@@ -1,5 +1,6 @@
 import React from 'react';
-import { Menu, Search, Briefcase } from 'lucide-react';
+import { Menu, Search, Briefcase, Plus } from 'lucide-react';
+import QuickCreateMenu from './QuickCreateMenu';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 
@@ -42,6 +43,7 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-4 flex-1 justify-end">
+        <QuickCreateMenu />
         <div className="h-8 w-8 rounded-full bg-slate-900 border-2 border-white shadow-sm flex items-center justify-center text-white text-xs font-bold ring-2 ring-slate-100">
           {user?.email?.[0]?.toUpperCase() || 'U'}
         </div>

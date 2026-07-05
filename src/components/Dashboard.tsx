@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useAuthStore } from '../stores/useAuthStore';
-import { DollarSign, ArrowUpRight, ArrowDownRight, Zap, Loader2, TrendingUp, Activity, CheckCircle2 } from 'lucide-react';
+import { DollarSign, ArrowUpRight, ArrowDownRight, Zap, Loader2, TrendingUp, Activity, CheckCircle2, Database, FileText } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
 import PrivacyValue from './platform/PrivacyValue';
 import { aiService } from '../services/aiService';
@@ -132,7 +132,7 @@ export default function Dashboard() {
             {currentWorkspace?.name || 'Command Center'}
           </h1>
           <p className="text-slate-500 mt-1 font-medium">
-            "Don't build complicated charts. Just make more money."
+            Your business at a glance.
           </p>
         </div>
       </header>
@@ -161,10 +161,31 @@ export default function Dashboard() {
          </div>
       </div>
       
+      
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <button className="p-4 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 transition-colors rounded-2xl flex flex-col items-center justify-center gap-2 text-indigo-700 font-medium">
+          <div className="p-2 bg-white rounded-full shadow-sm"><DollarSign size={18} className="text-indigo-600" /></div>
+          Create Invoice
+        </button>
+        <button className="p-4 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 transition-colors rounded-2xl flex flex-col items-center justify-center gap-2 text-emerald-700 font-medium">
+          <div className="p-2 bg-white rounded-full shadow-sm"><ArrowUpRight size={18} className="text-emerald-600" /></div>
+          Record Receipt
+        </button>
+        <button className="p-4 bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-colors rounded-2xl flex flex-col items-center justify-center gap-2 text-rose-700 font-medium">
+          <div className="p-2 bg-white rounded-full shadow-sm"><ArrowDownRight size={18} className="text-rose-600" /></div>
+          Add Bill
+        </button>
+        <button className="p-4 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-700 font-medium">
+          <div className="p-2 bg-white rounded-full shadow-sm"><Activity size={18} className="text-slate-600" /></div>
+          Reconcile
+        </button>
+      </div>
+      
       {/* The 3 Core Numbers */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
          <div className="p-6 md:p-8 bg-emerald-500/10 border border-emerald-500/30 rounded-[32px] flex flex-col justify-between">
-            <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2">Oxygen (Cash)</h3>
+            <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2">Cash Balance</h3>
             <span className="text-4xl md:text-5xl font-light font-mono text-slate-900 tracking-tight">
                <PrivacyValue value={formatCurrency(cashAccounts)} />
             </span>
@@ -190,12 +211,48 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chart Section */}
+        
+      {/* Onboarding Checklist */}
+      {transactions.length < 10 && (
+        <div className="bg-indigo-50 border border-indigo-100 rounded-[32px] p-6 lg:p-8 mb-6 shadow-sm">
+           <h3 className="text-xl font-bold text-indigo-900 mb-2 flex items-center gap-2">
+              <CheckCircle2 size={24} className="text-indigo-600" />
+              Welcome to the System
+           </h3>
+           <p className="text-indigo-700 font-medium mb-6">Complete these steps to get your ERP fully operational.</p>
+           
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-indigo-100 flex items-start gap-3">
+                 <div className="p-2 bg-emerald-100 rounded-full text-emerald-600"><CheckCircle2 size={16} /></div>
+                 <div>
+                    <p className="font-bold text-slate-800 text-sm">Create Workspace</p>
+                    <p className="text-xs text-slate-500 mt-1">Your business space is active.</p>
+                 </div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-indigo-100 flex items-start gap-3">
+                 <div className="p-2 bg-indigo-100 rounded-full text-indigo-600"><Database size={16} /></div>
+                 <div>
+                    <p className="font-bold text-slate-800 text-sm">Add Bank Accounts</p>
+                    <p className="text-xs text-slate-500 mt-1">Connect or create asset accounts.</p>
+                 </div>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-indigo-100 flex items-start gap-3">
+                 <div className="p-2 bg-slate-100 rounded-full text-slate-400"><FileText size={16} /></div>
+                 <div>
+                    <p className="font-bold text-slate-800 text-sm">Create First Invoice</p>
+                    <p className="text-xs text-slate-500 mt-1">Get paid by your customers.</p>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Chart Section */}
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-[32px] p-6 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <Activity size={18} className="text-indigo-500" /> 
-              Cash Flow Velocity
+              Cash Flow
             </h3>
           </div>
           <div className="flex-1 min-h-[250px]">

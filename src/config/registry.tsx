@@ -276,13 +276,13 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'tax-optimizer', label: { en: 'Tax Optimizer', he: 'אופטימיזציית מס' }, icon: Target, groupId: 'planning' },
 
   // System & Vault
-  { id: 'automation', label: { en: 'Process Automation', he: 'אוטומציה עסקית' }, icon: Zap, groupId: 'system' },
-  { id: 'vault', label: { en: 'Document Vault', he: 'כספת מסמכים' }, icon: ShieldCheck, groupId: 'system' },
-  { id: 'audit-trail', label: { en: 'Advanced Audit Trail', he: 'יומן ביקורת מתקדם' }, icon: Search, groupId: 'system' },
-  { id: 'integrity', label: { en: 'System Audits', he: 'ביקורת מערכת' }, icon: ShieldCheck, groupId: 'system' },
+  { id: 'automation', label: { en: 'Automations', he: 'אוטומציה עסקית' }, icon: Zap, groupId: 'system' },
+  { id: 'vault', label: { en: 'Documents', he: 'כספת מסמכים' }, icon: ShieldCheck, groupId: 'system' },
+  { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת מתקדם' }, icon: Search, groupId: 'system' },
+  { id: 'integrity', label: { en: 'Security', he: 'ביקורת מערכת' }, icon: ShieldCheck, groupId: 'system' },
   { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'system' },
-  { id: 'excel-qbo-bridge', label: { en: 'Data Importer', he: 'יבוא נתונים' }, icon: FileText, groupId: 'system' },
-  { id: 'settings', label: { en: 'System Settings', he: 'הגדרות' }, icon: Settings, groupId: 'system' },
+  { id: 'excel-qbo-bridge', label: { en: 'Import Data', he: 'יבוא נתונים' }, icon: FileText, groupId: 'system' },
+  { id: 'settings', label: { en: 'Settings', he: 'הגדרות' }, icon: Settings, groupId: 'system' },
   { id: 'categorization-rules', label: { en: 'Bank Rules', he: 'חוקים בנקאיים' }, icon: Settings, groupId: 'finance' },
   { id: 'split-transaction', label: { en: 'Split Tool', he: 'פיצול תנועות' }, icon: Settings, groupId: 'finance' },
   { id: 'expense-capture', label: { en: 'Receipt Capture', he: 'סריקת קבלות' }, icon: Settings, groupId: 'operations' },
@@ -342,12 +342,12 @@ export const APP_TABS: AppTabDefinition[] = [
 ];
 
 export const NAV_GROUPS: Record<string, Record<string, string>> = {
-  pulse: { en: 'Pulse', he: 'ראשי' },
-  finance: { en: 'Financial Architecture', he: 'ליבה פיננסית' },
-  operations: { en: 'Operations', he: 'תפעול' },
-  strategy: { en: 'Strategy & Growth', he: 'אסטרטגיה' },
-  planning: { en: 'Planning & Tax', he: 'תכנון ומיסים' },
-  system: { en: 'System & Vault', he: 'מערכת' },
+  pulse: { en: 'Dashboard', he: 'ראשי' },
+  finance: { en: 'Accounting', he: 'הנהלת חשבונות' },
+  operations: { en: 'Business', he: 'עסקים' },
+  strategy: { en: 'Intelligence', he: 'בינה' },
+  planning: { en: 'Planning', he: 'תכנון' },
+  system: { en: 'Settings', he: 'הגדרות' },
   admin: { en: 'Admin Panel', he: 'Admin Panel' }
 };
 

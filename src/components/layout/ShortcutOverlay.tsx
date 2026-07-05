@@ -8,7 +8,15 @@ interface ShortcutOverlayProps {
 }
 
 export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProps) {
-  const shortcuts: any[] = [];
+  const shortcuts = [
+    { key: '⌘ + K', desc: 'Global Command Palette', icon: Search },
+    { key: '⌘ + /', desc: 'Show Keyboard Shortcuts', icon: Command },
+    { key: 'Esc', desc: 'Close Modals & Drawers', icon: X },
+    { key: '?', desc: 'Toggle Intelligence UI', icon: Activity },
+    { key: 'Shift + N', desc: 'Quick Create (Transaction)', icon: Plus },
+    { key: 'Shift + S', desc: 'Quick Create (Invoice/Sales)', icon: Plus },
+    { key: 'Shift + B', desc: 'Quick Create (Bill)', icon: Plus },
+  ];
 
   return (
     <AnimatePresence>
@@ -28,7 +36,19 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-[0_32px_120px_-20px_rgba(0,0,0,0.5)] border border-slate-200 overflow-hidden"
           >
+
             <div className="p-4 md:p-10 border-b border-slate-200 bg-slate-50/30">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                {shortcuts.map((sc, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><sc.icon size={16} /></div>
+                      <span className="font-bold text-slate-700 text-sm">{sc.desc}</span>
+                    </div>
+                    <kbd className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-mono font-bold rounded">{sc.key}</kbd>
+                  </div>
+                ))}
+              </div>
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Command Directives</h2>

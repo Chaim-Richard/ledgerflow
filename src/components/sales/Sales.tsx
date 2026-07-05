@@ -88,10 +88,10 @@ export default function Sales({
         <div>
           <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate mb-4">
             <TrendingUp size={14} />
-            Revenue Capture Pipeline
+            Sales & Customers
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter">Inflow Matrix</h2>
-          <p className="text-slate-500 font-medium text-lg mt-2 italic opacity-60">Real-time resolution of accounts receivable and customer lifecycle value.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter">Sales Hub</h2>
+          <p className="text-slate-500 font-medium text-lg mt-2 italic opacity-60">Manage invoices, estimates, and customer relationships.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">

@@ -174,11 +174,11 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
              </div>
              <div>
                 <h1 className="text-4xl md:text-6xl font-display font-black text-slate-900 tracking-tight flex items-baseline gap-3">
-                  Inventory <span className="text-2xl font-mono opacity-20 uppercase tracking-widest truncate">Nodes</span>
+                  Inventory 
                 </h1>
                 <div className="flex items-center gap-3">
                    <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
-                   <p className="text-[12px] font-black text-slate-500 uppercase tracking-[0.5em] font-mono">Elastic Supply Simulation: Active</p>
+                   <p className="text-[12px] font-black text-slate-500 uppercase tracking-[0.5em] font-mono">Real-time stock management.</p>
                 </div>
              </div>
           </div>
