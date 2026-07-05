@@ -1,0 +1,162 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global fallback: Deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper to check if a user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // ID Validation Guard (prevents large string payload poisoning and ID injection)
+    function isValidId(id) {
+      return id is string && id.size() < 128 && !id.matches(".*[\\s\\x00-\\x1F\\x7F].*");
+    }
+
+    // Allowed keys gate (prevents extra/malicious fields injection and size bloat)
+    function affectedKeys(allowedList) {
+      return request.resource.data.keys().hasOnly(allowedList);
+    }
+
+    // Workspace Access Helper - ensures users can only read/write data in workspaces they own or admin
+    function isWorkspaceMember(workspaceId) {
+      return isSignedIn() && (
+        get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.uid == request.auth.uid ||
+        get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.admins[request.auth.uid] == true
+      );
+    }
+
+    // Immutability Guard - ensures immutable variables cannot be altered
+    function isUnchanged(field) {
+      return !(field in request.resource.data) || 
+        (resource == null || request.resource.data[field] == resource.data[field]);
+    }
+
+    match /apiKeys/{keyId} {
+      allow get: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create, update, delete: if false; // Managed via server-side API
+    }
+
+    // Users collection rules with privilege escalation and email overwrite protection
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow list: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) &&
+        affectedKeys(["uid", "email", "role", "createdAt"]) &&
+        (request.resource.data.role == "client" || (request.resource.data.role == "admin" && request.auth.token.email == "shmuelbiller@gmail.com")) &&
+        request.resource.data.email == request.auth.token.email;
+      allow update: if isSignedIn() && request.auth.uid == userId && 
+        isUnchanged("role") && 
+        isUnchanged("email") &&
+        affectedKeys(["uid", "email", "role", "createdAt"]);
+      allow delete: if false;
+    }
+
+    // Workspaces collection rules
+    match /workspaces/{workspaceId} {
+      allow get: if isSignedIn() && (resource == null || resource.data.uid == request.auth.uid || (resource.data.admins != null && resource.data.admins[request.auth.uid] == true));
+      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isValidId(workspaceId) &&
+        request.resource.data.name.size() < 128 &&
+        (!("description" in request.resource.data) || request.resource.data.description.size() < 1000) &&
+        affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "status", "adminCount", "admins", "dateFormat", "aiModel", "notifications", "analyticalTopology"]);
+      allow update: if isSignedIn() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid && isUnchanged("uid") &&
+        request.resource.data.name.size() < 128 &&
+        (!("description" in request.resource.data) || request.resource.data.description.size() < 1000) &&
+        isUnchanged("plan") && isUnchanged("computeCreditBalance") && isUnchanged("apiQuotaMonthlyLimitCents") && isUnchanged("maxSeats") && isUnchanged("concurrentUserLimit") &&
+        isUnchanged("apiQuotaTotalCentsUsed") && isUnchanged("stripeCustomerId") && isUnchanged("seatCount") &&
+        isUnchanged("billingCycle") && isUnchanged("status") && isUnchanged("lockedUntilDate") &&
+        affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "status", "adminCount", "admins", "dateFormat", "aiModel", "notifications", "analyticalTopology"]);
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // Presence collection rules for multi-user collaboration
+    match /presence/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId && isValidId(userId) &&
+        affectedKeys(["uid", "email", "displayName", "photoURL", "lastActive", "activeTab", "state", "currentWorkspaceId"]);
+    }
+
+    // Specific rules for all tenant-scoped ledger resources to eliminate the general pattern loophole
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(transactionId) &&
+        request.resource.data.description.size() < 1000 &&
+        request.resource.data.lines.size() < 100 &&
+        affectedKeys(["id", "uid", "workspaceId", "date", "description", "payee", "lines", "totalAmountCents", "currency", "status", "type", "createdAt", "updatedAt", "metadata", "deletedAt", "originalCurrency", "exchangeRate", "isCleared", "clearedAt", "bankTransactionId", "isFlagged", "verification", "projectId", "tags", "parentEventId", "eventId", "reversalEventId", "project", "schemaVersion", "units", "unitType", "total_impact", "eventBusSeq"]);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") && 
+        (resource.data.status != "certified" && resource.data.status != "voided") &&
+        !(resource.data.status == "pending" && request.resource.data.status == "reconciled") && // State Shortcutting Guard
+        request.resource.data.description.size() < 1000 &&
+        request.resource.data.lines.size() < 100 &&
+        affectedKeys(["id", "uid", "workspaceId", "date", "description", "payee", "lines", "totalAmountCents", "currency", "status", "type", "createdAt", "updatedAt", "metadata", "deletedAt", "originalCurrency", "exchangeRate", "isCleared", "clearedAt", "bankTransactionId", "isFlagged", "verification", "projectId", "tags", "parentEventId", "eventId", "reversalEventId", "project", "schemaVersion", "units", "unitType", "total_impact", "eventBusSeq"]);
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId) && (resource.data.status != "certified" && resource.data.status != "voided");
+    }
+
+    match /chartAccounts/{accountId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(accountId) &&
+        affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "balanceCents", "createdAt", "updatedAt", "isSystem", "classification"]);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
+        affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "balanceCents", "createdAt", "updatedAt", "isSystem", "classification"]);
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /projects/{projectId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(projectId) &&
+        affectedKeys(["id", "uid", "workspaceId", "name", "description", "type", "status", "budgetCents", "dimensions", "splitRules", "metadata", "createdAt", "updatedAt"]);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") &&
+        affectedKeys(["id", "uid", "workspaceId", "name", "description", "type", "status", "budgetCents", "dimensions", "splitRules", "metadata", "createdAt", "updatedAt"]);
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(logId) &&
+        affectedKeys(["id", "uid", "workspaceId", "action", "details", "createdAt", "severity", "userEmail", "email", "documentId", "entityId", "collectionName", "entityType", "previousState", "newState", "metadata", "hash", "previousHash", "timestamp"]);
+      allow update, delete: if false; // Forensically immutable audit trail
+    }
+
+    match /learnedDeltas/{deltaId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(deltaId) &&
+        request.resource.data.description is string && request.resource.data.description.size() <= 500 &&
+        request.resource.data.category is string && request.resource.data.category.size() <= 100 &&
+        affectedKeys(["id", "uid", "workspaceId", "apiKeyId", "description", "category", "timestamp"]);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
+        request.resource.data.description is string && request.resource.data.description.size() <= 500 &&
+        request.resource.data.category is string && request.resource.data.category.size() <= 100 &&
+        affectedKeys(["id", "uid", "workspaceId", "apiKeyId", "description", "category", "timestamp"]);
+      allow delete: if false; // Only allow organic machine learning append, no history rewrite
+    }
+
+    match /customTemplates/{templateId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isValidId(templateId) &&
+        affectedKeys(["name", "industry", "accounts", "analyticalTopology", "uid", "createdAt"]);
+      allow update: if isSignedIn() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid && isUnchanged("uid") &&
+        affectedKeys(["name", "industry", "accounts", "analyticalTopology", "uid", "createdAt"]);
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    function isProtectedCollection(name) {
+      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates"];
+    }
+
+    // Standard rule for remaining secondary metrics and details matching the blueprint
+    match /{collectionName}/{documentId} {
+      allow read: if isSignedIn() && !isProtectedCollection(collectionName) && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && !isProtectedCollection(collectionName) && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(documentId) &&
+        request.resource.data.keys().size() < 30; // Denial of Wallet payload protection for fallbacks
+      allow update: if isSignedIn() && !isProtectedCollection(collectionName) && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
+        request.resource.data.keys().size() < 30; // Denial of Wallet payload protection for fallbacks
+      allow delete: if isSignedIn() && !isProtectedCollection(collectionName) && isWorkspaceMember(resource.data.workspaceId);
+    }
+  }
+}

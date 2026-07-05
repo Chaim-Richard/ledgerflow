@@ -1,0 +1,63 @@
+import React from 'react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+
+interface Props {
+  children: React.ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends React.Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null
+  };
+
+  public static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Uncaught error:', error, errorInfo);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-6">
+          <div className="bg-white p-4 md:p-8 rounded-[32px] border border-rose-100 shadow-sm max-w-xl w-full text-center space-y-6">
+            <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-[32px] mx-auto flex items-center justify-center">
+              <AlertCircle size={32} />
+            </div>
+            
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold text-slate-800 tracking-tight font-display">System Exception Detected</h1>
+              <p className="text-sm font-medium text-slate-500">
+                The application encountered an unexpected error. Please reload the interface.
+              </p>
+            </div>
+
+            <div className="p-4 bg-zinc-50 rounded-[32px] border border-zinc-200 text-left overflow-auto max-h-40">
+              <code className="text-xs font-mono text-rose-600 break-words">
+                {this.state.error?.message || "Unknown rendering exception"}
+              </code>
+            </div>
+
+            <button
+              onClick={() => window.location.reload()}
+              className="btn-primary flex items-center justify-center gap-2 w-full active:scale-[0.98]"
+            >
+              <RefreshCw size={16} />
+              Reload Application
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}

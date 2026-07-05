@@ -1,0 +1,44 @@
+# LedgerFlow Zenith vs. Traditional Systems
+
+This document outlines the synthesis of Excel's mathematical flexibility and QuickBooks' structured rigidity, evolving into the **Core Truth** engine.
+
+## 1. Feature Synthesis Matrix
+
+| Feature | Excel | QuickBooks | LedgerFlow Zenith | Status |
+| :--- | :---: | :---: | :---: | :---: |
+| **Recursive Aggregation** | Manual | Rigid | Real-time / Automatic | ✅ Implemented |
+| **Dynamic Sorting** | Static | Fixed Columns | Multi-vector (Deterministic) | ✅ Implemented |
+| **Quantum Range Filtering** | Filter Menus | Preset Rules | Statistical Range Logic | ✅ Implemented |
+| **Dataset Depth Monitor** | Row Count | None | Neural Load / Data Density | ✅ Implemented |
+| **Column Visibility** | Hide/Unhide | Preset Layouts | Dynamic Visibility Matrix | ✅ Implemented |
+| **CSV Matrix Export** | Native | Export Tool | Clean Data Hierarchy | ✅ Implemented |
+| **Anomaly Engine** | Conditional | Audit Log | Neural Anomaly (Core Truth) | ✅ Implemented |
+| **Reconciliation** | Manual | Semi-Auto | Deterministic Flow Match | ✅ Implemented |
+| **Scenario Modeling** | "What-If" | None | Forensic Forecaster | ✅ Implemented |
+| **Bulk Matrix Update** | Drag-fill | Batch Action | Neural Bulk Logic | ✅ Implemented |
+| **Pivot Logic** | Pivot Tables | Classes | Neural Pivot / Topology | ✅ Implemented |
+| **Inventory Intelligence** | Manual List | Basic Tracking | Sourcing Arbitrage / Velocity | ✅ Implemented |
+
+## 2. The Zenith Difference (The Core Truth)
+
+Unlike traditional systems that rely on user-inputted "tags," LedgerFlow Zenith uses **Neural Data Chain Synthesis**:
+
+1.  **Truth over Entry**: Traditional apps trust the user's manual entry. LedgerFlow calculates an **Integrity Score** based on transaction consistency and source variety.
+2.  **Symmetry Verification**: Every action is cross-referenced for **Ledger Equilibrium**. If a transaction drifts too far from historical norms, the **Anomaly Engine** flags it instantly.
+3.  **Arbitrage Intelligence**: Traditional inventory tells you what you have. Zenith tells you **where it should have come from** to maximize margin.
+
+## 3. Implemented Tools (Excel/QB Equivalents)
+
+*   **Excel-style Filters**: Implemented in `TransactionGrid.tsx` with dedicated logic for `starts with`, `ends with`, `contains`, and `exact match`.
+*   **QuickBooks-style Classing**: Handled via `Project` and `Category` nodes with multi-select consensus.
+*   **Audit Trail**: A high-fidelity timeline of every deterministic change.
+*   **Quantum Range**: Advanced amount filtering (Greater than, Less than, Between) with statistical segments (Above/Below Average).
+
+## 4. Planned Zenith Evolution
+
+*   **Sub-Atomic Accounts**: Deeply nested Chart of Accounts hierarchy (Beyond standard nodes).
+*   **Automatic Node Mapping**: AI-driven categorization based on historical "Core Truth" patterns.
+*   **Tax Liability Matrix**: Real-time sales tax and corporate tax accrual tracking.
+
+---
+**Core Mandate: MATHEMATICAL STABILITY [OK]**

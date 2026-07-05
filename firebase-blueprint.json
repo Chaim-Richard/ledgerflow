@@ -1,0 +1,432 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Private user metadata and roles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "client"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Workspace": {
+      "title": "Workspace",
+      "description": "Organizational container for ledger data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "businessType": { "type": "string" },
+        "currency": { "type": "string" },
+        "lockDate": { "type": "string", "format": "date" },
+        "isClosed": { "type": "boolean" },
+        "fiscalYearEnd": { "type": "string" },
+        "admins": { "type": "object" },
+        "analyticalTopology": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name"]
+    },
+    "Transaction": {
+      "title": "Financial Transaction",
+      "description": "Double-entry validated transaction",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "certified", "voided", "reconciled", "completed", "failed", "flagged", "reviewed"] },
+        "totalAmountCents": { "type": "integer" },
+        "lines": { "type": "array" },
+        "tags": { "type": "array" },
+        "reference": { "type": "string" },
+        "projectId": { "type": "string" },
+        "isCleared": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["workspaceId", "uid", "date", "status", "totalAmountCents", "lines"]
+    },
+    "ChartAccount": {
+      "title": "Chart of Account",
+      "description": "Financial category for ledger organization",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "code": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["asset", "liability", "equity", "income", "expense"] },
+        "category": { "type": "string" },
+        "balanceCents": { "type": "integer" },
+        "openingBalanceCents": { "type": "integer" },
+        "description": { "type": "string" },
+        "parentId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["workspaceId", "uid", "code", "name", "type"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Discrete fiscal container for job costing",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "completed", "archived"] },
+        "budgetCents": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["workspaceId", "uid", "name"]
+    },
+    "AuditLog": {
+      "title": "Forensic Audit Log",
+      "description": "Immutable trail of system changes",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "action": { "type": "string" },
+        "entityType": { "type": "string" },
+        "entityId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "details": { "type": "string" }
+      }
+    },
+    "AnalyticalPattern": {
+      "title": "Analytical Pattern",
+      "description": "Learned associations for automated bookkeeping",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "workspaceId": { "type": "string" },
+        "descriptionKey": { "type": "string" },
+        "accountId": { "type": "string" },
+        "accountName": { "type": "string" },
+        "confidence": { "type": "number" },
+        "usageCount": { "type": "integer" }
+      }
+    },
+    "VaultItem": {
+      "title": "Encrypted Vault Document",
+      "description": "Sensitive financial documents with hashing",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "hash": { "type": "string" },
+        "mimeType": { "type": "string" },
+        "encryptionProtocol": { "type": "string" },
+        "size": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "PayrollRecord": {
+      "title": "Payroll Execution Record",
+      "description": "Validated employee compensation logic",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "periodStart": { "type": "string", "format": "date" },
+        "periodEnd": { "type": "string", "format": "date" },
+        "grossAmountCents": { "type": "integer" },
+        "withholdingCents": { "type": "integer" },
+        "netAmountCents": { "type": "integer" },
+        "status": { "type": "string", "enum": ["pending", "processed", "certified"] }
+      }
+    },
+    "Presence": {
+      "title": "Real-time Presence",
+      "description": "Transient user activity status",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "lastActive": { "type": "string", "format": "date-time" },
+        "color": { "type": "string" }
+      }
+    },
+    "Vendor": {
+      "title": "Vendor",
+      "description": "Entity providing goods or services",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Entity receiving goods or services",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Bill sent to a customer",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "customerId": { "type": "string" },
+        "amountCents": { "type": "integer" },
+        "dueDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["pending", "paid", "overdue", "sent"] }
+      }
+    },
+    "Bill": {
+      "title": "Bill",
+      "description": "Bill received from a vendor",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "vendorId": { "type": "string" },
+        "amountCents": { "type": "integer" },
+        "dueDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["pending", "paid", "overdue", "unpaid"] }
+      }
+    },
+    "InventoryItem": {
+      "title": "Inventory Item",
+      "description": "Physical stock item details",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "sku": { "type": "string" },
+        "quantityAtHand": { "type": "integer" },
+        "unitPriceCents": { "type": "integer" }
+      }
+    },
+    "FixedAsset": {
+      "title": "Fixed Asset",
+      "description": "Long-term tangible asset",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "purchaseDate": { "type": "string", "format": "date" },
+        "purchasePriceCents": { "type": "integer" },
+        "status": { "type": "string", "enum": ["active", "disposed"] }
+      }
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "Planned financial allocation",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "accountId": { "type": "string" },
+        "amountCents": { "type": "integer" },
+        "period": { "type": "string" }
+      }
+    },
+    "Reconciliation": {
+      "title": "Reconciliation Session",
+      "description": "Bank statement matching record",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "bankAccountId": { "type": "string" },
+        "statementDate": { "type": "string", "format": "date" }
+      }
+    },
+    "AutoRule": {
+      "title": "Auto-Classification Rule",
+      "description": "Logic for automated entry matching",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "condition": { "type": "object" },
+        "action": { "type": "object" },
+        "confidence": { "type": "number" }
+      }
+    },
+    "BankLine": {
+      "title": "Bank Statement Line",
+      "description": "Unmatched line from bank import",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "description": { "type": "string" },
+        "amountCents": { "type": "integer" },
+        "status": { "type": "string", "enum": ["pending", "matched", "ignored"] }
+      }
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Human resource details",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "salaryCents": { "type": "integer" },
+        "status": { "type": "string", "enum": ["Active", "On Leave", "Terminated"] }
+      }
+    },
+    "PayRun": {
+      "title": "Pay Run",
+      "description": "Batch payroll event",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "totalAmountCents": { "type": "integer" },
+        "status": { "type": "string", "enum": ["draft", "processed", "failed"] }
+      }
+    },
+    "TaxRate": {
+      "title": "Tax Rate",
+      "description": "Configured taxation percentage",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "rate": { "type": "number" }
+      }
+    },
+    "Partner": {
+      "title": "Partner",
+      "description": "Equity stakeholder details",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "share": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Private user profiles"
+    },
+    "workspaces/{workspaceId}": {
+      "schema": "Workspace",
+      "description": "Workspaces owned by users"
+    },
+    "transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Ledger entries secured by workspace access"
+    },
+    "chartAccounts/{accountId}": {
+      "schema": "ChartAccount",
+      "description": "Ledger categories"
+    },
+    "projects/{projectId}": {
+      "schema": "Project",
+      "description": "Discrete job containers"
+    },
+    "auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Immutable security records"
+    },
+    "analyticalPatterns/{patternId}": {
+      "schema": "AnalyticalPattern",
+      "description": "AI-learned categorization patterns"
+    },
+    "vault/{itemId}": {
+      "schema": "VaultItem",
+      "description": "Secure document metadata"
+    },
+    "payroll/{recordId}": {
+      "schema": "PayrollRecord",
+      "description": "Detailed labor compensation history"
+    },
+    "presence/{userId}": {
+      "schema": "Presence",
+      "description": "Real-time user presence for collaboration"
+    },
+    "vendors/{vendorId}": {
+      "schema": "Vendor",
+      "description": "Suppliers"
+    },
+    "customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Clients"
+    },
+    "invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Accounts Receivable"
+    },
+    "bills/{billId}": {
+      "schema": "Bill",
+      "description": "Accounts Payable"
+    },
+    "inventory/{itemId}": {
+      "schema": "InventoryItem",
+      "description": "Stock tracking"
+    },
+    "fixedAssets/{assetId}": {
+      "schema": "FixedAsset",
+      "description": "Tangible assets"
+    },
+    "budgets/{budgetId}": {
+      "schema": "Budget",
+      "description": "Fiscal planning"
+    },
+    "reconciliations/{reconciliationId}": {
+      "schema": "Reconciliation",
+      "description": "Bank matching history"
+    },
+    "autoRules/{ruleId}": {
+      "schema": "AutoRule",
+      "description": "Classification logic"
+    },
+    "bankLines/{lineId}": {
+      "schema": "BankLine",
+      "description": "Imported bank statements"
+    },
+    "employees/{employeeId}": {
+      "schema": "Employee",
+      "description": "Personnel records"
+    },
+    "payRuns/{runId}": {
+      "schema": "PayRun",
+      "description": "Payroll batch events"
+    },
+    "taxRates/{rateId}": {
+      "schema": "TaxRate",
+      "description": "Tax configuration"
+    },
+    "partners/{partnerId}": {
+      "schema": "Partner",
+      "description": "Equity stakeholders"
+    }
+  }
+}

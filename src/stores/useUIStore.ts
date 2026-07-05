@@ -1,0 +1,207 @@
+import { create } from 'zustand';
+import { AppTab } from '../types';
+
+interface UIState {
+  activeTab: AppTab;
+  isSidebarOpen: boolean;
+  isCompactMode: boolean;
+  isProMode: boolean;
+  isQuickEntryOpen: boolean;
+  isCommandPaletteOpen: boolean;
+  isImporterOpen: boolean;
+  isTemplateSelectorOpen: boolean;
+  isAIBlueprintOpen: boolean;
+  isCommandCenterOpen: boolean;
+  isConverterOpen: boolean;
+  isIntegrityOpen: boolean;
+  isEntanglementOpen: boolean;
+  isDiagnosticConsoleOpen: boolean;
+  isGuideOpen: boolean;
+  isArchitectureOpen: boolean;
+  isFocusMode: boolean;
+  isPrivacyMode: boolean;
+  isShortcutOverlayOpen: boolean;
+  isOnline: boolean;
+  isSyncing: boolean;
+  language: 'en' | 'he';
+  filterCriteria: any | null;
+  parsingQueue: Array<{ id: string, name: string, status: 'uploading' | 'parsing' | 'done' | 'error', idempotencyKey?: string }>;
+  splittingTxId: string | null;
+  isDevMode: boolean;
+  theme: 'light' | 'dark' | 'system';
+  isQuietMode: boolean;
+  activeIntelChannel: string;
+  lexiconOverrides: Record<string, { en: string; he: string }>;
+  
+  setActiveTab: (tab: AppTab) => void;
+  setActiveIntelChannel: (channel: string) => void;
+  toggleSidebar: () => void;
+  setSidebarOpen: (val: boolean) => void;
+  toggleQuietMode: () => void;
+  toggleFocusMode: () => void;
+  setLanguage: (lang: 'en' | 'he') => void;
+  setCompactMode: (val: boolean) => void;
+  setProMode: (val: boolean) => void;
+  setQuickEntryOpen: (val: boolean) => void;
+  setCommandPaletteOpen: (val: boolean) => void;
+  setImporterOpen: (val: boolean) => void;
+  setTemplateSelectorOpen: (val: boolean) => void;
+  setAIBlueprintOpen: (val: boolean) => void;
+  setCommandCenterOpen: (val: boolean) => void;
+  setConverterOpen: (val: boolean) => void;
+  setIntegrityOpen: (val: boolean) => void;
+  setEntanglementOpen: (val: boolean) => void;
+  setDiagnosticConsoleOpen: (val: boolean) => void;
+  setGuideOpen: (val: boolean) => void;
+  setArchitectureOpen: (val: boolean) => void;
+  togglePrivacyMode: () => void;
+  setShortcutOverlayOpen: (val: boolean) => void;
+  setFilterCriteria: (val: any | null) => void;
+  setIsOnline: (val: boolean) => void;
+  setIsSyncing: (val: boolean) => void;
+  setParsingQueue: (queue: any[]) => void;
+  setSplittingTxId: (id: string | null) => void;
+  addParsingItem: (item: { id: string, name: string, status: 'uploading' | 'parsing' | 'done' | 'error', idempotencyKey?: string }) => void;
+  updateParsingItem: (id: string, updates: any) => void;
+  setDevMode: (val: boolean) => void;
+  setLexiconOverride: (key: string, lang: 'en' | 'he', value: string) => void;
+  resetLexiconOverrides: () => void;
+  hiddenTabs: string[];
+  toggleTabVisibility: (id: string) => void;
+}
+
+export const useUIStore = create<UIState>((set) => ({
+  activeTab: (typeof window !== 'undefined' && window.location.hash) ? 
+    (window.location.hash.slice(1) as AppTab) : 'dashboard',
+  isSidebarOpen: true,
+  isCompactMode: false,
+  isProMode: false,
+  isQuickEntryOpen: false,
+  isCommandPaletteOpen: false,
+  isImporterOpen: false,
+  isTemplateSelectorOpen: false,
+  isAIBlueprintOpen: false,
+  isCommandCenterOpen: false,
+  isConverterOpen: false,
+  isIntegrityOpen: false,
+  isEntanglementOpen: false,
+  isDiagnosticConsoleOpen: false,
+  isGuideOpen: false,
+  isArchitectureOpen: false,
+  isFocusMode: false,
+  isPrivacyMode: false,
+  isShortcutOverlayOpen: false,
+  isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+  isSyncing: false,
+  language: 'en',
+  filterCriteria: null,
+  parsingQueue: [],
+  splittingTxId: null,
+  isDevMode: false,
+  theme: (() => {
+    try {
+      return (localStorage.getItem('lf_theme') as 'light' | 'dark' | 'system') || 'system';
+    } catch (e) {
+      return 'system';
+    }
+  })(),
+  isQuietMode: false,
+  activeIntelChannel: 'radar',
+  lexiconOverrides: (() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('lf_lexicon_overrides') : null;
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  })(),
+  hiddenTabs: (() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('lf_hidden_tabs') : null;
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  })(),
+
+  setActiveIntelChannel: (activeIntelChannel) => set({ activeIntelChannel }),
+  setActiveTab: (activeTab) => {
+    if (typeof window !== 'undefined' && window.location.hash !== `#${activeTab}`) {
+      window.location.hash = activeTab;
+    }
+    set({ activeTab });
+  },
+  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+  setSidebarOpen: (isSidebarOpen) => set({ isSidebarOpen }),
+  toggleQuietMode: () => set((state) => ({ isQuietMode: !state.isQuietMode })),
+  toggleFocusMode: () => set((state) => ({ 
+    isFocusMode: !state.isFocusMode,
+    isSidebarOpen: state.isFocusMode // Open sidebar when leaving focus mode
+  })),
+  setLanguage: (language) => set({ language }),
+  setCompactMode: (isCompactMode) => set({ isCompactMode }),
+  setProMode: (isProMode) => set({ isProMode }),
+  setQuickEntryOpen: (isQuickEntryOpen) => set({ isQuickEntryOpen }),
+  setCommandPaletteOpen: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
+  setImporterOpen: (isImporterOpen) => set({ isImporterOpen }),
+  setTemplateSelectorOpen: (isTemplateSelectorOpen) => set({ isTemplateSelectorOpen }),
+  setAIBlueprintOpen: (isAIBlueprintOpen) => set({ isAIBlueprintOpen }),
+  setCommandCenterOpen: (isCommandCenterOpen) => set({ isCommandCenterOpen }),
+  setConverterOpen: (isConverterOpen) => set({ isConverterOpen }),
+  setIntegrityOpen: (isIntegrityOpen) => set({ isIntegrityOpen }),
+  setEntanglementOpen: (isEntanglementOpen) => set({ isEntanglementOpen }),
+  setDiagnosticConsoleOpen: (isDiagnosticConsoleOpen) => set({ isDiagnosticConsoleOpen }),
+  setGuideOpen: (isGuideOpen) => set({ isGuideOpen }),
+  setArchitectureOpen: (isArchitectureOpen) => set({ isArchitectureOpen }),
+  togglePrivacyMode: () => set((state) => ({ isPrivacyMode: !state.isPrivacyMode })),
+  setShortcutOverlayOpen: (isShortcutOverlayOpen) => set({ isShortcutOverlayOpen }),
+  setFilterCriteria: (filterCriteria) => set({ filterCriteria }),
+  setIsOnline: (isOnline) => set({ isOnline }),
+  setIsSyncing: (isSyncing) => set({ isSyncing }),
+  setParsingQueue: (parsingQueue) => set({ parsingQueue }),
+  setSplittingTxId: (splittingTxId) => set({ splittingTxId }),
+  addParsingItem: (item) => set((state) => ({ parsingQueue: [...state.parsingQueue, item] })),
+  updateParsingItem: (id, updates) => set((state) => ({ 
+    parsingQueue: state.parsingQueue.map(i => i.id === id ? { ...i, ...updates } : i) 
+  })),
+  setDevMode: (val) => set({ isDevMode: val }),
+  setLexiconOverride: (key, lang, value) => set((state) => {
+    const existing = state.lexiconOverrides[key] || { en: '', he: '' };
+    const nextOverrides = {
+      ...state.lexiconOverrides,
+      [key]: {
+        ...existing,
+        [lang]: value
+      }
+    };
+    try {
+      localStorage.setItem('lf_lexicon_overrides', JSON.stringify(nextOverrides));
+    } catch (e) {}
+    return { lexiconOverrides: nextOverrides };
+  }),
+  resetLexiconOverrides: () => set(() => {
+    try {
+      localStorage.removeItem('lf_lexicon_overrides');
+    } catch (e) {}
+    return { lexiconOverrides: {} };
+  }),
+  toggleTabVisibility: (id) => set((state) => {
+    const isHidden = state.hiddenTabs.includes(id);
+    const nextHidden = isHidden
+      ? state.hiddenTabs.filter(x => x !== id)
+      : [...state.hiddenTabs, id];
+    try {
+      localStorage.setItem('lf_hidden_tabs', JSON.stringify(nextHidden));
+    } catch (e) {}
+    return { hiddenTabs: nextHidden };
+  })
+}));
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash.slice(1) as AppTab;
+    if (hash && useUIStore.getState().activeTab !== hash) {
+      useUIStore.setState({ activeTab: hash });
+    }
+  });
+}

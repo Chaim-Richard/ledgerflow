@@ -1,0 +1,400 @@
+
+/app/applet/src/App.tsx
+   37:9   warning  'setCurrentWorkspaceId' is assigned a value but never used. Allowed unused vars must match /^_/u   unused-imports/no-unused-vars
+   46:9   warning  'isPrivacyMode' is assigned a value but never used. Allowed unused vars must match /^_/u           unused-imports/no-unused-vars
+   47:9   warning  'setPrivacyMode' is assigned a value but never used. Allowed unused vars must match /^_/u          unused-imports/no-unused-vars
+   48:9   warning  'integrityStatus' is assigned a value but never used. Allowed unused vars must match /^_/u         unused-imports/no-unused-vars
+   49:9   warning  'reconcileIntegrity' is assigned a value but never used. Allowed unused vars must match /^_/u      unused-imports/no-unused-vars
+   51:9   warning  'activeTab' is assigned a value but never used. Allowed unused vars must match /^_/u               unused-imports/no-unused-vars
+   55:9   warning  'isCompactMode' is assigned a value but never used. Allowed unused vars must match /^_/u           unused-imports/no-unused-vars
+   56:9   warning  'setCompactMode' is assigned a value but never used. Allowed unused vars must match /^_/u          unused-imports/no-unused-vars
+   68:9   warning  'filterCriteria' is assigned a value but never used. Allowed unused vars must match /^_/u          unused-imports/no-unused-vars
+   69:9   warning  'setFilterCriteria' is assigned a value but never used. Allowed unused vars must match /^_/u       unused-imports/no-unused-vars
+   71:9   warning  'setConverterOpen' is assigned a value but never used. Allowed unused vars must match /^_/u        unused-imports/no-unused-vars
+   72:9   warning  'setIntegrityOpen' is assigned a value but never used. Allowed unused vars must match /^_/u        unused-imports/no-unused-vars
+   73:9   warning  'setGuideOpen' is assigned a value but never used. Allowed unused vars must match /^_/u            unused-imports/no-unused-vars
+   74:9   warning  'setCommandCenterOpen' is assigned a value but never used. Allowed unused vars must match /^_/u    unused-imports/no-unused-vars
+   75:9   warning  'isFocusMode' is assigned a value but never used. Allowed unused vars must match /^_/u             unused-imports/no-unused-vars
+   76:9   warning  'isGuideOpen' is assigned a value but never used. Allowed unused vars must match /^_/u             unused-imports/no-unused-vars
+   77:9   warning  'isTemplateSelectorOpen' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+   78:9   warning  'isConverterOpen' is assigned a value but never used. Allowed unused vars must match /^_/u         unused-imports/no-unused-vars
+   79:9   warning  'isAIBlueprintOpen' is assigned a value but never used. Allowed unused vars must match /^_/u       unused-imports/no-unused-vars
+   80:9   warning  'setAIBlueprintOpen' is assigned a value but never used. Allowed unused vars must match /^_/u      unused-imports/no-unused-vars
+   81:9   warning  'isIntegrityOpen' is assigned a value but never used. Allowed unused vars must match /^_/u         unused-imports/no-unused-vars
+   82:9   warning  'isEntanglementOpen' is assigned a value but never used. Allowed unused vars must match /^_/u      unused-imports/no-unused-vars
+   83:9   warning  'setEntanglementOpen' is assigned a value but never used. Allowed unused vars must match /^_/u     unused-imports/no-unused-vars
+   84:9   warning  'isCommandCenterOpen' is assigned a value but never used. Allowed unused vars must match /^_/u     unused-imports/no-unused-vars
+   85:9   warning  'isImporterOpen' is assigned a value but never used. Allowed unused vars must match /^_/u          unused-imports/no-unused-vars
+   86:9   warning  'setImporterOpen' is assigned a value but never used. Allowed unused vars must match /^_/u         unused-imports/no-unused-vars
+   87:9   warning  'isSidebarOpen' is assigned a value but never used. Allowed unused vars must match /^_/u           unused-imports/no-unused-vars
+   88:9   warning  'toggleSidebar' is assigned a value but never used. Allowed unused vars must match /^_/u           unused-imports/no-unused-vars
+  204:14  warning  'error' is defined but never used                                                                  unused-imports/no-unused-vars
+  372:14  warning  'error' is defined but never used                                                                  unused-imports/no-unused-vars
+
+/app/applet/src/components/Dashboard.tsx
+   51:7   warning  'RatioCard' is assigned a value but never used. Allowed unused vars must match /^_/u           unused-imports/no-unused-vars
+  128:11  warning  't' is assigned a value but never used. Allowed unused vars must match /^_/u                   unused-imports/no-unused-vars
+  128:14  warning  'language' is assigned a value but never used. Allowed unused vars must match /^_/u            unused-imports/no-unused-vars
+  134:5   warning  'onAnalyzeTrends' is assigned a value but never used. Allowed unused vars must match /^_/u     unused-imports/no-unused-vars
+  135:5   warning  'isAnalyzingTrends' is assigned a value but never used. Allowed unused vars must match /^_/u   unused-imports/no-unused-vars
+  136:5   warning  'currentWorkspaceId' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  137:5   warning  'activityThreads' is assigned a value but never used. Allowed unused vars must match /^_/u     unused-imports/no-unused-vars
+  138:5   warning  'strategicInsights' is assigned a value but never used. Allowed unused vars must match /^_/u   unused-imports/no-unused-vars
+  141:5   warning  'auditLogs' is assigned a value but never used. Allowed unused vars must match /^_/u           unused-imports/no-unused-vars
+  146:9   warning  'transactionsLength' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  147:9   warning  'accountsLength' is assigned a value but never used. Allowed unused vars must match /^_/u      unused-imports/no-unused-vars
+  206:9   warning  'template' is assigned a value but never used. Allowed unused vars must match /^_/u            unused-imports/no-unused-vars
+  207:9   warning  'audit' is assigned a value but never used. Allowed unused vars must match /^_/u               unused-imports/no-unused-vars
+  214:9   warning  'stats' is assigned a value but never used. Allowed unused vars must match /^_/u               unused-imports/no-unused-vars
+
+/app/applet/src/components/assets/FixedAssets.tsx
+   93:14  warning  'err' is defined but never used  unused-imports/no-unused-vars
+  120:14  warning  'err' is defined but never used  unused-imports/no-unused-vars
+  129:14  warning  'err' is defined but never used  unused-imports/no-unused-vars
+
+/app/applet/src/components/finance/ContractorCompliance.tsx
+   21:34  warning  'accounts' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  103:14  warning  'e' is defined but never used                                                        unused-imports/no-unused-vars
+  114:14  warning  'e' is defined but never used                                                        unused-imports/no-unused-vars
+
+/app/applet/src/components/finance/EmployeeExpenses.tsx
+   38:11  warning  'addEntity' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+   44:10  warning  'loading' is assigned a value but never used. Allowed unused vars must match /^_/u    unused-imports/no-unused-vars
+  294:14  warning  'err' is defined but never used                                                       unused-imports/no-unused-vars
+
+/app/applet/src/components/finance/PayrollHub.tsx
+   35:11  warning  'user' is assigned a value but never used. Allowed unused vars must match /^_/u                unused-imports/no-unused-vars
+   35:17  warning  'currentWorkspaceId' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+   61:14  warning  'e' is defined but never used                                                                  unused-imports/no-unused-vars
+  164:13  warning  'payRunRef' is assigned a value but never used. Allowed unused vars must match /^_/u           unused-imports/no-unused-vars
+  257:14  warning  'e' is defined but never used                                                                  unused-imports/no-unused-vars
+  293:14  warning  'err' is defined but never used                                                                unused-imports/no-unused-vars
+  308:14  warning  'e' is defined but never used                                                                  unused-imports/no-unused-vars
+
+/app/applet/src/components/finance/TaxManager.tsx
+  32:3  warning  'user' is defined but never used. Allowed unused args must match /^_/u         unused-imports/no-unused-vars
+  33:3  warning  'workspaceId' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/finance/TaxOptimizer.tsx
+   50:54  warning  'onAction' is defined but never used. Allowed unused args must match /^_/u                        unused-imports/no-unused-vars
+   55:10  warning  'selectedFormatYear' is assigned a value but never used. Allowed unused vars must match /^_/u     unused-imports/no-unused-vars
+   55:30  warning  'setSelectedFormatYear' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  668:9   warning  'COLORS' is assigned a value but never used. Allowed unused vars must match /^_/u                 unused-imports/no-unused-vars
+
+/app/applet/src/components/forensics/AuditVault.tsx
+  19:11  warning  'AuditLog' is defined but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/forensics/ForensicAnatomy.tsx
+  23:67  warning  'onAction' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/forensics/ForensicAudit.tsx
+   22:51  warning  'accounts' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+  218:57  warning  'i' is defined but never used. Allowed unused args must match /^_/u         unused-imports/no-unused-vars
+
+/app/applet/src/components/forensics/ForensicChart.tsx
+  27:29  warning  'data' is defined but never used. Allowed unused args must match /^_/u                  unused-imports/no-unused-vars
+  69:51  warning  'isCompactMode' is defined but never used. Allowed unused args must match /^_/u         unused-imports/no-unused-vars
+  69:66  warning  'periodicity' is assigned a value but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/forensics/LedgerInterruptOverlay.tsx
+  13:11  warning  'transactions' is assigned a value but never used. Allowed unused vars must match /^_/u    unused-imports/no-unused-vars
+  13:25  warning  'accounts' is assigned a value but never used. Allowed unused vars must match /^_/u        unused-imports/no-unused-vars
+  13:35  warning  'journalEntries' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  28:9   warning  'severity' is assigned a value but never used. Allowed unused vars must match /^_/u        unused-imports/no-unused-vars
+
+/app/applet/src/components/forensics/Vault.tsx
+  81:14  warning  'err' is defined but never used  unused-imports/no-unused-vars
+  91:14  warning  'err' is defined but never used  unused-imports/no-unused-vars
+
+/app/applet/src/components/forensics/tabs/AuditTab.tsx
+  21:3  warning  'transactions' is defined but never used. Allowed unused args must match /^_/u    unused-imports/no-unused-vars
+  22:3  warning  'accounts' is defined but never used. Allowed unused args must match /^_/u        unused-imports/no-unused-vars
+  23:3  warning  'journalEntries' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/forensics/tabs/EconomicsMatrixTab.tsx
+  37:3  warning  'preTaxNetIncome' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+  38:3  warning  'rawExpenses' is defined but never used. Allowed unused args must match /^_/u      unused-imports/no-unused-vars
+
+/app/applet/src/components/forensics/tabs/TracerTab.tsx
+  20:3  warning  'accounts' is defined but never used. Allowed unused args must match /^_/u      unused-imports/no-unused-vars
+  21:3  warning  'transactions' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/intelligence/DiagnosticConsole.tsx
+  32:9   warning  'userKey' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  68:16  warning  'err' is defined but never used                                                     unused-imports/no-unused-vars
+
+/app/applet/src/components/intelligence/IntelligenceCenter.tsx
+  337:3  warning  'bills' is assigned a value but never used. Allowed unused args must match /^_/u     unused-imports/no-unused-vars
+  338:3  warning  'invoices' is assigned a value but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+  339:3  warning  'filterCriteria' is defined but never used. Allowed unused args must match /^_/u     unused-imports/no-unused-vars
+
+/app/applet/src/components/intelligence/SystemSearch.tsx
+  18:10  warning  'isPerforming' is assigned a value but never used. Allowed unused vars must match /^_/u     unused-imports/no-unused-vars
+  18:24  warning  'setIsPerforming' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/inventory/Inventory.tsx
+  111:14  warning  'err' is defined but never used                                                           unused-imports/no-unused-vars
+  140:14  warning  'err' is defined but never used                                                           unused-imports/no-unused-vars
+  149:14  warning  'err' is defined but never used                                                           unused-imports/no-unused-vars
+  164:9   warning  'lowStockItems' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/layout/CommandCenter.tsx
+  31:36  warning  'accounts' is assigned a value but never used. Allowed unused vars must match /^_/u    unused-imports/no-unused-vars
+  55:15  warning  'sampleData' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  69:14  warning  'err' is defined but never used                                                        unused-imports/no-unused-vars
+
+/app/applet/src/components/layout/CommandPalette.tsx
+  118:51  warning  'index' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/layout/Header.tsx
+  51:10  warning  'isProjectDropdownOpen' is assigned a value but never used. Allowed unused vars must match /^_/u   unused-imports/no-unused-vars
+  52:10  warning  'isTemplateDropdownOpen' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  66:9   warning  'stats' is assigned a value but never used. Allowed unused vars must match /^_/u                   unused-imports/no-unused-vars
+  88:9   warning  'tickerData' is assigned a value but never used. Allowed unused vars must match /^_/u              unused-imports/no-unused-vars
+
+/app/applet/src/components/layout/StatusBar.tsx
+  15:37  warning  'metrics' is defined but never used. Allowed unused args must match /^_/u         unused-imports/no-unused-vars
+  41:9   warning  'audit' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/AgingReport.tsx
+  21:52  warning  'workspaceId' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/BankFeedImport.tsx
+  32:17  warning  'userProfile' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/ConsolidatedLedger.tsx
+   23:70  warning  'onAction' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+  108:44  warning  'i' is defined but never used. Allowed unused args must match /^_/u         unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/ExcelQboBridge.tsx
+    42:10  warning  'sheetNames' is assigned a value but never used. Allowed unused vars must match /^_/u           unused-imports/no-unused-vars
+    43:10  warning  'selectedSheet' is assigned a value but never used. Allowed unused vars must match /^_/u        unused-imports/no-unused-vars
+   123:11  warning  'firstRow' is assigned a value but never used. Allowed unused vars must match /^_/u             unused-imports/no-unused-vars
+   252:9   warning  'singleColTotal' is assigned a value but never used. Allowed unused vars must match /^_/u       unused-imports/no-unused-vars
+   255:30  warning  'idx' is defined but never used. Allowed unused args must match /^_/u                           unused-imports/no-unused-vars
+   474:13  warning  'dbInstance' is assigned a value but never used. Allowed unused vars must match /^_/u           unused-imports/no-unused-vars
+   476:13  warning  'batchLogs' is assigned a value but never used. Allowed unused vars must match /^_/u            unused-imports/no-unused-vars
+   500:17  warning  'direction' is assigned a value but never used. Allowed unused vars must match /^_/u            unused-imports/no-unused-vars
+   628:18  warning  '_' is defined but never used                                                                   unused-imports/no-unused-vars
+  1040:29  warning  'currentSelectedName' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/JournalEntryModal.tsx
+  166:18  warning  'baseCents' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/Ledger.tsx
+   38:7   warning  'FractionalView' is assigned a value but never used. Allowed unused vars must match /^_/u            unused-imports/no-unused-vars
+   41:7   warning  'PeriodsView' is assigned a value but never used. Allowed unused vars must match /^_/u               unused-imports/no-unused-vars
+   42:7   warning  'ProjectProfitabilityView' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+   98:22  warning  'id' is defined but never used. Allowed unused args must match /^_/u                                 unused-imports/no-unused-vars
+  118:3   warning  'partners' is assigned a value but never used. Allowed unused args must match /^_/u                  unused-imports/no-unused-vars
+  124:3   warning  'onStartReconciliation' is defined but never used. Allowed unused args must match /^_/u              unused-imports/no-unused-vars
+  190:9   warning  'handleAddPartner' is assigned a value but never used. Allowed unused vars must match /^_/u          unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/MagicEntry.tsx
+  25:10  warning  'error' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/ProfitAndLossView.tsx
+  19:64  warning  'workspaceId' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/Reconciliation.tsx
+  37:3  warning  'workspaceId' is defined but never used. Allowed unused args must match /^_/u        unused-imports/no-unused-vars
+  40:3  warning  'accounts' is assigned a value but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/RecurringTransactions.tsx
+   80:14  warning  'err' is defined but never used  unused-imports/no-unused-vars
+  110:14  warning  'err' is defined but never used  unused-imports/no-unused-vars
+  119:14  warning  'err' is defined but never used  unused-imports/no-unused-vars
+  127:14  warning  'err' is defined but never used  unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/StatementImporter.tsx
+  62:3   warning  'autoRules' is defined but never used. Allowed unused args must match /^_/u            unused-imports/no-unused-vars
+  70:19  warning  'setCsvData' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/ledger/TransactionGrid.tsx
+   88:16  warning  'e' is defined but never used                                                                    unused-imports/no-unused-vars
+  116:20  warning  'e' is defined but never used. Allowed unused args must match /^_/u                              unused-imports/no-unused-vars
+  125:33  warning  'i' is defined but never used. Allowed unused args must match /^_/u                              unused-imports/no-unused-vars
+  408:9   warning  'searchInterpretation' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/planning/BudgetManager.tsx
+  48:14  warning  'error' is defined but never used  unused-imports/no-unused-vars
+
+/app/applet/src/components/planning/Forecaster.tsx
+  44:3  warning  'user' is defined but never used. Allowed unused args must match /^_/u             unused-imports/no-unused-vars
+  45:3  warning  'workspaceId' is defined but never used. Allowed unused args must match /^_/u      unused-imports/no-unused-vars
+  50:3  warning  'businessContext' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/platform/AdditionalSandboxes.tsx
+  1852:19  warning  'setClientE' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/platform/AdditionalSandboxes2.tsx
+  136:53  warning  'd' is defined but never used. Allowed unused args must match /^_/u                        unused-imports/no-unused-vars
+  222:10  warning  'totalLiquidity' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/platform/ApiHub.tsx
+   61:10  warning  'billingStatus' is assigned a value but never used. Allowed unused vars must match /^_/u            unused-imports/no-unused-vars
+   74:10  warning  'billingLedger' is assigned a value but never used. Allowed unused vars must match /^_/u            unused-imports/no-unused-vars
+   75:10  warning  'isLoadingBilling' is assigned a value but never used. Allowed unused vars must match /^_/u         unused-imports/no-unused-vars
+   79:10  warning  'computingAlgoId' is assigned a value but never used. Allowed unused vars must match /^_/u          unused-imports/no-unused-vars
+  145:9   warning  'handleRecordCompute' is assigned a value but never used. Allowed unused vars must match /^_/u      unused-imports/no-unused-vars
+  184:9   warning  'handleTriggerStressTest' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  249:9   warning  'sha256' is assigned a value but never used. Allowed unused vars must match /^_/u                   unused-imports/no-unused-vars
+  352:9   warning  'generateHex' is assigned a value but never used. Allowed unused vars must match /^_/u              unused-imports/no-unused-vars
+
+/app/applet/src/components/platform/ArchitectureMonitor.tsx
+  13:47  warning  'layerStatus' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/platform/SystemCommandCenter.tsx
+  234:16  warning  'e' is defined but never used                                                             unused-imports/no-unused-vars
+  269:9   warning  'isSystemAdmin' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/platform/ToolSandbox.tsx
+  368:10  warning  'activeStep' is assigned a value but never used. Allowed unused vars must match /^_/u     unused-imports/no-unused-vars
+  368:22  warning  'setActiveStep' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  473:31  warning  'idx' is defined but never used. Allowed unused args must match /^_/u                     unused-imports/no-unused-vars
+
+/app/applet/src/components/platform/settings/BlueprintSettings.tsx
+  33:9  warning  'resetLexiconOverrides' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/projects/Projects.tsx
+   38:3   warning  'budgets' is assigned a value but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+   40:3   warning  'onAction' is defined but never used. Allowed unused args must match /^_/u          unused-imports/no-unused-vars
+   77:14  warning  'err' is defined but never used                                                     unused-imports/no-unused-vars
+   91:14  warning  'err' is defined but never used                                                     unused-imports/no-unused-vars
+  104:14  warning  'err' is defined but never used                                                     unused-imports/no-unused-vars
+
+/app/applet/src/components/purchases/Purchases.tsx
+  38:3  warning  'user' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/reporting/CustomerInsights.tsx
+   22:58  warning  'onAction' is defined but never used. Allowed unused args must match /^_/u               unused-imports/no-unused-vars
+   56:9   warning  'topCustomers' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  116:53  warning  'i' is defined but never used. Allowed unused args must match /^_/u                      unused-imports/no-unused-vars
+
+/app/applet/src/components/reporting/FinancialRatios.tsx
+  19:43  warning  'accounts' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/reporting/FiscalMatrix.tsx
+  20:64  warning  'projects' is defined but never used. Allowed unused args must match /^_/u           unused-imports/no-unused-vars
+  23:9   warning  'vectors' is assigned a value but never used. Allowed unused vars must match /^_/u   unused-imports/no-unused-vars
+  30:9   warning  'CURRENCY' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/reporting/Reports.tsx
+  59:9  warning  'availableMonths' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/reporting/VendorPerformance.tsx
+   27:59  warning  'vendors' is defined but never used. Allowed unused args must match /^_/u   unused-imports/no-unused-vars
+   27:68  warning  'onAction' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+  148:50  warning  'i' is defined but never used. Allowed unused args must match /^_/u         unused-imports/no-unused-vars
+  180:49  warning  'i' is defined but never used. Allowed unused args must match /^_/u         unused-imports/no-unused-vars
+
+/app/applet/src/components/sales/Sales.tsx
+  37:3  warning  'user' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/transactions/PivotView.tsx
+  10:48  warning  'formatCurrency' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/transactions/SelectionBar.tsx
+  20:3  warning  'avgAmount' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/transactions/TransactionEditModal.tsx
+  155:9  warning  'handleAutoBalance' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/components/transactions/TransactionRow.tsx
+  73:3  warning  'onUpdate' is defined but never used. Allowed unused args must match /^_/u             unused-imports/no-unused-vars
+  86:3  warning  'dateFormat' is assigned a value but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/core/auth/AuthScreen.tsx
+  14:70  warning  'language' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/core/layout/RootLayout.tsx
+  27:3  warning  'isPending' is defined but never used. Allowed unused args must match /^_/u      unused-imports/no-unused-vars
+  39:9  warning  'user' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/hooks/useAIActions.ts
+  17:9  warning  'userKey' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/hooks/useAuditTelemetry.ts
+  370:11  warning  'analysisToken' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/hooks/useFinancialReporting.ts
+  55:14  warning  'error' is defined but never used  unused-imports/no-unused-vars
+
+/app/applet/src/hooks/useLedgerComputation.ts
+  106:9  warning  'accountMap' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/hooks/useTransactionActions.ts
+   678:14  warning  'error' is defined but never used                                                   unused-imports/no-unused-vars
+  1163:17  warning  'account' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  1209:69  warning  'docData' is defined but never used. Allowed unused args must match /^_/u           unused-imports/no-unused-vars
+  1210:71  warning  'docData' is defined but never used. Allowed unused args must match /^_/u           unused-imports/no-unused-vars
+  1212:64  warning  'docData' is defined but never used. Allowed unused args must match /^_/u           unused-imports/no-unused-vars
+  1213:67  warning  'docData' is defined but never used. Allowed unused args must match /^_/u           unused-imports/no-unused-vars
+  1214:72  warning  'docData' is defined but never used. Allowed unused args must match /^_/u           unused-imports/no-unused-vars
+  1215:84  warning  'docData' is defined but never used. Allowed unused args must match /^_/u           unused-imports/no-unused-vars
+  1216:68  warning  'docData' is defined but never used. Allowed unused args must match /^_/u           unused-imports/no-unused-vars
+  1279:14  warning  'error' is defined but never used                                                   unused-imports/no-unused-vars
+  1288:14  warning  'error' is defined but never used                                                   unused-imports/no-unused-vars
+  1335:14  warning  'error' is defined but never used                                                   unused-imports/no-unused-vars
+  1344:14  warning  'error' is defined but never used                                                   unused-imports/no-unused-vars
+  1467:14  warning  'error' is defined but never used                                                   unused-imports/no-unused-vars
+  1570:14  warning  'error' is defined but never used                                                   unused-imports/no-unused-vars
+  1575:56  warning  'details' is defined but never used. Allowed unused args must match /^_/u           unused-imports/no-unused-vars
+  1657:16  warning  'e' is defined but never used                                                       unused-imports/no-unused-vars
+
+/app/applet/src/lib/MatchingEngine.ts
+   68:11  warning  'isClient' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  240:13  warning  'levScore' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/lib/algorithms.ts
+   365:11  warning  'traverse' is assigned a value but never used. Allowed unused vars must match /^_/u    unused-imports/no-unused-vars
+   892:9   warning  'mPow' is assigned a value but never used. Allowed unused vars must match /^_/u        unused-imports/no-unused-vars
+  1728:25  warning  'conflict' is defined but never used. Allowed unused args must match /^_/u             unused-imports/no-unused-vars
+  2036:66  warning  'sum' is assigned a value but never used. Allowed unused vars must match /^_/u         unused-imports/no-unused-vars
+  2064:9   warning  'lastValues' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/lib/intentResolver.ts
+   97:11  warning  'quarterMatch' is assigned a value but never used. Allowed unused vars must match /^_/u    unused-imports/no-unused-vars
+  147:13  warning  'learnedAccount' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/lib/telemetry.ts
+  26:25  warning  'name' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/services/aiBackendService.ts
+   33:14  warning  'e' is defined but never used  unused-imports/no-unused-vars
+  315:14  warning  'e' is defined but never used  unused-imports/no-unused-vars
+
+/app/applet/src/services/aiService.ts
+   31:16  warning  'e' is defined but never used                                                 unused-imports/no-unused-vars
+   39:18  warning  'textErr' is defined but never used                                           unused-imports/no-unused-vars
+   46:14  warning  'e' is defined but never used                                                 unused-imports/no-unused-vars
+   58:5   warning  'userApiKey' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+  120:72  warning  'userApiKey' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+  123:14  warning  'error' is defined but never used                                             unused-imports/no-unused-vars
+  135:14  warning  'error' is defined but never used                                             unused-imports/no-unused-vars
+  143:14  warning  'error' is defined but never used                                             unused-imports/no-unused-vars
+  156:14  warning  'error' is defined but never used                                             unused-imports/no-unused-vars
+  174:14  warning  'error' is defined but never used                                             unused-imports/no-unused-vars
+  211:14  warning  'error' is defined but never used                                             unused-imports/no-unused-vars
+
+/app/applet/src/services/auditor.ts
+  38:11  warning  'signatures' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  45:11  warning  'accountMap' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+
+/app/applet/src/services/strategicEngine.ts
+   21:11  warning  'now' is assigned a value but never used. Allowed unused vars must match /^_/u             unused-imports/no-unused-vars
+  267:11  warning  'workingCapital' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  301:60  warning  'transactions' is defined but never used. Allowed unused args must match /^_/u             unused-imports/no-unused-vars
+  470:11  warning  'SIX_MONTHS_MS' is assigned a value but never used. Allowed unused vars must match /^_/u   unused-imports/no-unused-vars
+  471:11  warning  'itemsBySku' is assigned a value but never used. Allowed unused vars must match /^_/u      unused-imports/no-unused-vars
+  472:11  warning  'itemsByName' is assigned a value but never used. Allowed unused vars must match /^_/u     unused-imports/no-unused-vars
+
+/app/applet/src/stores/useUIStore.ts
+  101:14  warning  'e' is defined but never used  unused-imports/no-unused-vars
+  109:14  warning  'e' is defined but never used  unused-imports/no-unused-vars
+  159:14  warning  'e' is defined but never used  unused-imports/no-unused-vars
+  165:14  warning  'e' is defined but never used  unused-imports/no-unused-vars
+  175:14  warning  'e' is defined but never used  unused-imports/no-unused-vars
+
+✖ 249 problems (0 errors, 249 warnings)
+

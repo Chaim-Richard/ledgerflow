@@ -1,0 +1,338 @@
+import { TruthEngine } from '../../modules/truth/TruthEngine';
+import React, { useState, useMemo } from 'react';
+import { 
+  Target, 
+  Plus, 
+  Trash2, 
+  Edit2,
+  AlertCircle,
+  DollarSign,
+  Activity,
+  ShieldCheck,
+  Zap,
+  ArrowUpRight,
+  Layers
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Budget, Transaction, ChartAccount } from '../../types';
+import { cn, formatCurrency } from '../../lib/utils';
+import { addDoc, collection, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { toast } from 'sonner';
+
+interface BudgetManagerProps {
+  budgets: Budget[];
+  transactions: Transaction[];
+  accounts: ChartAccount[];
+  user: any;
+}
+
+export default function BudgetManager({ budgets = [], transactions = [], accounts = [], user }: BudgetManagerProps) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<string | null>(null);
+  const [newBudget, setNewBudget] = useState({
+    targetId: '',
+    targetType: 'account' as const,
+    amountCents: 0,
+    period: 'monthly',
+    startDate: new Date().toISOString().split('T')[0]
+  });
+
+  const handleAddBudget = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingBudget) {
+        await updateDoc(doc(db, 'budgets', editingBudget), {
+           targetId: newBudget.targetId,
+           amountCents: newBudget.amountCents,
+           period: newBudget.period,
+        });
+        toast.success('Objective Updated');
+      } else {
+        await addDoc(collection(db, 'budgets'), {
+          ...newBudget,
+          uid: user.uid,
+          createdAt: new Date().toISOString()
+        });
+        toast.success('Objective Synchronized');
+      }
+      setIsAdding(false);
+      setEditingBudget(null);
+    } catch (error) {
+      toast.error('Sync Failure: Allocation Fault');
+    }
+  };
+
+  const budgetAnalysis = useMemo(() => {
+    return budgets.map(budget => {
+      const actualCents = transactions.reduce((sum, t) => {
+        const lines = t.lines?.filter(l => l.accountName === budget.targetId) || [];
+        return sum + lines.reduce((s, l) => s + Math.abs(l.amountCents), 0);
+      }, 0);
+      
+      const variance = budget.amountCents - actualCents;
+      const percentUsed = (actualCents / budget.amountCents) * 100;
+
+      return {
+        ...budget,
+        actualCents,
+        variance,
+        percentUsed
+      };
+    });
+  }, [budgets, transactions]);
+
+  return (
+    <div className="space-y-12">
+      {/* Neural Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+        <div>
+          <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate mb-4">
+            <Target size={14} />
+            Resource Allocation Matrix
+          </div>
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter">Budget Protocol</h2>
+          <p className="text-slate-500 font-medium text-lg mt-2 italic opacity-60">Strategic variance analysis and predictive consumption monitoring.</p>
+        </div>
+
+        <button 
+          onClick={() => setIsAdding(true)}
+          className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider hover:bg-slate-900/90 transition-all shadow-2xl"
+        >
+          <Plus size={18} />
+          Define Target
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {budgetAnalysis.map((b) => {
+          const isOver = b.percentUsed > 100;
+          const isWarning = b.percentUsed > 85 && b.percentUsed <= 100;
+
+          return (
+            <motion.div 
+              key={b.id}
+              whileHover={{ y: -5 }}
+              className="ledger-card p-4 md:p-8 rounded-[32px] relative overflow-hidden group border border-slate-200 hover:border-indigo-600/20 transition-all"
+            >
+              <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
+              
+              <div className="flex items-center justify-between mb-8 relative z-10">
+                <div className="w-14 h-14 bg-slate-900 rounded-[32px] flex items-center justify-center text-white border border-white/5 shadow-2xl">
+                  <Activity size={28} />
+                </div>
+                <div className="flex items-center gap-2">
+                  {isOver ? (
+                    <div className="px-4 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-[9px] font-medium uppercase tracking-wider flex items-center gap-2">
+                      <AlertCircle size={12} />
+                      Critical Limit
+                    </div>
+                  ) : isWarning ? (
+                    <div className="px-4 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-[9px] font-medium uppercase tracking-wider flex items-center gap-2">
+                      <Zap size={12} />
+                      Warning Alert
+                    </div>
+                  ) : (
+                    <div className="px-4 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[9px] font-medium uppercase tracking-wider flex items-center gap-2">
+                      <ShieldCheck size={12} />
+                      Stable Allocation
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => {
+                      setNewBudget({
+                        targetId: b.targetId,
+                        targetType: b.targetType as 'account',
+                        amountCents: b.amountCents,
+                        period: b.period,
+                        startDate: b.period
+                      });
+                      setEditingBudget(b.id);
+                      setIsAdding(true);
+                    }}
+                    className="p-2 text-slate-500 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button 
+                    onClick={() => deleteDoc(doc(db, 'budgets', b.id))}
+                    className="p-2 text-slate-500 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2 relative z-10">
+                 <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic truncate">{b.targetId}</h3>
+                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] opacity-40">{b.period} Allocation</p>
+              </div>
+
+              <div className="mt-8 space-y-6 relative z-10">
+                <div className="flex justify-between items-end">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50 mb-1">Consumption Flow</span>
+                    <span className="text-2xl font-black text-slate-900 font-mono tracking-tighter">{formatCurrency(b.actualCents)}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50 mb-1">Cap Magnitude</span>
+                    <span className="text-sm font-bold text-slate-500 font-mono">{formatCurrency(b.amountCents)}</span>
+                  </div>
+                </div>
+
+                <div className="relative h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-200">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(b.percentUsed, 100)}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className={cn(
+                      "absolute inset-y-0 left-0 transition-colors",
+                      isOver ? "bg-rose-500 shadow-[0_0_15px_#f43f5e]" : 
+                      isWarning ? "bg-amber-500 shadow-[0_0_15px_#f59e0b]" : 
+                      "bg-indigo-600 shadow-[0_0_15px_#10b981]"
+                    )}
+                  />
+                </div>
+
+                <div className="flex justify-between items-center text-[10px] font-medium uppercase tracking-wider">
+                  <span className={cn(
+                    isOver ? "text-rose-600" : isWarning ? "text-amber-600" : "text-emerald-600"
+                  )}>
+                    {b.percentUsed.toFixed(1)}% Capacity Utilization
+                  </span>
+                  <span className="text-slate-500 opacity-40">
+                    {b.variance > 0 ? `Forensic Buffer: ${formatCurrency(b.variance)}` : 'Cap Threshold Breached'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-slate-200 flex justify-between items-center relative z-10">
+                 <div className="flex items-center gap-2">
+                    <Layers size={14} className="text-slate-500 opacity-30" />
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest opacity-30">Analytical Snapshot Matrix</span>
+                 </div>
+                 <button className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition-all border border-slate-200 group-hover:scale-110">
+                    <ArrowUpRight size={18} />
+                 </button>
+              </div>
+            </motion.div>
+          );
+        })}
+
+        {budgets.length === 0 && (
+          <div className="col-span-full py-32 text-center bg-white rounded-[32px] border border-dashed border-slate-200 relative overflow-hidden group">
+            <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
+            <div className="relative z-10 flex flex-col items-center gap-6">
+              <div className="w-24 h-24 bg-slate-200/20 rounded-[32px] flex items-center justify-center text-slate-500/30">
+                <Target size={48} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">Zero Objectives Detected</h3>
+                <p className="text-sm font-black text-slate-500/40 uppercase tracking-widest truncate">Initialize target matrix to begin forensic consumption mapping.</p>
+              </div>
+              <button 
+                onClick={() => setIsAdding(true)}
+                className="mt-4 px-10 py-5 bg-slate-900 text-white rounded-[32px] text-sm font-medium uppercase tracking-wider hover:translate-y-[-2px] transition-all shadow-2xl"
+              >
+                Sync First Target
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Add Budget Modal */}
+      <AnimatePresence>
+        {isAdding && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAdding(false)}
+              className="absolute inset-0 bg-slate-900/80 backdrop-blur-xl"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              className="relative w-full max-w-xl bg-slate-50 rounded-[32px] shadow-2xl border border-slate-200 overflow-hidden p-12"
+            >
+              <div className="flex items-center justify-between mb-10">
+                 <div>
+                    <h2 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight uppercase italic">Define Objective</h2>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-1 opacity-50">Operational Resource Allocation</p>
+                 </div>
+                 <button onClick={() => setIsAdding(false)} className="w-12 h-12 bg-slate-50 rounded-[32px] flex items-center justify-center text-slate-500 hover:text-slate-900 transition-all rotate-45 border border-slate-200">
+                    <Plus size={24} />
+                 </button>
+              </div>
+
+              <form onSubmit={handleAddBudget} className="space-y-8">
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-50">Neural Mapping (Account)</label>
+                  <select 
+                    value={newBudget.targetId}
+                    onChange={(e) => setNewBudget({ ...newBudget, targetId: e.target.value })}
+                    required
+                    className="w-full px-8 py-5 bg-white border border-slate-200 rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-slate-900 appearance-none cursor-pointer uppercase tracking-widest"
+                  >
+                    <option value="">Select Protocol Node...</option>
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.name}>{acc.code} - {(acc.name || 'UNKNOWN').toUpperCase()}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-50">Target Magnitude ($)</label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500/30" size={16} />
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        required
+                        value={newBudget.amountCents / 100}
+                        onChange={(e) => setNewBudget({ ...newBudget, amountCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
+                        className="w-full pl-12 pr-8 py-5 bg-white border border-slate-200 rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-mono font-black text-slate-900 text-right text-xl"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-50">Velocity Period</label>
+                    <select 
+                      value={newBudget.period}
+                      onChange={(e) => setNewBudget({ ...newBudget, period: e.target.value as any })}
+                      className="w-full px-8 py-5 bg-white border border-slate-200 rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-slate-900 appearance-none cursor-pointer uppercase tracking-widest"
+                    >
+                      <option value="monthly">Monthly Cycle</option>
+                      <option value="quarterly">Quarterly Cycle</option>
+                      <option value="yearly">Yearly Cycle</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-6 flex gap-6">
+                  <button 
+                    type="button"
+                    onClick={() => setIsAdding(false)}
+                    className="flex-1 py-5 bg-slate-50 text-slate-500 opacity-60 rounded-[32px] text-xs font-black uppercase tracking-[0.3em] hover:opacity-100 transition-all"
+                  >
+                    Abort
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-[2] py-5 bg-slate-900 text-white rounded-[32px] text-xs font-black uppercase tracking-[0.3em] hover:translate-y-[-2px] transition-all shadow-2xl"
+                  >
+                    Confirm Allocation
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

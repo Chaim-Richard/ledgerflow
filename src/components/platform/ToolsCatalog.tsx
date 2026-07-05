@@ -1,0 +1,154 @@
+
+import React, { useState } from 'react';
+import { 
+  Library, 
+  Search, 
+  Grid3X3, 
+  List, 
+  CheckCircle2, 
+  Zap, 
+  Star,
+  Download,
+  Terminal,
+  Cpu,
+  BarChart4,
+  ShieldCheck,
+  Globe,
+  LineChart,
+  Sparkles,
+  Brain,
+  TrendingUp
+} from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { motion, AnimatePresence } from 'motion/react';
+import ToolSandbox from './ToolSandbox';
+
+const CATEGORIES = ['All', 'Reporting', 'Automation', 'Compliance', 'Intelligence', 'Operations', 'Finance'];
+
+const TOOLS: any[] = [];
+
+export default function ToolsCatalog() {
+  const [activeCat, setActiveCat] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeSandbox, setActiveSandbox] = useState<{ id: string, name: string } | null>(null);
+
+  const filteredTools = TOOLS.filter(t => 
+    (activeCat === 'All' || t.cat === activeCat) &&
+    (t.name.toLowerCase().includes(searchTerm.toLowerCase()) || t.desc.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  return (
+    <div className="flex flex-col h-full bg-slate-50 p-4 md:p-10 overflow-hidden">
+       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10 mb-12">
+          <div className="space-y-4">
+             <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-slate-900 rounded-[32px] flex items-center justify-center text-white shadow-2xl">
+                   <Library size={28} />
+                </div>
+                <div>
+                  <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">Tool Catalog</h1>
+                  <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest truncate mt-3 opacity-50">Enterprise Financial Capabilities Suite</p>
+                </div>
+             </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+             <div className="relative group">
+                <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-slate-900 transition-colors" />
+                <input 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Query capabilities..." 
+                  className="w-80 h-14 pl-14 pr-8 bg-white border border-slate-200 rounded-[32px] text-xs font-bold outline-none focus:border-slate-800 transition-all shadow-sm"
+                />
+             </div>
+          </div>
+       </div>
+
+       <div className="flex gap-4 mb-10 overflow-x-auto pb-4 custom-scrollbar">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveCat(cat)}
+              className={cn(
+                "px-8 py-3 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all whitespace-nowrap",
+                activeCat === cat ? "bg-slate-900 text-white shadow-xl" : "bg-white border border-slate-200 text-slate-500 hover:border-slate-800 hover:text-slate-900"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
+       </div>
+
+       <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 -mr-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+             {filteredTools.map((tool, idx) => (
+               <motion.div 
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ delay: idx * 0.03 }}
+                 key={tool.id}
+                 onClick={() => {
+                   if (tool.implemented) {
+                     setActiveSandbox({ id: tool.id, name: tool.name });
+                   }
+                 }}
+                 className={cn(
+                   "google-card p-10 bg-white border-slate-200 transition-all group flex flex-col justify-between relative",
+                   tool.implemented ? "cursor-pointer hover:border-slate-800 hover:shadow-lg hover:-translate-y-1" : "opacity-80 grayscale-[0.5]"
+                 )}
+               >
+                  {!tool.implemented && (
+                    <div className="absolute top-6 right-6">
+                       <span className="px-2 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded text-[8px] font-medium uppercase tracking-wider">Backlog</span>
+                    </div>
+                  )}
+                  {tool.implemented && (
+                    <div className="absolute top-6 right-6">
+                       <CheckCircle2 size={16} className="text-emerald-500" />
+                    </div>
+                  )}
+
+                  <div className="space-y-6">
+                     <div className="w-14 h-14 bg-slate-50 rounded-[32px] flex items-center justify-center text-slate-900 border border-slate-200 group-hover:bg-slate-900 group-hover:text-white transition-all">
+                        <tool.icon size={28} />
+                     </div>
+                     <div>
+                        <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic mb-2 leading-none">{tool.name}</h3>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-60 mb-4">{tool.cat}</p>
+                        <p className="text-xs font-medium text-slate-500 leading-relaxed italic line-clamp-2">"{tool.desc}"</p>
+                     </div>
+                  </div>
+
+                  <div className="mt-8 pt-8 border-t border-slate-200 flex items-center justify-between">
+                     <button className={cn(
+                       "flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider transition-all",
+                       tool.implemented ? "text-slate-900 hover:underline" : "text-slate-500 cursor-not-allowed"
+                     )}>
+                        {tool.implemented ? 'Open Mathematical Sandbox' : 'In Development'}
+                        {tool.implemented && <Zap size={14} className="text-indigo-600" />}
+                     </button>
+                  </div>
+               </motion.div>
+             ))}
+
+             {/* End of results */}
+          </div>
+
+          <div className="mt-20 py-12 text-center border-t border-slate-200/50">
+             <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.5em] italic">Listing {filteredTools.length} Active Financial Modules</p>
+          </div>
+       </div>
+
+       <AnimatePresence>
+          {activeSandbox && (
+             <ToolSandbox 
+                toolId={activeSandbox.id} 
+                toolName={activeSandbox.name} 
+                onClose={() => setActiveSandbox(null)} 
+             />
+          )}
+       </AnimatePresence>
+    </div>
+  );
+}

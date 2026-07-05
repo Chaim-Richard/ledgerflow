@@ -1,0 +1,565 @@
+import { TruthEngine } from '../../modules/truth/TruthEngine';
+import React, { useState, useMemo } from 'react';
+import { User } from 'firebase/auth';
+import { ChartAccount, JournalLine } from '../../types';
+import { 
+  Plus, 
+  Trash2, 
+  AlertCircle, 
+  CheckCircle2,
+  X,
+  ArrowRightLeft,
+  Type as TypeIcon
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../../lib/utils';
+import { collection, writeBatch, doc } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { toast } from 'sonner';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { MatchingEngine } from '../../lib/MatchingEngine';
+import { SpellChecker } from '../../lib/algorithms';
+import { TemporalTruth } from '../../modules/truth/TruthEngine';
+import { TemporalValidity } from '../../types';
+
+// Temporal series for various currencies (to ensure we use 'rate of date of change' as requested)
+const getTemporalRatesFor = (currency: string): TemporalValidity[] => {
+  const baseRate = currency === 'EUR' ? 0.92 : currency === 'GBP' ? 0.79 : currency === 'JPY' ? 151.42 : currency === 'ILS' ? 3.65 : currency === 'CAD' ? 1.35 : 1.0;
+  return [
+    { validFrom: '0000-01-01', validTo: '2022-12-31', value: baseRate * 0.90 },
+    { validFrom: '2023-01-01', validTo: '2023-12-31', value: baseRate * 0.95 },
+    { validFrom: '2024-01-01', validTo: '2024-12-31', value: baseRate },
+    { validFrom: '2025-01-01', validTo: '2025-12-31', value: baseRate * 1.05 },
+    { validFrom: '2026-01-01', validTo: '9999-12-31', value: baseRate * 1.1 },
+  ];
+};
+
+interface JournalEntryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  user: User;
+  accounts: ChartAccount[];
+  workspaceId: string;
+}
+
+export default function JournalEntryModal({ isOpen, onClose, user, accounts, workspaceId }: JournalEntryModalProps) {
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reference, setReference] = useState('');
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [showDimensions, setShowDimensions] = useState(false);
+  
+  const baseCurrency = useLedgerStore(state => state.baseCurrency);
+  const lockDate = useLedgerStore(state => state.lockDate);
+  const [transactionCurrency, setTransactionCurrency] = useState(baseCurrency || 'USD');
+  const [exchangeRate, setExchangeRate] = useState<number>(1.0);
+  
+  const isLocked = !!(lockDate && date <= lockDate);
+
+  const [lines, setLines] = useState<JournalLine[]>([
+    { accountId: '', accountName: '', debit: 0, credit: 0, class: '', location: '', project: '' },
+    { accountId: '', accountName: '', debit: 0, credit: 0, class: '', location: '', project: '' },
+  ]);
+
+  React.useEffect(() => {
+    if (transactionCurrency !== baseCurrency) {
+      try {
+        const series = getTemporalRatesFor(transactionCurrency);
+        const rate = TemporalTruth.resolveEffectiveValue(series, date);
+        setExchangeRate(Number(rate.toFixed(6)));
+      } catch (err) {
+        setExchangeRate(1.0);
+      }
+    } else {
+      setExchangeRate(1.0);
+    }
+  }, [transactionCurrency, date, baseCurrency]);
+
+  const { transactions, analyticalPatternCache, autoRules, matchingThreshold } = useLedgerStore();
+  
+  const engine = useMemo(() => new MatchingEngine(autoRules, analyticalPatternCache, undefined, matchingThreshold, transactions), [autoRules, analyticalPatternCache, transactions, matchingThreshold]);
+  
+  const spellChecker = useMemo(() => {
+    const dictionary = [
+      ...accounts.map(a => a.name),
+      ...Object.keys(analyticalPatternCache || {})
+    ];
+    return new SpellChecker(dictionary);
+  }, [accounts, analyticalPatternCache]);
+
+  const handleDescriptionChange = (val: string) => {
+    setDescription(val);
+    
+    // Spell Check Logic
+    const words = val.split(/\s+/);
+    const lastWord = words[words.length - 1];
+    if (lastWord && lastWord.length > 3) {
+      const closest = spellChecker.findClosest(lastWord, 1);
+      if (closest && closest.toLowerCase() !== lastWord.toLowerCase()) {
+        setSuggestion(closest);
+      } else {
+        setSuggestion(null);
+      }
+    } else {
+      setSuggestion(null);
+    }
+
+    if (val.length > 3) {
+      const match = engine.resolveCategory(val);
+      if (match) {
+        const found = accounts.find(a => a.name === match.accountName);
+        if (found && lines[0].accountId === '') {
+          handleLineChange(0, 'accountId', found.id);
+          toast.info(`Smart Category: Suggesting ${found.name} based on neural patterns.`, { duration: 2000 });
+        }
+      }
+    }
+  };
+
+  const totals = useMemo(() => {
+    const debit = lines.reduce((sum, l) => sum + l.debit, 0);
+    const credit = lines.reduce((sum, l) => sum + l.credit, 0);
+    return { debit, credit, isBalanced: debit === credit && debit > 0 };
+  }, [lines]);
+
+  const handleAddLine = () => {
+    setLines([...lines, { accountId: '', accountName: '', debit: 0, credit: 0, class: '', location: '', project: '' }]);
+  };
+
+  const handleRemoveLine = (index: number) => {
+    if (lines.length <= 2) return;
+    setLines(lines.filter((_, i) => i !== index));
+  };
+
+  const handleLineChange = (index: number, field: keyof JournalLine, value: any) => {
+    const newLines = [...lines];
+    if (field === 'accountId') {
+      const account = accounts.find(a => a.id === value);
+      newLines[index].accountId = value;
+      newLines[index].accountName = account?.name || '';
+    } else if (field === 'debit' || field === 'credit') {
+      // Convert to cents
+      const cents = TruthEngine.parseAmountToCents(value || '0');
+      newLines[index][field] = cents;
+      // If debit is set, clear credit and vice versa (standard journal entry behavior)
+      if (field === 'debit' && cents > 0) newLines[index].credit = 0;
+      if (field === 'credit' && cents > 0) newLines[index].debit = 0;
+    } else {
+      (newLines[index] as any)[field] = value;
+    }
+    setLines(newLines);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isLocked) {
+      toast.error(`Ledger period is sealed. Cannot modify entries on or before ${lockDate}.`);
+      return;
+    }
+    if (!totals.isBalanced) {
+      toast.error('Journal entry must be balanced (Debits = Credits)');
+      return;
+    }
+
+    try {
+      const isForeignCurrency = transactionCurrency !== baseCurrency;
+      const appliedRate = isForeignCurrency ? exchangeRate : 1.0;
+      
+      const batch = writeBatch(db);
+      
+      const txRef = doc(collection(db, 'transactions'));
+      const jeRef = doc(collection(db, 'journalEntries'));
+      
+      const totalAmountCents = Math.round(totals.debit * appliedRate);
+      batch.set(txRef, {
+        uid: user.uid,
+        workspaceId,
+        date,
+        description,
+        reference,
+        totalAmountCents,
+        currency: baseCurrency,
+        originalCurrency: isForeignCurrency ? transactionCurrency : undefined,
+        exchangeRate: isForeignCurrency ? appliedRate : undefined,
+        type: 'journal',
+        status: 'completed',
+        lines: lines.filter(l => l.accountId && (l.debit > 0 || l.credit > 0)).map(l => {
+          const baseCents = Math.round((l.debit > 0 ? l.debit : -l.credit) * appliedRate);
+          return {
+            accountId: l.accountId,
+            accountName: l.accountName,
+            amountCents: baseCents,
+            class: l.class || undefined,
+            location: l.location || undefined,
+            project: l.project || undefined
+          };
+        }),
+        isCleared: true,
+        createdAt: new Date().toISOString()
+      });
+      
+      batch.set(jeRef, {
+        uid: user.uid,
+        workspaceId,
+        date,
+        description,
+        reference,
+        currency: baseCurrency,
+        originalCurrency: isForeignCurrency ? transactionCurrency : undefined,
+        exchangeRate: isForeignCurrency ? appliedRate : undefined,
+        lines: lines.filter(l => l.accountId && (l.debit > 0 || l.credit > 0)).map(l => {
+           const baseCents = Math.round((l.debit > 0 ? l.debit : -l.credit) * appliedRate);
+           return { ...l, debit: Math.round(l.debit * appliedRate), credit: Math.round(l.credit * appliedRate) };
+        }),
+        createdAt: new Date().toISOString()
+      });
+      
+      await batch.commit();
+      
+      // Update account balances (In a real app, this would be a cloud function or transaction)
+      // Assume the parent component refreshes data to update account balances
+      
+      toast.success('Journal entry recorded');
+      onClose();
+      // Reset form
+      setDescription('');
+      setReference('');
+      setLines([
+        { accountId: '', accountName: '', debit: 0, credit: 0 },
+        { accountId: '', accountName: '', debit: 0, credit: 0 },
+      ]);
+    } catch (error) {
+      console.error("Journal Entry Error:", error);
+      toast.error('Failed to record journal entry');
+    }
+  };
+
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val / 100);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative w-full max-w-4xl bg-white rounded-[32px] md:rounded-[40px] shadow-2xl border border-zinc-200 overflow-hidden flex flex-col max-h-[95dvh] md:max-h-[90dvh]"
+          >
+            {/* Header */}
+            <div className="p-4 md:p-6 lg:p-8 border-b border-slate-200 flex items-center justify-between bg-slate-50/30 gap-4">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-900 rounded-xl md:rounded-[32px] flex items-center justify-center text-white shadow-lg shadow-ledger-ink/20 shrink-0">
+                  <ArrowRightLeft size={20} className="md:size-[24px]" />
+                </div>
+                <div>
+                  <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">New Journal Entry</h2>
+                  <p className="text-xs md:text-sm text-slate-500 font-medium">Record manual adjustments to the ledger</p>
+                </div>
+              </div>
+              <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors shrink-0">
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+
+            {/* Form Content */}
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
+              {isLocked && (
+                <div className="p-4 rounded-[32px] bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 flex items-start gap-3">
+                  <AlertCircle size={20} className="shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-xs uppercase tracking-wider">Accounting Period Sealed</p>
+                    <p className="text-[11px] opacity-90 leading-relaxed mt-0.5">
+                      This date ({date}) falls within a closed and sealed ledger accounting period (Lock ended: {lockDate}). 
+                      Recording manual journal entries under sealed periods is strictly prohibited by GAAP/IFRS controls.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Meta Info */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Date</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all font-bold"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2 relative">
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Description</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={description}
+                    onChange={(e) => handleDescriptionChange(e.target.value)}
+                    placeholder="e.g. Monthly depreciation adjustment"
+                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all font-bold"
+                  />
+                  
+                  <AnimatePresence>
+                    {suggestion && (
+                      <motion.button
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        type="button"
+                        onClick={() => {
+                          const words = description.split(/\s+/);
+                           words[words.length - 1] = suggestion;
+                           setDescription(words.join(' ') + ' ');
+                           setSuggestion(null);
+                        }}
+                        className="absolute right-4 top-1/2 translate-y-1 py-1 px-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-[9px] font-black uppercase flex items-center gap-2 hover:bg-amber-100 transition-all shadow-lg z-20"
+                      >
+                        <TypeIcon size={10} />
+                        Did you mean "{suggestion}"?
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Reference (Optional)</label>
+                  <input 
+                    type="text" 
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
+                    placeholder="e.g. JE-2026-001"
+                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all shadow-sm font-bold"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Currency</label>
+                   <select 
+                     value={transactionCurrency}
+                     onChange={(e) => setTransactionCurrency(e.target.value)}
+                     className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all font-bold appearance-none"
+                   >
+                     {['USD', 'EUR', 'GBP', 'ILS', 'JPY', 'CAD'].map(cur => (
+                       <option key={cur} value={cur}>{cur}</option>
+                     ))}
+                   </select>
+                </div>
+                
+                {transactionCurrency !== baseCurrency && (
+                   <div className="space-y-2">
+                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                       Exchange Rate ({transactionCurrency} → {baseCurrency})
+                     </label>
+                     <input 
+                       type="number" 
+                       step="0.000001"
+                       value={exchangeRate}
+                       onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
+                       placeholder="e.g. 1.08"
+                       required
+                       className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all font-mono font-bold"
+                     />
+                   </div>
+                )}
+              </div>
+
+              {/* Lines Table */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Entry Lines</h3>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={showDimensions} 
+                        onChange={e => setShowDimensions(e.target.checked)} 
+                        className="rounded border-zinc-300 text-slate-900 focus:ring-indigo-600"
+                      />
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Show Dimensions</span>
+                    </label>
+                    <button 
+                      type="button"
+                      onClick={handleAddLine}
+                      className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
+                    >
+                      <Plus size={14} /> Add Line
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border border-slate-200 rounded-[32px] md:rounded-[32px] overflow-hidden overflow-x-auto custom-scrollbar">
+                  <table className="w-full border-collapse text-sm min-w-[600px]">
+                    <thead>
+                      <tr className="text-left border-b border-slate-200 bg-slate-50/50">
+                        <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Account</th>
+                        {showDimensions && <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Class</th>}
+                        {showDimensions && <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Location</th>}
+                        {showDimensions && <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Project</th>}
+                        <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px] text-right w-32">Debit</th>
+                        <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px] text-right w-32">Credit</th>
+                        <th className="p-4 w-12"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-ledger-line/30">
+                      {lines.map((line, idx) => (
+                        <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
+                          <td className="p-3">
+                            <select 
+                              required
+                              value={line.accountId}
+                              onChange={(e) => handleLineChange(idx, 'accountId', e.target.value)}
+                              className="w-full px-4 py-2.5 bg-transparent border-none focus:ring-0 font-bold text-slate-900 appearance-none min-w-[150px]"
+                            >
+                              <option value="">Select Account...</option>
+                              {accounts.map(acc => (
+                                <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                          {showDimensions && (
+                            <td className="p-3">
+                              <select 
+                                value={line.class || ''}
+                                onChange={(e) => handleLineChange(idx, 'class', e.target.value)}
+                                className="w-full px-4 py-2.5 bg-slate-50/50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 font-bold appearance-none min-w-[120px]"
+                              >
+                                <option value="">Select Class...</option>
+                                {useLedgerStore.getState().classes?.map(c => (
+                                  <option key={c} value={c}>{c}</option>
+                                ))}
+                              </select>
+                            </td>
+                          )}
+                          {showDimensions && (
+                            <td className="p-3">
+                              <select 
+                                value={line.location || ''}
+                                onChange={(e) => handleLineChange(idx, 'location', e.target.value)}
+                                className="w-full px-4 py-2.5 bg-slate-50/50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 font-bold appearance-none min-w-[120px]"
+                              >
+                                <option value="">Select Location...</option>
+                                {useLedgerStore.getState().locations?.map(l => (
+                                  <option key={l} value={l}>{l}</option>
+                                ))}
+                              </select>
+                            </td>
+                          )}
+                          {showDimensions && (
+                            <td className="p-3">
+                              <select 
+                                value={line.project || ''}
+                                onChange={(e) => handleLineChange(idx, 'project', e.target.value)}
+                                className="w-full px-4 py-2.5 bg-slate-50/50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 font-bold appearance-none min-w-[120px]"
+                              >
+                                <option value="">Select Project...</option>
+                                {useLedgerStore.getState().projects?.map(p => (
+                                  <option key={p.id} value={p.name}>{p.name}</option>
+                                ))}
+                              </select>
+                            </td>
+                          )}
+                          <td className="p-3">
+                            <input 
+                              type="number" 
+                              step="0.01"
+                              value={line.debit > 0 ? line.debit / 100 : ''}
+                              onChange={(e) => handleLineChange(idx, 'debit', e.target.value)}
+                              placeholder="0.00"
+                              className="w-full px-4 py-2.5 bg-slate-50/50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 text-right font-mono font-bold"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <input 
+                              type="number" 
+                              step="0.01"
+                              value={line.credit > 0 ? line.credit / 100 : ''}
+                              onChange={(e) => handleLineChange(idx, 'credit', e.target.value)}
+                              placeholder="0.00"
+                              className="w-full px-4 py-2.5 bg-slate-50/50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 text-right font-mono font-bold"
+                            />
+                          </td>
+                          <td className="p-3 text-center">
+                            <button 
+                              type="button"
+                              onClick={() => handleRemoveLine(idx)}
+                              className="p-2 text-slate-500 hover:text-rose-600 transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-50/50 font-bold">
+                        <td className="p-6 text-right uppercase tracking-widest text-[10px] text-slate-500" colSpan={showDimensions ? 4 : 1}>Totals</td>
+                        <td className="p-6 text-right font-mono text-slate-900">{formatCurrency(totals.debit)}</td>
+                        <td className="p-6 text-right font-mono text-slate-900">{formatCurrency(totals.credit)}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              {/* Validation Status */}
+              <div className={cn(
+                "p-5 md:p-6 rounded-[32px] border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300 shadow-sm",
+                totals.isBalanced 
+                  ? "bg-emerald-50/5 border-emerald-200/30 text-emerald-600" 
+                  : "bg-rose-50/5 border-rose-200/30 text-rose-600"
+              )}>
+                <div className="flex items-start sm:items-center gap-3">
+                  {totals.isBalanced ? <CheckCircle2 size={24} className="shrink-0 mt-1 sm:mt-0" /> : <AlertCircle size={24} className="shrink-0 mt-1 sm:mt-0" />}
+                  <div>
+                    <p className="font-bold text-sm tracking-tight">{totals.isBalanced ? "TOPOLOGY SYNCED: BALANCED" : "IMBALANCE DETECTED"}</p>
+                    <p className="text-xs opacity-80 font-medium">
+                      {totals.isBalanced 
+                        ? "The total debits equal the total credits. Your fiscal structure is integrity-verified." 
+                        : "Dimensional mismatch: Debits and credits must be equivalent to commit."}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-left sm:text-right shrink-0">
+                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Delta</p>
+                  <p className="text-xl font-bold font-mono tracking-tighter">{formatCurrency(Math.abs(totals.debit - totals.credit))}</p>
+                </div>
+              </div>
+            </form>
+
+            {/* Footer Actions */}
+            <div className="p-4 md:p-6 lg:p-8 border-t border-slate-200 bg-slate-50/30 flex flex-col sm:flex-row gap-3">
+              <button 
+                type="button"
+                onClick={onClose}
+                className="py-3.5 md:py-4 px-4 bg-white border border-slate-200 text-slate-500 rounded-[32px] font-bold hover:bg-slate-50 transition-all order-2 sm:order-1 sm:flex-1"
+              >
+                Discard Entry
+              </button>
+              <button 
+                onClick={handleSubmit}
+                disabled={!totals.isBalanced || isLocked}
+                className={cn(
+                  "py-3.5 md:py-4 px-4 rounded-[32px] font-bold transition-all shadow-xl order-1 sm:order-2 sm:flex-[2]",
+                  (totals.isBalanced && !isLocked)
+                    ? "bg-slate-900 text-white hover:bg-slate-100 shadow-ledger-ink/20" 
+                    : "bg-slate-50 text-slate-500 cursor-not-allowed shadow-none"
+                )}
+              >
+                {isLocked ? "PERIOD IS SEALED" : "COMMIT TO LEDGER"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}

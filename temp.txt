@@ -1,0 +1,205 @@
+231- * Authorization & Context Helper
+232- */
+233:async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string) {
+234:  console.log("[DEBUG] authorizeWorkspace - workspaceId:", workspaceId);
+235-  const db = getDb();
+236-  
+--
+246-    
+247-    const docRef = db.collection("workspaces").doc(workspaceId);
+248:    console.log("[DEBUG] authorizeWorkspace - Path:", docRef.path);
+249:    console.log("[DEBUG] authorizeWorkspace - ID JSON:", JSON.stringify(workspaceId));
+250:    console.log("[DEBUG] authorizeWorkspace - ID Length:", workspaceId.length);
+251-    
+252-    const workspaceSnap = await docRef.get();
+253-    
+254-    if (!workspaceSnap.exists) {
+255:      console.error("[DEBUG] authorizeWorkspace - Workspace document does not exist:", workspaceId);
+256-      throw new Error(`NOT_FOUND: Workspace with ID ${workspaceId} not found in database.`);
+257-    }
+--
+262-    
+263-    if (!isOwner && !isAdmin) {
+264:      console.error("[DEBUG] authorizeWorkspace - Forbidden access for user:", req.user.uid, "to workspace:", workspaceId);
+265-      throw new Error("FORBIDDEN: You do not have permission to access workspace " + workspaceId);
+266-    }
+--
+344-async function getReportContext(req: AuthenticatedRequest, workspaceId: string) {
+345-  const db = getDb();
+346:  await authorizeWorkspace(req, workspaceId);
+347-  const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get();
+348-  
+--
+417-
+418-      const authReq = req as AuthenticatedRequest;
+419:      await authorizeWorkspace(authReq, workspaceId);
+420-
+421-      if (!Array.isArray(descriptions)) {
+--
+483-
+484-      // Ensure the user actually has permission to operate on this workspace!
+485:      await authorizeWorkspace(req as AuthenticatedRequest, workspaceId);
+486-
+487-      // Implement workspace quota/credit budget locking
+--
+1205-
+1206-      const authReq = req as AuthenticatedRequest;
+1207:      await authorizeWorkspace(authReq, workspaceId);
+1208-
+1209-      const db = getDb();
+--
+1228-
+1229-      const authReq = req as AuthenticatedRequest;
+1230:      await authorizeWorkspace(authReq, workspaceId);
+1231-
+1232-      const { name, code, description, budgetLimitCents, managerEmail } = req.body;
+--
+1265-
+1266-      const authReq = req as AuthenticatedRequest;
+1267:      await authorizeWorkspace(authReq, workspaceId);
+1268-
+1269-      const db = getDb();
+--
+1290-
+1291-      const authReq = req as AuthenticatedRequest;
+1292:      await authorizeWorkspace(authReq, workspaceId);
+1293-
+1294-      const { name, type, code, parentId, isActive, tags } = req.body;
+--
+1327-
+1328-      const authReq = req as AuthenticatedRequest;
+1329:      await authorizeWorkspace(authReq, workspaceId);
+1330-      
+1331-      const { startDate, endDate, accountId, limit } = req.query;
+--
+1428-
+1429-      const authReq = req as AuthenticatedRequest;
+1430:      const wsData = await authorizeWorkspace(authReq, workspaceId);
+1431-
+1432-      const idempotencyKey = req.headers['idempotency-key'] as string;
+--
+1657-
+1658-      const authReq = req as AuthenticatedRequest;
+1659:      const wsData = await authorizeWorkspace(authReq, workspaceId);
+1660-
+1661-      const { transactions, dryRun } = req.body;
+--
+1903-
+1904-      const authReq = req as AuthenticatedRequest;
+1905:      await authorizeWorkspace(authReq, workspaceId);
+1906-
+1907-      const db = getDb();
+--
+2025-
+2026-      const authReq = req as AuthenticatedRequest;
+2027:      await authorizeWorkspace(authReq, workspaceId);
+2028-
+2029-      const { descriptions } = req.body;
+--
+2161-
+2162-      const authReq = req as AuthenticatedRequest;
+2163:      await authorizeWorkspace(authReq, workspaceId);
+2164-
+2165-      const db = getDb();
+--
+2334-
+2335-      const authReq = req as AuthenticatedRequest;
+2336:      await authorizeWorkspace(authReq, workspaceId);
+2337-
+2338-      const db = getDb();
+--
+2394-
+2395-      const authReq = req as AuthenticatedRequest;
+2396:      await authorizeWorkspace(authReq, workspaceId);
+2397-
+2398-      const db = getDb();
+--
+2643-
+2644-      const authReq = req as AuthenticatedRequest;
+2645:      await authorizeWorkspace(authReq, workspaceId);
+2646-
+2647-      const db = getDb();
+--
+2681-
+2682-      const authReq = req as AuthenticatedRequest;
+2683:      await authorizeWorkspace(authReq, workspaceId);
+2684-
+2685-      const txId = req.params.id;
+--
+2735-
+2736-      const authReq = req as AuthenticatedRequest;
+2737:      await authorizeWorkspace(authReq, workspaceId);
+2738-
+2739-      const txId = req.params.id;
+--
+2843-
+2844-      const authReq = req as AuthenticatedRequest;
+2845:      await authorizeWorkspace(authReq, workspaceId);
+2846-
+2847-      const { prompt, ephemeralData } = req.body;
+--
+2991-
+2992-      const authReq = req as AuthenticatedRequest;
+2993:      await authorizeWorkspace(authReq, workspaceId);
+2994-
+2995-      const { description, targetFeatures } = req.body;
+--
+3384-
+3385-      const authReq = req as AuthenticatedRequest;
+3386:      await authorizeWorkspace(authReq, workspaceId);
+3387-
+3388-      const stripe = getStripe();
+--
+3464-
+3465-      const authReq = req as AuthenticatedRequest;
+3466:      await authorizeWorkspace(authReq, workspaceId);
+3467-
+3468-      const stripe = getStripe();
+--
+3494-
+3495-      const authReq = req as AuthenticatedRequest;
+3496:      await authorizeWorkspace(authReq, workspaceId);
+3497-
+3498-      const userId = authReq.user.uid;
+--
+3574-
+3575-      const authReq = req as AuthenticatedRequest;
+3576:      await authorizeWorkspace(authReq, workspaceId);
+3577-
+3578-      let wsData: any = {};
+--
+3626-
+3627-      const authReq = req as AuthenticatedRequest;
+3628:      await authorizeWorkspace(authReq, workspaceId);
+3629-
+3630-      let wsData: any = {};
+--
+3722-
+3723-      const authReq = req as AuthenticatedRequest;
+3724:      await authorizeWorkspace(authReq, workspaceId);
+3725-
+3726-      const filtered = apiLogs.filter(log => {
+--
+4008-
+4009-    try {
+4010:      await authorizeWorkspace(authReq, workspaceId);
+4011-      const db = getDb();
+4012-      const collectionName = type === 'ar' ? 'invoices' : 'bills';
+--
+4094-
+4095-    try {
+4096:      await authorizeWorkspace(authReq, workspaceId);
+4097-      const db = getDb();
+4098-      
+--
+4161-
+4162-    try {
+4163:      await authorizeWorkspace(authReq, workspaceId);
+4164-      const db = getDb();
+4165-      // Fetch by workspaceId and filter in memory to avoid index requirements
+--
+4216-
+4217-    try {
+4218:      await authorizeWorkspace(authReq, workspaceId);
+4219-      const db = getDb();
+4220-      const snap = await db.collection("auditLogs")

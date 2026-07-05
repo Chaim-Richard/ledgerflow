@@ -1,0 +1,7 @@
+src/components/platform/ToolSandbox.tsx:368:  // Simple simulator demonstrating pattern assertion
+src/components/Dashboard.tsx:370:                cardKey="dashboard.demoLoadedBanner" 
+src/hooks/useSystemContext.ts:37:      'seed-demo-data': () => txActions.handleSeedDemoData(),
+src/hooks/useTransactionActions.ts:716:    const loader = toast.loading('Powering up out-of-the-box demo registers...');
+src/hooks/useTransactionActions.ts:787:      const demoTransactions = [
+src/hooks/useTransactionActions.ts:889:      demoTransactions.forEach((tx) => {
+src/lib/algorithms.ts:1897:    const residuals = differenced.map(v => v * 0.1); // Simulated white noise for demo purposes

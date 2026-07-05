@@ -1,0 +1,610 @@
+import React, { useState } from 'react';
+import { useUIStore } from '../../../stores/useUIStore';
+import { useLedgerStore } from '../../../stores/useLedgerStore';
+import { useAuthStore } from '../../../stores/useAuthStore';
+import { db } from '../../../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { APP_TABS, SYSTEM_GLOSSARY } from '../../../config/registry';
+import { 
+  Sliders, 
+  Eye, 
+  EyeOff, 
+  Search, 
+  Save, 
+  RefreshCw, 
+  Calendar, 
+  Globe, 
+  Check, 
+  SlidersHorizontal,
+  FolderLock,
+  Plus,
+  Trash2,
+  AlertTriangle,
+  Zap
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+export default function BlueprintSettings() {
+  const language = useUIStore(state => state.language);
+  const hiddenTabs = useUIStore(state => state.hiddenTabs);
+  const toggleTabVisibility = useUIStore(state => state.toggleTabVisibility);
+  const lexiconOverrides = useUIStore(state => state.lexiconOverrides);
+  const setLexiconOverride = useUIStore(state => state.setLexiconOverride);
+  const resetLexiconOverrides = useUIStore(state => state.resetLexiconOverrides);
+
+  const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
+
+  // Read lockDate and actions from ledger store
+  const lockDate = useLedgerStore(state => state.lockDate);
+  const setLockDate = useLedgerStore(state => state.setLockDate);
+  const baseCurrency = useLedgerStore(state => state.baseCurrency);
+  const setBaseCurrency = useLedgerStore(state => state.setBaseCurrency);
+
+  // Local state for customized inputs
+  const [lexiconSearch, setLexiconSearch] = useState('');
+  const [selectedLockDate, setSelectedLockDate] = useState(lockDate || '');
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editValEn, setEditValEn] = useState('');
+  const [editValHe, setEditValHe] = useState('');
+
+  // Active workspace & ledger accounts mapping state
+  const workspaces = useAuthStore(state => state.workspaces);
+  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
+  const accounts = useLedgerStore(state => state.accounts);
+
+  const [mappings, setMappings] = useState<Record<string, string>>({});
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatAccountId, setNewCatAccountId] = useState('');
+  const [isSavingMappings, setIsSavingMappings] = useState(false);
+  const [hasInitializedMappings, setHasInitializedMappings] = useState(false);
+
+  // Sync mappings with workspace document
+  React.useEffect(() => {
+    if (currentWorkspace && !hasInitializedMappings) {
+      setMappings(currentWorkspace.defaultAccountMappings || {});
+      setHasInitializedMappings(true);
+    }
+  }, [currentWorkspace, hasInitializedMappings]);
+
+  // If current workspace ID shifts, trigger re-initialization
+  React.useEffect(() => {
+    setHasInitializedMappings(false);
+  }, [currentWorkspaceId]);
+
+  const handleUpdateMappingField = (key: string, value: string) => {
+    setMappings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleRemoveCategoryMapping = (key: string) => {
+    setMappings(prev => {
+      const updated = { ...prev };
+      delete updated[key];
+      return updated;
+    });
+  };
+
+  const handleAddCategoryMapping = () => {
+    if (!newCatName.trim()) {
+      toast.error('Category Title Required', { description: 'Please specify the category name.' });
+      return;
+    }
+    if (!newCatAccountId) {
+      toast.error('Account Required', { description: 'Please select a ledger account.' });
+      return;
+    }
+    const cleanKey = newCatName.trim().toLowerCase();
+    setMappings(prev => ({ ...prev, [cleanKey]: newCatAccountId }));
+    setNewCatName('');
+    setNewCatAccountId('');
+    toast.success('Category Mapping Staged', {
+      description: `Rule for category "${cleanKey}" staged. Click Save to activate.`
+    });
+  };
+
+  const handleSaveMappings = async () => {
+    if (!currentWorkspaceId) return;
+    setIsSavingMappings(true);
+    try {
+      await updateDoc(doc(db, 'workspaces', currentWorkspaceId), {
+        defaultAccountMappings: mappings
+      });
+      toast.success('Ingestion Mappings Active', {
+        description: 'Default transaction split and fallback routing channels updated.'
+      });
+    } catch (err: any) {
+      console.error("Failed to commit default account mappings:", err);
+      toast.error('Saving Failed', { description: err.message || String(err) });
+    } finally {
+      setIsSavingMappings(false);
+    }
+  };
+
+  const renderAccountOptions = () => {
+    const groups: Record<string, typeof accounts> = {};
+    accounts.forEach(acc => {
+      const type = acc.type || 'other';
+      if (!groups[type]) groups[type] = [];
+      groups[type].push(acc);
+    });
+
+    return (
+      <>
+        <option value="">-- Choose Account --</option>
+        {Object.keys(groups).map(type => (
+          <optgroup key={type} label={type.substring(0, 1).toUpperCase() + type.substring(1) + 's'} className="font-bold text-[10px]">
+            {groups[type].map(acc => (
+              <option key={acc.id} value={acc.id}>
+                {acc.code ? `${acc.code} — ` : ''}{acc.name}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </>
+    );
+  };
+
+  // Save the custom lock date
+  const handleSaveLockDate = async () => {
+    setLockDate(selectedLockDate || null);
+    
+    if (currentWorkspaceId) {
+      try {
+        await updateDoc(doc(db, 'workspaces', currentWorkspaceId), {
+          lockDate: selectedLockDate || null
+        });
+      } catch (err) {
+        console.error("Failed to persist lock date:", err);
+      }
+    }
+
+    toast.success('System parameters locked', {
+      description: selectedLockDate 
+        ? `Ledger transactions pre-dating ${selectedLockDate} are restricted.`
+        : 'Accounting lock removed. Period modifications unrestricted.'
+    });
+  };
+
+  // Switch workspace currency
+  const handleSaveCurrency = async (curr: string) => {
+    setBaseCurrency(curr);
+    
+    if (currentWorkspaceId) {
+       try {
+         await updateDoc(doc(db, 'workspaces', currentWorkspaceId), {
+           currency: curr
+         });
+       } catch (err) {
+         console.error("Failed to persist currency:", err);
+       }
+    }
+
+    // Custom label trick: override the DollarSign default or app symbols
+    setLexiconOverride('currencySymbol', 'en', curr === 'ILS' ? '₪' : curr === 'EUR' ? '€' : curr === 'GBP' ? '£' : '$');
+    toast.success('Core Currency Recalibrated', {
+      description: `Unified ledger values are mapped under ${curr} parameters.`
+    });
+  };
+
+  // Glossary keys search
+  const filteredGlossary = Object.keys(SYSTEM_GLOSSARY).filter(key => 
+    key.toLowerCase().includes(lexiconSearch.toLowerCase()) || 
+    SYSTEM_GLOSSARY[key].en.toLowerCase().includes(lexiconSearch.toLowerCase()) || 
+    (SYSTEM_GLOSSARY[key].he && SYSTEM_GLOSSARY[key].he.toLowerCase().includes(lexiconSearch.toLowerCase()))
+  );
+
+  const startEditingGlossary = (key: string) => {
+    const enVal = lexiconOverrides[key]?.en || SYSTEM_GLOSSARY[key].en;
+    const heVal = lexiconOverrides[key]?.he || SYSTEM_GLOSSARY[key].he || '';
+    setEditingKey(key);
+    setEditValEn(enVal);
+    setEditValHe(heVal);
+  };
+
+  const saveGlossaryOverride = (key: string) => {
+    setLexiconOverride(key, 'en', editValEn);
+    if (SYSTEM_GLOSSARY[key].he) {
+      setLexiconOverride(key, 'he', editValHe);
+    }
+    setEditingKey(null);
+    toast.success('Glossary Word Overestimated', {
+      description: `"${key}" updated to reflect customized visual terminology.`
+    });
+  };
+
+  return (
+    <div className="space-y-12">
+      {/* 1. Global Accounting Controls */}
+      <div className="ledger-card p-4 md:p-10 bg-white border border-slate-200 shadow-sm space-y-10">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-12 h-12 bg-zinc-950 text-white rounded-[32px] flex items-center justify-center">
+            <SlidersHorizontal size={22} />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase tracking-widest">Base Ledger Variables</h3>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Core Accounting Configurations</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          {/* Base Currency Selector */}
+          <div className="space-y-4">
+            <label className="text-xs font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
+              <Globe size={13} className="text-zinc-500" />
+              Institutional Base Currency
+            </label>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Standardize ledger currency codes across operational, forensic, and projection matrix layers.
+            </p>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 bg-white p-1.5 rounded-[32px] border border-slate-200">
+              {['USD', 'EUR', 'GBP', 'ILS', 'JPY', 'CAD'].map(curr => (
+                <button
+                  key={curr}
+                  type="button"
+                  onClick={() => handleSaveCurrency(curr)}
+                  className={`py-3 text-xs font-bold rounded-xl transition-all ${
+                    baseCurrency === curr 
+                      ? 'bg-zinc-950 text-white shadow-xs' 
+                      : 'hover:bg-zinc-100 text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  {curr}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Ledger Hard Period Lock */}
+          <div className="space-y-4">
+            <label className="text-xs font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
+              <FolderLock size={13} className="text-zinc-500" />
+              Accounting closing date
+            </label>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Restrict mutations to pre-dating items. Submitting transactions prior to this date triggers an immediate hard reject.
+            </p>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <input
+                  type="date"
+                  value={selectedLockDate}
+                  onChange={(e) => setSelectedLockDate(e.target.value)}
+                  className="w-full bg-white hover:bg-zinc-50 border border-slate-200 focus:border-zinc-400 focus:outline-none p-3 pl-10 rounded-[32px] text-xs font-bold tracking-wider"
+                />
+                <Calendar size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveLockDate}
+                className="px-6 bg-zinc-950 hover:bg-zinc-850 text-white rounded-[32px] text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all self-stretch"
+              >
+                <Check size={13} />
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ingestion Pipeline Mappings */}
+      <div className="ledger-card p-4 md:p-10 bg-white border border-slate-200 shadow-sm space-y-10 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-zinc-900 text-white rounded-[32px] flex items-center justify-center shadow-lg shadow-zinc-900/10">
+              <Zap size={20} className="text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase tracking-widest font-display">Neural Ingestion Architecture</h3>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Automated Accounts & Fallback Mappings</p>
+            </div>
+          </div>
+          
+          <button
+            type="button"
+            onClick={handleSaveMappings}
+            disabled={isSavingMappings}
+            className="px-6 py-3 bg-zinc-950 hover:bg-zinc-850 disabled:bg-zinc-300 text-white rounded-[32px] text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all self-stretch sm:self-auto justify-center"
+          >
+            {isSavingMappings ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
+            {isSavingMappings ? 'Syncing...' : 'Save Mappings'}
+          </button>
+        </div>
+
+        {/* Global Warnings if fallbacks are missing */}
+        {(!mappings['expense'] || !mappings['asset']) && (
+          <div className="p-5 bg-amber-50 rounded-[32px] border border-amber-200 flex items-start gap-3.5">
+            <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={16} />
+            <div className="space-y-1">
+              <h5 className="text-xs font-bold text-amber-900 uppercase tracking-wider">Unmapped Fallback Warnings</h5>
+              <p className="text-[11px] text-amber-700 leading-relaxed font-semibold uppercase tracking-wide">
+                Transactions uploaded via API or scanned via OCR cannot be saved without default fallbacks. Configure Debit Fallback (expense) and Credit Fallback (asset) immediately.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Fallback Inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Debit Fallback (Expense) */}
+          <div className="space-y-3 p-6 bg-slate-50/50 rounded-[32px] border border-slate-200">
+            <label className="text-xs font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              Debit Fallback Account (expense)
+            </label>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">
+              The default ledger subaccount selected for transaction debits when the category is unclassified.
+            </p>
+            <select
+              value={mappings['expense'] || ''}
+              onChange={(e) => handleUpdateMappingField('expense', e.target.value)}
+              className="w-full bg-white border border-slate-200 focus:border-zinc-400 focus:outline-none p-3.5 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
+            >
+              {renderAccountOptions()}
+            </select>
+          </div>
+
+          {/* Credit Fallback (Asset) */}
+          <div className="space-y-3 p-6 bg-slate-50/50 rounded-[32px] border border-slate-200">
+            <label className="text-xs font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Credit Fallback Account (asset)
+            </label>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">
+              The default ledger asset/cash subaccount selected for credit double-entry offsets in ingestion pipelines.
+            </p>
+            <select
+              value={mappings['asset'] || ''}
+              onChange={(e) => handleUpdateMappingField('asset', e.target.value)}
+              className="w-full bg-white border border-slate-200 focus:border-zinc-400 focus:outline-none p-3.5 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
+            >
+              {renderAccountOptions()}
+            </select>
+          </div>
+        </div>
+
+        {/* Category Specific Overrides */}
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
+            <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Category-Specific Routing Exclusions</h4>
+            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+              {Object.keys(mappings).filter(k => k !== 'expense' && k !== 'asset').length} rules registered
+            </span>
+          </div>
+
+          <div className="space-y-4 max-h-64 overflow-y-auto custom-scrollbar p-1">
+            {Object.keys(mappings)
+              .filter(k => k !== 'expense' && k !== 'asset')
+              .map(categoryKey => {
+                const mappedAccountId = mappings[categoryKey];
+                const matchingAccount = accounts.find(a => a.id === mappedAccountId);
+                return (
+                  <div key={categoryKey} className="flex items-center justify-between gap-4 p-4 hover:bg-slate-50 border border-slate-200 rounded-[32px] transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="px-3 py-1.5 bg-zinc-100 text-zinc-800 rounded-xl text-[10px] font-bold uppercase tracking-wider font-mono">
+                        {categoryKey}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                        <span>→</span>
+                        <span className="text-slate-800 font-display">
+                          {matchingAccount ? `${matchingAccount.name} (${matchingAccount.type.toUpperCase()})` : 'Unknown Account'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCategoryMapping(categoryKey)}
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                      title="Delete category mapping rule"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+
+            {Object.keys(mappings).filter(k => k !== 'expense' && k !== 'asset').length === 0 && (
+              <div className="py-6 text-center text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                No category-specific overrides configured. All categories default to general fallbacks.
+              </div>
+            )}
+          </div>
+
+          {/* Add Option Form */}
+          <div className="pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div className="space-y-2">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Category Name (Lower-Case Match)</label>
+              <input
+                type="text"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                placeholder="e.g. software, rent, utilities"
+                className="w-full bg-white hover:bg-zinc-50 border border-slate-200 focus:border-zinc-400 focus:outline-none p-3 rounded-[32px] text-xs font-bold tracking-wider"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Debit Override Account</label>
+              <select
+                value={newCatAccountId}
+                onChange={(e) => setNewCatAccountId(e.target.value)}
+                className="w-full bg-white hover:bg-zinc-50 border border-slate-200 focus:border-zinc-400 focus:outline-none p-3 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
+              >
+                {renderAccountOptions()}
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddCategoryMapping}
+              className="py-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+            >
+              <Plus size={14} strokeWidth={3} />
+              Add Override Rule
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Visual Tab Visibility Controller */}
+      <div className="ledger-card p-4 md:p-10 bg-white border border-slate-200 shadow-sm space-y-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center shadow-lg shadow-indigo-600/15">
+            <Eye size={22} />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase tracking-widest font-display">Workflow Tab Architect</h3>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Workspace Navigation Elasticity</p>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-500 leading-relaxed max-w-2xl">
+          Toggle sidebar layout items on-the-fly. Hiding system items instantly streamlines employee access pipelines, allowing you to fine-tune your custom operations portal.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 h-[350px] overflow-y-auto custom-scrollbar p-1">
+          {APP_TABS.map(tab => {
+            const isHidden = hiddenTabs.includes(tab.id);
+            return (
+              <div 
+                key={tab.id}
+                onClick={() => toggleTabVisibility(tab.id)}
+                className={`p-5 rounded-[32px] border transition-all flex items-center justify-between cursor-pointer group ${
+                  isHidden 
+                    ? 'border-gray-200 bg-gray-50/50 text-slate-500 hover:border-gray-300' 
+                    : 'border-slate-200 hover:border-indigo-200 bg-white text-slate-900 shadow-xs'
+                }`}
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                    isHidden 
+                      ? 'bg-gray-100 text-gray-400' 
+                      : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100'
+                  }`}>
+                    {React.createElement(tab.icon, { size: 16 })}
+                  </div>
+                  <div className="text-left">
+                    <p className={`text-xs font-black uppercase tracking-wider ${isHidden ? 'line-through text-gray-400' : 'text-slate-900'}`}>
+                      {tab.label[language] || tab.label['en']}
+                    </p>
+                    <p className="text-[9px] text-gray-400 font-mono tracking-tight capitalize mt-0.5">{tab.groupId} module</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center">
+                  {isHidden ? (
+                    <div className="p-1.5 rounded-lg bg-gray-100 text-gray-400" title="Hidden Tab">
+                      <EyeOff size={13} />
+                    </div>
+                  ) : (
+                    <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600" title="Active Tab">
+                      <Eye size={13} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 3. Text Glossary Customizer */}
+      <div className="ledger-card p-4 md:p-10 bg-white border border-slate-200 shadow-sm space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-600 text-white rounded-[32px] flex items-center justify-center shadow-lg shadow-amber-600/15">
+              <Sliders size={22} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase tracking-widest">Aesthetic Nomenclature Registry</h3>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5 font-display">System-Wide Glossary Patch Engine</p>
+            </div>
+          </div>
+
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search labels..."
+              value={lexiconSearch}
+              onChange={(e) => setLexiconSearch(e.target.value)}
+              className="bg-white p-2.5 pl-9 pr-4 text-xs font-bold hover:bg-zinc-50 border border-slate-200 focus:border-zinc-400 focus:outline-none rounded-xl w-60 tracking-wider"
+            />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-500 leading-relaxed max-w-2xl">
+          Quickly edit titles and descriptive terminology throughout the interface. To override labels permanently, modify words directly in the registry fields below.
+        </p>
+
+        <div className="max-h-96 overflow-y-auto custom-scrollbar border border-slate-200 rounded-[32px] bg-white divide-y divide-ledger-line">
+          {filteredGlossary.map(key => {
+            const hasOverride = !!lexiconOverrides[key];
+            const isEditing = editingKey === key;
+            const originalVal = SYSTEM_GLOSSARY[key];
+
+            return (
+              <div key={key} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-zinc-50/50 transition-colors">
+                <div className="space-y-1.5 md:max-w-md">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-indigo-600 tracking-tight">{key}</span>
+                    {hasOverride && (
+                      <span className="text-[8px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Overridden</span>
+                    )}
+                  </div>
+                  {!isEditing && (
+                    <div className="text-xs space-y-1 text-gray-700">
+                      <p><span className="text-gray-400 font-bold mr-1">[EN]</span> {lexiconOverrides[key]?.en || originalVal.en}</p>
+                      {originalVal.he && (
+                        <p><span className="text-gray-400 font-bold mr-1">[HE]</span> {lexiconOverrides[key]?.he || originalVal.he}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 self-end md:self-auto">
+                  {isEditing ? (
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="text"
+                        value={editValEn}
+                        onChange={(e) => setEditValEn(e.target.value)}
+                        placeholder="English Override..."
+                        className="p-2 border border-zinc-300 rounded-xl text-xs font-bold bg-white focus:outline-none min-w-[150px]"
+                      />
+                      {originalVal.he && (
+                        <input
+                          type="text"
+                          value={editValHe}
+                          onChange={(e) => setEditValHe(e.target.value)}
+                          placeholder="Hebrew Override..."
+                          className="p-2 border border-zinc-300 rounded-xl text-xs font-bold bg-white focus:outline-none min-w-[150px]"
+                        />
+                      )}
+                      <button
+                        onClick={() => saveGlossaryOverride(key)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-medium uppercase tracking-wider rounded-xl transition-all"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingKey(null)}
+                        className="px-3 py-1.5 border border-gray-300 hover:bg-gray-100 text-gray-600 text-[10px] font-medium uppercase tracking-wider rounded-xl transition-all"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startEditingGlossary(key)}
+                      className="px-4 py-2 border border-slate-200 hover:border-zinc-400 bg-white rounded-xl text-[10px] font-medium uppercase tracking-wider text-[#3d3d3d] transition-all"
+                    >
+                      Customize Override
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

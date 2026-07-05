@@ -1,0 +1,296 @@
+import React, { useState, useMemo } from 'react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { formatCurrency, cn } from '../../lib/utils';
+import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { useAuthStore } from '../../stores/useAuthStore';
+
+export default function CashFlowView() {
+  const { transactions, accounts } = useLedgerStore();
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
+  });
+  const [isComparative, setIsComparative] = useState(false);
+
+  const { workspaces, currentWorkspaceId } = useAuthStore();
+  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
+  const businessType = currentWorkspace?.businessType || 'generic';
+
+  const labels = useMemo(() => {
+    if (businessType === 'personal') {
+      return {
+        title: "Statement of Cash Flows (Household)",
+        operating: "Living & Household Cash Flow",
+        operatingSub: "Daily living inflows & standard expenses",
+        investing: "Asset Portfolio & Savings Flows",
+        investingSub: "Acquisition or sale of financial assets",
+        financing: "Debt & Capital Transfers",
+        financingSub: "Lending, credit card repayments & mortgage servicing",
+        netChange: "Household Net Cash Position Shift",
+        netChangeSub: "Liquidity delta synthesis position",
+        netSectionLabel: (sec: string) => `Net Household Cash from ${sec}`
+      };
+    } else if (businessType === 'nonprofit') {
+      return {
+        title: "Statement of Cash Flows (Fund)",
+        operating: "Operating & Public Program Cash Flow",
+        operatingSub: "Charitable grant receipts & program spending outflows",
+        investing: "Charitable Capital & Program Outlays",
+        investingSub: "Development of program infrastructure",
+        financing: "Endowments & Borrowing",
+        financingSub: "Restricted endowment funds & borrowing",
+        netChange: "Net Shift in Reserve Liquidity",
+        netChangeSub: "Liquidity delta synthesis position",
+        netSectionLabel: (sec: string) => `Net Fund Flow from ${sec}`
+      };
+    } else {
+      return {
+        title: "Statement of Cash Flows",
+        operating: "Operating Activities",
+        operatingSub: "Core operational receipts & vendor disbursements",
+        investing: "Investing Activities",
+        investingSub: "Capital expenditure & direct asset asset acquisition",
+        financing: "Financing Activities",
+        financingSub: "Long-term liabilities, debt servicing & equity transactions",
+        netChange: "Net Increase / Decrease in Cash",
+        netChangeSub: "Liquidity delta synthesis position",
+        netSectionLabel: (sec: string) => `Net Cash from ${sec}`
+      };
+    }
+  }, [businessType]);
+
+  const getPrevPeriod = (start: string, end: string) => {
+    const s = new Date(start);
+    const e = new Date(end);
+    const msDiff = e.getTime() - s.getTime();
+    const prevE = new Date(s.getTime() - 86400000); 
+    const MathDiffDays = Math.round(msDiff / 86400000);
+    const prevS = new Date(prevE.getTime() - (MathDiffDays * 86400000));
+    return {
+      start: prevS.toISOString().split('T')[0],
+      end: prevE.toISOString().split('T')[0]
+    }
+  };
+
+  const { currentData, prevData } = useMemo(() => {
+    const calcPeriod = (start: string, end: string) => {
+      const data = {
+        operating: { total: 0, inflow: 0, outflow: 0 },
+        investing: { total: 0, inflow: 0, outflow: 0 },
+        financing: { total: 0, inflow: 0, outflow: 0 },
+        netChange: 0,
+      };
+
+      const periodTxs = transactions.filter(t => t.date >= start && t.date <= end);
+      const cashAccounts = accounts.filter(a => {
+        const nameLower = a.name.toLowerCase();
+        const catLower = (a.category || '').toLowerCase();
+        const isCashCategory = catLower.includes('cash') || catLower.includes('bank') || catLower.includes('checking') || catLower.includes('liquidity') || catLower.includes('savings');
+        const isCashName = nameLower.includes('cash') || nameLower.includes('bank') || nameLower.includes('checking') || nameLower.includes('savings') || nameLower.includes('escrow') || nameLower.includes('deposits') || nameLower.includes('wallet') || nameLower.includes('current account') || nameLower.includes('operating account');
+        const isCashCode = a.code?.startsWith('10'); // Standard assets category prefix for cash/liquidity
+        return isCashCategory || isCashName || (a.type === 'asset' && isCashCode);
+      });
+
+      periodTxs.forEach(tx => {
+        let isCashTx = tx.lines?.some(l => cashAccounts.find(ca => ca.id === l.accountId));
+        if (!isCashTx) return;
+
+        // Simplify: all income/expense into Operating. Equity/Loans into Financing. Assets into Investing
+        tx.lines?.forEach(line => {
+          const acc = accounts.find(a => a.id === line.accountId);
+          if (!acc || cashAccounts.find(ca => ca.id === acc.id)) return;
+
+          const absoluteAmount = Math.abs(line.amountCents);
+          // If transaction increases cash, the offsetting line is negative (credit). If credit is income, it's inflow.
+          const isCashInflow = line.amountCents < 0; 
+          const moneyFlow = isCashInflow ? absoluteAmount : -absoluteAmount;
+
+          if (acc.type === 'income' || acc.type === 'expense') {
+            data.operating.total += moneyFlow;
+            isCashInflow ? data.operating.inflow += absoluteAmount : data.operating.outflow += absoluteAmount;
+          } else if (acc.type === 'asset') {
+            data.investing.total += moneyFlow;
+            isCashInflow ? data.investing.inflow += absoluteAmount : data.investing.outflow += absoluteAmount;
+          } else if (acc.type === 'liability' || acc.type === 'equity') {
+            data.financing.total += moneyFlow;
+            isCashInflow ? data.financing.inflow += absoluteAmount : data.financing.outflow += absoluteAmount;
+          }
+        });
+      });
+
+      data.netChange = data.operating.total + data.investing.total + data.financing.total;
+      return data;
+    };
+
+    const currentData = calcPeriod(dateRange.start, dateRange.end);
+    let prevData = {
+        operating: { total: 0, inflow: 0, outflow: 0 },
+        investing: { total: 0, inflow: 0, outflow: 0 },
+        financing: { total: 0, inflow: 0, outflow: 0 },
+        netChange: 0,
+    };
+
+    if (isComparative) {
+      const prev = getPrevPeriod(dateRange.start, dateRange.end);
+      prevData = calcPeriod(prev.start, prev.end);
+    }
+
+    return { currentData, prevData };
+  }, [transactions, accounts, dateRange, isComparative]);
+
+  const exportCashFlow = () => {
+    const isComp = isComparative;
+    const rows = [
+      [labels.title, '', ''],
+      [`Period: ${dateRange.start} to ${dateRange.end}`, isComp ? 'Prior Period' : '', isComp ? 'Variance %' : ''],
+      ['', '', '', ''],
+      [`CASH FLOWS FROM ${labels.operating.toUpperCase()}`, (currentData.operating.total / 100).toFixed(2), isComp ? (prevData.operating.total / 100).toFixed(2) : '', ''],
+      [`CASH FLOWS FROM ${labels.investing.toUpperCase()}`, (currentData.investing.total / 100).toFixed(2), isComp ? (prevData.investing.total / 100).toFixed(2) : '', ''],
+      [`CASH FLOWS FROM ${labels.financing.toUpperCase()}`, (currentData.financing.total / 100).toFixed(2), isComp ? (prevData.financing.total / 100).toFixed(2) : '', ''],
+      ['', '', '', ''],
+      [labels.netChange.toUpperCase(), (currentData.netChange / 100).toFixed(2), isComp ? (prevData.netChange / 100).toFixed(2) : '', '']
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Cash_Flows");
+    XLSX.writeFile(wb, `Cash_Flow_Statement_${dateRange.start}_${dateRange.end}.xlsx`);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Date Range & Controls */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-white border border-slate-200/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
+        <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10 w-full lg:w-auto">
+          <div className="flex items-center gap-3 w-full">
+            <div className="w-8 h-8 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center text-slate-500 shrink-0">
+               <Calendar size={13} />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Temporal Range</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <input 
+                  type="date" 
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                  className="bg-slate-55 bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md focus:ring-1 focus:ring-slate-300 outline-none text-slate-800"
+                />
+                <span className="text-slate-300 font-mono text-sm leading-none">/</span>
+                <input 
+                  type="date" 
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                  className="bg-slate-55 bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md focus:ring-1 focus:ring-slate-300 outline-none text-slate-800"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="hidden sm:block w-px h-8 bg-slate-200" />
+          <label className="flex items-center gap-2 cursor-pointer group/toggle">
+            <input 
+               type="checkbox" 
+               className="hidden" 
+               checked={isComparative} 
+               onChange={(e) => setIsComparative(e.target.checked)} 
+            />
+            <div className={cn(
+              "w-8 h-4 rounded-full flex items-center p-0.5 transition-colors duration-300",
+              isComparative ? "bg-indigo-500" : "bg-slate-300"
+            )}>
+              <div className={cn(
+                "w-3 h-3 bg-white rounded-full shadow-sm transition-transform duration-300",
+                isComparative ? "translate-x-4" : "translate-x-0"
+              )} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-slate-800 transition-colors flex items-center gap-1">
+                Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-slate-400")} />
+              </span>
+              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Compare to Prior Prev</span>
+            </div>
+          </label>
+        </div>
+        <button 
+          onClick={exportCashFlow}
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
+        >
+          <FileSpreadsheet size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
+          <span>Export Synthesis</span>
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-3xs overflow-hidden relative p-4 md:p-8">
+        <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none">
+          <Waves size={160} />
+        </div>
+        
+        <div className="relative z-10 max-w-4xl mx-auto space-y-12">
+           <div className="border-b border-slate-900 pb-4 flex items-end justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 tracking-tight uppercase italic">{labels.title}</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">For period ending {dateRange.end}</p>
+              </div>
+              <Waves size={24} className="text-slate-200" />
+           </div>
+
+           <div className="space-y-8">
+              {[
+                  { label: labels.operating, desc: labels.operatingSub, data: currentData.operating, prev: prevData.operating },
+                  { label: labels.investing, desc: labels.investingSub, data: currentData.investing, prev: prevData.investing },
+                  { label: labels.financing, desc: labels.financingSub, data: currentData.financing, prev: prevData.financing }
+              ].map((section, idx) => (
+                  <div key={idx} className="space-y-4">
+                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                        <h4 className="text-[11px] font-bold bg-slate-900 text-white px-3 py-1 rounded inline-flex uppercase tracking-wider">{section.label}</h4>
+                        <span className="text-[9px] font-semibold text-slate-450 uppercase tracking-wider text-slate-400">{section.desc}</span>
+                     </div>
+                     
+                     <div className="pl-4 space-y-3">
+                        <div className="flex justify-between items-center text-sm">
+                           <span className="text-slate-600 font-medium">Cash Inflows</span>
+                           <span className="font-mono tabular-nums">{formatCurrency(section.data.inflow)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                           <span className="text-slate-600 font-medium">Cash Outflows</span>
+                           <span className="font-mono tabular-nums text-rose-600/80">({formatCurrency(section.data.outflow)})</span>
+                        </div>
+                        <div className="flex justify-between items-center border-t border-slate-200 pt-2 font-bold cursor-default hover:bg-slate-50 p-1 -mx-1 px-1 rounded transition-colors group">
+                           <span className="text-slate-800 text-sm">{labels.netSectionLabel(section.label)}</span>
+                           <div className="flex items-center gap-4">
+                             {isComparative && section.prev.total !== 0 && (
+                                <span className={cn("text-[10px] opacity-0 group-hover:opacity-100 transition-opacity", section.data.total >= section.prev.total ? "text-emerald-500" : "text-rose-500")}>
+                                   {(((section.data.total - section.prev.total) / Math.abs(section.prev.total)) * 100).toFixed(1)}% vs Prior
+                                </span>
+                             )}
+                             <span className="font-mono tabular-nums text-slate-800">{formatCurrency(section.data.total)}</span>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+              ))}
+           </div>
+
+           <div className="mt-12 p-6 bg-slate-900 text-white rounded-xl border border-slate-950 flex justify-between items-center shadow-lg">
+               <div>
+                 <span className="text-[12px] font-bold text-white/40 uppercase tracking-widest block mb-1">{labels.netChange}</span>
+                 <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest block">{labels.netChangeSub}</span>
+               </div>
+               <div className="flex items-center gap-6">
+                 {isComparative && prevData.netChange !== 0 && (
+                    <div className="text-right">
+                       <span className="block text-[8px] font-bold text-slate-500 uppercase tracking-widest">Prior Delta</span>
+                       <span className="font-mono text-sm text-slate-400">{formatCurrency(prevData.netChange)}</span>
+                    </div>
+                 )}
+                 <span className={cn("text-3xl font-black font-mono tracking-tighter", currentData.netChange >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                    {formatCurrency(currentData.netChange)}
+                 </span>
+               </div>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+}

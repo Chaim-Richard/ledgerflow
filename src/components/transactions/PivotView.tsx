@@ -1,0 +1,46 @@
+import React from 'react';
+import { ChevronRight } from 'lucide-react';
+import { cn } from '../../lib/utils';
+
+interface PivotViewProps {
+  pivotData: Array<{ name: string, value: number, count: number }>;
+  formatCurrency: (cents: number) => string;
+}
+
+export default function PivotView({ pivotData, formatCurrency }: PivotViewProps) {
+  return (
+    <div className="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {pivotData.map((item) => (
+        <div key={item.name} className="bg-white border border-zinc-100 rounded-[32px] p-6 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-zinc-50 rounded-[32px] flex items-center justify-center text-zinc-400 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors">
+                <ChevronRight size={20} />
+              </div>
+              <h3 className="font-bold text-zinc-900">{item.name}</h3>
+            </div>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{item.count} txns</span>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-500">Total Volume</span>
+              <span className={cn(
+                "font-mono font-bold",
+                item.value >= 0 ? "text-emerald-600" : "text-rose-600"
+              )}>
+                {item.value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+              </span>
+            </div>
+            <div className="w-full bg-zinc-100 h-1.5 rounded-full overflow-hidden">
+              <div 
+                className="bg-orange-500 h-full rounded-full" 
+                style={{ width: `${Math.min(100, (Math.abs(item.value) / 1000) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
