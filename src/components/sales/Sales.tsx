@@ -64,11 +64,14 @@ export default function Sales({
   }, [invoices]);
 
   const filteredInvoices = useMemo(() => {
-    return invoices.filter((i: Invoice) => 
-      (i.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) || 
-      (i.number?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
-    );
-  }, [invoices, searchTerm]);
+    return invoices.filter((i: Invoice) => {
+      const term = searchTerm.toLowerCase();
+      if (!term) return true;
+      const customer = customers?.find(c => c.id === i.customerId);
+      const searchStr = `${i.customerName || ''} ${i.number || ''} ${i.metadata ? JSON.stringify(i.metadata) : ''} ${i.tags?.join(' ') || ''} ${customer?.tags?.join(' ') || ''} ${customer?.metadata ? JSON.stringify(customer.metadata) : ''}`.toLowerCase();
+      return searchStr.includes(term);
+    });
+  }, [invoices, customers, searchTerm]);
 
   const getStatusColor = (status: Invoice['status']) => {
     switch (status) {
@@ -179,7 +182,7 @@ export default function Sales({
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-600 transition-colors" size={20} />
           <input 
             type="text"
-            placeholder="Query matrix by identity or index..."
+            placeholder="Search invoices by customer, number, tags, or metadata..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:bg-white transition-all text-sm font-bold text-slate-900 placeholder:text-slate-500/40 shadow-sm"

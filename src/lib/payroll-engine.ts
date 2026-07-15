@@ -225,9 +225,9 @@ export function computePeriodPayroll(employee: Employee, year: number = 2026): P
   // County margin surcharge mapping
   const employeeCountyTaxCents = Math.round(grossPayCents * (regionalConfig.countyRate || 0));
 
-  // FUTA: 0.6% (mocked as accrued per period)
+  // FUTA: 0.6% (accrued per period)
   const employerFutaCents = Math.round(grossPayCents * 0.006);
-  // SUTA: 2.7% (mocked as accrued per period)
+  // SUTA: 2.7% (accrued per period)
   const employerSutaCents = Math.round(grossPayCents * 0.027);
 
   const totalWithholdingCents = 

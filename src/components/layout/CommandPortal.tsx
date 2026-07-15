@@ -1,5 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { toast } from 'sonner';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 
 // Highly Optimized Lazy Loading of heavy overlay system modals
 const CommandPalette = lazy(() => import('./CommandPalette'));
@@ -46,23 +48,26 @@ interface CommandPortalProps {
     handleSaveCurrentTemplate: () => void;
     handleApplyAITemplate: (t: any) => void;
   };
-  data: {
-    transactions: any[];
-    categories: string[];
-    accounts: any[];
-    projects: any[];
-    workspaceId: string | null;
-    businessContext: string;
-    baseCurrency: string;
-    customTemplates: any[];
-    currentTemplateId: string;
-    recentQueries?: string[];
-    autoRules: any[];
-    analyticalPatternCache: Record<string, any>;
-  };
 }
 
-export default function CommandPortal({ modals, handlers, data }: CommandPortalProps) {
+export default function CommandPortal({ modals, handlers }: CommandPortalProps) {
+  const transactions = useLedgerStore(state => state.transactions);
+  const accounts = useLedgerStore(state => state.accounts);
+  const projects = useLedgerStore(state => state.projects);
+  const autoRules = useLedgerStore(state => state.autoRules || []);
+  const patternCache = useLedgerStore(state => state.analyticalPatternCache || {});
+  const customTemplates = useLedgerStore(state => state.customTemplates || []);
+  
+  const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
+  const workspaces = useAuthStore(state => state.workspaces);
+  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
+  
+  const businessContext = currentWorkspace?.description || '';
+  const baseCurrency = currentWorkspace?.currency || 'USD';
+  const currentTemplateId = currentWorkspace?.businessType || 'generic';
+  
+  const categories = Array.from(new Set(accounts.filter((a: any) => a.type === 'income' || a.type === 'expense').map((a: any) => a.name)));
+  
   return (
     <Suspense fallback={null}>
       {modals.commandPalette && (
@@ -70,7 +75,7 @@ export default function CommandPortal({ modals, handlers, data }: CommandPortalP
           isOpen={modals.commandPalette}
           onClose={handlers.closeCommandPalette}
           onQuery={handlers.handleAIQuery}
-          recentQueries={data.recentQueries || []}
+          recentQueries={[]}
         />
       )}
       {modals.quickEntry && (
@@ -78,11 +83,11 @@ export default function CommandPortal({ modals, handlers, data }: CommandPortalP
           isOpen={modals.quickEntry} 
           onClose={handlers.closeQuickEntry} 
           onAdd={handlers.handleQuickAdd}
-          categories={data.categories}
-          accounts={data.accounts}
-          projects={data.projects.map((p: any) => p.name)}
-          autoRules={data.autoRules}
-          patternCache={data.analyticalPatternCache}
+          categories={categories}
+          accounts={accounts}
+          projects={projects.map((p: any) => p.name)}
+          autoRules={autoRules}
+          patternCache={patternCache}
         />
       )}
       {modals.importer && (
@@ -90,11 +95,11 @@ export default function CommandPortal({ modals, handlers, data }: CommandPortalP
           isOpen={modals.importer}
           onClose={handlers.closeImporter}
           onImport={handlers.handleImportTransactions}
-          existingTransactions={data.transactions}
-          businessContext={data.businessContext}
-          accounts={data.accounts}
-          autoRules={data.autoRules}
-          patternCache={data.analyticalPatternCache}
+          existingTransactions={transactions}
+          businessContext={businessContext}
+          accounts={accounts}
+          autoRules={autoRules}
+          patternCache={patternCache}
         />
       )}
       {modals.aiBlueprint && (
@@ -110,8 +115,8 @@ export default function CommandPortal({ modals, handlers, data }: CommandPortalP
           onClose={handlers.closeTemplate}
           onSelect={handlers.handleSelectTemplate}
           onOpenAI={handlers.handleOpenAIBlueprint}
-          currentType={data.currentTemplateId}
-          customTemplates={data.customTemplates}
+          currentType={currentTemplateId}
+          customTemplates={customTemplates}
           onSaveCurrent={handlers.handleSaveCurrentTemplate}
         />
       )}
@@ -120,14 +125,14 @@ export default function CommandPortal({ modals, handlers, data }: CommandPortalP
           isOpen={modals.commandCenter}
           onClose={handlers.closeCommandCenter}
           onFilter={handlers.handleFilter}
-          businessContext={data.businessContext}
+          businessContext={businessContext}
         />
       )}
       {modals.converter && (
         <CurrencyConverter 
           isOpen={modals.converter}
           onClose={handlers.closeConverter}
-          baseCurrency={data.baseCurrency}
+          baseCurrency={baseCurrency}
         />
       )}
       {modals.entanglement && (
@@ -144,8 +149,8 @@ export default function CommandPortal({ modals, handlers, data }: CommandPortalP
         <SystemArchitecture 
           isOpen={modals.architecture}
           onClose={handlers.closeArchitecture}
-          transactions={data.transactions}
-          accounts={data.accounts}
+          
+          accounts={accounts}
         />
       )}
     </Suspense>

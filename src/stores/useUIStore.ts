@@ -35,6 +35,11 @@ interface UIState {
   
   setActiveTab: (tab: AppTab) => void;
   setActiveIntelChannel: (channel: string) => void;
+  activeSettingsTab: string;
+  setActiveSettingsTab: (tab: string) => void;
+  activeReportTab: string;
+  setActiveReportTab: (tab: string) => void;
+  navigateTool: (id: string) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (val: boolean) => void;
   toggleQuietMode: () => void;
@@ -66,8 +71,12 @@ interface UIState {
   setDevMode: (val: boolean) => void;
   setLexiconOverride: (key: string, lang: 'en' | 'he', value: string) => void;
   resetLexiconOverrides: () => void;
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
   hiddenTabs: string[];
   toggleTabVisibility: (id: string) => void;
+  speedDials: Record<string, string>;
+  setSpeedDial: (key: string, tabId: string) => void;
+  removeSpeedDial: (key: string) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -107,6 +116,8 @@ export const useUIStore = create<UIState>((set) => ({
   })(),
   isQuietMode: false,
   activeIntelChannel: 'radar',
+  activeSettingsTab: 'billing',
+  activeReportTab: 'pnl',
   lexiconOverrides: (() => {
     try {
       const saved = typeof window !== 'undefined' ? localStorage.getItem('lf_lexicon_overrides') : null;
@@ -123,8 +134,48 @@ export const useUIStore = create<UIState>((set) => ({
       return [];
     }
   })(),
+  speedDials: (() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('lf_speed_dials') : null;
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  })(),
 
   setActiveIntelChannel: (activeIntelChannel) => set({ activeIntelChannel }),
+  setActiveSettingsTab: (activeSettingsTab) => set({ activeSettingsTab }),
+  setActiveReportTab: (activeReportTab) => set({ activeReportTab }),
+  navigateTool: (id: string) => set((state) => {
+    // Basic heuristics:
+    const s = { ...state };
+    
+    // Check Intelligence & Lenses
+    if (['radar', 'roi', 'signals', 'yield', 'burn', 'fx-exposure', 'growth-model', 'working-capital', 'pricing-optimizer', 'valuation'].includes(id)) {
+      s.activeTab = 'intelligence' as any;
+      s.activeIntelChannel = id;
+    }
+    // Check Settings
+    else if (['billing', 'neural', 'blueprint', 'developer', 'security', 'shortcuts'].includes(id)) {
+      s.activeTab = 'settings' as any;
+      s.activeSettingsTab = id;
+    }
+    // Check Reports
+    else if (['pnl', 'balance-sheet', 'cash-flow', 'trial-balance', 'general-ledger', 'tax', 'segment', 'compliance', 'financial-goals', 'ratios', 'profitability', 'forecast'].includes(id)) {
+      s.activeTab = 'reports' as any;
+      s.activeReportTab = id;
+    }
+    // Default to main tab
+    else {
+      s.activeTab = id as any;
+    }
+    
+    if (typeof window !== 'undefined') {
+      window.location.hash = s.activeTab;
+    }
+    
+    return s;
+  }),
   setActiveTab: (activeTab) => {
     if (typeof window !== 'undefined' && window.location.hash !== `#${activeTab}`) {
       window.location.hash = activeTab;
@@ -165,6 +216,12 @@ export const useUIStore = create<UIState>((set) => ({
     parsingQueue: state.parsingQueue.map(i => i.id === id ? { ...i, ...updates } : i) 
   })),
   setDevMode: (val) => set({ isDevMode: val }),
+  setTheme: (theme) => {
+    try {
+      localStorage.setItem('lf_theme', theme);
+    } catch (e) {}
+    set({ theme });
+  },
   setLexiconOverride: (key, lang, value) => set((state) => {
     const existing = state.lexiconOverrides[key] || { en: '', he: '' };
     const nextOverrides = {
@@ -194,6 +251,20 @@ export const useUIStore = create<UIState>((set) => ({
       localStorage.setItem('lf_hidden_tabs', JSON.stringify(nextHidden));
     } catch (e) {}
     return { hiddenTabs: nextHidden };
+  }),
+  setSpeedDial: (key, tabId) => set((state) => {
+    const nextSpeedDials = { ...state.speedDials, [key]: tabId };
+    try {
+      localStorage.setItem('lf_speed_dials', JSON.stringify(nextSpeedDials));
+    } catch (e) {}
+    return { speedDials: nextSpeedDials };
+  }),
+  removeSpeedDial: (key) => set((state) => {
+    const { [key]: _, ...nextSpeedDials } = state.speedDials;
+    try {
+      localStorage.setItem('lf_speed_dials', JSON.stringify(nextSpeedDials));
+    } catch (e) {}
+    return { speedDials: nextSpeedDials };
   })
 }));
 

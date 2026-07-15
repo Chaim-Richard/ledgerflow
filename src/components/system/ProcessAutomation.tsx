@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Network, Zap, GitCommit, Play, Pause, Activity } from 'lucide-react';
+import { Network, Zap, GitCommit, Activity } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function ProcessAutomation() {
@@ -26,7 +26,7 @@ export default function ProcessAutomation() {
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'workflows', label: 'Workflows', icon: GitCommit },
             { id: 'executions', label: 'Run History', icon: Activity }

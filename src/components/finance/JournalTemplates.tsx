@@ -1,15 +1,10 @@
 import React, { useState } from 'react';
-import { Copy, Plus, FileText, CheckCircle2 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { Copy, Plus, FileText } from 'lucide-react';
 
 export default function JournalTemplates() {
   const [activeTab, setActiveTab] = useState<'templates'>('templates');
 
-  const templates = [
-    { id: 'TPL-001', name: 'Monthly Rent Allocation', lines: 4, type: 'Recurring', lastUsed: '2026-06-01' },
-    { id: 'TPL-002', name: 'Payroll Clearing', lines: 12, type: 'Standard', lastUsed: '2026-06-15' },
-    { id: 'TPL-003', name: 'Depreciation - IT Equip', lines: 2, type: 'Standard', lastUsed: '2026-05-31' },
-  ];
+  const templates: any[] = [];
 
   return (
     <div className="h-full flex flex-col bg-[#FAFAFA]">

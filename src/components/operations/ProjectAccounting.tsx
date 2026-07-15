@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Briefcase, DollarSign, Clock, LayoutDashboard, Plus } from 'lucide-react';
+import { Briefcase, DollarSign, LayoutDashboard, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function ProjectAccounting() {
@@ -25,7 +25,7 @@ export default function ProjectAccounting() {
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'overview', label: 'Portfolio Overview', icon: LayoutDashboard },
             { id: 'wip', label: 'WIP & Job Costs', icon: DollarSign }

@@ -3,10 +3,7 @@ import { Transaction, ChartAccount } from '../../types';
 import { motion } from 'motion/react';
 import { 
   ArrowUpRight, 
-  ArrowDownRight, 
-  Activity,
-  Briefcase,
-  TrendingUp,
+  ArrowDownRight,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 

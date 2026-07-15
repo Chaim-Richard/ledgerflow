@@ -5,13 +5,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 
 export default function ProcessAutomationHub() {
   const { autoRules } = useLedgerStore();
-  const [workflows, setWorkflows] = useState(autoRules?.length ? autoRules : [
-    { id: 'wf-1', type: 'approval_chain', name: 'Vendor Bill Approval', trigger: 'Bill > $5,000', status: 'active', icon: ShieldCheck, color: 'text-indigo-500' },
-    { id: 'wf-2', type: 'email_alert', name: 'Overdue Invoice Reminder', trigger: 'Invoice > 10 Days Late', status: 'active', icon: Mail, color: 'text-blue-500' },
-    { id: 'wf-3', type: 'low_stock', name: 'Inventory Reorder', trigger: 'Stock < Reorder Point', status: 'paused', icon: Package, color: 'text-rose-500' },
-    { id: 'wf-4', type: 'routing_rule', name: 'Auto-Routing High Value Leads', trigger: 'Lead Score > 80', status: 'active', icon: Workflow, color: 'text-emerald-500' },
-    { id: 'wf-5', type: 'recurring', name: 'Monthly Tax Accrual Check', trigger: 'Last Day of Month', status: 'active', icon: Clock, color: 'text-amber-500' },
-  ]);
+  const [workflows, setWorkflows] = useState<any[]>(autoRules?.length ? autoRules : []);
 
   const toggleStatus = (id: string) => {
     setWorkflows(workflows.map(w => {

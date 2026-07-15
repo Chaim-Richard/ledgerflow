@@ -1,4 +1,3 @@
-import { Transaction } from '../../types';
 
 export class AuditRuleEngine {
   /**

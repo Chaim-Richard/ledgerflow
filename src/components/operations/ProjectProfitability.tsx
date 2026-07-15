@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Briefcase, TrendingUp, ArrowUpRight, ArrowDownRight, Clock, Target, Search, BarChart3, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Briefcase, TrendingUp, ArrowUpRight, ArrowDownRight, Search, BarChart3, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 

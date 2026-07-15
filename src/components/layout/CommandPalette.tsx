@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Loader2, ArrowRight } from 'lucide-react';
+import { Search, Loader2, ArrowRight, FileText, User, Building, FolderKanban, Tags, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { SYSTEM_COMMANDS, ANALYTICAL_LENSES_REGISTRY } from '../../config/registry';
 import { useUIStore } from '../../stores/useUIStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -17,27 +18,148 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
   const [query, setQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const language = useUIStore(state => state.language);
+  const ledger = useLedgerStore();
 
   // Map commands to the currently active UI language
   const localizedCommands = React.useMemo(() => {
     const base = SYSTEM_COMMANDS.map(cmd => ({
       id: cmd.id,
+      type: 'command',
       label: cmd.label[language] || cmd.label['en'],
       category: cmd.category,
       actionId: cmd.actionId,
-      payload: cmd.payload
+      payload: cmd.payload,
+      icon: <ArrowRight size={16} />
     }));
-
+    
     const lenses = ANALYTICAL_LENSES_REGISTRY.map(lens => ({
       id: `lens-${lens.id}`,
-      label: `Open: ${lens.label[language] || lens.label['en']}`,
+      type: 'command',
+      label: `Open: ${(lens.label && lens.label[language]) || (lens.label && lens.label['en']) || lens.name || lens.id}`,
       category: 'Calculators & Analytics',
       actionId: 'switch-tab',
-      payload: { tab: 'intelligence', channel: lens.id } // Intelligence center needs to parse this channel if provided
+      payload: { tab: 'intelligence', channel: lens.id },
+      icon: <ArrowRight size={16} />
     }));
-
+    
     return [...base, ...lenses];
   }, [language]);
+
+  // Deep Omnisearch across the entire business model
+  const dataResults = useMemo(() => {
+    if (!query || query.length < 2) return [];
+    
+    const lowerQ = query.toLowerCase();
+    const results: any[] = [];
+    const searchTerms = lowerQ.split(' ').filter(t => t.length > 0);
+
+    // Helper to check if all search terms match a string
+    const match = (str?: string) => {
+      if (!str) return false;
+      const lower = str.toLowerCase();
+      return searchTerms.every(term => lower.includes(term));
+    };
+
+    // Helper to check array of tags
+    const matchArray = (arr?: string[]) => {
+      if (!arr) return false;
+      const str = arr.join(' ').toLowerCase();
+      return searchTerms.every(term => str.includes(term));
+    };
+
+    // 1. Transactions
+    ledger.transactions.forEach(t => {
+      if (match(t.description) || matchArray(t.tags) || match(t.payee) || match(t.id)) {
+        results.push({
+          id: `tx-${t.id}`,
+          type: 'data',
+          label: `${t.description || 'Transaction'} - ${(t.totalAmountCents / 100).toLocaleString('en-US', { style: 'currency', currency: t.currency || 'USD' })}`,
+          category: `Transaction • ${t.date} ${t.tags ? '• ' + t.tags.join(', ') : ''}`,
+          actionId: 'switch-tab',
+          payload: { tab: 'transactions', id: t.id },
+          icon: <DollarSign size={16} className="text-emerald-500 shrink-0" />
+        });
+      } else {
+        // Search inside lines
+        for (const line of t.lines) {
+          if (match(line.description) || match(line.accountName) || matchArray(line.tags) || match(line.project) || match(line.class) || match(line.location)) {
+            results.push({
+              id: `tx-line-${t.id}-${line.accountId}`,
+              type: 'data',
+              label: `${line.description || t.description} (in ${line.accountName})`,
+              category: `Transaction Line • ${(line.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: t.currency || 'USD' })} ${line.tags ? '• ' + line.tags.join(', ') : ''}`,
+              actionId: 'switch-tab',
+              payload: { tab: 'transactions', id: t.id },
+              icon: <FileText size={16} className="text-blue-500 shrink-0" />
+            });
+            break; // Don't duplicate if multiple lines match
+          }
+        }
+      }
+    });
+
+    // 2. Projects / Units
+    ledger.projects.forEach(p => {
+      if (match(p.name) || match(p.description)) {
+        results.push({
+          id: `proj-${p.id}`,
+          type: 'data',
+          label: p.name,
+          category: `Project / Unit • ${p.status}`,
+          actionId: 'switch-tab',
+          payload: { tab: 'projects', id: p.id },
+          icon: <FolderKanban size={16} className="text-purple-500 shrink-0" />
+        });
+      }
+    });
+
+    // 3. Customers
+    ledger.customers.forEach(c => {
+      if (match(c.name) || match(c.email) || matchArray(c.tags) || match((c as any).group)) {
+        results.push({
+          id: `cust-${c.id}`,
+          type: 'data',
+          label: c.name,
+          category: `Customer ${(c as any).group ? '• ' + (c as any).group : ''}`,
+          actionId: 'switch-tab',
+          payload: { tab: 'sales', id: c.id },
+          icon: <User size={16} className="text-amber-500 shrink-0" />
+        });
+      }
+    });
+
+    // 4. Vendors
+    ledger.vendors.forEach(v => {
+      if (match(v.name) || match(v.email) || matchArray(v.tags) || match((v as any).group)) {
+        results.push({
+          id: `vend-${v.id}`,
+          type: 'data',
+          label: v.name,
+          category: `Vendor ${(v as any).group ? '• ' + (v as any).group : ''}`,
+          actionId: 'switch-tab',
+          payload: { tab: 'expenses', id: v.id },
+          icon: <Building size={16} className="text-rose-500 shrink-0" />
+        });
+      }
+    });
+
+    // 5. Accounts
+    ledger.accounts.forEach(a => {
+      if (match(a.name) || match(a.code) || match(a.category)) {
+        results.push({
+          id: `acc-${a.id}`,
+          type: 'data',
+          label: `${a.code ? a.code + ' - ' : ''}${a.name}`,
+          category: `Account • ${a.type} ${a.category ? '• ' + a.category : ''}`,
+          actionId: 'switch-tab',
+          payload: { tab: 'coa', id: a.id },
+          icon: <Tags size={16} className="text-blue-500 shrink-0" />
+        });
+      }
+    });
+
+    return results.slice(0, 50); // Limit to top 50 results
+  }, [query, ledger.transactions, ledger.projects, ledger.customers, ledger.vendors, ledger.accounts]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -70,20 +192,20 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       )
     : localizedCommands;
 
-  const handleSelect = async (command: any) => {
+  const combinedResults = [...dataResults, ...filteredCommands];
+
+  const handleSelect = async (item: any) => {
     setIsExecuting(true);
     await new Promise(r => setTimeout(r, 400));
     
-    // Core Application Action Mappings (safely checked and dynamically dispatched)
-    if (onAction && command.actionId) {
-      onAction(command.actionId, command.payload);
+    // Core Application Action Mappings
+    if (onAction && item.actionId) {
+      onAction(item.actionId, item.payload);
     }
-
-    toast.success(`${command.label} dispatched`);
+    toast.success(`${item.label} opened`);
     setIsExecuting(false);
     onClose();
   };
-
 
   return (
     <AnimatePresence>
@@ -100,14 +222,14 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            className="fixed z-[201] top-[10%] left-1/2 -translate-x-1/2 w-full max-w-2xl bg-white rounded-[32px] shadow-2xl overflow-hidden border border-gray-200"
+            className="fixed z-[201] top-[10%] left-1/2 -translate-x-1/2 w-full max-w-3xl bg-white rounded-[32px] shadow-2xl overflow-hidden border border-gray-200"
           >
-            <div className="flex items-center px-4 py-3 border-b border-gray-100">
-              <Search className="text-gray-400 mr-3" size={20} />
+            <div className="flex items-center px-6 py-5 border-b border-gray-100">
+              <Search className="text-indigo-600 mr-4" size={24} />
               <input
                 autoFocus
-                className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400 text-lg"
-                placeholder="Type a command or search..."
+                className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400 text-xl font-medium"
+                placeholder="Search across all businesses, houses, units, tags, and commands..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 disabled={isExecuting}
@@ -117,32 +239,48 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
               </div>
             </div>
             
-            <div className="max-h-[60dvh] overflow-y-auto">
+            <div className="max-h-[60dvh] overflow-y-auto bg-slate-50">
               {isExecuting ? (
-                <div className="flex flex-col items-center justify-center p-12 text-gray-500">
-                  <Loader2 className="animate-spin mb-4" size={24} />
-                  <p className="text-sm font-medium">Executing command...</p>
+                <div className="flex flex-col items-center justify-center p-16 text-gray-500">
+                  <Loader2 className="animate-spin mb-4" size={32} />
+                  <p className="text-base font-medium">Navigating universe...</p>
                 </div>
-              ) : filteredCommands.length > 0 ? (
-                <div className="p-2 space-y-1">
-                  {filteredCommands.map((command, index) => (
+              ) : combinedResults.length > 0 ? (
+                <div className="p-3 space-y-1">
+                  {combinedResults.map((item, index) => (
                     <button
-                      key={command.id}
-                      onClick={() => handleSelect(command)}
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 rounded-xl transition-colors group text-left"
+                      key={item.id}
+                      onClick={() => handleSelect(item)}
+                      className="w-full flex items-center justify-between px-5 py-4 hover:bg-white hover:shadow-sm rounded-2xl transition-all group text-left border border-transparent hover:border-slate-200"
                     >
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{command.label}</p>
-                        <p className="text-xs text-gray-500">{command.category}</p>
+                      <div className="flex items-center gap-4 min-w-0 flex-1 mr-4">
+                        <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0">
+                          {item.icon}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-base font-semibold text-gray-900 truncate">{item.label}</p>
+                          <p className="text-xs font-medium text-gray-500 truncate">{item.category}</p>
+                        </div>
                       </div>
-                      <ArrowRight size={16} className="text-gray-300 group-hover:text-gray-900 group-hover:translate-x-1 transition-all" />
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center shrink-0">
+                         <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 mr-2 hidden sm:inline">Jump</span>
+                         <ArrowRight size={16} className="text-indigo-600 inline-block -translate-x-2 group-hover:translate-x-0 transition-all shrink-0" />
+                      </div>
                     </button>
                   ))}
                 </div>
-              ) : (
-                <div className="p-12 text-center text-gray-500 text-sm">
-                  No commands found.
+              ) : query.length > 0 ? (
+                <div className="p-16 text-center text-gray-500">
+                  <Tags size={48} className="mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg font-bold text-gray-900">No dimensions matched</p>
+                  <p className="text-sm font-medium mt-1">Try searching by tags, units, categories, or dollar amounts.</p>
                 </div>
+              ) : (
+                 <div className="p-10 flex items-center justify-center opacity-50">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 text-center max-w-sm">
+                      Quantum Search Matrix active.<br/>Type any tag, location, class, or entity to instantly filter your workspace.
+                    </p>
+                 </div>
               )}
             </div>
           </motion.div>

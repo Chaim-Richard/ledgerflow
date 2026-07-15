@@ -111,10 +111,12 @@ export default function Projects({
   };
 
   const filteredProjects = useMemo(() => {
-    return projects.filter(p => 
-      (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.description || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    return projects.filter(p => {
+      const term = searchTerm.toLowerCase();
+      if (!term) return true;
+      const searchStr = `${p.name || ''} ${p.description || ''} ${p.tags?.join(' ') || ''} ${p.metadata ? JSON.stringify(p.metadata) : ''}`.toLowerCase();
+      return searchStr.includes(term);
+    });
   }, [projects, searchTerm]);
 
   const projectStats = useMemo(() => {
@@ -207,7 +209,7 @@ export default function Projects({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-655 transition-colors" size={14} />
             <input 
               type="text"
-              placeholder="Query project identity..."
+              placeholder="Search by project name, description, tags, or metadata..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 pr-4 py-1.5 bg-slate-50 hover:bg-slate-50/80 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-950 transition-all w-60 text-slate-800 placeholder:text-slate-400 font-medium"
@@ -226,7 +228,6 @@ export default function Projects({
       {activeSubTab === 'pipeline' ? (
          <ProjectPipeline 
            projects={filteredProjects}
-           transactions={transactions}
            onUpdateProject={async (id, data) => { if (onUpdate) await onUpdate(id, data); }}
          />
       ) : (

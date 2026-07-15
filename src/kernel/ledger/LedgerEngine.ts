@@ -14,7 +14,9 @@ export class LedgerEngine {
     
     // Initialize map
     accounts.forEach(acc => {
-      balances.set(acc.id, { total: 0, projects: new Map() });
+      const isDebit = acc.type === 'asset' || acc.type === 'expense';
+      const opening = acc.openingBalanceCents || 0;
+      balances.set(acc.id, { total: isDebit ? opening : -opening, projects: new Map() });
     });
 
     // We no longer loop UI transactions manually without Fx rates, etc.

@@ -1,20 +1,13 @@
 import React, { useState } from 'react';
-import { Tag, MapPin, Search, Plus, ListFilter } from 'lucide-react';
+import { Tag, MapPin, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function ClassLocationManager() {
   const [activeTab, setActiveTab] = useState<'classes' | 'locations'>('classes');
 
-  const classes = [
-    { id: 'CLS-01', name: 'Software Sales', status: 'Active', parent: 'None' },
-    { id: 'CLS-02', name: 'Hardware Sales', status: 'Active', parent: 'None' },
-    { id: 'CLS-03', name: 'Consulting', status: 'Active', parent: 'Services' },
-  ];
+  const classes: any[] = [];
 
-  const locations = [
-    { id: 'LOC-NY', name: 'New York HQ', status: 'Active', region: 'North America' },
-    { id: 'LOC-LDN', name: 'London Office', status: 'Active', region: 'EMEA' },
-  ];
+  const locations: any[] = [];
 
   return (
     <div className="h-full flex flex-col bg-[#FAFAFA]">
@@ -34,7 +27,7 @@ export default function ClassLocationManager() {
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'classes', label: 'Classes (Departments)', icon: Tag },
             { id: 'locations', label: 'Locations', icon: MapPin }

@@ -96,11 +96,19 @@ export default function SplitTransaction() {
               {activeTab === 'flat' ? (
                 <div className="relative w-full md:w-40 flex items-center bg-white rounded-lg border border-slate-200 overflow-hidden">
                   <span className="pl-4 font-bold text-slate-500">$</span>
-                  <input type="number" value={split.amount} className="w-full px-2 py-2.5 border-none focus:ring-0 outline-none font-mono font-bold text-right" />
+                  <input type="number" value={split.amount} onChange={(e) => {
+                    const newSplits = [...splits];
+                    newSplits[i].amount = Number(e.target.value);
+                    setLines(newSplits);
+                  }} className="w-full px-2 py-2.5 border-none focus:ring-0 outline-none font-mono font-bold text-right" />
                 </div>
               ) : (
                 <div className="relative w-full md:w-40 flex items-center bg-white rounded-lg border border-slate-200 overflow-hidden">
-                  <input type="number" value={split.percent} className="w-full px-4 py-2.5 border-none focus:ring-0 outline-none font-mono font-bold text-right" />
+                  <input type="number" value={split.percent} onChange={(e) => {
+                    const newSplits = [...splits];
+                    newSplits[i].percent = Number(e.target.value);
+                    setLines(newSplits);
+                  }} className="w-full px-4 py-2.5 border-none focus:ring-0 outline-none font-mono font-bold text-right" />
                   <span className="pr-4 font-bold text-slate-500">%</span>
                 </div>
               )}

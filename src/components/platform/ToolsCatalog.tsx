@@ -3,29 +3,24 @@ import React, { useState } from 'react';
 import { 
   Library, 
   Search, 
-  Grid3X3, 
-  List, 
   CheckCircle2, 
-  Zap, 
-  Star,
-  Download,
-  Terminal,
-  Cpu,
-  BarChart4,
-  ShieldCheck,
-  Globe,
-  LineChart,
-  Sparkles,
-  Brain,
-  TrendingUp
+  Zap
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import ToolSandbox from './ToolSandbox';
+import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
 
 const CATEGORIES = ['All', 'Reporting', 'Automation', 'Compliance', 'Intelligence', 'Operations', 'Finance'];
 
-const TOOLS: any[] = [];
+const TOOLS = Object.values(FINANCIAL_ALGORITHMS).map((algo: any, i: number) => ({
+  id: algo.id,
+  name: algo.name,
+  desc: algo.description,
+  cat: ['Operations', 'Intelligence', 'Reporting', 'Automation', 'Finance'][i % 5],
+  implemented: true,
+  icon: Zap
+}));
 
 export default function ToolsCatalog() {
   const [activeCat, setActiveCat] = useState('All');

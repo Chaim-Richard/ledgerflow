@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  resolve: { dedupe: ["react", "react-dom"] },
   plugins: [react(), tailwindcss(), VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["**/*"],
@@ -34,6 +35,9 @@ export default defineConfig({
   server: {
     port: 3000,
     host: '0.0.0.0',
+  },
+  optimizeDeps: {
+    include: ['recharts', 'd3']
   },
   build: {
     rollupOptions: {

@@ -1,5 +1,7 @@
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import { TruthEngine } from '../../modules/truth/TruthEngine';
-import React, { useState, useMemo } from 'react';
+import React,
+ { useState, useMemo } from 'react';
 import { Transaction, ChartAccount } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -20,13 +22,15 @@ import { toast } from 'sonner';
 interface ReconciliationWizardProps {
   isOpen: boolean;
   onClose: () => void;
-  transactions: Transaction[];
+  
   accounts: ChartAccount[];
   onComplete: (data: any) => void;
   formatCurrency: (val: number) => string;
 }
 
-export default function ReconciliationWizard({ isOpen, onClose, transactions, accounts, onComplete, formatCurrency }: ReconciliationWizardProps) {
+export default function ReconciliationWizard({ isOpen, onClose, accounts, onComplete, formatCurrency }: ReconciliationWizardProps) {
+  const transactions = useLedgerStore(state => state.transactions || []);
+  
   const [step, setStep] = useState(1);
   const [selectedAccount, setSelectedAccount] = useState<string>('');
   const [statementDate, setStatementDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -38,7 +42,7 @@ export default function ReconciliationWizard({ isOpen, onClose, transactions, ac
   
   const filteredTransactions = useMemo(() => {
     if (!selectedAccount) return [];
-    return transactions.filter(t => 
+    return (transactions || []).filter(t => 
       t.lines?.some(l => l.accountName === selectedAccount) && 
       !t.clearedAt &&
       (t.description.toLowerCase().includes(searchTerm.toLowerCase()) || t.totalAmountCents.toString().includes(searchTerm))
@@ -47,7 +51,7 @@ export default function ReconciliationWizard({ isOpen, onClose, transactions, ac
       // For reconciliation, we care about the amount specifically for the selected account
       relevantAmountCents: t.lines?.find(l => l.accountName === selectedAccount)?.amountCents || 0
     }));
-  }, [transactions, selectedAccount, searchTerm]);
+  }, [selectedAccount, searchTerm]);
 
   const stats = useMemo(() => {
     const cleared = filteredTransactions

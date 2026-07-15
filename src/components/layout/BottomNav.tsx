@@ -1,59 +1,58 @@
 import React from 'react';
-import { Home, Database, Briefcase, Menu, Building2 } from 'lucide-react';
-import { useUIStore } from '../../stores/useUIStore';
 import { cn } from '../../lib/utils';
-import { AppTab } from '../../types';
-import { APP_TABS } from '../../config/registry';
+import { LayoutGrid, Layers, Briefcase, BarChart3, Settings } from 'lucide-react';
+import { APP_TABS, NAV_GROUPS } from '../../config/registry';
 
 interface BottomNavProps {
-  activeTab: AppTab;
-  onTabChange: (tabId: AppTab) => void;
+  activeTab: string;
+  onTabChange: (tabId: string) => void;
 }
 
+const GROUP_ICONS: Record<string, any> = {
+  pulse: LayoutGrid,
+  finance: Layers,
+  operations: Briefcase,
+  planning: BarChart3,
+  system: Settings
+};
+
 export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
-  const { toggleSidebar } = useUIStore();
+  const currentTabDef = APP_TABS.find(t => t.id === activeTab);
+  const activeGroupId = currentTabDef?.groupId || 'pulse';
 
-  const activeTabDef = APP_TABS.find(t => t.id === activeTab);
-  const activeGroupId = activeTabDef?.groupId;
-
-  const navGroups: any[] = [];
+  const visibleGroups = ['pulse', 'finance', 'operations', 'planning'];
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-      <div className="flex items-center justify-around h-[64px] px-2">
-        {navGroups.map((group) => {
-          const Icon = group.icon;
-          const isActive = (activeGroupId === group.id && !group.isAction) || (activeTab === group.firstTab && !group.isAction);
-          
-          return (
-            <button
-              key={group.id}
-              onClick={() => {
-                if (group.isAction) {
-                  toggleSidebar();
-                } else if (group.firstTab) {
-                  onTabChange(group.firstTab as AppTab);
-                  useUIStore.getState().setSidebarOpen(false);
-                }
-              }}
-              className="flex flex-col items-center justify-center w-full h-full space-y-[2px] relative"
-            >
-              <div className={cn(
-                "p-1.5 rounded-full transition-all duration-200",
-                isActive ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100"
-              )}>
-                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-              </div>
-              <span className={cn(
-                "text-[10px] font-medium transition-colors duration-200",
-                isActive ? "text-slate-900 font-bold" : "text-slate-500"
-              )}>
-                {group.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-white border-t border-[#e5e5e5] flex items-center justify-around z-50 px-2 pb-[env(safe-area-inset-bottom)]">
+      {visibleGroups.map(groupId => {
+        const Icon = GROUP_ICONS[groupId];
+        const isActive = activeGroupId === groupId;
+        const firstTab = APP_TABS.find(t => t.groupId === groupId);
+        const groupLabel = NAV_GROUPS[groupId]?.en;
+        
+        if (!firstTab) return null;
+
+        return (
+          <button
+            key={groupId}
+            onClick={() => onTabChange(firstTab.id)}
+            className="flex flex-col items-center justify-center w-full h-full space-y-1 relative"
+          >
+            <div className={cn(
+              "p-1.5 rounded-full transition-colors",
+              isActive ? "bg-black/5 text-black" : "text-gray-400"
+            )}>
+              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+            </div>
+            <span className={cn(
+              "text-[10px] font-medium transition-colors",
+              isActive ? "text-black" : "text-gray-400"
+            )}>
+              {groupLabel}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

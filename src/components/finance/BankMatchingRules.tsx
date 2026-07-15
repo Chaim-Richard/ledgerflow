@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GitMerge, Landmark, ArrowRight, Settings } from 'lucide-react';
+import { GitMerge, ArrowRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function BankMatchingRules() {

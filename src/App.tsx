@@ -23,6 +23,7 @@ import { useBillingStore } from './modules/billing/BillingService';
 import { AuthScreen } from './core/auth/AuthScreen';
 import { InitializationScreen } from './core/auth/InitializationScreen';
 import { RootLayout } from './core/layout/RootLayout';
+import { LedgerAutoAuditor } from './components/forensics/LedgerAutoAuditor';
 
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -37,13 +38,9 @@ export default function App() {
   const workspaces = useAuthStore(state => state.workspaces);
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
 
-  const transactions = useLedgerStore(state => state.transactions);
-  const accounts = useLedgerStore(state => state.accounts);
-  const journalEntries = useLedgerStore(state => state.journalEntries);
-  const projects = useLedgerStore(state => state.projects);
-  const autoRules = useLedgerStore(state => state.autoRules);
   
   const language = useUIStore(state => state.language);
+  const speedDials = useUIStore(state => state.speedDials);
   const theme = useUIStore(state => state.theme);
 
   useEffect(() => {
@@ -59,6 +56,7 @@ export default function App() {
   }, [theme]);
   const isQuietMode = useUIStore(state => state.isQuietMode);
   const setActiveTabStore = useUIStore(state => state.setActiveTab);
+  const navigateToolStore = useUIStore(state => state.navigateTool);
   const isCommandPaletteOpen = useUIStore(state => state.isCommandPaletteOpen);
   const setCommandPaletteOpen = useUIStore(state => state.setCommandPaletteOpen);
   const isQuickEntryOpen = useUIStore(state => state.isQuickEntryOpen);
@@ -108,6 +106,12 @@ export default function App() {
     };
   }, []);
 
+  const navigateTool = useCallback((tab: any) => {
+    startTransition(() => {
+        navigateToolStore(tab);
+    });
+  }, [navigateToolStore]);
+
   const setActiveTab = useCallback((tab: any) => {
     startTransition(() => {
         setActiveTabStore(tab);
@@ -122,22 +126,33 @@ export default function App() {
   }, [setUser]);
 
   // Operational Keyboard Shortcuts
-  useKeyboardShortcuts({
-    'mod+k': () => setCommandPaletteOpen(!isCommandPaletteOpen),
-    'mod+q': () => setQuickEntryOpen(!isQuickEntryOpen),
-    'mod+f': () => toggleFocusMode(),
-    'mod+shift+k': () => setDiagnosticConsoleOpen(!isDiagnosticConsoleOpen),
-    'mod+/?': () => setShortcutOverlayOpen(!isShortcutOverlayOpen),
-    '?': () => setShortcutOverlayOpen(!isShortcutOverlayOpen),
-    'mod+1': () => setActiveTab('dashboard'),
-    'mod+2': () => setActiveTab('transactions'),
-    'mod+3': () => setActiveTab('ledger'),
-    'mod+e': () => handleAction('export'),
-    'mod+p': () => setActiveTab('reports'),
-    'mod+shift+d': () => useUIStore.getState().setTheme(useUIStore.getState().theme === 'dark' ? 'light' : 'dark'),
-    'mod+i': () => setImporterOpen(true),
-    'mod+shift+a': () => setArchitectureOpen(!isArchitectureOpen),
-  });
+const shortcutMap = useMemo(() => {
+    const base: Record<string, () => void> = {
+      'mod+k': () => setCommandPaletteOpen(!isCommandPaletteOpen),
+      'mod+q': () => setQuickEntryOpen(!isQuickEntryOpen),
+      'mod+f': () => toggleFocusMode(),
+      'mod+shift+k': () => setDiagnosticConsoleOpen(!isDiagnosticConsoleOpen),
+      'mod+/?': () => setShortcutOverlayOpen(!isShortcutOverlayOpen),
+      '?': () => setShortcutOverlayOpen(!isShortcutOverlayOpen),
+      'mod+1': () => setActiveTab('dashboard' as any),
+      'mod+2': () => setActiveTab('transactions' as any),
+      'mod+3': () => setActiveTab('ledger' as any),
+      'mod+e': () => handleAction('export' as any),
+      'mod+p': () => setActiveTab('reports' as any),
+      'mod+shift+d': () => useUIStore.getState().setTheme(useUIStore.getState().theme === 'dark' ? 'light' : 'dark'),
+      'mod+i': () => setImporterOpen(true),
+      'mod+shift+a': () => setArchitectureOpen(!isArchitectureOpen),
+    };
+    Object.entries(speedDials || {}).forEach(([key, tabId]) => {
+      base[`alt+${key.toLowerCase()}`] = () => navigateTool(tabId);
+    });
+    return base;
+  }, [
+    isCommandPaletteOpen, isQuickEntryOpen, isDiagnosticConsoleOpen,
+    isShortcutOverlayOpen, isArchitectureOpen, speedDials, navigateTool
+  ]);
+  
+  useKeyboardShortcuts(shortcutMap);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -150,11 +165,6 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  useEffect(() => {
-    if (transactions.length > 0 && accounts.length > 0) {
-      useLedgerStore.getState().runFullAudit();
-    }
-  }, [transactions, accounts, journalEntries]);
 
   const [isGuest, setIsGuest] = useState(() => localStorage.getItem('isGuest') === 'true');
 
@@ -250,11 +260,12 @@ export default function App() {
         analyticalTopology: customBlueprint.dashboardSchema || customBlueprint.topology
       });
 
-      const hasTransactions = transactions.length > 0;
+      const hasTransactions = useLedgerStore.getState().transactions.length > 0;
       
       if (!hasTransactions) {
-        if (accounts.length > 0) {
-          accounts.forEach(acc => {
+        const currentAccounts = useLedgerStore.getState().accounts;
+        if (currentAccounts.length > 0) {
+          currentAccounts.forEach(acc => {
             if (acc.id) {
               batch.delete(doc(db, 'chartAccounts', acc.id));
             }
@@ -276,7 +287,7 @@ export default function App() {
       } else {
         const accountsToMap = customBlueprint.chartOfAccounts || customBlueprint.accounts || [];
         accountsToMap.forEach((acc: any) => {
-          const exists = accounts.some(a => a.name.toLowerCase() === acc.name.toLowerCase());
+          const exists = useLedgerStore.getState().accounts.some((a: any) => a.name.toLowerCase() === acc.name.toLowerCase());
           if (!exists) {
             const accRef = doc(collection(db, 'chartAccounts'));
             batch.set(accRef, {
@@ -299,7 +310,7 @@ export default function App() {
     } catch (error: any) {
       toast.error(`Transformation Failed: ${error.message}`, { id: loader });
     }
-  }, [user, currentWorkspaceId, accounts, transactions]);
+  }, [user, currentWorkspaceId]);
 
   const handleSelectTemplate = useCallback(async (templateId: string) => {
     if (!user || !currentWorkspaceId) return;
@@ -319,12 +330,13 @@ export default function App() {
       // If there are no transactions recorded in this workspace, we cleanly purge existing placeholder 
       // accounts and write the template's exact configuration.
       // If transactions do exist, we execute a non-destructive "Smart Blend" (adding missing template accounts).
-      const hasTransactions = transactions.length > 0;
+      const hasTransactions = useLedgerStore.getState().transactions.length > 0;
       
       if (!hasTransactions) {
         // Clean Reset Strategy
-        if (accounts.length > 0) {
-          accounts.forEach(acc => {
+        const currentAccounts = useLedgerStore.getState().accounts;
+        if (currentAccounts.length > 0) {
+          currentAccounts.forEach(acc => {
             if (acc.id) {
               batch.delete(doc(db, 'chartAccounts', acc.id));
             }
@@ -343,8 +355,9 @@ export default function App() {
         });
       } else {
         // Smart Blend Strategy
-        const existingCodes = new Set(accounts.map(a => a.code));
-        const existingNames = new Set(accounts.map(a => (a.name || '').toLowerCase().trim()));
+        const currentAccounts = useLedgerStore.getState().accounts;
+        const existingCodes = new Set(currentAccounts.map(a => a.code));
+        const existingNames = new Set(currentAccounts.map(a => (a.name || '').toLowerCase().trim()));
 
         template.accounts.forEach((acc: Partial<ChartAccount>) => {
           if (!acc.code) return;
@@ -375,7 +388,7 @@ export default function App() {
       console.error("Template transformation aborted:", e);
       toast.error('SETUP FAILED', { id: loader });
     }
-  }, [user, currentWorkspaceId, accounts, transactions, setTemplateSelectorOpen, setActiveTab]);
+  }, [user, currentWorkspaceId, setTemplateSelectorOpen, setActiveTab]);
 
   const handleSaveCurrentTemplate = useCallback(async () => {
     if (!user || !currentWorkspaceId || !currentWorkspace) return;
@@ -387,7 +400,7 @@ export default function App() {
       await addDoc(collection(db, 'customTemplates'), {
         name,
         industry: currentWorkspace.businessType || 'generic',
-        accounts: accounts.map(a => ({ code: a.code, name: a.name, type: a.type, category: a.category })),
+        accounts: useLedgerStore.getState().accounts.map(a => ({ code: a.code, name: a.name, type: a.type, category: a.category })),
         analyticalTopology: currentWorkspace.analyticalTopology || {},
         uid: user.uid,
         createdAt: new Date().toISOString()
@@ -396,7 +409,7 @@ export default function App() {
     } catch (e) {
       toast.error('SNAPSHOT FAILED');
     }
-  }, [user, currentWorkspaceId, currentWorkspace, accounts]);
+  }, [user, currentWorkspaceId, currentWorkspace]);
 
   const handleCreateWorkspace = useCallback(async () => {
     if (!user) return;
@@ -426,19 +439,6 @@ export default function App() {
   }, [user]);
 
 
-  const portalData = useMemo(() => ({
-    transactions,
-    categories: coreSystemProps.categories,
-    accounts,
-    projects,
-    workspaceId: currentWorkspaceId,
-    businessContext: currentWorkspace?.description || '',
-    baseCurrency: currentWorkspace?.currency || 'USD',
-    customTemplates: useLedgerStore.getState().customTemplates || [],
-    currentTemplateId: currentWorkspace?.businessType || 'generic',
-    autoRules: autoRules || [],
-    analyticalPatternCache: useLedgerStore.getState().analyticalPatternCache || {}
-  }), [transactions, coreSystemProps.categories, accounts, projects, currentWorkspaceId, currentWorkspace, autoRules]);
 
   if (isInitializing) {
     return <InitializationScreen language={language} />;
@@ -463,12 +463,12 @@ export default function App() {
               />
           </div>
         )}
+        <LedgerAutoAuditor />
         <RootLayout 
           handleAction={handleAction} 
           coreSystemProps={coreSystemProps} 
           handleLogout={handleLogout} 
           handleLoginPrompt={handleLoginPrompt}
-          portalData={portalData} 
           isPending={isPending} 
           txActions={txActions}
           ai={ai}

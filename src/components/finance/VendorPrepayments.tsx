@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Banknote, ArrowRight, Wallet, CheckCircle2 } from 'lucide-react';
+import { Banknote } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function VendorPrepayments() {

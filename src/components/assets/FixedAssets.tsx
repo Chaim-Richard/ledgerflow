@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import { Briefcase, Calendar, TrendingDown, Info, Plus, Search, Filter, MoreHorizontal } from 'lucide-react';
+import { Briefcase, Calendar, TrendingDown, Info, Plus, Search, MoreHorizontal } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { motion } from 'motion/react';
 
 export default function FixedAssetDepreciation() {
   const [activeTab, setActiveTab] = useState<'register' | 'schedule'>('register');
   
-  const mockAssets: any[] = [];
+  const assets: any[] = [];
 
-  const totalCost = mockAssets.reduce((sum, a) => sum + a.costCents, 0);
-  const totalAccDepr = mockAssets.reduce((sum, a) => sum + a.accDeprCents, 0);
+  const totalCost = assets.reduce((sum, a) => sum + a.costCents, 0);
+  const totalAccDepr = assets.reduce((sum, a) => sum + a.accDeprCents, 0);
   const netBookValue = totalCost - totalAccDepr;
 
   return (
@@ -106,7 +105,7 @@ export default function FixedAssetDepreciation() {
               <div className="col-span-2 text-right">Net Book Value</div>
             </div>
             <div className="divide-y divide-[#E5E5E5]">
-              {mockAssets.map((asset) => {
+              {assets.map((asset) => {
                 const nbv = asset.costCents - asset.accDeprCents;
                 return (
                   <div key={asset.id} className="grid grid-cols-12 p-4 items-center hover:bg-[#FAFAFA] transition-colors cursor-pointer group">

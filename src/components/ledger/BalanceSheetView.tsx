@@ -1,3 +1,4 @@
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import React, { useState, useMemo } from 'react';
 import { ChartAccount, Transaction, JournalEntry } from '../../types';
 import { 
@@ -17,12 +18,14 @@ import { useAuthStore } from '../../stores/useAuthStore';
 
 interface BalanceSheetViewProps {
   accounts: ChartAccount[];
-  transactions: Transaction[];
+  
   journalEntries: JournalEntry[];
   formatCurrency: (val: number) => string;
 }
 
-export default function BalanceSheetView({ accounts, transactions = [], journalEntries = [], formatCurrency }: BalanceSheetViewProps) {
+export default function BalanceSheetView({ accounts = [], journalEntries = [], formatCurrency }: BalanceSheetViewProps) {
+  const transactions = useLedgerStore(state => state.transactions || []);
+  
   const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isComparative, setIsComparative] = useState<boolean>(false);
   const [priorDate, setPriorDate] = useState<string>(
@@ -166,7 +169,7 @@ export default function BalanceSheetView({ accounts, transactions = [], journalE
     const currentData = getPeriodBalances(asOfDate);
     const prevData = isComparative ? getPeriodBalances(priorDate) : currentData;
     return { currentData, prevData };
-  }, [accounts, transactions, journalEntries, asOfDate, priorDate, isComparative]);
+  }, [accounts, journalEntries, asOfDate, priorDate, isComparative]);
 
   const exportBalanceSheet = () => {
     const rows = [

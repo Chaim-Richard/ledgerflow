@@ -1,16 +1,11 @@
 import React, { useState } from 'react';
-import { DollarSign, Globe, RefreshCw, Plus, TrendingUp, History } from 'lucide-react';
+import { DollarSign, Globe, RefreshCw, TrendingUp, History } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function MultiCurrencyManager() {
   const [activeTab, setActiveTab] = useState<'rates' | 'revaluation'>('rates');
 
-  const currencies = [
-    { code: 'USD', name: 'US Dollar', rate: 1.0000, base: true, lastUpdated: 'System' },
-    { code: 'EUR', name: 'Euro', rate: 0.9240, base: false, lastUpdated: '2026-07-01 09:00 UTC' },
-    { code: 'GBP', name: 'British Pound', rate: 0.7915, base: false, lastUpdated: '2026-07-01 09:00 UTC' },
-    { code: 'JPY', name: 'Japanese Yen', rate: 151.20, base: false, lastUpdated: '2026-07-01 09:00 UTC' },
-  ];
+  const currencies: any[] = [];
 
   return (
     <div className="h-full flex flex-col bg-[#FAFAFA]">
@@ -30,7 +25,7 @@ export default function MultiCurrencyManager() {
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'rates', label: 'Exchange Rates', icon: DollarSign },
             { id: 'revaluation', label: 'Currency Revaluation', icon: TrendingUp }

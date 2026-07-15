@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 interface ReconciliationProps {
   user: User | null;
   workspaceId: string;
-  transactions: Transaction[];
+  transactions?: Transaction[];
   bankLines: BankStatementLine[];
   accounts: ChartAccount[];
   onMatch: (bankLineId: string, transactionId: string) => Promise<void>;

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Briefcase, Calendar, TrendingUp, Search, Plus, Filter, CheckCircle2 } from 'lucide-react';
+import { Briefcase, Calendar, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { motion } from 'motion/react';
 
 export default function EquityGrants() {
   const [activeTab, setActiveTab] = useState<'grants' | 'vesting'>('grants');
@@ -29,7 +28,7 @@ export default function EquityGrants() {
 
       <div className="flex-1 overflow-auto p-8">
         {/* Tab Bar */}
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'grants', label: 'Grant Ledger', icon: Briefcase },
             { id: 'vesting', label: 'Vesting Schedules', icon: Calendar }

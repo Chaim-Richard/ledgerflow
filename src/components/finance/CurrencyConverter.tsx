@@ -31,7 +31,7 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
   };
 
   const innerContent = (
-    <div className="p-6 w-full max-w-xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+    <div className="p-6 w-full max-w-xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
       <h2 className="text-xl font-medium text-slate-900 dark:text-white mb-6">
         {language === 'he' ? 'המרת מטבעות' : 'Currency Converter'}
       </h2>

@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 
 interface BudgetManagerProps {
   budgets: Budget[];
-  transactions: Transaction[];
+  transactions?: Transaction[];
   accounts: ChartAccount[];
   user: any;
 }

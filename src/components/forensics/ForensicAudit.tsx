@@ -1,4 +1,6 @@
-import React, { useMemo } from 'react';
+import React,
+
+ { useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -13,13 +15,12 @@ import {
 import { Transaction, ChartAccount } from '../../types';
 import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 
-interface ForensicAuditProps {
-  transactions: Transaction[];
-  accounts: ChartAccount[];
-}
 
-const ForensicAudit = React.memo(({ transactions, accounts }: ForensicAuditProps) => {
+
+const ForensicAudit = React.memo(() => {
+  const { transactions, accounts } = useLedgerStore();
   // 1. BENFORD'S LAW CALCULATION
   const benfordAnalysis = useMemo(() => {
     const counts = Uint32Array ? new Uint32Array(9) : Array(9).fill(0);
@@ -106,7 +107,7 @@ const ForensicAudit = React.memo(({ transactions, accounts }: ForensicAuditProps
       if (t.deletedAt) continue;
       
       // Unbalanced check
-      const lineSum = (t.lines || []).reduce((sum, l) => sum + (l.amountCents || 0), 0);
+      const lineSum = (t.lines || []).reduce((sum: number, l: any) => sum + (l.amountCents as number || 0), 0);
       if (lineSum !== 0) unbalancedCount++;
       
       // Project Check

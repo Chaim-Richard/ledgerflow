@@ -134,13 +134,9 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   employees: [],
   payRuns: [],
   taxRates: [],
-  classes: ['Overhead', 'Marketing', 'Sales', 'Engineering', 'Executive'],
-  locations: ['Seattle', 'New York', 'London', 'Remote', 'Berlin'],
-  customFields: [
-    { name: 'PO Number', type: 'Text', showOnSales: true, showOnExpenses: true },
-    { name: 'Sales Rep', type: 'Dropdown', showOnSales: true, showOnExpenses: false },
-    { name: 'Campaign', type: 'Text', showOnSales: false, showOnExpenses: true }
-  ],
+  classes: [],
+  locations: [],
+  customFields: [],
   auditLogs: [],
   partners: [],
   reconciliations: [],
@@ -203,9 +199,11 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       
       const nextComputedAccounts = accounts.map((acc, idx) => {
         const data = balances.get(acc.id);
-        const balance = data?.total || 0;
+        const signedBalance = data?.total || 0;
+        const isDebit = acc.type === 'asset' || acc.type === 'expense';
+        const balance = isDebit ? signedBalance : -signedBalance;
         
-        if (acc.type === 'asset' || acc.type === 'expense') totalBal += balance;
+        if (isDebit) totalBal += balance;
         else totalBal -= balance;
 
         const projectAllocations = data ? Object.fromEntries(data.projects) : {};

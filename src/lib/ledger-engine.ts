@@ -51,7 +51,7 @@ export class LedgerEngine {
       const norm = {
         ...t,
         _normalized: {
-          searchStr: `${t.description || ''} ${absAmount} ${tDate} ${t.isCleared ? 'cleared' : 'pending'} ${t.lines?.map(l => `${l.accountName} ${l.description || ''} ${l.tags?.join(' ') || ''}`).join(' ')}`.toLowerCase()
+          searchStr: `${t.description || ''} ${absAmount} ${tDate} ${t.isCleared ? 'cleared' : 'pending'} ${t.tags?.join(' ') || ''} ${t.project || ''} ${t.classId || ''} ${t.locationId || ''} ${t.metadata ? JSON.stringify(t.metadata) : ''} ${t.lines?.map(l => `${l.accountName} ${l.description || ''} ${l.tags?.join(' ') || ''} ${l.class || ''} ${l.location || ''} ${l.project || ''}`).join(' ')}`.toLowerCase()
             .normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
           month: tDate.length >= 7 ? tDate.substring(0, 7) : '',
           absAmount,

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, RefreshCw, Server, CheckCircle2 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { ShoppingBag, CheckCircle2 } from 'lucide-react';
 
 export default function EcommerceIntegrations() {
   const [activeTab, setActiveTab] = useState<'channels'>('channels');

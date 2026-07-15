@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, FileText, Users, ShoppingCart, UserCheck, RefreshCw, Calculator, FileSpreadsheet } from 'lucide-react';
+import { Plus, FileText, Users, UserCheck, Calculator, FileSpreadsheet } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
 
 export default function QuickCreateMenu() {

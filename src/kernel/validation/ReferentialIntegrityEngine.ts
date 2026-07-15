@@ -1,4 +1,4 @@
-import { ChartAccount, Vendor, Customer, Project, Transaction, Invoice, Bill } from '../../types';
+import { Transaction, Invoice, Bill } from '../../types';
 
 export class ReferentialIntegrityEngine {
   static canDeleteAccount(accountId: string, transactions: Transaction[]): boolean {

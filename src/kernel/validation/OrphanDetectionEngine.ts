@@ -1,4 +1,4 @@
-import { Transaction, Invoice, Bill, Project, ChartAccount } from '../../types';
+import { Transaction, Invoice, Project, ChartAccount } from '../../types';
 
 export class OrphanDetectionEngine {
   static scanTransactions(transactions: Transaction[]): Transaction[] {

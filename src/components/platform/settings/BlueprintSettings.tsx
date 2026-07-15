@@ -482,7 +482,7 @@ export default function BlueprintSettings() {
                   </div>
                   <div className="text-left">
                     <p className={`text-xs font-black uppercase tracking-wider ${isHidden ? 'line-through text-gray-400' : 'text-slate-900'}`}>
-                      {tab.label[language] || tab.label['en']}
+                      {((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id}
                     </p>
                     <p className="text-[9px] text-gray-400 font-mono tracking-tight capitalize mt-0.5">{tab.groupId} module</p>
                   </div>

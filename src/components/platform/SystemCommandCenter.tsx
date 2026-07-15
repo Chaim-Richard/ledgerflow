@@ -24,11 +24,16 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useUIStore } from '../../stores/useUIStore';
+import { SYSTEM_GLOSSARY } from '../../config/registry';
+import { BookA } from 'lucide-react';
 
 export default function SystemCommandCenter() {
   const [telemetry, setTelemetry] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { user, userProfile } = useAuthStore();
+  const lexiconOverrides = useUIStore(state => state.lexiconOverrides);
+  const setLexiconOverride = useUIStore(state => state.setLexiconOverride);
 
   const [editingWorkspace, setEditingWorkspace] = useState<any | null>(null);
   const [savingWorkspace, setSavingWorkspace] = useState(false);
@@ -49,7 +54,7 @@ export default function SystemCommandCenter() {
   // User Management Engine
   const [usersList, setUsersList] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [activeMainTab, setActiveMainTab] = useState<'workspaces' | 'users' | 'global'>('workspaces');
+  const [activeMainTab, setActiveMainTab] = useState<'workspaces' | 'users' | 'global' | 'lexicon'>('workspaces');
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [savingUser, setSavingUser] = useState(false);
   const [userFormState, setUserFormState] = useState({
@@ -179,8 +184,8 @@ export default function SystemCommandCenter() {
     }
   };
 
-  // Trigger Mock Stress Test event directly in system telemetry logs
-  const handleTriggerMockStressEvent = (type: 'db_timeout' | 'quota_low' | 'normal_gemini') => {
+  // Trigger System Diagnostic event directly in system telemetry logs
+  const handleTriggerStressEvent = (type: 'db_timeout' | 'quota_low' | 'normal_gemini') => {
     const freshLog: any = {
       timestamp: new Date().toISOString(),
       statusCode: type === 'db_timeout' ? 503 : type === 'quota_low' ? 429 : 200,
@@ -409,9 +414,53 @@ export default function SystemCommandCenter() {
               <Users className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
               Deep User Matrix
             </button>
+            <button
+              onClick={() => setActiveMainTab('lexicon')}
+              className={cn(
+                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                activeMainTab === 'lexicon' ? "bg-slate-900 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"
+              )}
+            >
+              <BookA className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
+              Site Lexicon Control
+            </button>
           </div>
 
-          {activeMainTab === 'users' ? (
+          {activeMainTab === 'lexicon' ? (
+            <div className="space-y-8">
+              <div className="bg-white border border-slate-200 rounded-[32px] shadow-3xs overflow-hidden">
+                <div className="p-4 md:p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                  <div className="flex items-center gap-3">
+                    <BookA size={16} className="text-[#0047AB]" />
+                    <h3 className="text-[12px] font-black uppercase tracking-widest text-slate-800">Global Lexicon Override</h3>
+                  </div>
+                </div>
+                <div className="p-6 md:p-8 space-y-6">
+                  <p className="text-sm text-slate-500">
+                    Use this administrative panel to override any hardcoded text across the system. This allows full white-labeling and customization of the site's terminology. Changes here are applied instantly for all users.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Object.keys(SYSTEM_GLOSSARY).map(key => {
+                        const originalVal = SYSTEM_GLOSSARY[key];
+                        const currentVal = lexiconOverrides[key]?.en || originalVal.en;
+                        return (
+                          <div key={key} className="space-y-2 p-4 bg-slate-50 rounded-[20px] border border-slate-200">
+                            <label className="block text-xs font-bold text-slate-700 tracking-wide break-all">{key}</label>
+                            <input 
+                              type="text"
+                              value={currentVal}
+                              onChange={e => setLexiconOverride(key, 'en', e.target.value)}
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-[#0047AB] focus:ring-2 focus:ring-[#0047AB]/20 transition-all"
+                            />
+                          </div>
+                        );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : activeMainTab === 'users' ? (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               <div className="xl:col-span-2 space-y-8">
                 <div className="bg-white border border-slate-200 rounded-[32px] shadow-3xs overflow-hidden">
@@ -1135,6 +1184,8 @@ export default function SystemCommandCenter() {
                     >
                       <Cpu size={12} /> Rates & Keys
                     </button>
+
+
                   </div>
 
                   <form onSubmit={handleSaveWorkspaceLimits} className="space-y-5 flex-1 overflow-y-auto max-h-[60dvh] pr-1 scrollbar-thin">
@@ -1485,6 +1536,10 @@ export default function SystemCommandCenter() {
                       </div>
                     )}
 
+
+
+
+
                     <div className="flex gap-3 pt-4 border-t border-slate-200">
                       <button
                         type="button"
@@ -1526,7 +1581,7 @@ export default function SystemCommandCenter() {
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
-                  onClick={() => handleTriggerMockStressEvent('normal_gemini')}
+                  onClick={() => handleTriggerStressEvent('normal_gemini')}
                   className="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase text-white hover:text-indigo-300 transition-all text-left px-4 flex items-center justify-between"
                 >
                   <span>1. POST /gemini/summarize (200 OK)</span>
@@ -1534,7 +1589,7 @@ export default function SystemCommandCenter() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTriggerMockStressEvent('quota_low')}
+                  onClick={() => handleTriggerStressEvent('quota_low')}
                   className="w-full py-2.5 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl text-[9px] font-black uppercase text-amber-300 border border-amber-500/20 transition-all text-left px-4 flex items-center justify-between"
                 >
                   <span>2. GET /transactions/ledger_audit (429 Rate Exceeded)</span>
@@ -1542,7 +1597,7 @@ export default function SystemCommandCenter() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTriggerMockStressEvent('db_timeout')}
+                  onClick={() => handleTriggerStressEvent('db_timeout')}
                   className="w-full py-2.5 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl text-[9px] font-black uppercase text-rose-300 border border-rose-500/20 transition-all text-left px-4 flex items-center justify-between"
                 >
                   <span>3. GET /admin/telemetry (503 Service Unavailable)</span>
@@ -1588,7 +1643,7 @@ export default function SystemCommandCenter() {
                   <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 gap-2 text-center p-4">
                     <ShieldCheck size={36} className="text-emerald-500" />
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-700">Audit pipeline is empty</p>
-                    <p className="text-[9px] lowercase max-w-[170px]">Trigger mock stress test vectors or invoke client endpoints to stream event triggers.</p>
+                    <p className="text-[9px] lowercase max-w-[170px]">Invoke client endpoints to stream event triggers.</p>
                   </div>
                 ) : (
                   liveErrors.map((log: any, idx: number) => {

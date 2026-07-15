@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Scale, AlertTriangle, TrendingDown, ArrowRightLeft } from 'lucide-react';
+import { Scale } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function LandedCostVariances() {

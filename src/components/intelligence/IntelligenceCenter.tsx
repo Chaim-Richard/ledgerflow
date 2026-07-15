@@ -5,7 +5,7 @@ import {
   BarChart, Bar,
   Radar, RadarChart, PolarGrid, PolarAngleAxis
 } from 'recharts';
-import { Building2, Globe, BarChart3, Layers, ShieldCheck, Target, Download, Maximize2, Minimize2, BrainCircuit, TrendingUp, Activity, Info, Grid3X3, ChevronRight, Sparkles, Radar as RadarIcon, Menu, X, Search, Calendar, Flame, Loader2, LayoutGrid, Building, Clock, DollarSign, Users, BarChart, Bank, Briefcase as BriefcaseIcon, Scale, Wallet, LineChart, RotateCcw, Landmark, LineChart as LineChartIcon, Receipt, TrendingDown, Crosshair, BriefcaseMedical, Umbrella, Banknote, BarChart4, Hourglass, FastForward, Zap, RefreshCw, PackageCheck, Droplets, Link, Home, ArrowLeftRight, CandlestickChart, Network, Factory, BookOpen, PiggyBank, HandCoins, ActivitySquare, Leaf, Shield, Sprout, Box, Clock4, Clock8, Sliders, AlertTriangle, ClipboardCheck, PercentCircle, BookMarked, PieChart, Coins, Signal, Calculator } from 'lucide-react';
+import { BarChart3, ShieldCheck, Target, Download, Maximize2, Minimize2, BrainCircuit, TrendingUp, Activity, Info, ChevronRight, Sparkles, Menu, X, Search, Calendar, Flame, Loader2, LayoutGrid, Building, Clock, DollarSign, Users, BarChart as BarChartIcon, Calculator } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuditTelemetry } from '../../hooks/useAuditTelemetry';
@@ -299,7 +299,7 @@ const CHANNELS = [
       { id: 'compound', icon: Target, label: { en: 'Compound Interest', he: 'ריבית דריבית' }, desc: { en: 'Calculate compounding investment returns', he: 'חישוב תשואות השקעה בריבית דריבית' } },
       { id: 'rule72', icon: Activity, label: { en: 'Rule of 72', he: 'כלל ה-72' }, desc: { en: 'Calculate years to double investment', he: 'חישוב שנים להכפלת השקעה' } },
       { id: 'ltv', icon: Users, label: { en: 'LTV', he: 'LTV' }, desc: { en: 'Customer Lifetime Value', he: 'ערך חיי לקוח' } },
-      { id: 'npv', icon: BarChart, label: { en: 'NPV', he: 'NPV' }, desc: { en: 'Net Present Value', he: 'ערך נוכחי נקי' } },
+      { id: 'npv', icon: BarChartIcon, label: { en: 'NPV', he: 'NPV' }, desc: { en: 'Net Present Value', he: 'ערך נוכחי נקי' } },
       { id: 'cac', icon: Users, label: { en: 'CAC', he: 'CAC' }, desc: { en: 'Customer Acquisition Cost', he: 'עלות רכישת לקוח' } },
       { id: 'wacc', icon: BarChart3, label: { en: 'WACC', he: 'WACC' }, desc: { en: 'Weighted Average Cost of Capital', he: 'עלות הון משוקללת' } },
       { id: 'roas', icon: TrendingUp, label: { en: 'ROAS Calculator', he: 'החזר הוצאות פרסום' }, desc: { en: 'Return on Ad Spend', he: 'החזר על הוצאות פרסום' } },
@@ -540,7 +540,7 @@ export default function AnalyticalCenter({
     })).filter(g => g.items.length > 0);
   }, [searchTerm]);
 
-  const activeChannelName = activeChannelDef.label[language] || activeChannelDef.label['en'];
+  const activeChannelName = (activeChannelDef.label && (activeChannelDef.label[language] || activeChannelDef.label['en'])) || (activeChannelDef as any).name || activeChannelDef.id;
 
   return (
     <div className="flex flex-col lg:flex-row h-full min-h-[660px] overflow-hidden bg-white border border-slate-200/80 rounded-[32px] shadow-sm relative text-slate-800 font-sans">
@@ -646,10 +646,10 @@ export default function AnalyticalCenter({
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className={cn("text-[11.5px] leading-none tracking-tight transition-colors", isActive ? "font-bold text-slate-800" : "font-medium text-slate-700")}>
-                            {item.label[language] || item.label['en']}
+                            {((item as any).label?.[language] || (item as any).label?.['en']) || (item as any).name || item.id}
                           </p>
                           <p className="text-[9px] text-slate-400 mt-1 leading-normal font-medium truncate group-hover:text-slate-500 transition-colors">
-                            {item.desc[language] || item.desc['en']}
+                            {((item as any).desc?.[language] || (item as any).desc?.['en']) || item.description || ''}
                           </p>
                         </div>
                         {isActive && (
@@ -1074,7 +1074,7 @@ export default function AnalyticalCenter({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.99 }}
               >
-                <ForensicAuditor transactions={transactions} isEmbedded={true} />
+                <ForensicAuditor isEmbedded={true} />
               </motion.div>
             )}
 
@@ -1111,7 +1111,7 @@ export default function AnalyticalCenter({
                         </div>
                       }>
                         <Component 
-                          transactions={transactions} 
+                          
                           accounts={accounts} 
                           computedAccounts={accounts} 
                           budgets={budgets} 
@@ -1196,7 +1196,7 @@ export default function AnalyticalCenter({
                             )}
                           >
                             <IconComponent size={13} className={cn(isActive ? "text-indigo-600" : "text-slate-400")} />
-                            <span>{item.label[language] || item.label['en']}</span>
+                            <span>{((item as any).label?.[language] || (item as any).label?.['en']) || (item as any).name || item.id}</span>
                           </button>
                         );
                       })}

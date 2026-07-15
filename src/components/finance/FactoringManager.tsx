@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Banknote, ShieldCheck, Plus, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Banknote } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function FactoringManager() {

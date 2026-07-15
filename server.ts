@@ -108,12 +108,12 @@ const getDb = () => {
   const dbId = firebaseConfig.firestoreDatabaseId || "(default)";
   try {
     if (dbId && dbId !== "(default)") {
-      return getFirestore(dbId);
+      return getFirestore(admin.app(), dbId);
     }
-    return getFirestore();
+    return getFirestore(admin.app());
   } catch (error) {
     console.error(`[Firebase Admin] Failed getFirestore for: ${dbId}`, error);
-    return getFirestore(); 
+    return getFirestore(admin.app()); 
   }
 };
 

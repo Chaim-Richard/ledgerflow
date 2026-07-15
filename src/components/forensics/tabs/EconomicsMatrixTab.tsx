@@ -233,7 +233,7 @@ export default function EconomicsMatrixTab({
                   <span className="font-black uppercase tracking-tight text-slate-800 block">Cell Formula Precedent Tracing</span>
                   <span className="text-[9px] text-slate-500 mt-1 uppercase font-mono block">Audit total summaries to raw entries</span>
                 </td>
-                <td className="p-5 text-center text-rose-600 font-bold uppercase font-mono text-[10px]">❌ Simulated or Mocked</td>
+                <td className="p-5 text-center text-rose-600 font-bold uppercase font-mono text-[10px]">❌ Pending Data Connection</td>
                 <td className="p-5 text-center">
                   <span className="inline-flex px-3 py-1 text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 rounded-lg">Excellent Trace</span>
                 </td>

@@ -25,7 +25,7 @@ export default function Budgeting() {
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'scenarios', label: 'Budget Scenarios', icon: Target },
             { id: 'variance', label: 'Variance Analysis', icon: BarChart }

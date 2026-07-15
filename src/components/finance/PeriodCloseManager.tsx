@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { ShieldAlert, CheckCircle2, Lock, FileText, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Lock, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useLedgerStore } from '../../stores/useLedgerStore';
 
 export default function PeriodCloseManager() {
   const [selectedPeriod, setSelectedPeriod] = useState('2024-06');

@@ -2,14 +2,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ledger-bg: #fdfdfc;
+  --color-ledger-bg: #fafafa;
   --color-ledger-paper: #ffffff;
-  --color-ledger-ink: #0f172a;
-  --color-ledger-muted: #64748b;
-  --color-ledger-line: #e2e8f0;
-  --color-ledger-highlight: #f8fafc;
-  --color-ledger-accent: #2563eb;
-  --color-ledger-success: #16a34a;
+  --color-ledger-ink: #000000;
+  --color-ledger-muted: #737373;
+  --color-ledger-line: #e5e5e5;
+  --color-ledger-highlight: #f5f5f5;
+  --color-ledger-accent: #000000;
+  --color-ledger-success: #10b981;
   --color-ledger-error: #ef4444;
   --color-ledger-warning: #f59e0b;
 
@@ -17,183 +17,145 @@
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  /* Resharpen the UI for a sophisticated look */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-2xl: 28px;
-  --radius-3xl: 36px;
+  /* Crisp minimal radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
   
   --spacing-fluid: clamp(1rem, 5vw, 3rem);
 
-  /* Advanced Shadows & Glass */
-  --shadow-google-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-google-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --shadow-google-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  /* Almost invisible clean shadows */
+  --shadow-google-sm: 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-google-md: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+  --shadow-google-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.03), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
   
-  --glass-bg: rgba(255, 255, 255, 0.9);
-  --glass-border: rgba(226, 232, 240, 0.5);
+  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(229, 229, 229, 0.5);
 
-  --color-google-blue: #2563eb;
+  --color-google-blue: #000000;
   --color-google-red: #ef4444;
   --color-google-yellow: #f59e0b;
-  --color-google-green: #16a34a;
+  --color-google-green: #10b981;
 
   @keyframes float {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+    50% { transform: translateY(-4px); }
   }
-
   @keyframes shimmer {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
   }
-
-  @keyframes scanline {
-    0% { transform: translateY(-100%); }
-    100% { transform: translateY(100%); }
-  }
-
-  @keyframes pulse-node {
-    0% { transform: scale(1); opacity: 0.5; }
-    50% { transform: scale(1.5); opacity: 0.1; }
-    100% { transform: scale(1); opacity: 0.5; }
-  }
-
-  --animate-shimmer: shimmer 2s infinite linear;
-  --animate-pulse-node: pulse-node 4s infinite ease-in-out;
 }
 
 @layer base {
   * {
-    @apply transition-colors duration-200 outline-none;
+    @apply transition-colors duration-150 outline-none;
   }
-
   html {
     @apply scroll-smooth;
   }
-
   body {
-    @apply bg-ledger-bg text-ledger-ink font-sans antialiased selection:bg-ledger-accent selection:text-white overflow-hidden;
+    @apply bg-ledger-bg text-ledger-ink font-sans antialiased selection:bg-black selection:text-white overflow-hidden;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
     cursor: default;
   }
-
   button, a, [role="button"] {
     cursor: pointer;
   }
-
   input, textarea {
     cursor: text;
   }
-
   h1, h2, h3, h4 {
     @apply font-sans tracking-tight text-ledger-ink font-medium;
   }
-
   input:focus, textarea:focus {
-    @apply ring-2 ring-google-blue/20 border-google-blue;
+    @apply ring-1 ring-black border-black;
     outline: none !important;
   }
 }
 
 @layer components {
   .google-card {
-    @apply bg-ledger-paper border border-ledger-line shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl;
+    @apply bg-white border border-[#e5e5e5] shadow-sm hover:shadow-md transition-all duration-200 rounded-xl;
   }
-
   .ledger-card {
-    @apply bg-ledger-paper border border-ledger-line shadow-sm hover:border-ledger-line transition-all duration-300 rounded-2xl hover:shadow-[0_1px_3px_0_rgba(60,64,67,0.3),0_4px_8px_3px_rgba(60,64,67,0.15)];
+    @apply bg-white shadow-sm border border-[#e5e5e5] hover:border-[#d4d4d4] transition-all duration-200 rounded-xl hover:shadow-md;
   }
-
   .interactive-hover {
     @apply hover:translate-y-[-1px] hover:shadow-md active:translate-y-0 active:shadow-sm transition-all duration-200;
   }
-
   .typing-indicator span {
     @apply w-1.5 h-1.5 bg-current rounded-full inline-block animate-bounce;
     animation-duration: 0.8s;
   }
   .typing-indicator span:nth-child(2) { animation-delay: 0.1s; }
   .typing-indicator span:nth-child(3) { animation-delay: 0.2s; }
-
+  
   .btn-primary {
-    @apply h-10 px-6 bg-google-blue text-white font-medium text-sm
-           hover:bg-blue-700 hover:shadow-md active:bg-blue-800 active:shadow-sm transition-all flex items-center justify-center gap-2
-           disabled:opacity-50 disabled:cursor-not-allowed rounded-full;
+    @apply h-9 px-5 bg-black text-white font-medium text-[13px]
+           hover:bg-gray-800 active:bg-gray-900 active:scale-[0.98] transition-all flex items-center justify-center gap-2
+           disabled:opacity-50 disabled:cursor-not-allowed rounded-lg;
   }
-
   .btn-tonal {
-    @apply h-10 px-6 bg-ledger-highlight text-ledger-ink font-medium text-sm
-           hover:bg-gray-200 hover:text-ledger-ink active:bg-gray-300 active:scale-[0.98] transition-all flex items-center justify-center gap-2
-           disabled:opacity-50 disabled:cursor-not-allowed rounded-full border border-transparent;
+    @apply h-9 px-5 bg-white border border-[#e5e5e5] text-[#171717] font-medium text-[13px]
+           hover:bg-gray-50 active:bg-gray-100 active:scale-[0.98] transition-all flex items-center justify-center gap-2
+           disabled:opacity-50 disabled:cursor-not-allowed rounded-lg;
   }
-
+  
   .input-field {
-    @apply bg-white border border-ledger-line text-sm py-2 px-3 text-ledger-ink focus:outline-none focus:border-google-blue focus:ring-1 focus:ring-google-blue focus:bg-white
-           placeholder:text-ledger-muted/70 transition-all rounded-md font-normal;
+    @apply bg-white border border-[#e5e5e5] text-[13px] py-2 px-3 text-ledger-ink focus:outline-none focus:border-black focus:ring-1 focus:ring-black focus:bg-white
+           placeholder:text-gray-400 transition-all rounded-lg font-normal shadow-sm;
   }
-
   .paper-texture {
-    display: none; /* Removed for cleaner Google look */
+    display: none;
   }
-
   .data-grid-header {
-    @apply px-4 py-3 font-sans text-xs font-medium text-ledger-muted border-b border-ledger-line bg-ledger-paper;
+    @apply px-4 py-3 font-sans text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-[#e5e5e5] bg-gray-50/50;
   }
-
   .mono-value {
-    @apply font-mono tracking-normal tabular-nums text-[13px] font-medium text-ledger-ink;
+    @apply font-mono tracking-tight tabular-nums text-[13px] font-medium text-ledger-ink;
   }
-
   .micro-label {
-    @apply text-xs flex items-center gap-1 font-medium text-ledger-muted;
+    @apply text-xs flex items-center gap-1 font-medium text-gray-500;
   }
-
   .status-pill {
-    @apply px-3 py-0.5 rounded-full text-xs font-medium border;
+    @apply px-2.5 py-0.5 rounded-md text-[11px] font-semibold border uppercase tracking-wider;
   }
-
   .glass-blur {
-    @apply bg-ledger-paper/95 border border-ledger-line shadow-google-lg;
+    @apply bg-white/95 backdrop-blur-md border border-[#e5e5e5] shadow-lg;
   }
-
   .bento-grid {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    gap: 1.5rem;
+    gap: 1.25rem;
   }
-
   .bento-card {
-    @apply bg-ledger-paper border border-ledger-line shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)] rounded-2xl p-6 flex flex-col justify-between hover:shadow-[0_1px_3px_0_rgba(60,64,67,0.3),0_4px_8px_3px_rgba(60,64,67,0.15)] transition-all relative overflow-hidden;
+    @apply bg-white shadow-sm border border-[#e5e5e5] rounded-xl p-6 flex flex-col justify-between hover:shadow-md hover:border-[#d4d4d4] transition-all relative overflow-hidden;
   }
-
   .text-fluid-h1 {
-    font-size: clamp(2rem, 5vw, 4rem);
+    font-size: clamp(2rem, 5vw, 3.5rem);
     line-height: 1.1;
-    font-weight: 400;
-    letter-spacing: -0.02em;
+    font-weight: 500;
+    letter-spacing: -0.03em;
   }
-
   .technical-grid {
-    display: none; /* Removed for cleaner Google look */
+    display: none;
   }
-
+  
   /* Custom Scrollbar Utility */
   .custom-scrollbar::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 4px;
+    height: 4px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     @apply bg-transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors bg-clip-padding;
+    @apply bg-gray-200 rounded-full hover:bg-gray-300 transition-colors bg-clip-padding;
   }
 }
-
-
-
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "scaffold:plugin": "node scripts/scaffold.js plugin",
+    "scaffold:algo": "node scripts/scaffold.js algo",
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "lint": "tsc --noEmit",

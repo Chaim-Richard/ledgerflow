@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Network, Search, Filter, Server, Database, Globe, Share2, Shield, Activity, Plus } from 'lucide-react';
+import { Network, Search, Server, Database, Globe, Share2, Shield, Activity, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function NetworkTopology() {
   const [activeTab, setActiveTab] = useState<'nodes' | 'traffic' | 'security'>('nodes');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const mockNodes: any[] = [];
+  const networkNodes: any[] = [];
 
   return (
     <div className="h-full flex flex-col bg-[#FAFAFA]">
@@ -84,7 +84,7 @@ export default function NetworkTopology() {
         </div>
 
         {/* Tab Bar */}
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'nodes', label: 'Node Registry', icon: Server },
             { id: 'traffic', label: 'Traffic Analysis', icon: Activity },
@@ -115,7 +115,7 @@ export default function NetworkTopology() {
               <div className="col-span-2 text-right">Status</div>
             </div>
             <div className="divide-y divide-slate-200">
-              {mockNodes.filter(n => n.name.toLowerCase().includes(searchTerm.toLowerCase()) || n.ip.includes(searchTerm)).map((node) => (
+              {networkNodes.filter(n => n.name.toLowerCase().includes(searchTerm.toLowerCase()) || n.ip.includes(searchTerm)).map((node) => (
                 <div key={node.id} className="grid grid-cols-12 p-4 items-center hover:bg-slate-50 transition-colors cursor-pointer">
                   <div className="col-span-3">
                     <div className="font-bold text-slate-900">{node.name}</div>

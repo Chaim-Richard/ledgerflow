@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Building, MapPin, Package, ArrowRightLeft, Plus, Search, Filter, Box } from 'lucide-react';
+import { Building, MapPin, ArrowRightLeft, Plus, Search, Filter, Box } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { motion } from 'motion/react';
 
 export default function MultiWarehouse() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'transfers' | 'locations'>('inventory');

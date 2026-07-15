@@ -90,7 +90,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
         collection(db, 'transactions'),
         where('workspaceId', '==', workspaceId),
         where('uid', '==', user.uid),
-        limit(100)
+        limit(1000)
       );
       const historySnap = await getDocs(qHistory);
       const historicalTxs = historySnap.docs.map(d => d.data() as Transaction);

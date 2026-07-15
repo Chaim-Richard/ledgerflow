@@ -343,7 +343,7 @@ const Ledger = React.memo(({
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-600 transition-colors" size={16} />
             <input 
               type="text" 
-              placeholder="Query protocol by identity or code..."
+              placeholder="Search accounts by name, code, or type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-11 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-slate-950 focus:bg-white transition-all text-sm font-medium text-slate-800 placeholder:text-slate-400"
@@ -379,7 +379,6 @@ const Ledger = React.memo(({
         }>
           {activeSubTab === 'inbox' && (
             <InboxView 
-              transactions={transactions} 
               accounts={accounts} 
               onCategorize={onBulkCategorize}
               formatCurrency={formatCurrency}
@@ -408,7 +407,6 @@ const Ledger = React.memo(({
           {activeSubTab === 'balance' && (
             <BalanceSheetView 
               accounts={accounts} 
-              transactions={transactions} 
               journalEntries={journalEntries || []} 
               formatCurrency={formatCurrency} 
             />
@@ -444,7 +442,6 @@ const Ledger = React.memo(({
               <Reconciliation
                 user={user}
                 workspaceId={workspaceId}
-                transactions={transactions}
                 bankLines={bankLines}
                 accounts={accounts}
                 onMatch={onMatch || (async () => {})}
@@ -462,7 +459,6 @@ const Ledger = React.memo(({
             <TaxManager 
               user={user} 
               workspaceId={workspaceId} 
-              transactions={transactions} 
               accounts={accounts} 
               taxRates={taxRates}
               onAddTaxRate={onAddTaxRate}
@@ -471,7 +467,7 @@ const Ledger = React.memo(({
             />
           )}
           {activeSubTab === 'budgets' && (
-            <BudgetManager budgets={budgets} transactions={transactions} accounts={accounts} user={user} />
+            <BudgetManager budgets={budgets} accounts={accounts} user={user} />
           )}
         </React.Suspense>
       </motion.div>
@@ -713,7 +709,6 @@ const Ledger = React.memo(({
       <ReconciliationWizard 
         isOpen={activeModal === 'recon'}
         onClose={() => setActiveModal(null)}
-        transactions={transactions}
         accounts={accounts}
         onComplete={onCompleteReconciliation}
         formatCurrency={formatCurrency}

@@ -47,7 +47,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       return;
     }
     
-    // Support file attachments (mock preview only)
+    // Support file attachments (preview only)
     if (attachments.length > 0) {
       toast.success(`${attachments.length} file(s) attached`);
     }

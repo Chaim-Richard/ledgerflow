@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Transaction } from '../../types';
 import { Globe, Shield, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
-import { formatCurrency, cn } from '../../lib/utils';
+import { formatCurrency } from '../../lib/utils';
 
 export default function GlobalLiquidityMap({ transactions }: { transactions: Transaction[] }) {
   const regions = useMemo(() => {

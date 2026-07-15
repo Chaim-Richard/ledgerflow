@@ -1,34 +1,28 @@
 import React, { useState, useMemo } from 'react';
-import { Activity, ShieldAlert, BarChart, TrendingDown, Target, Brain, Radar, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, BarChart, Brain, Radar, AlertTriangle } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import { mean, standardDeviation, calculateZScore, calculateBenfordsDistribution, benfordsLawExpected } from '../../lib/algorithms/math';
 
 export default function AlgorithmicTruth() {
   const [activeTab, setActiveTab] = useState<'anomalies' | 'benford'>('anomalies');
 
-  // Mock ledger data for algorithms
+  // Ledger data for algorithms
+  const ledgerTransactions = useLedgerStore(state => state.transactions || []);
+  
   const transactions = useMemo(() => {
-    const txns = [];
-    let baseDate = new Date('2026-07-01').getTime();
-    for(let i=0; i<150; i++) {
-       // mostly normal amounts around 100-500
-       let amount = 100 + Math.random() * 400;
-       
-       // Inject some anomalies
-       if (i === 12) amount = 45000;
-       if (i === 45) amount = 89000;
-       if (i === 101) amount = -12000;
-       
-       txns.push({
-          id: `TXN-${9000 + i}`,
-          date: new Date(baseDate - i * 86400000).toISOString().split('T')[0],
-          account: i % 3 === 0 ? 'Cash' : i % 3 === 1 ? 'AP' : 'AR',
-          amount: parseFloat(amount.toFixed(2)),
-          vendor: `Vendor ${String.fromCharCode(65 + (i % 5))}`
-       });
-    }
-    return txns;
-  }, []);
+    return ledgerTransactions.map(t => {
+      let amt = 0;
+      t.lines?.forEach(l => { amt += Math.abs(l.amountCents / 100); });
+      return {
+          id: t.id,
+          date: t.date,
+          account: 'Mixed', // Simplified
+          amount: amt,
+          vendor: t.payee || 'Unknown'
+      };
+    });
+  }, [ledgerTransactions]);
 
   const amounts = transactions.map(t => t.amount);
   const m = mean(amounts);
@@ -62,7 +56,7 @@ export default function AlgorithmicTruth() {
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'anomalies', label: 'Z-Score Outliers', icon: Radar },
             { id: 'benford', label: 'Benford\'s Law Test', icon: BarChart }

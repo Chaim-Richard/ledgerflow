@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { CreditCard, Banknote, ShoppingBag, Search, Plus, Minus, Trash2, Maximize, User, Tag, ArrowRight } from 'lucide-react';
+import { CreditCard, Banknote, ShoppingBag, Search, Plus, Minus, Trash2, Maximize, User } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { motion } from 'motion/react';
 
 export default function PosTerminal() {
   const [cart, setCart] = useState<any[]>([]);

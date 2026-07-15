@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Coins, TrendingUp, Percent } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function SalesCommissionsRules() {

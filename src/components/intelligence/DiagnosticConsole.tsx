@@ -3,7 +3,6 @@ import { Terminal, Command, X, ChevronRight, Loader2, Globe, Sparkles } from 'lu
 import { motion, AnimatePresence } from 'motion/react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { aiService } from '../../services/aiService';
 import { StrategicEngine } from '../../services/strategicEngine';
 import { useUIStore } from '../../stores/useUIStore';
 import { DoubleEntryAuditor } from '../../services/auditor';
@@ -17,15 +16,7 @@ interface DiagnosticConsoleProps {
 export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsoleProps) {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [history, setHistory] = useState<string[]>([
-    'LedgerFlow System Terminal [Version 2.4.0]',
-    '(c) 2026 Google Workspace Integration. All rights reserved.',
-    '',
-    'Session: Secure connection established.',
-    'Status: Ready for commands.',
-    '',
-    'Type "help" for a list of available commands or start with "/" for AI assistance.'
-  ]);
+  const [history, setHistory] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 

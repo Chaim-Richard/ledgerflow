@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Zap, Server, Activity } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { ShieldCheck } from 'lucide-react';
 
 export default function ApprovalsMatrix() {
   const [activeTab, setActiveTab] = useState<'matrix'>('matrix');

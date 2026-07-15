@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Users, Filter, ArrowRight, DollarSign, Plus, Search, Calendar, ChevronRight, GripVertical, CheckCircle2 } from 'lucide-react';
+import { Filter, Plus, Search, Calendar, GripVertical, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 // STAGES: Lead, Qualified, Proposal, Negotiation, Closed Won, Closed Lost

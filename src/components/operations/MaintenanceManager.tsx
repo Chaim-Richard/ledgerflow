@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Wrench, Calendar, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Settings, Wrench } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function MaintenanceManager() {
@@ -22,7 +22,7 @@ export default function MaintenanceManager() {
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'workorders', label: 'Work Orders', icon: Wrench },
             { id: 'assets', label: 'Asset Registry', icon: Settings }

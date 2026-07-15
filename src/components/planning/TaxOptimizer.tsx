@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Calculator, PieChart, Activity, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { Target } from 'lucide-react';
 
 export default function TaxOptimizer() {
   const [activeTab, setActiveTab] = useState<'scenarios'>('scenarios');

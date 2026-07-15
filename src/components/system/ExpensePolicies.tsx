@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldAlert, CreditCard, Ban, CheckSquare } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { ShieldAlert, Ban } from 'lucide-react';
 
 export default function ExpensePolicies() {
   const [activeTab, setActiveTab] = useState<'policies'>('policies');

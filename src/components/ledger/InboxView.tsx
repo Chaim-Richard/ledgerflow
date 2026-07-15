@@ -21,7 +21,7 @@ import AutoSizer from 'react-virtualized-auto-sizer';
 import { useCallback } from 'react';
 
 interface InboxViewProps {
-  transactions: Transaction[];
+  transactions?: Transaction[];
   accounts: ChartAccount[];
   onCategorize: (transactionIds: string[], category: string, account: string) => void;
   formatCurrency: (val: number) => string;
@@ -106,10 +106,13 @@ export default function InboxView({ transactions = [], accounts = [], onCategori
       t.status === 'pending' || 
       !t.lines?.length || 
       t.lines.some(l => l.accountName === 'Uncategorized')
-    ).filter(t => 
-      t.description.toLowerCase().includes(term) ||
-      t.totalAmountCents.toString().includes(searchTerm)
-    );
+    ).filter(t => {
+      if (!term) return true;
+      const tDate = t.date || '';
+      const absAmount = Math.abs(t.totalAmountCents || 0);
+      const searchStr = `${t.description || ''} ${absAmount} ${tDate} ${t.isCleared ? 'cleared' : 'pending'} ${t.tags?.join(' ') || ''} ${t.project || ''} ${t.classId || ''} ${t.locationId || ''} ${t.metadata ? JSON.stringify(t.metadata) : ''} ${t.lines?.map(l => `${l.accountName} ${l.description || ''} ${l.tags?.join(' ') || ''} ${l.class || ''} ${l.location || ''} ${l.project || ''}`).join(' ')}`.toLowerCase();
+      return searchStr.includes(term);
+    });
   }, [transactions, searchTerm]);
 
   const toggleSelect = useCallback((id: string) => {
@@ -292,7 +295,7 @@ export default function InboxView({ transactions = [], accounts = [], onCategori
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
               <input 
                 type="text" 
-                placeholder="Search signal stream..."
+                placeholder="Search names, tags, amounts, classes, or dates..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-14 pr-8 py-4 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all text-sm font-bold text-slate-900 w-full md:w-80 shadow-inner"

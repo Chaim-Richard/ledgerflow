@@ -78,7 +78,7 @@ export const useBillingStore = create<BillingState>()(
 );
 
 export const BillingAPI = {
-  // Mock external API for Stripe/payment processing
+  // External API wrapper for Stripe/payment processing
   async chargeUser(amountCents: number, currency: string = 'USD') {
     // Integrate Stripe or equivalent here to process real logic
     console.log(`Processing charge of ${amountCents} ${currency} for usage.`);

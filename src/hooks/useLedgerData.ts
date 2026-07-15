@@ -133,7 +133,7 @@ export function useLedgerData() {
 
     
     // DATA BRIDGE: Fetch snapshot for immediate "big math" rendering on new devices
-    fetchSnapshotBridge(currentWorkspaceId).then((data) => {
+    fetchSnapshotBridge(currentWorkspaceId).then((data: any) => {
       if (data && useLedgerStore.getState().transactions.length === 0) {
         useLedgerStore.setState({
           runningBalances: {

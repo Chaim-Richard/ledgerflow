@@ -1,3 +1,4 @@
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import React, { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
 import { Transaction, ChartAccount, TaxRate } from '../../types';
@@ -22,7 +23,7 @@ import TaxFilingReporter from './TaxFilingReporter';
 interface TaxManagerProps {
   user: User;
   workspaceId: string;
-  transactions: Transaction[];
+  
   accounts: ChartAccount[];
   taxRates: TaxRate[];
   onAddTaxRate: (data: Partial<TaxRate>) => Promise<void>;
@@ -33,20 +34,21 @@ interface TaxManagerProps {
 export default function TaxManager({ 
   user, 
   workspaceId, 
-  transactions, 
   accounts,
   taxRates,
   onAddTaxRate,
   onUpdateTaxRate,
   onDeleteTaxRate
 }: TaxManagerProps) {
+  const transactions = useLedgerStore(state => state.transactions || []);
+  
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRate, setEditingRate] = useState<TaxRate | null>(null);
   const [activeTab, setActiveTab] = useState<'rates' | 'contractors' | 'reporting'>('rates');
   
   const taxMetrics = useMemo(() => {
-    const yearTransactions = transactions.filter(tx => new Date(tx.date).getFullYear() === selectedYear);
+    const yearTransactions = (transactions || []).filter(tx => new Date(tx.date).getFullYear() === selectedYear);
     
     const grossIncome = yearTransactions
       .reduce((acc, tx) => {
@@ -89,7 +91,7 @@ export default function TaxManager({
       estimatedTax,
       salesTaxCollected
     };
-  }, [transactions, selectedYear, accounts, taxRates]);
+  }, [selectedYear, accounts, taxRates]);
 
   return (
     <div className="space-y-12 p-4 md:p-6 lg:p-10 w-full max-w-[1550px] mx-auto pb-20 animate-in fade-in duration-500">
@@ -157,8 +159,7 @@ export default function TaxManager({
       {activeTab === 'contractors' ? (
         <ContractorCompliance />
       ) : activeTab === 'reporting' ? (
-        <TaxFilingReporter 
-           transactions={transactions} 
+        <TaxFilingReporter transactions={transactions} 
            accounts={accounts} 
            taxRates={taxRates} 
            selectedYear={selectedYear} 

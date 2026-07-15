@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import React,
+ { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Project, Transaction } from '../../types';
 import { cn, formatCurrency } from '../../lib/utils';
@@ -6,7 +8,7 @@ import { GripVertical, CheckCircle, Target, Users, PlayCircle, Clock, Archive } 
 
 interface ProjectPipelineProps {
   projects: Project[];
-  transactions: Transaction[];
+  
   onUpdateProject: (id: string, updates: Partial<Project>) => Promise<void>;
 }
 
@@ -20,7 +22,9 @@ const STAGES: { id: PipelineStage; label: string; icon: React.ElementType; color
   { id: 'archived', label: 'Archived', icon: Archive, color: 'bg-stone-100 text-stone-700', borderColor: 'border-stone-200' }
 ];
 
-export default function ProjectPipeline({ projects, transactions, onUpdateProject }: ProjectPipelineProps) {
+export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPipelineProps) {
+  const transactions = useLedgerStore(state => state.transactions || []);
+  
   const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
@@ -82,7 +86,7 @@ export default function ProjectPipeline({ projects, transactions, onUpdateProjec
     const stats: Record<string, { actualCents: number, budgetCents: number, incomeCents: number, expenseCents: number }> = {};
     
     projects.forEach(p => {
-      const projectTransactions = transactions.filter(t => t.lines?.some(l => l.project === p.id));
+      const projectTransactions = (transactions || []).filter(t => t.lines?.some(l => l.project === p.id));
       let income = 0;
       let expense = 0;
 

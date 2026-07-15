@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { RefreshCw, CheckCircle2, AlertCircle, FileText, Upload, Plus, Download, ChevronRight, Zap } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertCircle, FileText, Upload, Plus, Zap } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function BankFeedReconciliation() {
   const [activeTab, setActiveTab] = useState<'feed' | 'rules'>('feed');
 
-  const mockTransactions: any[] = [];
+  const bankTransactions: any[] = [];
 
   return (
     <div className="h-full flex flex-col bg-[#FAFAFA]">
@@ -93,7 +93,7 @@ export default function BankFeedReconciliation() {
                     <div className="col-span-4 pl-8">Ledger Match</div>
                   </div>
                   <div className="divide-y divide-[#E5E5E5]">
-                    {mockTransactions.map((tx) => (
+                    {bankTransactions.map((tx) => (
                       <div key={tx.id} className="grid grid-cols-12 p-4 items-center hover:bg-[#FAFAFA] transition-colors group">
                         <div className="col-span-2 font-mono text-xs font-bold text-[#525252]">{tx.date}</div>
                         <div className="col-span-4 font-bold text-[#0A0A0A] pr-4 truncate">{tx.description}</div>

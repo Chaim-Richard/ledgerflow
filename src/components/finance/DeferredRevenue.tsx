@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, TrendingUp, CheckSquare, Clock } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function DeferredRevenue() {

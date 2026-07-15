@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Server, Database, Cloud, ShieldCheck, Cpu } from 'lucide-react';
+import { Cloud } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function WebhookManager() {

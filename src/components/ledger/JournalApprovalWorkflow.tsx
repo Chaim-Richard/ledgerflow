@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, CheckCircle2, XCircle, Search, Filter, ShieldCheck, User } from 'lucide-react';
-import { motion } from 'motion/react';
+import { CheckCircle2, XCircle, ShieldCheck, User } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -10,7 +9,7 @@ export default function JournalApprovalWorkflow() {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
 
-  // Filter mocked pending transactions (requiring review)
+  // Filter pending transactions (requiring review)
   const pendingTxs = transactions.filter(t => t.status === 'pending');
 
   return (

@@ -50,6 +50,7 @@ export interface TransactionLine {
   location?: string;
   class?: string;        // Explicit Class dimension for QBO parity
   tags?: string[];
+  metadata?: Record<string, any>;
   quantity?: number;
   unitPriceCents?: number;
   isAutoTagged?: boolean; // New: System-detected line
@@ -96,7 +97,7 @@ export interface Transaction {
   locationId?: string;   // Explicit Location tracking
   employeeId?: string;   // Employee map
   tags?: string[];
-  
+  metadata?: Record<string, any>;
   // Audit & History
   verification?: {
     status: 'verified' | 'unverified';
@@ -115,7 +116,6 @@ export interface Transaction {
   project?: string; // Legacy field for migration
 
   createdAt: string;
-  metadata?: Record<string, any>; // Extended for custom fields
   deletedAt?: string; 
   isFlagged?: boolean;
   isLocked?: boolean;
@@ -136,13 +136,14 @@ export interface Project {
   laborBuckets?: Array<{ id: string, name: string, rateCents: number, estimatedHours: number }>;
   materialsBuckets?: Array<{ id: string, name: string, budgetCents: number }>;
   subcontractCosts?: Array<{ id: string, vendorId: string, description: string, amountCents: number }>;
-  dimensions: string[]; // Custom dimensions for this project
+  dimensions: string[];
+  tags?: string[];
+  metadata?: Record<string, any>;
   splitRules?: Array<{
     partnerId: string;
     partnerName?: string;
     percentage: number;
   }>;
-  metadata?: Record<string, any>;
   createdAt: string;
 }
 
@@ -160,6 +161,7 @@ export interface Vendor {
   isForeign?: boolean;
   rating?: number;
   tags?: string[];
+  metadata?: Record<string, any>;
   balanceCents?: number;
 }
 
@@ -174,6 +176,7 @@ export interface Bill {
   taxAmountCents?: number;
   taxRate?: number;
   receiptUrl?: string;
+  tags?: string[];
   metadata?: Record<string, any>;
   splits?: Array<{
     amountCents: number;
@@ -200,6 +203,7 @@ export interface Invoice {
   totalCents?: number;
   date?: string;
   dueDate: string;
+  tags?: string[];
   metadata?: Record<string, any>;
   status: 'pending' | 'paid' | 'overdue' | 'sent' | 'draft' | 'approved' | 'rejected' | 'invoiced';
   type?: 'standard' | 'recurring' | 'progress' | 'estimate' | 'quote' | 'change-order' | 'time-materials'; // For advanced billing workflows
@@ -231,6 +235,7 @@ export interface Customer {
   probability?: number;
   score?: number;
   tags?: string[];
+  metadata?: Record<string, any>;
   notes?: string;
   isForeign?: boolean;
 }
@@ -565,7 +570,7 @@ export interface CloudDocument {
   mimeType: string;
   sizeBytes: number;
   linkedTransactionId?: string;
-  tags?: string[];
+  tags?: string[]; metadata?: Record<string, any>;
   createdAt: string;
 }
 
@@ -668,6 +673,7 @@ export interface ExpenseClaim {
   category: string;
   status: 'pending' | 'approved' | 'rejected';
   receiptUrl?: string;
+  tags?: string[]; metadata?: Record<string, any>;
   createdAt: string;
 }
 

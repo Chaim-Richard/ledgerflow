@@ -23,7 +23,8 @@ interface ReportsProps {
 
 const Reports = React.memo(({ transactions = [], accounts = [], projects = [], budgets = [], onAction }: ReportsProps) => {
   useZenithTrace("Reports");
-  const [activeTab, setActiveTab] = useState<string>('pnl');
+  const activeTab = useUIStore(state => state.activeReportTab || 'pnl');
+    const setActiveTab = useUIStore(state => state.setActiveReportTab);
   const [timeframe, setTimeframe] = useState<'month' | 'quarter' | 'year'>('month');
   const [drillDownAccount, setDrillDownAccount] = useState<string | null>(null);
   const language = useUIStore(state => state.language);

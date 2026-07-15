@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Globe, ShieldCheck, ToggleLeft, Palette } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function CustomerPortalSettings() {

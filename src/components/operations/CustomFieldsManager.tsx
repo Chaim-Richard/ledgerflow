@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Tag, Database, Sliders, Hash, CheckCircle2, Search, Calendar, ToggleLeft, Plus, Settings } from 'lucide-react';
+import { Tag, Database, Sliders, Hash, Search, Calendar, ToggleLeft, Plus, Settings } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 

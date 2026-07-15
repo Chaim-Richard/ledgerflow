@@ -1,16 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React,
+ { useMemo, useState } from 'react';
 import { ShieldAlert, Fingerprint, Zap, AlertTriangle, CheckCircle2, Loader2, FileText } from 'lucide-react';
 import { Transaction } from '../../types';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import { AnomalyDetector } from '../../lib/algorithms';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 
-interface ForensicAuditorProps {
-  transactions: Transaction[];
-  isEmbedded?: boolean;
-}
 
-export default function ForensicAuditor({ transactions, isEmbedded = false }: ForensicAuditorProps) {
+
+export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: boolean }) {
+  const { transactions } = useLedgerStore();
   const [isRunning, setIsRunning] = useState(false);
 
   const forensicData = useMemo(() => {

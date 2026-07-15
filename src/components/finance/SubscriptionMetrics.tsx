@@ -1,16 +1,11 @@
 import React, { useState } from 'react';
-import { TrendingUp, Activity, PieChart, Repeat, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Repeat, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function SubscriptionMetrics() {
   const [activeTab, setActiveTab] = useState<'mrr'>('mrr');
 
-  const metrics = [
-    { metric: 'Monthly Recurring Revenue (MRR)', value: '$124,500', growth: '+5.2%', trend: 'up' },
-    { metric: 'Annual Recurring Revenue (ARR)', value: '$1,494,000', growth: '+5.2%', trend: 'up' },
-    { metric: 'Logo Churn Rate', value: '1.2%', growth: '-0.1%', trend: 'down' },
-    { metric: 'Average Revenue Per Account (ARPA)', value: '$450', growth: '+2.1%', trend: 'up' },
-  ];
+  const metrics: any[] = [];
 
   return (
     <div className="h-full flex flex-col bg-[#FAFAFA]">

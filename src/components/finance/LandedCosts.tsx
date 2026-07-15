@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, Ship, Map, ArrowDownRight, Hash } from 'lucide-react';
+import { Ship } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function LandedCosts() {

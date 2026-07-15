@@ -95,11 +95,14 @@ export default function Purchases({
   }, [bills]);
 
   const filteredBills = useMemo(() => {
-    return bills.filter(b => 
-      (b.vendorName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-      (b.number?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
-    ).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-  }, [bills, searchTerm]);
+    return bills.filter(b => {
+      const term = searchTerm.toLowerCase();
+      if (!term) return true;
+      const vendor = vendors?.find(v => v.id === b.vendorId);
+      const searchStr = `${b.vendorName || ''} ${b.number || ''} ${b.tags?.join(' ') || ''} ${b.metadata ? JSON.stringify(b.metadata) : ''} ${vendor?.tags?.join(' ') || ''} ${vendor?.metadata ? JSON.stringify(vendor.metadata) : ''}`.toLowerCase();
+      return searchStr.includes(term);
+    }).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  }, [bills, vendors, searchTerm]);
 
   const getStatusColor = (status: Bill['status']) => {
     switch (status) {
@@ -281,7 +284,7 @@ export default function Purchases({
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-600 transition-colors" size={20} />
           <input 
             type="text" 
-            placeholder="Search payables by node or vendor..." 
+            placeholder="Search bills by vendor, number, tags, or metadata..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:bg-white transition-all text-sm font-bold text-slate-900 placeholder:text-slate-500/40 shadow-sm"

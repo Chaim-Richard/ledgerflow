@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building, ArrowRightLeft, CheckCircle2, AlertTriangle, Layers } from 'lucide-react';
+import { ArrowRightLeft, Layers } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function Intercompany() {
@@ -22,7 +22,7 @@ export default function Intercompany() {
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'transactions', label: 'IC Transactions', icon: ArrowRightLeft },
             { id: 'balances', label: 'Elimination Matrix', icon: Layers }

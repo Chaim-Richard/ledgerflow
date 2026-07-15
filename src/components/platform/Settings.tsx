@@ -7,7 +7,8 @@ import { useUIStore } from '../../stores/useUIStore';
 
 export default function Settings() {
   const language = useUIStore(state => state.language);
-  const [activeSubTab, setActiveSubTab] = useState<string>('billing');
+  const activeSubTab = useUIStore(state => state.activeSettingsTab || 'billing');
+  const setActiveSubTab = useUIStore(state => state.setActiveSettingsTab);
 
   const activeTabDef = SETTINGS_TABS_REGISTRY.find(t => t.id === activeSubTab);
   const ActiveComponent = activeTabDef ? SETTINGS_COMPONENTS[activeTabDef.componentName] : null;
@@ -39,7 +40,7 @@ export default function Settings() {
               )}
             >
               <tab.icon size={14} />
-              {tab.label[language] || tab.label['en']}
+              {((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id}
             </button>
           ))}
         </div>

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Users, PieChart, TrendingUp, Briefcase, Plus, FileText, ArrowRight } from 'lucide-react';
+import { Users, PieChart, TrendingUp, Plus, FileText, ArrowRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { motion } from 'motion/react';
 
 export default function CapTableManager() {
   const [activeTab, setActiveTab] = useState<'shareholders' | 'certificates' | 'scenarios'>('shareholders');
@@ -64,7 +63,7 @@ export default function CapTableManager() {
         </div>
 
         {/* Tab Bar */}
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'shareholders', label: 'Shareholder Ledger', icon: Users },
             { id: 'certificates', label: 'Stock Certificates', icon: FileText },

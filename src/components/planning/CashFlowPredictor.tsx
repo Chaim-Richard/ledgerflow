@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { TrendingUp, Activity, BarChart, Zap, Calendar, ArrowUpRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { doubleExponentialSmoothing } from '../../lib/algorithms/forecasting';
@@ -7,10 +7,7 @@ export default function CashFlowPredictor() {
   const [activeTab, setActiveTab] = useState<'forecast' | 'trends'>('forecast');
   
   // Historical cash flow data (monthly net cash flow)
-  const historicalData = [
-     150000, 165000, 140000, 180000, 175000, 210000, 
-     205000, 230000, 245000, 260000, 255000, 290000
-  ];
+  const historicalData: any[] = [];
   
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   
@@ -33,7 +30,7 @@ export default function CashFlowPredictor() {
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'forecast', label: 'Predictive Forecast (6-Mo)', icon: Activity },
             { id: 'trends', label: 'Historical Trend', icon: BarChart }

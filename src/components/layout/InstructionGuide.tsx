@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Book, X, Sparkles, Search, Command, Zap, Shield, Calculator, Keyboard, FileText,
-  Target, RefreshCcw
+  Book, X, Sparkles, Search, Keyboard
 } from 'lucide-react';
 
 interface InstructionGuideProps {

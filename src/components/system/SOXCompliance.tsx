@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Network, Database, ShieldCheck, Download, Search } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function SOXCompliance() {

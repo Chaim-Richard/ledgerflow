@@ -385,7 +385,7 @@ export class IsolationForest {
           return;
       }
 
-      const dim = Math.floor(Math.random() * dims);
+      const dim = Math.floor(defaultRandom() * dims);
       const min = Math.min(...currentSubsample.map(i => points[i][dim]));
       const max = Math.max(...currentSubsample.map(i => points[i][dim]));
 
@@ -394,7 +394,7 @@ export class IsolationForest {
           return;
       }
 
-      const split = min + Math.random() * (max - min);
+      const split = min + defaultRandom() * (max - min);
       
       const leftSubsample: number[] = [];
       const rightSubsample: number[] = [];
@@ -1252,11 +1252,11 @@ export class RootOptimizer {
       for (let week = 1; week <= horizonWeeks; week++) {
         // Weekly burn with volatility
         const weeklyBurnBase = monthlyBurn / 4;
-        const volatility = (Math.random() - 0.5) * 0.4; // +/- 20%
+        const volatility = (defaultRandom() - 0.5) * 0.4; // +/- 20%
         simulatedCash -= weeklyBurnBase * (1 + volatility);
         
         // Sudden 10% liquidity shock probability (7% weekly chance = ~30% per month)
-        if (Math.random() < 0.07) {
+        if (defaultRandom() < 0.07) {
           simulatedCash *= 0.9;
         }
 
@@ -1754,9 +1754,9 @@ export class AuditEngine {
       let balance = currentBalance;
       const path = [balance];
       for (let day = 0; day < 30; day++) {
-        const randomDiff = historicalDiffs[Math.floor(Math.random() * historicalDiffs.length)] || 0;
+        const randomDiff = historicalDiffs[Math.floor(defaultRandom() * historicalDiffs.length)] || 0;
         // Add random volatility (variance flux)
-        const flux = (Math.random() - 0.5) * 0.1 * Math.abs(randomDiff);
+        const flux = (defaultRandom() - 0.5) * 0.1 * Math.abs(randomDiff);
         balance += randomDiff + flux;
         path.push(balance);
       }
@@ -1940,8 +1940,8 @@ export class OptionsEngine {
     // Box-Muller transform for standard normal distribution Z-scores
     const generateZ = () => {
       let u = 0, v = 0;
-      while(u === 0) u = Math.random();
-      while(v === 0) v = Math.random();
+      while(u === 0) u = defaultRandom();
+      while(v === 0) v = defaultRandom();
       return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
     };
 
@@ -1979,7 +1979,7 @@ export class MarkowitzOptimization {
 
     for (let i = 0; i < iterations; i++) {
         // Generate random distributed weights summing to 1
-        let weights = Array.from({length: numAssets}, () => Math.random());
+        let weights = Array.from({length: numAssets}, () => defaultRandom());
         const sum = weights.reduce((a, b) => a + b, 0);
         weights = weights.map(w => w / sum);
 

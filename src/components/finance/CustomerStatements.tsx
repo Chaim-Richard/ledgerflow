@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Download, Mail, CheckCircle2 } from 'lucide-react';
+import { FileText, Download, Mail } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function CustomerStatements() {

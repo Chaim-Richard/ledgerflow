@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Target, TrendingUp, AlertTriangle, ArrowUpRight, ArrowDownRight, Layers, CreditCard, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { motion } from 'motion/react';
 
 export default function SegmentedReporting() {
   const [activeSegment, setActiveSegment] = useState<'region' | 'department' | 'product'>('region');
 
-  const mockData = {
+  const segmentedData = {
     region: [
       { id: 'NA', name: 'North America', rev: 12500000, exp: 8200000, priorRev: 11000000, priorExp: 7900000 },
       { id: 'EMEA', name: 'Europe, Middle East, Africa', rev: 8400000, exp: 6100000, priorRev: 7500000, priorExp: 5800000 },
@@ -26,7 +25,7 @@ export default function SegmentedReporting() {
     ]
   };
 
-  const currentData = mockData[activeSegment];
+  const currentData = segmentedData[activeSegment];
   const totalRev = currentData.reduce((sum, item) => sum + item.rev, 0);
   const totalExp = currentData.reduce((sum, item) => sum + item.exp, 0);
   const totalProfit = totalRev - totalExp;

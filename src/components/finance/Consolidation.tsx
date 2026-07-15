@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Building, Download, BarChart3, TrendingUp } from 'lucide-react';
+import { Layers, Download, BarChart3, TrendingUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function Consolidation() {
@@ -23,7 +23,7 @@ export default function Consolidation() {
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm mb-6 w-max">
+        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'matrix', label: 'Consolidated Matrix', icon: BarChart3 },
             { id: 'adjustments', label: 'Top-Level Adjustments', icon: TrendingUp }
@@ -52,7 +52,7 @@ export default function Consolidation() {
               <div className="col-span-2 text-right text-indigo-600">Consolidated</div>
             </div>
             <div className="divide-y divide-slate-200">
-               {/* Mock Rows */}
+               {/* Placeholder Rows */}
                <div className="grid grid-cols-12 p-4 items-center hover:bg-slate-50 transition-colors font-mono text-sm">
                   <div className="col-span-3 font-bold font-sans text-slate-900">Total Revenue</div>
                   <div className="col-span-2 text-right">4,500,000</div>

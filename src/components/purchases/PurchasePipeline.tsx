@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bill } from '../../types';
 import { cn, formatCurrency } from '../../lib/utils';
-import { Truck, Receipt, CheckCircle, GripVertical, AlertTriangle, Clock, Target, TrendingDown } from 'lucide-react';
+import { GripVertical, AlertTriangle, Clock, Target, TrendingDown } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 
 interface PurchasePipelineProps {

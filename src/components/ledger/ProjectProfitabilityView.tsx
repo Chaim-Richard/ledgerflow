@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Transaction } from '../../types';
-import { BarChart3, TrendingUp, Filter, Maximize2, Download, Zap, Compass, Activity, BrainCircuit } from 'lucide-react';
+import { TrendingUp, Filter, Maximize2, Download, Zap, Compass, Activity, BrainCircuit } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Area, Legend } from 'recharts';
+import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 
 interface ProjectProfitabilityViewProps {
   transactions: Transaction[];

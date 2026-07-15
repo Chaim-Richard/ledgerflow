@@ -20,7 +20,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
   // Custom user inputs per algorithm
   const [params, setParams] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {};
-    algorithm.inputs.forEach(i => init[i.key] = i.defaultValue);
+    algorithm.inputs.forEach((i: any) => init[i.key] = i.defaultValue);
     return init;
   });
 
@@ -71,7 +71,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1 opacity-60">Tune computational vectors</p>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                 {algorithm.inputs.map(inp => (
+                 {algorithm.inputs.map((inp: any) => (
                     <div key={inp.key} className="space-y-3">
                        <div className="flex justify-between items-center text-xs font-bold font-mono">
                           <span className="text-[10px] text-[#8a8a8f] uppercase tracking-wider font-sans">{inp.label}</span>
@@ -100,7 +100,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
            <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#fafafa] dark:bg-[#161718] p-4 md:p-8 space-y-8">
                {/* Metrics Row */}
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {results.metrics.map((m, idx) => (
+                  {results.metrics.map((m: any, idx: number) => (
                      <div key={idx} className="p-6 bg-white dark:bg-[#1b1c1d] border border-slate-200 rounded-[32px] shadow-sm">
                         <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 block mb-1">{m.label}</span>
                         <h4 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic">
@@ -112,7 +112,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                </div>
 
                {/* Engine Output Chart */}
-               {results.charts.map((c, idx) => (
+               {results.charts.map((c: any, idx: number) => (
                   <div key={idx} className="p-6 bg-white dark:bg-[#1b1c1d] border border-slate-200 rounded-[32px] shadow-sm h-96 flex flex-col">
                      <div className="flex justify-between items-center mb-6">
                          <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
@@ -127,7 +127,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                               <YAxis fontSize={10} tickLine={false} />
                               <Tooltip contentStyle={{ background: '#111', color: '#fff', borderRadius: '8px', border: 'none' }} />
                               <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 900 }} />
-                              {c.config.yKeys.map(y => y.type === 'bar' ? (
+                              {c.config.yKeys.map((y: any) => y.type === 'bar' ? (
                                  <Bar key={y.key} dataKey={y.key} fill={y.color} name={y.name} radius={[4, 4, 0, 0]} />
                               ) : (
                                  <Line key={y.key} type="monotone" dataKey={y.key} stroke={y.color} strokeWidth={3} name={y.name} dot={{ r: 4 }} activeDot={{ r: 6 }} />
@@ -142,7 +142,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                <div className="p-6 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900 rounded-[32px] space-y-4">
                   <h3 className="text-xs font-black uppercase tracking-wider text-indigo-800 dark:text-indigo-400">Algorithmic Consensus Output</h3>
                   <div className="space-y-2">
-                     {results.insights.map((ins, i) => (
+                     {results.insights.map((ins: string, i: number) => (
                         <div key={i} className="flex gap-3 text-sm text-indigo-900 dark:text-indigo-200">
                            <CheckCircle2 size={16} className="text-indigo-500 shrink-0 mt-0.5" />
                            <p className="leading-relaxed font-medium">{ins}</p>

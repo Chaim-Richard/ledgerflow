@@ -24,7 +24,6 @@ import {
 import { cn, formatCurrency } from '../../lib/utils';
 import { computeFederalIncomeTaxWithholding, getRegionalTaxConfig, getFederalTaxYearConfig } from '../../lib/payroll-engine';
 import { computeExpenseDeductibility } from '../../lib/business-expenses';
-import { aiService } from '../../services/aiService';
 import { 
   PieChart, 
   Pie, 
@@ -286,8 +285,8 @@ export default function TaxOptimizer({ transactions, onAction }: TaxOptimizerPro
     let potentialSavings = 0;
     if (entityType === 'Sole-Prop') {
       const reasonableW2 = Math.round(netOperatingProfit * 0.60);
-      const theoreticalEmployerFica = Math.round(Math.min(reasonableW2, 18215000) * 0.062 + reasonableW2 * 0.0145);
-      const theoreticalEmployeeFica = Math.round(Math.min(reasonableW2, 18215000) * 0.062 + reasonableW2 * 0.0145);
+      const theoreticalEmployerFica = Math.round(Math.min(reasonableW2, 18660000) * 0.062 + reasonableW2 * 0.0145);
+      const theoreticalEmployeeFica = Math.round(Math.min(reasonableW2, 18660000) * 0.062 + reasonableW2 * 0.0145);
       const theoreticalTotalFica = theoreticalEmployerFica + theoreticalEmployeeFica;
       potentialSavings = Math.max(0, selfEmploymentTaxCents - theoreticalTotalFica);
     } else if (entityType === 'S-Corp') {

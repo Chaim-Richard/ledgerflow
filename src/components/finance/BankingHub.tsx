@@ -1290,7 +1290,7 @@ export default function BankingHub() {
                            </p>
                            <div className="text-[9px] text-slate-400 uppercase font-mono max-h-16 overflow-y-auto">
                               {cluster.txs.slice(0, 3).map((t, idx) => (
-                                <div key={idx} className="truncate">• {t.date} : {(t as any).amountCents / 100}</div>
+                                <div key={idx} className="truncate">• {t.date} : ${((t as any).amountCents / 100).toFixed(2)}</div>
                               ))}
                               {cluster.txs.length > 3 && <div className="text-slate-300 italic">...and {cluster.txs.length - 3} more.</div>}
                            </div>

@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { Layers, Search, Filter, Box, TrendingUp, TrendingDown, RefreshCw, BarChart2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Layers, Search, TrendingUp, TrendingDown, RefreshCw, BarChart2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function InventoryValuation() {
   const [method, setMethod] = useState<'FIFO' | 'LIFO' | 'WAC'>('FIFO');
 
-  const mockItems: any[] = [];
+  const items: any[] = [];
 
-  const totalInventoryValue = mockItems.reduce((acc, item) => acc + item.totalVal, 0);
+  const totalInventoryValue = items.reduce((acc, item) => acc + item.totalVal, 0);
 
   return (
     <div className="h-full flex flex-col bg-[#FAFAFA]">
@@ -105,7 +104,7 @@ export default function InventoryValuation() {
           </div>
 
           <div className="divide-y divide-[#E5E5E5]">
-            {mockItems.map((item) => (
+            {items.map((item) => (
               <div key={item.sku} className="grid grid-cols-5 p-4 items-center hover:bg-[#FAFAFA] transition-colors">
                 <div className="col-span-2">
                   <div className="font-bold text-[#0A0A0A]">{item.name}</div>

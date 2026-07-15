@@ -874,7 +874,7 @@ export default function TransactionGrid({
                 <input 
                   ref={searchInputRef}
                   type="text" 
-                  placeholder='Quantize search (e.g. "burn over 5k", "mismatches in oct")...'
+                  placeholder='Search anything: amounts (">500"), tags, names, dates ("oct"), "mismatches", classes, or locations...'
                   value={searchTerm}
                   dir="auto"
                   onChange={(e) => setSearchTerm(e.target.value)}

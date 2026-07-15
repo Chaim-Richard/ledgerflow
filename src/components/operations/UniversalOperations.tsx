@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Layers, FolderTree, Tag, Search, Filter, ArrowUpRight, ArrowDownRight, ChevronRight, ChevronDown, Plus, Activity } from 'lucide-react';
+import { Layers, FolderTree, Tag, Search, Filter, ChevronRight, ChevronDown, Plus, Activity } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 
 interface TreeNode {

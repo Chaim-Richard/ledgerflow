@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { FileSignature, Send, User, Calendar, Plus, Search, Filter, FileText, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import { FileSignature, Send, User, Calendar, Plus, Search, FileText, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { motion } from 'motion/react';
 
 export default function SalesProposalHub() {
   const [activeTab, setActiveTab] = useState<'active' | 'templates'>('active');
 
-  const mockProposals: any[] = [];
+  const proposals: any[] = [];
 
   return (
     <div className="h-full flex flex-col bg-[#FAFAFA]">
@@ -46,7 +45,7 @@ export default function SalesProposalHub() {
               </div>
             </div>
             <div className="text-3xl font-bold text-[#0A0A0A]">
-              {mockProposals.filter(p => p.status === 'Draft').length}
+              {proposals.filter(p => p.status === 'Draft').length}
             </div>
           </div>
 
@@ -58,7 +57,7 @@ export default function SalesProposalHub() {
               </div>
             </div>
             <div className="text-3xl font-bold text-[#0A0A0A]">
-              {mockProposals.filter(p => p.status === 'Sent').length}
+              {proposals.filter(p => p.status === 'Sent').length}
             </div>
           </div>
 
@@ -70,7 +69,7 @@ export default function SalesProposalHub() {
               </div>
             </div>
             <div className="text-3xl font-bold text-emerald-600">
-              {mockProposals.filter(p => p.status === 'Accepted').length}
+              {proposals.filter(p => p.status === 'Accepted').length}
             </div>
           </div>
 
@@ -117,7 +116,7 @@ export default function SalesProposalHub() {
               <div className="col-span-2 text-right">Status</div>
             </div>
             <div className="divide-y divide-[#E5E5E5]">
-              {mockProposals.map((prop) => (
+              {proposals.map((prop) => (
                 <div key={prop.id} className="grid grid-cols-12 p-4 items-center hover:bg-[#FAFAFA] transition-colors cursor-pointer group">
                   <div className="col-span-2 font-mono text-sm font-bold text-[#0A0A0A]">{prop.id}</div>
                   <div className="col-span-4 pr-4">

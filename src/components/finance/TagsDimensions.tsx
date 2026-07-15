@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Tags, Plus, Tag, CheckCircle2 } from 'lucide-react';
+import { Tags, Tag } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export default function TagsDimensions() {
