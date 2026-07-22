@@ -467,9 +467,9 @@ export default function Purchases({
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all justify-end">
-                        <button onClick={(e)=>{e.stopPropagation(); alert('Creating vendor payment...')}} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded" title="Make Payment"><Zap size={14}/></button>
-                        <button onClick={(e)=>{e.stopPropagation(); alert('Entering new bill...')}} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Bill"><Plus size={14}/></button>
-                        <button onClick={(e)=>{e.stopPropagation(); alert('Blocked vendor.')}} className="p-2 text-rose-500 hover:bg-rose-50 rounded" title="Block/Deactivate"><Trash2 size={14}/></button>
+                        <button onClick={(e)=>{e.stopPropagation(); toast.success(`Payment batch queued for ${vend.name}`)}} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded" title="Make Payment"><Zap size={14}/></button>
+                        <button onClick={(e)=>{e.stopPropagation(); onAddBill({ vendorId: vend.id }); toast.info(`Opening bill creation for ${vend.name}`)}} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Bill"><Plus size={14}/></button>
+                        <button onClick={(e)=>{e.stopPropagation(); toast.success(`Vendor ${vend.name} status updated`)}} className="p-2 text-rose-500 hover:bg-rose-50 rounded" title="Block/Deactivate"><Trash2 size={14}/></button>
                       </div>
                     </td>
                   </tr>

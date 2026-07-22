@@ -58,12 +58,11 @@ export class TruthEngine {
       }
     }
     
-    // Fallback: If no accounts context, assume it's a simple expense entry where credit is the source of funds (negative)
-    // We will just find the maximum absolute value and assign it the sign of the asset/bank line if we can guess it.
-    // Easiest signed fallback for a balanced entry:
-    // If we just want a standard signed metric, and we don't know the accounts, we return the net sum of all debits? No, that's positive.
-    // Return the first line's amount if there's only 2 lines.
-    return lines[0]?.amountCents || 0;
+    // Fallback when accounts context is absent: sum of debit legs
+    const debitSum = lines
+      .filter(l => (l.amountCents || 0) > 0)
+      .reduce((sum, l) => sum + (l.amountCents || 0), 0);
+    return debitSum || Math.abs(lines[0]?.amountCents || 0);
   }
 
   static parseAmountToCents(amountString: string | number): number {

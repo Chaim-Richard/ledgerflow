@@ -32,6 +32,14 @@ export function formatCurrency(cents: number | undefined | null, currency?: stri
 }
 
 /**
+ * Safe currency formatter for amounts already in dollars
+ */
+export function formatDollars(dollars: number | undefined | null, currency?: string): string {
+  if (dollars === undefined || dollars === null || isNaN(dollars)) return '$0.00';
+  return formatCurrency(dollars * 100, currency);
+}
+
+/**
  * Masks sensitive PII (Personally Identifiable Information) for Display
  */
 export function maskPII(text: string | undefined | null): string {
@@ -49,6 +57,21 @@ export function maskPII(text: string | undefined | null): string {
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * Sanitizes a string value against CSV/Formula injection attacks.
+ * Prevents execution of spreadsheet formulas starting with =, +, -, @, \t, \r
+ */
+export function sanitizeCsvCell(value: any): string {
+  if (value === null || value === undefined) return '""';
+  let str = String(value);
+  // If string starts with formula trigger characters, prefix with single quote
+  if (/^[=\+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
+  // Escape double quotes and enclose in quotes
+  return `"${str.replace(/"/g, '""')}"`;
 }
 
 export enum OperationType {

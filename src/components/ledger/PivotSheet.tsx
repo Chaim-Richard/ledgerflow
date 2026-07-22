@@ -11,7 +11,7 @@ import {
   ListCollapse,
   Plus
 } from 'lucide-react';
-import { cn, formatCurrency } from '../../lib/utils';
+import { cn, formatCurrency, sanitizeCsvCell } from '../../lib/utils';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
 

@@ -43,7 +43,8 @@ transactionRouter.get('/', async (req, res) => {
     });
   } catch (err: any) {
     if (err.message === "FORBIDDEN") return res.status(403).json({ error: "Forbidden workspace access" });
-    res.status(500).json({ error: err.message });
+    console.error('[TRANSACTION ROUTE ERROR]', err);
+    res.status(500).json({ error: "An unexpected internal server error occurred." });
   }
 });
 
@@ -80,9 +81,10 @@ transactionRouter.post('/', async (req, res) => {
     
     // Standardize totalAmountCents
     if (!transaction.totalAmountCents) {
-       // We can't fetch accounts here synchronously easily without a big refactor, 
-       // but the client should have already set it. If not, fallback:
-       transaction.totalAmountCents = transaction.lines[0]?.amountCents || 0;
+       const debitSum = (transaction.lines || [])
+         .filter((l: any) => (l.amountCents || 0) > 0)
+         .reduce((sum: number, l: any) => sum + (l.amountCents || 0), 0);
+       transaction.totalAmountCents = debitSum || Math.abs(transaction.lines?.[0]?.amountCents || 0);
     }
 
     await db.runTransaction(async (t: any) => {

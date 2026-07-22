@@ -22,7 +22,7 @@ export function calculateSafeToSpend(transactions: Transaction[], accounts: Char
             t.lines.forEach(line => {
                 const account = accountMap.get(line.accountId);
                 if (account) {
-                    if (account.type === 'revenue' && line.amountCents > 0) {
+                    if (account.type === 'income' && line.amountCents > 0) {
                         revenue += line.amountCents;
                     } else if (account.type === 'expense' && line.amountCents > 0) {
                         expenses += line.amountCents;

@@ -55,6 +55,7 @@ const Sidebar = React.memo(({
 }: SidebarProps) => {
   const uiStore = useUIStore();
   const user = useAuthStore(s => s.user);
+  const userProfile = useAuthStore(s => s.userProfile);
   const realProjects = useLedgerStore(s => s.projects);
   const accounts = useLedgerStore(s => s.accounts);
 
@@ -125,7 +126,7 @@ const Sidebar = React.memo(({
             )}
             <div className="space-y-1">
               {Object.entries(NAV_GROUPS).map(([groupId, groupLabel]) => {
-                 if (groupId === 'admin' && user?.email?.toLowerCase() !== 'shmuelbiller@gmail.com') return null;
+                 if (groupId === 'admin' && userProfile?.role !== 'admin') return null;
 
                  const Icon = GROUP_ICONS[groupId] || LayoutGrid;
                  const isActive = activeGroupId === groupId;

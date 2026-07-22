@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
-import { cn } from '../../lib/utils';
+import { cn, sanitizeCsvCell } from '../../lib/utils';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import TransactionRow from '../transactions/TransactionRow';
@@ -554,15 +554,15 @@ export default function TransactionGrid({
   const handleExportCSV = () => {
     const headers = ['Date', 'Description', 'Category', 'Project', 'Amount', 'Status'];
     const rows = transactionsWithBalance.map(t => [
-      t.date,
-      `"${(t.description || '').replace(/"/g, '""')}"`,
-      `"${(t.lines?.[0]?.accountName || 'Uncategorized').replace(/"/g, '""')}"`,
-      `"${(t.project || 'General').replace(/"/g, '""')}"`,
-      ((t.totalAmountCents || 0) / 100).toFixed(2),
-      t.status
+      sanitizeCsvCell(t.date),
+      sanitizeCsvCell(t.description),
+      sanitizeCsvCell(t.lines?.[0]?.accountName || 'Uncategorized'),
+      sanitizeCsvCell(t.project || 'General'),
+      sanitizeCsvCell(((t.totalAmountCents || 0) / 100).toFixed(2)),
+      sanitizeCsvCell(t.status)
     ]);
     
-    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const csvContent = [headers.map(sanitizeCsvCell), ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -986,18 +986,18 @@ export default function TransactionGrid({
               onClick={() => {
                 const headers = ['Date', 'Description', 'Amount', 'Currency', 'Account', 'Project', 'Notes'];
                 const rows = transactionsWithBalance.map(t => [
-                  t.date,
-                  t.description,
-                  (t.totalAmountCents / 100).toFixed(2),
-                  t.currency || 'USD',
-                  t.lines?.[0]?.accountName || '',
-                  t.project || '',
-                  t.notes || ''
+                  sanitizeCsvCell(t.date),
+                  sanitizeCsvCell(t.description),
+                  sanitizeCsvCell((t.totalAmountCents / 100).toFixed(2)),
+                  sanitizeCsvCell(t.currency || 'USD'),
+                  sanitizeCsvCell(t.lines?.[0]?.accountName || ''),
+                  sanitizeCsvCell(t.project || ''),
+                  sanitizeCsvCell(t.notes || '')
                 ]);
                 
                 const csvContent = [
-                  headers.join(','),
-                  ...rows.map(r => r.map(v => `"${(v?.toString() || '').replace(/"/g, '""')}"`).join(','))
+                  headers.map(sanitizeCsvCell).join(','),
+                  ...rows.map(r => r.join(','))
                 ].join('\n');
                 
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

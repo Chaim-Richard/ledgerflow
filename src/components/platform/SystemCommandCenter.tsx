@@ -22,6 +22,7 @@ import {
   Play
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
@@ -129,7 +130,7 @@ export default function SystemCommandCenter() {
          throw new Error('Administrative database returned non-success code.');
       }
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSavingWorkspace(false);
     }
@@ -177,7 +178,7 @@ export default function SystemCommandCenter() {
       await fetchTelemetry();
       setShowBulkSuccess(true);
     } catch (error: any) {
-      alert(`Bulk Sync Error: ${error.message}`);
+      toast.error(`Bulk Sync Error: ${error.message}`);
     } finally {
       setBulkSyncing(false);
     }
@@ -237,7 +238,7 @@ export default function SystemCommandCenter() {
       
       setEditingUser(null);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSavingUser(false);
     }
@@ -266,7 +267,7 @@ export default function SystemCommandCenter() {
         throw new Error('Server returned non-success response code.');
       }
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setUpdatingGlobal(false);
     }
@@ -367,7 +368,7 @@ export default function SystemCommandCenter() {
   const totalErrors = allLogsCombined.filter((l: any) => l.statusCode >= 500).length;
   const liveErrors = allLogsCombined.filter((l: any) => l.statusCode >= 400);
 
-  const isSystemAdmin = user?.email?.toLowerCase() === 'shmuelbiller@gmail.com' || userProfile?.role === 'admin';
+  const isSystemAdmin = userProfile?.role === 'admin';
 
 
 

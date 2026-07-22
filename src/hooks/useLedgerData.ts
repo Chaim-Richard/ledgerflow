@@ -94,7 +94,7 @@ export function useLedgerData() {
           setDoc(doc(db, 'users', user.uid), {
             uid: user.uid,
             email: user.email,
-            role: user.email?.toLowerCase() === 'shmuelbiller@gmail.com' ? 'admin' : 'client',
+            role: 'client',
             createdAt: new Date().toISOString()
           }),
           OperationType.CREATE,

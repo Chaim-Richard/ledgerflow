@@ -20,6 +20,7 @@ import { useUIStore } from '../stores/useUIStore';
 import { MatchingEngine } from '../lib/MatchingEngine';
 import { Transaction, BankStatementLine, AutoRule, TransactionLine } from '../types';
 import { toast } from 'sonner';
+import { sanitizeCsvCell } from '../lib/utils';
 import { aiService } from '../services/aiService';
 import { DoubleEntryAuditor } from '../services/auditor';
 import { 
@@ -827,15 +828,15 @@ export function useTransactionActions() {
   const handleExport = (transactions: Transaction[]) => {
     const headers = ['Date', 'Description', 'Amount', 'Status', 'Category'];
     const rows = transactions.map(t => [
-      t.date,
-      t.description,
-      (t.totalAmountCents / 100).toFixed(2),
-      t.status,
-      t.lines?.[0]?.accountName || 'N/A'
+      sanitizeCsvCell(t.date),
+      sanitizeCsvCell(t.description),
+      sanitizeCsvCell((t.totalAmountCents / 100).toFixed(2)),
+      sanitizeCsvCell(t.status),
+      sanitizeCsvCell(t.lines?.[0]?.accountName || 'N/A')
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers, ...rows].map(e => e.join(",")).join("\n");
+      + [headers.map(sanitizeCsvCell), ...rows].map(e => e.join(",")).join("\n");
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");

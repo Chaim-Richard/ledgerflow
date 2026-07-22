@@ -139,7 +139,7 @@ service cloud.firestore {
     }
 
     match /customTemplates/{templateId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (resource == null || resource.data.uid == request.auth.uid);
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isValidId(templateId) &&
         affectedKeys(["name", "industry", "accounts", "analyticalTopology", "uid", "createdAt"]);
       allow update: if isSignedIn() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid && isUnchanged("uid") &&

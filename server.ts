@@ -289,7 +289,7 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
     if (!isSystemAdmin && !isBillingOrMetadataRoute) {
       // 1. Account Freeze enforcement (concurrentUserLimit = 0 denotes administratively frozen account)
       if (data?.concurrentUserLimit === 0) {
-        throw new Error("FORBIDDEN: This workspace is administratively suspended/frozen by Systems Administration. Please contact shmuelbiller@gmail.com.");
+        throw new Error("FORBIDDEN: This workspace is administratively suspended/frozen by Systems Administration. Please contact support@ledgerflow.app.");
       }
 
       const method = req.method || "GET";
@@ -378,7 +378,32 @@ async function getReportContext(req: AuthenticatedRequest, workspaceId: string) 
 
 async function startServer() {
   const app = express();
-  app.use(cors());
+  const allowedOriginsEnv = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) : null;
+  app.use(cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or same-origin)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOriginsEnv) {
+        if (allowedOriginsEnv.includes(origin)) return callback(null, true);
+        return callback(new Error('CORS policy does not allow access from this origin'));
+      }
+      
+      // Default safety: Allow same-origin, localhost, and Cloud Run / AI Studio preview subdomains
+      if (
+        process.env.NODE_ENV !== 'production' ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin.includes('ais-') ||
+        origin.endsWith('.run.app')
+      ) {
+        return callback(null, true);
+      }
+      
+      return callback(null, true); // Permissive fallback when no explicit restriction is set
+    },
+    credentials: true
+  }));
   const PORT = 3000;
 
   // Efficiency & Security Middleware
@@ -2248,7 +2273,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         description: description || txData.description,
         payee: payee !== undefined ? payee : (txData.payee || ""),
         lines: transactionLines,
-        totalAmountCents: TruthEngine.deriveSignedTotal(transactionLines, accounts),
+        totalAmountCents: TruthEngine.deriveSignedTotal(transactionLines),
         status: status || txData.status || "completed",
         type: type || txData.type || "actual",
         updatedAt: new Date().toISOString()
@@ -2558,7 +2583,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
       const workspacesSnap = await db.collection("workspaces").limit(100).get();
       const wsIds = workspacesSnap.docs.map(d => d.id).slice(0, 30);
-      let transactionsSnap = { docs: [] };
+      let transactionsSnap: { docs: any[] } = { docs: [] };
       if (wsIds.length > 0) {
           transactionsSnap = await db.collection("transactions").where("workspaceId", "in", wsIds).get();
       }

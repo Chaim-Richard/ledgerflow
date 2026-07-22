@@ -30,7 +30,7 @@ export function useFinancialReporting() {
       });
       const data = await response.json();
       if (data.status === 'success') {
-         setApiReports(prev => ({ ...prev, pl: data.data }));
+         setApiReports((prev: any) => ({ ...prev, pl: data.data }));
       }
     } catch (e: any) {
       toast.error('Failed to fetch P&L');

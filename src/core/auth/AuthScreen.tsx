@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, ShieldCheck, Mail, UserPlus } from 'lucide-react';
+import { LogIn, ShieldCheck, Mail, UserPlus, FileText } from 'lucide-react';
 import { useBillingStore } from '../../modules/billing/BillingService';
+import LegalModal from '../../components/legal/LegalModal';
 
 interface AuthScreenProps {
   onLogin: () => void;
@@ -18,6 +19,8 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onGuest, lang
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState<'terms' | 'privacy'>('terms');
 
   const registrationAllowed = useBillingStore(state => state.registrationAllowed);
   const maxRegistrationLimit = useBillingStore(state => state.maxRegistrationLimit);
@@ -106,7 +109,7 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onGuest, lang
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold leading-relaxed mb-2 shadow-sm">
                     <p className="font-bold flex items-center gap-1.5 uppercase text-[10px] tracking-wider text-amber-950">⚠️ Platform limit reached</p>
                     <p className="mt-1">
-                      New sign-ups are temporarily capped at <span className="font-mono font-bold text-amber-950">{maxRegistrationLimit}</span> users. Currently, {totalSystemUsers} users are registered. Please contact <strong>shmuelbiller@gmail.com</strong> for a custom account creation.
+                      New sign-ups are temporarily capped at <span className="font-mono font-bold text-amber-950">{maxRegistrationLimit}</span> users. Currently, {totalSystemUsers} users are registered. Please contact <strong>support@ledgerflow.app</strong> for a custom account creation.
                     </p>
                   </div>
                 )}
@@ -196,10 +199,34 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onGuest, lang
                   {isRegistering ? "Sign in" : "Sign up"}
                 </button>
               </p>
+
+              <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-center gap-4 text-xs text-[#737373]">
+                <button
+                  type="button"
+                  onClick={() => { setLegalTab('terms'); setLegalModalOpen(true); }}
+                  className="hover:text-[#0A0A0A] underline underline-offset-2 transition-colors"
+                >
+                  Terms of Service
+                </button>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={() => { setLegalTab('privacy'); setLegalModalOpen(true); }}
+                  className="hover:text-[#0A0A0A] underline underline-offset-2 transition-colors"
+                >
+                  Privacy Policy
+                </button>
+              </div>
             </motion.div>
           </AnimatePresence>
         </div>
       </section>
+
+      <LegalModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialTab={legalTab}
+      />
     </main>
   );
 }

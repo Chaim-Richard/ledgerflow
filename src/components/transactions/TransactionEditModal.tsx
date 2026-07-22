@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { auth } from '../../firebase';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import TagInput from './TagInput';
 
 interface TransactionEditModalProps {
