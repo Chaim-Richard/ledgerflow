@@ -84,86 +84,89 @@ export default function Sales({
   };
 
   return (
-    <div className="space-y-12">
-      {/* Rule Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-        <div>
-          <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate mb-4">
-            <TrendingUp size={14} />
-            Sales & Customers
+    <div className="space-y-8 pb-12">
+      {/* Rule Header with brand gold backdrop */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[var(--brass-soft)] via-[var(--surface)]/40 to-[var(--panel)] p-6 rounded-2xl border border-[var(--brass-line)]/50 shadow-sm">
+        <div className="absolute -top-16 -left-16 w-56 h-56 bg-[var(--brass)]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)]/60 text-[10px] font-mono text-[var(--brass)] font-semibold mb-2 shadow-xs">
+              <TrendingUp size={12} />
+              SALES & ACCOUNTS RECEIVABLE
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text)] tracking-tight">Invoicing & Customer Accounts</h1>
+            <p className="text-xs text-[var(--muted)] font-medium mt-1">Manage receivables, recurring billing, and client credit balances.</p>
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Invoicing & Accounts Receivable</h2>
-          <p className="text-slate-500 font-medium text-lg mt-2 opacity-70">Manage invoices, estimates, and customer accounts.</p>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center bg-[var(--surface)] p-1 rounded-xl border border-[var(--line)] shadow-xs">
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="flex items-center bg-[var(--surface)]/80 p-1 rounded-xl border border-[var(--line)] shadow-inner backdrop-blur-sm">
+              <button 
+                onClick={() => setActiveSubTab('invoices')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                  activeSubTab === 'invoices' 
+                    ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold shadow-sm" 
+                    : "text-[var(--muted)] hover:text-[var(--text)]"
+                )}
+              >
+                Invoices & Receipts
+              </button>
+              <button 
+                onClick={() => setActiveSubTab('customers')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                  activeSubTab === 'customers' 
+                    ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold shadow-sm" 
+                    : "text-[var(--muted)] hover:text-[var(--text)]"
+                )}
+              >
+                Customers
+              </button>
+            </div>
             <button 
-              onClick={() => setActiveSubTab('invoices')}
-              className={cn(
-                "px-4 py-2 rounded-lg text-xs font-semibold transition-all",
-                activeSubTab === 'invoices' ? "bg-[var(--brass)] text-black shadow-xs" : "text-[var(--muted)] hover:text-[var(--text)]"
-              )}
+              onClick={() => activeSubTab === 'invoices' ? setIsInvoiceModalOpen(true) : setIsCustomerModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black rounded-xl text-xs font-bold hover:opacity-95 transition-all shadow-md hover:shadow-lg cursor-pointer active:scale-95"
             >
-              Invoices & Receipts
-            </button>
-            <button 
-              onClick={() => setActiveSubTab('customers')}
-              className={cn(
-                "px-4 py-2 rounded-lg text-xs font-semibold transition-all",
-                activeSubTab === 'customers' ? "bg-[var(--brass)] text-black shadow-xs" : "text-[var(--muted)] hover:text-[var(--text)]"
-              )}
-            >
-              Customers
+              <Plus size={15} />
+              {activeSubTab === 'invoices' ? 'Create Invoice' : 'Add Customer'}
             </button>
           </div>
-          <button 
-            onClick={() => activeSubTab === 'invoices' ? setIsInvoiceModalOpen(true) : setIsCustomerModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--brass)] text-black rounded-xl text-xs font-semibold hover:opacity-90 transition-all shadow-sm cursor-pointer"
-          >
-            <Plus size={16} />
-            {activeSubTab === 'invoices' ? 'Create Invoice' : 'Add Customer'}
-          </button>
         </div>
       </div>
 
       {/* Psychological Header */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group">
-          <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-          <p className="text-[10px] font-mono uppercase tracking-widest text-rose-500 font-semibold mb-3 relative z-10 flex items-center gap-2">
+        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] hover:border-[var(--neg)]/40 shadow-sm relative overflow-hidden group bg-gradient-to-b from-[var(--brass-soft)]/20 via-[var(--panel)] to-[var(--panel)] transition-all">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--neg)] font-semibold mb-2 flex items-center gap-2">
             <AlertCircle size={14} />
             Delinquent Nodes
           </p>
-          <p className="text-2xl sm:text-3xl font-mono font-bold text-rose-600 tracking-tight relative z-10">{formatCurrency(agingBuckets.overdue)}</p>
-          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--neg)] tracking-tight">{formatCurrency(agingBuckets.overdue)}</p>
+          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)]">
              <Clock size={12} />
              Critical Resolution Required
           </div>
         </div>
         
-        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group">
-          <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-          <p className="text-[10px] font-mono uppercase tracking-widest text-amber-500 font-semibold mb-3 relative z-10 flex items-center gap-2">
+        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] hover:border-[var(--brass-line)] shadow-sm relative overflow-hidden group bg-gradient-to-b from-[var(--brass-soft)]/30 via-[var(--panel)] to-[var(--panel)] transition-all">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--brass)] font-semibold mb-2 flex items-center gap-2">
             <Activity size={14} />
             Proximal Velocity (30d)
           </p>
-          <p className="text-2xl sm:text-3xl font-mono font-bold text-amber-600 tracking-tight relative z-10">{formatCurrency(agingBuckets.dueSoon)}</p>
-          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
-             <RefreshCw size={12} className="hidden" />
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--brass)] tracking-tight">{formatCurrency(agingBuckets.dueSoon)}</p>
+          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)]">
+             <Activity size={12} className="text-[var(--brass)]" />
              Anticipated Liquidity Event
           </div>
         </div>
 
-        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--brass-line)] shadow-sm relative overflow-hidden group bg-gradient-to-b from-[var(--brass-soft)] to-[var(--panel)]">
-          <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-          <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-semibold mb-3 relative z-10 flex items-center gap-2">
-            <ShieldCheck size={14} className="text-[var(--brass)]" />
-            Total Aggregate Exposure
+        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--brass-line)] shadow-sm relative overflow-hidden group bg-gradient-to-b from-[var(--brass-soft)] via-[var(--brass-soft)]/20 to-[var(--panel)]">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--brass)] font-semibold mb-2 flex items-center justify-between">
+            <span className="flex items-center gap-2"><ShieldCheck size={14} className="text-[var(--brass)]" />Total Aggregate Exposure</span>
           </p>
-          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10">{formatCurrency(agingBuckets.total)}</p>
-          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
-             <ShieldCheck size={12} />
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight">{formatCurrency(agingBuckets.total)}</p>
+          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)]">
+             <ShieldCheck size={12} className="text-[var(--brass)]" />
              Verified Asset Cluster
           </div>
         </div>

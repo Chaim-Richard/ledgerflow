@@ -4,6 +4,49 @@ import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidat
 
 export const transactionRouter = express.Router();
 
+transactionRouter.get('/', async (req, res) => {
+  try {
+    const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
+    if (!workspaceId) return res.status(400).json({ error: "Missing workspaceId query parameters" });
+
+    const user = (req as any).user;
+    const db = getFirestore();
+    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+
+    const { startDate, endDate, accountId, limit } = req.query;
+
+    let queryFn: any = db.collection("transactions").where("workspaceId", "==", workspaceId);
+    
+    if (startDate) queryFn = queryFn.where("date", ">=", startDate as string);
+    if (endDate) queryFn = queryFn.where("date", "<=", endDate as string);
+    
+    const maxLimit = parseInt(limit as string, 10) || 100;
+    queryFn = queryFn.limit(Math.min(maxLimit, 1000));
+
+    const transactionsSnap = await queryFn.get();
+    let transactions = transactionsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+
+    if (accountId) {
+      transactions = transactions.filter((t: any) => t.lines?.some((l: any) => l.accountId === accountId));
+    }
+
+    transactions.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    res.json({
+      status: "success",
+      workspaceId,
+      transactionsCount: transactions.length,
+      transactions
+    });
+  } catch (err: any) {
+    if (err.message === "FORBIDDEN") return res.status(403).json({ error: "Forbidden workspace access" });
+    res.status(500).json({ error: err.message });
+  }
+});
+
 transactionRouter.post('/', async (req, res) => {
   try {
     const { transaction } = req.body;

@@ -259,25 +259,33 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       categoryMetrics: {} as Record<string, number>
     };
 
-    transactions.forEach(tx => {
-      const amount = tx.totalAmountCents || 0;
-      integrity.totalBalance += amount;
-      if (amount > 0) integrity.totalIncome += amount;
-      else integrity.totalExpense += (-amount);
+    if (Array.isArray(transactions)) {
+      transactions.forEach(tx => {
+        if (!tx || typeof tx !== 'object') return;
+        const amount = typeof tx.totalAmountCents === 'number' && Number.isSafeInteger(tx.totalAmountCents) ? tx.totalAmountCents : 0;
+        
+        integrity.totalBalance += amount;
+        if (amount > 0) integrity.totalIncome += amount;
+        else integrity.totalExpense += (-amount);
 
-      if (tx.projectId) {
-        if (!integrity.projectMetrics[tx.projectId]) {
-          integrity.projectMetrics[tx.projectId] = { income: 0, expense: 0 };
+        if (tx.projectId && typeof tx.projectId === 'string') {
+          if (!integrity.projectMetrics[tx.projectId]) {
+            integrity.projectMetrics[tx.projectId] = { income: 0, expense: 0 };
+          }
+          if (amount > 0) integrity.projectMetrics[tx.projectId].income += amount;
+          else integrity.projectMetrics[tx.projectId].expense += (-amount);
         }
-        if (amount > 0) integrity.projectMetrics[tx.projectId].income += amount;
-        else integrity.projectMetrics[tx.projectId].expense += (-amount);
-      }
 
-      tx.lines?.forEach(l => {
-        const cat = l.category || 'General';
-        integrity.categoryMetrics[cat] = (integrity.categoryMetrics[cat] || 0) + (l.amountCents || 0);
+        if (Array.isArray(tx.lines)) {
+          tx.lines.forEach(l => {
+            if (!l || typeof l !== 'object') return;
+            const cat = (typeof l.category === 'string' && l.category) ? l.category : 'General';
+            const lAmount = (typeof l.amountCents === 'number' && Number.isSafeInteger(l.amountCents)) ? l.amountCents : 0;
+            integrity.categoryMetrics[cat] = (integrity.categoryMetrics[cat] || 0) + lAmount;
+          });
+        }
       });
-    });
+    }
 
     const isConsistent = 
       integrity.totalBalance === runningBalances.totalBalance &&
@@ -317,7 +325,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       };
       set({ 
         runningBalances: integrity,
-        auditLogs: [driftLog, ...auditLogs]
+        auditLogs: [driftLog, ...(Array.isArray(auditLogs) ? auditLogs : [])]
       });
     }
 
@@ -325,13 +333,20 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   },
 
   setTransactions: (transactions) => {
+    if (!Array.isArray(transactions)) {
+      throw new Error("Validation Failed: Transactions payload must be an array.");
+    }
+    
+    const validTxs = transactions.filter(tx => tx && typeof tx === 'object' && Array.isArray(tx.lines));
+    
     const { recomputeBalances } = get();
-    const mergedTxs = transactions;
-    const allTxs = mergedTxs.sort((a, b) => {
-      if (a.date > b.date) return -1;
-      if (a.date < b.date) return 1;
-      const aTime = a.createdAt || '';
-      const bTime = b.createdAt || '';
+    const allTxs = validTxs.sort((a, b) => {
+      const aDate = typeof a.date === 'string' ? a.date : '';
+      const bDate = typeof b.date === 'string' ? b.date : '';
+      if (aDate > bDate) return -1;
+      if (aDate < bDate) return 1;
+      const aTime = typeof a.createdAt === 'string' ? a.createdAt : '';
+      const bTime = typeof b.createdAt === 'string' ? b.createdAt : '';
       if (aTime > bTime) return -1;
       if (aTime < bTime) return 1;
       return 0;
@@ -347,22 +362,27 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     };
 
     allTxs.forEach(tx => {
-      const amount = tx.totalAmountCents || 0;
+      const amount = typeof tx.totalAmountCents === 'number' && Number.isSafeInteger(tx.totalAmountCents) ? tx.totalAmountCents : 0;
       runningBalances.totalBalance += amount;
       if (amount > 0) runningBalances.totalIncome += amount;
       else runningBalances.totalExpense += (-amount);
 
-      if (tx.projectId) {
+      if (tx.projectId && typeof tx.projectId === 'string') {
         if (!runningBalances.projectMetrics[tx.projectId]) {
           runningBalances.projectMetrics[tx.projectId] = { income: 0, expense: 0 };
         }
         if (amount > 0) runningBalances.projectMetrics[tx.projectId].income += amount;
         else runningBalances.projectMetrics[tx.projectId].expense += (-amount);
       }
-      tx.lines?.forEach(l => {
-        const cat = l.category || 'General';
-        runningBalances.categoryMetrics[cat] = (runningBalances.categoryMetrics[cat] || 0) + (l.amountCents || 0);
-      });
+      
+      if (Array.isArray(tx.lines)) {
+        tx.lines.forEach(l => {
+          if (!l || typeof l !== 'object') return;
+          const cat = (typeof l.category === 'string' && l.category) ? l.category : 'General';
+          const lAmount = (typeof l.amountCents === 'number' && Number.isSafeInteger(l.amountCents)) ? l.amountCents : 0;
+          runningBalances.categoryMetrics[cat] = (runningBalances.categoryMetrics[cat] || 0) + lAmount;
+        });
+      }
     });
 
     set({ transactions: allTxs, runningBalances });

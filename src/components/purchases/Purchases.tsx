@@ -115,46 +115,53 @@ export default function Purchases({
   };
 
   return (
-    <div className="space-y-12 pb-20">
-      {/* Rule Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-        <div>
-          <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate mb-4">
-            <TrendingDown size={14} />
-            Liability Management System
+    <div className="space-y-8 pb-20">
+      {/* Rule Header with brand gold backdrop */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[var(--brass-soft)] via-[var(--surface)]/40 to-[var(--panel)] p-6 rounded-2xl border border-[var(--brass-line)]/50 shadow-sm">
+        <div className="absolute -top-16 -left-16 w-56 h-56 bg-[var(--brass)]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)]/60 text-[10px] font-mono text-[var(--brass)] font-semibold mb-2 shadow-xs">
+              <TrendingDown size={12} />
+              ACCOUNTS PAYABLE & EXPENSES
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text)] tracking-tight">Bills & Vendor Liabilities</h1>
+            <p className="text-xs text-[var(--muted)] font-medium mt-1">Manage supplier bills, expense accruals, and cash outflow schedules.</p>
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Bills & Accounts Payable</h2>
-          <p className="text-slate-500 font-medium text-lg mt-2 opacity-70">Manage vendor bills, expenses, and accounts payable (AP).</p>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center bg-[var(--surface)] p-1 rounded-xl border border-[var(--line)] shadow-xs">
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="flex items-center bg-[var(--surface)]/80 p-1 rounded-xl border border-[var(--line)] shadow-inner backdrop-blur-sm">
+              <button 
+                onClick={() => setActiveSubTab('bills')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                  activeSubTab === 'bills' 
+                    ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold shadow-sm" 
+                    : "text-[var(--muted)] hover:text-[var(--text)]"
+                )}
+              >
+                Bills & AP
+              </button>
+              <button 
+                onClick={() => setActiveSubTab('vendors')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                  activeSubTab === 'vendors' 
+                    ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold shadow-sm" 
+                    : "text-[var(--muted)] hover:text-[var(--text)]"
+                )}
+              >
+                Vendors & Suppliers
+              </button>
+            </div>
             <button 
-              onClick={() => setActiveSubTab('bills')}
-              className={cn(
-                "px-4 py-2 rounded-lg text-xs font-semibold transition-all",
-                activeSubTab === 'bills' ? "bg-[var(--brass)] text-black shadow-xs" : "text-[var(--muted)] hover:text-[var(--text)]"
-              )}
+              onClick={() => activeSubTab === 'bills' ? setIsBillModalOpen(true) : setIsVendorModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black rounded-xl text-xs font-bold hover:opacity-95 transition-all shadow-md hover:shadow-lg cursor-pointer active:scale-95"
             >
-              Bills & AP
-            </button>
-            <button 
-              onClick={() => setActiveSubTab('vendors')}
-              className={cn(
-                "px-4 py-2 rounded-lg text-xs font-semibold transition-all",
-                activeSubTab === 'vendors' ? "bg-[var(--brass)] text-black shadow-xs" : "text-[var(--muted)] hover:text-[var(--text)]"
-              )}
-            >
-              Vendors & Suppliers
+              <Plus size={15} />
+              {activeSubTab === 'bills' ? 'Add Bill' : 'Add Vendor'}
             </button>
           </div>
-          <button 
-            onClick={() => activeSubTab === 'bills' ? setIsBillModalOpen(true) : setIsVendorModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--brass)] text-black rounded-xl text-xs font-semibold hover:opacity-90 transition-all shadow-sm cursor-pointer"
-          >
-            <Plus size={16} />
-            {activeSubTab === 'bills' ? 'Add Bill' : 'Add Vendor'}
-          </button>
         </div>
       </div>
 

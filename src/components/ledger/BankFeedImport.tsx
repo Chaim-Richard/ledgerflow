@@ -156,11 +156,10 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
         }
 
         // Step B: Match with high-efficiency local rule engine OR dynamic Bayesian classification
-        const result = localEngine.resolveCategory(t.description);
-        if (result && result.accountName !== 'Manual Review') {
-          const matchedAcct = accounts.find(a => a.name === result.accountName);
+        const dbg = localEngine.debugResolveCategory(t.description);
+        if (dbg && dbg.accountName !== 'Manual Review') {
+          const matchedAcct = accounts.find(a => a.name === dbg.accountName);
           if (matchedAcct) {
-            const dbg = localEngine.debugResolveCategory(t.description);
             const source = dbg.layer.includes('Rule:') ? 'Local Rule Machine' : 'Dynamic Auto-Learner';
             resolvedBatch.push({
               ...t,
@@ -182,15 +181,14 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       let aiMapped: any[] = [];
       if (outstandingForAI.length > 0) {
         outstandingForAI.forEach(t => {
-          const fallbackResult = localEngine.resolveCategory(t.description);
+          const dbg = localEngine.debugResolveCategory(t.description);
           // If the fallback engine resolves exactly to "Manual Review", let it stay as Uncategorized for manual review, otherwise map it
           const matchedAcct = 
-            (fallbackResult && fallbackResult.accountName !== 'Manual Review') 
-              ? accounts.find(a => a.name === fallbackResult.accountName) 
+            (dbg && dbg.accountName !== 'Manual Review') 
+              ? accounts.find(a => a.name === dbg.accountName) 
               : null;
           
           if (matchedAcct) {
-            const dbg = localEngine.debugResolveCategory(t.description);
             aiMapped.push({
               id: t.id,
               accountId: matchedAcct.id,
@@ -201,7 +199,6 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
             });
           } else {
             // Put it into Manual Review
-            const dbg = localEngine.debugResolveCategory(t.description);
             const uncatAcc = accounts.find(a => a.name === 'Uncategorized');
             aiMapped.push({
               id: t.id,
@@ -275,14 +272,14 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[var(--ink)] rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90dvh] flex flex-col overflow-hidden border border-[var(--line)]"
+        className="bg-[var(--ink)] rounded-[40px] shadow-2xl w-full max-w-4xl max-h-[90dvh] flex flex-col overflow-hidden border border-[var(--line)]"
       >
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30">
           <div>
             <h2 className="text-xl font-black text-[var(--text)] uppercase italic tracking-tighter">Bank Feed Ingestion</h2>
-            <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1 opacity-40">Rule CSV parsing & topological mapping</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1 opacity-40">Rule CSV parsing & topological mapping</p>
           </div>
-          <button onClick={onClose} className="w-10 h-10 bg-[var(--ink)] hover:bg-slate-200 rounded-xl flex items-center justify-center text-[var(--muted)] transition-all">
+          <button onClick={onClose} className="w-10 h-10 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-slate-500 transition-all">
             <AlertCircle className="rotate-45" size={20} />
           </button>
         </div>
@@ -292,22 +289,22 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
             <div 
               {...getRootProps()} 
               className={cn(
-                "border-2 border-dashed rounded-xl p-20 flex flex-col items-center justify-center transition-all cursor-pointer group",
+                "border-2 border-dashed rounded-[32px] p-20 flex flex-col items-center justify-center transition-all cursor-pointer group",
                 isDragActive ? "border-indigo-600 bg-indigo-600/5" : "border-[var(--line)] hover:border-indigo-600/30 hover:bg-[var(--ink)]/20"
               )}
             >
               <input {...getInputProps()} />
-              <div className="w-24 h-24 bg-[var(--ink)] rounded-xl flex items-center justify-center mb-8 border border-[var(--line)] group-hover:scale-110 transition-transform">
-                <Upload className={cn("text-[var(--muted)] group-hover:text-indigo-600 transition-colors", isDragActive && "text-indigo-600")} size={40} />
+              <div className="w-24 h-24 bg-[var(--ink)] rounded-[32px] flex items-center justify-center mb-8 border border-[var(--line)] group-hover:scale-110 transition-transform">
+                <Upload className={cn("text-slate-500 group-hover:text-indigo-600 transition-colors", isDragActive && "text-indigo-600")} size={40} />
               </div>
               {file ? (
                 <div className="text-center">
                   <p className="text-lg font-black text-[var(--text)] italic uppercase tracking-tight">{file.name}</p>
-                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mt-1">{(file.size / 1024).toFixed(1)} KB DATA PACKET</p>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">{(file.size / 1024).toFixed(1)} KB DATA PACKET</p>
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleUpload(); }}
                     disabled={isUploading}
-                    className="mt-10 px-10 py-3 bg-indigo-600 text-[var(--panel)] rounded-xl font-black uppercase tracking-[0.2em] text-xs hover:brightness-110 transition-all flex items-center gap-3 shadow-xl shadow-ledger-accent/20"
+                    className="mt-10 px-10 py-3 bg-indigo-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-xs hover:brightness-110 transition-all flex items-center gap-3 shadow-xl shadow-ledger-accent/20"
                   >
                     {isUploading ? <Loader2 className="animate-spin" size={18} /> : <ArrowRight size={18} />}
                     Initialize Upload
@@ -316,14 +313,14 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
               ) : (
                 <div className="text-center flex flex-col items-center">
                   <p className="text-lg font-black text-[var(--text)] uppercase italic tracking-tighter">Deploy Ledger Source</p>
-                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] mt-2 opacity-40 mb-8">Drop CSV or click to browse system</p>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-2 opacity-40 mb-8">Drop CSV or click to browse system</p>
                   
                   <div className="flex gap-4 items-center mt-4" onClick={(e) => e.stopPropagation()}>
                     <PlaidConnectButton />
                     <button 
                       onClick={(e) => { e.stopPropagation(); fetchFromPlaid(); }}
                       disabled={isUploading}
-                      className="h-12 px-6 bg-[var(--ink)] hover:bg-black text-[var(--panel)] font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                      className="h-12 px-6 bg-slate-900 hover:bg-black text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center gap-2 active:scale-95 disabled:opacity-50"
                     >
                       {isUploading ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />}
                       Sync from Plaid
@@ -337,7 +334,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
                    <div className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
-                   <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em]">
+                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
                     {isMapping ? "Rule categorizer active..." : `${mappedTransactions.length} NODES DETECTED`}
                   </p>
                 </div>
@@ -351,15 +348,15 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                 )}
               </div>
 
-              <div className="border border-[var(--line)] rounded-xl overflow-hidden bg-[var(--surface)]/50">
+              <div className="border border-[var(--line)] rounded-[32px] overflow-hidden bg-[var(--surface)]/50">
                 <table className="w-full text-left text-sm border-collapse">
                   <thead>
                     <tr className="bg-[var(--ink)]/50 border-b border-[var(--line)]">
                       <th className="px-6 py-4 w-12"></th>
-                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Timestamp</th>
-                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Description</th>
-                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Amount</th>
-                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">AI Topology Hint</th>
+                      <th className="px-4 py-4 font-black text-slate-500 uppercase tracking-widest text-[9px]">Timestamp</th>
+                      <th className="px-4 py-4 font-black text-slate-500 uppercase tracking-widest text-[9px]">Description</th>
+                      <th className="px-4 py-4 font-black text-slate-500 uppercase tracking-widest text-[9px]">Amount</th>
+                      <th className="px-4 py-4 font-black text-slate-500 uppercase tracking-widest text-[9px]">AI Topology Hint</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ledger-line/50">
@@ -375,13 +372,13 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                             }}
                             className={cn(
                               "w-6 h-6 rounded-lg border flex items-center justify-center transition-all",
-                              selectedIndices.has(idx) ? "bg-indigo-600 border-indigo-600 text-[var(--panel)]" : "border-[var(--line)] bg-[var(--ink)]"
+                              selectedIndices.has(idx) ? "bg-indigo-600 border-indigo-600 text-white" : "border-[var(--line)] bg-[var(--ink)]"
                             )}
                           >
                             {selectedIndices.has(idx) && <Check size={14} />}
                           </button>
                         </td>
-                        <td className="px-4 py-4 text-[11px] font-mono font-bold text-[var(--muted)]">{tx.date}</td>
+                        <td className="px-4 py-4 text-[11px] font-mono font-bold text-slate-500">{tx.date}</td>
                         <td className="px-4 py-4 font-black text-[var(--text)] italic uppercase tracking-tight text-xs">{tx.description}</td>
                         <td className="px-4 py-4 font-mono font-black text-[var(--text)] text-sm">
                           {(tx.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
@@ -395,7 +392,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                                 <span className="px-3 py-1 bg-indigo-600/10 text-indigo-600 border border-indigo-600/20 rounded-lg text-[9px] font-medium uppercase tracking-wider">
                                   {tx.category || 'PENDING'}
                                 </span>
-                                <span className="text-[9px] font-mono text-[var(--muted)]/40 font-bold uppercase tracking-tighter">
+                                <span className="text-[9px] font-mono text-slate-500/40 font-bold uppercase tracking-tighter">
                                   {Math.round((tx.confidence || 0) * 100)}% Match
                                 </span>
                               </div>
@@ -417,13 +414,13 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
         </div>
 
         <div className="p-4 md:p-8 border-t border-[var(--line)] flex items-center justify-end gap-5 bg-[var(--ink)]/20">
-          <button onClick={onClose} className="px-8 py-3 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] hover:text-[var(--text)] transition-all">
+          <button onClick={onClose} className="px-8 py-3 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] hover:text-[var(--text)] transition-all">
             Abort Mission
           </button>
           <button 
             onClick={handleConfirm}
             disabled={!selectedIndices.size || isMapping}
-            className="px-10 py-3 bg-indigo-600 text-[var(--panel)] rounded-xl font-black uppercase tracking-[0.2em] text-xs hover:brightness-110 disabled:opacity-30 disabled:grayscale transition-all shadow-xl shadow-ledger-accent/20"
+            className="px-10 py-3 bg-indigo-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-xs hover:brightness-110 disabled:opacity-30 disabled:grayscale transition-all shadow-xl shadow-ledger-accent/20"
           >
             Import {selectedIndices.size} Vectors
           </button>

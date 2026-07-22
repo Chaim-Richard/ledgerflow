@@ -31,26 +31,28 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
   if (groupTabs.length <= 1) return null;
 
   return (
-    <div className="bg-[var(--surface)] border-b border-[var(--line)] px-4 sm:px-6 z-20">
+    <div className="bg-[var(--surface)] border-b border-[var(--line)] px-4 sm:px-6 z-20 shadow-2xs">
       <div 
         ref={scrollRef}
-        className="flex overflow-x-auto no-scrollbar space-x-6 pt-3 -mb-px"
+        className="flex overflow-x-auto no-scrollbar items-center gap-1.5 py-2.5"
       >
         {groupTabs.map(tab => {
           const isActive = activeTab === tab.id;
+          const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               data-state={isActive ? 'active' : 'inactive'}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "pb-2.5 text-[13px] font-medium whitespace-nowrap transition-all border-b-2",
+                "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border",
                 isActive 
-                  ? "border-[var(--brass)] text-[var(--brass)] font-semibold" 
-                  : "border-transparent text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--line)]"
+                  ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold border-[var(--brass-line)] shadow-xs" 
+                  : "bg-[var(--panel)]/80 text-[var(--muted)] border-[var(--line)] hover:text-[var(--text)] hover:border-[var(--brass-line)]/50 hover:bg-[var(--elevated)]"
               )}
             >
-              {tab.label.en}
+              {Icon && <Icon size={14} className={isActive ? "text-black" : "text-[var(--brass)]"} />}
+              <span>{tab.label.en}</span>
             </button>
           );
         })}
@@ -58,3 +60,4 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
     </div>
   );
 }
+

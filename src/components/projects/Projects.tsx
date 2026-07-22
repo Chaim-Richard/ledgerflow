@@ -173,55 +173,62 @@ export default function Projects({
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[var(--line)]/60">
-        <div>
-          <div className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--faint)] uppercase tracking-widest truncate mb-1">
-            <FolderKanban size={12} />
-            Dimensional Cost Architecture
+      {/* Header with brand gold backdrop */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[var(--brass-soft)] via-[var(--surface)]/40 to-[var(--panel)] p-6 rounded-2xl border border-[var(--brass-line)]/50 shadow-sm">
+        <div className="absolute -top-16 -left-16 w-56 h-56 bg-[var(--brass)]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)]/60 text-[10px] font-mono text-[var(--brass)] font-semibold mb-2 shadow-xs">
+              <FolderKanban size={12} />
+              DIMENSIONAL COST ARCHITECTURE
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text)] tracking-tight">Project & Initiative Tracking</h1>
+            <p className="text-xs text-[var(--muted)] font-medium mt-1">Initiative performance management paired with multi-rule split protocol tracing.</p>
           </div>
-          <h2 className="text-2xl font-black text-[var(--text)] tracking-tight">Project Tracking</h2>
-          <p className="text-xs text-[var(--muted)] font-medium">Initiative performance management paired with multi-rule split protocol tracing.</p>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap bg-slate-100/50 p-1 rounded-xl border border-[var(--line)]/60">
-            <button
-              onClick={() => setActiveSubTab('pipeline')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wider transition-all gap-1.5 flex items-center",
-                activeSubTab === 'pipeline' ? "bg-[var(--surface)] text-[var(--text)] shadow-sm ring-1 ring-slate-200/50" : "text-[var(--muted)] hover:text-slate-700"
-              )}
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="flex items-center bg-[var(--surface)]/80 p-1 rounded-xl border border-[var(--line)] shadow-inner backdrop-blur-sm">
+              <button
+                onClick={() => setActiveSubTab('pipeline')}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all gap-1.5 flex items-center cursor-pointer",
+                  activeSubTab === 'pipeline' 
+                    ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold shadow-sm" 
+                    : "text-[var(--muted)] hover:text-[var(--text)]"
+                )}
+              >
+                 <LayoutDashboard size={13} /> Board
+              </button>
+              <button
+                onClick={() => setActiveSubTab('list')}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all gap-1.5 flex items-center cursor-pointer",
+                  activeSubTab === 'list' 
+                    ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold shadow-sm" 
+                    : "text-[var(--muted)] hover:text-[var(--text)]"
+                )}
+              >
+                <List size={13} /> List
+              </button>
+            </div>
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--brass)] transition-colors" size={14} />
+              <input 
+                type="text"
+                placeholder="Search projects or tags..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-xs focus:outline-none focus:border-[var(--brass-line)] focus:ring-1 focus:ring-[var(--brass)] transition-all w-52 sm:w-60 text-[var(--text)] placeholder:text-[var(--faint)] font-medium"
+              />
+            </div>
+            <button 
+              onClick={() => setIsNewProjectModalOpen(true)}
+              className="h-9 px-4 bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black hover:opacity-95 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-md hover:shadow-lg cursor-pointer"
             >
-               <LayoutDashboard size={12} /> Board
-            </button>
-            <button
-              onClick={() => setActiveSubTab('list')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wider transition-all gap-1.5 flex items-center",
-                activeSubTab === 'list' ? "bg-[var(--surface)] text-[var(--text)] shadow-sm ring-1 ring-slate-200/50" : "text-[var(--muted)] hover:text-slate-700"
-              )}
-            >
-              <List size={12} /> List
+              <Plus size={15} />
+              Initialize Project
             </button>
           </div>
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--faint)] group-focus-within:text-slate-655 transition-colors" size={14} />
-            <input 
-              type="text"
-              placeholder="Search by project name, description, tags, or metadata..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-1.5 bg-[var(--ink)] hover:bg-[var(--ink)]/80 border border-[var(--line)] rounded-xl text-xs focus:outline-none focus:border-slate-950 transition-all w-60 text-[var(--text)] placeholder:text-[var(--faint)] font-medium"
-            />
-          </div>
-          <button 
-            onClick={() => setIsNewProjectModalOpen(true)}
-            className="h-10 px-4 bg-[var(--ink)] text-[var(--panel)] hover:bg-slate-800 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-2 shadow-sm"
-          >
-            <Plus size={14} className="stroke-[3px]" />
-            New Project
-          </button>
         </div>
       </div>
 
@@ -246,8 +253,8 @@ export default function Projects({
                 className={cn(
                   "p-5 rounded-xl border transition-all cursor-pointer group relative overflow-hidden",
                   selectedProjectId === project.id 
-                    ? "bg-[var(--ink)] border-slate-950 text-[var(--panel)] shadow-sm" 
-                    : "bg-[var(--surface)] border-[var(--line)] hover:border-slate-300 text-[var(--text)] shadow-sm"
+                    ? "bg-slate-900 border-slate-950 text-white shadow-xs" 
+                    : "bg-[var(--surface)] border-[var(--line)]/80 hover:border-slate-300 text-[var(--text)] shadow-3xs"
                 )}
               >
                 {selectedProjectId === project.id && (
@@ -265,10 +272,10 @@ export default function Projects({
                       <div dir="auto">
                         <h3 className="font-bold text-sm tracking-tight">{project.name}</h3>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "bg-[var(--surface)]/10 text-[var(--panel)]" : "bg-slate-100 text-slate-600")}>
+                          <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "bg-[var(--surface)]/10 text-white" : "bg-slate-100 text-slate-600")}>
                             {project.type}
                           </span>
-                          <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border", selectedProjectId === project.id ? "border-white/10 text-[var(--panel)]/80" : "border-[var(--line)] text-[var(--faint)]")}>
+                          <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border", selectedProjectId === project.id ? "border-white/10 text-white/80" : "border-[var(--line)] text-slate-400")}>
                             {project.status}
                           </span>
                         </div>
@@ -283,7 +290,7 @@ export default function Projects({
                           }}
                           className={cn(
                             "p-1.5 rounded-md transition-all",
-                            selectedProjectId === project.id ? "text-[var(--panel)]/80 hover:text-[var(--panel)] hover:bg-[var(--surface)]/10" : "text-[var(--faint)] hover:text-[var(--text)] hover:bg-[var(--ink)]"
+                            selectedProjectId === project.id ? "text-white/80 hover:text-white hover:bg-[var(--surface)]/10" : "text-slate-400 hover:text-[var(--text)] hover:bg-[var(--ink)]"
                           )}
                         >
                           <Pencil size={12} />
@@ -295,14 +302,14 @@ export default function Projects({
                           }}
                           className={cn(
                             "p-1.5 rounded-md transition-all",
-                            selectedProjectId === project.id ? "text-[var(--panel)]/80 hover:text-red-400 hover:bg-[var(--surface)]/10" : "text-[var(--faint)] hover:text-rose-600 hover:bg-rose-50/50"
+                            selectedProjectId === project.id ? "text-white/80 hover:text-red-400 hover:bg-[var(--surface)]/10" : "text-slate-400 hover:text-rose-600 hover:bg-rose-50/50"
                           )}
                         >
                           <Trash2 size={12} />
                         </button>
                       </div>
                       <div className="text-right">
-                        <p className={cn("text-[9px] font-bold uppercase tracking-wider mb-0.5", selectedProjectId === project.id ? "text-[var(--panel)]/60" : "text-[var(--faint)]")}>Net Impact</p>
+                        <p className={cn("text-[9px] font-bold uppercase tracking-wider mb-0.5", selectedProjectId === project.id ? "text-white/60" : "text-slate-400")}>Net Impact</p>
                         <p className={cn("text-base font-bold font-mono tracking-tight", stats.actualCents < 0 ? (selectedProjectId === project.id ? "text-rose-300" : "font-semibold text-rose-700") : (selectedProjectId === project.id ? "text-emerald-300" : "font-semibold text-emerald-700"))}>
                           {formatCurrency(stats.actualCents)}
                         </p>
@@ -312,15 +319,15 @@ export default function Projects({
 
                 <div className="grid grid-cols-3 gap-4 mb-4 relative z-10 pt-2 border-t border-[var(--line)]/10">
                   <div className="space-y-0.5">
-                    <p className={cn("text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "text-[var(--panel)]/60" : "text-[var(--faint)]")}>Allocated</p>
+                    <p className={cn("text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "text-white/60" : "text-slate-400")}>Allocated</p>
                     <p className="font-semibold font-mono text-xs">{formatCurrency(stats.budgetCents)}</p>
                   </div>
                   <div className="space-y-0.5">
-                    <p className={cn("text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "text-[var(--panel)]/60" : "text-[var(--faint)]")}>Cost Burn</p>
+                    <p className={cn("text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "text-white/60" : "text-slate-400")}>Cost Burn</p>
                     <p className="font-semibold font-mono text-xs">{formatCurrency(stats.expenseCents)}</p>
                   </div>
                   <div className="space-y-0.5">
-                    <p className={cn("text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "text-[var(--panel)]/60" : "text-[var(--faint)]")}>Usage</p>
+                    <p className={cn("text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "text-white/60" : "text-slate-400")}>Usage</p>
                     <p className="font-semibold font-mono text-xs">{progress.toFixed(1)}%</p>
                   </div>
                 </div>
@@ -334,7 +341,7 @@ export default function Projects({
                       "h-full rounded-full",
                       selectedProjectId === project.id 
                         ? "bg-[var(--surface)]" 
-                        : (progress > 90 ? "bg-rose-500" : progress > 70 ? "bg-amber-500" : "bg-[var(--ink)]")
+                        : (progress > 90 ? "bg-rose-500" : progress > 70 ? "bg-amber-500" : "bg-slate-900")
                     )}
                   />
                 </div>
@@ -352,17 +359,17 @@ export default function Projects({
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
-                className="bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm p-5 relative overflow-hidden"
+                className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs p-5 relative overflow-hidden"
               >
                 <div className="absolute inset-0 technical-grid opacity-[0.01] pointer-events-none" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-[var(--line)]">
                     <div>
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--faint)]">Collaborators</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Collaborators</h4>
                       <h3 className="text-sm font-black text-[var(--text)] tracking-tight mt-0.5">{selectedProject.name}</h3>
                     </div>
                     <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)]/60 rounded-lg flex items-center justify-center">
-                      <Users size={14} className="text-[var(--muted)]" />
+                      <Users size={14} className="text-slate-500" />
                     </div>
                   </div>
 
@@ -370,7 +377,7 @@ export default function Projects({
                     {projectVendors.length > 0 ? projectVendors.map(vendor => (
                       <div key={vendor.id} className="flex items-center justify-between p-3 bg-[var(--ink)] rounded-xl border border-[var(--line)]/60 hover:border-slate-300 transition-all">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-[var(--ink)] flex items-center justify-center text-[var(--panel)] font-black text-xs shadow-sm">
+                          <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-black text-xs shadow-3xs">
                             {vendor.name[0]}
                           </div>
                           <div>
@@ -414,13 +421,13 @@ export default function Projects({
                         </div>
                       ))}
                       {!selectedProject.splitRules?.length && (
-                        <p className="text-[10px] text-[var(--faint)] font-bold italic">No split allocations configured.</p>
+                        <p className="text-[10px] text-slate-400 font-bold italic">No split allocations configured.</p>
                       )}
                     </div>
                   </div>
 
                   <div className="mt-6 pt-4 border-t border-[var(--line)]">
-                    <button className="w-full h-10 bg-[var(--ink)] hover:bg-slate-800 text-[var(--panel)] rounded-xl font-bold uppercase tracking-wider text-[9px] transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                    <button className="w-full h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold uppercase tracking-wider text-[9px] transition-all flex items-center justify-center gap-2 shadow-3xs cursor-pointer">
                       <BarChart3 size={12} className="text-slate-300" />
                       Generate Brief
                     </button>
@@ -429,11 +436,11 @@ export default function Projects({
               </motion.div>
             ) : (
               <div className="bg-slate-100/30 rounded-xl border border-dashed border-[var(--line)] p-4 md:p-8 text-center h-full flex flex-col items-center justify-center">
-                <div className="w-12 h-12 bg-[var(--surface)] rounded-lg shadow-sm flex items-center justify-center text-[var(--faint)] border border-[var(--line)] mx-auto mb-4">
+                <div className="w-12 h-12 bg-[var(--surface)] rounded-lg shadow-3xs flex items-center justify-center text-slate-400 border border-[var(--line)] mx-auto mb-4">
                   <BrainCircuit size={20} />
                 </div>
                 <h3 className="text-xs font-bold text-[var(--text)] mb-1 uppercase tracking-wider">Select Initiative</h3>
-                <p className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider max-w-[200px] mx-auto leading-relaxed">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider max-w-[200px] mx-auto leading-relaxed">
                   Select a workflow folder from the left pane to analyze members, expenses, and split tranches.
                 </p>
               </div>
@@ -445,20 +452,20 @@ export default function Projects({
 
       {/* New Project Modal */}
       {isNewProjectModalOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-[var(--ink)]/60 backdrop-blur-md">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="w-full max-w-xl bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl overflow-hidden"
+            className="w-full max-w-xl bg-[var(--ink)] border border-[var(--line)] rounded-[32px] shadow-2xl overflow-hidden"
           >
             <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Initialize Project</h3>
-                <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Deploying new objective into ledger matrix</p>
+                <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider mt-1">Deploying new objective into ledger matrix</p>
               </div>
               <button 
                 onClick={() => setIsNewProjectModalOpen(false)}
-                className="p-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors"
+                className="p-2 text-slate-500 hover:text-[var(--text)] transition-colors"
               >
                 <Plus size={24} className="rotate-45" />
               </button>
@@ -466,19 +473,19 @@ export default function Projects({
             
             <div className="p-4 md:p-8 space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] px-1">Protocol Name</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-1">Protocol Name</label>
                 <input 
                   type="text"
                   dir="auto"
                   value={newProject.name}
                   onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
                   placeholder="e.g., Project Overlord"
-                  className="w-full p-4 bg-[var(--panel)] rounded-2xl text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all"
+                  className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all"
                 />
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Dimensional Type</label>
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Dimensional Type</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { id: 'general', label: 'General', icon: FolderKanban },
@@ -490,9 +497,9 @@ export default function Projects({
                       key={type.id}
                       onClick={() => setNewProject({ ...newProject, type: type.id as any })}
                       className={cn(
-                        "flex items-center gap-3 p-4 rounded-xl border transition-all text-left",
+                        "flex items-center gap-3 p-4 rounded-[32px] border transition-all text-left",
                         newProject.type === type.id 
-                          ? "bg-indigo-600 border-indigo-600 text-[var(--panel)] shadow-lg" 
+                          ? "bg-indigo-600 border-indigo-600 text-white shadow-lg" 
                           : "bg-[var(--surface)] border-[var(--line)] text-[var(--text)] hover:border-indigo-600/50"
                       )}
                     >
@@ -504,13 +511,13 @@ export default function Projects({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] px-1">Strategic Description</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-1">Strategic Description</label>
                 <textarea 
                   dir="auto"
                   value={newProject.description || ''}
                   onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
                   placeholder="Intelligence briefing on project goals..."
-                  className="w-full p-4 bg-[var(--panel)] rounded-2xl text-sm font-medium focus:outline-none focus:border-indigo-600 transition-all h-24"
+                  className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-medium focus:outline-none focus:border-indigo-600 transition-all h-24"
                 />
               </div>
             </div>
@@ -518,14 +525,14 @@ export default function Projects({
             <div className="p-4 md:p-8 bg-[var(--ink)]/30 border-t border-[var(--line)] flex items-center justify-end gap-4">
               <button 
                 onClick={() => setIsNewProjectModalOpen(false)}
-                className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-[var(--muted)] hover:text-[var(--text)] transition-colors"
+                className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-slate-500 hover:text-[var(--text)] transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleAddProject}
                 disabled={loading || !newProject.name}
-                className="px-8 py-3 bg-indigo-600 text-[var(--panel)] rounded-xl text-xs font-medium uppercase tracking-wider hover:bg-indigo-600/90 transition-all shadow-xl disabled:opacity-50"
+                className="px-8 py-3 bg-indigo-600 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider hover:bg-indigo-600/90 transition-all shadow-xl disabled:opacity-50"
               >
                 {loading ? 'PROCESSING...' : 'INITIALIZE PROTOCOL'}
               </button>
@@ -536,20 +543,20 @@ export default function Projects({
 
       {/* Edit Project Modal */}
       {editingProject && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-[var(--ink)]/60 backdrop-blur-md">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="w-full max-w-xl bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl overflow-hidden"
+            className="w-full max-w-xl bg-[var(--ink)] border border-[var(--line)] rounded-[32px] shadow-2xl overflow-hidden"
           >
             <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Configure Project</h3>
-                <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Rule settings for project matrix {editingProject.id.slice(0, 8)}</p>
+                <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider mt-1">Rule settings for project matrix {editingProject.id.slice(0, 8)}</p>
               </div>
               <button 
                 onClick={() => setEditingProject(null)}
-                className="p-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors"
+                className="p-2 text-slate-500 hover:text-[var(--text)] transition-colors"
               >
                 <Plus size={24} className="rotate-45" />
               </button>
@@ -557,18 +564,18 @@ export default function Projects({
             
             <div className="p-4 md:p-8 space-y-6">
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Protocol Name</label>
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Protocol Name</label>
                 <input 
                   type="text"
                   dir="auto"
                   value={editingProject.name}
                   onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
-                  className="w-full p-4 bg-[var(--panel)] rounded-2xl text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all"
+                  className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all"
                 />
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Status</label>
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Status</label>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { id: 'active', label: 'Active', color: 'ledger-success' },
@@ -579,10 +586,10 @@ export default function Projects({
                       key={status.id}
                       onClick={() => setEditingProject({ ...editingProject, status: status.id as any })}
                       className={cn(
-                        "p-3 rounded-xl border transition-all text-xs font-bold uppercase tracking-wider",
+                        "p-3 rounded-[32px] border transition-all text-xs font-bold uppercase tracking-wider",
                         editingProject.status === status.id 
-                          ? `bg-${status.color} border-${status.color} text-[var(--panel)] shadow-lg` 
-                          : "bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:border-indigo-600/50"
+                          ? `bg-${status.color} border-${status.color} text-white shadow-lg` 
+                          : "bg-[var(--surface)] border-[var(--line)] text-slate-500 hover:border-indigo-600/50"
                       )}
                     >
                       {status.label}
@@ -592,7 +599,7 @@ export default function Projects({
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Dimensional Type</label>
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Dimensional Type</label>
                 <div className="grid grid-cols-2 gap-3">
                     {[
                       { id: 'general', label: 'General', icon: FolderKanban },
@@ -604,9 +611,9 @@ export default function Projects({
                         key={type.id}
                         onClick={() => setEditingProject({ ...editingProject, type: type.id as any })}
                         className={cn(
-                          "flex items-center gap-3 p-4 rounded-xl border transition-all text-left",
+                          "flex items-center gap-3 p-4 rounded-[32px] border transition-all text-left",
                           editingProject.type === type.id 
-                            ? "bg-indigo-600 border-indigo-600 text-[var(--panel)] shadow-lg" 
+                            ? "bg-indigo-600 border-indigo-600 text-white shadow-lg" 
                             : "bg-[var(--surface)] border-[var(--line)] text-[var(--text)] hover:border-indigo-600/50"
                         )}
                       >
@@ -619,26 +626,26 @@ export default function Projects({
 
                 <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Budget Allocation</label>
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Budget Allocation</label>
                   <div className="relative">
-                    <DollarSign size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+                    <DollarSign size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input 
                       type="number"
                       value={editingProject.budgetCents / 100}
                       onChange={(e) => setEditingProject({ ...editingProject, budgetCents: Math.round(Number(e.target.value) * 100) })}
-                      className="w-full pl-10 pr-4 py-4 bg-[var(--panel)] rounded-2xl text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all"
+                      className="w-full pl-10 pr-4 py-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all"
                     />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Strategic Description</label>
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Strategic Description</label>
                 <textarea 
                   dir="auto"
                   value={editingProject.description || ''}
                   onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
-                  className="w-full p-4 bg-[var(--panel)] rounded-2xl text-sm font-medium focus:outline-none focus:border-indigo-600 transition-all h-24"
+                  className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-medium focus:outline-none focus:border-indigo-600 transition-all h-24"
                 />
               </div>
             </div>
@@ -646,14 +653,14 @@ export default function Projects({
             <div className="p-4 md:p-8 bg-[var(--ink)]/30 border-t border-[var(--line)] flex items-center justify-end gap-4">
               <button 
                 onClick={() => setEditingProject(null)}
-                className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-[var(--muted)] hover:text-[var(--text)] transition-colors"
+                className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-slate-500 hover:text-[var(--text)] transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleUpdateProject}
                 disabled={loading || !editingProject.name}
-                className="px-8 py-3 bg-indigo-600 text-[var(--panel)] rounded-xl text-xs font-medium uppercase tracking-wider hover:bg-indigo-600/90 transition-all shadow-xl disabled:opacity-50"
+                className="px-8 py-3 bg-indigo-600 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider hover:bg-indigo-600/90 transition-all shadow-xl disabled:opacity-50"
               >
                 {loading ? 'COMMITTING...' : 'SAVE MODIFICATIONS'}
               </button>

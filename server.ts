@@ -54,7 +54,7 @@ const plaidClient = new PlaidApi(plaidConfig);
 let stripeClient: Stripe | null = null;
 export function getStripe(): Stripe {
   if (!stripeClient) {
-    const key = process.env.STRIPE_SECRET_KEY || "sk_test_51Th0cyHeA5CQrJgAydtw8kNiEYTmsIqV9OmpYPeqg2QTL9PMGqmB9Fu7genKx2xbk9l6y9aLjNH4JAsFuHQHzdZ100LeA5wRvb";
+    const key = process.env.STRIPE_SECRET_KEY as string;
     stripeClient = new Stripe(key, { apiVersion: "2024-12-18.acacia" as any });
   }
   return stripeClient;
@@ -64,6 +64,11 @@ export function getStripe(): Stripe {
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   GEMINI_API_KEY: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().min(1),
+  SESSION_SECRET: z.string().min(1),
+  CURRENCY_API_KEY: z.string().min(1),
+  TAX_API_KEY: z.string().min(1),
+  SYSTEM_SALT: z.string().min(1),
 });
 
 const envResult = EnvSchema.safeParse(process.env);
@@ -256,25 +261,17 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
   }
   
   try {
-    const allWorkspacesSnap = await db.collection("workspaces").get();
-    console.log("[DEBUG] Total workspaces in DB:", allWorkspacesSnap.size);
-    console.log("[DEBUG] Sample IDs:", allWorkspacesSnap.docs.slice(0, 5).map(d => d.id));
-    
     const docRef = db.collection("workspaces").doc(workspaceId);
-    console.log("[DEBUG] authorizeWorkspace - Path:", docRef.path);
-    console.log("[DEBUG] authorizeWorkspace - ID JSON:", JSON.stringify(workspaceId));
-    console.log("[DEBUG] authorizeWorkspace - ID Length:", workspaceId.length);
     
     const workspaceSnap = await docRef.get();
     
     if (!workspaceSnap.exists) {
-      console.error("[DEBUG] authorizeWorkspace - Workspace document does not exist:", workspaceId);
       throw new Error(`NOT_FOUND: Workspace with ID ${workspaceId} not found in database.`);
     }
     
     const data = workspaceSnap.data();
     const isOwner = data?.uid === req.user.uid;
-    const isAdmin = data?.admins?.[req.user.uid] === true || req.user.email?.toLowerCase() === "shmuelbiller@gmail.com";
+    const isAdmin = data?.admins?.[req.user.uid] === true || req.user.admin === true;
     
     if (!isOwner && !isAdmin) {
       console.error("[DEBUG] authorizeWorkspace - Forbidden access for user:", req.user.uid, "to workspace:", workspaceId);
@@ -284,7 +281,7 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
     // Administrative Policy Enforcement & Access Matrix Checks
     const url = req.originalUrl || req.url || "";
     const isBillingOrMetadataRoute = url.includes("/billing/status") || url.includes("/billing/record-compute");
-    const isSystemAdmin = req.user?.email?.toLowerCase() === 'shmuelbiller@gmail.com';
+    const isSystemAdmin = req.user?.admin === true;
 
     if (!isSystemAdmin && !isBillingOrMetadataRoute) {
       // 1. Account Freeze enforcement (concurrentUserLimit = 0 denotes administratively frozen account)
@@ -459,7 +456,7 @@ async function startServer() {
       const transactions = transactionsSnap.docs.map(doc => doc.data() as any);
 
       // Dyn Salt Entropy combines Server Secret with client workspace signature to prevent side-channel inference
-      const serverSecret = process.env.SESSION_SECRET || "clearbook-proprietary-core-secret-2026";
+      const serverSecret = process.env.SESSION_SECRET as string;
       const strongSalt = crypto.createHmac("sha256", serverSecret).update(workspaceId).digest("hex");
 
       // Server instantiates the full-entropy matching engine
@@ -1337,581 +1334,6 @@ async function startServer() {
     }
   });
 
-  app.get("/api/v1/transactions", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    try {
-      const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
-      if (!workspaceId) return sendError(res, "Missing workspaceId query parameters", 400);
-
-      const authReq = req as AuthenticatedRequest;
-      await authorizeWorkspace(authReq, workspaceId);
-      
-      const { startDate, endDate, accountId, limit } = req.query;
-
-      const db = getDb();
-      let queryFn: any = db.collection("transactions").where("workspaceId", "==", workspaceId);
-      
-      if (startDate) queryFn = queryFn.where("date", ">=", startDate as string);
-      if (endDate) queryFn = queryFn.where("date", "<=", endDate as string);
-      
-      const maxLimit = parseInt(limit as string, 10) || 100;
-      queryFn = queryFn.limit(Math.min(maxLimit, 1000));
-
-      const transactionsSnap = await queryFn.get();
-      let transactions = transactionsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-
-      if (accountId) {
-        transactions = transactions.filter((t: any) => t.lines?.some((l: any) => l.accountId === accountId));
-      }
-
-      transactions.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      res.json({
-        status: "success",
-        workspaceId,
-        transactionsCount: transactions.length,
-        transactions
-      });
-    } catch (err: any) {
-      if (err.message === "FORBIDDEN") return sendError(res, "Forbidden workspace access", 403);
-      sendError(res, err.message, 500);
-    }
-  });
-
-  async function trainClassifierWithWorkspaceData(classifier: BayesianClassifier, workspaceId: string, apiKeyId?: string) {
-    const db = getDb();
-    let trainedCount = 0;
-    
-    // 1. Train from standard transactions (high-veracity human-vetted context)
-    try {
-      const transactionsSnap = await db.collection("transactions")
-        .where("workspaceId", "==", workspaceId)
-        .limit(200)
-        .get();
-      transactionsSnap.docs.forEach(doc => {
-        const txData = doc.data();
-        if (txData && txData.description) {
-          const category = txData.category || txData.lines?.find((l: any) => l.category)?.category || txData.lines?.find((l: any) => l.amountCents > 0)?.accountName;
-          if (category) {
-            classifier.train(txData.description, category, 1.5);
-            trainedCount++;
-          }
-        }
-      });
-    } catch (err) {
-      console.warn("[Bayesian Train] Bypassed base transactions training:", (err as Error).message || err);
-    }
-
-    // 2. Train from sandboxed learnedDeltas to prevent cross-API model poisoning
-    try {
-      const activeKeyId = apiKeyId || "human_web_console";
-      
-      // We retrieve both human-reviewed dashboard deltas and key-specific feedback deltas in parallel single-field queries
-      // This prevents requiring any complex composite indexes and operates instantly.
-      const queryPromises = [
-        db.collection("learnedDeltas").where("apiKeyId", "==", "human_web_console").limit(150).get()
-      ];
-      
-      if (activeKeyId !== "human_web_console") {
-        queryPromises.push(
-          db.collection("learnedDeltas").where("apiKeyId", "==", activeKeyId).limit(150).get()
-        );
-      }
-      
-      const snaps = await Promise.all(queryPromises);
-      
-      snaps.forEach(snap => {
-        snap.docs.forEach(doc => {
-          const data = doc.data();
-          if (data && data.description && data.category) {
-            // Confirm workspaceId match for absolute multi-tenant safety
-            if (data.workspaceId === workspaceId) {
-              classifier.train(data.description, data.category, 3.0);
-              trainedCount++;
-            }
-          }
-        });
-      });
-    } catch (err) {
-      console.warn("[Bayesian Train] Bypassed learnedDeltas training:", (err as Error).message || err);
-    }
-    
-    return trainedCount;
-  }
-
-  app.post("/api/v1/transactions", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    try {
-      const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
-      if (!workspaceId) return sendError(res, "Missing workspaceId field in body wrapper", 400);
-
-      const authReq = req as AuthenticatedRequest;
-      const wsData = await authorizeWorkspace(authReq, workspaceId);
-
-      const idempotencyKey = req.headers['idempotency-key'] as string;
-      if (!idempotencyKey) {
-        return sendError(res, "Missing required Idempotency-Key header.", 400);
-      }
-
-      const db = getDb();
-      
-      const existingTxSnap = await db.collection("transactions")
-        .where("workspaceId", "==", workspaceId)
-        .where("metadata.idempotencyKey", "==", idempotencyKey)
-        .limit(1)
-        .get();
-        
-      if (!existingTxSnap.empty) {
-         return res.status(200).json({
-           status: "success",
-           message: "Idempotent request matched. Returning existing transaction.",
-           transactionId: existingTxSnap.docs[0].id,
-           data: existingTxSnap.docs[0].data()
-         });
-      }
-
-      let { date, description, amountCents, lines, payee, status, type, dryRun, category } = req.body;
-
-      if (!dryRun) {
-        const plan = wsData?.plan || 'sandbox';
-        const billingCycle = wsData?.billingCycle || 'free';
-        const isFree = plan === 'sandbox' || plan === 'free' || billingCycle === 'free';
-        if (isFree) {
-          const txsSnap = await db.collection("transactions").where("workspaceId", "==", workspaceId).get();
-          const currentTxCount = txsSnap.size;
-          const limit = globalAdminConfig.freeWorkspaceTxCap !== undefined ? globalAdminConfig.freeWorkspaceTxCap : 100;
-          if (currentTxCount >= limit) {
-            return sendError(res, `QUOTA_EXCEEDED: This free workspace has reached its limit of ${limit} transactions. Please upgrade to Pro in Settings > Billing to lift this limit.`, 429);
-          }
-        }
-      }
-
-      if (!date || !description) {
-        return sendError(res, "Missing required criteria: 'date' (YYYY-MM-DD) and 'description' are mandatory.", 400);
-      }
-
-      await verifyLockDate(workspaceId, date);
-
-      // --- ADVANCED INGESTION & ALGORITHMIC CLASSIFICATION ---
-      // Clean messy raw transaction strings, match against historical patterns, self-train, predict Chart of Accounts nodes
-      let cleanedPayee = payee || "";
-      let parsedState: string | undefined = undefined;
-      const lowerDesc = description.toLowerCase();
-      // Detect if it is a messy direct bank import statement
-      const isMessyString = lowerDesc.includes("purchase") || lowerDesc.includes("withdrawal") || lowerDesc.includes("ach") || lowerDesc.includes("#") || /\s[A-Z]{2}\s*-\s*\$/.test(description) || /-\s*\$/.test(description);
-
-      if (isMessyString && !lines && !payee) {
-        // 1. Regex amount parser
-        const amountMatch = description.match(/(?:-\s*\$|\$\s*-?|-?\s*\$)?\s*(-?\d+(?:\.\d{2})?)\b/);
-        if (amountMatch && amountCents === undefined) {
-          amountCents = TruthEngine.parseAmountToCents(amountMatch[1]);
-          if (lowerDesc.includes("purchase") || lowerDesc.includes("withdrawal") || description.includes("-")) {
-            amountCents = Math.abs(amountCents);
-          }
-        }
-
-        // 2. State tax jurisdiction detector
-        const stateMatch = description.match(/\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/i);
-        if (stateMatch) {
-          parsedState = stateMatch[1].toUpperCase();
-        }
-
-        // 3. String cleaner stripping hashes, states, amounts and categories and leading noise
-        cleanedPayee = description
-          .replace(/(?:purchase|withdrawal|ach|deposit|card|pos|online|payment|trans)\b/gi, '')
-          .replace(/#\d+/g, '')
-          .replace(/\b\d{4,}\b/g, '')
-          .replace(/\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/gi, '')
-          .replace(/[-$a-zA-Z0-9.,\s]+$/gi, (match: string) => {
-             if (/[0-9]/.test(match)) return '';
-             return match;
-          })
-          .replace(/[^a-zA-Z0-9\s]/g, '')
-          .replace(/\s+/g, ' ')
-          .trim();
-
-        if (!cleanedPayee) {
-          cleanedPayee = "Suspense Merchant";
-        }
-      } else {
-        cleanedPayee = payee || description;
-      }
-
-      // Bayesian Classification training & execution
-      const activeApiKeyId = (req as any).user?.usedApiKeyId || "human_web_console";
-      const classifier = new BayesianClassifier();
-      const trainedCount = await trainClassifierWithWorkspaceData(classifier, workspaceId, activeApiKeyId);
-
-      let predictedCategory = category;
-      if (!predictedCategory) {
-        const prediction = classifier.classify(cleanedPayee);
-        predictedCategory = prediction ? prediction.category : "Operating Expenses";
-      }
-
-      // --- SELF-LEARNING FEEDBACK LAYER ---
-      // We write this labeling mapping into Firestore "learnedDeltas".
-      // This is a zero-latency permanent learning delta which immediately updates future predictions.
-      // Crucially, this happens EVEN on dryRuns (the transaction isn't saved, but the mathematical intelligence is)!
-      if (cleanedPayee && predictedCategory) {
-        // Compound document ID scoped to Workspace, API Key ID (or dashboard user key), and Payee to naturally cap overall workspace DB sizing and avoid bloat.
-        const deltaId = crypto.createHash('sha256').update(`${workspaceId}_${activeApiKeyId}_${cleanedPayee.toLowerCase()}`).digest('hex');
-        await db.collection("learnedDeltas").doc(deltaId).set({
-          id: deltaId,
-          uid: authReq.user.uid,
-          workspaceId,
-          apiKeyId: activeApiKeyId,
-          description: cleanedPayee.substring(0, 500),
-          category: predictedCategory.substring(0, 100),
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      let transactionLines = lines || [];
-
-      if (transactionLines.length === 0) {
-        if (amountCents === undefined) {
-          amountCents = 1000; // safe baseline fallback ($10)
-        }
-
-        const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
-        const wsData = wsDoc.data() || {};
-        const defaultAccounts = wsData.defaultAccountMappings || {};
-
-        let debitAccountId = defaultAccounts[(predictedCategory || "").toLowerCase()] || defaultAccounts['expense'];
-        let creditAccountId = defaultAccounts['asset'];
-
-        if (!debitAccountId || !creditAccountId) {
-          return sendError(res, "Mapping error: Clean structural match cannot be verified for target accounts. Please configure defaultAccountMappings in workspace.", 400);
-        }
-
-        const [debitSnap, creditSnap] = await Promise.all([
-          db.collection("chartAccounts").doc(debitAccountId).get(),
-          db.collection("chartAccounts").doc(creditAccountId).get()
-        ]);
-
-        if (!debitSnap.exists || !creditSnap.exists) {
-          return sendError(res, "Mapping error: Configured default accounts do not exist in chart of accounts.", 400);
-        }
-
-        const debitAccount = { id: debitSnap.id, name: debitSnap.data()?.name };
-        const creditAccount = { id: creditSnap.id, name: creditSnap.data()?.name };
-
-        transactionLines = [
-          {
-            accountId: debitAccount.id,
-            accountName: debitAccount.name,
-            amountCents: Math.abs(amountCents),
-            description: `Dr - Automated Ingestion Mapped to ${predictedCategory}`
-          },
-          {
-            accountId: creditAccount.id,
-            accountName: creditAccount.name,
-            amountCents: -Math.abs(amountCents),
-            description: "Cr - Automated Double-Entry Cash Balancing Offset"
-          }
-        ];
-      } else {
-        const netSum = transactionLines.reduce((acc: number, entry: any) => acc + (entry.amountCents || 0), 0);
-        if (netSum !== 0) {
-          return sendError(res, `Double-entry ledger sum imbalance detected. Net total: ${netSum} cents. Sum must equal exactly zero.`, 400);
-        }
-      }
-
-      const transactionId = `api-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
-      const newTx = {
-        id: transactionId,
-        uid: authReq.user.uid,
-        workspaceId,
-        date,
-        description: cleanedPayee,
-        payee: cleanedPayee,
-        category: predictedCategory,
-        lines: transactionLines,
-        totalAmountCents: Math.max(...transactionLines.map((l: any) => Math.abs(l.amountCents || 0))),
-        currency: "USD",
-        status: status || "completed",
-        type: type || "actual",
-        createdAt: new Date().toISOString(),
-        metadata: { 
-          importedVia: "clearbook-deep-developer-api", 
-          ip: req.ip, 
-          idempotencyKey, 
-          dryRun: !!dryRun,
-          taxState: parsedState || null,
-          trainedModelCount: trainedCount
-        }
-      };
-
-      if (!dryRun) {
-        await db.collection("transactions").doc(transactionId).set(newTx);
-
-        const auditId = `audit-${Date.now()}`;
-        await db.collection("auditLogs").doc(auditId).set({
-          id: auditId,
-          workspaceId,
-          timestamp: new Date().toISOString(),
-          userId: authReq.user.uid,
-          userEmail: authReq.user.email || "developer@clearbook.io",
-          action: "TRANSACTION_IMPORTED_API",
-          details: `Imported transaction ref [${transactionId}] via deep API interface. Net value: $${(newTx.totalAmountCents / 100).toFixed(2)}.`
-        });
-      }
-
-      res.status(dryRun ? 200 : 201).json({
-        status: "success",
-        message: dryRun ? "Dry run successful. Transaction would be valid and the Bayesian model has learned the mapping." : "Double-entry transaction balances perfectly inside LedgerFlow database registers.",
-        transactionId: dryRun ? "N/A" : transactionId,
-        modelLearned: true,
-        data: newTx
-      });
-    } catch (err: any) {
-      handleApiError(res, err);
-    }
-  });
-
-  app.post("/api/v1/transactions/bulk", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    try {
-      const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
-      if (!workspaceId) return sendError(res, "Missing workspaceId field in body wrapper", 400);
-
-      const authReq = req as AuthenticatedRequest;
-      const wsData = await authorizeWorkspace(authReq, workspaceId);
-
-      const { transactions, dryRun } = req.body;
-      if (!Array.isArray(transactions)) {
-        return sendError(res, "The parameter 'transactions' must be an array of transaction items.", 400);
-      }
-
-      const db = getDb();
-
-      if (!dryRun) {
-        const plan = wsData?.plan || 'sandbox';
-        const billingCycle = wsData?.billingCycle || 'free';
-        const isFree = plan === 'sandbox' || plan === 'free' || billingCycle === 'free';
-        if (isFree) {
-          const txsSnap = await db.collection("transactions").where("workspaceId", "==", workspaceId).get();
-          const currentTxCount = txsSnap.size;
-          const limit = globalAdminConfig.freeWorkspaceTxCap !== undefined ? globalAdminConfig.freeWorkspaceTxCap : 100;
-          if (currentTxCount >= limit) {
-            return sendError(res, `QUOTA_EXCEEDED: This free workspace has reached its limit of ${limit} transactions. Please upgrade to Pro in Settings > Billing to lift this limit.`, 429);
-          }
-          if (currentTxCount + transactions.length > limit) {
-            return sendError(res, `QUOTA_EXCEEDED: Importing ${transactions.length} transactions would exceed this free workspace's remaining quota. (Current: ${currentTxCount}/${limit}). Please upgrade to Pro in Settings > Billing to lift this limit.`, 429);
-          }
-        }
-      }
-
-      const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
-      const defaultAccounts = wsDoc.data()?.defaultAccountMappings || {};
-      const cachedAccountNodes: Record<string, { id: string, name: string }> = {};
-
-      const activeApiKeyId = (req as any).user?.usedApiKeyId || "human_web_console";
-      const classifier = new BayesianClassifier();
-      const trainedCount = await trainClassifierWithWorkspaceData(classifier, workspaceId, activeApiKeyId);
-
-      const results: any[] = [];
-      let successCount = 0;
-      let skippedCount = 0;
-      let failedCount = 0;
-
-      // Process up to 100 items for robust production performance limits
-      const sliceLimit = Math.min(transactions.length, 100);
-      const itemsToProcess = transactions.slice(0, sliceLimit);
-
-      for (let i = 0; i < itemsToProcess.length; i++) {
-        const item = itemsToProcess[i];
-        try {
-          const itemDate = item.date;
-          const itemDesc = item.description || item.payee;
-          const itemAmountCents = item.amountCents;
-          const itemIdempotencyKey = item.idempotencyKey;
-
-          if (!itemDate || !itemDesc) {
-            throw new Error("Missing required fields: 'date' (YYYY-MM-DD) and 'description' or 'payee' are mandatory.");
-          }
-
-          // Check single transaction-level idempotency key
-          if (itemIdempotencyKey) {
-            const existingTxSnap = await db.collection("transactions")
-              .where("workspaceId", "==", workspaceId)
-              .where("metadata.idempotencyKey", "==", itemIdempotencyKey)
-              .limit(1)
-              .get();
-              
-            if (!existingTxSnap.empty) {
-              results.push({
-                index: i,
-                status: "skipped_idempotent",
-                message: "Duplicate key skipped safely.",
-                transactionId: existingTxSnap.docs[0].id,
-                totalAmountCents: existingTxSnap.docs[0].data()?.totalAmountCents || 0
-              });
-              skippedCount++;
-              continue;
-            }
-          }
-
-          await verifyLockDate(workspaceId, itemDate);
-
-          // Advanced prediction and payee extraction
-          let cleanedPayee = item.payee || itemDesc;
-          let parsedState: string | undefined = undefined;
-          const lowerDesc = itemDesc.toLowerCase();
-          const isMessyString = lowerDesc.includes("purchase") || lowerDesc.includes("withdrawal") || lowerDesc.includes("ach") || lowerDesc.includes("#") || /\s[A-Z]{2}\s*-\s*\$/.test(cleanedPayee);
-
-          if (isMessyString && !item.lines && !item.payee) {
-            // Regex state jurisdiction mapping
-            const stateMatch = itemDesc.match(/\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/i);
-            if (stateMatch) parsedState = stateMatch[1].toUpperCase();
-
-            cleanedPayee = itemDesc
-              .replace(/(?:purchase|withdrawal|ach|deposit|card|pos|online|payment|trans)\b/gi, '')
-              .replace(/#\d+/g, '')
-              .replace(/\b\d{4,}\b/g, '')
-              .trim() || "Suspense Merchant";
-          }
-
-          let predictedCategory = item.category;
-          if (!predictedCategory) {
-            const prediction = classifier.classify(cleanedPayee);
-            predictedCategory = prediction ? prediction.category : "Operating Expenses";
-          }
-
-          // Permanent learned feedback feed
-          if (cleanedPayee && predictedCategory) {
-            const deltaId = crypto.createHash('sha256').update(`${workspaceId}_${activeApiKeyId}_${cleanedPayee.toLowerCase()}`).digest('hex');
-            await db.collection("learnedDeltas").doc(deltaId).set({
-              id: deltaId,
-              uid: authReq.user.uid,
-              workspaceId,
-              apiKeyId: activeApiKeyId,
-              description: cleanedPayee.substring(0, 500),
-              category: predictedCategory.substring(0, 100),
-              timestamp: new Date().toISOString()
-            });
-          }
-
-          let transactionLines = item.lines || [];
-          let finalAmount = itemAmountCents;
-
-          if (transactionLines.length === 0) {
-            if (finalAmount === undefined) {
-              finalAmount = 1000; // safe baseline fallback ($10)
-            }
-
-            let debitAccountId = defaultAccounts[(predictedCategory || "").toLowerCase()] || defaultAccounts['expense'];
-            let creditAccountId = defaultAccounts['asset'];
-
-            if (!debitAccountId || !creditAccountId) {
-              throw new Error("Mapping error: Clean structural match cannot be verified for target accounts. Please configure defaultAccountMappings in workspace.");
-            }
-
-            if (!cachedAccountNodes[debitAccountId]) {
-              const debitSnap = await db.collection("chartAccounts").doc(debitAccountId).get();
-              if (debitSnap.exists) cachedAccountNodes[debitAccountId] = { id: debitSnap.id, name: debitSnap.data()?.name || "" };
-            }
-            if (!cachedAccountNodes[creditAccountId]) {
-              const creditSnap = await db.collection("chartAccounts").doc(creditAccountId).get();
-              if (creditSnap.exists) cachedAccountNodes[creditAccountId] = { id: creditSnap.id, name: creditSnap.data()?.name || "" };
-            }
-
-            const debitAccount = cachedAccountNodes[debitAccountId];
-            const creditAccount = cachedAccountNodes[creditAccountId];
-
-            if (!debitAccount || !creditAccount) {
-              throw new Error("Mapping error: Configured default accounts do not exist in chart of accounts.");
-            }
-
-            transactionLines = [
-              {
-                accountId: debitAccount.id,
-                accountName: debitAccount.name,
-                amountCents: Math.abs(finalAmount),
-                description: `Dr - Automated Bulk Ingestion Mapped to ${predictedCategory}`
-              },
-              {
-                accountId: creditAccount.id,
-                accountName: creditAccount.name,
-                amountCents: -Math.abs(finalAmount),
-                description: "Cr - Automated Double-Entry Cash Balancing Offset"
-              }
-            ];
-          } else {
-            const netSum = transactionLines.reduce((acc: number, entry: any) => acc + (entry.amountCents || 0), 0);
-            if (netSum !== 0) {
-              throw new Error(`Double-entry ledger sum imbalance detected: Net sum remains ${netSum} cents. Sum must equal exactly zero.`);
-            }
-            finalAmount = Math.max(...transactionLines.map((l: any) => Math.abs(l.amountCents || 0)));
-          }
-
-          const transactionId = `api-bulk-${Date.now()}-${crypto.randomBytes(4).toString('hex')}-${i}`;
-          const newTx = {
-            id: transactionId,
-            uid: authReq.user.uid,
-            workspaceId,
-            date: itemDate,
-            description: cleanedPayee,
-            payee: cleanedPayee,
-            category: predictedCategory,
-            lines: transactionLines,
-            totalAmountCents: finalAmount,
-            currency: item.currency || "USD",
-            status: item.status || "completed",
-            type: item.type || "actual",
-            createdAt: new Date().toISOString(),
-            metadata: { 
-              importedVia: "clearbook-bulk-developer-api", 
-              ip: req.ip, 
-              idempotencyKey: itemIdempotencyKey || null, 
-              dryRun: !!dryRun,
-              taxState: parsedState || null,
-              trainedModelCount: trainedCount
-            }
-          };
-
-          if (!dryRun) {
-            await db.collection("transactions").doc(transactionId).set(newTx);
-          }
-
-          results.push({
-            index: i,
-            status: "success",
-            transactionId: dryRun ? "N/A" : transactionId,
-            payee: cleanedPayee,
-            category: predictedCategory,
-            totalAmountCents: finalAmount
-          });
-          successCount++;
-
-        } catch (itemErr: any) {
-          results.push({
-            index: i,
-            status: "failed",
-            error: itemErr.message || String(itemErr)
-          });
-          failedCount++;
-        }
-      }
-
-      // Record compute usage billing log credits
-      const computedCredits = (successCount * 3) + (skippedCount * 1) + (failedCount * 1);
-      
-      res.status(200).json({
-        status: "success",
-        workspaceId,
-        stats: {
-          totalProcessed: itemsToProcess.length,
-          successCount,
-          skippedCount,
-          failedCount,
-          receivedCount: transactions.length,
-          creditsSpent: computedCredits
-        },
-        batchResults: results
-      });
-
-    } catch (err: any) {
-      handleApiError(res, err);
-    }
-  });
 
   app.get("/api/v1/ledger/diagnostics", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
@@ -2717,7 +2139,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
       // Terminal State Lock Rule Audit
       if (txData.status === "certified" || txData.status === "voided") {
         const uDoc = await db.collection("users").doc(authReq.user.uid).get();
-        if (!uDoc.exists || (uDoc.data()?.role !== "admin" && authReq.user.email?.toLowerCase() !== "shmuelbiller@gmail.com")) {
+        if (!uDoc.exists || (uDoc.data()?.role !== "admin" && authReq.user.admin !== true)) {
           return sendError(res, `Forbidden: Transaction status is audited and locked (${txData.status}). Destructive actions are restricted to administrators.`, 403);
         }
       }
@@ -2771,7 +2193,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
       // Terminal State Lock Rule Audit
       if (txData.status === "certified" || txData.status === "voided") {
         const uDoc = await db.collection("users").doc(authReq.user.uid).get();
-        if (!uDoc.exists || (uDoc.data()?.role !== "admin" && authReq.user.email?.toLowerCase() !== "shmuelbiller@gmail.com")) {
+        if (!uDoc.exists || (uDoc.data()?.role !== "admin" && authReq.user.admin !== true)) {
           return sendError(res, `Forbidden: Transaction status is audited and locked (${txData.status}). Modifications are restricted to administrators.`, 403);
         }
       }
@@ -3097,7 +2519,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
       
-      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
+      const isSystemAdmin = authReq.user.admin === true;
       let isRoleAdmin = false;
       if (!isSystemAdmin) {
         try {
@@ -3213,7 +2635,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
       
-      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
+      const isSystemAdmin = authReq.user.admin === true;
       let isRoleAdmin = false;
       if (!isSystemAdmin) {
         try {
@@ -3290,7 +2712,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
       
-      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
+      const isSystemAdmin = authReq.user.admin === true;
       let isRoleAdmin = false;
       if (!isSystemAdmin) {
         try {
@@ -3320,7 +2742,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
       
-      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
+      const isSystemAdmin = authReq.user.admin === true;
       let isRoleAdmin = false;
       if (!isSystemAdmin) {
         try {
@@ -3352,7 +2774,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.get("/api/v1/admin/global-config", authenticate, async (req: express.Request, res: express.Response) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
+      const isSystemAdmin = authReq.user.admin === true;
       const db = getDb();
       let isRoleAdmin = false;
       if (!isSystemAdmin) {
@@ -3378,7 +2800,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.put("/api/v1/admin/global-config", authenticate, async (req: express.Request, res: express.Response) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
+      const isSystemAdmin = authReq.user.admin === true;
       const db = getDb();
       let isRoleAdmin = false;
       if (!isSystemAdmin) {
@@ -3874,7 +3296,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       }
 
       const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
-      const apiKey = process.env.CURRENCY_API_KEY || "ORWo7wJ4yhMCQkR9og2lJb4VrSdqTKgb";
+      const apiKey = process.env.CURRENCY_API_KEY as string;
       const url = `https://api.apilayer.com/currency_data/${endpoint}?${queryString}`;
       
       // Cache live endpoint for 6 hours, historical/list for 365 days
@@ -3905,7 +3327,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       }
 
       const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
-      const apiKey = process.env.TAX_API_KEY || "ORWo7wJ4yhMCQkR9og2lJb4VrSdqTKgb";
+      const apiKey = process.env.TAX_API_KEY as string;
       const url = `https://api.apilayer.com/tax_data/${endpoint}?${queryString}`;
 
       // Tax data changes very rarely, cache for 30 days
@@ -4540,3 +3962,42 @@ startServer().catch(err => {
   console.error("💥 [Server] Critical Startup Failure:", err);
   process.exit(1);
 });
+async function trainClassifierWithWorkspaceData(classifier: import("./src/lib/algorithms.ts").BayesianClassifier, workspaceId: string, apiKeyId?: string) {
+  const db = getDb();
+  let trainedCount = 0;
+  try {
+    const transactionsSnap = await db.collection("transactions").where("workspaceId", "==", workspaceId).limit(200).get();
+    transactionsSnap.docs.forEach(doc => {
+      const txData = doc.data();
+      if (txData && txData.description) {
+        const category = txData.category || txData.lines?.find((l: any) => l.category)?.category || txData.lines?.find((l: any) => l.amountCents > 0)?.accountName;
+        if (category) {
+          classifier.train(txData.description, category, 1.5);
+          trainedCount++;
+        }
+      }
+    });
+  } catch (err: any) {}
+
+  try {
+    const activeKeyId = apiKeyId || "human_web_console";
+    const queryPromises = [
+      db.collection("learnedDeltas").where("apiKeyId", "==", "human_web_console").limit(150).get()
+    ];
+    if (activeKeyId !== "human_web_console") {
+      queryPromises.push(db.collection("learnedDeltas").where("apiKeyId", "==", activeKeyId).limit(150).get());
+    }
+    const snaps = await Promise.all(queryPromises);
+    snaps.forEach(snap => {
+      snap.docs.forEach(doc => {
+        const data = doc.data();
+        if (data && data.description && data.category && data.workspaceId === workspaceId) {
+          classifier.train(data.description, data.category, 3.0);
+          trainedCount++;
+        }
+      });
+    });
+  } catch (err: any) {}
+  
+  return trainedCount;
+}

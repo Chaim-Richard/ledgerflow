@@ -22,32 +22,48 @@ export class LedgerEngine {
     // We no longer loop UI transactions manually without Fx rates, etc.
     // For now, doing a basic translation.
     
-    transactions.forEach(tx => {
-      // Pending txs should not affect physical balance? Or maybe they do in shadow.
-      if (tx.status === 'void' || tx.status === 'failed') return;
-      
-      tx.lines?.forEach(line => {
-        const accData = balances.get(line.accountId);
-        if (accData) {
-          accData.total += (line.amountCents || 0);
-          
-          const proj = line.project || tx.projectId;
-          if (proj) {
-            accData.projects.set(proj, (accData.projects.get(proj) || 0) + (line.amountCents || 0));
-          }
+    if (Array.isArray(transactions)) {
+      transactions.forEach(tx => {
+        if (!tx || typeof tx !== 'object') return;
+        if (tx.status === 'void' || tx.status === 'failed') return;
+        
+        if (Array.isArray(tx.lines)) {
+          tx.lines.forEach(line => {
+            if (!line || typeof line !== 'object') return;
+            const accId = typeof line.accountId === 'string' ? line.accountId : '';
+            const accData = balances.get(accId);
+            if (accData) {
+              const amount = typeof line.amountCents === 'number' && Number.isSafeInteger(line.amountCents) ? line.amountCents : 0;
+              accData.total += amount;
+              
+              const proj = (typeof line.project === 'string' && line.project) || (typeof tx.projectId === 'string' && tx.projectId);
+              if (proj) {
+                accData.projects.set(proj, (accData.projects.get(proj) || 0) + amount);
+              }
+            }
+          });
         }
       });
-    });
+    }
 
-    journalEntries.forEach(je => {
-      if (je.deletedAt) return; // Journal entries only have deletedAt, not status
-      je.lines?.forEach(line => {
-        const accData = balances.get(line.accountId);
-        if (accData) {
-          accData.total += (line.debit || 0) - (line.credit || 0);
+    if (Array.isArray(journalEntries)) {
+      journalEntries.forEach(je => {
+        if (!je || typeof je !== 'object') return;
+        if (je.deletedAt) return; // Journal entries only have deletedAt, not status
+        if (Array.isArray(je.lines)) {
+          je.lines.forEach(line => {
+            if (!line || typeof line !== 'object') return;
+            const accId = typeof line.accountId === 'string' ? line.accountId : '';
+            const accData = balances.get(accId);
+            if (accData) {
+              const debit = typeof line.debit === 'number' && Number.isSafeInteger(line.debit) ? line.debit : 0;
+              const credit = typeof line.credit === 'number' && Number.isSafeInteger(line.credit) ? line.credit : 0;
+              accData.total += debit - credit;
+            }
+          });
         }
       });
-    });
+    }
 
     return balances;
   }
