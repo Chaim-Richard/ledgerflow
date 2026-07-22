@@ -118,7 +118,7 @@ export default function EconomicsMatrixTab({
               max="50"
               step="1"
               value={taxClassification}
-              onChange={(e) => setTaxClassification(parseInt(e.target.value))}
+              onChange={(e) => setTaxClassification(parseInt(e.target.value, 10))}
               className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600"
               id="tax-input"
             />

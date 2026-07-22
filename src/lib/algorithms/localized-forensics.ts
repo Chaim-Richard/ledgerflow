@@ -71,7 +71,7 @@ export function computeLocalizedForensics(transactions: Transaction[]): Localize
     const variance = node.amounts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / node.amounts.length;
     const stdDev = Math.sqrt(variance) || 1;
     const maxAmt = Math.max(...node.amounts);
-    const zScoreSpike = (maxAmt - mean) / stdDev;
+    const zScoreSpike = stdDev === 0 ? 0 : (maxAmt - mean) / stdDev;
 
     // 3. Round-number density
     const roundNumDensity = node.roundCount / node.amounts.length;

@@ -191,7 +191,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                    min="0"
                    max="100"
                    value={invoice.progressPercentage || 0}
-                   onChange={(e) => setInvoice({ ...invoice, progressPercentage: parseInt(e.target.value) })}
+                   onChange={(e) => setInvoice({ ...invoice, progressPercentage: parseInt(e.target.value, 10) })}
                    className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
                  />
                </div>

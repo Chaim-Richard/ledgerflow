@@ -138,7 +138,7 @@ export default function TransactionEditModal({
     }
 
     // In double-entry ledger bookkeeping, the gross transaction size is the total debit value (or absolute credit size), equivalent to half the absolute sum.
-    const calculatedTotal = lines.reduce((acc, l) => acc + Math.abs(l.amountCents || 0), 0) / 2;
+    const calculatedTotal = TruthEngine.deriveSignedTotal(lines, accounts);
 
     const finalLines = lines.map(l => {
       const acc = accounts.find(a => a.id === l.accountId);
@@ -161,7 +161,7 @@ export default function TransactionEditModal({
       originalCurrency: originalCurrency !== 'USD' ? originalCurrency : undefined,
       exchangeRate: originalCurrency !== 'USD' ? exchangeRate : undefined,
       lines: finalLines,
-      totalAmountCents: Math.round(calculatedTotal)
+      totalAmountCents: calculatedTotal
     });
 
     toast.success('Ledger state synchronized with extreme precision');

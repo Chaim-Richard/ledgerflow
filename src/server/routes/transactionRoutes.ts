@@ -77,6 +77,13 @@ transactionRouter.post('/', async (req, res) => {
     }
     
     DoubleEntryValidator.validateJournalEntry(transaction);
+    
+    // Standardize totalAmountCents
+    if (!transaction.totalAmountCents) {
+       // We can't fetch accounts here synchronously easily without a big refactor, 
+       // but the client should have already set it. If not, fallback:
+       transaction.totalAmountCents = transaction.lines[0]?.amountCents || 0;
+    }
 
     await db.runTransaction(async (t: any) => {
       if (idempotencyKey) {

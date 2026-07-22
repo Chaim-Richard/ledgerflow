@@ -107,7 +107,7 @@ export default function TaxManager({
           <div className="relative">
              <select 
                value={selectedYear}
-               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+               onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
                className="px-6 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] text-[10px] font-black uppercase tracking-widest text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all appearance-none cursor-pointer pr-10 shadow-sm"
              >
                {[2023, 2024, 2025, 2026].map(year => (

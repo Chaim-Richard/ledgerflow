@@ -16,51 +16,28 @@ export function useFinancialReporting() {
   const fetchPL = useCallback(async (startDate?: string, endDate?: string) => {
     if (!currentWorkspaceId) return;
     setLoading(true);
-    // Emulate microtask delay for consistent UX load transition
-    await new Promise(resolve => setTimeout(resolve, 150));
-
     try {
-      const start = startDate || "1970-01-01";
-      const end = endDate || "2099-12-31";
+      const user = useAuthStore.getState().user;
+      if (!user) return;
       
-      const pl: any = {
-        income: { total: 0, accounts: {} },
-        expense: { total: 0, accounts: {} },
-        grossProfit: 0,
-        netIncome: 0
-      };
+      let url = `/api/v1/reports/pl?workspaceId=${currentWorkspaceId}`;
+      if (startDate) url += `&startDate=${startDate}`;
+      if (endDate) url += `&endDate=${endDate}`;
 
-      accounts.forEach((acc: any) => {
-        if (acc.type === 'income' || acc.type === 'expense') {
-          pl[acc.type].accounts[acc.id] = { name: acc.name, balance: 0, parentId: acc.parentId };
-        }
+      const token = await user.getIdToken();
+      const response = await fetch(url, {
+         headers: { 'Authorization': `Bearer ${token}` }
       });
-
-      transactions.forEach((tx: any) => {
-        if (tx.date < start || tx.date > end) return;
-        tx.lines?.forEach((line: any) => {
-          if (pl.income.accounts[line.accountId]) {
-            const val = -line.amountCents; 
-            pl.income.accounts[line.accountId].balance += val;
-            pl.income.total += val;
-          } else if (pl.expense.accounts[line.accountId]) {
-            const val = line.amountCents;
-            pl.expense.accounts[line.accountId].balance += val;
-            pl.expense.total += val;
-          }
-        });
-      });
-
-      pl.grossProfit = pl.income.total;
-      pl.netIncome = pl.income.total - pl.expense.total;
-
-      setApiReports((prev: any) => ({ ...prev, pl }));
-    } catch (error) {
-      toast.error('Reporting Sync Failure: P&L Engine Offline');
+      const data = await response.json();
+      if (data.status === 'success') {
+         setApiReports(prev => ({ ...prev, pl: data.data }));
+      }
+    } catch (e: any) {
+      toast.error('Failed to fetch P&L');
     } finally {
       setLoading(false);
     }
-  }, [currentWorkspaceId, accounts, transactions]);
+  }, [currentWorkspaceId]);
 
   const fetchAging = useCallback(async (type: 'ar' | 'ap') => {
     if (!currentWorkspaceId) return;

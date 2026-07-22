@@ -325,7 +325,7 @@ export default function StatementImporter({
                       <label className="micro-label !text-[var(--text)] capitalize">{field} Column</label>
                       <select 
                         value={mapping[field]}
-                        onChange={(e) => setMapping({...mapping, [field]: parseInt(e.target.value)})}
+                        onChange={(e) => setMapping({...mapping, [field]: parseInt(e.target.value, 10)})}
                         className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)] cursor-pointer"
                       >
                         <option value={-1}>Select Column</option>

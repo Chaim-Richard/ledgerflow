@@ -105,10 +105,10 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
       description: formData.get('description') as string,
       unitPriceCents: TruthEngine.parseAmountToCents(formData.get('unitPrice') as string),
       unitCostCents: TruthEngine.parseAmountToCents(formData.get('unitCost') as string),
-      quantityAtHand: parseInt(formData.get('quantity') as string),
-      reorderPoint: parseInt(formData.get('reorderPoint') as string),
+      quantityAtHand: parseInt(formData.get('quantity') as string, 10) || 0,
+      reorderPoint: parseInt(formData.get('reorderPoint') as string, 10) || 0,
       measurementUnit: formData.get('measurementUnit') as string || undefined,
-      unitsPerPackage: formData.get('unitsPerPackage') ? parseInt(formData.get('unitsPerPackage') as string) : undefined,
+      unitsPerPackage: formData.get('unitsPerPackage') ? parseInt(formData.get('unitsPerPackage') as string, 10) || 1 : undefined,
       category: formData.get('category') as string,
     };
 
@@ -133,10 +133,10 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
       description: formData.get('description') as string,
       unitPriceCents: TruthEngine.parseAmountToCents(formData.get('unitPrice') as string),
       unitCostCents: TruthEngine.parseAmountToCents(formData.get('unitCost') as string),
-      quantityAtHand: parseInt(formData.get('quantity') as string),
-      reorderPoint: parseInt(formData.get('reorderPoint') as string),
+      quantityAtHand: parseInt(formData.get('quantity') as string, 10) || 0,
+      reorderPoint: parseInt(formData.get('reorderPoint') as string, 10) || 0,
       measurementUnit: formData.get('measurementUnit') as string || undefined,
-      unitsPerPackage: formData.get('unitsPerPackage') ? parseInt(formData.get('unitsPerPackage') as string) : undefined,
+      unitsPerPackage: formData.get('unitsPerPackage') ? parseInt(formData.get('unitsPerPackage') as string, 10) || 1 : undefined,
       category: formData.get('category') as string,
       createdAt: new Date().toISOString()
     };

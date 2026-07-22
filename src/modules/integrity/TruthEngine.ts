@@ -35,13 +35,46 @@ export class TruthEngine {
     if (taxRate < 0) throw new Error('Integrity Violation: Tax rate cannot be negative.');
     return new Decimal(amountCents).mul(taxRate).round().toNumber();
   }
+  
+  static deriveSignedTotal(lines: any[], accounts?: any[]): number {
+    if (!lines || lines.length === 0) return 0;
+    
+    if (accounts && accounts.length > 0) {
+      const assetLines = lines.filter(l => {
+        const acc = accounts.find(a => a.id === l.accountId);
+        return acc && acc.type === 'asset';
+      });
+      if (assetLines.length > 0) {
+        return assetLines.reduce((sum, l) => sum + (l.amountCents || 0), 0);
+      }
+      
+      const liabilityLines = lines.filter(l => {
+        const acc = accounts.find(a => a.id === l.accountId);
+        return acc && acc.type === 'liability';
+      });
+      if (liabilityLines.length > 0) {
+        // Liability increasing (credit/negative) means inflow of cash
+        return -liabilityLines.reduce((sum, l) => sum + (l.amountCents || 0), 0);
+      }
+    }
+    
+    // Fallback: If no accounts context, assume it's a simple expense entry where credit is the source of funds (negative)
+    // We will just find the maximum absolute value and assign it the sign of the asset/bank line if we can guess it.
+    // Easiest signed fallback for a balanced entry:
+    // If we just want a standard signed metric, and we don't know the accounts, we return the net sum of all debits? No, that's positive.
+    // Return the first line's amount if there's only 2 lines.
+    return lines[0]?.amountCents || 0;
+  }
+
   static parseAmountToCents(amountString: string | number): number {
     const cleaned = String(amountString).replace(/,/g, '');
-    if (!cleaned) return 0;
+    if (!cleaned) throw new Error('Integrity Violation: Amount cannot be empty');
     try {
-      return new Decimal(cleaned).mul(100).round().toNumber();
+      const val = new Decimal(cleaned).mul(100).round().toNumber();
+      if (isNaN(val)) throw new Error('Integrity Violation: Parsed amount is NaN');
+      return val;
     } catch (e) {
-      return 0; // Fallback on invalid floats instead of NaN
+      throw new Error(`Integrity Violation: Invalid amount format: ${amountString}`);
     }
   }
 

@@ -1559,7 +1559,7 @@ export class AnomalyDetector {
     if (stdDev === 0) return [];
 
     return values
-      .map((v, i) => ({ index: i, zScore: Math.abs((v - mean) / stdDev) }))
+      .map((v, i) => ({ index: i, zScore: stdDev === 0 ? 0 : Math.abs((v - mean) / stdDev) }))
       .filter(res => res.zScore > threshold);
   }
 

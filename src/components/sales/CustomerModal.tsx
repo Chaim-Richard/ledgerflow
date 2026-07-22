@@ -127,7 +127,7 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
               <input 
                 type="number" min="0" max="100"
                 value={customer.score || 0}
-                onChange={(e) => setCustomer({ ...customer, score: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setCustomer({ ...customer, score: parseInt(e.target.value, 10) || 0 })}
                 className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
               />
             </div>

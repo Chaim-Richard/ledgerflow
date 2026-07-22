@@ -1,5 +1,6 @@
 import { transactionRouter } from "./src/server/routes/transactionRoutes";
 import express from "express";
+import cors from "cors";
 import Stripe from "stripe";
 import rateLimit from "express-rate-limit";
 import { createServer as createViteServer } from "vite";
@@ -199,12 +200,14 @@ async function verifyLockDate(workspaceId: string, date: string) {
       if (data?.lockDate && date <= data.lockDate) {
         throw new Error(`Period Locked: Data mutation forbidden before ${data.lockDate}`);
       }
+    } else {
+      throw new Error("Workspace not found");
     }
   } catch (err: any) {
-    if (err.message?.includes("Period Locked")) {
+    if (err.message?.includes("Period Locked") || err.message === "Workspace not found") {
       throw err;
     }
-    console.warn("[Firebase Admin] Skipping period lockDate validation on write due to db connection/permission constraints:", err.message);
+    throw new Error(`Failed to verify period lock status: ${err.message}`);
   }
 }
 
@@ -375,6 +378,7 @@ async function getReportContext(req: AuthenticatedRequest, workspaceId: string) 
 
 async function startServer() {
   const app = express();
+  app.use(cors());
   const PORT = 3000;
 
   // Efficiency & Security Middleware
@@ -2244,13 +2248,33 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         description: description || txData.description,
         payee: payee !== undefined ? payee : (txData.payee || ""),
         lines: transactionLines,
-        totalAmountCents: Math.max(...transactionLines.map((l: any) => Math.abs(l.amountCents || 0))),
+        totalAmountCents: TruthEngine.deriveSignedTotal(transactionLines, accounts),
         status: status || txData.status || "completed",
         type: type || txData.type || "actual",
         updatedAt: new Date().toISOString()
       };
 
       await db.collection("transactions").doc(txId).set(updatedTx);
+
+      // Append to event-sourced journal entries
+      if (updatedTx.lines && Array.isArray(updatedTx.lines)) {
+         const batch = db.batch();
+         updatedTx.lines.forEach((line: any, index: number) => {
+             const eventRef = db.collection('journalEntries').doc(`${txId}-update-${Date.now()}-line-${index}`);
+             batch.set(eventRef, {
+                 id: eventRef.id,
+                 timestamp: new Date().toISOString(),
+                 accountId: line.accountId,
+                 amountCents: line.amountCents,
+                 eventType: 'UPDATE',
+                 transactionId: txId,
+                 workspaceId: workspaceId,
+                 description: line.description || updatedTx.description || ""
+             });
+         });
+         await batch.commit();
+      }
+
 
       const auditId = `audit-${Date.now()}`;
       await db.collection("auditLogs").doc(auditId).set({
@@ -3239,7 +3263,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
           id: `csv-${batchId}-${idx}`,
           date: r[dateKey || ""] || new Date().toISOString().split('T')[0],
           description: r[descKey || ""] || "Unknown Transaction",
-          amountCents: TruthEngine.parseAmountToCents(r[amountKey || ""] || "0"),
+          amountCents: TruthEngine.parseAmountToCents(r[amountKey || ""]),
           category: categoryVal ? categoryVal.trim() : undefined
         };
       });

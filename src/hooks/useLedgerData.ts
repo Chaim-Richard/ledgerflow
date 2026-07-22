@@ -192,7 +192,7 @@ export function useLedgerData() {
     };
 
     const criticalListeners = [
-      onSnapshot(query(collection(db, 'transactions'), ...filter, orderBy('date', 'desc'), limit(5000)), (snap) => {
+      onSnapshot(query(collection(db, 'transactions'), ...filter, orderBy('date', 'desc'), ), (snap) => {
         scheduleUpdate('transactions', snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'transactions')),
       onSnapshot(query(collection(db, 'chartAccounts'), ...filter), (snap) => {
