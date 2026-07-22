@@ -1084,8 +1084,16 @@ export function useTransactionActions() {
   };
 
   const handleReconcileIgnore = async (bankLineId: string) => {
+    if (!user || !currentWorkspaceId) return;
     try {
-      await updateDoc(doc(db, 'bankLines', bankLineId), { status: 'ignored' });
+      await fetch('/api/v1/transactions/reconcile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+          body: JSON.stringify({ 
+            workspaceId: currentWorkspaceId, 
+            operations: [{ type: 'updateBankLine', id: bankLineId, data: { status: 'ignored' } }] 
+          })
+      });
       toast.info('Item ignored');
     } catch (error) {
       toast.error('Action failed');

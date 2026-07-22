@@ -50,24 +50,24 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-[var(--ink)]/60 backdrop-blur-md"
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
           />
           
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-4xl bg-[var(--panel)] rounded-2xl shadow-[0_32px_120px_-20px_rgba(0,0,0,0.5)] border border-[var(--line)] overflow-hidden flex flex-col max-h-[85vh]"
+            className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[32px] shadow-[0_32px_120px_-20px_rgba(0,0,0,0.5)] border border-[var(--line)] overflow-hidden flex flex-col max-h-[85vh]"
           >
             <div className="p-8 md:p-10 border-b border-[var(--line)] bg-[var(--ink)]/30 shrink-0">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-3xl font-black text-[var(--text)] tracking-tighter">Command Directives</h2>
-                  <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest mt-1">Accelerated Keyboard Navigation</p>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Accelerated Keyboard Navigation</p>
                 </div>
                 <button 
                   onClick={onClose}
-                  className="w-12 h-12 rounded-full bg-[var(--surface)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] hover:border-slate-800 transition-all shadow-sm"
+                  className="w-12 h-12 rounded-full bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-slate-500 hover:text-[var(--text)] hover:border-slate-800 transition-all shadow-sm"
                 >
                   <X size={20} />
                 </button>
@@ -77,7 +77,7 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
             <div className="flex-1 overflow-y-auto p-8 md:p-10 space-y-12">
               <div>
                 <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-6 flex items-center gap-2">
-                  <Command size={14} className="text-[var(--faint)]" />
+                  <Command size={14} className="text-slate-400" />
                   System Shortcuts
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -87,7 +87,7 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
                       className="flex items-center justify-between p-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:border-slate-300 transition-all group"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-[var(--ink)] border border-[var(--line)] flex items-center justify-center text-[var(--faint)] group-hover:text-indigo-600 transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-[var(--ink)] border border-[var(--line)] flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors">
                           <s.icon size={16} />
                         </div>
                         <span className="text-sm font-semibold text-slate-700">{s.desc}</span>
@@ -139,8 +139,8 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
               )}
             </div>
             
-            <div className="p-4 md:p-6 bg-[var(--ink)] text-center shrink-0">
-              <p className="text-[10px] font-black text-[var(--panel)]/40 uppercase tracking-[0.3em]">
+            <div className="p-4 md:p-6 bg-slate-900 text-center shrink-0">
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">
                 Master the Protocol • Velocity is Efficiency
               </p>
             </div>

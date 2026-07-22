@@ -20,14 +20,14 @@ export default function Collaborators() {
           >
             <div 
               className={cn(
-                "w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-black text-[var(--panel)] shadow-sm transition-transform group-hover:-translate-y-1",
+                "w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-black text-white shadow-sm transition-transform group-hover:-translate-y-1",
               )}
               style={{ backgroundColor: c.color }}
             >
               {(c.name?.[0] || '?').toUpperCase()}
             </div>
             
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-[var(--ink)] text-[var(--panel)] text-[9px] font-black rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl border border-white/10 italic">
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-slate-900 text-white text-[9px] font-black rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl border border-white/10 italic">
               {c.name}
             </div>
             

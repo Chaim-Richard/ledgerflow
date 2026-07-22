@@ -342,7 +342,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            className="fixed z-[201] top-[10%] left-1/2 -translate-x-1/2 w-full max-w-3xl bg-[var(--panel)] rounded-2xl shadow-2xl overflow-hidden border border-gray-200"
+            className="fixed z-[201] top-[10%] left-1/2 -translate-x-1/2 w-full max-w-3xl bg-[var(--surface)] rounded-[32px] shadow-2xl overflow-hidden border border-gray-200"
           >
             <div className="flex items-center px-6 py-5 border-b border-gray-100">
               <Search className="text-indigo-600 mr-4" size={24} />
@@ -370,7 +370,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                 <div className="p-3 bg-indigo-50/80 border-b border-indigo-100">
                   <button
                     onClick={handleExecuteIntent}
-                    className="w-full flex items-center justify-between p-4 bg-indigo-600 hover:bg-indigo-700 text-[var(--panel)] rounded-2xl transition-all shadow-md group text-left cursor-pointer"
+                    className="w-full flex items-center justify-between p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl transition-all shadow-md group text-left cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 bg-white/20 rounded-xl">
@@ -426,7 +426,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                 </div>
               ) : (
                  <div className="p-10 flex items-center justify-center opacity-50">
-                    <p className="text-xs font-bold uppercase tracking-widest text-[var(--faint)] text-center max-w-sm">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 text-center max-w-sm">
                       Amount Search Matrix active.<br/>Type any tag, location, class, or entity to instantly filter your workspace.
                     </p>
                  </div>

@@ -6,9 +6,10 @@ import { formatCurrency } from '../../lib/utils';
 
 export function TaxReserveWidget() {
   const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
   
   // Calculate
-  const { estimatedTax, safeToSpend, rawCash } = calculateSafeToSpend(transactions, 0.30); // 30% flat tax assumption
+  const { estimatedTax, safeToSpend, rawCash } = calculateSafeToSpend(transactions, accounts, 0.30); // 30% flat tax assumption
 
   return (
     <div className="bg-[var(--panel)] border border-[var(--brass-line)]/50 rounded-2xl p-5 relative overflow-hidden shadow-sm bg-gradient-to-r from-[var(--brass-soft)]/20 via-[var(--panel)] to-[var(--panel)]">

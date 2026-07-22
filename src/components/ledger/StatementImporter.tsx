@@ -242,7 +242,7 @@ export default function StatementImporter({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-[var(--ink)]/60 backdrop-blur-md"
+        className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
       />
       
       <motion.div
@@ -291,7 +291,7 @@ export default function StatementImporter({
                       />
                       <label 
                         htmlFor="csv-upload"
-                        className="flex items-center gap-2 px-4 py-2 bg-[var(--surface)] text-[var(--text)] rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all cursor-pointer"
+                        className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all cursor-pointer"
                       >
                         <Upload size={14} />
                         Upload CSV / Excel
@@ -302,7 +302,7 @@ export default function StatementImporter({
                     value={rawText}
                     onChange={(e) => setRawText(e.target.value)}
                     placeholder="Paste raw text from your bank statement, CSV, or PDF export here..."
-                    className="w-full h-64 p-6 bg-[var(--surface)] rounded-2xl font-mono text-sm text-[var(--text)] focus:border-[var(--brass-line)] outline-none transition-all resize-none"
+                    className="w-full h-64 p-6 bg-[var(--surface)] border border-[var(--line)] rounded-2xl font-mono text-sm text-[var(--text)] focus:border-[var(--brass-line)] outline-none transition-all resize-none"
                   />
                 </div>
               </motion.div>
@@ -326,7 +326,7 @@ export default function StatementImporter({
                       <select 
                         value={mapping[field]}
                         onChange={(e) => setMapping({...mapping, [field]: parseInt(e.target.value)})}
-                        className="w-full px-4 py-3 bg-[var(--panel)] border border-[var(--line)] rounded-2xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)] cursor-pointer"
+                        className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)] cursor-pointer"
                       >
                         <option value={-1}>Select Column</option>
                         {csvData[0]?.map((col, idx) => (
@@ -352,9 +352,9 @@ export default function StatementImporter({
                       </thead>
                       <tbody>
                         {csvData.slice(1, 6).map((row, rIdx) => (
-                          <tr key={rIdx} className="border-b border-[var(--line)]">
+                          <tr key={rIdx} className="border-b border-[var(--line)]/50">
                             {row.map((cell, cIdx) => (
-                              <td key={cIdx} className="p-4 text-[var(--muted)] font-medium truncate max-w-[150px]">{cell}</td>
+                              <td key={cIdx} className="p-4 text-slate-500 font-medium truncate max-w-[150px]">{cell}</td>
                             ))}
                           </tr>
                         ))}
@@ -379,7 +379,7 @@ export default function StatementImporter({
                     >
                       {parsedTxs.every(t => t.selected) ? 'Deselect All' : 'Select All'}
                     </button>
-                    <span className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest">
+                    <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">
                       {parsedTxs.filter(t => t.selected).length} Selected
                     </span>
                   </div>

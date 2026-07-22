@@ -629,8 +629,8 @@ async function startServer() {
   app.get("/api/v1/public/registration-status", async (req, res) => {
     try {
       const db = getDb();
-      const usersSnap = await db.collection("users").get();
-      const totalUsers = usersSnap.size;
+      const usersSnap = await db.collection("users").count().get();
+      const totalUsers = usersSnap.data().count;
       const limit = globalAdminConfig.maxRegistrationLimit !== undefined ? globalAdminConfig.maxRegistrationLimit : 100;
       res.json({
         status: "success",
@@ -2532,8 +2532,12 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
       }
 
-      const workspacesSnap = await db.collection("workspaces").get();
-      const transactionsSnap = await db.collection("transactions").get();
+      const workspacesSnap = await db.collection("workspaces").limit(100).get();
+      const wsIds = workspacesSnap.docs.map(d => d.id).slice(0, 30);
+      let transactionsSnap = { docs: [] };
+      if (wsIds.length > 0) {
+          transactionsSnap = await db.collection("transactions").where("workspaceId", "in", wsIds).get();
+      }
       
       const transactions = transactionsSnap.docs.map(doc => doc.data() as any);
       
@@ -2725,7 +2729,9 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
       }
 
-      const usersSnap = await db.collection("users").get();
+      const usersSnap = await db.collection("users").limit(100).get();
+      const countSnap = await db.collection("users").count().get();
+      const totalCount = countSnap.data().count;
       const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() as any }));
       
       res.json({
@@ -3916,6 +3922,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 
   // Mount kernel routes
+  app.use("/api/v1/transactions", apiAuthenticate, transactionRouter);
 
   const http = await import('http');
   const httpServer = http.createServer(app);
@@ -3940,7 +3947,6 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
   await syncGlobalAdminConfig();
 
-  app.use("/api/v1/transactions", apiAuthenticate, transactionRouter);
   httpServer.on('error', (e: any) => {
     if (e.code === 'EADDRINUSE') {
       console.log(`💥 Port ${PORT} is in use, retrying...`);

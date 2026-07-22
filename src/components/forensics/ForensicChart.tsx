@@ -45,16 +45,16 @@ const CustomDot = (props: any) => {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#202124] border border-white/10 rounded-xl p-4 shadow-2xl backdrop-blur-xl">
-        <p className="text-[10px] font-black text-[var(--panel)]/40 uppercase tracking-widest mb-3">{label}</p>
+      <div className="bg-[#202124] border border-white/10 rounded-[32px] p-4 shadow-2xl backdrop-blur-xl">
+        <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3">{label}</p>
         <div className="space-y-2">
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex items-center justify-between gap-8">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
-                <span className="text-[11px] font-bold text-[var(--panel)]/70 uppercase tracking-tighter">{entry.name}</span>
+                <span className="text-[11px] font-bold text-white/70 uppercase tracking-tighter">{entry.name}</span>
               </div>
-              <span className="text-xs font-mono font-black text-[var(--panel)]">
+              <span className="text-xs font-mono font-black text-white">
                 ${entry.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </div>
@@ -216,12 +216,12 @@ const ForensicChart = React.memo(({ transactions, isCompactMode, periodicity = [
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12 relative z-10">
         <div>
            <div className="flex items-center gap-3 mb-2">
-             <div className="w-10 h-10 bg-[var(--ink)] rounded-xl flex items-center justify-center text-emerald-400 shadow-2xl">
+             <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-emerald-400 shadow-2xl">
                <TrendingUp size={20} />
              </div>
              <div>
                <h3 className="text-2xl font-black text-[var(--text)] uppercase tracking-tighter leading-tight">Cash Flow Timeline</h3>
-               <p className="text-[10px] font-black text-[var(--muted)] opacity-50 uppercase tracking-[0.3em]">Historical Variance Analysis • Ledger Trend Line</p>
+               <p className="text-[10px] font-black text-slate-500 opacity-50 uppercase tracking-[0.3em]">Historical Variance Analysis • Ledger Trend Line</p>
              </div>
            </div>
         </div>
@@ -229,7 +229,7 @@ const ForensicChart = React.memo(({ transactions, isCompactMode, periodicity = [
         <div className="flex items-center gap-8">
           {stats.map((s, i) => (
             <div key={i} className="flex flex-col items-end">
-              <span className="text-[9px] font-black text-[var(--muted)] opacity-40 uppercase tracking-widest mb-1">{s.label}</span>
+              <span className="text-[9px] font-black text-slate-500 opacity-40 uppercase tracking-widest mb-1">{s.label}</span>
               <span className={cn("text-xl font-mono font-black tabular-nums tracking-tighter", s.color)}>{s.value}</span>
             </div>
           ))}
@@ -238,7 +238,7 @@ const ForensicChart = React.memo(({ transactions, isCompactMode, periodicity = [
                onClick={() => setIsWaterfallMode(!isWaterfallMode)}
                className={cn(
                  "px-4 py-2 rounded-xl text-[9px] font-medium uppercase tracking-wider transition-all flex items-center gap-2",
-                 isWaterfallMode ? "bg-[var(--ink)] text-[var(--panel)]" : "bg-[var(--ink)] text-[var(--muted)] hover:bg-slate-200 hover:text-[var(--text)] border border-[var(--line)]"
+                 isWaterfallMode ? "bg-slate-900 text-white" : "bg-[var(--ink)] text-slate-500 hover:bg-slate-200 hover:text-[var(--text)] border border-[var(--line)]"
                )}
              >
                <BarChart3 size={14} />
@@ -248,11 +248,11 @@ const ForensicChart = React.memo(({ transactions, isCompactMode, periodicity = [
           <div className="flex items-center gap-6 pl-6 border-l border-[var(--line)]">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
-              <span className="text-[9px] font-black text-[var(--muted)] uppercase tracking-widest opacity-60">Inflow</span>
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest opacity-60">Inflow</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.4)]" />
-              <span className="text-[9px] font-black text-[var(--muted)] uppercase tracking-widest opacity-60">Outflow</span>
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest opacity-60">Outflow</span>
             </div>
           </div>
         </div>
@@ -343,7 +343,7 @@ const ForensicChart = React.memo(({ transactions, isCompactMode, periodicity = [
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="absolute bottom-6 left-6 right-6 bg-[#202124] border border-[#333537] rounded-xl shadow-2xl p-6 z-30"
+            className="absolute bottom-6 left-6 right-6 bg-[#202124] border border-[#333537] rounded-[32px] shadow-2xl p-6 z-30"
           >
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center gap-4">
@@ -352,14 +352,14 @@ const ForensicChart = React.memo(({ transactions, isCompactMode, periodicity = [
                 </div>
                 <div>
                   <h4 className="text-base font-medium text-[var(--text)]">Large outflow detected</h4>
-                  <p className="text-xs text-[var(--muted)] mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     {selectedAnomaly.date} • Manual review recommended
                   </p>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedAnomaly(null)}
-                className="p-1.5 transition-colors text-[var(--muted)] hover:text-[var(--text)]"
+                className="p-1.5 transition-colors text-slate-500 hover:text-[var(--text)]"
               >
                 <X size={18} />
               </button>
@@ -370,7 +370,7 @@ const ForensicChart = React.memo(({ transactions, isCompactMode, periodicity = [
                 <div key={tx.id} className="flex items-center justify-between p-3 bg-[var(--ink)] rounded-xl border border-[var(--line)] hover:border-slate-400 transition-colors">
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-[var(--text)]">{tx.description}</span>
-                    <span className="text-[11px] text-[var(--muted)] mt-0.5">{tx.lines?.[0]?.accountName}</span>
+                    <span className="text-[11px] text-slate-500 mt-0.5">{tx.lines?.[0]?.accountName}</span>
                   </div>
                   <span className="text-sm font-medium text-rose-500">
                     -${(tx.totalAmountCents / 100).toLocaleString()}

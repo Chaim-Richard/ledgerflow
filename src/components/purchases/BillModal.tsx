@@ -76,26 +76,26 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-[var(--ink)]/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
       />
       
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-3xl shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
+        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
       >
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[var(--ink)] text-[var(--panel)] rounded-xl flex items-center justify-center shadow-xl shadow-zinc-900/20">
+            <div className="w-12 h-12 bg-zinc-900 text-white rounded-[32px] flex items-center justify-center shadow-xl shadow-zinc-900/20">
               <CreditCard size={24} />
             </div>
             <div>
               <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Record New Bill</h3>
-              <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest">Purchases & Payables</p>
+              <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Purchases & Payables</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[var(--surface)] rounded-full transition-colors text-[var(--faint)]">
+          <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400">
             <X size={24} />
           </button>
         </div>
@@ -111,7 +111,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                   const vend = safeVendors.find(v => v.id === e.target.value);
                   setBill({ ...bill, vendorId: e.target.value, vendorName: vend?.name });
                 }}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="">Select Vendor</option>
                 {safeVendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
@@ -124,7 +124,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 required
                 value={bill.number}
                 onChange={(e) => setBill({ ...bill, number: e.target.value })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-mono font-bold"
               />
             </div>
             <div className="space-y-2">
@@ -132,7 +132,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <select 
                 value={bill.status}
                 onChange={(e) => setBill({ ...bill, status: e.target.value as any })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="pending">Pending</option>
                 <option value="unpaid">Unpaid</option>
@@ -150,7 +150,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 required
                 value={bill.date}
                 onChange={(e) => setBill({ ...bill, date: e.target.value })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               />
             </div>
             <div className="space-y-2">
@@ -160,7 +160,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 required
                 value={bill.dueDate}
                 onChange={(e) => setBill({ ...bill, dueDate: e.target.value })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               />
             </div>
           </div>
@@ -171,7 +171,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <button 
                 type="button"
                 onClick={() => setSplits([...splits, { amountCents: 0, accountId: '', description: '' }])}
-                className="flex items-center gap-2 px-4 py-2 bg-[var(--surface)] text-[var(--text)] rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all"
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all"
               >
                 <Plus size={14} />
                 Add Split
@@ -180,9 +180,9 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
             
             <div className="space-y-3">
               {splits.map((split, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-xl border border-[var(--line)]">
+                <div key={idx} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
                   <div className="col-span-5 space-y-1">
-                    <label className="text-[10px] font-bold text-[var(--faint)] uppercase">Description</label>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Description</label>
                     <input 
                       type="text"
                       value={split.description}
@@ -192,11 +192,11 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                         setSplits(newSplits);
                       }}
                       placeholder="What was this for?"
-                      className="w-full px-4 py-2 bg-[var(--panel)] border border-[var(--line)] rounded-2xl outline-none focus:ring-2 focus:ring-zinc-900"
+                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
                     />
                   </div>
                   <div className="col-span-3 space-y-1">
-                    <label className="text-[10px] font-bold text-[var(--faint)] uppercase">Expense Account</label>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Expense Account</label>
                     <select 
                       value={split.accountId}
                       onChange={(e) => {
@@ -204,14 +204,14 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                         newSplits[idx].accountId = e.target.value;
                         setSplits(newSplits);
                       }}
-                      className="w-full px-4 py-2 bg-[var(--panel)] border border-[var(--line)] rounded-2xl outline-none focus:ring-2 focus:ring-zinc-900"
+                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
                     >
                       <option value="">Select Account</option>
                       {safeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </div>
                   <div className="col-span-3 space-y-1">
-                    <label className="text-[10px] font-bold text-[var(--faint)] uppercase">Amount ($)</label>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Amount ($)</label>
                     <input 
                       type="number"
                       step="0.01"
@@ -221,7 +221,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                         newSplits[idx].amountCents = TruthEngine.parseAmountToCents(e.target.value || '0');
                         setSplits(newSplits);
                       }}
-                      className="w-full px-4 py-2 bg-[var(--panel)] border border-[var(--line)] rounded-2xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
+                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
                     />
                   </div>
                   <div className="col-span-1 pb-1">
@@ -254,15 +254,15 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <div className="space-y-2">
                 <label className="micro-label">Attachments & Receipts</label>
                 <div className="flex items-center gap-4">
-                   <label className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-[var(--surface)] transition-colors">
-                     <span className="text-xs font-bold text-[var(--muted)] uppercase tracking-widest">Select Files</span>
+                   <label className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
+                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Select Files</span>
                      <input type="file" multiple className="hidden" onChange={handleFileUpload} />
                    </label>
                 </div>
                 {attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                      {attachments.map((f, i) => (
-                       <span key={i} className="px-2 py-1 bg-[var(--surface)] text-[var(--text)] text-xs rounded-lg">{f.name}</span>
+                       <span key={i} className="px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded-lg">{f.name}</span>
                      ))}
                   </div>
                 )}
@@ -273,7 +273,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
         <div className="p-4 md:p-8 border-t border-[var(--line)] bg-[var(--ink)]/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-col w-full sm:w-auto">
-            <span className="text-[10px] font-bold text-[var(--faint)] uppercase tracking-widest">Total Bill Amount</span>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Bill Amount</span>
             <span className="text-3xl font-black text-[var(--text)] font-mono">
               {(total / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
             </span>
@@ -282,21 +282,21 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
             <button 
               type="button"
               onClick={onClose}
-              className="px-6 py-3.5 bg-[var(--surface)] text-[var(--text)] rounded-xl font-medium uppercase tracking-wider text-[10px] hover:bg-[var(--ink)] transition-all"
+              className="px-6 py-3.5 bg-[var(--surface)] border border-[var(--line)] text-zinc-600 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-[var(--ink)] transition-all"
             >
               Cancel
             </button>
             <button 
               type="button"
               onClick={(e) => handleAction(e, 'draft')}
-              className="px-6 py-3.5 bg-[var(--surface)] text-zinc-700 rounded-xl font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-200 transition-all flex items-center gap-2"
+              className="px-6 py-3.5 bg-zinc-100 text-zinc-700 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-200 transition-all flex items-center gap-2"
             >
               Save Draft
             </button>
             <button 
               type="submit"
               onClick={(e) => handleAction(e, 'pending')}
-              className="px-6 py-3.5 bg-[var(--ink)] text-[var(--panel)] rounded-xl font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
+              className="px-6 py-3.5 bg-zinc-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
             >
               <Save size={16} />
               Save & Close
@@ -304,7 +304,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
             <button 
               type="button"
               onClick={(e) => handleAction(e, 'approved')}
-              className="px-6 py-3.5 bg-emerald-600 text-[var(--panel)] rounded-xl font-medium uppercase tracking-wider text-[10px] hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2"
+              className="px-6 py-3.5 bg-emerald-600 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2"
             >
               Approve Bill
             </button>

@@ -163,15 +163,15 @@ export default function CashFlowView() {
   return (
     <div className="space-y-6">
       {/* Date Range & Controls */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--panel)] border border-[var(--line)] rounded-2xl shadow-sm relative overflow-hidden group gap-4">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
         <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10 w-full lg:w-auto">
           <div className="flex items-center gap-3 w-full">
-            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-[var(--muted)] shrink-0">
+            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-slate-500 shrink-0">
                <Calendar size={13} />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider mb-0.5">Temporal Range</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Temporal Range</span>
               <div className="flex flex-wrap items-center gap-2">
                 <input 
                   type="date" 
@@ -208,22 +208,22 @@ export default function CashFlowView() {
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
-                Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--faint)]")} />
+                Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-slate-400")} />
               </span>
-              <span className="text-[8px] font-bold text-[var(--faint)] uppercase tracking-widest">Compare to Prior Prev</span>
+              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Compare to Prior Prev</span>
             </div>
           </label>
         </div>
         <button 
           onClick={exportCashFlow}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--ink)] text-[var(--panel)] rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
         >
           <FileSpreadsheet size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
           <span>Export Synthesis</span>
         </button>
       </div>
 
-      <div className="bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden relative p-4 md:p-8">
+      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative p-4 md:p-8">
         <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none">
           <Waves size={160} />
         </div>
@@ -232,7 +232,7 @@ export default function CashFlowView() {
            <div className="border-b border-slate-900 pb-4 flex items-end justify-between">
               <div>
                 <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase italic">{labels.title}</h3>
-                <p className="text-[10px] font-bold text-[var(--faint)] uppercase tracking-widest">For period ending {dateRange.end}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">For period ending {dateRange.end}</p>
               </div>
               <Waves size={24} className="text-slate-200" />
            </div>
@@ -245,8 +245,8 @@ export default function CashFlowView() {
               ].map((section, idx) => (
                   <div key={idx} className="space-y-4">
                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
-                        <h4 className="text-[11px] font-bold bg-[var(--ink)] text-[var(--panel)] px-3 py-1 rounded inline-flex uppercase tracking-wider">{section.label}</h4>
-                        <span className="text-[9px] font-semibold text-slate-450 uppercase tracking-wider text-[var(--faint)]">{section.desc}</span>
+                        <h4 className="text-[11px] font-bold bg-slate-900 text-white px-3 py-1 rounded inline-flex uppercase tracking-wider">{section.label}</h4>
+                        <span className="text-[9px] font-semibold text-slate-450 uppercase tracking-wider text-slate-400">{section.desc}</span>
                      </div>
                      
                      <div className="pl-4 space-y-3">
@@ -274,16 +274,16 @@ export default function CashFlowView() {
               ))}
            </div>
 
-           <div className="mt-12 p-6 bg-[var(--ink)] text-[var(--panel)] rounded-xl border border-slate-950 flex justify-between items-center shadow-lg">
+           <div className="mt-12 p-6 bg-slate-900 text-white rounded-xl border border-slate-950 flex justify-between items-center shadow-lg">
                <div>
-                 <span className="text-[12px] font-bold text-[var(--panel)]/40 uppercase tracking-widest block mb-1">{labels.netChange}</span>
+                 <span className="text-[12px] font-bold text-white/40 uppercase tracking-widest block mb-1">{labels.netChange}</span>
                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest block">{labels.netChangeSub}</span>
                </div>
                <div className="flex items-center gap-6">
                  {isComparative && prevData.netChange !== 0 && (
                     <div className="text-right">
-                       <span className="block text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest">Prior Delta</span>
-                       <span className="font-mono text-sm text-[var(--faint)]">{formatCurrency(prevData.netChange)}</span>
+                       <span className="block text-[8px] font-bold text-slate-500 uppercase tracking-widest">Prior Delta</span>
+                       <span className="font-mono text-sm text-slate-400">{formatCurrency(prevData.netChange)}</span>
                     </div>
                  )}
                  <span className={cn("text-3xl font-black font-mono tracking-tighter", currentData.netChange >= 0 ? "text-emerald-400" : "text-rose-400")}>

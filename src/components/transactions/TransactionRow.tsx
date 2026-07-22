@@ -112,8 +112,8 @@ const TransactionRow = React.memo(({
         )}
         style={{ gridTemplateColumns: gridColumns }}
       >
-        <div className={cn("px-4 relative h-full flex items-center justify-center border-r border-[var(--line)]", isProMode && "px-2", isCompactMode && "px-1")}>
-          {isFocused && <div className="absolute inset-y-0 left-0 w-1 bg-[var(--ink)] shadow-[0_0_10px_rgba(0,0,0,0.2)]" />}
+        <div className={cn("px-4 relative h-full flex items-center justify-center border-r border-[var(--line)]/50", isProMode && "px-2", isCompactMode && "px-1")}>
+          {isFocused && <div className="absolute inset-y-0 left-0 w-1 bg-slate-900 shadow-[0_0_10px_rgba(0,0,0,0.2)]" />}
           <input 
             type="checkbox" 
             checked={isSelected}
@@ -125,7 +125,7 @@ const TransactionRow = React.memo(({
           />
         </div>
         <div className={cn(
-          "px-4 text-[var(--muted)] font-mono whitespace-nowrap text-[10px] h-full flex items-center border-r border-[var(--line)] transition-colors group-hover/active:text-[var(--panel)]/60", 
+          "px-4 text-slate-500 font-mono whitespace-nowrap text-[10px] h-full flex items-center border-r border-[var(--line)]/50 transition-colors group-hover/active:text-white/60", 
           isProMode && "px-2 text-[9px]",
           isCompactMode && "px-1 text-[9px]",
           isFocused && focusedField === 'date' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
@@ -133,7 +133,7 @@ const TransactionRow = React.memo(({
           {format(new Date(displayTx.date), 'dd MMM yyyy')}
         </div>
         <div className={cn(
-          "px-4 font-bold text-[var(--text)] transition-colors text-xs h-full flex flex-col justify-center relative border-r border-[var(--line)] group-hover/active:text-[var(--panel)]", 
+          "px-4 font-bold text-[var(--text)] transition-colors text-xs h-full flex flex-col justify-center relative border-r border-[var(--line)]/50 group-hover/active:text-white", 
           isProMode && "px-2 text-[10px]",
           isFocused && focusedField === 'description' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5",
           "truncate"
@@ -147,7 +147,7 @@ const TransactionRow = React.memo(({
             )}
           </span>
           {!isCompactMode && tx.verification?.hash && (
-            <span className="text-[9px] text-[var(--muted)] font-mono flex items-center gap-1 transition-colors group-hover/active:text-[var(--panel)]/40">
+            <span className="text-[9px] text-slate-500 font-mono flex items-center gap-1 transition-colors group-hover/active:text-white/40">
               <Zap size={9} className={isLocked ? "text-amber-400" : "text-emerald-500"} />
               {tx.verification.hash.slice(0, 8)} {isLocked && <span className="text-[7px] font-black tracking-widest uppercase bg-amber-400/10 text-amber-500 dark:text-amber-400 px-1.5 py-0.5 border border-amber-400/20 rounded font-sans scale-90 origin-left">SEALED</span>}
             </span>
@@ -155,7 +155,7 @@ const TransactionRow = React.memo(({
         </div>
         {!isMobileGrid && (
           <div className={cn(
-            "px-4 h-full flex items-center border-r border-[var(--line)]", 
+            "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2", 
             isCompactMode && "px-1",
             isFocused && focusedField === 'category' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
@@ -167,14 +167,14 @@ const TransactionRow = React.memo(({
                   dir="auto"
                   className={cn(
                     "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider truncate w-full border transition-all",
-                    line.amountCents > 0 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover/active:text-[var(--panel)] group-hover/active:border-white/20" : "bg-[var(--ink)] text-[var(--muted)] border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-[var(--panel)]/80 group-hover/active:border-white/20",
+                    line.amountCents > 0 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover/active:text-white group-hover/active:border-white/20" : "bg-[var(--ink)] text-slate-500 border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-white/80 group-hover/active:border-white/20",
                   )}
                 >
                   <HighlightMatch text={line.accountName} match={searchTerm} />
                   {line.isAnalyticalTagged && (
                     <div className="absolute -top-2 -right-2 z-20 group/spark">
                       <Sparkles size={10} className="text-amber-500 animate-[pulse_2s_infinite]" />
-                      <div className="absolute top-4 left-0 w-48 p-3 bg-[var(--ink)] text-[var(--panel)] rounded-xl text-[8px] font-medium leading-relaxed opacity-0 group-hover/spark:opacity-100 transition-opacity pointer-events-none shadow-2xl border border-white/10 italic">
+                      <div className="absolute top-4 left-0 w-48 p-3 bg-slate-900 text-white rounded-xl text-[8px] font-medium leading-relaxed opacity-0 group-hover/spark:opacity-100 transition-opacity pointer-events-none shadow-2xl border border-white/10 italic">
                         Analytical pattern matched: This transaction corresponds to a recurring {line.accountName.toLowerCase()} vector based on historical consistency.
                       </div>
                     </div>
@@ -186,7 +186,7 @@ const TransactionRow = React.memo(({
                 <span 
                   key={`tag-${idx}`}
                   dir="auto"
-                  className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest truncate w-full border transition-all bg-indigo-50 text-indigo-600 border-indigo-200 group-hover/active:bg-indigo-500 group-hover/active:text-[var(--panel)] group-hover/active:border-white/20"
+                  className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest truncate w-full border transition-all bg-indigo-50 text-indigo-600 border-indigo-200 group-hover/active:bg-indigo-500 group-hover/active:text-white group-hover/active:border-white/20"
                 >
                   <HighlightMatch text={tag} match={searchTerm} />
                 </span>
@@ -196,7 +196,7 @@ const TransactionRow = React.memo(({
         )}
         {!isMobileGrid && !isTabletGrid && (
           <div className={cn(
-            "px-4 h-full flex items-center border-r border-[var(--line)]", 
+            "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
             isFocused && focusedField === 'project' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}>
@@ -208,7 +208,7 @@ const TransactionRow = React.memo(({
                     onProjectClick(tx.lines!.find(l => l.project)!.project!);
                   }}
                   dir="auto"
-                  className="px-2 py-0.5 bg-[var(--ink)] text-[var(--muted)] rounded text-[9px] font-bold border border-[var(--line)] hover:border-slate-800 transition-colors truncate uppercase group-hover/active:text-[var(--panel)] group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10"
+                  className="px-2 py-0.5 bg-[var(--ink)] text-slate-500 rounded text-[9px] font-bold border border-[var(--line)] hover:border-slate-800 transition-colors truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10"
                 >
                   <HighlightMatch text={tx.lines!.find(l => l.project)!.project!} match={searchTerm} />
                 </button>
@@ -218,13 +218,13 @@ const TransactionRow = React.memo(({
         )}
         {!isMobileGrid && !isTabletGrid && (
           <div className={cn(
-            "px-4 h-full flex items-center border-r border-[var(--line)]", 
+            "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
             isFocused && focusedField === 'class' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}>
             <div className="flex flex-wrap gap-1 w-full">
               {tx.lines?.find(l => l.class)?.class && (
-                <span className="px-2 py-0.5 bg-[var(--ink)] text-[var(--muted)] rounded text-[9px] font-bold border border-[var(--line)] truncate uppercase group-hover/active:text-[var(--panel)] group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10">
+                <span className="px-2 py-0.5 bg-[var(--ink)] text-slate-500 rounded text-[9px] font-bold border border-[var(--line)] truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10">
                   <HighlightMatch text={tx.lines!.find(l => l.class)!.class!} match={searchTerm} />
                 </span>
               )}
@@ -233,13 +233,13 @@ const TransactionRow = React.memo(({
         )}
         {!isMobileGrid && !isTabletGrid && (
           <div className={cn(
-            "px-4 h-full flex items-center border-r border-[var(--line)]", 
+            "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
             isFocused && focusedField === 'location' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}>
             <div className="flex flex-wrap gap-1 w-full">
               {tx.lines?.find(l => l.location)?.location && (
-                <span className="px-2 py-0.5 bg-[var(--ink)] text-[var(--muted)] rounded text-[9px] font-bold border border-[var(--line)] truncate uppercase group-hover/active:text-[var(--panel)] group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10">
+                <span className="px-2 py-0.5 bg-[var(--ink)] text-slate-500 rounded text-[9px] font-bold border border-[var(--line)] truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10">
                   <HighlightMatch text={tx.lines!.find(l => l.location)!.location!} match={searchTerm} />
                 </span>
               )}
@@ -248,7 +248,7 @@ const TransactionRow = React.memo(({
         )}
         <div 
           className={cn(
-            "px-4 text-right font-black font-mono transition-colors text-sm h-full flex flex-col justify-center relative overflow-hidden border-r border-[var(--line)] items-end",
+            "px-4 text-right font-black font-mono transition-colors text-sm h-full flex flex-col justify-center relative overflow-hidden border-r border-[var(--line)]/50 items-end",
             tx.totalAmountCents > 0 ? "text-emerald-600 group-hover/active:text-emerald-400" : "text-rose-600 group-hover/active:text-rose-400",
             isFocused && focusedField === 'amountCents' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}
@@ -257,14 +257,14 @@ const TransactionRow = React.memo(({
             {formatCurrency(displayTx.totalAmountCents)}
           </span>
           {tx.originalCurrency && tx.exchangeRate && (
-            <span className={cn("text-[9px] font-sans font-bold uppercase tracking-wider text-[var(--muted)] mt-0.5 truncate whitespace-nowrap", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
+            <span className={cn("text-[9px] font-sans font-bold uppercase tracking-wider text-slate-500 mt-0.5 truncate whitespace-nowrap", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
               {tx.originalCurrency} @ {tx.exchangeRate.toFixed(4)}
             </span>
           )}
         </div>
         {!isMobileGrid && !isTabletGrid && (
           <div className={cn(
-            "px-4 text-right font-bold font-mono text-[var(--muted)] text-[11px] h-full flex items-center justify-end border-r border-[var(--line)] transition-colors group-hover/active:text-[var(--panel)]/60 whitespace-nowrap",
+            "px-4 text-right font-bold font-mono text-slate-500 text-[11px] h-full flex items-center justify-end border-r border-[var(--line)]/50 transition-colors group-hover/active:text-white/60 whitespace-nowrap",
             isProMode && "px-2 text-[10px]"
           )}>
             {formatCurrency(tx.balanceCents || 0)}
@@ -272,17 +272,17 @@ const TransactionRow = React.memo(({
         )}
         {!isMobileGrid && (
           <div className={cn(
-            "px-4 text-center h-full flex items-center justify-center border-r border-[var(--line)]", 
+            "px-4 text-center h-full flex items-center justify-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
             isFocused && focusedField === 'status' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}>
             <span className={cn(
               "px-2 py-0.5 rounded text-[9px] font-medium uppercase tracking-wider border transition-all",
-              tx.status === 'approved' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover:text-[var(--panel)]" :
-              tx.status === 'flagged' ? "bg-amber-500/10 text-amber-600 border-amber-500/20 group-hover/active:bg-amber-500 group-hover:text-[var(--panel)]" :
-              tx.status === 'void' ? "bg-rose-500/10 text-rose-600 border-rose-500/20 group-hover/active:bg-rose-500 group-hover:text-[var(--panel)]" :
-              tx.status === 'draft' ? "bg-[var(--ink)]0/10 text-slate-600 border-slate-500/20 group-hover/active:bg-[var(--ink)]0 group-hover:text-[var(--panel)]" :
-              "bg-[var(--ink)] text-[var(--muted)] border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-[var(--panel)] group-hover/active:border-white/20",
+              tx.status === 'approved' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover:text-white" :
+              tx.status === 'flagged' ? "bg-amber-500/10 text-amber-600 border-amber-500/20 group-hover/active:bg-amber-500 group-hover:text-white" :
+              tx.status === 'void' ? "bg-rose-500/10 text-rose-600 border-rose-500/20 group-hover/active:bg-rose-500 group-hover:text-white" :
+              tx.status === 'draft' ? "bg-[var(--ink)]0/10 text-slate-600 border-slate-500/20 group-hover/active:bg-[var(--ink)]0 group-hover:text-white" :
+              "bg-[var(--ink)] text-slate-500 border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-white group-hover/active:border-white/20",
               tx.lines?.some(l => l.isAnalyticalTagged) && "border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]"
             )}>
               {tx.status || tx.type}
@@ -290,7 +290,7 @@ const TransactionRow = React.memo(({
           </div>
         )}
         {!isMobileGrid && !isTabletGrid && (
-          <div className={cn("px-4 text-right h-full flex items-center justify-end group-hover/active:text-[var(--panel)]")}>
+          <div className={cn("px-4 text-right h-full flex items-center justify-end group-hover/active:text-white")}>
             {isLocked ? (
               <div className="flex items-center gap-1.5 text-[8px] font-medium uppercase tracking-wider text-[#d97706] bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded border border-amber-500/20 shrink-0 select-none">
                 <Lock size={10} className="text-[#d97706] animate-pulse" /> Immutable
@@ -302,28 +302,28 @@ const TransactionRow = React.memo(({
               )}>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onEditDetails?.(tx); }}
-                  className="p-1 text-[var(--muted)] hover:text-indigo-600 rounded transition-all"
+                  className="p-1 text-slate-500 hover:text-indigo-600 rounded transition-all"
                   title="Edit Transaction Details"
                 >
                   <Edit3 size={14} />
                 </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onSplit(tx.id); }}
-                  className="p-1 text-[var(--muted)] hover:text-indigo-600 rounded transition-all"
+                  className="p-1 text-slate-500 hover:text-indigo-600 rounded transition-all"
                   title="Split Transaction"
                 >
                   <Columns size={14} />
                 </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onDuplicate?.(tx.id); }}
-                  className="p-1 text-[var(--muted)] hover:text-indigo-600 rounded transition-all"
+                  className="p-1 text-slate-500 hover:text-indigo-600 rounded transition-all"
                   title="Duplicate Transaction"
                 >
                   <Copy size={14} />
                 </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onCreateRule(tx); }}
-                  className="p-1 text-[var(--muted)] hover:text-indigo-600 rounded transition-all"
+                  className="p-1 text-slate-500 hover:text-indigo-600 rounded transition-all"
                 >
                   <Zap size={14} />
                 </button>
@@ -331,7 +331,7 @@ const TransactionRow = React.memo(({
                   onClick={(e) => { e.stopPropagation(); onToggleFlag?.(tx.id); }}
                   className={cn(
                     "p-1 rounded transition-all",
-                    tx.isFlagged ? "text-amber-500" : "text-[var(--muted)] hover:text-amber-500"
+                    tx.isFlagged ? "text-amber-500" : "text-slate-500 hover:text-amber-500"
                   )}
                   title="Flag for Review"
                 >
@@ -339,7 +339,7 @@ const TransactionRow = React.memo(({
                 </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onVoid(tx.id); }}
-                  className="p-1 text-[var(--muted)] hover:text-rose-600 rounded transition-all"
+                  className="p-1 text-slate-500 hover:text-rose-600 rounded transition-all"
                   disabled={tx.type === 'reversal' || !!tx.reversalEventId}
                 >
                   <RotateCcw size={14} />

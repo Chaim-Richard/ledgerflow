@@ -53,26 +53,26 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-[var(--ink)]/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
       />
       
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-lg bg-[var(--surface)] rounded-3xl shadow-2xl border border-[var(--line)] overflow-hidden"
+        className="relative w-full max-w-lg bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden"
       >
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[var(--ink)] text-[var(--panel)] rounded-xl flex items-center justify-center shadow-xl shadow-zinc-900/20">
+            <div className="w-12 h-12 bg-zinc-900 text-white rounded-[32px] flex items-center justify-center shadow-xl shadow-zinc-900/20">
               <Users size={24} />
             </div>
             <div>
               <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Add Vendor</h3>
-              <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest">Supply Chain & Payables</p>
+              <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Supply Chain & Payables</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[var(--surface)] rounded-full transition-colors text-[var(--faint)]">
+          <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400">
             <X size={24} />
           </button>
         </div>
@@ -87,7 +87,7 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
               value={vendor.name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="e.g. Amazon Web Services"
-              className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+              className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
             />
           </div>
 
@@ -100,7 +100,7 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
                   value={vendor.category}
                   onChange={(e) => setVendor({ ...vendor, category: e.target.value })}
                   placeholder="e.g. Software, Utilities"
-                  className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
+                  className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
                 />
               </div>
             </div>
@@ -109,7 +109,7 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
               <select 
                 value={vendor.type || 'supplier'}
                 onChange={(e) => setVendor({ ...vendor, type: e.target.value })}
-                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
+                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
               >
                 <option value="supplier">General Supplier</option>
                 <option value="subcontractor">Subcontractor</option>
@@ -127,7 +127,7 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
                 value={vendor.email}
                 onChange={(e) => setVendor({ ...vendor, email: e.target.value })}
                 placeholder="accounts@vendor.com"
-                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
+                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
               />
             </div>
             <div className="space-y-2">
@@ -137,7 +137,7 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
                 value={vendor.phone || ''}
                 onChange={(e) => setVendor({ ...vendor, phone: e.target.value })}
                 placeholder="+1 (555) 000-0000"
-                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
+                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
               />
             </div>
           </div>
@@ -148,7 +148,7 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
               <select 
                 value={vendor.status || 'active'}
                 onChange={(e) => setVendor({ ...vendor, status: e.target.value as any })}
-                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
+                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
               >
                 <option value="active">Active</option>
                 <option value="approved">Approved Vendor</option>
@@ -172,13 +172,13 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
             <button 
               type="button"
               onClick={onClose}
-              className="flex-1 py-4 bg-[var(--surface)] text-[var(--text)] rounded-xl font-medium uppercase tracking-wider text-xs hover:bg-[var(--ink)] transition-all"
+              className="flex-1 py-4 bg-[var(--surface)] border border-[var(--line)] text-zinc-600 rounded-[32px] font-medium uppercase tracking-wider text-xs hover:bg-[var(--ink)] transition-all"
             >
               Cancel
             </button>
             <button 
               type="submit"
-              className="flex-1 py-4 bg-[var(--ink)] text-[var(--panel)] rounded-xl font-medium uppercase tracking-wider text-xs hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-2"
+              className="flex-1 py-4 bg-zinc-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-xs hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-2"
             >
               <Save size={18} />
               Save Vendor

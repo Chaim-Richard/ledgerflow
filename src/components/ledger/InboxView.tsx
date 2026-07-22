@@ -88,7 +88,7 @@ export default function InboxView({ transactions = [], accounts, onCategorize, o
           <CheckCircle2 size={48} className="text-green-500" />
         </div>
         <h2 className="text-2xl font-black text-[var(--text)] mb-2">Inbox Zero</h2>
-        <p className="text-[var(--muted)] text-center max-w-sm">
+        <p className="text-slate-500 text-center max-w-sm">
           All transactions have been categorized and filed. Your books are perfectly up to date.
         </p>
       </div>
@@ -118,12 +118,12 @@ export default function InboxView({ transactions = [], accounts, onCategorize, o
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--text)] text-lg">High Confidence ({highConfidence.length})</h3>
-                  <p className="text-sm text-[var(--muted)]">Over 90% match certainty. Ready to auto-file.</p>
+                  <p className="text-sm text-slate-500">Over 90% match certainty. Ready to auto-file.</p>
                 </div>
               </div>
               <button 
                 onClick={handleAutoFile}
-                className="bg-green-600 hover:bg-green-700 text-[var(--panel)] px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2"
+                className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2"
               >
                 <Check size={16} />
                 Auto-file all {highConfidence.length}
@@ -140,7 +140,7 @@ export default function InboxView({ transactions = [], accounts, onCategorize, o
               {highConfidence.length > 5 && (
                 <button 
                   onClick={() => setShowAllHighConfidence(!showAllHighConfidence)}
-                  className="bg-[var(--ink)] border border-[var(--line)] px-3 py-2 rounded-lg text-xs font-medium text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
+                  className="bg-[var(--ink)] border border-[var(--line)] px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:text-[var(--text)] transition-colors cursor-pointer"
                 >
                   {showAllHighConfidence ? 'Show Less' : `+${highConfidence.length - 5} more`}
                 </button>
@@ -152,7 +152,7 @@ export default function InboxView({ transactions = [], accounts, onCategorize, o
         {/* MEDIUM CONFIDENCE */}
         {mediumConfidence.length > 0 && (
           <div className="bg-[var(--surface)] rounded-2xl border-2 border-[#0047AB] p-6 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 bg-[#0047AB] text-[var(--panel)] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-bl-xl">Review</div>
+            <div className="absolute top-0 right-0 bg-[#0047AB] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-bl-xl">Review</div>
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
@@ -160,12 +160,12 @@ export default function InboxView({ transactions = [], accounts, onCategorize, o
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--text)] text-lg">Needs Quick Review ({mediumConfidence.length})</h3>
-                  <p className="text-sm text-[var(--muted)]">We're fairly sure about these. One tap to confirm the batch.</p>
+                  <p className="text-sm text-slate-500">We're fairly sure about these. One tap to confirm the batch.</p>
                 </div>
               </div>
               <button 
                 onClick={handleBatchConfirm}
-                className="bg-[#0047AB] hover:bg-blue-800 text-[var(--panel)] px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2"
+                className="bg-[#0047AB] hover:bg-blue-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2"
               >
                 <CheckSquare size={16} />
                 Confirm Batch
@@ -179,12 +179,12 @@ export default function InboxView({ transactions = [], accounts, onCategorize, o
                     <div className="w-2 h-2 rounded-full bg-[#0047AB]"></div>
                     <div>
                       <p className="font-bold text-[var(--text)] text-sm">{t.description}</p>
-                      <p className="text-xs text-[var(--muted)]">{new Date(t.date).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-500">{new Date(t.date).toLocaleDateString()}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-right">
-                      <p className="text-xs text-[var(--faint)] mb-0.5">Suggested</p>
+                      <p className="text-xs text-slate-400 mb-0.5">Suggested</p>
                       <p className="text-sm font-medium text-[#0047AB] bg-blue-50 px-2 py-0.5 rounded-md">Software / SaaS</p>
                     </div>
                     <p className="font-mono font-bold text-[var(--text)]">{formatCurrency(t.totalAmountCents)}</p>
@@ -204,7 +204,7 @@ export default function InboxView({ transactions = [], accounts, onCategorize, o
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--text)] text-lg">Your Input Needed ({lowConfidence.length})</h3>
-                  <p className="text-sm text-[var(--muted)]">Unrecognized patterns. Answer a simple question to train the model.</p>
+                  <p className="text-sm text-slate-500">Unrecognized patterns. Answer a simple question to train the model.</p>
                 </div>
               </div>
 
@@ -227,13 +227,13 @@ export default function InboxView({ transactions = [], accounts, onCategorize, o
                     <div className="flex gap-2">
                       <button 
                         onClick={() => handleResolveLow(t.id, 'Business')}
-                        className="flex-1 bg-[var(--surface)] hover:border-[#0047AB] hover:text-[#0047AB] text-slate-700 py-2 rounded-lg text-sm font-bold transition-all shadow-sm"
+                        className="flex-1 bg-[var(--surface)] border border-[var(--line)] hover:border-[#0047AB] hover:text-[#0047AB] text-slate-700 py-2 rounded-lg text-sm font-bold transition-all shadow-sm"
                       >
                         Business
                       </button>
                       <button 
                         onClick={() => handleResolveLow(t.id, 'Personal')}
-                        className="flex-1 bg-[var(--surface)] hover:border-slate-400 text-slate-700 py-2 rounded-lg text-sm font-bold transition-all shadow-sm"
+                        className="flex-1 bg-[var(--surface)] border border-[var(--line)] hover:border-slate-400 text-slate-700 py-2 rounded-lg text-sm font-bold transition-all shadow-sm"
                       >
                         Personal
                       </button>

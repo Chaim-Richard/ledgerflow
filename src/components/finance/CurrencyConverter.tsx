@@ -56,8 +56,8 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
   };
 
   const innerContent = (
-    <div className="p-6 w-full max-w-xl mx-auto bg-[var(--panel)] dark:bg-[var(--ink)] border border-[var(--line)] dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
-      <h2 className="text-xl font-medium text-[var(--text)] dark:text-[var(--panel)] mb-6">
+    <div className="p-6 w-full max-w-xl mx-auto bg-[var(--surface)] dark:bg-slate-900 border border-[var(--line)] dark:border-slate-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
+      <h2 className="text-xl font-medium text-[var(--text)] dark:text-white mb-6">
         {language === 'he' ? 'המרת מטבעות' : 'Currency Converter'}
       </h2>
 
@@ -70,7 +70,7 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
             type="number"
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
-            className="w-full px-3 py-2 bg-[var(--surface)] rounded-lg text-sm text-[var(--text)]"
+            className="w-full px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-sm text-[var(--text)]"
           />
         </div>
 
@@ -82,7 +82,7 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
             <select
               value={fromCurrency}
               onChange={(e) => setFromCurrency(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--surface)] rounded-lg text-sm text-[var(--text)]"
+              className="w-full px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-sm text-[var(--text)]"
             >
               {Object.keys(exchangeRates).map(c => (
                 <option key={c} value={c}>{c}</option>
@@ -97,7 +97,7 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
             <select
               value={toCurrency}
               onChange={(e) => setToCurrency(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--surface)] rounded-lg text-sm text-[var(--text)]"
+              className="w-full px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-sm text-[var(--text)]"
             >
               {Object.keys(exchangeRates).map(c => (
                 <option key={c} value={c}>{c}</option>
@@ -142,18 +142,18 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-[var(--ink)]/40 backdrop-blur-sm"
+          className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
         />
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative w-full max-w-xl bg-[var(--surface)] dark:bg-[var(--ink)] rounded-2xl shadow-xl border border-[var(--line)] dark:border-slate-800 overflow-hidden"
+          className="relative w-full max-w-xl bg-[var(--surface)] dark:bg-slate-900 rounded-2xl shadow-xl border border-[var(--line)] dark:border-slate-800 overflow-hidden"
         >
           {onClose && (
             <button 
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 text-[var(--faint)] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors z-10"
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors z-10"
             >
               <X size={20} />
             </button>

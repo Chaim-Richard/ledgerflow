@@ -78,22 +78,22 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-[var(--ink)]/60 backdrop-blur-2xl"
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-2xl"
       />
       
       <motion.div
         initial={{ opacity: 0, y: -40, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -20, scale: 0.98 }}
-        className="relative w-full max-w-4xl bg-[var(--panel)] rounded-2xl shadow-2xl border border-[var(--line)] overflow-hidden p-2"
+        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[32px] shadow-2xl border border-[var(--line)] overflow-hidden p-2"
       >
-        <div className="bg-[var(--ink)] rounded-xl p-4 md:p-10 text-[var(--panel)] relative overflow-hidden">
+        <div className="bg-slate-900 rounded-[32px] p-4 md:p-10 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 blur-[100px] pointer-events-none" />
           
           <form onSubmit={handleSubmit} className="mb-10 relative z-10">
             <div className="flex items-center gap-6 border-b border-white/5 pb-8 mb-8">
                <div className={cn(
-                 "p-4 bg-[var(--surface)]/5 rounded-xl transition-all",
+                 "p-4 bg-[var(--surface)]/5 rounded-[32px] transition-all",
                  isProcessing ? "text-indigo-500 animate-spin" : "text-indigo-400 shadow-[0_0_20px_rgba(79,70,229,0.3)]"
                )}>
                  <Sparkles size={32} />
@@ -105,11 +105,11 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                    value={query}
                    onChange={(e) => setQuery(e.target.value)}
                    placeholder="Enter Natural Language Query..."
-                   className="w-full bg-transparent border-none text-2xl md:text-4xl font-black tracking-tighter focus:outline-none placeholder:text-[var(--panel)]/20 font-display text-[var(--panel)]"
+                   className="w-full bg-transparent border-none text-2xl md:text-4xl font-black tracking-tighter focus:outline-none placeholder:text-white/20 font-display text-white"
                  />
                  <div className="flex items-center gap-3 mt-3">
                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(79,70,229,0.8)]" />
-                   <span className="text-[9px] font-black text-[var(--panel)]/40 uppercase tracking-widest truncate">Analytical Engine Active</span>
+                   <span className="text-[9px] font-black text-white/40 uppercase tracking-widest truncate">Analytical Engine Active</span>
                  </div>
                </div>
             </div>
@@ -118,52 +118,52 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
               <button 
                 type="submit"
                 disabled={!query.trim() || isProcessing}
-                className="px-8 h-14 bg-indigo-600 text-[var(--panel)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all active:scale-95 disabled:opacity-20 flex items-center gap-3 shadow-[0_15px_30px_-10px_rgba(79,70,229,0.4)]"
+                className="px-8 h-14 bg-indigo-600 text-white rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all active:scale-95 disabled:opacity-20 flex items-center gap-3 shadow-[0_15px_30px_-10px_rgba(79,70,229,0.4)]"
               >
                 {isProcessing ? "Processing..." : "Run Analysis"}
                 <Zap size={14} />
               </button>
               <div className="h-10 w-px bg-[var(--surface)]/10 mx-4" />
               <div className="flex items-center gap-6">
-                 <button className="text-[10px] font-black text-[var(--panel)]/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Compare Period</button>
-                 <button className="text-[10px] font-black text-[var(--panel)]/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Anomaly Sweep</button>
+                 <button className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Compare Period</button>
+                 <button className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Anomaly Sweep</button>
               </div>
             </div>
           </form>
 
           <div className="grid grid-cols-2 gap-10 relative z-10">
             <div className="space-y-6">
-              <h4 className="text-[10px] font-black text-[var(--panel)]/20 uppercase tracking-widest truncate">Command History</h4>
+              <h4 className="text-[10px] font-black text-white/20 uppercase tracking-widest truncate">Command History</h4>
               <div className="space-y-3">
                 {history.length > 0 ? history.map((h, i) => (
                   <button 
                     key={i}
                     onClick={() => { setQuery(h); handleSubmit(); }}
-                    className="w-full text-left p-4 rounded-xl bg-[var(--surface)]/5 border border-white/5 hover:bg-[var(--surface)]/10 transition-all flex items-center justify-between group"
+                    className="w-full text-left p-4 rounded-[32px] bg-[var(--surface)]/5 border border-white/5 hover:bg-[var(--surface)]/10 transition-all flex items-center justify-between group"
                   >
-                    <span className="text-xs font-bold text-[var(--panel)]/60 group-hover:text-[var(--panel)] transition-colors">{h}</span>
-                    <History size={14} className="text-[var(--panel)]/20" />
+                    <span className="text-xs font-bold text-white/60 group-hover:text-white transition-colors">{h}</span>
+                    <History size={14} className="text-white/20" />
                   </button>
                 )) : (
-                  <p className="text-[11px] font-bold text-[var(--panel)]/20 italic">No previous executions detected.</p>
+                  <p className="text-[11px] font-bold text-white/20 italic">No previous executions detected.</p>
                 )}
               </div>
             </div>
 
             <div className="space-y-6">
-               <h4 className="text-[10px] font-black text-[var(--panel)]/20 uppercase tracking-widest truncate">System Shortcuts</h4>
+               <h4 className="text-[10px] font-black text-white/20 uppercase tracking-widest truncate">System Shortcuts</h4>
                <div className="grid grid-cols-1 gap-3">
                  {[
                    { label: "Analyze High-Value Outflow", icon: AlertCircle, color: 'text-rose-400' },
                    { label: "Reconcile Missing Metadata", icon: Filter, color: 'text-amber-400' },
                    { label: "Predict Q3 Growth Matrix", icon: BarChart3, color: 'text-emerald-400' }
                  ].map((item, i) => (
-                   <button key={i} className="flex items-center justify-between p-4 bg-[var(--surface)]/5 rounded-xl border border-white/5 hover:border-indigo-500/30 hover:bg-[var(--surface)]/10 transition-all group active:scale-95">
+                   <button key={i} className="flex items-center justify-between p-4 bg-[var(--surface)]/5 rounded-[32px] border border-white/5 hover:border-indigo-500/30 hover:bg-[var(--surface)]/10 transition-all group active:scale-95">
                      <div className="flex items-center gap-4">
                        <item.icon size={16} className={item.color} />
-                       <span className="text-[10px] font-black text-[var(--panel)]/80 uppercase tracking-widest">{item.label}</span>
+                       <span className="text-[10px] font-black text-white/80 uppercase tracking-widest">{item.label}</span>
                      </div>
-                     <ArrowRight size={14} className="text-[var(--panel)]/20 group-hover:text-indigo-400 transition-colors" />
+                     <ArrowRight size={14} className="text-white/20 group-hover:text-indigo-400 transition-colors" />
                    </button>
                  ))}
                </div>

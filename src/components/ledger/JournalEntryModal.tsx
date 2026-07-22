@@ -255,7 +255,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-[var(--ink)]/60 backdrop-blur-md"
+            className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -528,7 +528,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
               <button 
                 type="button"
                 onClick={onClose}
-                className="py-3 px-4 bg-[var(--surface)] text-[var(--muted)] rounded-xl font-bold hover:bg-[var(--ink)] hover:text-[var(--text)] transition-all order-2 sm:order-1 sm:flex-1 cursor-pointer text-xs uppercase tracking-wider"
+                className="py-3 px-4 bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] rounded-xl font-bold hover:bg-[var(--ink)] hover:text-[var(--text)] transition-all order-2 sm:order-1 sm:flex-1 cursor-pointer text-xs uppercase tracking-wider"
               >
                 Discard Entry
               </button>

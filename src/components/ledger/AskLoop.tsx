@@ -83,19 +83,19 @@ export default function AskLoop() {
     <div className="p-6 space-y-6 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">Accountant Ask</h1>
-        <p className="text-[var(--muted)] text-sm mt-1">
+        <p className="text-slate-500 text-sm mt-1">
           Review and clarify uncategorized or pending transactions in your General Ledger.
         </p>
       </div>
 
       <div className="space-y-4">
         {pendingTransactions.length === 0 ? (
-          <div className="bg-[var(--ink)] border border-[var(--line)] rounded-2xl p-12 flex flex-col items-center justify-center text-center">
+          <div className="bg-[var(--ink)] border border-[var(--line)]/80 rounded-2xl p-12 flex flex-col items-center justify-center text-center">
             <div className="w-14 h-14 bg-emerald-100/80 rounded-2xl flex items-center justify-center mb-4">
               <CheckCircle2 className="h-8 w-8 text-emerald-600" />
             </div>
             <h3 className="font-bold text-[var(--text)] text-lg mb-1">Inbox Zero — All Caught Up!</h3>
-            <p className="text-[var(--muted)] text-sm max-w-md">
+            <p className="text-slate-500 text-sm max-w-md">
               All transactions in your General Ledger are fully categorized and verified. No pending questions.
             </p>
           </div>
@@ -113,7 +113,7 @@ export default function AskLoop() {
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="font-bold text-lg text-[var(--text)]">{tx.description || 'Unlabeled Transaction'}</h3>
-                      <p className="text-xs font-semibold text-[var(--muted)] mt-0.5">
+                      <p className="text-xs font-semibold text-slate-500 mt-0.5">
                         {tx.date} • <span className="font-mono text-[var(--text)] font-bold">{formattedAmt}</span>
                       </p>
                     </div>
@@ -144,8 +144,8 @@ export default function AskLoop() {
                     </div>
 
                     <div className="flex items-center gap-2 pt-1">
-                      <Tag className="w-3.5 h-3.5 text-[var(--faint)]" />
-                      <span className="text-xs font-semibold text-[var(--muted)]">Or assign account:</span>
+                      <Tag className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-xs font-semibold text-slate-500">Or assign account:</span>
                       <div className="relative flex-1">
                         <select
                           className="w-full bg-[var(--ink)] border border-[var(--line)] rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-600 focus:bg-[var(--surface)]"

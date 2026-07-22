@@ -46,7 +46,7 @@ export default function SecuritySettings() {
   return (
     <div className="space-y-10">
       {/* Fiscal Period Locking */}
-      <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] shadow-sm rounded-2xl">
+      <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl">
         <div className="flex items-center gap-5 mb-8">
           <div className="w-12 h-12 bg-[var(--brass)] text-black rounded-xl flex items-center justify-center shadow-md">
             <Lock size={24} />
@@ -68,12 +68,12 @@ export default function SecuritySettings() {
             type="date" 
             value={lockDate || ''}
             onChange={(e) => handleLockDateChange(e.target.value || null)}
-            className="bg-[var(--panel)] px-4 py-2.5 rounded-2xl font-bold text-[var(--text)] outline-none focus:border-[var(--brass-line)] shadow-sm"
+            className="bg-[var(--surface)] border border-[var(--line)] px-4 py-2.5 rounded-xl font-bold text-[var(--text)] outline-none focus:border-[var(--brass-line)] shadow-sm"
           />
         </div>
       </div>
 
-      <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] shadow-sm rounded-2xl">
+      <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl">
         <div className="flex items-center gap-5 mb-8">
           <div className="w-12 h-12 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex items-center justify-center shadow-sm">
             <ShieldCheck size={24} className="text-[var(--pos)]" />
@@ -118,7 +118,7 @@ export default function SecuritySettings() {
                 <button 
                   onClick={handleSystemPurge}
                   disabled={isResetting}
-                  className="px-6 py-3 bg-rose-500 text-[var(--panel)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-rose-600 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
+                  className="px-6 py-3 bg-rose-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-rose-600 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
                 >
                   {isResetting ? <RefreshCw size={14} className="animate-spin" /> : <AlertCircle size={14} />}
                   {isResetting ? 'DECOMMISSIONING...' : 'INITIATE PURGE'}

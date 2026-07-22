@@ -129,28 +129,28 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-[var(--ink)]/60 backdrop-blur-md"
+        className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
       />
       
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-3xl shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
+        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
       >
         {/* Header */}
         <div className="p-4 md:p-10 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
           <div className="flex items-center gap-5">
-            <div className="w-16 h-16 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 border border-orange-100">
+            <div className="w-16 h-16 bg-orange-50 rounded-[32px] flex items-center justify-center text-orange-600 border border-orange-100">
               <Sparkles size={32} />
             </div>
             <div>
               <h2 className="text-2xl font-black text-[var(--text)] tracking-tight">Analytical Architect</h2>
-              <p className="text-sm text-[var(--muted)]">Describe your business model, and we'll architect the system structure.</p>
+              <p className="text-sm text-zinc-500">Describe your business model, and we'll architect the system structure.</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-3 hover:bg-[var(--surface)] rounded-full transition-colors">
-            <X size={24} className="text-[var(--faint)]" />
+          <button onClick={onClose} className="p-3 hover:bg-zinc-100 rounded-full transition-colors">
+            <X size={24} className="text-zinc-400" />
           </button>
         </div>
 
@@ -158,33 +158,33 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
           {!generatedData ? (
             <div className="max-w-2xl mx-auto space-y-8 py-10">
               <div className="space-y-4">
-                <label className="block text-xs font-medium uppercase tracking-wider text-[var(--faint)]">
+                <label className="block text-xs font-medium uppercase tracking-wider text-zinc-400">
                   How does your business work?
                 </label>
                 <textarea 
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="e.g., I run a boutique coffee shop that also sells beans online. I have 3 employees and rent a space in downtown..."
-                  className="w-full h-48 px-8 py-6 bg-[var(--ink)] border-2 border-[var(--line)] rounded-xl focus:outline-none focus:border-orange-500 transition-all text-lg leading-relaxed resize-none"
+                  className="w-full h-48 px-8 py-6 bg-[var(--ink)] border-2 border-[var(--line)] rounded-[32px] focus:outline-none focus:border-orange-500 transition-all text-lg leading-relaxed resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 bg-[var(--ink)] rounded-xl border border-[var(--line)] space-y-3">
+                <div className="p-6 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] space-y-3">
                   <div className="w-10 h-10 bg-[var(--surface)] rounded-xl flex items-center justify-center text-[var(--text)] shadow-sm">
                     <BookOpen size={20} />
                   </div>
                   <h4 className="font-bold text-[var(--text)]">Custom COA</h4>
-                  <p className="text-xs text-[var(--muted)] leading-relaxed">
+                  <p className="text-xs text-zinc-500 leading-relaxed">
                     AI will generate a Chart of Accounts tailored to your specific industry and revenue streams.
                   </p>
                 </div>
-                <div className="p-6 bg-[var(--ink)] rounded-xl border border-[var(--line)] space-y-3">
+                <div className="p-6 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] space-y-3">
                   <div className="w-10 h-10 bg-[var(--surface)] rounded-xl flex items-center justify-center text-[var(--text)] shadow-sm">
                     <Layout size={20} />
                   </div>
                   <h4 className="font-bold text-[var(--text)]">Visual Topology</h4>
-                  <p className="text-xs text-[var(--muted)] leading-relaxed">
+                  <p className="text-xs text-zinc-500 leading-relaxed">
                     A custom dashboard schema will be built to visualize your unique money flow.
                   </p>
                 </div>
@@ -194,10 +194,10 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
                 onClick={handleGenerate}
                 disabled={isGenerating || !description.trim()}
                 className={cn(
-                  "w-full py-6 rounded-xl font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl shadow-orange-500/20",
+                  "w-full py-6 rounded-[32px] font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl shadow-orange-500/20",
                   isGenerating 
-                    ? "bg-[var(--surface)] text-[var(--faint)] cursor-not-allowed" 
-                    : "bg-orange-500 text-[var(--panel)] hover:bg-orange-600"
+                    ? "bg-zinc-100 text-zinc-400 cursor-not-allowed" 
+                    : "bg-orange-500 text-white hover:bg-orange-600"
                 )}
               >
                 {isGenerating ? (
@@ -215,8 +215,8 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
             </div>
           ) : (
             <div className="space-y-10">
-              <div className="p-4 md:p-8 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-6">
-                <div className="w-16 h-16 bg-[var(--panel)] rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
+              <div className="p-4 md:p-8 bg-emerald-50 border border-emerald-100 rounded-[32px] flex items-center gap-6">
+                <div className="w-16 h-16 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
                   <CheckCircle2 size={32} />
                 </div>
                 <div>
@@ -228,11 +228,11 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
               {/* Strategic Advice Section */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {generatedData.strategicAdvice?.map((advice: string, i: number) => (
-                  <div key={i} className="p-6 bg-[var(--ink)] text-[var(--panel)] rounded-xl relative overflow-hidden group">
+                  <div key={i} className="p-6 bg-zinc-900 text-white rounded-[32px] relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                       <Sparkles size={40} />
                     </div>
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)] mb-4 block">Strategy 0{i+1}</span>
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500 mb-4 block">Strategy 0{i+1}</span>
                     <p className="text-sm font-medium leading-relaxed">{advice}</p>
                   </div>
                 ))}
@@ -241,7 +241,7 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-6">
                   <h4 className="micro-label">Generated Chart of Accounts</h4>
-                  <div className="bg-[var(--ink)] rounded-xl border border-[var(--line)] overflow-hidden">
+                  <div className="bg-[var(--ink)] rounded-[32px] border border-[var(--line)] overflow-hidden">
                     <div className="divide-y divide-zinc-200">
                       {(showAllAccounts ? generatedData.chartOfAccounts : generatedData.chartOfAccounts.slice(0, 8)).map((acc: any, i: number) => (
                         <div key={i} className="p-4 flex items-center justify-between">
@@ -271,12 +271,12 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
 
                 <div className="space-y-6">
                   <h4 className="micro-label">Dashboard Structure</h4>
-                  <div className="bg-[var(--ink)] rounded-xl border border-[var(--line)] p-4 md:p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
-                    <div className="w-20 h-20 bg-[var(--panel)] rounded-2xl flex items-center justify-center text-zinc-300 mb-6 border border-[var(--line)] shadow-sm">
+                  <div className="bg-[var(--ink)] rounded-[32px] border border-[var(--line)] p-4 md:p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
+                    <div className="w-20 h-20 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-zinc-300 mb-6 border border-[var(--line)] shadow-sm">
                       <Layout size={40} />
                     </div>
                     <p className="text-sm font-bold text-[var(--text)] mb-2">Structure Ready</p>
-                    <p className="text-xs text-[var(--muted)] leading-relaxed">
+                    <p className="text-xs text-zinc-500 leading-relaxed">
                       {generatedData.dashboardSchema.nodes.length} nodes and {generatedData.dashboardSchema.links.length} connections mapped to your business model.
                     </p>
                   </div>
@@ -286,13 +286,13 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
               <div className="flex gap-4">
                 <button 
                   onClick={() => setGeneratedData(null)}
-                  className="px-10 py-5 bg-[var(--panel)] text-[var(--text)] rounded-2xl font-black border border-[var(--line)] hover:bg-[var(--ink)] transition-all"
+                  className="px-10 py-5 bg-[var(--surface)] text-zinc-600 rounded-[32px] font-black border border-[var(--line)] hover:bg-[var(--ink)] transition-all"
                 >
                   Start Over
                 </button>
                 <button 
                   onClick={handleApply}
-                  className="flex-1 py-5 bg-[var(--ink)] text-[var(--panel)] rounded-xl font-black hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-2"
+                  className="flex-1 py-5 bg-zinc-900 text-white rounded-[32px] font-black hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-2"
                 >
                   Apply & Save Blueprint
                   <ArrowRight size={20} />
@@ -303,8 +303,8 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
         </div>
 
         <div className="p-4 md:p-8 bg-[var(--ink)] border-t border-[var(--line)] flex items-center gap-4">
-          <AlertCircle className="text-[var(--faint)]" size={20} />
-          <p className="text-xs text-[var(--muted)] font-medium">
+          <AlertCircle className="text-zinc-400" size={20} />
+          <p className="text-xs text-zinc-500 font-medium">
             AI-generated blueprints are starting points. You can always customize accounts and dashboard nodes later.
           </p>
         </div>

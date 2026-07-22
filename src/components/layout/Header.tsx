@@ -58,7 +58,7 @@ const Header = React.memo(function Header() {
             world:realestate property:homes/* amount:&gt;1000
           </span>
           <div className="ml-auto flex items-center gap-1 shrink-0">
-            <kbd className="px-1.5 py-0.5 text-[10px] bg-[var(--surface)] rounded font-mono text-[var(--faint)]">⌘K</kbd>
+            <kbd className="px-1.5 py-0.5 text-[10px] bg-[var(--surface)] border border-[var(--line)] rounded font-mono text-[var(--faint)]">⌘K</kbd>
           </div>
         </button>
       </div>

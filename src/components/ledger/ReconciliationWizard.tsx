@@ -123,27 +123,27 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-[var(--ink)]/60 backdrop-blur-md"
+        className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
       />
       
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-5xl bg-[var(--ink)] rounded-3xl shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
+        className="relative w-full max-w-5xl bg-[var(--ink)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
       >
         {/* Header */}
         <div className="p-4 md:p-10 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30">
           <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-indigo-600 text-[var(--panel)] rounded-xl flex items-center justify-center border border-indigo-600/20 shadow-lg shadow-ledger-accent/10">
+            <div className="w-16 h-16 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center border border-indigo-600/20 shadow-lg shadow-ledger-accent/10">
               <RefreshCw size={32} />
             </div>
             <div>
               <h2 className="text-2xl font-black text-[var(--text)] uppercase italic tracking-tighter">Reconciliation Wizard</h2>
-              <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1 opacity-40">Step {step} of 2 // {step === 1 ? 'Statement Target Definition' : 'Rule Transaction Alignment'}</p>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1 opacity-40">Step {step} of 2 // {step === 1 ? 'Statement Target Definition' : 'Rule Transaction Alignment'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-12 h-12 bg-[var(--ink)] hover:bg-slate-200 rounded-xl flex items-center justify-center text-[var(--muted)] transition-all">
+          <button onClick={onClose} className="w-12 h-12 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-slate-500 transition-all">
             <X size={24} />
           </button>
         </div>
@@ -160,11 +160,11 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               >
                 <div className="space-y-8">
                   <div className="space-y-3">
-                    <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] italic ml-2">Select Target Topology</label>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic ml-2">Select Target Topology</label>
                     <select 
                       value={selectedAccount}
                       onChange={(e) => setSelectedAccount(e.target.value)}
-                      className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-[var(--text)] uppercase italic tracking-tight"
+                      className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-[var(--text)] uppercase italic tracking-tight"
                     >
                       <option value="" className="bg-[var(--ink)]">Protocol pending selection...</option>
                       {accounts.filter(a => a.type === 'asset' || a.type === 'liability').map(acc => (
@@ -175,30 +175,30 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
 
                   <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-3">
-                      <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] italic ml-2">Statement Horizon</label>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic ml-2">Statement Horizon</label>
                       <input 
                         type="date"
                         value={statementDate}
                         onChange={(e) => setStatementDate(e.target.value)}
-                        className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-[var(--text)] uppercase italic tracking-tight"
+                        className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-[var(--text)] uppercase italic tracking-tight"
                       />
                     </div>
                     <div className="space-y-3">
-                      <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] italic ml-2">Terminal Amount Balance ($)</label>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic ml-2">Terminal Amount Balance ($)</label>
                       <input 
                         type="number"
                         step="0.01"
                         value={endingBalance}
                         onChange={(e) => setEndingBalance(e.target.value)}
-                        className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-mono font-black text-[var(--text)] text-lg italic"
+                        className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-mono font-black text-[var(--text)] text-lg italic"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="p-4 md:p-8 bg-[var(--ink)]/40 border border-[var(--line)] rounded-xl flex gap-5 shadow-inner">
+                <div className="p-4 md:p-8 bg-[var(--ink)]/40 border border-[var(--line)] rounded-[32px] flex gap-5 shadow-inner">
                   <AlertCircle className="text-indigo-600 shrink-0" size={24} />
-                  <p className="text-[11px] text-[var(--muted)] leading-relaxed font-bold italic opacity-70">
+                  <p className="text-[11px] text-slate-500 leading-relaxed font-bold italic opacity-70">
                     Precision is mandatory. Enter terminal statement values exactly as specified by the regulatory entity. This defines the target resonance for the rule alignment phase.
                   </p>
                 </div>
@@ -213,21 +213,21 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               >
                 {/* Summary Bar */}
                 <div className="grid grid-cols-4 gap-6">
-                  <div className="p-7 bg-[var(--ink)] rounded-xl border border-[var(--line)] shadow-inner">
-                    <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mb-2 italic">Statement Horizon</p>
+                  <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 italic">Statement Horizon</p>
                     <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight">{formatCurrency(stats.targetBalance)}</p>
                   </div>
-                  <div className="p-7 bg-[var(--ink)] rounded-xl border border-[var(--line)] shadow-inner">
-                    <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mb-2 italic">Aligned Quanta</p>
+                  <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 italic">Aligned Quanta</p>
                     <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight">{formatCurrency(stats.cleared)}</p>
                   </div>
-                  <div className="p-7 bg-[var(--ink)] rounded-xl border border-[var(--line)] shadow-inner">
-                    <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mb-2 italic">Current Registry</p>
+                  <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 italic">Current Registry</p>
                     <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight">{formatCurrency(stats.currentBalance)}</p>
                   </div>
                   <div className={cn(
-                    "p-7 rounded-xl border transition-all shadow-lg",
-                    Math.abs(stats.difference) < 1 ? "bg-[var(--ink)]/10 border-indigo-600/30" : "bg-rose-500/10 border-rose-500/30"
+                    "p-7 rounded-[32px] border transition-all shadow-lg",
+                    Math.abs(stats.difference) < 1 ? "bg-slate-900/10 border-indigo-600/30" : "bg-rose-500/10 border-rose-500/30"
                   )}>
                     <p className={cn(
                       "text-[9px] font-black uppercase tracking-[0.2em] mb-2 italic",
@@ -241,14 +241,14 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                 </div>
 
                 {/* Matching Interface */}
-                <div className="bg-[var(--surface)] rounded-3xl border border-[var(--line)] overflow-hidden shadow-sm">
+                <div className="bg-[var(--surface)] rounded-[40px] border border-[var(--line)] overflow-hidden shadow-sm">
                   <div className="p-6 border-b border-[var(--line)] bg-[var(--ink)]/30 flex justify-between items-center">
                     <div>
                         <h3 className="text-[10px] font-black text-[var(--text)] uppercase tracking-[0.3em] italic">Orphaned Nodes</h3>
-                        <p className="text-[8px] font-black text-[var(--muted)] uppercase mt-1 opacity-40">Awaiting registry alignment</p>
+                        <p className="text-[8px] font-black text-slate-500 uppercase mt-1 opacity-40">Awaiting registry alignment</p>
                     </div>
                     <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={14} />
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
                       <input 
                         type="text" 
                         placeholder="Search Registry..."
@@ -271,13 +271,13 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                         <div className="flex items-center gap-6">
                           <div className={cn(
                             "w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all transform",
-                            reconciledIds.includes(t.id) ? "bg-indigo-600 border-indigo-600 text-[var(--panel)] scale-105" : "border-[var(--line)] bg-[var(--ink)] group-hover:bg-slate-200/50"
+                            reconciledIds.includes(t.id) ? "bg-indigo-600 border-indigo-600 text-white scale-105" : "border-[var(--line)] bg-[var(--ink)] group-hover:bg-slate-200/50"
                           )}>
                             {reconciledIds.includes(t.id) && <CheckSquare size={16} />}
                           </div>
                           <div>
                             <p className="text-xs font-black text-[var(--text)] uppercase italic tracking-tight">{t.description}</p>
-                            <p className="text-[9px] text-[var(--muted)] font-black uppercase tracking-[0.2em] mt-1 opacity-50">{format(new Date(t.date), 'MMM dd, yyyy')} // NODE_ID: {t.id.substring(0,8)}</p>
+                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1 opacity-50">{format(new Date(t.date), 'MMM dd, yyyy')} // NODE_ID: {t.id.substring(0,8)}</p>
                           </div>
                         </div>
                         <p className="text-sm font-black font-mono text-[var(--text)] italic tracking-tight">
@@ -286,7 +286,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                       </div>
                     ))}
                     {filteredTransactions.length === 0 && (
-                      <div className="p-24 text-center text-[var(--muted)] font-medium uppercase tracking-wider truncate text-[10px] italic opacity-20">No orphaned directives detected in current topology</div>
+                      <div className="p-24 text-center text-slate-500 font-medium uppercase tracking-wider truncate text-[10px] italic opacity-20">No orphaned directives detected in current topology</div>
                     )}
                   </div>
                 </div>
@@ -300,7 +300,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
           {step === 2 && (
             <button 
               onClick={() => setStep(1)}
-              className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-[var(--muted)] rounded-xl font-black uppercase tracking-[0.2em] text-[10px] border border-[var(--line)] hover:text-[var(--text)] transition-all"
+              className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-slate-500 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] border border-[var(--line)] hover:text-[var(--text)] transition-all"
             >
               <ChevronLeft size={18} />
               Rollback
@@ -316,7 +316,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                 }
                 setStep(2);
               }}
-              className="flex items-center gap-3 px-12 py-4 bg-indigo-600 text-[var(--panel)] rounded-xl font-black uppercase tracking-[0.2em] text-[10px] hover:brightness-110 transition-all shadow-xl shadow-ledger-accent/20"
+              className="flex items-center gap-3 px-12 py-4 bg-indigo-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] hover:brightness-110 transition-all shadow-xl shadow-ledger-accent/20"
             >
               Initialize Matching Protocol
               <ChevronRight size={18} />
@@ -325,7 +325,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
             <div className="flex items-center gap-5">
               <button 
                 onClick={handleAutoMatch}
-                className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-indigo-600 rounded-xl font-black uppercase tracking-[0.1em] text-[10px] border border-indigo-600/20 hover:bg-indigo-600/10 transition-all"
+                className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-indigo-600 rounded-[32px] font-black uppercase tracking-[0.1em] text-[10px] border border-indigo-600/20 hover:bg-indigo-600/10 transition-all"
               >
                 <Sparkles size={18} />
                 Rule Auto-Match
@@ -333,10 +333,10 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               <button 
                 onClick={handleFinalize}
                 className={cn(
-                  "flex items-center gap-3 px-12 py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-xl",
+                  "flex items-center gap-3 px-12 py-4 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-xl",
                   Math.abs(stats.difference) < 1 
-                    ? "bg-[var(--ink)] text-[var(--panel)] hover:brightness-110 shadow-ledger-google-blue/20" 
-                    : "bg-[var(--ink)] text-[var(--muted)]/30 cursor-not-allowed border border-[var(--line)] grayscale"
+                    ? "bg-slate-900 text-white hover:brightness-110 shadow-ledger-google-blue/20" 
+                    : "bg-[var(--ink)] text-slate-500/30 cursor-not-allowed border border-[var(--line)] grayscale"
                 )}
               >
                 <CheckCircle2 size={18} />

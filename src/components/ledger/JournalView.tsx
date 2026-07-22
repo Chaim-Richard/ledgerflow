@@ -25,26 +25,26 @@ export default function JournalView({ journalEntries = [], formatCurrency }: Jou
       <div style={style} className="px-5 flex items-center border-b border-[var(--line)] hover:bg-[var(--ink)] transition-all cursor-pointer group">
          <div className="grid grid-cols-[80px_1fr_120px_150px] w-full items-center gap-4 py-3 px-2">
             <div className="flex flex-col">
-               <span className="text-[8px] font-bold text-[var(--faint)] uppercase tracking-wider">Date</span>
+               <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Date</span>
                <span className="font-mono text-xs text-slate-600 font-semibold">{format(new Date(entry.date), 'dd.MM.yy')}</span>
             </div>
             
             <div className="flex flex-col">
-               <span className="text-[8px] font-bold text-[var(--faint)] uppercase tracking-wider">Description</span>
+               <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Description</span>
                <span className="font-bold text-xs text-[var(--text)] tracking-tight truncate">
                  {entry.description || 'General Slip Entry'}
                </span>
             </div>
 
             <div className="flex flex-col">
-               <span className="text-[8px] font-bold text-[var(--faint)] uppercase tracking-wider">Reference</span>
-               <span className="font-mono text-[10px] text-[var(--muted)]">
+               <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Reference</span>
+               <span className="font-mono text-[10px] text-slate-500">
                  {entry.reference || `CB-${(entry.id || 'xxxxxx').substring(0, 6).toUpperCase()}`}
                </span>
             </div>
 
             <div className="flex flex-col items-end">
-               <span className="text-[8px] font-bold text-[var(--faint)] uppercase tracking-wider">Magnitude</span>
+               <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Magnitude</span>
                <span className="font-mono text-xs font-bold text-[var(--text)]">
                  {formatCurrency(totalDebits)}
                </span>
@@ -55,29 +55,29 @@ export default function JournalView({ journalEntries = [], formatCurrency }: Jou
   };
 
   return (
-    <div className="bg-[var(--panel)] border border-[var(--line)] rounded-2xl shadow-sm overflow-hidden flex-1 min-h-[500px] flex flex-col relative">
+    <div className="bg-[var(--surface)] border border-[var(--line)]/85 rounded-xl shadow-3xs overflow-hidden flex-1 min-h-[500px] flex flex-col relative">
        <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
        
        <div className="p-4 border-b border-slate-150 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[var(--ink)] shrink-0 relative z-10 gap-3">
         <div>
           <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider leading-none">Journal Protocol</h3>
-          <p className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider mt-1">Verified Cryptographic Log</p>
+          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Verified Cryptographic Log</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] rounded-lg text-[9px] font-bold uppercase tracking-wider hover:border-slate-400 transition-colors cursor-pointer">
+          <button className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-[9px] font-bold uppercase tracking-wider hover:border-slate-400 transition-colors cursor-pointer">
              <Activity size={12} className="text-blue-500 shrink-0" />
              Metrics
           </button>
-          <button className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--ink)] text-[var(--panel)] rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-all cursor-pointer">
+          <button className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-all cursor-pointer">
             <FileSearch size={12} className="shrink-0" />
             Full Audit
           </button>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 bg-[var(--panel)] relative z-10 overflow-x-auto custom-scrollbar">
+      <div className="flex-1 min-h-0 bg-[var(--surface)] relative z-10 overflow-x-auto custom-scrollbar">
         {sortedEntries.length > 0 ? (
-          <React.Suspense fallback={<div className="p-6 text-center text-xs font-mono uppercase text-[var(--faint)]">Opening Table...</div>}>
+          <React.Suspense fallback={<div className="p-6 text-center text-xs font-mono uppercase text-slate-400">Opening Table...</div>}>
             <AutoSizer>
               {({ height, width }) => (
                 <List
@@ -94,10 +94,10 @@ export default function JournalView({ journalEntries = [], formatCurrency }: Jou
           </React.Suspense>
         ) : (
           <div className="h-full flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-12 h-12 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex items-center justify-center text-[var(--faint)] mx-auto mb-3 shadow-sm">
+            <div className="w-12 h-12 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex items-center justify-center text-slate-400 mx-auto mb-3 shadow-3xs">
                <Activity size={20} />
             </div>
-            <p className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider">Log Matrix Zero State</p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Log Matrix Zero State</p>
           </div>
         )}
       </div>

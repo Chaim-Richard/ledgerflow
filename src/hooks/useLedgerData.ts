@@ -174,7 +174,7 @@ export function useLedgerData() {
 
       if (updateTimer) clearTimeout(updateTimer);
       // Increased window for high-volume logs and history to prevent UI lockup
-      const window = (key === 'auditLogs' || key === 'bankLines') ? 500 : 100;
+      const debounceMs = (key === 'auditLogs' || key === 'bankLines') ? 500 : 100;
       
       updateTimer = setTimeout(() => {
         const updatesToApply: any = { ...pendingUpdates };
@@ -188,7 +188,7 @@ export function useLedgerData() {
             store[setterName](value);
           }
         });
-      }, window);
+      }, debounceMs);
     };
 
     const criticalListeners = [
@@ -218,9 +218,6 @@ export function useLedgerData() {
     const secondaryTimer = setTimeout(() => {
       if (!isCurrent.active) return;
       const secondaryUnsubs = [
-        onSnapshot(query(collection(db, 'journalEntries'), ...filter), (snap) => {
-          scheduleUpdate('journalEntries', snap.docs.map(d => ({ id: d.id, ...d.data() } as JournalEntry)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'journalEntries')),
         onSnapshot(query(collection(db, 'budgets'), ...filter), (snap) => {
           scheduleUpdate('budgets', snap.docs.map(d => ({ id: d.id, ...d.data() } as Budget)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'budgets')),

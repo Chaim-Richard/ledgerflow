@@ -168,14 +168,14 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-2xl bg-[var(--ink)] border border-slate-800 rounded-xl shadow-2xl z-[60] overflow-hidden font-mono"
+            className="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-[32px] shadow-2xl z-[60] overflow-hidden font-mono"
           >
             <div className="bg-slate-800 px-5 py-3.5 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-3">
                 <Terminal size={16} className="text-indigo-400" />
                 <span className="text-[11px] font-medium text-slate-100 uppercase tracking-wider">System Terminal :: LedgerFlow</span>
               </div>
-              <button onClick={onClose} className="text-[var(--faint)] hover:text-[var(--panel)] transition-colors">
+              <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
                 <X size={18} />
               </button>
             </div>
@@ -201,33 +201,33 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
               )}
             </div>
 
-            <form onSubmit={handleCommand} className="px-6 py-4 bg-[var(--ink)] border-t border-slate-800 flex items-center gap-3">
+            <form onSubmit={handleCommand} className="px-6 py-4 bg-slate-900 border-t border-slate-800 flex items-center gap-3">
               <ChevronRight size={16} className="text-indigo-400" />
               <input 
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type a command..."
-                className="flex-1 bg-transparent border-none outline-none text-slate-100 text-[13px] placeholder:text-[var(--muted)]"
+                className="flex-1 bg-transparent border-none outline-none text-slate-100 text-[13px] placeholder:text-slate-500"
               />
               <div className="flex items-center gap-2 px-2.5 py-1 bg-slate-800 rounded-md border border-slate-800">
-                <Command size={10} className="text-[var(--faint)]" />
-                <span className="text-[10px] font-medium text-[var(--faint)]">ENTER</span>
+                <Command size={10} className="text-slate-400" />
+                <span className="text-[10px] font-medium text-slate-400">ENTER</span>
               </div>
             </form>
 
             <div className="bg-slate-950 px-6 py-2.5 flex items-center gap-8 border-t border-slate-800">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,168,83,0.4)]" />
-                <span className="text-[10px] text-[var(--faint)] uppercase font-medium tracking-wider">Connected</span>
+                <span className="text-[10px] text-slate-400 uppercase font-medium tracking-wider">Connected</span>
               </div>
               <div className="flex items-center gap-2">
-                <Globe size={11} className="text-[var(--faint)]" />
-                <span className="text-[10px] text-[var(--faint)] uppercase font-medium tracking-wider">TLS 1.3 Encryption</span>
+                <Globe size={11} className="text-slate-400" />
+                <span className="text-[10px] text-slate-400 uppercase font-medium tracking-wider">TLS 1.3 Encryption</span>
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <Sparkles size={11} className="text-indigo-400" />
-                <span className="text-[10px] text-[var(--faint)] uppercase font-medium tracking-wider">AI Guard Active</span>
+                <span className="text-[10px] text-slate-400 uppercase font-medium tracking-wider">AI Guard Active</span>
               </div>
             </div>
           </motion.div>

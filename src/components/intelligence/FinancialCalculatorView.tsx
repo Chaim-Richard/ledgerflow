@@ -67,21 +67,21 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Fixed Operating Costs ($)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Fixed Operating Costs ($)</label>
                 <input type="number" value={fixedCosts} onChange={e => setFixedCosts(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Unit Price ($)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Unit Price ($)</label>
                 <input type="number" value={unitPrice} onChange={e => setUnitPrice(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Variable Cost per Unit ($)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Variable Cost per Unit ($)</label>
                 <input type="number" value={unitVarCost} onChange={e => setUnitVarCost(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 bg-[var(--panel)] text-[var(--text)] rounded-xl border border-[var(--line)] shadow-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 bg-[var(--panel)] text-[var(--text)] rounded-[32px] border border-[var(--line)] shadow-lg">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brass)]">Required Break-Even Units</span>
                 <p className="text-3xl font-black mt-1">{breakEvenUnits.toLocaleString()} Units</p>
@@ -104,30 +104,30 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Principal Amount ($)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Principal Amount ($)</label>
                 <input type="number" value={principal} onChange={e => setPrincipal(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Annual Interest Rate (%)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Annual Interest Rate (%)</label>
                 <input type="number" step="0.1" value={rate} onChange={e => setRate(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Duration (Years)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Duration (Years)</label>
                 <input type="number" value={years} onChange={e => setYears(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 bg-[var(--ink)] text-[var(--panel)] rounded-xl border border-slate-800">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 bg-slate-900 text-white rounded-[32px] border border-slate-800">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Future Value</span>
                 <p className="text-3xl font-black mt-1">${Math.round(futureVal).toLocaleString()}</p>
-                <p className="text-xs text-[var(--faint)] mt-1">Total accumulated value after {years} years</p>
+                <p className="text-xs text-slate-400 mt-1">Total accumulated value after {years} years</p>
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">Compounded Interest Yield</span>
                 <p className="text-3xl font-black mt-1">${Math.round(totalInterest).toLocaleString()}</p>
-                <p className="text-xs text-[var(--faint)] mt-1">Gain over initial principal</p>
+                <p className="text-xs text-slate-400 mt-1">Gain over initial principal</p>
               </div>
             </div>
           </div>
@@ -138,15 +138,15 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
         const yearsToDouble = rate > 0 ? (72 / rate).toFixed(1) : '∞';
         return (
           <div className="space-y-6">
-            <div className="p-4 bg-[var(--surface)] rounded-2xl max-w-md">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Annual Growth / Rate of Return (%)</label>
+            <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl max-w-md">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Annual Growth / Rate of Return (%)</label>
               <input type="number" step="0.5" value={rate} onChange={e => setRate(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
             </div>
 
-            <div className="p-6 bg-[var(--ink)] text-[var(--panel)] rounded-xl border border-slate-800">
+            <div className="p-6 bg-slate-900 text-white rounded-[32px] border border-slate-800">
               <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">Estimated Years to Double Capital</span>
               <p className="text-4xl font-black mt-2">{yearsToDouble} Years</p>
-              <p className="text-xs text-[var(--faint)] mt-2">At a constant return of {rate}%, capital doubles every {yearsToDouble} years.</p>
+              <p className="text-xs text-slate-400 mt-2">At a constant return of {rate}%, capital doubles every {yearsToDouble} years.</p>
             </div>
           </div>
         );
@@ -157,24 +157,24 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Monthly ARPU ($)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Monthly ARPU ($)</label>
                 <input type="number" value={arpu} onChange={e => setArpu(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Gross Margin (%)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Gross Margin (%)</label>
                 <input type="number" value={marginPct} onChange={e => setMarginPct(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Monthly Churn Rate (%)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Monthly Churn Rate (%)</label>
                 <input type="number" step="0.1" value={churn} onChange={e => setChurn(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
             </div>
 
-            <div className="p-6 bg-[var(--ink)] text-[var(--panel)] rounded-xl border border-slate-800">
+            <div className="p-6 bg-slate-900 text-white rounded-[32px] border border-slate-800">
               <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Customer Lifetime Value (LTV)</span>
               <p className="text-4xl font-black mt-2">${Math.round(ltvVal).toLocaleString()}</p>
-              <p className="text-xs text-[var(--faint)] mt-2">Expected net profit generated per customer relationship</p>
+              <p className="text-xs text-slate-400 mt-2">Expected net profit generated per customer relationship</p>
             </div>
           </div>
         );
@@ -185,20 +185,20 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Total Marketing & Sales Cost ($)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Total Marketing & Sales Cost ($)</label>
                 <input type="number" value={mktgCost} onChange={e => setMktgCost(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">New Acquired Customers</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">New Acquired Customers</label>
                 <input type="number" value={newCustomers} onChange={e => setNewCustomers(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
             </div>
 
-            <div className="p-6 bg-[var(--ink)] text-[var(--panel)] rounded-xl border border-slate-800">
+            <div className="p-6 bg-slate-900 text-white rounded-[32px] border border-slate-800">
               <span className="text-[10px] font-bold uppercase tracking-widest text-rose-400">Customer Acquisition Cost (CAC)</span>
               <p className="text-4xl font-black mt-2">${cacVal.toLocaleString()}</p>
-              <p className="text-xs text-[var(--faint)] mt-2">Average cost required to acquire one new customer</p>
+              <p className="text-xs text-slate-400 mt-2">Average cost required to acquire one new customer</p>
             </div>
           </div>
         );
@@ -210,26 +210,26 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Total Ad Spend ($)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Total Ad Spend ($)</label>
                 <input type="number" value={adSpend} onChange={e => setAdSpend(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Attributable Ad Revenue ($)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Attributable Ad Revenue ($)</label>
                 <input type="number" value={adRevenue} onChange={e => setAdRevenue(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 bg-[var(--ink)] text-[var(--panel)] rounded-xl border border-slate-800">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 bg-slate-900 text-white rounded-[32px] border border-slate-800">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">ROAS Multiple</span>
                 <p className="text-4xl font-black mt-1">{roasVal}x</p>
-                <p className="text-xs text-[var(--faint)] mt-1">For every $1 spent on ads, ${roasVal} revenue is generated</p>
+                <p className="text-xs text-slate-400 mt-1">For every $1 spent on ads, ${roasVal} revenue is generated</p>
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">ROAS Percentage</span>
                 <p className="text-4xl font-black mt-1">{roasPct}%</p>
-                <p className="text-xs text-[var(--faint)] mt-1">Return on marketing capital efficiency</p>
+                <p className="text-xs text-slate-400 mt-1">Return on marketing capital efficiency</p>
               </div>
             </div>
           </div>
@@ -241,20 +241,20 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Net Operating Income (NOI) ($)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Net Operating Income (NOI) ($)</label>
                 <input type="number" value={noi} onChange={e => setNoi(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Asset Value / Purchase Price ($)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Asset Value / Purchase Price ($)</label>
                 <input type="number" value={propValue} onChange={e => setPropValue(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
             </div>
 
-            <div className="p-6 bg-[var(--ink)] text-[var(--panel)] rounded-xl border border-slate-800">
+            <div className="p-6 bg-slate-900 text-white rounded-[32px] border border-slate-800">
               <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">Capitalization Rate (Cap Rate)</span>
               <p className="text-4xl font-black mt-2">{capRateVal}%</p>
-              <p className="text-xs text-[var(--faint)] mt-2">Unleveraged rate of return generated by the asset</p>
+              <p className="text-xs text-slate-400 mt-2">Unleveraged rate of return generated by the asset</p>
             </div>
           </div>
         );
@@ -270,24 +270,24 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Cost of Equity (%)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Cost of Equity (%)</label>
                 <input type="number" step="0.1" value={costEquity} onChange={e => setCostEquity(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Pre-Tax Cost of Debt (%)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Pre-Tax Cost of Debt (%)</label>
                 <input type="number" step="0.1" value={costDebt} onChange={e => setCostDebt(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Corporate Tax Rate (%)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Corporate Tax Rate (%)</label>
                 <input type="number" value={taxRate} onChange={e => setTaxRate(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
             </div>
 
-            <div className="p-6 bg-[var(--ink)] text-[var(--panel)] rounded-xl border border-slate-800">
+            <div className="p-6 bg-slate-900 text-white rounded-[32px] border border-slate-800">
               <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">Weighted Average Cost of Capital (WACC)</span>
               <p className="text-4xl font-black mt-2">{waccVal}%</p>
-              <p className="text-xs text-[var(--faint)] mt-2">Hurdle rate required to generate economic value add (EVA)</p>
+              <p className="text-xs text-slate-400 mt-2">Hurdle rate required to generate economic value add (EVA)</p>
             </div>
           </div>
         );
@@ -299,20 +299,20 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Initial Outlay ($)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Initial Outlay ($)</label>
                 <input type="number" value={initialInv} onChange={e => setInitialInv(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
-              <div className="p-4 bg-[var(--surface)] rounded-2xl">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">Discount Rate / Hurdle Rate (%)</label>
+              <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Discount Rate / Hurdle Rate (%)</label>
                 <input type="number" step="0.5" value={discountRate} onChange={e => setDiscountRate(Number(e.target.value))} className="w-full text-lg font-bold bg-[var(--ink)] border border-[var(--line)] rounded-xl p-2.5 text-[var(--text)]" />
               </div>
             </div>
 
-            <div className="p-6 bg-[var(--ink)] text-[var(--panel)] rounded-xl border border-slate-800">
+            <div className="p-6 bg-slate-900 text-white rounded-[32px] border border-slate-800">
               <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Net Present Value (NPV)</span>
               <p className="text-4xl font-black mt-2">${Math.round(npvVal).toLocaleString()}</p>
-              <p className="text-xs text-[var(--faint)] mt-2">{npvVal >= 0 ? 'Project creates value above required discount hurdle rate' : 'Project destroys value at current discount rate'}</p>
+              <p className="text-xs text-slate-400 mt-2">{npvVal >= 0 ? 'Project creates value above required discount hurdle rate' : 'Project destroys value at current discount rate'}</p>
             </div>
           </div>
         );
@@ -329,25 +329,25 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-5 bg-[var(--surface)] rounded-2xl">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted)]">Current Ratio</span>
+              <div className="p-5 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Current Ratio</span>
                 <p className="text-2xl font-black text-[var(--text)] mt-1">{currentRatio}</p>
-                <p className="text-[10px] text-[var(--faint)] mt-1">Total Assets / Total Liabilities</p>
+                <p className="text-[10px] text-slate-400 mt-1">Total Assets / Total Liabilities</p>
               </div>
-              <div className="p-5 bg-[var(--surface)] rounded-2xl">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted)]">Gross Margin</span>
+              <div className="p-5 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Gross Margin</span>
                 <p className="text-2xl font-black text-emerald-600 mt-1">{grossMargin}%</p>
-                <p className="text-[10px] text-[var(--faint)] mt-1">Derived from live ledger entries</p>
+                <p className="text-[10px] text-slate-400 mt-1">Derived from live ledger entries</p>
               </div>
-              <div className="p-5 bg-[var(--surface)] rounded-2xl">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted)]">Net Profit Margin</span>
+              <div className="p-5 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Net Profit Margin</span>
                 <p className="text-2xl font-black text-indigo-600 mt-1">{netMargin}%</p>
-                <p className="text-[10px] text-[var(--faint)] mt-1">Live net profitability yield</p>
+                <p className="text-[10px] text-slate-400 mt-1">Live net profitability yield</p>
               </div>
-              <div className="p-5 bg-[var(--surface)] rounded-2xl">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted)]">Estimated EBITDA</span>
+              <div className="p-5 bg-[var(--surface)] border border-[var(--line)] rounded-2xl">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Estimated EBITDA</span>
                 <p className="text-2xl font-black text-[var(--text)] mt-1">${ebitdaVal.toLocaleString()}</p>
-                <p className="text-[10px] text-[var(--faint)] mt-1">Operational earnings indicator</p>
+                <p className="text-[10px] text-slate-400 mt-1">Operational earnings indicator</p>
               </div>
             </div>
           </div>
@@ -357,7 +357,7 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
   };
 
   return (
-    <div className="p-6 md:p-8 bg-[var(--surface)]/80 rounded-xl shadow-sm space-y-6">
+    <div className="p-6 md:p-8 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-sm space-y-6">
       <div className="flex items-center gap-3 border-b border-[var(--line)] pb-5">
         <div className="w-10 h-10 bg-[var(--brass)] text-black rounded-xl flex items-center justify-center font-bold">
           <Calculator size={20} />
@@ -366,7 +366,7 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
           <h2 className="text-lg font-bold text-[var(--text)] uppercase tracking-tight">
             {type.toUpperCase()} Analytical Lens Calculator
           </h2>
-          <p className="text-xs text-[var(--muted)] font-mono">
+          <p className="text-xs text-slate-500 font-mono">
             Interactive financial computation powered by live workspace ledger physics
           </p>
         </div>

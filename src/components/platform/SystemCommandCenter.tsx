@@ -376,19 +376,19 @@ export default function SystemCommandCenter() {
       {/* Header section matching upgraded architecture */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[var(--line)]">
         <div>
-          <div className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest truncate mb-1">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate mb-1">
             <Server size={12} />
             Institutional Telemetry & Control Tower
           </div>
           <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Admin Panel</h2>
-          <p className="text-[var(--muted)] font-medium text-lg mt-2 italic opacity-60">Consolidated platform health, multi-tenant matrices, live billing pipelines, and granular override dials.</p>
+          <p className="text-slate-500 font-medium text-lg mt-2 italic opacity-60">Consolidated platform health, multi-tenant matrices, live billing pipelines, and granular override dials.</p>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="p-4 bg-[var(--surface)] rounded-xl flex items-center gap-3 shadow-sm">
+          <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] flex items-center gap-3 shadow-3xs">
             <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
             <div>
-              <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest leading-none">Diagnostic Socket</p>
+              <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-none">Diagnostic Socket</p>
               <p className="text-xs font-bold text-emerald-600 uppercase mt-0.5 tracking-wider">ONLINE</p>
             </div>
           </div>
@@ -398,14 +398,14 @@ export default function SystemCommandCenter() {
       {loading && !telemetry ? (
         <div className="h-96 flex items-center justify-center flex-col gap-3">
           <Loader2 className="animate-spin text-[var(--text)] opacity-40" size={32} />
-          <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">Hooking operational datastream...</span>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Hooking operational datastream...</span>
         </div>
       ) : !telemetry || !telemetry.tenants ? (
-        <div className="h-96 flex flex-col items-center justify-center gap-4 border border-dashed border-[var(--line)] rounded-xl">
+        <div className="h-96 flex flex-col items-center justify-center gap-4 border border-dashed border-[var(--line)] rounded-[32px]">
           <AlertOctagon size={40} className="text-rose-500 opacity-60" />
           <div className="text-center">
             <h3 className="text-sm font-black text-[var(--text)] uppercase tracking-wider">Interface Refused</h3>
-            <p className="text-xs text-[var(--muted)] mt-1">Unable to construct reliable stream channel to backend metrics.</p>
+            <p className="text-xs text-slate-500 mt-1">Unable to construct reliable stream channel to backend metrics.</p>
           </div>
         </div>
       ) : (
@@ -445,7 +445,7 @@ export default function SystemCommandCenter() {
 
           {activeMainTab === 'lexicon' ? (
             <div className="space-y-8">
-              <div className="bg-[var(--surface)] rounded-xl shadow-sm overflow-hidden">
+              <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-3xs overflow-hidden">
                 <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]">
                   <div className="flex items-center gap-3">
                     <BookA size={16} className="text-[#0047AB]" />
@@ -453,7 +453,7 @@ export default function SystemCommandCenter() {
                   </div>
                 </div>
                 <div className="p-6 md:p-8 space-y-6">
-                  <p className="text-sm text-[var(--muted)]">
+                  <p className="text-sm text-slate-500">
                     Use this administrative panel to override any hardcoded text across the system. This allows full white-labeling and customization of the site's terminology. Changes here are applied instantly for all users.
                   </p>
                   
@@ -468,7 +468,7 @@ export default function SystemCommandCenter() {
                               type="text"
                               value={currentVal}
                               onChange={e => setLexiconOverride(key, 'en', e.target.value)}
-                              className="w-full bg-[var(--panel)] border border-[var(--line)] rounded-2xl px-3 py-2 text-sm font-medium focus:border-[#0047AB] focus:ring-2 focus:ring-[#0047AB]/20 transition-all"
+                              className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2 text-sm font-medium focus:border-[#0047AB] focus:ring-2 focus:ring-[#0047AB]/20 transition-all"
                             />
                           </div>
                         );
@@ -480,17 +480,17 @@ export default function SystemCommandCenter() {
           ) : activeMainTab === 'users' ? (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               <div className="xl:col-span-2 space-y-8">
-                <div className="bg-[var(--surface)] rounded-xl shadow-sm overflow-hidden">
+                <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-3xs overflow-hidden">
                   <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]">
                     <div className="flex items-center gap-3">
-                      <Users size={16} className="text-[var(--muted)]" />
+                      <Users size={16} className="text-slate-500" />
                       <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Platform User Ledger</h3>
                     </div>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                       <thead>
-                        <tr className="border-b border-[var(--line)] bg-[var(--surface)] text-[9px] font-bold uppercase tracking-wider text-[var(--faint)]">
+                        <tr className="border-b border-[var(--line)] bg-[var(--surface)] text-[9px] font-bold uppercase tracking-wider text-slate-400">
                           <th className="py-4 px-6 font-medium">User Details</th>
                           <th className="py-4 px-6 font-medium">Role</th>
                           <th className="py-4 px-6 font-medium text-right">Custom Limit ($)</th>
@@ -504,7 +504,7 @@ export default function SystemCommandCenter() {
                             <td className="py-4 px-6">
                               <div className="flex flex-col">
                                 <span className="text-xs font-bold text-[var(--text)]">{u.email || 'Unknown Email'}</span>
-                                <span className="text-[10px] font-mono text-[var(--faint)]">{u.uid}</span>
+                                <span className="text-[10px] font-mono text-slate-400">{u.uid}</span>
                               </div>
                             </td>
                             <td className="py-4 px-6">
@@ -537,7 +537,7 @@ export default function SystemCommandCenter() {
                         ))}
                         {usersList.length === 0 && (
                           <tr>
-                            <td colSpan={5} className="py-12 text-center text-[10px] uppercase font-bold tracking-widest text-[var(--faint)]">
+                            <td colSpan={5} className="py-12 text-center text-[10px] uppercase font-bold tracking-widest text-slate-400">
                               No user records located.
                             </td>
                           </tr>
@@ -551,7 +551,7 @@ export default function SystemCommandCenter() {
               {/* Edit User Panel */}
               <div className="xl:col-span-1 space-y-6">
                 <div className={cn(
-                  "bg-[var(--panel)] border rounded-2xl p-6 transition-all duration-300 shadow-xl",
+                  "bg-[var(--surface)] border rounded-[32px] p-6 transition-all duration-300 shadow-xl",
                   editingUser ? "border-[#0047AB] ring-4 ring-[#0047AB]/5" : "border-[var(--line)] opacity-50 pointer-events-none grayscale"
                 )}>
                   <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[var(--line)]">
@@ -563,7 +563,7 @@ export default function SystemCommandCenter() {
                       {editingUser && (
                         <div className="flex flex-col mt-1">
                           <span className="text-[11px] font-bold text-slate-700">{editingUser.email || 'Unknown Email'}</span>
-                          <span className="text-[9px] font-mono text-[var(--muted)]">{editingUser.uid}</span>
+                          <span className="text-[9px] font-mono text-slate-500">{editingUser.uid}</span>
                         </div>
                       )}
                     </div>
@@ -573,7 +573,7 @@ export default function SystemCommandCenter() {
                     <form onSubmit={handleSaveUser} className="space-y-6">
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                             Authority Role
                           </label>
                           <select 
@@ -586,7 +586,7 @@ export default function SystemCommandCenter() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                             Custom Monetary Limit (Cents)
                           </label>
                           <input 
@@ -598,7 +598,7 @@ export default function SystemCommandCenter() {
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                             Compute Credit Ceiling
                           </label>
                           <input 
@@ -610,7 +610,7 @@ export default function SystemCommandCenter() {
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                             Quick Actions
                           </label>
                           <div className="flex gap-2">
@@ -636,14 +636,14 @@ export default function SystemCommandCenter() {
                         <button
                           type="button"
                           onClick={() => setEditingUser(null)}
-                          className="flex-1 px-4 py-3 border border-[var(--line)] rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--muted)] hover:bg-[var(--ink)] transition-all"
+                          className="flex-1 px-4 py-3 border border-[var(--line)] rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-[var(--ink)] transition-all"
                         >
                           Cancel
                         </button>
                         <button
                           type="submit"
                           disabled={savingUser}
-                          className="flex-[2] px-4 py-3 bg-[#0047AB] text-[var(--panel)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#003380] transition-all disabled:opacity-50"
+                          className="flex-[2] px-4 py-3 bg-[#0047AB] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#003380] transition-all disabled:opacity-50"
                         >
                           {savingUser ? 'Syncing...' : 'Deploy Directives'}
                         </button>
@@ -651,7 +651,7 @@ export default function SystemCommandCenter() {
                     </form>
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--faint)]">Select a user profile to override limits & roles</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Select a user profile to override limits & roles</p>
                     </div>
                   )}
                 </div>
@@ -663,45 +663,45 @@ export default function SystemCommandCenter() {
           <div className="xl:col-span-2 space-y-8">
             {/* Stat Cards Row */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="bg-[var(--panel)] p-4 md:p-8 rounded-2xl shadow-sm hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
+              <div className="bg-[var(--surface)] border border-[var(--line)] p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none group-hover:opacity-[0.05] transition-all">
                   <Database size={80} />
                 </div>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-[var(--ink)] text-[var(--panel)] rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center">
                     <Database size={18} />
                   </div>
-                  <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Active Tenants</h4>
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Tenants</h4>
                 </div>
                 <h3 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">{telemetry.tenants.length}</h3>
-                <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-2">Isolated workspaces in sync</p>
+                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-2">Isolated workspaces in sync</p>
               </div>
 
-              <div className="bg-[var(--panel)] p-4 md:p-8 rounded-2xl shadow-sm hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
+              <div className="bg-[var(--surface)] border border-[var(--line)] p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none group-hover:opacity-[0.05] transition-all">
                   <Activity size={80} />
                 </div>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-[var(--ink)] text-[var(--panel)] rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center">
                     <Activity size={18} />
                   </div>
-                  <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Global Ledger Rows</h4>
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Global Ledger Rows</h4>
                 </div>
                 <h3 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">
                   {telemetry.tenants.reduce((acc: number, t: any) => acc + t.txCount, 0).toLocaleString()}
                 </h3>
-                <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-2">Total transactional assertions</p>
+                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-2">Total transactional assertions</p>
               </div>
 
-              <div className="bg-[var(--panel)] p-4 md:p-8 rounded-2xl shadow-sm hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
+              <div className="bg-[var(--surface)] border border-[var(--line)] p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none group-hover:opacity-[0.05] transition-all">
                   <AlertOctagon size={80} />
                 </div>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-rose-500/10 text-rose-600 rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-rose-500/10 text-rose-600 rounded-[32px] flex items-center justify-center">
                     <AlertOctagon size={18} />
                   </div>
-                  <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">API Incidents (400+)</h4>
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">API Incidents (400+)</h4>
                 </div>
                 <h3 className="text-2xl md:text-4xl font-black font-mono text-rose-600 tracking-tight">{totalErrors}</h3>
                 <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-2">Aggregated active warning nodes</p>
@@ -709,17 +709,17 @@ export default function SystemCommandCenter() {
             </div>
 
             {/* Global Pricing Overrides Panel & Bulk Updater */}
-            <div className="bg-[var(--ink)] border border-slate-800 text-[var(--panel)] rounded-xl p-4 md:p-10 shadow-lg relative overflow-hidden">
+            <div className="bg-slate-900 border border-slate-800 text-white rounded-[32px] p-4 md:p-10 shadow-lg relative overflow-hidden">
               <div className="absolute inset-0 technical-grid opacity-[0.03] pointer-events-none" />
               
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-500/30">
+                  <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-[32px] flex items-center justify-center border border-indigo-500/30">
                     <Sliders size={24} className="text-indigo-400" />
                   </div>
                   <div>
                     <h3 className="text-xl font-black uppercase tracking-tight italic">Global Baseline Billing & Multiplier Registry</h3>
-                    <p className="text-[10px] text-[var(--panel)]/40 font-bold tracking-widest uppercase mt-1">Configure standard fallback coefficients applied automatically or synced globally</p>
+                    <p className="text-[10px] text-white/40 font-bold tracking-widest uppercase mt-1">Configure standard fallback coefficients applied automatically or synced globally</p>
                   </div>
                 </div>
 
@@ -728,7 +728,7 @@ export default function SystemCommandCenter() {
                   type="button"
                   disabled={bulkSyncing || telemetry.tenants.length === 0}
                   onClick={handleBulkApplyBaseline}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-[var(--panel)] font-black text-[10px] uppercase tracking-widest rounded-xl shadow-md transition-all flex items-center gap-2 border border-indigo-400/30 disabled:opacity-40"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-md transition-all flex items-center gap-2 border border-indigo-400/30 disabled:opacity-40"
                 >
                   <RefreshCw size={11} className={cn(bulkSyncing && "animate-spin")} />
                   Sync to All Workspaces
@@ -742,7 +742,7 @@ export default function SystemCommandCenter() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="mb-6 p-4 bg-indigo-950/40 border border-indigo-500/30 rounded-xl space-y-3"
+                    className="mb-6 p-4 bg-indigo-950/40 border border-indigo-500/30 rounded-[32px] space-y-3"
                   >
                     <div className="flex justify-between items-center text-xs font-mono">
                       <span className="text-indigo-300 uppercase font-black tracking-widest text-[9px] flex items-center gap-2">
@@ -767,7 +767,7 @@ export default function SystemCommandCenter() {
                 {/* Multiplier 1 */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <label className="block text-[10px] font-bold text-[var(--panel)]/50 uppercase tracking-widest ml-0.5">
+                    <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
                       Credit Cost Multiplier
                     </label>
                     <span className="text-[10px] font-mono text-indigo-400 font-bold">{globalConfig.creditCostMultiplier}x</span>
@@ -781,7 +781,7 @@ export default function SystemCommandCenter() {
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, creditCostMultiplier: Number(e.target.value) }))}
                     className="w-full h-1.5 bg-[var(--surface)]/10 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                   />
-                  <div className="flex justify-between text-[8px] text-[var(--panel)]/30 font-bold uppercase">
+                  <div className="flex justify-between text-[8px] text-white/30 font-bold uppercase">
                     <span>Free</span>
                     <span>Standard (1.0)</span>
                     <span>High (5.0)</span>
@@ -791,7 +791,7 @@ export default function SystemCommandCenter() {
                 {/* Multiplier 2 */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <label className="block text-[10px] font-bold text-[var(--panel)]/50 uppercase tracking-widest ml-0.5">
+                    <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
                       Platform spend Multiplier
                     </label>
                     <span className="text-[10px] font-mono text-indigo-400 font-bold">{globalConfig.quotaCentsMultiplier}x</span>
@@ -805,7 +805,7 @@ export default function SystemCommandCenter() {
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, quotaCentsMultiplier: Number(e.target.value) }))}
                     className="w-full h-1.5 bg-[var(--surface)]/10 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                   />
-                  <div className="flex justify-between text-[8px] text-[var(--panel)]/30 font-bold uppercase">
+                  <div className="flex justify-between text-[8px] text-white/30 font-bold uppercase">
                     <span>Free Spend</span>
                     <span>1.0x</span>
                     <span>Premium (5.0)</span>
@@ -814,7 +814,7 @@ export default function SystemCommandCenter() {
 
                 {/* Self API key credits */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-[var(--panel)]/50 uppercase tracking-widest ml-0.5">
+                  <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
                     Key Overhead Credits
                   </label>
                   <input
@@ -823,14 +823,14 @@ export default function SystemCommandCenter() {
                     max="1000"
                     value={globalConfig.customKeyCreditCharge}
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, customKeyCreditCharge: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-[var(--panel)] focus:border-[#0047AB] outline-none transition-all"
+                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
                   />
-                  <p className="text-[9px] text-[var(--panel)]/30 uppercase font-black">standard: 10 per call</p>
+                  <p className="text-[9px] text-white/30 uppercase font-black">standard: 10 per call</p>
                 </div>
 
                 {/* Self API key cents */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-[var(--panel)]/50 uppercase tracking-widest ml-0.5">
+                  <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
                     Key Overhead Cents
                   </label>
                   <input
@@ -839,14 +839,14 @@ export default function SystemCommandCenter() {
                     max="100"
                     value={globalConfig.customKeyCentsCharge}
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, customKeyCentsCharge: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-[var(--panel)] focus:border-[#0047AB] outline-none transition-all"
+                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
                   />
-                  <p className="text-[9px] text-[var(--panel)]/30 uppercase font-black">standard: 0 cents</p>
+                  <p className="text-[9px] text-white/30 uppercase font-black">standard: 0 cents</p>
                 </div>
 
                 {/* User Limit Cap */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-[var(--panel)]/50 uppercase tracking-widest ml-0.5">
+                  <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
                     User Registration Limit
                   </label>
                   <input
@@ -855,14 +855,14 @@ export default function SystemCommandCenter() {
                     max="10000"
                     value={globalConfig.maxRegistrationLimit ?? 100}
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, maxRegistrationLimit: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-[var(--panel)] focus:border-[#0047AB] outline-none transition-all"
+                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
                   />
-                  <p className="text-[9px] text-[var(--panel)]/30 uppercase font-black">limit total users</p>
+                  <p className="text-[9px] text-white/30 uppercase font-black">limit total users</p>
                 </div>
 
                 {/* Free Tx Cap */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-[var(--panel)]/50 uppercase tracking-widest ml-0.5">
+                  <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
                     Free Tier Tx Cap
                   </label>
                   <input
@@ -871,9 +871,9 @@ export default function SystemCommandCenter() {
                     max="100000"
                     value={globalConfig.freeWorkspaceTxCap ?? 100}
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, freeWorkspaceTxCap: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-[var(--panel)] focus:border-[#0047AB] outline-none transition-all"
+                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
                   />
-                  <p className="text-[9px] text-[var(--panel)]/30 uppercase font-black">cap per free workspace</p>
+                  <p className="text-[9px] text-white/30 uppercase font-black">cap per free workspace</p>
                 </div>
 
                 {/* Submit button */}
@@ -881,7 +881,7 @@ export default function SystemCommandCenter() {
                   <button
                     type="submit"
                     disabled={updatingGlobal}
-                    className="w-full h-11 bg-[#0047AB] hover:bg-[#0047AB]/90 text-[var(--panel)] rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
+                    className="w-full h-11 bg-[#0047AB] hover:bg-[#0047AB]/90 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
                   >
                     {updatingGlobal ? (
                       <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -906,16 +906,16 @@ export default function SystemCommandCenter() {
             </div>
 
             {/* Interactive Billing & Profit Simulator Modeler */}
-            <div className="bg-[var(--surface)] rounded-xl p-4 md:p-10 shadow-sm relative overflow-hidden">
+            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] p-4 md:p-10 shadow-3xs relative overflow-hidden">
               <div className="absolute inset-0 technical-grid opacity-[0.01] pointer-events-none" />
               
               <div className="flex items-center gap-3 pb-6 border-b border-[var(--line)] mb-6">
-                <div className="w-10 h-10 bg-[#0047AB]/5 text-[#0047AB] rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-[#0047AB]/5 text-[#0047AB] rounded-[32px] flex items-center justify-center">
                   <Calculator size={18} />
                 </div>
                 <div>
                   <h3 className="text-lg font-black uppercase tracking-tight italic">Platform Revenue & Surcharge Modeler Simulation</h3>
-                  <p className="text-[10px] text-[var(--muted)] font-bold tracking-wide uppercase mt-0.5">
+                  <p className="text-[10px] text-slate-500 font-bold tracking-wide uppercase mt-0.5">
                     Model monetization yield based on query volume, cost multipliers, and proportion of private key users
                   </p>
                 </div>
@@ -925,7 +925,7 @@ export default function SystemCommandCenter() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--muted)]">Simulated Queries per Month</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Simulated Queries per Month</span>
                     <span className="text-xs font-mono font-black text-[#0047AB]">{simulatedQueries.toLocaleString()} / mo</span>
                   </div>
                   <input
@@ -937,7 +937,7 @@ export default function SystemCommandCenter() {
                     onChange={(e) => setSimulatedQueries(Number(e.target.value))}
                     className="w-full h-2 bg-slate-150 rounded-lg appearance-none cursor-pointer accent-[#0047AB]"
                   />
-                  <div className="flex justify-between text-[9px] text-[var(--faint)] font-bold uppercase">
+                  <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase">
                     <span>10k / low</span>
                     <span>1M / mid</span>
                     <span>5M / high-volume</span>
@@ -946,7 +946,7 @@ export default function SystemCommandCenter() {
 
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--muted)]">Proportion of Custom Key Users</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Proportion of Custom Key Users</span>
                     <span className="text-xs font-mono font-black text-indigo-650">{customKeyRatio}% of tenants</span>
                   </div>
                   <input
@@ -958,7 +958,7 @@ export default function SystemCommandCenter() {
                     onChange={(e) => setCustomKeyRatio(Number(e.target.value))}
                     className="w-full h-2 bg-slate-150 rounded-lg appearance-none cursor-pointer accent-[#0047AB]"
                   />
-                  <div className="flex justify-between text-[9px] text-[var(--faint)] font-bold uppercase">
+                  <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase">
                     <span>0% (All System Paid)</span>
                     <span>50% (Surcharge Hybrid)</span>
                     <span>100% (Pure key Surcharge)</span>
@@ -967,45 +967,45 @@ export default function SystemCommandCenter() {
               </div>
 
               {/* Calculations Matrix results */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 bg-[var(--ink)] rounded-xl border border-[var(--line)]">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 bg-[var(--ink)] rounded-[32px] border border-[var(--line)]">
                 {/* 1 */}
                 <div className="space-y-1">
-                  <span className="text-[8px] font-black text-[var(--faint)] uppercase tracking-widest block">Est. Compute Credits Burn rate</span>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Est. Compute Credits Burn rate</span>
                   <div className="text-xl font-mono font-black text-[var(--text)]">
                     {Math.round(simulatedQueries * (customKeyRatio / 100 * (globalConfig.customKeyCreditCharge) + (1 - customKeyRatio / 100) * 100) * (globalConfig.creditCostMultiplier || 1)).toLocaleString()}
                   </div>
-                  <span className="text-[9px] font-bold text-[var(--muted)] leading-none">Compute credits allocated monthly</span>
+                  <span className="text-[9px] font-bold text-slate-500 leading-none">Compute credits allocated monthly</span>
                 </div>
 
                 {/* 2 */}
                 <div className="space-y-1 border-[var(--line)] sm:border-l sm:pl-6">
-                  <span className="text-[8px] font-black text-[var(--faint)] uppercase tracking-widest block">Gross Platform Cent Revenue</span>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Gross Platform Cent Revenue</span>
                   <div className="text-xl font-mono font-black text-emerald-650">
                     ${((simulatedQueries * (1 - customKeyRatio / 100) * 0.01 * (globalConfig.quotaCentsMultiplier || 1)) + (simulatedQueries * (customKeyRatio / 100) * (globalConfig.customKeyCentsCharge / 100))).toFixed(2)}
                   </div>
-                  <span className="text-[9px] font-bold text-[var(--muted)] leading-none">Estimated revenue pool per month</span>
+                  <span className="text-[9px] font-bold text-slate-500 leading-none">Estimated revenue pool per month</span>
                 </div>
 
                 {/* 3 */}
                 <div className="space-y-1 border-[var(--line)] sm:border-l sm:pl-6">
-                  <span className="text-[8px] font-black text-[var(--faint)] uppercase tracking-widest block">System Key Royaltiy Yield</span>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">System Key Royaltiy Yield</span>
                   <div className="text-xl font-mono font-black text-indigo-650">
                     {Math.round(simulatedQueries * (customKeyRatio / 100) * globalConfig.customKeyCreditCharge).toLocaleString()} cr
                   </div>
-                  <span className="text-[9px] font-bold text-[var(--muted)] leading-none">Royalty fee extracted from bypass API</span>
+                  <span className="text-[9px] font-bold text-slate-500 leading-none">Royalty fee extracted from bypass API</span>
                 </div>
               </div>
             </div>
 
             {/* Tenant Registry */}
-            <div className="bg-[var(--surface)] rounded-xl p-4 md:p-8 shadow-sm relative overflow-hidden">
+            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] p-4 md:p-8 shadow-3xs relative overflow-hidden">
               <div className="absolute inset-0 technical-grid opacity-[0.01] pointer-events-none" />
               <div className="flex items-center justify-between pb-6 border-b border-[var(--line)] mb-6 flex-wrap gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-2.5 h-6 bg-[var(--ink)] rounded-full" />
+                  <div className="w-2.5 h-6 bg-slate-900 rounded-full" />
                   <div>
                     <h3 className="text-lg font-black uppercase tracking-tight italic">Multi-Tenant Ledger Matrix</h3>
-                    <p className="text-[10px] text-[var(--muted)] font-bold tracking-wide uppercase mt-0.5">Click any workspace parameters row to customize limits & plans as Admin</p>
+                    <p className="text-[10px] text-slate-500 font-bold tracking-wide uppercase mt-0.5">Click any workspace parameters row to customize limits & plans as Admin</p>
                   </div>
                 </div>
               </div>
@@ -1013,7 +1013,7 @@ export default function SystemCommandCenter() {
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-[var(--line)] text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider bg-[var(--ink)]/50">
+                    <tr className="border-b border-[var(--line)] text-slate-500 text-[10px] font-medium uppercase tracking-wider bg-[var(--ink)]/50">
                       <th className="py-4 px-4">Workspace Identity / Name</th>
                       <th className="py-4 px-4 text-center">Plan</th>
                       <th className="py-4 px-4 text-right">Max Seats</th>
@@ -1029,7 +1029,7 @@ export default function SystemCommandCenter() {
                   <tbody className="divide-y divide-ledger-line font-medium text-[var(--text)]">
                     {telemetry.tenants.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="py-8 text-center text-[var(--faint)] font-bold uppercase tracking-widest text-[10px]">
+                        <td colSpan={10} className="py-8 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
                           No workspaces detected on server
                         </td>
                       </tr>
@@ -1050,7 +1050,7 @@ export default function SystemCommandCenter() {
                               <div className="font-mono text-xs text-slate-600 font-bold tracking-tight group-hover:text-[#0047AB]">
                                 {tenant.id}
                               </div>
-                              <div className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-widest mt-0.5 truncate max-w-[200px]">
+                              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate max-w-[200px]">
                                 {tenant.name || "Default Workspace"}
                               </div>
                             </td>
@@ -1079,7 +1079,7 @@ export default function SystemCommandCenter() {
                             <td className="py-4 px-4 text-right font-mono text-xs text-purple-650 font-bold">
                               ${costPerUser}
                             </td>
-                            <td className="py-4 px-4 text-right font-mono text-xs text-[var(--muted)]">
+                            <td className="py-4 px-4 text-right font-mono text-xs text-slate-500">
                               {(tenant.txCount || 0).toLocaleString()}
                             </td>
                             <td className="py-4 px-4 text-right font-mono text-xs text-indigo-600">
@@ -1087,7 +1087,7 @@ export default function SystemCommandCenter() {
                             </td>
                             <td className="py-4 px-4 text-center">
                               {isSpiking ? (
-                                <span className="bg-rose-50 border border-rose-200 text-rose-700 px-2 py-0.5 rounded-lg text-[9px] font-medium uppercase tracking-wider inline-flex items-center gap-1 shadow-sm">
+                                <span className="bg-rose-50 border border-rose-200 text-rose-700 px-2 py-0.5 rounded-lg text-[9px] font-medium uppercase tracking-wider inline-flex items-center gap-1 shadow-3xs">
                                   Spiking
                                 </span>
                               ) : tenant.errorCount > 0 ? (
@@ -1095,7 +1095,7 @@ export default function SystemCommandCenter() {
                                   WARNING
                                 </span>
                               ) : (
-                                <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-lg text-[9px] font-medium uppercase tracking-wider group-hover:bg-[#0047AB] group-hover:text-[var(--panel)] group-hover:border-[#0047AB] transition-all">
+                                <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-lg text-[9px] font-medium uppercase tracking-wider group-hover:bg-[#0047AB] group-hover:text-white group-hover:border-[#0047AB] transition-all">
                                   OPTIMAL
                                 </span>
                               )}
@@ -1113,27 +1113,27 @@ export default function SystemCommandCenter() {
           {/* Edit Limits & Policies Modal Accent */}
           <AnimatePresence>
             {editingWorkspace && (
-              <div className="fixed inset-0 bg-[var(--ink)]/60 backdrop-blur-xs flex items-center justify-center z-[200] p-4 animate-fade-in">
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[200] p-4 animate-fade-in">
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95, y: 15 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                  className="bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-2xl p-4 md:p-8 max-w-xl w-full relative z-[210] overflow-hidden flex flex-col max-h-[90dvh] md:max-h-none"
+                  className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-2xl p-4 md:p-8 max-w-xl w-full relative z-[210] overflow-hidden flex flex-col max-h-[90dvh] md:max-h-none"
                 >
                   <div className="absolute top-0 inset-x-0 h-1 bg-[#0047AB]" />
                   
                   <div className="mb-4 flex justify-between items-start">
                     <div>
-                      <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
                         Institutional Supervisor Control
                       </span>
                       <h3 className="text-2xl font-black text-[var(--text)] tracking-tight mt-1 truncate">Workspace Policy Editor</h3>
-                      <p className="text-[var(--faint)] font-mono text-[9px] font-bold uppercase mt-0.5 truncate">Workspace Hash: {editingWorkspace.id}</p>
+                      <p className="text-slate-400 font-mono text-[9px] font-bold uppercase mt-0.5 truncate">Workspace Hash: {editingWorkspace.id}</p>
                     </div>
                     <button 
                       type="button"
                       onClick={() => setEditingWorkspace(null)}
-                      className="text-[var(--faint)] hover:text-slate-700 font-bold text-xs px-3 py-1.5 bg-[var(--ink)] hover:bg-slate-100 rounded-xl transition-all"
+                      className="text-slate-400 hover:text-slate-700 font-bold text-xs px-3 py-1.5 bg-[var(--ink)] hover:bg-slate-100 rounded-xl transition-all"
                     >
                       CLOSE (ESC)
                     </button>
@@ -1148,7 +1148,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'tier' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-[var(--faint)] hover:text-slate-700 hover:bg-[var(--ink)]"
+                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Sparkles size={12} /> Pricing & Plan
@@ -1160,7 +1160,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'access' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-[var(--faint)] hover:text-slate-700 hover:bg-[var(--ink)]"
+                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Users size={12} /> Access & Seats
@@ -1172,7 +1172,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'credits' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-[var(--faint)] hover:text-slate-700 hover:bg-[var(--ink)]"
+                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Gift size={12} /> Grant Free Credits
@@ -1184,7 +1184,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'roadmap' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-[var(--faint)] hover:text-slate-700 hover:bg-[var(--ink)]"
+                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <DollarSign size={12} /> Monetization
@@ -1196,7 +1196,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'rates' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-[var(--faint)] hover:text-slate-700 hover:bg-[var(--ink)]"
+                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Cpu size={12} /> Rates & Keys
@@ -1211,7 +1211,7 @@ export default function SystemCommandCenter() {
                     {activeFormTab === 'tier' && (
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                             Assigned Plan Model
                           </label>
                           <select
@@ -1228,19 +1228,19 @@ export default function SystemCommandCenter() {
                         {/* Interactive plan features visual guide */}
                         <div className="grid grid-cols-1 gap-3 pt-2">
                           <div className={cn(
-                            "p-3 rounded-xl border text-left transition-all",
+                            "p-3 rounded-[32px] border text-left transition-all",
                             formState.plan === 'sandbox' ? "bg-[var(--ink)] border-slate-300" : "bg-[var(--surface)] border-[var(--line)] opacity-60"
                           )}>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-xs font-black text-[var(--text)] uppercase tracking-tight">Sandbox / Free Tier</span>
-                              <span className="text-[9px] font-black uppercase text-[var(--muted)] bg-slate-100 px-2 py-0.5 rounded-lg">$0.00 / mo</span>
+                              <span className="text-[9px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg">$0.00 / mo</span>
                             </div>
-                            <p className="text-[10px] text-[var(--muted)] font-medium lowercase first-letter:uppercase">Includes 100k standard compute units, 3 seat limit, normal query rates. Ideal for trial accounts.</p>
+                            <p className="text-[10px] text-slate-500 font-medium lowercase first-letter:uppercase">Includes 100k standard compute units, 3 seat limit, normal query rates. Ideal for trial accounts.</p>
                           </div>
 
                           <div className={cn(
-                            "p-3 rounded-xl border text-left transition-all",
-                            formState.plan === 'growth' ? "bg-emerald-50/40 border-emerald-300 shadow-sm" : "bg-[var(--surface)] border-[var(--line)] opacity-60"
+                            "p-3 rounded-[32px] border text-left transition-all",
+                            formState.plan === 'growth' ? "bg-emerald-50/40 border-emerald-300 shadow-3xs" : "bg-[var(--surface)] border-[var(--line)] opacity-60"
                           )}>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-xs font-black text-[#2e7d32] uppercase tracking-tight flex items-center gap-1">
@@ -1248,12 +1248,12 @@ export default function SystemCommandCenter() {
                               </span>
                               <span className="text-[9px] font-black uppercase text-[#2e7d32] bg-emerald-50 px-2 py-0.5 rounded-lg">$49.00 / mo</span>
                             </div>
-                            <p className="text-[10px] text-[var(--muted)] font-medium lowercase first-letter:uppercase">Allocates 500k standard compute credits, up to 15 seat limits, and standard API capabilities.</p>
+                            <p className="text-[10px] text-slate-500 font-medium lowercase first-letter:uppercase">Allocates 500k standard compute credits, up to 15 seat limits, and standard API capabilities.</p>
                           </div>
 
                           <div className={cn(
-                            "p-3 rounded-xl border text-left transition-all",
-                            formState.plan === 'enterprise' ? "bg-purple-50/40 border-purple-300 shadow-sm" : "bg-[var(--surface)] border-[var(--line)] opacity-60"
+                            "p-3 rounded-[32px] border text-left transition-all",
+                            formState.plan === 'enterprise' ? "bg-purple-50/40 border-purple-300 shadow-3xs" : "bg-[var(--surface)] border-[var(--line)] opacity-60"
                           )}>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-xs font-black text-purple-700 uppercase tracking-tight flex items-center gap-1">
@@ -1261,7 +1261,7 @@ export default function SystemCommandCenter() {
                               </span>
                               <span className="text-[9px] font-black uppercase text-purple-700 bg-purple-100 px-2 py-0.5 rounded-lg">Custom Quote</span>
                             </div>
-                            <p className="text-[10px] text-[var(--muted)] font-medium lowercase first-letter:uppercase">Allocates custom credits (e.g. 5M+ credits), unlimited concurrent rate boundaries, VIP status.</p>
+                            <p className="text-[10px] text-slate-500 font-medium lowercase first-letter:uppercase">Allocates custom credits (e.g. 5M+ credits), unlimited concurrent rate boundaries, VIP status.</p>
                           </div>
                         </div>
                       </div>
@@ -1270,17 +1270,17 @@ export default function SystemCommandCenter() {
                     {/* TAB 2: Access & Seats limit controls */}
                     {activeFormTab === 'access' && (
                       <div className="space-y-4">
-                        <div className="p-4 bg-[var(--ink)] rounded-xl border border-slate-150 flex items-center gap-3">
+                        <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-slate-150 flex items-center gap-3">
                           <Users size={16} className="text-[#0047AB]" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Seat Limits & Operations</p>
-                            <p className="text-[10px] text-[var(--muted)]">Determine user access size per tenant. If seats count surpasses maximum limit, further user registration is blocked automatically.</p>
+                            <p className="text-[10px] text-slate-500">Determine user access size per tenant. If seats count surpasses maximum limit, further user registration is blocked automatically.</p>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                               Seat authorization (Max Seats)
                             </label>
                             <input
@@ -1291,11 +1291,11 @@ export default function SystemCommandCenter() {
                               onChange={(e) => setFormState(prev => ({ ...prev, maxSeats: Number(e.target.value) }))}
                               className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             />
-                            <p className="text-[9px] text-[var(--faint)] mt-1 uppercase font-bold tracking-wider leading-relaxed">Capped at 500 seats/tenant</p>
+                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Capped at 500 seats/tenant</p>
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                               Rate limit (Queries rate/min)
                             </label>
                             <input
@@ -1306,13 +1306,13 @@ export default function SystemCommandCenter() {
                               onChange={(e) => setFormState(prev => ({ ...prev, concurrentUserLimit: Number(e.target.value) }))}
                               className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             />
-                            <p className="text-[9px] text-[var(--faint)] mt-1 uppercase font-bold tracking-wider leading-relaxed">Prevents endpoint throttling</p>
+                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Prevents endpoint throttling</p>
                           </div>
                         </div>
 
                         {/* Lock / Suspense simulations */}
                         <div className="pt-2">
-                          <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                             Workspace Access Status
                           </label>
                           <div className="grid grid-cols-2 gap-3">
@@ -1343,16 +1343,16 @@ export default function SystemCommandCenter() {
                     {/* TAB 3: Grant Promotional Credits (Giving Free) */}
                     {activeFormTab === 'credits' && (
                       <div className="space-y-4">
-                        <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-150 flex items-center gap-3">
+                        <div className="p-4 bg-indigo-50/50 rounded-[32px] border border-indigo-150 flex items-center gap-3">
                           <Gift size={16} className="text-indigo-650" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Assign Free Promotional Allocations</p>
-                            <p className="text-[10px] text-[var(--muted)]">Inject computational balance credits for testing, marketing, or to reward long-term institutional customers with free credit balances.</p>
+                            <p className="text-[10px] text-slate-500">Inject computational balance credits for testing, marketing, or to reward long-term institutional customers with free credit balances.</p>
                           </div>
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                             Compute balance credits
                           </label>
                           <input
@@ -1363,12 +1363,12 @@ export default function SystemCommandCenter() {
                             onChange={(e) => setFormState(prev => ({ ...prev, computeCreditBalance: Number(e.target.value) }))}
                             className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                           />
-                          <p className="text-[9px] text-[var(--faint)] mt-1 uppercase font-bold tracking-wider leading-relaxed">Required dynamically by rule classifying pipeline & algorithms on API routes</p>
+                          <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Required dynamically by rule classifying pipeline & algorithms on API routes</p>
                         </div>
 
                         {/* Quick Inject Grant Credit triggers */}
                         <div className="pt-2">
-                          <span className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-2 ml-0.5">Quick Grant Presets (Click to Load)</span>
+                          <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-0.5">Quick Grant Presets (Click to Load)</span>
                           <div className="grid grid-cols-3 gap-2">
                             <button
                               type="button"
@@ -1399,17 +1399,17 @@ export default function SystemCommandCenter() {
                     {/* TAB 4: Monetization Strategy & Cash Controls */}
                     {activeFormTab === 'roadmap' && (
                       <div className="space-y-4 text-left">
-                        <div className="p-4 bg-[#0047AB]/5 rounded-xl border border-[#0047AB]/10 flex items-center gap-3">
+                        <div className="p-4 bg-[#0047AB]/5 rounded-[32px] border border-[#0047AB]/10 flex items-center gap-3">
                           <DollarSign size={16} className="text-[#0047AB]" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Monetization & API Limits ($)</p>
-                            <p className="text-[10px] text-[var(--muted)]">Establish maximum billing limits per workspace to charge for premium services. Limit over-spending and manage enterprise custom invoicing.</p>
+                            <p className="text-[10px] text-slate-500">Establish maximum billing limits per workspace to charge for premium services. Limit over-spending and manage enterprise custom invoicing.</p>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                               API Monthly Limit ($)
                             </label>
                             <input
@@ -1419,23 +1419,23 @@ export default function SystemCommandCenter() {
                               onChange={(e) => setFormState(prev => ({ ...prev, apiQuotaMonthlyLimitCents: Math.round(Number(e.target.value || 0) * 100) }))}
                               className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             />
-                            <p className="text-[9px] text-[var(--faint)] mt-1 uppercase font-bold tracking-wider leading-relaxed">Auto-caps programmatic use</p>
+                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Auto-caps programmatic use</p>
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                               Estimated Monthly Bill
                             </label>
                             <div className="w-full h-11 bg-slate-100 border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-slate-600 flex items-center">
                               ${formState.plan === 'growth' ? '49.00 / mo' : formState.plan === 'enterprise' ? '299.00 / mo' : '0.00 (Free)'}
                             </div>
-                            <p className="text-[9px] text-[var(--faint)] mt-1 uppercase font-bold tracking-wider leading-relaxed">Based on designated plan model</p>
+                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Based on designated plan model</p>
                           </div>
                         </div>
 
-                        <div className="p-4 bg-[var(--ink)] rounded-xl border border-[var(--line)]">
+                        <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)]">
                           <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1.5">Monetization Deployment Strategy</h4>
-                          <p className="text-[10px] text-[var(--muted)] leading-relaxed uppercase tracking-wide">
+                          <p className="text-[10px] text-slate-500 leading-relaxed uppercase tracking-wide">
                             LedgerFlow is fully structured to receive custom payment processors (e.g. Stripe Customer Portal). This admin system already manages and updates plans, quotas, and limits. By connecting a Stripe webhook, you will be able to process subscriptions and charge client cards directly, with this UI serving as your operational control tower.
                           </p>
                         </div>
@@ -1445,19 +1445,19 @@ export default function SystemCommandCenter() {
                     {/* TAB 5: Pricing Multipliers & Cust Key Charges */}
                     {activeFormTab === 'rates' && (
                       <div className="space-y-4 text-left">
-                        <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-250/30 flex items-center gap-3">
+                        <div className="p-4 bg-emerald-50/50 rounded-[32px] border border-emerald-250/30 flex items-center gap-3">
                           <Cpu size={16} className="text-emerald-505 animate-pulse" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Dynamic Pricing Multipliers & Private Key Surcharges</p>
-                            <p className="text-[10px] text-[var(--muted)] leading-relaxed">Provide granular overrides for this specific workspace. You can scale charging metrics from zero to premium amounts dynamically.</p>
+                            <p className="text-[10px] text-slate-500 leading-relaxed">Provide granular overrides for this specific workspace. You can scale charging metrics from zero to premium amounts dynamically.</p>
                           </div>
                         </div>
 
                         {/* Bypass Switch */}
-                        <div className="p-4 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex items-center justify-between">
+                        <div className="p-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] flex items-center justify-between">
                           <div>
                             <p className="text-xs font-black text-[var(--text)] uppercase tracking-tight">Bypass All Billing & Caps</p>
-                            <p className="text-[9px] text-[var(--muted)] uppercase font-black tracking-wider mt-0.5">Gives unmetered free operations, bypassing freeze limits completely</p>
+                            <p className="text-[9px] text-slate-500 uppercase font-black tracking-wider mt-0.5">Gives unmetered free operations, bypassing freeze limits completely</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input 
@@ -1473,7 +1473,7 @@ export default function SystemCommandCenter() {
                         {/* Cost Multipliers */}
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                               Compute Credit Cost Multiplier
                             </label>
                             <input
@@ -1485,13 +1485,13 @@ export default function SystemCommandCenter() {
                               onChange={(e) => setFormState(prev => ({ ...prev, creditCostMultiplier: Number(e.target.value || 0) }))}
                               className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             />
-                            <p className="text-[9px] text-[var(--faint)] mt-1 uppercase font-bold tracking-wider leading-relaxed">
+                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">
                               0.00 = Free, 1.0 = Base, 2.0 = Double cost
                             </p>
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                               Platform Spend Multiplier (Cents)
                             </label>
                             <input
@@ -1503,22 +1503,22 @@ export default function SystemCommandCenter() {
                               onChange={(e) => setFormState(prev => ({ ...prev, quotaCentsMultiplier: Number(e.target.value || 0) }))}
                               className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             />
-                            <p className="text-[9px] text-[var(--faint)] mt-1 uppercase font-bold tracking-wider leading-relaxed">
+                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">
                               0.00 = Free spend, 1.0 = Base multiplier
                             </p>
                           </div>
                         </div>
 
                         {/* Custom Key Parameters */}
-                        <div className="p-4 bg-[var(--ink)] rounded-xl border border-[var(--line)] space-y-4">
+                        <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] space-y-4">
                           <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Self-Funded API Key Rates</h4>
-                          <p className="text-[9px] text-[var(--faint)] leading-normal uppercase tracking-wider font-extrabold">
+                          <p className="text-[9px] text-slate-400 leading-normal uppercase tracking-wider font-extrabold">
                             Specify billing charges if this account provides their private Gemini key:
                           </p>
 
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                                 Overhead Credits Per Query
                               </label>
                               <input
@@ -1526,15 +1526,15 @@ export default function SystemCommandCenter() {
                                 min="0"
                                 value={formState.customKeyCreditCharge}
                                 onChange={(e) => setFormState(prev => ({ ...prev, customKeyCreditCharge: Number(e.target.value || 0) }))}
-                                className="w-full h-10 bg-[var(--panel)] border border-slate-205 rounded-2xl px-3 text-xs font-mono font-bold text-slate-850 focus:border-[#0047AB] outline-none transition-all"
+                                className="w-full h-10 bg-[var(--surface)] border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-850 focus:border-[#0047AB] outline-none transition-all"
                               />
-                              <p className="text-[9px] text-[var(--faint)] mt-1 uppercase font-bold tracking-wider">
+                              <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">
                                 Credits (default is 10)
                               </p>
                             </div>
 
                             <div>
-                              <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                                 Overhead Cents Per Query
                               </label>
                               <input
@@ -1542,9 +1542,9 @@ export default function SystemCommandCenter() {
                                 min="0"
                                 value={formState.customKeyCentsCharge}
                                 onChange={(e) => setFormState(prev => ({ ...prev, customKeyCentsCharge: Number(e.target.value || 0) }))}
-                                className="w-full h-10 bg-[var(--panel)] border border-slate-205 rounded-2xl px-3 text-xs font-mono font-bold text-slate-855 focus:border-[#0047AB] outline-none transition-all"
+                                className="w-full h-10 bg-[var(--surface)] border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-855 focus:border-[#0047AB] outline-none transition-all"
                               />
-                              <p className="text-[9px] text-[var(--faint)] mt-1 uppercase font-bold tracking-wider">
+                              <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">
                                 Platform cents (default is 0)
                               </p>
                             </div>
@@ -1568,7 +1568,7 @@ export default function SystemCommandCenter() {
                       <button
                         type="submit"
                         disabled={savingWorkspace}
-                        className="flex-1 h-12 bg-[var(--ink)] text-[var(--panel)] hover:bg-[#0047AB] rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2"
+                        className="flex-1 h-12 bg-slate-900 text-white hover:bg-[#0047AB] rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2"
                       >
                         {savingWorkspace ? (
                           <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1586,20 +1586,20 @@ export default function SystemCommandCenter() {
           {/* Right Column - Incident Stream */}
           <div className="space-y-6">
             {/* Stress Test Generator Panel */}
-            <div className="bg-[var(--ink)] border border-slate-800 text-[var(--panel)] rounded-xl p-4 md:p-8 shadow-lg relative overflow-hidden">
+            <div className="bg-slate-900 border border-slate-800 text-white rounded-[32px] p-4 md:p-8 shadow-lg relative overflow-hidden">
               <div className="absolute inset-0 technical-grid opacity-[0.03] pointer-events-none" />
               <div className="flex items-center gap-3 mb-4 pb-2 border-b border-white/10">
                 <Wrench className="text-pink-400 animate-spin-slow" size={18} />
                 <h3 className="text-sm font-black uppercase tracking-wider text-pink-400">Stress Test Injector</h3>
               </div>
-              <p className="text-[10px] text-[var(--panel)]/50 uppercase font-black mb-4 leading-relaxed">
+              <p className="text-[10px] text-white/50 uppercase font-black mb-4 leading-relaxed">
                 Manually dispatch simulated requests to visualize real-time error piping, quota exception handling, and diagnostic reporting on the dashboard.
               </p>
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
                   onClick={() => handleTriggerStressEvent('normal_gemini')}
-                  className="w-full py-2.5 bg-[var(--surface)]/5 hover:bg-[var(--surface)]/10 rounded-xl text-[9px] font-black uppercase text-[var(--panel)] hover:text-indigo-300 transition-all text-left px-4 flex items-center justify-between"
+                  className="w-full py-2.5 bg-[var(--surface)]/5 hover:bg-[var(--surface)]/10 rounded-xl text-[9px] font-black uppercase text-white hover:text-indigo-300 transition-all text-left px-4 flex items-center justify-between"
                 >
                   <span>1. POST /gemini/summarize (200 OK)</span>
                   <Play size={10} className="text-indigo-400" />
@@ -1624,7 +1624,7 @@ export default function SystemCommandCenter() {
             </div>
 
             {/* Diagnostic Logs Panel */}
-            <div className="bg-[var(--surface)] rounded-xl p-4 md:p-8 shadow-sm flex flex-col h-[520px]">
+            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] p-4 md:p-8 shadow-3xs flex flex-col h-[520px]">
               <div className="flex items-center justify-between pb-4 border-b border-[var(--line)] mb-4">
                 <div className="flex items-center gap-3">
                   <Terminal size={18} className="text-indigo-600 animate-pulse" />
@@ -1640,7 +1640,7 @@ export default function SystemCommandCenter() {
               <div className="flex gap-1 mb-4 bg-slate-100 p-1 rounded-xl">
                 <button 
                   type="button"
-                  className="flex-1 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg bg-[var(--surface)] text-[var(--text)] shadow-sm"
+                  className="flex-1 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg bg-[var(--surface)] text-[var(--text)] shadow-3xs"
                 >
                   Latest Events ({liveErrors.length})
                 </button>
@@ -1657,7 +1657,7 @@ export default function SystemCommandCenter() {
 
               <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3 font-mono text-[10px]">
                 {liveErrors.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-[var(--muted)] opacity-50 gap-2 text-center p-4">
+                  <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 gap-2 text-center p-4">
                     <ShieldCheck size={36} className="text-emerald-500" />
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-700">Audit pipeline is empty</p>
                     <p className="text-[9px] lowercase max-w-[170px]">Invoke client endpoints to stream event triggers.</p>
@@ -1670,7 +1670,7 @@ export default function SystemCommandCenter() {
                       <div 
                         key={idx} 
                         className={cn(
-                          "p-4 border rounded-xl relative overflow-hidden shadow-sm transition-all",
+                          "p-4 border rounded-[32px] relative overflow-hidden shadow-3xs transition-all",
                           isError ? "bg-rose-50/50 border-rose-150" : 
                           isWarning ? "bg-amber-50/50 border-amber-150" : 
                           "bg-[var(--ink)] border-slate-150"
@@ -1685,7 +1685,7 @@ export default function SystemCommandCenter() {
                           )}>
                             HTTP_{log.statusCode} {log.simulated && '[SIMULATED]'}
                           </span>
-                          <span className="text-[var(--faint)] text-[8px] uppercase font-bold">
+                          <span className="text-slate-400 text-[8px] uppercase font-bold">
                             {new Date(log.timestamp).toLocaleTimeString()}
                           </span>
                         </div>
@@ -1695,7 +1695,7 @@ export default function SystemCommandCenter() {
                             isError ? "text-rose-600" : isWarning ? "text-amber-600" : "text-indigo-600"
                           )}>{log.method}</span> {log.path}
                         </div>
-                        <div className="space-y-0.5 text-[8px] text-[var(--muted)] font-semibold uppercase tracking-wider pt-1.5 border-t border-[var(--line)]">
+                        <div className="space-y-0.5 text-[8px] text-slate-500 font-semibold uppercase tracking-wider pt-1.5 border-t border-[var(--line)]">
                           <div>Source Node: {log.ip}</div>
                           <div className="truncate">Client Ref: {log.apiKeyUsed}</div>
                         </div>
@@ -1707,11 +1707,11 @@ export default function SystemCommandCenter() {
             </div>
 
             {/* Platform spec box */}
-            <div className="bg-[var(--ink)] text-[var(--panel)] rounded-xl p-4 md:p-8 relative overflow-hidden group">
+            <div className="bg-slate-900 text-white rounded-[32px] p-4 md:p-8 relative overflow-hidden group">
               <div className="absolute technical-grid inset-0 opacity-[0.05]" />
               <Cpu size={32} className="text-emerald-400 mb-4" />
               <h5 className="text-lg font-black tracking-tight italic uppercase mb-1">Decentralized Trust Hook</h5>
-              <p className="text-[10px] font-medium text-[var(--panel)]/40 leading-relaxed uppercase tracking-widest leading-loose">
+              <p className="text-[10px] font-medium text-white/40 leading-relaxed uppercase tracking-widest leading-loose">
                 Real-time cryptographic pipeline audits. Mutex locks prevent race overrides, securing multi-tenant ledger synchronization bounds on memory channels.
               </p>
             </div>
@@ -1724,24 +1724,24 @@ export default function SystemCommandCenter() {
       {/* Bulk Synchronization Progress Success Modal */}
       <AnimatePresence>
         {showBulkSuccess && (
-          <div className="fixed inset-0 bg-[var(--ink)]/60 backdrop-blur-xs flex items-center justify-center z-[250] p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[250] p-4">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-2xl p-4 md:p-8 max-w-sm w-full text-center relative"
+              className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-2xl p-4 md:p-8 max-w-sm w-full text-center relative"
             >
               <div className="mx-auto w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 size={24} />
               </div>
               <h3 className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Ledger Synchronized</h3>
-              <p className="text-xs text-[var(--muted)] mt-2 uppercase tracking-wide leading-relaxed">
+              <p className="text-xs text-slate-500 mt-2 uppercase tracking-wide leading-relaxed">
                 Successfully propagated global cost coefficients, spend multipliers, and private api key surcharges to all {telemetry?.tenants?.length || 0} active workspaces securely.
               </p>
               <button
                 type="button"
                 onClick={() => setShowBulkSuccess(false)}
-                className="w-full mt-6 h-11 bg-[var(--ink)] hover:bg-[#0047AB] text-[var(--panel)] rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md cursor-pointer"
+                className="w-full mt-6 h-11 bg-slate-900 hover:bg-[#0047AB] text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md cursor-pointer"
               >
                 Acknowledge alignment
               </button>

@@ -37,16 +37,16 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
       <motion.div 
         initial={{ scale: 0.95, y: 15 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 15 }}
         transition={{ type: "spring", damping: 25, stiffness: 180 }}
-        className="bg-[#fafafa] dark:bg-[#161718] border border-[var(--line)] rounded-xl w-full max-w-6xl h-[85dvh] flex flex-col overflow-hidden shadow-2xl relative"
+        className="bg-[#fafafa] dark:bg-[#161718] border border-[var(--line)] rounded-[32px] w-full max-w-6xl h-[85dvh] flex flex-col overflow-hidden shadow-2xl relative"
       >
         <div className="flex items-center justify-between px-8 py-6 border-b border-[var(--line)] bg-[var(--surface)] dark:bg-[#1b1c1d]">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 bg-[var(--ink)] text-emerald-400 rounded-xl flex items-center justify-center font-mono font-black text-xs border border-[var(--line)]">
+             <div className="w-10 h-10 bg-slate-900 text-emerald-400 rounded-xl flex items-center justify-center font-mono font-black text-xs border border-[var(--line)]">
                 {toolId}
              </div>
              <div>
                 <div className="flex items-center gap-2">
-                   <h2 className="text-xl font-black uppercase italic text-[var(--text)] dark:text-[var(--panel)] tracking-tight leading-none">{algorithm.name}</h2>
+                   <h2 className="text-xl font-black uppercase italic text-[var(--text)] dark:text-white tracking-tight leading-none">{algorithm.name}</h2>
                    <span className="hidden sm:inline-block px-2 py-0.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[8px] font-medium uppercase tracking-wider rounded">
                      Real-Time Data Connected
                    </span>
@@ -56,7 +56,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                 </p>
              </div>
           </div>
-          <button onClick={onClose} className="p-3 bg-neutral-100 dark:bg-neutral-800 text-[var(--muted)] rounded-xl transition-all cursor-pointer hover:bg-neutral-200">
+          <button onClick={onClose} className="p-3 bg-neutral-100 dark:bg-neutral-800 text-slate-500 rounded-xl transition-all cursor-pointer hover:bg-neutral-200">
             <X size={16} />
           </button>
         </div>
@@ -65,17 +65,17 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
            {/* Parameters Pane */}
            <div className="w-full md:w-80 border-b md:border-r md:border-b-0 border-[var(--line)] bg-[var(--surface)] dark:bg-[#1b1c1d] flex flex-col shrink-0">
               <div className="p-6 border-b border-[var(--line)]">
-                 <h3 className="text-xs font-black uppercase tracking-wider text-[var(--text)] dark:text-[var(--panel)] flex items-center gap-2">
+                 <h3 className="text-xs font-black uppercase tracking-wider text-[var(--text)] dark:text-white flex items-center gap-2">
                     <Play size={14} className="text-indigo-600" /> Analysis Parameters
                  </h3>
-                 <p className="text-[10px] text-[var(--muted)] uppercase tracking-wider mt-1 opacity-60">Tune computational vectors</p>
+                 <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1 opacity-60">Tune computational vectors</p>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                  {algorithm.inputs.map((inp: any) => (
                     <div key={inp.key} className="space-y-3">
                        <div className="flex justify-between items-center text-xs font-bold font-mono">
                           <span className="text-[10px] text-[#8a8a8f] uppercase tracking-wider font-sans">{inp.label}</span>
-                          <span className="text-[var(--text)] dark:text-[var(--panel)]">{params[inp.key]}</span>
+                          <span className="text-[var(--text)] dark:text-white">{params[inp.key]}</span>
                        </div>
                        <input 
                          type="range" min={inp.min} max={inp.max} step={inp.step} 
@@ -87,8 +87,8 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                  ))}
                  
                  <div className="p-4 bg-[var(--ink)] rounded-xl border border-[var(--line)]">
-                    <span className="text-[9px] uppercase tracking-wider font-black text-[var(--muted)] block mb-2">Ingestion Status</span>
-                    <div className="space-y-1 font-mono text-[10px] font-bold text-[var(--text)] dark:text-[var(--panel)]">
+                    <span className="text-[9px] uppercase tracking-wider font-black text-slate-500 block mb-2">Ingestion Status</span>
+                    <div className="space-y-1 font-mono text-[10px] font-bold text-[var(--text)] dark:text-white">
                        <div className="flex justify-between"><span>Transactions:</span> <span className="text-emerald-500">{transactions.length}</span></div>
                        <div className="flex justify-between"><span>Active Accounts:</span> <span className="text-emerald-500">{accounts.length}</span></div>
                     </div>
@@ -101,9 +101,9 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                {/* Metrics Row */}
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {results.metrics.map((m: any, idx: number) => (
-                     <div key={idx} className="p-6 bg-[var(--panel)] dark:bg-[#1b1c1d] border border-[var(--line)] rounded-2xl shadow-sm">
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)] block mb-1">{m.label}</span>
-                        <h4 className="text-3xl font-black text-[var(--text)] dark:text-[var(--panel)] tracking-tighter italic">
+                     <div key={idx} className="p-6 bg-[var(--surface)] dark:bg-[#1b1c1d] border border-[var(--line)] rounded-[32px] shadow-sm">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 block mb-1">{m.label}</span>
+                        <h4 className="text-3xl font-black text-[var(--text)] dark:text-white tracking-tighter italic">
                            {m.value}
                         </h4>
                         {m.trend && <p className="text-[10px] uppercase font-bold text-emerald-500 tracking-wider mt-2">{m.trend}</p>}
@@ -113,9 +113,9 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
 
                {/* Engine Output Chart */}
                {results.charts.map((c: any, idx: number) => (
-                  <div key={idx} className="p-6 bg-[var(--panel)] dark:bg-[#1b1c1d] border border-[var(--line)] rounded-2xl shadow-sm h-96 flex flex-col">
+                  <div key={idx} className="p-6 bg-[var(--surface)] dark:bg-[#1b1c1d] border border-[var(--line)] rounded-[32px] shadow-sm h-96 flex flex-col">
                      <div className="flex justify-between items-center mb-6">
-                         <h3 className="text-sm font-black uppercase tracking-wider text-[var(--text)] dark:text-[var(--panel)] flex items-center gap-2">
+                         <h3 className="text-sm font-black uppercase tracking-wider text-[var(--text)] dark:text-white flex items-center gap-2">
                             <BarChart3 size={16} /> Operational Topology Projection
                          </h3>
                      </div>
@@ -139,7 +139,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                ))}
 
                {/* Insights Engine */}
-               <div className="p-6 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900 rounded-xl space-y-4">
+               <div className="p-6 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900 rounded-[32px] space-y-4">
                   <h3 className="text-xs font-black uppercase tracking-wider text-indigo-800 dark:text-indigo-400">Algorithmic Consensus Output</h3>
                   <div className="space-y-2">
                      {results.insights.map((ins: string, i: number) => (

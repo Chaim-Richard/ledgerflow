@@ -120,7 +120,7 @@ export default function TemplateSelector({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 15 }}
         transition={{ duration: 0.35, ease: [0.19, 1, 0.22, 1] }}
-        className="bg-[var(--surface)] rounded-3xl max-w-[1450px] w-full h-[90dvh] shadow-2xl border border-[var(--line)] overflow-hidden relative flex flex-col"
+        className="bg-[var(--surface)] rounded-[40px] max-w-[1450px] w-full h-[90dvh] shadow-2xl border border-[var(--line)] overflow-hidden relative flex flex-col"
       >
         {/* Glow Header Accent Bar */}
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-ledger-ink to-emerald-500" />
@@ -129,10 +129,10 @@ export default function TemplateSelector({
         <div className="flex items-center justify-between px-10 pt-10 pb-6 shrink-0 border-b border-[var(--line)] relative z-10">
           <div>
             <div className="flex items-center gap-3">
-              <span className="px-2.5 py-1 bg-[var(--ink)] text-emerald-400 font-mono text-[9px] font-medium uppercase tracking-wider rounded-lg">
+              <span className="px-2.5 py-1 bg-slate-900 text-emerald-400 font-mono text-[9px] font-medium uppercase tracking-wider rounded-lg">
                 Blueprint Studio
               </span>
-              <span className="text-[10px] text-[var(--muted)] font-black uppercase tracking-[0.2em]">
+              <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">
                 Verified Invariant Maturation
               </span>
             </div>
@@ -143,7 +143,7 @@ export default function TemplateSelector({
           </div>
           <button 
             onClick={onClose}
-            className="w-12 h-12 flex items-center justify-center bg-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--panel)] text-[var(--muted)] rounded-xl transition-all cursor-pointer active:scale-95"
+            className="w-12 h-12 flex items-center justify-center bg-[var(--ink)] hover:bg-slate-900 hover:text-white text-slate-500 rounded-[32px] transition-all cursor-pointer active:scale-95"
             aria-label="Close modal"
           >
             <Plus className="rotate-45" size={20} />
@@ -158,7 +158,7 @@ export default function TemplateSelector({
             
             {/* AI Custom Builder Card */}
             <div className="space-y-6">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--muted)]/40 flex items-center gap-3">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500/40 flex items-center gap-3">
                 Adaptive Synthesis
                 <div className="h-px bg-slate-200 flex-grow" />
               </h3>
@@ -173,16 +173,16 @@ export default function TemplateSelector({
                     <Sparkles size={120} className="text-emerald-500" />
                   </div>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10">
-                    <div className="w-16 h-16 bg-[var(--ink)] text-emerald-400 rounded-xl flex items-center justify-center shadow-lg group-hover:bg-emerald-500 group-hover:text-[var(--panel)] transition-all">
+                    <div className="w-16 h-16 bg-slate-900 text-emerald-400 rounded-[32px] flex items-center justify-center shadow-lg group-hover:bg-emerald-500 group-hover:text-white transition-all">
                       <Wand2 size={32} />
                     </div>
                     <div className="flex-grow">
                       <h3 className="text-xl font-black text-[var(--text)] uppercase italic tracking-tight">AI Generated Blueprint</h3>
-                      <p className="text-xs text-[var(--muted)] font-medium max-w-2xl mt-1.5 leading-relaxed">
+                      <p className="text-xs text-slate-500 font-medium max-w-2xl mt-1.5 leading-relaxed">
                         Synthesize a proprietary chart of accounts aligned immediately. Describe your operational models or industry constraints to automate deterministic graph configuration.
                       </p>
                     </div>
-                    <div className="w-12 h-12 rounded-full bg-[var(--surface)] flex items-center justify-center text-[var(--muted)] group-hover:bg-[var(--ink)] group-hover:text-[var(--panel)] transition-all shadow-md mt-4 sm:mt-0">
+                    <div className="w-12 h-12 rounded-full bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-slate-500 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-md mt-4 sm:mt-0">
                       <ArrowRight size={20} />
                     </div>
                   </div>
@@ -192,7 +192,7 @@ export default function TemplateSelector({
 
             {/* Standard Protocols List */}
             <div className="space-y-6">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--muted)]/40 flex items-center gap-3">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500/40 flex items-center gap-3">
                 Standard Invariant Templates
                 <div className="h-px bg-slate-200 flex-grow" />
               </h3>
@@ -219,30 +219,30 @@ export default function TemplateSelector({
                       )}
                     >
                       {isActive && (
-                        <div className="absolute top-5 right-5 px-2.5 py-1 bg-emerald-500 text-[var(--panel)] rounded-lg text-[8px] font-medium uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                        <div className="absolute top-5 right-5 px-2.5 py-1 bg-emerald-500 text-white rounded-lg text-[8px] font-medium uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
                           <Check size={10} /> Active
                         </div>
                       )}
                       
                       <div>
                         <div className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-all shadow-sm border",
+                          "w-12 h-12 rounded-[32px] flex items-center justify-center mb-6 transition-all shadow-sm border",
                           isActive 
-                            ? "bg-emerald-500 text-[var(--panel)] border-emerald-600" 
-                            : "bg-[var(--ink)] text-[var(--text)] border-[var(--line)] group-hover:bg-[var(--ink)] group-hover:text-[var(--panel)]"
+                            ? "bg-emerald-500 text-white border-emerald-600" 
+                            : "bg-[var(--ink)] text-[var(--text)] border-[var(--line)] group-hover:bg-slate-900 group-hover:text-white"
                         )}>
                           <Icon size={22} />
                         </div>
 
                         <h3 className="text-lg font-black text-[var(--text)] mb-2 uppercase tracking-tight italic">{template.name}</h3>
-                        <p className="text-xs text-[var(--muted)] leading-relaxed font-semibold opacity-70 mb-6">
+                        <p className="text-xs text-slate-500 leading-relaxed font-semibold opacity-70 mb-6">
                           {template.description}
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between text-[9px] font-medium uppercase tracking-wider mt-auto border-t border-[var(--line)] pt-4">
+                      <div className="flex items-center justify-between text-[9px] font-medium uppercase tracking-wider mt-auto border-t border-[var(--line)]/50 pt-4">
                         <span className={cn(
-                          isActive ? "text-emerald-600" : isInspected ? "text-[var(--text)]" : "text-[var(--muted)]"
+                          isActive ? "text-emerald-600" : isInspected ? "text-[var(--text)]" : "text-slate-500"
                         )}>
                           {isActive ? 'Protocol Engaged' : isInspected ? 'Inspecting Concept' : 'Investigate Blueprint'}
                         </span>
@@ -252,7 +252,7 @@ export default function TemplateSelector({
                               e.stopPropagation();
                               onSelect(template.id);
                             }}
-                            className="px-3.5 py-1.5 bg-[var(--ink)] text-[var(--panel)] hover:bg-emerald-500 transition-all text-[8px] font-medium uppercase tracking-wider rounded-lg flex items-center gap-1.5"
+                            className="px-3.5 py-1.5 bg-slate-900 text-white hover:bg-emerald-500 transition-all text-[8px] font-medium uppercase tracking-wider rounded-lg flex items-center gap-1.5"
                           >
                             Engage
                           </button>
@@ -267,7 +267,7 @@ export default function TemplateSelector({
             {/* Custom Blueprints */}
             {(customTemplates.length > 0 || onSaveCurrent) && (
               <div className="space-y-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--muted)]/40 flex items-center gap-3">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500/40 flex items-center gap-3">
                   Snapshotted Topologies
                   <div className="h-px bg-slate-200 flex-grow" />
                 </h3>
@@ -276,13 +276,13 @@ export default function TemplateSelector({
                     <motion.div
                       whileHover={{ y: -4 }}
                       onClick={onSaveCurrent}
-                      className="p-6 rounded-[30px] border-2 border-dashed border-[var(--line)] bg-[var(--ink)]/20 hover:border-slate-800 hover:bg-[var(--ink)] hover:text-[var(--panel)] transition-all cursor-pointer group flex flex-col items-center justify-center text-center min-h-[180px] shadow-sm"
+                      className="p-6 rounded-[30px] border-2 border-dashed border-[var(--line)] bg-[var(--ink)]/20 hover:border-slate-800 hover:bg-slate-900 hover:text-white transition-all cursor-pointer group flex flex-col items-center justify-center text-center min-h-[180px] shadow-sm"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-[var(--surface)] flex items-center justify-center mb-4 group-hover:bg-[var(--surface)] group-hover:text-[var(--text)] transition-all shadow-sm">
+                      <div className="w-10 h-10 rounded-xl bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center mb-4 group-hover:bg-[var(--surface)] group-hover:text-[var(--text)] transition-all shadow-sm">
                         <Plus size={18} />
                       </div>
-                      <h3 className="text-sm font-black text-[var(--text)] group-hover:text-[var(--panel)] mb-1 uppercase tracking-wider">Save Current Topology</h3>
-                      <p className="text-[9px] font-bold text-[var(--muted)] group-hover:text-[var(--panel)]/60 uppercase tracking-widest">Store snapshot</p>
+                      <h3 className="text-sm font-black text-[var(--text)] group-hover:text-white mb-1 uppercase tracking-wider">Save Current Topology</h3>
+                      <p className="text-[9px] font-bold text-slate-500 group-hover:text-white/60 uppercase tracking-widest">Store snapshot</p>
                     </motion.div>
                   )}
 
@@ -294,13 +294,13 @@ export default function TemplateSelector({
                       className="p-6 rounded-[30px] border-2 border-[var(--line)] bg-[var(--surface)] hover:border-slate-800/50 transition-all cursor-pointer group flex flex-col justify-between shadow-sm"
                     >
                       <div>
-                        <div className="w-10 h-10 rounded-xl bg-[var(--ink)] text-[var(--text)] flex items-center justify-center mb-6 group-hover:bg-[var(--ink)] group-hover:text-[var(--panel)] transition-all border border-[var(--line)]">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--ink)] text-[var(--text)] flex items-center justify-center mb-6 group-hover:bg-slate-900 group-hover:text-white transition-all border border-[var(--line)]">
                           <Sparkles size={18} />
                         </div>
                         <h3 className="text-lg font-black text-[var(--text)] mb-2 uppercase tracking-tight italic">{template.name}</h3>
-                        <p className="text-xs text-[var(--muted)] leading-relaxed font-semibold opacity-70 mb-6">-</p>
+                        <p className="text-xs text-slate-500 leading-relaxed font-semibold opacity-70 mb-6">-</p>
                       </div>
-                      <div className="flex items-center justify-between text-[9px] font-medium uppercase tracking-wider text-[var(--muted)] mt-auto pt-4 border-t border-[var(--line)]">
+                      <div className="flex items-center justify-between text-[9px] font-medium uppercase tracking-wider text-slate-500 mt-auto pt-4 border-t border-[var(--line)]/50">
                         Initialize Template
                         <ArrowRight size={12} />
                       </div>
@@ -319,7 +319,7 @@ export default function TemplateSelector({
               {/* Inspected Icon & Headline */}
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[var(--ink)] text-[var(--panel)] rounded-xl flex items-center justify-center shadow-lg">
+                  <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-lg">
                     {React.createElement(icons[activeInspected.id] || Briefcase, { size: 20 })}
                   </div>
                   <div>
@@ -331,47 +331,47 @@ export default function TemplateSelector({
                     </h3>
                   </div>
                 </div>
-                <p className="text-xs text-[var(--muted)] font-medium mt-1 leading-relaxed italic opacity-85">
+                <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed italic opacity-85">
                   "{activeInspected.description}"
                 </p>
               </div>
 
               {/* SECTION 1: THE MATHEMATICAL INVARIANT INTEGRITY EQUATION */}
-              <div className="p-6 bg-[var(--surface)] rounded-xl shadow-sm space-y-3">
-                <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2">
+              <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-sm space-y-3">
+                <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
                   <Cpu size={12} className="text-indigo-500" /> Core Equation Invariant
                 </span>
                 
-                <div className="p-3 bg-[var(--ink)] text-slate-100 rounded-xl font-mono text-[10px] leading-relaxed break-words border border-slate-800">
+                <div className="p-3 bg-slate-900 text-slate-100 rounded-xl font-mono text-[10px] leading-relaxed break-words border border-slate-800">
                   {TEMPLATE_FORMULAS[activeInspected.id] || "Ledger Balance EQ : Assets (Σ Debit) = Liabilities (Σ Credit) + Owner's Equity"}
                 </div>
                 
-                <p className="text-[9px] text-[var(--muted)] font-medium leading-normal">
+                <p className="text-[9px] text-slate-500 font-medium leading-normal">
                   Our double-entry resolution pipeline continuously solves this objective function. If transactional components drifts, an immediate ledger shadow alert is broadcasted.
                 </p>
               </div>
 
               {/* SECTION 2: CHARTS OF ACCOUNTS TARGET LIST */}
               <div className="space-y-4">
-                <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2">
+                <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
                   <Layers size={12} className="text-emerald-500" /> Structure Protocol Accounts
                 </span>
 
-                <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-2 bg-[var(--surface)]/40 p-3 rounded-xl border border-[var(--line)]/60">
+                <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-2 bg-[var(--surface)]/40 p-3 rounded-[32px] border border-[var(--line)]/60">
                   {activeInspected.accounts.map((acc, key) => (
                     <div 
                       key={key}
-                      className="px-3.5 py-2 bg-[var(--panel)] hover:border-slate-800/20 rounded-2xl flex items-center justify-between transition-all"
+                      className="px-3.5 py-2 bg-[var(--surface)] border border-[var(--line)] hover:border-slate-800/20 rounded-xl flex items-center justify-between transition-all"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="font-mono text-[10px] font-black text-[var(--text)] bg-[var(--ink)] px-2 py-0.5 rounded border border-[var(--line)]">
+                        <span className="font-mono text-[10px] font-black text-[var(--text)] bg-[var(--ink)] px-2 py-0.5 rounded border border-[var(--line)]/50">
                           {acc.code}
                         </span>
                         <span className="text-xs font-bold text-[var(--text)]">
                           {acc.name}
                         </span>
                       </div>
-                      <span className="text-[8.5px] font-black uppercase text-[var(--muted)] tracking-wide">
+                      <span className="text-[8.5px] font-black uppercase text-slate-500 tracking-wide">
                         {acc.category || acc.type}
                       </span>
                     </div>
@@ -381,12 +381,12 @@ export default function TemplateSelector({
 
               {/* SECTION 3: CORE WORKSPACE FLOW GRAPH SCHEMATIC */}
               <div className="space-y-4">
-                <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2">
+                <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
                   <Network size={12} className="text-amber-500" /> Consensus Invariant Map
                 </span>
 
                 {activeInspected.topology?.nodes ? (
-                  <div className="p-4 bg-[var(--surface)] rounded-xl flex flex-wrap items-center justify-center gap-x-3 gap-y-2 shrink-0">
+                  <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] flex flex-wrap items-center justify-center gap-x-3 gap-y-2 shrink-0">
                     {activeInspected.topology.nodes.map((node, key) => (
                       <div key={key} className="flex items-center gap-2">
                         <div 
@@ -396,13 +396,13 @@ export default function TemplateSelector({
                           {node.label}
                         </div>
                         {key < (activeInspected.topology.nodes?.length ?? 0) - 1 && (
-                          <span className="text-[var(--muted)]/30 text-xs">→</span>
+                          <span className="text-slate-500/30 text-xs">→</span>
                         )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 bg-[var(--surface)]/50 border border-[var(--line)] border-dashed rounded-xl text-[10px] text-[var(--muted)] text-center italic">
+                  <div className="p-4 bg-[var(--surface)]/50 border border-[var(--line)] border-dashed rounded-[32px] text-[10px] text-slate-500 text-center italic">
                     Abstract accounting nodes
                   </div>
                 )}
@@ -411,8 +411,8 @@ export default function TemplateSelector({
             </div>
 
             {/* Verification Absolute Guarantee Block */}
-            <div className="pt-6 border-t border-[var(--line)] space-y-3 shrink-0">
-              <div className="p-4 bg-emerald-500/5 text-emerald-800 border border-emerald-500/10 rounded-xl space-y-2">
+            <div className="pt-6 border-t border-[var(--line)]/50 space-y-3 shrink-0">
+              <div className="p-4 bg-emerald-500/5 text-emerald-800 border border-emerald-500/10 rounded-[32px] space-y-2">
                 <div className="flex items-center gap-2">
                   <ShieldCheck size={14} className="text-emerald-500 inline shrink-0" />
                   <span className="text-[9px] font-black uppercase tracking-wider leading-none">Ledger Equilibrium Certified</span>
@@ -424,7 +424,7 @@ export default function TemplateSelector({
 
               <button
                 onClick={() => onSelect(activeInspected.id)}
-                className="w-full h-12 bg-[var(--ink)] hover:bg-emerald-500 text-[var(--panel)] rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg hover:-translate-y-0.5"
+                className="w-full h-12 bg-slate-900 hover:bg-emerald-500 text-white rounded-[32px] text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg hover:-translate-y-0.5"
               >
                 Engage Blueprint <ArrowRight size={14} />
               </button>

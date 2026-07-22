@@ -130,8 +130,8 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
       
       <div className="flex flex-wrap gap-2 justify-center pt-4">
         <span className="text-xs text-[var(--muted)]">Try typing:</span>
-        <span className="text-xs bg-[var(--surface)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" onClick={() => handleParse("earned $1500 client retainer check today")}>earned $1500 client retainer check today</span>
-        <span className="text-xs bg-[var(--surface)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" onClick={() => handleParse("paid $80 lunch card yesterday")}>paid $80 lunch card yesterday</span>
+        <span className="text-xs bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" onClick={() => handleParse("earned $1500 client retainer check today")}>earned $1500 client retainer check today</span>
+        <span className="text-xs bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" onClick={() => handleParse("paid $80 lunch card yesterday")}>paid $80 lunch card yesterday</span>
       </div>
     </div>
   );
@@ -139,15 +139,15 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
   if (isModal) {
     return (
       <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-[var(--ink)]/60 backdrop-blur-sm" onClick={onClose} />
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
         <div className="relative w-full max-w-2xl bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--line)] overflow-hidden">
           <div className="flex items-center justify-between p-6 border-b border-[var(--line)]">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Magic Entry</h2>
-              <p className="text-[var(--muted)]">Just type what happened. No debit/credit knowledge required.</p>
+              <p className="text-slate-500">Just type what happened. No debit/credit knowledge required.</p>
             </div>
             {onClose && (
-              <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-[var(--muted)]">
+              <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
                 <X className="w-5 h-5" />
               </button>
             )}
@@ -163,9 +163,9 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Magic Entry</h1>
-        <p className="text-[var(--muted)]">Just type what happened. No debit/credit knowledge required.</p>
+        <p className="text-slate-500">Just type what happened. No debit/credit knowledge required.</p>
       </div>
-      <div className="bg-[var(--panel)] rounded-2xl shadow-sm border border-[var(--line)] overflow-hidden">
+      <div className="bg-[var(--surface)] rounded-xl shadow-sm border border-[var(--line)] overflow-hidden">
         {content}
       </div>
     </div>

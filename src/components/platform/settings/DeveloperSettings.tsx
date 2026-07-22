@@ -109,15 +109,15 @@ export default function DeveloperSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">Get Permanent Copy Code:</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Get Permanent Copy Code:</p>
                     <div className="relative">
-                      <pre className="text-[10px] font-mono bg-[var(--ink)] text-slate-300 p-4 rounded-xl overflow-x-auto leading-relaxed max-h-32">
+                      <pre className="text-[10px] font-mono bg-slate-900 text-slate-300 p-4 rounded-xl overflow-x-auto leading-relaxed max-h-32">
 {`// Add this directly inside SYSTEM_GLOSSARY in /src/config/registry.tsx:
 ${JSON.stringify(lexiconOverrides, null, 2)}`}
                       </pre>
                       <button 
                         onClick={copyLexiconCodeToClipboard}
-                        className="absolute top-2 right-2 p-2 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 text-[var(--panel)] rounded-lg transition-colors cursor-pointer"
+                        className="absolute top-2 right-2 p-2 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 text-white rounded-lg transition-colors cursor-pointer"
                         title="Copy Config Patch"
                       >
                         <Copy size={12} />
@@ -126,7 +126,7 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
                   </div>
                 </div>
               ) : (
-                <div className="p-4 border border-dashed border-gray-200 rounded-xl text-center text-[11px] font-medium text-[var(--muted)] py-8">
+                <div className="p-4 border border-dashed border-gray-200 rounded-xl text-center text-[11px] font-medium text-slate-500 py-8">
                   No copy overrides active. Enable Dev Mode (Zap Icon) in top header, click or hover over any text element on the Dashboard to edit it inline instantly!
                 </div>
               )}
@@ -138,7 +138,7 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <button 
                 onClick={() => exportData('json')}
-                className="flex items-center justify-between p-5 bg-[var(--panel)] border border-[var(--line)] rounded-2xl hover:border-[var(--brass-line)] transition-all group cursor-pointer"
+                className="flex items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:border-[var(--brass-line)] transition-all group cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 bg-[var(--ink)] rounded-lg flex items-center justify-center text-[var(--text)] group-hover:bg-[var(--brass)] group-hover:text-black transition-all">
@@ -154,7 +154,7 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
 
               <button 
                 onClick={() => exportData('csv')}
-                className="flex items-center justify-between p-5 bg-[var(--panel)] border border-[var(--line)] rounded-2xl hover:border-[var(--brass-line)] transition-all group cursor-pointer"
+                className="flex items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:border-[var(--brass-line)] transition-all group cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 bg-[var(--ink)] rounded-lg flex items-center justify-center text-[var(--text)] group-hover:bg-[var(--brass)] group-hover:text-black transition-all">
@@ -170,7 +170,7 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
 
               <button 
                 onClick={handleOFXExport}
-                className="flex items-center justify-between p-5 bg-[var(--panel)] border border-[var(--line)] rounded-2xl hover:border-[var(--brass-line)] transition-all group cursor-pointer"
+                className="flex items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:border-[var(--brass-line)] transition-all group cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 bg-[var(--ink)] rounded-lg flex items-center justify-center text-[var(--text)] group-hover:bg-[var(--brass)] group-hover:text-black transition-all">

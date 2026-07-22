@@ -2,18 +2,33 @@ import { Transaction, ChartAccount } from '../../types';
 import { AlgorithmDefinition } from './types';
 
 // Calculates running safe-to-spend balance based on virtual envelopes
-export function calculateSafeToSpend(transactions: Transaction[], taxRate: number = 0.30) {
+export function calculateSafeToSpend(transactions: Transaction[], accounts: ChartAccount[], taxRate: number = 0.30) {
     let revenue = 0;
     let expenses = 0;
     let rawCash = 0;
 
+    const accountMap = new Map(accounts.map(a => [a.id, a]));
+
     transactions.forEach(t => {
+        // Raw cash is still just the sum of positive vs negative transaction totals
         if (t.totalAmountCents > 0) {
-            revenue += t.totalAmountCents;
             rawCash += t.totalAmountCents;
         } else {
-            expenses += Math.abs(t.totalAmountCents);
             rawCash -= Math.abs(t.totalAmountCents);
+        }
+
+        // Revenue and expenses must be filtered by account type
+        if (t.lines) {
+            t.lines.forEach(line => {
+                const account = accountMap.get(line.accountId);
+                if (account) {
+                    if (account.type === 'revenue' && line.amountCents > 0) {
+                        revenue += line.amountCents;
+                    } else if (account.type === 'expense' && line.amountCents > 0) {
+                        expenses += line.amountCents;
+                    }
+                }
+            });
         }
     });
 
@@ -34,7 +49,7 @@ export const TAX_SET_ASIDE_ALGO: AlgorithmDefinition = {
   ],
   compute: (transactions, accounts, inputs) => {
     const start = performance.now();
-    const result = calculateSafeToSpend(transactions, inputs.taxRate / 100);
+    const result = calculateSafeToSpend(transactions, accounts, inputs.taxRate / 100);
     const ms = performance.now() - start;
 
     return {

@@ -115,6 +115,16 @@ service cloud.firestore {
       allow update, delete: if false; // Forensically immutable audit trail
     }
 
+    match /journalEntries/{entryId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create, update, delete: if false; // Server-side append-only
+    }
+
+    match /bankLines/{lineId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create, update, delete: if false; // Server-side managed
+    }
+
     match /learnedDeltas/{deltaId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(deltaId) &&

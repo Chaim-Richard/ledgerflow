@@ -14,12 +14,12 @@ class ModuleErrorBoundary extends React.Component<{children: React.ReactNode}, {
     if (this.state.hasError) {
       return (
         <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-4 text-center h-full">
-          <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-[32px] flex items-center justify-center">
             <AlertTriangle size={24} />
           </div>
           <div>
             <h3 className="text-lg font-medium text-[var(--text)]">Module Failed to Load</h3>
-            <p className="text-sm text-[var(--muted)] mt-1 max-w-md">There was a problem loading this module. This may be due to a network error or missing plugin.</p>
+            <p className="text-sm text-slate-500 mt-1 max-w-md">There was a problem loading this module. This may be due to a network error or missing plugin.</p>
           </div>
           <button onClick={() => this.setState({hasError: false})} className="btn-secondary text-sm">Retry Loading</button>
         </div>
@@ -44,7 +44,7 @@ const MainViewSwitcher = React.memo(({ activeTab }: MainViewSwitcherProps) => {
           <div className="min-h-full flex flex-col items-center justify-center space-y-6 flex-1">
             <Loader2 className="animate-spin text-slate-300" size={32} />
             <div className="text-center space-y-2">
-              <span className="text-sm font-medium text-[var(--muted)]">Loading module...</span>
+              <span className="text-sm font-medium text-slate-500">Loading module...</span>
             </div>
           </div>
         }>

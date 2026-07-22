@@ -198,15 +198,15 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
   return (
     <div className="space-y-6">
       {/* Date Range & Controls */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--panel)] border border-[var(--line)] rounded-2xl shadow-sm relative overflow-hidden group gap-4">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
         <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10 w-full lg:w-auto">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-[var(--muted)] shrink-0">
+            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-slate-500 shrink-0">
                <Calendar size={13} />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider mb-0.5">Temporal Range</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Temporal Range</span>
               <div className="flex flex-wrap items-center gap-2">
                 <input 
                   type="date" 
@@ -243,15 +243,15 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
-                Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--faint)]")} />
+                Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-slate-400")} />
               </span>
-              <span className="text-[8px] font-bold text-[var(--faint)] uppercase tracking-widest">Compare to Prior Prev</span>
+              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Compare to Prior Prev</span>
             </div>
           </label>
         </div>
         <button 
           onClick={exportToExcel}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--ink)] text-[var(--panel)] rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
         >
           <FileSpreadsheet size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
           <span>Export Synthesis</span>
@@ -263,13 +263,13 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[var(--panel)] p-5 rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group hover:border-slate-300 transition-all flex flex-col justify-between"
+          className="bg-[var(--surface)] p-5 rounded-xl border border-[var(--line)]/80 shadow-3xs relative overflow-hidden group hover:border-slate-300 transition-all flex flex-col justify-between"
         >
            <div className="absolute -top-3 -right-3 p-3 opacity-[0.015] group-hover:rotate-6 transition-transform text-[var(--text)]">
              <TrendingUp size={80} />
            </div>
           <div>
-            <p className="text-[9px] font-bold text-[var(--faint)] mb-2 uppercase tracking-wider">{labels.inflowLabel}</p>
+            <p className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider">{labels.inflowLabel}</p>
             <p className="text-xl font-black text-[var(--text)] leading-none mb-3 tabular-nums font-mono">{formatCurrency(data.income?.total || 0)}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -292,13 +292,13 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="bg-[var(--panel)] p-5 rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group hover:border-slate-300 transition-all flex flex-col justify-between"
+          className="bg-[var(--surface)] p-5 rounded-xl border border-[var(--line)]/80 shadow-3xs relative overflow-hidden group hover:border-slate-300 transition-all flex flex-col justify-between"
         >
           <div className="absolute -top-3 -right-3 p-3 opacity-[0.015] group-hover:-rotate-6 transition-transform text-[var(--text)]">
               <TrendingDown size={80} />
            </div>
           <div>
-            <p className="text-[9px] font-bold text-[var(--faint)] mb-2 uppercase tracking-wider">{labels.outflowLabel}</p>
+            <p className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider">{labels.outflowLabel}</p>
             <p className="text-xl font-black text-[var(--text)] leading-none mb-3 tabular-nums font-mono">{formatCurrency(data.expense?.total || 0)}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -322,21 +322,21 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className={cn(
-            "p-5 rounded-xl border shadow-sm relative overflow-hidden transition-all flex flex-col justify-between",
-            (data.netIncome || 0) >= 0 ? "bg-[var(--ink)] text-[var(--panel)] border-slate-950" : "bg-rose-950 text-[var(--panel)] border-rose-950"
+            "p-5 rounded-xl border shadow-3xs relative overflow-hidden transition-all flex flex-col justify-between",
+            (data.netIncome || 0) >= 0 ? "bg-slate-900 text-white border-slate-950" : "bg-rose-950 text-white border-rose-950"
           )}
         >
-          <div className="absolute -top-3 -right-3 p-3 opacity-[0.05] group-hover:scale-105 transition-transform text-[var(--panel)]">
+          <div className="absolute -top-3 -right-3 p-3 opacity-[0.05] group-hover:scale-105 transition-transform text-white">
               <Target size={80} />
            </div>
           <div>
-            <p className="text-[9px] font-bold text-[var(--panel)]/40 mb-2 uppercase tracking-wider">{labels.netLabel}</p>
+            <p className="text-[9px] font-bold text-white/40 mb-2 uppercase tracking-wider">{labels.netLabel}</p>
             <p className="text-xl font-black italic tracking-tight font-mono leading-none mb-3">
               {formatCurrency(data.netIncome || 0)}
             </p>
           </div>
           <div className="flex items-center gap-2 mt-auto">
-            <p className="text-[8px] font-bold uppercase tracking-wider text-[var(--panel)]/60">
+            <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">
               {(data.netIncome || 0) >= 0 ? "Surplus Mode Stable" : "Refinement Protocol Recommended"}
             </p>
             {isComparative && prevData.netIncome !== 0 && (
@@ -352,12 +352,12 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
       </div>
 
       {/* Detail Core */}
-      <div className="bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden relative">
+      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative">
         <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
         <div className="p-4 border-b border-slate-150 bg-[var(--ink)] flex items-center justify-between">
           <div>
             <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">{labels.title}</h3>
-            <p className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider mt-0.5">Hierarchical Performance Synthesis</p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Hierarchical Performance Synthesis</p>
           </div>
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
         </div>
@@ -374,7 +374,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
                 <span className="font-mono text-base font-black text-emerald-700">{formatCurrency(data.income?.total || 0)}</span>
                 {isComparative && prevData.income?.total !== 0 && (
                   <div className="flex items-center gap-1.5 mt-0.5">
-                     <span className="font-mono text-[9px] text-[var(--faint)] font-medium">prev: {formatCurrency(prevData.income?.total)}</span>
+                     <span className="font-mono text-[9px] text-slate-400 font-medium">prev: {formatCurrency(prevData.income?.total)}</span>
                      <span className={cn(
                        "text-[10px] font-bold", 
                        (data.income?.total || 0) >= prevData.income?.total ? "text-emerald-500" : "text-rose-500"
@@ -395,14 +395,14 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
                 return (
                   <div key={id} className="flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-[var(--line)] transition-all group gap-4 min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-mono text-[8px] font-bold text-[var(--faint)] bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
+                      <span className="font-mono text-[8px] font-bold text-slate-400 bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
                       <span className="text-[var(--text)] font-bold group-hover:text-[var(--brass)] transition-colors uppercase tracking-tight text-xs truncate">{acc.name}</span>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
                       <span className="font-mono text-[var(--text)] text-xs font-semibold">{formatCurrency(balance)}</span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-[var(--faint)]">prev: {formatCurrency(prevBalance)}</span>
+                          <span className="font-mono text-[8px] text-slate-400">prev: {formatCurrency(prevBalance)}</span>
                           {variance !== null && (
                             <span className={cn("text-[9px] font-bold", variance >= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance >= 0 ? '+' : ''}{variance.toFixed(1)}%
@@ -428,7 +428,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
                  <span className="font-mono text-base font-black text-rose-700">{formatCurrency(data.expense?.total || 0)}</span>
                  {isComparative && prevData.expense?.total !== 0 && (
                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="font-mono text-[9px] text-[var(--faint)] font-medium">prev: {formatCurrency(prevData.expense?.total)}</span>
+                      <span className="font-mono text-[9px] text-slate-400 font-medium">prev: {formatCurrency(prevData.expense?.total)}</span>
                       <span className={cn(
                         "text-[10px] font-bold", 
                         (data.expense?.total || 0) <= prevData.expense?.total ? "text-emerald-500" : "text-rose-500"
@@ -449,14 +449,14 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
                 return (
                   <div key={id} className="flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-[var(--line)] transition-all group gap-4 min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-mono text-[8px] font-bold text-[var(--faint)] bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
+                      <span className="font-mono text-[8px] font-bold text-slate-400 bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
                       <span className="text-[var(--text)] font-bold group-hover:text-[var(--brass)] transition-colors uppercase tracking-tight text-xs truncate">{acc.name}</span>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
                       <span className="font-mono text-[var(--text)] text-xs font-semibold">{formatCurrency(balance)}</span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-[var(--faint)]">prev: {formatCurrency(prevBalance)}</span>
+                          <span className="font-mono text-[8px] text-slate-400">prev: {formatCurrency(prevBalance)}</span>
                           {variance !== null && (
                             <span className={cn("text-[9px] font-bold", variance <= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance >= 0 ? '+' : ''}{variance.toFixed(1)}%
@@ -472,15 +472,15 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
           </section>
 
           {/* Net Income Cluster */}
-          <div className="mt-6 p-4 bg-[var(--ink)] text-[var(--panel)] rounded-lg border border-slate-950 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mt-6 p-4 bg-slate-900 text-white rounded-lg border border-slate-950 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex flex-col self-start sm:self-auto">
-              <h4 className="text-[10px] font-bold text-[var(--faint)] uppercase tracking-wider">{labels.netChangeTitle}</h4>
-              <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider">{labels.netSub}</p>
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{labels.netChangeTitle}</h4>
+              <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">{labels.netSub}</p>
             </div>
             <div className="flex flex-col items-end sm:items-center sm:flex-row gap-4 text-right">
               {isComparative && prevData.netIncome !== 0 && (
                 <div className="flex flex-col sm:items-end items-end mr-4">
-                  <span className="text-[9px] font-bold text-[var(--faint)] font-medium tracking-wider mb-1">PRIOR PERIOD</span>
+                  <span className="text-[9px] font-bold text-slate-400 font-medium tracking-wider mb-1">PRIOR PERIOD</span>
                   <span className="font-mono text-sm text-slate-300 line-through opacity-70">
                     {formatCurrency(prevData.netIncome)}
                   </span>
@@ -494,7 +494,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
               )}
               <span className={cn(
                 "text-lg font-mono font-bold tracking-tight",
-                (data.netIncome || 0) >= 0 ? "text-[var(--panel)]" : "text-rose-400"
+                (data.netIncome || 0) >= 0 ? "text-white" : "text-rose-400"
               )}>
                 {formatCurrency(data.netIncome || 0)}
               </span>

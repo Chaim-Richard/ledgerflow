@@ -71,7 +71,7 @@ export default function ToolsCatalog() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Query capabilities..." 
-                  className="w-80 h-11 pl-12 pr-6 bg-[var(--panel)] border border-[var(--line)] rounded-2xl text-xs font-bold text-[var(--text)] outline-none focus:border-[var(--brass-line)] transition-all shadow-sm"
+                  className="w-80 h-11 pl-12 pr-6 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] outline-none focus:border-[var(--brass-line)] transition-all shadow-sm"
                 />
              </div>
           </div>
@@ -84,7 +84,7 @@ export default function ToolsCatalog() {
               onClick={() => setActiveCat(cat)}
               className={cn(
                 "px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer",
-                activeCat === cat ? "bg-[var(--brass)] text-black shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--brass-line)] hover:text-[var(--text)]"
+                activeCat === cat ? "bg-[var(--brass)] text-black shadow-md font-bold" : "bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:border-[var(--brass-line)] hover:text-[var(--text)]"
               )}
             >
               {cat}
@@ -147,8 +147,8 @@ export default function ToolsCatalog() {
              {/* End of results */}
           </div>
 
-          <div className="mt-20 py-12 text-center border-t border-[var(--line)]">
-             <p className="text-[11px] font-black text-[var(--muted)] uppercase tracking-[0.5em] italic">Listing {filteredTools.length} Active Financial Modules</p>
+          <div className="mt-20 py-12 text-center border-t border-[var(--line)]/50">
+             <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.5em] italic">Listing {filteredTools.length} Active Financial Modules</p>
           </div>
        </div>
 
