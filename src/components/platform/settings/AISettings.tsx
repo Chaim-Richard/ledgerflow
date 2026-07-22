@@ -147,18 +147,18 @@ export default function AISettings() {
         </div>
         
         <div className="flex items-center gap-5 mb-12">
-          <div className="w-14 h-14 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center shadow-xl shadow-ledger-accent/20 rotate-3 animate-pulse">
+          <div className="w-14 h-14 bg-indigo-600 text-[var(--panel)] rounded-xl flex items-center justify-center shadow-xl shadow-ledger-accent/20 rotate-3 animate-pulse">
             <BrainCircuit size={28} />
           </div>
           <div>
             <h3 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase tracking-widest">Rule Key & Intelligence Provisioning</h3>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">Google Gemini Enterprise Routing Infrastructure</p>
+            <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1">Google Gemini Enterprise Routing Infrastructure</p>
           </div>
         </div>
 
         <div className="space-y-8">
           <div className="space-y-4">
-            <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] flex items-center justify-between">
+            <label className="text-[10px] font-black uppercase text-[var(--muted)] tracking-[0.2em] flex items-center justify-between">
               <span className="flex items-center gap-2">Enterprise API Key Override</span>
               {userProfile?.geminiApiKey && (
                 <span className="inline-flex items-center gap-1 text-emerald-600 font-extrabold text-[9px] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
@@ -168,7 +168,7 @@ export default function AISettings() {
               )}
             </label>
             <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500">
+              <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-[var(--muted)]">
                 <Lock size={18} />
               </div>
               <input
@@ -176,12 +176,12 @@ export default function AISettings() {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Secure institutional API credentials (leaves blank to use global workspace keys)..."
-                className="w-full pl-14 pr-14 py-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-mono focus:bg-[var(--surface)] focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all outline-none"
+                className="w-full pl-14 pr-14 py-5 bg-[var(--panel)] rounded-2xl text-sm font-mono focus:bg-[var(--surface)] focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all outline-none"
               />
               <button 
                 onClick={() => setShowKey(!showKey)}
                 type="button"
-                className="absolute inset-y-0 right-0 pr-5 flex items-center text-slate-500 hover:text-[var(--text)] transition-colors"
+                className="absolute inset-y-0 right-0 pr-5 flex items-center text-[var(--muted)] hover:text-[var(--text)] transition-colors"
                 style={{ right: '1.25rem' }}
               >
                 {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -189,13 +189,13 @@ export default function AISettings() {
             </div>
           </div>
 
-          <div className="p-6 bg-slate-900 rounded-[32px] border border-slate-800 flex gap-5">
-            <div className="w-10 h-10 bg-[var(--surface)]/5 rounded-[32px] flex items-center justify-center shrink-0 border border-white/10">
+          <div className="p-6 bg-[var(--ink)] rounded-xl border border-slate-800 flex gap-5">
+            <div className="w-10 h-10 bg-[var(--surface)]/5 rounded-xl flex items-center justify-center shrink-0 border border-white/10">
               <AlertCircle className="text-amber-400" size={20} />
             </div>
             <div className="space-y-2">
               <p className="text-xs font-bold text-slate-200 leading-relaxed uppercase tracking-wider">Enterprise Cryptograph Awareness</p>
-              <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
+              <p className="text-[11px] text-[var(--faint)] leading-relaxed font-medium">
                 Your keys enable high-precision fiscal modeling and bypass system-shared quota limitations. Keys are AES-256 encrypted at rest in your secure institutional user profile.
               </p>
             </div>
@@ -206,19 +206,19 @@ export default function AISettings() {
       {/* Advanced Bayesian Self-Learning Rigor Configurations */}
       <div className="ledger-card p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
         <div className="flex items-center gap-5 mb-10">
-          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-[32px] flex items-center justify-center border border-indigo-100">
+          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border border-indigo-100">
             <Sliders size={22} />
           </div>
           <div>
             <h4 className="text-lg font-black text-[var(--text)] tracking-tight uppercase">Statistical Self-Learning Calibration</h4>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em] mt-0.5">Control match thresholds and update rates at absolute integrity</p>
+            <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.15em] mt-0.5">Control match thresholds and update rates at absolute integrity</p>
           </div>
         </div>
 
         <div className="space-y-8">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">
+              <label className="text-[10px] font-black uppercase text-[var(--muted)] tracking-[0.2em]">
                 Self-Learning Matching Gate (Certainty Edge)
               </label>
               <span className="font-mono text-sm font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-xl">
@@ -236,7 +236,7 @@ export default function AISettings() {
               className="w-full h-2 bg-[var(--surface)] rounded-lg appearance-none cursor-pointer accent-indigo-600 border border-[var(--line)]"
             />
             
-            <div className={cn("p-6 rounded-[32px] border transition-all space-y-2", statusLabel.color)}>
+            <div className={cn("p-6 rounded-xl border transition-all space-y-2", statusLabel.color)}>
               <span className="text-[10px] font-medium uppercase tracking-wider block">{statusLabel.title}</span>
               <p className="text-[11px] leading-relaxed font-semibold">{statusLabel.description}</p>
             </div>
@@ -245,7 +245,7 @@ export default function AISettings() {
           <div className="grid grid-cols-2 gap-8 pt-4">
             {/* Soft-Learning Rate Adjuster */}
             <div className="space-y-4">
-              <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] block">
+              <label className="text-[10px] font-black uppercase text-[var(--muted)] tracking-[0.2em] block">
                 Unsupervised Learning Memory Weight
               </label>
               <div className="flex gap-4">
@@ -259,21 +259,21 @@ export default function AISettings() {
                     type="button"
                     onClick={() => setLearningScale(scale.value)}
                     className={cn(
-                      "flex-1 p-4 rounded-[32px] text-[10px] font-black uppercase tracking-wider text-center border transition-all active:scale-[0.98]",
-                      learningScale === scale.value ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/10" : "bg-[var(--surface)] border-[var(--line)] text-[var(--text)] hover:border-slate-350"
+                      "flex-1 p-4 rounded-xl text-[10px] font-black uppercase tracking-wider text-center border transition-all active:scale-[0.98]",
+                      learningScale === scale.value ? "bg-indigo-600 border-indigo-600 text-[var(--panel)] shadow-lg shadow-indigo-600/10" : "bg-[var(--surface)] border-[var(--line)] text-[var(--text)] hover:border-slate-350"
                     )}
                   >
                     {scale.label}
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide leading-relaxed">
+              <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wide leading-relaxed">
                 Determines how fast newly accepted or corrected transactions alter the Bayesian ledger sorting weights. Higher values enforce faster adaptability but reduce historical smoothing.
               </p>
             </div>
 
             {/* Clear Brain memory state */}
-            <div className="p-6 bg-rose-500/5 rounded-[32px] border border-rose-500/10 flex flex-col justify-between">
+            <div className="p-6 bg-rose-500/5 rounded-xl border border-rose-500/10 flex flex-col justify-between">
               <div className="space-y-1">
                 <h4 className="text-xs font-black text-rose-600 uppercase tracking-widest flex items-center gap-1.5">
                   <Activity size={14} />
@@ -286,7 +286,7 @@ export default function AISettings() {
               <button 
                 onClick={handleWipeRuleCache}
                 type="button"
-                className="w-full mt-4 px-6 py-3 bg-red-50 hover:bg-red-100 text-rose-600 rounded-[32px] text-[10px] font-medium uppercase tracking-wider transition-all ring-1 ring-inset ring-rose-500/35 flex items-center justify-center gap-2 active:scale-95"
+                className="w-full mt-4 px-6 py-3 bg-red-50 hover:bg-red-100 text-rose-600 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all ring-1 ring-inset ring-rose-500/35 flex items-center justify-center gap-2 active:scale-95"
               >
                 <RefreshCw size={12} />
                 Wipe Neuromatrix Pattern Cache
@@ -298,7 +298,7 @@ export default function AISettings() {
 
       <div className="grid grid-cols-2 gap-8">
         <div className="ledger-card p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
-          <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+          <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-6 flex items-center gap-2">
             <CpuIcon size={14} className="text-indigo-500" />
             Vivid Logic Routing Precision
           </h4>
@@ -308,7 +308,7 @@ export default function AISettings() {
                 key={m.name} 
                 onClick={() => handleSelectModel(m.name)}
                 className={cn(
-                  "p-5 rounded-[32px] border flex flex-col gap-2 transition-all cursor-pointer select-none active:scale-[0.98]",
+                  "p-5 rounded-xl border flex flex-col gap-2 transition-all cursor-pointer select-none active:scale-[0.98]",
                   selectedModel === m.name ? "bg-indigo-50 border-indigo-200 ring-2 ring-indigo-50" : "bg-[var(--surface)] border-[var(--line)] hover:border-slate-350"
                 )}
               >
@@ -316,12 +316,12 @@ export default function AISettings() {
                   <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text)]">{m.name}</span>
                   <span className={cn(
                     "text-[8px] font-black uppercase px-2 py-0.5 rounded",
-                    selectedModel === m.name ? "bg-indigo-600 text-white" : "bg-zinc-150 text-slate-500"
+                    selectedModel === m.name ? "bg-indigo-600 text-[var(--panel)]" : "bg-zinc-150 text-[var(--muted)]"
                   )}>
                     {m.tier}
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-relaxed">{m.desc}</p>
+                <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wider leading-relaxed">{m.desc}</p>
               </div>
             ))}
           </div>
@@ -329,7 +329,7 @@ export default function AISettings() {
 
         <div className="ledger-card p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm flex flex-col justify-between">
           <div>
-            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+            <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-6 flex items-center gap-2">
               <Activity size={14} className="text-emerald-500" />
               Intelligence Bridge Telemetry
             </h4>
@@ -340,7 +340,7 @@ export default function AISettings() {
                 { label: 'Staged Prediction Drift', value: '0.001%', status: 'Minimal' },
               ].map((h) => (
                 <div key={h.label} className="flex items-center justify-between border-b border-dashed border-[var(--line)] pb-4 last:border-0 last:pb-0">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pr-4">{h.label}</span>
+                  <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest pr-4">{h.label}</span>
                   <div className="text-right whitespace-nowrap">
                     <span className="text-xs font-black text-[var(--text)] block leading-tight">{h.value}</span>
                     <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{h.status}</span>
@@ -365,20 +365,20 @@ export default function AISettings() {
       </div>
 
       {/* Persistence commit line */}
-      <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+      <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="space-y-1">
           <h4 className="text-xs font-black text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles size={14} className="text-amber-500" />
             Enterprise Veracity Gate
           </h4>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+          <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wider">
             Consolidate keys, dynamic model routing rules, and the mathematical classifier threshold variables.
           </p>
         </div>
         <button
           onClick={handleSave}
           disabled={isUpdating}
-          className="btn-primary !px-10 !py-5 flex items-center justify-center gap-3 disabled:bg-zinc-300 shadow-2xl shadow-ledger-accent/20 min-w-[240px] whitespace-nowrap active:scale-95 transition-all text-xs font-medium uppercase tracking-wider text-white leading-none inline-flex items-center"
+          className="btn-primary !px-10 !py-5 flex items-center justify-center gap-3 disabled:bg-zinc-300 shadow-2xl shadow-ledger-accent/20 min-w-[240px] whitespace-nowrap active:scale-95 transition-all text-xs font-medium uppercase tracking-wider text-[var(--panel)] leading-none inline-flex items-center"
         >
           {isUpdating ? <RefreshCw className="animate-spin" size={16} /> : <Database size={16} />}
           <span>{isUpdating ? 'SYNCHRONIZING...' : 'COMMIT RULES PLATFORM'}</span>

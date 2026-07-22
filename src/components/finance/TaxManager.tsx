@@ -95,12 +95,12 @@ export default function TaxManager({
       {/* Rule Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-[var(--line)] pb-8">
         <div>
-          <div className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-widest truncate mb-2">
+          <div className="flex items-center gap-2 text-xs font-black text-[var(--muted)] uppercase tracking-widest truncate mb-2">
             <Receipt size={24} className="text-slate-600" />
             Fiscal Compliance Protocol
           </div>
-          <h2 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase font-display">Tax Matrix</h2>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">High-fidelity liability projection and jurisdictional audit readiness.</p>
+          <h2 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase font-display">Tax Management</h2>
+          <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider mt-1">High-fidelity liability projection and jurisdictional audit readiness.</p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -108,14 +108,14 @@ export default function TaxManager({
              <select 
                value={selectedYear}
                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-               className="px-6 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] text-[10px] font-black uppercase tracking-widest text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all appearance-none cursor-pointer pr-10 shadow-sm"
+               className="px-6 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all appearance-none cursor-pointer pr-10 shadow-sm"
              >
                {[2023, 2024, 2025, 2026].map(year => (
                  <option key={year} value={year}>{year} Fiscal Domain</option>
                ))}
              </select>
           </div>
-          <button className="flex items-center gap-2 px-6 py-3.5 bg-slate-900 text-white rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-md">
+          <button className="flex items-center gap-2 px-6 py-3.5 bg-[var(--brass)] text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-md cursor-pointer">
             <Download size={16} />
             Fiscal Export
           </button>
@@ -123,12 +123,12 @@ export default function TaxManager({
       </div>
 
       {/* Tab Selector */}
-      <div className="flex flex-wrap items-center gap-2 p-2 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] w-fit shadow-sm">
+      <div className="flex flex-wrap items-center gap-2 p-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl w-fit shadow-sm">
         <button
           onClick={() => setActiveTab('rates')}
           className={cn(
-            "px-6 py-3 rounded-[32px] text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer active:scale-95",
-            activeTab === 'rates' ? "bg-[var(--surface)] text-[var(--text)] shadow-md ring-1 ring-slate-900/5" : "text-slate-400 hover:text-slate-600"
+            "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer active:scale-95",
+            activeTab === 'rates' ? "bg-[var(--brass)] text-black font-bold shadow-md" : "text-[var(--muted)] hover:text-[var(--text)]"
           )}
         >
           Federal Rates & Provisions
@@ -141,45 +141,45 @@ export default function TaxManager({
         <>
           {/* Deterministic Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="p-6 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group">
+        <div className="p-6 md:p-8 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-[0.02] pointer-events-none" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Estimated Liability</p>
+          <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-4 relative z-10">Estimated Liability</p>
           <p className="text-3xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10">
             {formatCurrency(taxMetrics.estimatedTax)}
           </p>
-          <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 p-2 rounded-lg border border-indigo-100 w-fit">
+          <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-[var(--brass)] uppercase tracking-widest bg-[var(--brass-soft)] p-2 rounded-lg border border-[var(--brass-line)] w-fit">
              <Calculator size={12} />
              Basis: {((taxMetrics.estimatedTax / Math.max(1, taxMetrics.netProfit)) * 100).toFixed(1)}% Eff. Factor
           </div>
         </div>
 
-        <div className="p-6 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group">
+        <div className="p-6 md:p-8 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-[0.02] pointer-events-none" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Indirect Provisioning</p>
+          <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-4 relative z-10">Indirect Provisioning</p>
           <p className="text-3xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10">
             {formatCurrency(taxMetrics.salesTaxCollected)}
           </p>
-          <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 p-2 rounded-lg border border-emerald-100 w-fit">
+          <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-[var(--pos)] uppercase tracking-widest bg-[var(--pos)]/10 p-2 rounded-lg border border-[var(--pos)]/20 w-fit">
              <ShieldCheck size={12} />
              100% Locked for Filing
           </div>
         </div>
 
-        <div className="p-6 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group">
+        <div className="p-6 md:p-8 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-[0.02] pointer-events-none" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Fiscal Period Yield</p>
+          <p className="text-[10px] font-black text-[var(--faint)] uppercase tracking-widest mb-4 relative z-10">Fiscal Period Yield</p>
           <p className="text-3xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10">
             {formatCurrency(taxMetrics.netProfit)}
           </p>
-          <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-[var(--ink)] p-2 rounded-lg border border-[var(--line)] w-fit">
+          <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-[var(--muted)] uppercase tracking-widest bg-[var(--ink)] p-2 rounded-lg border border-[var(--line)] w-fit">
              <Activity size={12} />
              Net Taxable Momentum
           </div>
         </div>
 
-        <div className="p-6 md:p-8 bg-slate-900 text-white rounded-[32px] shadow-xl relative overflow-hidden group border border-slate-800">
+        <div className="p-6 md:p-8 bg-[var(--ink)] text-[var(--panel)] rounded-xl shadow-xl relative overflow-hidden group border border-slate-800">
           <div className="absolute technical-grid inset-0 opacity-[0.03] pointer-events-none" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Audit Deadline</p>
+          <p className="text-[10px] font-black text-[var(--faint)] uppercase tracking-widest mb-4 relative z-10">Audit Deadline</p>
           <p className="text-3xl md:text-4xl font-black text-amber-400 tracking-tighter font-display relative z-10">April 15</p>
           <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/10 p-2 rounded-lg border border-amber-500/20 w-fit">
              <Zap size={12} />
@@ -198,7 +198,7 @@ export default function TaxManager({
                 setEditingRate(null);
                 setIsModalOpen(true);
               }}
-              className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center hover:bg-slate-800 transition-all shadow-md active:scale-95"
+              className="w-10 h-10 bg-[var(--ink)] text-[var(--panel)] rounded-xl flex items-center justify-center hover:bg-slate-800 transition-all shadow-md active:scale-95"
             >
               <Plus size={18} />
             </button>
@@ -209,19 +209,19 @@ export default function TaxManager({
               <motion.div 
                 key={rate.id}
                 whileHover={{ x: 4 }}
-                className="p-6 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group hover:border-slate-300 transition-all"
+                className="p-6 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group hover:border-slate-300 transition-all"
               >
                 <div className="absolute technical-grid inset-0 opacity-[0.02] pointer-events-none" />
                 <div className="flex items-center justify-between relative z-10">
                   <div className="space-y-1">
                     <p className="text-sm font-black text-[var(--text)] leading-none uppercase tracking-tight">{rate.name}</p>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{rate.type} Classification</p>
+                    <p className="text-[10px] font-black text-[var(--faint)] uppercase tracking-widest">{rate.type} Classification</p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-black font-mono text-[var(--text)] tracking-tighter">{(rate.rate * 100).toFixed(1)}%</p>
                     <div className="flex items-center justify-end gap-3 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setEditingRate(rate); setIsModalOpen(true); }} className="text-slate-400 hover:text-[var(--text)] transition-colors"><Edit2 size={14} /></button>
-                      <button onClick={() => onDeleteTaxRate?.(rate.id)} className="text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
+                      <button onClick={() => { setEditingRate(rate); setIsModalOpen(true); }} className="text-[var(--faint)] hover:text-[var(--text)] transition-colors"><Edit2 size={14} /></button>
+                      <button onClick={() => onDeleteTaxRate?.(rate.id)} className="text-[var(--faint)] hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
                     </div>
                   </div>
                 </div>
@@ -234,20 +234,20 @@ export default function TaxManager({
         <div className="lg:col-span-8 space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-black text-[var(--text)] tracking-tight uppercase font-display">Liability Mapping</h3>
-            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-[10px] font-black text-[var(--faint)] uppercase tracking-widest">
                <Layers size={14} />
                Cross-Analysis active
             </div>
           </div>
 
-          <div className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] overflow-hidden shadow-sm relative group">
+          <div className="bg-[var(--panel)] rounded-2xl border border-[var(--line)] overflow-hidden shadow-sm relative group">
             <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
             <table className="w-full text-left relative z-10">
               <thead>
                 <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Protocol Domain</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Basis</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Metric</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Protocol Domain</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-right">Basis</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-center">Metric</th>
                   <th className="px-6 py-5 text-[10px] font-black text-slate-700 uppercase tracking-widest text-right bg-slate-100/50">Apportionment</th>
                 </tr>
               </thead>
@@ -255,13 +255,13 @@ export default function TaxManager({
                 <tr className="hover:bg-[var(--ink)]/50 transition-all group/row">
                   <td className="px-6 py-6">
                     <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">Federal Corporate Levy</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-mono">IRC SEC 11 COMPLIANT</p>
+                    <p className="text-[10px] font-bold text-[var(--faint)] uppercase tracking-widest mt-1 font-mono">IRC SEC 11 COMPLIANT</p>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)]">
                     {formatCurrency(taxMetrics.netProfit)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50">
                     {formatCurrency(taxMetrics.netProfit * (taxRates.find(r => r.type === 'Income')?.rate || 0.21))}
@@ -270,13 +270,13 @@ export default function TaxManager({
                 <tr className="hover:bg-[var(--ink)]/50 transition-all group/row">
                   <td className="px-6 py-6">
                     <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">State Statutory Matrix</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-mono">BASE REGIONAL QUOTA (5.0%)</p>
+                    <p className="text-[10px] font-bold text-[var(--faint)] uppercase tracking-widest mt-1 font-mono">BASE REGIONAL QUOTA (5.0%)</p>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)]">
                     {formatCurrency(taxMetrics.netProfit)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50">
                     {formatCurrency(taxMetrics.netProfit * 0.05)}
@@ -285,13 +285,13 @@ export default function TaxManager({
                 <tr className="hover:bg-[var(--ink)]/50 transition-all group/row">
                   <td className="px-6 py-6">
                     <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">Indirect Consumption Flow</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-mono">SALES & USE PASS-THROUGH</p>
+                    <p className="text-[10px] font-bold text-[var(--faint)] uppercase tracking-widest mt-1 font-mono">SALES & USE PASS-THROUGH</p>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)]">
                     {formatCurrency(taxMetrics.salesTaxCollected)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">GROSS_FLOW</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">GROSS_FLOW</div>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-base font-black text-emerald-600 bg-emerald-50/50 group-hover/row:bg-emerald-50">
                     {formatCurrency(taxMetrics.salesTaxCollected)}
@@ -314,20 +314,20 @@ export default function TaxManager({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsModalOpen(false)}
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-[var(--ink)]/40 backdrop-blur-sm"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-xl bg-[var(--surface)] rounded-[32px] shadow-2xl border border-[var(--line)] overflow-hidden p-8 md:p-12"
+              className="relative w-full max-w-xl bg-[var(--panel)] rounded-2xl shadow-2xl border border-[var(--line)] overflow-hidden p-8 md:p-12"
             >
               <div className="flex items-center justify-between mb-10">
                  <div>
                     <h2 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase font-display">{editingRate ? 'Modify Protocol' : 'Deploy Threshold'}</h2>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Operational Fiscal Parameterization</p>
+                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-1">Operational Fiscal Parameterization</p>
                  </div>
-                 <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-slate-400 hover:text-[var(--text)] hover:bg-slate-100 transition-all border border-[var(--line)]">
+                 <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 bg-[var(--ink)] rounded-xl flex items-center justify-center text-[var(--faint)] hover:text-[var(--text)] hover:bg-slate-100 transition-all border border-[var(--line)]">
                     <Plus size={24} className="rotate-45" />
                  </button>
               </div>
@@ -352,18 +352,18 @@ export default function TaxManager({
                 className="space-y-6"
               >
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Threshold Metadata (Name)</label>
-                  <input name="name" required defaultValue={editingRate?.name} placeholder="e.g. FEDERAL_REVENUE_SERVICE" className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-bold text-[var(--text)] uppercase tracking-widest placeholder:text-slate-300" />
+                  <label className="block text-[10px] font-black text-[var(--faint)] uppercase tracking-widest truncate">Threshold Metadata (Name)</label>
+                  <input name="name" required defaultValue={editingRate?.name} placeholder="e.g. FEDERAL_REVENUE_SERVICE" className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-bold text-[var(--text)] uppercase tracking-widest placeholder:text-slate-300" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Scalar Intensity (%)</label>
-                    <input name="rate" type="number" step="0.1" required defaultValue={(editingRate?.rate || 0) * 100} className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-mono font-black text-[var(--text)] text-right text-lg" />
+                    <label className="block text-[10px] font-black text-[var(--faint)] uppercase tracking-widest truncate">Scalar Intensity (%)</label>
+                    <input name="rate" type="number" step="0.1" required defaultValue={(editingRate?.rate || 0) * 100} className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-mono font-black text-[var(--text)] text-right text-lg" />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Mapping Type</label>
-                    <select name="type" defaultValue={editingRate?.type || 'Income'} className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-bold text-[var(--text)] appearance-none cursor-pointer uppercase tracking-widest">
+                    <label className="block text-[10px] font-black text-[var(--faint)] uppercase tracking-widest truncate">Mapping Type</label>
+                    <select name="type" defaultValue={editingRate?.type || 'Income'} className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-bold text-[var(--text)] appearance-none cursor-pointer uppercase tracking-widest">
                       <option value="Income">Income Protocol</option>
                       <option value="Sales">Sales Flow</option>
                       <option value="Payroll">Payroll Cluster</option>
@@ -372,8 +372,8 @@ export default function TaxManager({
                 </div>
 
                 <div className="pt-8 flex gap-4 border-t border-[var(--line)] mt-8">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-[var(--surface)] border border-[var(--line)] text-slate-600 rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--ink)] transition-all active:scale-95 shadow-sm">Abort</button>
-                  <button type="submit" className="flex-[2] py-4 bg-slate-900 text-white rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md active:scale-95">Deploy Parameter</button>
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-[var(--surface)] text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--ink)] transition-all active:scale-95 shadow-sm">Abort</button>
+                  <button type="submit" className="flex-[2] py-4 bg-[var(--ink)] text-[var(--panel)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md active:scale-95">Deploy Parameter</button>
                 </div>
               </form>
             </motion.div>

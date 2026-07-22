@@ -242,27 +242,27 @@ export default function StatementImporter({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
+        className="absolute inset-0 bg-[var(--ink)]/60 backdrop-blur-md"
       />
       
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
+        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
       >
         {/* Header */}
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--surface)]">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-600/10 rounded-[32px] flex items-center justify-center text-indigo-600">
+            <div className="w-12 h-12 bg-[var(--brass-soft)] border border-[var(--brass-line)] rounded-xl flex items-center justify-center text-[var(--brass)]">
               <FileText size={24} />
             </div>
             <div>
               <h2 className="text-2xl font-black text-[var(--text)] tracking-tight">Statement Intelligence</h2>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Rule Parsing & Causal Deduplication</p>
+              <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider">Rule Parsing & Causal Deduplication</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-all text-slate-500">
+          <button onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-all text-[var(--muted)] cursor-pointer">
             <X size={24} />
           </button>
         </div>
@@ -291,7 +291,7 @@ export default function StatementImporter({
                       />
                       <label 
                         htmlFor="csv-upload"
-                        className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all cursor-pointer"
+                        className="flex items-center gap-2 px-4 py-2 bg-[var(--surface)] text-[var(--text)] rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all cursor-pointer"
                       >
                         <Upload size={14} />
                         Upload CSV / Excel
@@ -302,7 +302,7 @@ export default function StatementImporter({
                     value={rawText}
                     onChange={(e) => setRawText(e.target.value)}
                     placeholder="Paste raw text from your bank statement, CSV, or PDF export here..."
-                    className="w-full h-64 p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] font-mono text-sm text-[var(--text)] focus:ring-2 focus:ring-indigo-600/20 outline-none transition-all resize-none"
+                    className="w-full h-64 p-6 bg-[var(--surface)] rounded-2xl font-mono text-sm text-[var(--text)] focus:border-[var(--brass-line)] outline-none transition-all resize-none"
                   />
                 </div>
               </motion.div>
@@ -314,9 +314,9 @@ export default function StatementImporter({
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="space-y-8"
               >
-                <div className="p-6 bg-zinc-900 rounded-[32px] text-white">
-                  <h3 className="text-xl font-black mb-2">Configure Deterministic Mapping</h3>
-                  <p className="text-xs text-zinc-400 font-medium tracking-tight">Match your file columns to the LedgerFlow protocol fields.</p>
+                <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-2xl text-[var(--text)]">
+                  <h3 className="text-xl font-black mb-1 uppercase tracking-tight">Configure Deterministic Mapping</h3>
+                  <p className="text-xs text-[var(--muted)] font-medium">Match your file columns to the LedgerFlow protocol fields.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -326,7 +326,7 @@ export default function StatementImporter({
                       <select 
                         value={mapping[field]}
                         onChange={(e) => setMapping({...mapping, [field]: parseInt(e.target.value)})}
-                        className="w-full px-5 py-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-600/20"
+                        className="w-full px-4 py-3 bg-[var(--panel)] border border-[var(--line)] rounded-2xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)] cursor-pointer"
                       >
                         <option value={-1}>Select Column</option>
                         {csvData[0]?.map((col, idx) => (
@@ -337,9 +337,9 @@ export default function StatementImporter({
                   ))}
                 </div>
 
-                <div className="border border-[var(--line)] rounded-[32px] overflow-hidden">
+                <div className="border border-[var(--line)] rounded-2xl overflow-hidden">
                   <div className="p-4 bg-[var(--surface)] border-b border-[var(--line)]">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Data Preview (First 5 Rows)</p>
+                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Data Preview (First 5 Rows)</p>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
@@ -352,9 +352,9 @@ export default function StatementImporter({
                       </thead>
                       <tbody>
                         {csvData.slice(1, 6).map((row, rIdx) => (
-                          <tr key={rIdx} className="border-b border-[var(--line)]/50">
+                          <tr key={rIdx} className="border-b border-[var(--line)]">
                             {row.map((cell, cIdx) => (
-                              <td key={cIdx} className="p-4 text-slate-500 font-medium truncate max-w-[150px]">{cell}</td>
+                              <td key={cIdx} className="p-4 text-[var(--muted)] font-medium truncate max-w-[150px]">{cell}</td>
                             ))}
                           </tr>
                         ))}
@@ -379,7 +379,7 @@ export default function StatementImporter({
                     >
                       {parsedTxs.every(t => t.selected) ? 'Deselect All' : 'Select All'}
                     </button>
-                    <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">
+                    <span className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest">
                       {parsedTxs.filter(t => t.selected).length} Selected
                     </span>
                   </div>
@@ -394,11 +394,11 @@ export default function StatementImporter({
                     <div 
                       key={idx}
                       className={cn(
-                        "p-4 rounded-[32px] border transition-all flex flex-col gap-3 group bg-[var(--surface)]",
+                        "p-4 rounded-xl border transition-all flex flex-col gap-3 group bg-[var(--surface)]",
                         tx.selected 
-                          ? "border-indigo-600 shadow-lg shadow-ledger-accent/5 ring-1 ring-indigo-600/5" 
+                          ? "border-[var(--brass-line)] shadow-sm" 
                           : "border-[var(--line)] opacity-60 grayscale bg-[var(--surface)]",
-                        tx.isDuplicate && tx.selected && "border-rose-200 bg-rose-50/30"
+                        tx.isDuplicate && tx.selected && "border-rose-300 bg-rose-500/10"
                       )}
                     >
                       <div className="flex items-center justify-between">
@@ -407,18 +407,18 @@ export default function StatementImporter({
                             onClick={(e) => { e.stopPropagation(); toggleSelect(idx); }}
                             className={cn(
                               "w-6 h-6 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
-                              tx.selected ? "bg-indigo-600 border-indigo-600 text-white" : "bg-[var(--surface)] border-[var(--line)]"
+                              tx.selected ? "bg-[var(--brass)] border-[var(--brass-line)] text-black" : "bg-[var(--surface)] border-[var(--line)]"
                             )}
                           >
                             {tx.selected && <Check size={14} />}
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-0.5">
-                              <p className="text-[10px] font-mono text-slate-500">{format(new Date(tx.date), 'MMM dd, yyyy')}</p>
+                              <p className="text-[10px] font-mono text-[var(--muted)]">{format(new Date(tx.date), 'MMM dd, yyyy')}</p>
                               {tx.hasResolvedEntity && (
                                 <span className={cn(
                                   "flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-tighter",
-                                  tx.isLearned ? "text-indigo-600 bg-indigo-600/5 border-indigo-600/20" : "text-emerald-600 bg-emerald-50 border-emerald-100"
+                                  tx.isLearned ? "text-[var(--brass)] bg-[var(--brass-soft)] border-[var(--brass-line)]" : "text-[var(--pos)] bg-[var(--pos)]/10 border-[var(--pos)]/20"
                                 )}>
                                   {tx.isLearned ? <Zap size={8} /> : <Activity size={8} />}
                                   {tx.isLearned ? "Rule Memory" : `Pattern Resolved (${Math.round((tx.resolutionScore || 0) * 100)}%)`}
@@ -433,7 +433,7 @@ export default function StatementImporter({
                         <div className="text-right">
                           <p className={cn(
                             "text-sm font-black mono-value",
-                            tx.amountCents > 0 ? "text-emerald-600" : "text-[var(--text)]"
+                            tx.amountCents > 0 ? "text-[var(--pos)]" : "text-[var(--text)]"
                           )}>
                             {tx.amountCents > 0 ? '+' : ''}{(tx.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                           </p>
@@ -445,23 +445,23 @@ export default function StatementImporter({
 
                       {/* Sub-item Drilldown */}
                       {tx.lines && tx.lines.length > 1 && (
-                        <div className="mt-2 pt-2 border-t border-[var(--line)]/30 space-y-1.5 pl-10">
+                        <div className="mt-2 pt-2 border-t border-[var(--line)] space-y-1.5 pl-10">
                           {tx.lines.map((item, i) => (
                             <div key={i} className="flex items-center justify-between group/item">
                               <div className="flex flex-col">
-                                <p className="text-[11px] font-medium text-slate-500 group-hover/item:text-[var(--text)] transition-colors">
+                                <p className="text-[11px] font-medium text-[var(--muted)] group-hover/item:text-[var(--text)] transition-colors">
                                   {item.description}
                                   {item.quantity && item.quantity > 1 && (
-                                    <span className="ml-2 text-[9px] text-slate-500 font-bold px-1 py-0.5 bg-[var(--surface)] rounded border border-[var(--line)]">
+                                    <span className="ml-2 text-[9px] text-[var(--muted)] font-bold px-1 py-0.5 bg-[var(--surface)] rounded border border-[var(--line)]">
                                       {item.quantity} units @ {( (item.unitPriceCents || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                                     </span>
                                   )}
                                 </p>
                                 {item.category && item.category !== tx.suggestedAccount && (
-                                  <span className="text-[8px] text-indigo-600 font-medium uppercase tracking-wider">{item.category}</span>
+                                  <span className="text-[8px] text-[var(--brass)] font-medium uppercase tracking-wider">{item.category}</span>
                                 )}
                               </div>
-                              <p className="text-[10px] font-mono font-bold text-slate-500">
+                              <p className="text-[10px] font-mono font-bold text-[var(--muted)]">
                                 {((item.amountCents || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                               </p>
                             </div>
@@ -477,11 +477,11 @@ export default function StatementImporter({
         </div>
 
         {/* Footer */}
-        <div className="p-4 md:p-8 border-t border-[var(--line)] bg-[var(--ink)] flex items-center justify-between">
+        <div className="p-4 md:p-6 border-t border-[var(--line)] bg-[var(--ink)] flex items-center justify-between">
           {step !== 'input' ? (
             <button 
               onClick={() => setStep('input')}
-              className="px-6 py-3 text-slate-500 font-bold hover:text-[var(--text)] transition-all"
+              className="px-5 py-2.5 text-[var(--muted)] font-bold hover:text-[var(--text)] transition-all cursor-pointer text-xs uppercase tracking-wider"
             >
               Back to Input
             </button>
@@ -494,25 +494,25 @@ export default function StatementImporter({
               <button 
                 onClick={handleParse}
                 disabled={isParsing || !rawText.trim()}
-                className="px-10 py-4 bg-slate-900 text-white rounded-[32px] font-black hover:bg-black transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-black/10"
+                className="px-8 py-3 bg-[var(--brass)] text-black rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-xs uppercase tracking-wider cursor-pointer"
               >
-                {isParsing ? <Loader2 className="animate-spin" size={20} /> : <ArrowRight size={20} />}
+                {isParsing ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />}
                 {isParsing ? 'Rule Analysis...' : 'Unstructured Parse'}
               </button>
             ) : step === 'mapping' ? (
               <button 
                 onClick={handleMapColumns}
-                className="px-10 py-4 bg-indigo-600 text-white rounded-[32px] font-black hover:bg-orange-600 transition-all flex items-center gap-3 shadow-xl shadow-ledger-accent/20"
+                className="px-8 py-3 bg-[var(--brass)] text-black rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-md text-xs uppercase tracking-wider cursor-pointer"
               >
-                <ArrowRight size={20} />
+                <ArrowRight size={16} />
                 Process Deterministic Mapping
               </button>
             ) : (
               <button 
                 onClick={handleImport}
-                className="px-10 py-4 bg-indigo-600 text-white rounded-[32px] font-black hover:bg-orange-600 transition-all flex items-center gap-3 shadow-xl shadow-ledger-accent/20"
+                className="px-8 py-3 bg-[var(--brass)] text-black rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-md text-xs uppercase tracking-wider cursor-pointer"
               >
-                <Check size={20} />
+                <Check size={16} />
                 Import {parsedTxs.filter(t => t.selected).length} Entries
               </button>
             )}

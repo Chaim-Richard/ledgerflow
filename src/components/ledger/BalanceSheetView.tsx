@@ -274,15 +274,15 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
   return (
     <div className="space-y-6">
       {/* Date controls and configuration header */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--panel)] border border-[var(--line)] rounded-2xl shadow-sm relative overflow-hidden group gap-4">
         <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10 w-full lg:w-auto">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-slate-500 shrink-0">
+            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-[var(--muted)] shrink-0">
                <Calendar size={13} />
             </div>
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">As Of Reporting Date</span>
+              <span className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider mb-0.5">As Of Reporting Date</span>
               <input 
                 type="date" 
                 value={asOfDate}
@@ -313,9 +313,9 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
-                Comparative Year-on-Year <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-slate-400")} />
+                Comparative Year-on-Year <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--faint)]")} />
               </span>
-              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Compare historical snapshot balances</span>
+              <span className="text-[8px] font-bold text-[var(--faint)] uppercase tracking-widest">Compare historical snapshot balances</span>
             </div>
           </label>
 
@@ -323,7 +323,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
             <>
               <div className="hidden sm:block w-px h-8 bg-slate-100" />
               <div className="flex flex-col">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Prior As Of Reference</span>
+                <span className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider mb-0.5">Prior As Of Reference</span>
                 <input 
                   type="date" 
                   value={priorDate}
@@ -337,7 +337,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
 
         <button 
           onClick={exportBalanceSheet}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--ink)] hover:bg-slate-800 text-[var(--panel)] rounded-lg font-bold uppercase text-[10px] tracking-wider transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
         >
           <FileSpreadsheet size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
           <span>Export Blueprint</span>
@@ -345,15 +345,15 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
       </div>
 
       {/* Fundamental Equilibrium Status Card */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between p-5 bg-slate-900 rounded-xl text-white shadow-sm relative overflow-hidden border border-slate-950 gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between p-5 bg-[var(--ink)] rounded-xl text-[var(--panel)] shadow-sm relative overflow-hidden border border-slate-950 gap-4">
         <div className="absolute technical-grid inset-0 opacity-[0.03] pointer-events-none" />
         <div className="flex flex-col relative z-10">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Fundamental Equilibrium Status</span>
+          <span className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider mb-1">Fundamental Equilibrium Status</span>
           <div className="flex items-baseline gap-3">
-             <span className="text-xl font-black text-white tracking-tight">
+             <span className="text-xl font-black text-[var(--panel)] tracking-tight">
                {currentData.isBalanced ? labels.isBalancedSuccess : 'Drift Alert'}
              </span>
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+             <p className="text-[10px] font-bold text-[var(--faint)] uppercase tracking-wider">
                • {currentData.isBalanced ? 'Stable' : labels.isBalancedDrift}
              </p>
           </div>
@@ -362,8 +362,8 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
         <div className="flex items-center gap-6 relative z-10">
           {isComparative && (
             <div className="text-right">
-              <span className="block text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">As Of {priorDate}</span>
-              <span className="block text-xs font-mono font-medium text-slate-400">
+              <span className="block text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest leading-none mb-1">As Of {priorDate}</span>
+              <span className="block text-xs font-mono font-medium text-[var(--faint)]">
                 {formatCurrency(prevData.totalAssets)} Assets / {formatCurrency(prevData.totalClaims)} Claims
               </span>
             </div>
@@ -388,7 +388,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden group hover:border-slate-300 transition-all flex flex-col"
+          className="bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden group hover:border-slate-300 transition-all flex flex-col"
         >
           <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)]/50 flex justify-between items-center relative overflow-hidden shrink-0">
             <div className="absolute top-0 right-0 p-2 opacity-[0.015] pointer-events-none group-hover:rotate-6 transition-transform duration-700">
@@ -396,7 +396,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
             </div>
             <div className="relative z-10">
               <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider leading-none">{labels.assetsLabel}</h3>
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1 block">{labels.assetsSub}</span>
+              <span className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider mt-1 block">{labels.assetsSub}</span>
             </div>
           </div>
           <div className="p-4 flex-1 flex flex-col justify-between">
@@ -409,19 +409,19 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                 return (
                   <div key={acc.id} className="flex justify-between items-center hover:bg-[var(--ink)]/60 p-2 rounded-lg transition-all border border-transparent hover:border-[var(--line)] min-w-0">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 bg-[var(--ink)] text-slate-500 rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
+                      <div className="w-8 h-8 bg-[var(--ink)] text-[var(--muted)] rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
                         {acc.code}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-[var(--text)] uppercase tracking-tight truncate">{acc.name}</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">{acc.category || 'Direct Asset'}</p>
+                        <p className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider truncate">{acc.category || 'Direct Asset'}</p>
                       </div>
                     </div>
                     <div className="flex flex-col items-end shrink-0 ml-2">
                       <span className="font-mono font-bold text-[var(--text)] text-xs">{formatCurrency(curVal)}</span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-slate-400">prev: {formatCurrency(prVal)}</span>
+                          <span className="font-mono text-[8px] text-[var(--faint)]">prev: {formatCurrency(prVal)}</span>
                           {variance.pct !== null && prVal !== 0 && (
                             <span className={cn("text-[8px] font-bold", variance.pct >= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -440,7 +440,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                  <span className="text-[var(--text)] font-bold uppercase tracking-wider text-[9px]">Total {labels.assetsLabel}</span>
               </div>
               <div className="text-right">
-                <span className="text-lg font-mono font-bold text-slate-950 tracking-tight block leading-none">{formatCurrency(currentData.totalAssets)}</span>
+                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none">{formatCurrency(currentData.totalAssets)}</span>
                 {isComparative && prevData.totalAssets !== 0 && (
                   <span className={cn("text-[9px] font-bold block mt-1", currentData.totalAssets >= prevData.totalAssets ? "text-emerald-500" : "text-rose-500")}>
                     {(((currentData.totalAssets - prevData.totalAssets) / Math.abs(prevData.totalAssets)) * 100).toFixed(1)}% vs Prior
@@ -455,7 +455,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden group hover:border-slate-300 transition-all flex flex-col"
+          className="bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden group hover:border-slate-300 transition-all flex flex-col"
         >
           <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)]/50 flex justify-between items-center relative overflow-hidden shrink-0">
             <div className="absolute top-0 right-0 p-2 opacity-[0.015] pointer-events-none group-hover:-rotate-6 transition-transform duration-700">
@@ -463,14 +463,14 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
             </div>
             <div className="relative z-10">
               <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider leading-none">{labels.liabilitiesLabel} & {labels.equityLabel}</h3>
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1 block">{labels.liabilitiesSub} / {labels.equitySub}</span>
+              <span className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider mt-1 block">{labels.liabilitiesSub} / {labels.equitySub}</span>
             </div>
           </div>
           <div className="p-4 flex-1 flex flex-col justify-between">
             <div className="space-y-6">
               {/* Liabilities Section */}
               <div className="space-y-2">
-                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider truncate border-b border-[var(--line)] pb-2">{labels.liabilitiesLabel}</p>
+                <p className="text-[8px] font-bold text-[var(--faint)] uppercase tracking-wider truncate border-b border-[var(--line)] pb-2">{labels.liabilitiesLabel}</p>
                 {accounts.filter(a => a.type === 'liability').map(acc => {
                   const curVal = currentData.liabilities[acc.id] || 0;
                   const prVal = isComparative ? prevData.liabilities[acc.id] || 0 : curVal;
@@ -479,19 +479,19 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                   return (
                     <div key={acc.id} className="flex justify-between items-center hover:bg-[var(--ink)]/60 p-2 rounded-lg transition-all border border-transparent hover:border-[var(--line)] min-w-0">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 bg-[var(--ink)] text-slate-500 rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
+                        <div className="w-8 h-8 bg-[var(--ink)] text-[var(--muted)] rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
                           {acc.code}
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-[var(--text)] uppercase tracking-tight truncate">{acc.name}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">{acc.category || 'Current Liability'}</p>
+                          <p className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider truncate">{acc.category || 'Current Liability'}</p>
                         </div>
                       </div>
                       <div className="flex flex-col items-end shrink-0 ml-2">
                         <span className="font-mono font-bold text-[var(--text)] text-xs">{formatCurrency(curVal)}</span>
                         {isComparative && (
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[8px] text-slate-400">prev: {formatCurrency(prVal)}</span>
+                            <span className="font-mono text-[8px] text-[var(--faint)]">prev: {formatCurrency(prVal)}</span>
                             {variance.pct !== null && prVal !== 0 && (
                               <span className={cn("text-[8px] font-bold", variance.pct <= 0 ? "text-emerald-500" : "text-rose-500")}>
                                 {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -503,7 +503,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                     </div>
                   );
                 })}
-                <div className="flex justify-between items-center pt-2 text-slate-400 text-[8px] font-bold uppercase tracking-wider">
+                <div className="flex justify-between items-center pt-2 text-[var(--faint)] text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Liabilities</span>
                   <span className="font-mono font-semibold">{formatCurrency(currentData.totalLiabilities)}</span>
                 </div>
@@ -511,7 +511,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
 
               {/* Equity Section */}
               <div className="space-y-2">
-                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider truncate border-b border-[var(--line)] pb-2">{labels.equityLabel}</p>
+                <p className="text-[8px] font-bold text-[var(--faint)] uppercase tracking-wider truncate border-b border-[var(--line)] pb-2">{labels.equityLabel}</p>
                 {accounts.filter(a => a.type === 'equity').map(acc => {
                   const curVal = currentData.equity[acc.id] || 0;
                   const prVal = isComparative ? prevData.equity[acc.id] || 0 : curVal;
@@ -520,19 +520,19 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                   return (
                     <div key={acc.id} className="flex justify-between items-center hover:bg-[var(--ink)]/60 p-2 rounded-lg transition-all border border-transparent hover:border-[var(--line)] min-w-0">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 bg-[var(--ink)] text-slate-500 rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
+                        <div className="w-8 h-8 bg-[var(--ink)] text-[var(--muted)] rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
                           {acc.code}
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-[var(--text)] uppercase tracking-tight truncate">{acc.name}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">{acc.category || 'Owner Equity'}</p>
+                          <p className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider truncate">{acc.category || 'Owner Equity'}</p>
                         </div>
                       </div>
                       <div className="flex flex-col items-end shrink-0 ml-2">
                         <span className="font-mono font-bold text-[var(--text)] text-xs">{formatCurrency(curVal)}</span>
                         {isComparative && (
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[8px] text-slate-400">prev: {formatCurrency(prVal)}</span>
+                            <span className="font-mono text-[8px] text-[var(--faint)]">prev: {formatCurrency(prVal)}</span>
                             {variance.pct !== null && prVal !== 0 && (
                               <span className={cn("text-[8px] font-bold", variance.pct >= 0 ? "text-emerald-500" : "text-rose-500")}>
                                 {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -562,7 +562,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                     </span>
                     {isComparative && (
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="font-mono text-[8.5px] text-slate-400">prev: {formatCurrency(prevData.netIncome)}</span>
+                        <span className="font-mono text-[8.5px] text-[var(--faint)]">prev: {formatCurrency(prevData.netIncome)}</span>
                         {prevData.netIncome !== 0 && (
                           <span className={cn("text-[8.5px] font-bold", (currentData.netIncome >= prevData.netIncome) ? "text-emerald-500" : "text-rose-500")}>
                             {(((currentData.netIncome - prevData.netIncome) / Math.abs(prevData.netIncome)) * 100).toFixed(1)}%
@@ -573,7 +573,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center pt-2 text-slate-400 text-[8px] font-bold uppercase tracking-wider">
+                <div className="flex justify-between items-center pt-2 text-[var(--faint)] text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Equity</span>
                   <span className="font-mono font-semibold">{formatCurrency(currentData.totalEquity + currentData.netIncome)}</span>
                 </div>
@@ -595,7 +595,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                 )}
               </div>
               <div className="text-right shrink-0">
-                <span className="text-lg font-mono font-bold text-slate-950 tracking-tight block leading-none">
+                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none">
                   {formatCurrency(currentData.totalClaims)}
                 </span>
                 {isComparative && prevData.totalClaims !== 0 && (

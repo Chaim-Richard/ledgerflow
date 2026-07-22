@@ -77,7 +77,7 @@ export default function ContextualToolbelt({
            <button
              onClick={onTogglePrivacy}
              className={cn(
-               "p-1.5 rounded-md transition-colors text-slate-500 hover:text-[var(--text)] hover:bg-slate-100 bg-transparent",
+               "p-1.5 rounded-md transition-colors text-[var(--muted)] hover:text-[var(--text)] hover:bg-slate-100 bg-transparent",
                isPrivacyMode && "text-emerald-600 bg-emerald-50"
              )}
              title={isPrivacyMode ? "Toggle visible figures" : "Mask sensitive financials"}
@@ -89,7 +89,7 @@ export default function ContextualToolbelt({
            <button
              onClick={onTriggerReconcile}
              className={cn(
-               "p-1.5 rounded-md transition-colors text-slate-500 hover:text-[var(--text)] hover:bg-slate-100 bg-transparent",
+               "p-1.5 rounded-md transition-colors text-[var(--muted)] hover:text-[var(--text)] hover:bg-slate-100 bg-transparent",
                !isConsistent && "text-rose-600 bg-rose-50"
              )}
              title="Recalculate dual equilibrium balance validation"
@@ -106,7 +106,7 @@ export default function ContextualToolbelt({
               className="whitespace-nowrap shrink-0 px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--surface)] hover:bg-[var(--ink)] active:bg-slate-100 border border-[var(--line)] text-slate-700 shadow-sm hover:text-[var(--text)] flex items-center gap-1.5 transition-all group"
               title={tool.tooltip}
             >
-              <tool.icon size={14} className="text-slate-500 group-hover:text-[var(--text)] transition-colors" />
+              <tool.icon size={14} className="text-[var(--muted)] group-hover:text-[var(--text)] transition-colors" />
               <span>{tool.label}</span>
             </button>
           ))}

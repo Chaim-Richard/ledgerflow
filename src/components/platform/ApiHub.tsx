@@ -95,7 +95,7 @@ export default function ApiHub() {
   const [fieldProjectName, setFieldProjectName] = useState('Project Phoenix Integration');
   const [fieldProjectCode, setFieldProjectCode] = useState('PHX-001');
   const [fieldMatchDesc, setFieldMatchDesc] = useState('Uber Trip transport ride\nAWS Cloud Services database bill\nMonthly advisory fee Deloitte business');
-  const [fieldClearbookAIPrompt, setFieldClearbookAIPrompt] = useState('Explain what operational cost adjustments we should carry out based on our high software subscription drift.');
+  const [fieldAIPrompt, setFieldAIPrompt] = useState('Explain what operational cost adjustments we should carry out based on our high software subscription drift.');
 
   const loadBillingStatus = async () => {
     if (!currentWorkspace?.id || !user) return;
@@ -601,7 +601,7 @@ export default function ApiHub() {
       case 'POST_brain_analyze':
         return {
           workspaceId: wsId,
-          prompt: fieldClearbookAIPrompt || "Generate executive review of cash allocation anomalies across our ledger assets."
+          prompt: fieldAIPrompt || "Generate executive review of cash allocation anomalies across our ledger assets."
         };
       case 'POST_v1_ecommerce':
         return { workspaceId: wsId, channel: "Shopify Store", syncStatus: "live" };
@@ -705,7 +705,7 @@ export default function ApiHub() {
           method = 'POST';
           bodyData = {
             workspaceId: currentWorkspace.id,
-            prompt: fieldClearbookAIPrompt
+            prompt: fieldAIPrompt
           };
           break;
         case 'POST_v1_transactions_bulk':
@@ -825,16 +825,16 @@ export default function ApiHub() {
         <div>
           <h1 className="text-xl font-bold tracking-tight text-[var(--text)] flex items-center gap-2.5 font-display">
             <Terminal className="text-slate-950" size={18} />
-            Integrity API Hub
+            API Platform
           </h1>
-          <p className="text-slate-400 mt-1 max-w-2xl text-xs font-medium">
+          <p className="text-[var(--faint)] mt-1 max-w-2xl text-xs font-medium">
             Direct interface to the TruthEngine core data engine. Integrate double-entry telemetry, query AI brain analysis, and orchestrate financial pipelines natively.
           </p>
         </div>
         
         {/* Workspace Quick-Picker */}
-        <div className="flex items-center gap-2.5 self-start md:self-auto bg-[var(--ink)] border border-[var(--line)] px-3.5 py-1.5 rounded-lg shadow-3xs">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Workspace:</span>
+        <div className="flex items-center gap-2.5 self-start md:self-auto bg-[var(--ink)] border border-[var(--line)] px-3.5 py-1.5 rounded-lg shadow-sm">
+          <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-wider">Workspace:</span>
           <select
             value={currentWorkspaceId || ''}
             onChange={(e) => setCurrentWorkspaceId(e.target.value)}
@@ -854,7 +854,7 @@ export default function ApiHub() {
           onClick={() => setActiveTab('overview')}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'overview' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'overview' ? "bg-[var(--surface)] text-[var(--text)] shadow-2xs border border-[var(--line)] font-bold" : "text-[var(--muted)] hover:text-[var(--text)]"
           )}
         >
           Overview
@@ -863,7 +863,7 @@ export default function ApiHub() {
           onClick={() => setActiveTab('keys')}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'keys' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'keys' ? "bg-[var(--surface)] text-[var(--text)] shadow-2xs border border-[var(--line)] font-bold" : "text-[var(--muted)] hover:text-[var(--text)]"
           )}
         >
           Auth Keys
@@ -872,7 +872,7 @@ export default function ApiHub() {
           onClick={() => setActiveTab('docs')}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'docs' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'docs' ? "bg-[var(--surface)] text-[var(--text)] shadow-2xs border border-[var(--line)] font-bold" : "text-[var(--muted)] hover:text-[var(--text)]"
           )}
         >
           Docs
@@ -881,7 +881,7 @@ export default function ApiHub() {
           onClick={() => setActiveTab('sandbox')}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'sandbox' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold text-emerald-500 font-black" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'sandbox' ? "bg-[var(--surface)] text-[var(--text)] shadow-2xs border border-[var(--line)] font-bold text-emerald-500 font-black" : "text-[var(--muted)] hover:text-[var(--text)]"
           )}
         >
           ⚡ Playground Sandbox
@@ -893,7 +893,7 @@ export default function ApiHub() {
           }}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'logs' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold text-indigo-600" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'logs' ? "bg-[var(--surface)] text-[var(--text)] shadow-2xs border border-[var(--line)] font-bold text-indigo-400" : "text-[var(--muted)] hover:text-[var(--text)]"
           )}
         >
           API Logs
@@ -905,7 +905,7 @@ export default function ApiHub() {
           }}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'billing' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold text-[#8A2BE2]" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'billing' ? "bg-[var(--surface)] text-[var(--text)] shadow-2xs border border-[var(--line)] font-bold text-[var(--brass)]" : "text-[var(--muted)] hover:text-[var(--text)]"
           )}
         >
           Compute Metering
@@ -919,26 +919,26 @@ export default function ApiHub() {
               <Activity className="text-indigo-600" size={20} />
               Platform Architecture
             </h3>
-            <p className="text-sm text-slate-500 leading-relaxed">
-              Clearbook's Integrity API is built on a high-throughput Express Node architecture, 
+            <p className="text-sm text-[var(--muted)] leading-relaxed">
+              LedgerFlow's Integrity API is built on a high-throughput Express Node architecture, 
               connecting natively to the unified workspace data layer. 
               The API guarantees double-entry accounting integrity at the database level for all incoming mutations.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <div className="p-4 border border-[var(--line)] rounded-xl bg-[var(--ink)]/50">
-                 <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Architecture Standard</div>
+                 <div className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider mb-1">Architecture Standard</div>
                  <div className="font-mono text-sm">RESTful JSON over HTTPS</div>
               </div>
               <div className="p-4 border border-[var(--line)] rounded-xl bg-[var(--ink)]/50">
-                 <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Base URL</div>
+                 <div className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider mb-1">Base URL</div>
                  <div className="font-mono text-sm">&lt;INSTANCE_URL&gt;/api/v1</div>
               </div>
               <div className="p-4 border border-[var(--line)] rounded-xl bg-[var(--ink)]/50">
-                 <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Authorization</div>
+                 <div className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider mb-1">Authorization</div>
                  <div className="font-mono text-sm">Bearer Token</div>
               </div>
               <div className="p-4 border border-[var(--line)] rounded-xl bg-[var(--ink)]/50">
-                 <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Rate Limit</div>
+                 <div className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider mb-1">Rate Limit</div>
                  <div className="font-mono text-sm">100 req / minute</div>
               </div>
             </div>
@@ -948,10 +948,10 @@ export default function ApiHub() {
                <CpuIcon className="text-emerald-500" size={18} />
                Brain Integration
              </h3>
-             <p className="text-xs text-slate-500 mb-4">
-               The API exposes a direct line to the Clearbook AI (`/brain/analyze`), allowing your external services to query the intelligent agent based on live ledger data.
+             <p className="text-xs text-[var(--muted)] mb-4">
+               The API exposes a direct line to the LedgerFlow AI (`/brain/analyze`), allowing your external services to query the intelligent agent based on live ledger data.
              </p>
-             <div className="p-3 bg-slate-900 text-white rounded-lg font-mono text-[10px] break-all">
+             <div className="p-3 bg-[var(--ink)] text-[var(--panel)] rounded-lg font-mono text-[10px] break-all">
                 POST /api/v1/brain/analyze<br/>
                 &#123;<br/>
                 &nbsp;&nbsp;"prompt": "Analyze our runway based on recent MRR..."<br/>
@@ -966,12 +966,12 @@ export default function ApiHub() {
           <div className="ledger-card p-4 md:p-8 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--line)] pb-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-[32px] bg-slate-950 text-white flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-slate-950 text-[var(--panel)] flex items-center justify-center">
                   <Key size={24} />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold font-display text-slate-950">Workspace API Keys</h2>
-                  <p className="text-sm text-slate-500">Manage Bearer tokens with full or granular access scopes to integrate with external systems.</p>
+                  <p className="text-sm text-[var(--muted)]">Manage Bearer tokens with full or granular access scopes to integrate with external systems.</p>
                 </div>
               </div>
               <button
@@ -981,7 +981,7 @@ export default function ApiHub() {
                    setExpiration('never');
                    setShowCreateModal(true);
                  }}
-                 className="px-5 py-2.5 bg-slate-950 text-white font-bold rounded-xl text-sm hover:bg-slate-800 transition-all flex items-center gap-2 self-start sm:self-auto shrink-0 shadow-sm hover:scale-[1.01]"
+                 className="px-5 py-2.5 bg-slate-950 text-[var(--panel)] font-bold rounded-xl text-sm hover:bg-slate-800 transition-all flex items-center gap-2 self-start sm:self-auto shrink-0 shadow-sm hover:scale-[1.01]"
                >
                  <RefreshCw size={14} />
                  Generate New Key
@@ -989,22 +989,22 @@ export default function ApiHub() {
             </div>
 
             {apiKey && (
-              <div className="p-6 bg-emerald-50 rounded-[32px] border border-emerald-500/20 shadow-3xs">
+              <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-500/20 shadow-sm">
                 <div className="flex gap-3 items-center mb-3">
                    <AlertCircle className="text-emerald-600 shrink-0" size={20} />
                    <h4 className="text-sm font-black uppercase text-emerald-800 tracking-wider">Secret Key Generated Successfully</h4>
                 </div>
                 <p className="text-xs text-emerald-700/80 mb-4 font-medium">
-                  <strong>Private Hashing Notice:</strong> Please copy this secret key now. For your security, Clearbook does NOT store this raw token string in the database. You will not be able to retrieve or see these characters again after you close this warning.
+                  <strong>Private Hashing Notice:</strong> Please copy this secret key now. For your security, LedgerFlow does NOT store this raw token string in the database. You will not be able to retrieve or see these characters again after you close this warning.
                 </p>
 
                 <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-                  <div className="flex-1 font-mono text-xs bg-[var(--surface)] border border-emerald-500/30 p-4 rounded-xl text-[var(--text)] font-bold break-all shadow-3xs">
+                  <div className="flex-1 font-mono text-xs bg-[var(--panel)] border border-emerald-500/30 p-4 rounded-2xl text-[var(--text)] font-bold break-all shadow-sm">
                       {apiKey}
                   </div>
                   <button
                     onClick={copyKey}
-                    className="px-6 py-4 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shrink-0 shadow-sm"
+                    className="px-6 py-4 bg-emerald-600 text-[var(--panel)] rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shrink-0 shadow-sm"
                   >
                     {isCopied ? <CheckCircle2 size={18} /> : <Copy size={18} />}
                     {isCopied ? 'Copied' : 'Copy Token'}
@@ -1027,13 +1027,13 @@ export default function ApiHub() {
                  Active Credentials ({publicKeys.length})
                </h3>
                {publicKeys.length === 0 ? (
-                  <div className="text-sm text-slate-500 italic p-6 border border-[var(--line)] bg-[var(--ink)]/50 rounded-[32px] text-center">
+                  <div className="text-sm text-[var(--muted)] italic p-6 border border-[var(--line)] bg-[var(--ink)]/50 rounded-xl text-center">
                     No active integration keys registered. Generate an API Key above to begin orchestrating external transactions and AI analyses.
                   </div>
                ) : (
-                  <div className="border border-slate-150 rounded-[32px] shadow-3xs overflow-hidden">
+                  <div className="border border-slate-150 rounded-xl shadow-sm overflow-hidden">
                      <table className="w-full text-left text-sm">
-                        <thead className="bg-[var(--ink)]/80 border-b border-slate-150 text-[10px] uppercase tracking-wider text-slate-400 font-black">
+                        <thead className="bg-[var(--ink)]/80 border-b border-slate-150 text-[10px] uppercase tracking-wider text-[var(--faint)] font-black">
                            <tr>
                               <th className="p-4 py-3.5">Details</th>
                               <th className="p-4 py-3.5">Granted Scopes</th>
@@ -1049,13 +1049,13 @@ export default function ApiHub() {
                                <tr key={k.id} className="hover:bg-[var(--ink)]/40 transition-colors">
                                   <td className="p-4">
                                      <div className="font-bold text-slate-950 text-xs">{k.name}</div>
-                                     <div className="font-mono text-[10px] text-slate-400 mt-0.5">{k.id}</div>
-                                     <div className="text-[10px] text-slate-400/90 mt-1">Created: {new Date(k.createdAt).toLocaleDateString()}</div>
+                                     <div className="font-mono text-[10px] text-[var(--faint)] mt-0.5">{k.id}</div>
+                                     <div className="text-[10px] text-[var(--faint)]/90 mt-1">Created: {new Date(k.createdAt).toLocaleDateString()}</div>
                                   </td>
                                   <td className="p-4 max-w-xs">
                                      <div className="flex flex-wrap gap-1">
                                         {k.scopes.length === 0 ? (
-                                           <span className="text-[9px] bg-[var(--ink)] text-slate-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-[var(--line)]">No Scopes</span>
+                                           <span className="text-[9px] bg-[var(--ink)] text-[var(--faint)] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-[var(--line)]">No Scopes</span>
                                         ) : (
                                            k.scopes.map((scope: string) => (
                                               <span 
@@ -1075,7 +1075,7 @@ export default function ApiHub() {
                                   </td>
                                   <td className="p-4 text-xs font-mono text-slate-600">
                                      <div className="font-bold">{k.totalRequests} API calls</div>
-                                     <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                                     <div className="text-[10px] text-[var(--faint)] mt-1 flex items-center gap-1">
                                         <Clock size={10} />
                                         Last Used: {k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleString() : 'Never'}
                                      </div>
@@ -1086,13 +1086,13 @@ export default function ApiHub() {
                                           <Shield size={10} className="stroke-[3]" /> Expired
                                         </span>
                                      ) : k.expiresAt === 'never' ? (
-                                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full border border-[var(--line)]">
+                                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase bg-slate-100 text-[var(--muted)] px-2.5 py-1 rounded-full border border-[var(--line)]">
                                           <Lock size={10} /> Indefinite
                                         </span>
                                      ) : (
                                         <div className="text-xs">
                                           <div className="font-bold text-[var(--text)]">{new Date(k.expiresAt).toLocaleDateString()}</div>
-                                          <div className="text-[10px] text-slate-400 mt-0.5">{new Date(k.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                          <div className="text-[10px] text-[var(--faint)] mt-0.5">{new Date(k.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                         </div>
                                      )}
                                   </td>
@@ -1103,7 +1103,7 @@ export default function ApiHub() {
                                            revokeKey(k.id);
                                          }
                                        }}
-                                       className="inline-flex items-center justify-center w-8 h-8 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                       className="inline-flex items-center justify-center w-8 h-8 text-[var(--faint)] hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                        title="Revoke Credential"
                                      >
                                        <Trash2 size={15} />
@@ -1121,21 +1121,21 @@ export default function ApiHub() {
 
           {/* CREATE DETAILED KEY MODAL */}
           {showCreateModal && (
-            <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="fixed inset-0 z-50 overflow-y-auto bg-[var(--ink)]/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-[var(--surface)] rounded-xl w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex justify-between items-center p-6 border-b border-[var(--line)]">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-slate-950 text-[var(--panel)] flex items-center justify-center">
                       <Key size={20} />
                     </div>
                     <div>
                       <h3 className="font-bold text-[var(--text)] font-display text-base">Provision New Developer Credential</h3>
-                      <p className="text-xs text-slate-400 font-mono mt-0.5">Workspace: {currentWorkspace?.name}</p>
+                      <p className="text-xs text-[var(--faint)] font-mono mt-0.5">Workspace: {currentWorkspace?.name}</p>
                     </div>
                   </div>
                   <button 
                     onClick={() => setShowCreateModal(false)}
-                    className="p-1 px-1.5 text-slate-400 hover:text-slate-950 rounded-lg hover:bg-[var(--ink)]"
+                    className="p-1 px-1.5 text-[var(--faint)] hover:text-slate-950 rounded-lg hover:bg-[var(--ink)]"
                   >
                     <X size={18} />
                   </button>
@@ -1144,23 +1144,23 @@ export default function ApiHub() {
                 <div className="p-6 space-y-6">
                   {/* Name Input */}
                   <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Credential Name</label>
+                    <label className="text-xs font-black uppercase tracking-wider text-[var(--muted)] block">Credential Name</label>
                     <input 
                       type="text"
                       value={newKeyName}
                       onChange={(e) => setNewKeyName(e.target.value)}
                       placeholder="e.g. Acme Production Integration"
-                      className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-3xs"
+                      className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-sm"
                     />
                   </div>
 
                   {/* Expiration dropdown */}
                   <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">TTL / Expiration Age</label>
+                    <label className="text-xs font-black uppercase tracking-wider text-[var(--muted)] block">TTL / Expiration Age</label>
                     <select 
                       value={expiration}
                       onChange={(e: any) => setExpiration(e.target.value)}
-                      className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-3xs"
+                      className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-sm"
                     >
                       <option value="never">Indefinite (Never Expire)</option>
                       <option value="1h">1 Hour (Ephemeral Transient Testing)</option>
@@ -1173,25 +1173,25 @@ export default function ApiHub() {
                   {/* Scopes selection */}
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <label className="text-xs font-black uppercase tracking-wider text-slate-500">Access Scopes & Permissions</label>
+                      <label className="text-xs font-black uppercase tracking-wider text-[var(--muted)]">Access Scopes & Permissions</label>
                       <div className="flex gap-2">
                         <button 
                           onClick={() => setSelectedScopes(AVAILABLE_SCOPES.map(s => s.id))}
-                          className="text-[10px] font-black text-slate-400 hover:text-slate-950 uppercase"
+                          className="text-[10px] font-black text-[var(--faint)] hover:text-slate-950 uppercase"
                         >
                           Select All
                         </button>
                         <span className="text-[10px] text-slate-200 font-bold">|</span>
                         <button 
                           onClick={() => setSelectedScopes([])}
-                          className="text-[10px] font-black text-slate-400 hover:text-slate-950 uppercase"
+                          className="text-[10px] font-black text-[var(--faint)] hover:text-slate-950 uppercase"
                         >
                           Clear
                         </button>
                       </div>
                     </div>
                     
-                    <div className="max-h-[180px] overflow-y-auto pr-1 space-y-2 border border-[var(--line)] p-3.5 rounded-[32px] bg-[var(--ink)]/50">
+                    <div className="max-h-[180px] overflow-y-auto pr-1 space-y-2 border border-[var(--line)] p-3.5 rounded-xl bg-[var(--ink)]/50">
                       {AVAILABLE_SCOPES.map((scope) => {
                         const checked = selectedScopes.includes(scope.id);
                         return (
@@ -1199,7 +1199,7 @@ export default function ApiHub() {
                             key={scope.id} 
                             className={cn(
                               "flex items-start gap-3 p-2.5 rounded-xl cursor-pointer transition-all border",
-                              checked ? "bg-[var(--surface)] border-[var(--line)] shadow-3xs" : "border-transparent opacity-75 hover:opacity-100"
+                              checked ? "bg-[var(--surface)] border-[var(--line)] shadow-sm" : "border-transparent opacity-75 hover:opacity-100"
                             )}
                           >
                             <input 
@@ -1219,7 +1219,7 @@ export default function ApiHub() {
                                 {scope.label}
                                 <span className="font-mono text-[9px] bg-slate-100 text-slate-450 border border-[var(--line)] px-1 rounded uppercase tracking-wider">{scope.id}</span>
                               </div>
-                              <div className="text-[10px] text-slate-400 mt-0.5">{scope.desc}</div>
+                              <div className="text-[10px] text-[var(--faint)] mt-0.5">{scope.desc}</div>
                             </div>
                           </label>
                         );
@@ -1228,22 +1228,22 @@ export default function ApiHub() {
                   </div>
 
                   {/* Private hashing notice */}
-                  <div className="p-4 rounded-[32px] bg-[var(--ink)] border border-slate-150 text-[11px] text-slate-500 leading-relaxed font-medium">
-                     🔓 <strong>Hashed Storage Guarantee:</strong> Clearbook stores credentials using a one-way salt-hashed SHA-256 match protocol. Nobody can ever decrypt or view the original secret sequence. Copy the key safely when displayed.
+                  <div className="p-4 rounded-xl bg-[var(--ink)] border border-slate-150 text-[11px] text-[var(--muted)] leading-relaxed font-medium">
+                     🔓 <strong>Hashed Storage Guarantee:</strong> LedgerFlow stores credentials using a one-way salt-hashed SHA-256 match protocol. Nobody can ever decrypt or view the original secret sequence. Copy the key safely when displayed.
                   </div>
                 </div>
 
                 <div className="flex justify-end gap-3 p-6 bg-[var(--ink)] border-t border-[var(--line)]">
                   <button 
                     onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 bg-[var(--surface)] border border-[var(--line)] text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-100 transition-all shrink-0"
+                    className="px-4 py-2 bg-[var(--surface)] text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-100 transition-all shrink-0"
                   >
                     Cancel
                   </button>
                   <button 
                     onClick={generateNewKey}
                     disabled={isRegenerating || selectedScopes.length === 0}
-                    className="px-5 py-2 bg-slate-950 text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-all disabled:opacity-50 shrink-0 shadow-sm"
+                    className="px-5 py-2 bg-slate-950 text-[var(--panel)] font-bold rounded-xl text-xs hover:bg-slate-800 transition-all disabled:opacity-50 shrink-0 shadow-sm"
                   >
                     {isRegenerating ? 'Generating...' : 'Confirm and Provision'}
                   </button>
@@ -1258,7 +1258,7 @@ export default function ApiHub() {
         <div className="ledger-card p-0 overflow-hidden text-sm flex flex-col md:flex-row min-h-[600px]">
           <div className="w-full md:w-64 border-r border-[var(--line)] overflow-y-auto bg-[var(--ink)]/20 p-4 shrink-0 space-y-6">
              <div>
-                <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-2">Core Telemetry</div>
+                <div className="font-bold text-[10px] text-[var(--muted)] uppercase tracking-wider mb-3 px-2">Core Telemetry</div>
                 <div className="space-y-1">
                   <button onClick={() => setActiveDoc('get-status')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-status' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /status</button>
                   <button onClick={() => setActiveDoc('get-logs')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-logs' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /logs</button>
@@ -1268,7 +1268,7 @@ export default function ApiHub() {
              </div>
              
              <div>
-                <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-2">Ledger Config</div>
+                <div className="font-bold text-[10px] text-[var(--muted)] uppercase tracking-wider mb-3 px-2">Ledger Config</div>
                 <div className="space-y-1">
                   <button onClick={() => setActiveDoc('get-ledger')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-ledger' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /ledger</button>
                   <button onClick={() => setActiveDoc('post-ledger')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-ledger' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-emerald-500" : "hover:bg-[var(--ink)]/50")}>POST /ledger</button>
@@ -1276,7 +1276,7 @@ export default function ApiHub() {
              </div>
 
              <div>
-                <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-2">Transactions</div>
+                <div className="font-bold text-[10px] text-[var(--muted)] uppercase tracking-wider mb-3 px-2">Transactions</div>
                 <div className="space-y-1">
                   <button onClick={() => setActiveDoc('get-transaction')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-transaction' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /transactions</button>
                   <button onClick={() => setActiveDoc('post-transaction')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-transaction' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-emerald-500" : "hover:bg-[var(--ink)]/50")}>POST /transactions</button>
@@ -1286,7 +1286,7 @@ export default function ApiHub() {
              </div>
 
              <div>
-                <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 mt-6 px-2">TruthEngine Math</div>
+                <div className="font-bold text-[10px] text-[var(--muted)] uppercase tracking-wider mb-3 mt-6 px-2">TruthEngine Math</div>
                 <div className="space-y-1">
                   <button onClick={() => setActiveDoc('math-depreciation')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-depreciation' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-purple-600" : "hover:bg-[var(--ink)]/50")}>POST /math/depreciation</button>
                   <button onClick={() => setActiveDoc('math-inventory')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-inventory' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-purple-600" : "hover:bg-[var(--ink)]/50")}>POST /math/inventory/wac</button>
@@ -1298,7 +1298,7 @@ export default function ApiHub() {
              </div>
 
              <div>
-                <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-2">Workspaces & Projects</div>
+                <div className="font-bold text-[10px] text-[var(--muted)] uppercase tracking-wider mb-3 px-2">Workspaces & Projects</div>
                 <div className="space-y-1">
                   <button onClick={() => setActiveDoc('get-workspaces')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-workspaces' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /workspaces</button>
                   <button onClick={() => setActiveDoc('get-projects')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-projects' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /projects</button>
@@ -1307,7 +1307,7 @@ export default function ApiHub() {
              </div>
 
              <div>
-                <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-2">AI Clearbook AI & ML</div>
+                <div className="font-bold text-[10px] text-[var(--muted)] uppercase tracking-wider mb-3 px-2">AI LedgerFlow AI & ML</div>
                 <div className="space-y-1">
                   <button onClick={() => setActiveDoc('post-brain')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-brain' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-[#8A2BE2]" : "hover:bg-[var(--ink)]/50")}>POST /brain/analyze</button>
                   <button onClick={() => setActiveDoc('post-classify')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-classify' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-[#d1502c]" : "hover:bg-[var(--ink)]/50")}>POST /brain/classify</button>
@@ -1320,9 +1320,9 @@ export default function ApiHub() {
           <div className="flex-1 p-4 md:p-6 md:p-10 overflow-y-auto">
              <div className="flex justify-end mb-6">
                  <div className="flex bg-[var(--ink)] p-1 rounded-lg border border-[var(--line)]">
-                     <button onClick={() => setDocLang('curl')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'curl' ? "bg-[var(--surface)] shadow-sm" : "text-slate-500 opacity-70")}>cURL</button>
-                     <button onClick={() => setDocLang('python')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'python' ? "bg-[var(--surface)] shadow-sm text-[#3776AB]" : "text-slate-500 opacity-70")}>Python</button>
-                     <button onClick={() => setDocLang('node')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'node' ? "bg-[var(--surface)] shadow-sm text-[#339933]" : "text-slate-500 opacity-70")}>Node.js</button>
+                     <button onClick={() => setDocLang('curl')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'curl' ? "bg-[var(--surface)] shadow-sm" : "text-[var(--muted)] opacity-70")}>cURL</button>
+                     <button onClick={() => setDocLang('python')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'python' ? "bg-[var(--surface)] shadow-sm text-[#3776AB]" : "text-[var(--muted)] opacity-70")}>Python</button>
+                     <button onClick={() => setDocLang('node')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'node' ? "bg-[var(--surface)] shadow-sm text-[#339933]" : "text-[var(--muted)] opacity-70")}>Node.js</button>
                  </div>
              </div>
 
@@ -1330,7 +1330,7 @@ export default function ApiHub() {
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2">Check Engine Status</h2>
-                    <p className="text-slate-500">Pings the Clearbook core API and returns active workspace metadata, currency settings, and uptime telemetry.</p>
+                    <p className="text-[var(--muted)]">Pings the LedgerFlow core API and returns active workspace metadata, currency settings, and uptime telemetry.</p>
                  </div>
                  
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
@@ -1382,9 +1382,9 @@ fetch(url, options)
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                       Create Transaction 
-                      <span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
+                      <span className="text-[10px] bg-emerald-500 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
                     </h2>
-                    <p className="text-slate-500">
+                    <p className="text-[var(--muted)]">
                        Injects a new structural double-entry transaction. This endpoint guarantees atomic integrity—if the ledger lines do not sum exactly to zero, the transaction is rejected instantly. 
                     </p>
                  </div>
@@ -1443,9 +1443,9 @@ fetch(url, {
 </pre>
                  </div>
 
-                 <p className="text-xs text-slate-500 bg-slate-900/10 p-4 rounded-xl border border-indigo-600/20">
+                 <p className="text-xs text-[var(--muted)] bg-[var(--ink)]/10 p-4 rounded-xl border border-indigo-600/20">
                    <strong>💡 Auto-Balancing:</strong> The example above uses <code className="bg-[var(--surface)]/50 px-1 py-0.5 rounded ml-1">amountCents</code> instead of strict <code className="bg-[var(--surface)]/50 px-1 py-0.5 rounded ml-1">lines</code>. 
-                   The Clearbook engine will intuitively pair your default operational expense and liquid asset accounts to balance the entry automatically. To specify multi-line distribution, pass an array of <code className="bg-[var(--surface)]/50 px-1 py-0.5 rounded ml-1">lines</code>.
+                   The LedgerFlow engine will intuitively pair your default operational expense and liquid asset accounts to balance the entry automatically. To specify multi-line distribution, pass an array of <code className="bg-[var(--surface)]/50 px-1 py-0.5 rounded ml-1">lines</code>.
                  </p>
                </div>
              )}
@@ -1454,11 +1454,11 @@ fetch(url, {
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
-                       Analyze with AI Clearbook AI
-                       <span className="text-[10px] bg-[#8A2BE2] text-white px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
+                       Analyze with AI LedgerFlow AI
+                       <span className="text-[10px] bg-[#8A2BE2] text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
                     </h2>
-                    <p className="text-slate-500">
-                      Ask the Clearbook AI engine a question about your financial data. The deep engine securely compiles your ledger context and queries the rule models directly.
+                    <p className="text-[var(--muted)]">
+                      Ask the LedgerFlow AI engine a question about your financial data. The deep engine securely compiles your ledger context and queries the rule models directly.
                     </p>
                  </div>
 
@@ -1505,9 +1505,9 @@ fetch("https://api.clearbook.io/api/v1/brain/analyze", {
                   <div>
                      <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                         Classify with Self-Learning ML
-                        <span className="text-[10px] bg-[#d1502c] text-white px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
+                        <span className="text-[10px] bg-[#d1502c] text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
                      </h2>
-                     <p className="text-slate-500">
+                     <p className="text-[var(--muted)]">
                        Instantly trains a Laplace-smoothed Naive Bayes bigram classifier on your workspace's past journal entries and categorizes incoming payment descriptions with machine confidence metrics.
                      </p>
                   </div>
@@ -1577,7 +1577,7 @@ fetch("https://api.clearbook.io/api/v1/brain/classify", {
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">List Ledger Accounts</h2>
-                    <p className="text-slate-500">Retrieves the entire structural Chart of Accounts mapped to the workspace.</p>
+                    <p className="text-[var(--muted)]">Retrieves the entire structural Chart of Accounts mapped to the workspace.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -1602,7 +1602,7 @@ fetch("https://api.clearbook.io/api/v1/ledger?workspaceId=${currentWorkspace?.id
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">Create Ledger Account</h2>
-                    <p className="text-slate-500">Append a new structural node to the Chart of Accounts.</p>
+                    <p className="text-[var(--muted)]">Append a new structural node to the Chart of Accounts.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -1650,7 +1650,7 @@ fetch("https://api.clearbook.io/api/v1/ledger", {
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">List Transactions</h2>
-                    <p className="text-slate-500">Retrieves chronological immutable transaction records with their double-entry structures intact.</p>
+                    <p className="text-[var(--muted)]">Retrieves chronological immutable transaction records with their double-entry structures intact.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -1676,9 +1676,9 @@ fetch("https://api.clearbook.io/api/v1/transactions?workspaceId=${currentWorkspa
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                        Delete Transaction
-                       <span className="text-[10px] bg-rose-500 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">DELETE</span>
+                       <span className="text-[10px] bg-rose-500 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">DELETE</span>
                     </h2>
-                    <p className="text-slate-500">Permanently removes a transaction record from the database. Note: Enforces lock period verification automatically.</p>
+                    <p className="text-[var(--muted)]">Permanently removes a transaction record from the database. Note: Enforces lock period verification automatically.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -1704,7 +1704,7 @@ fetch("https://api.clearbook.io/api/v1/transactions/api-1701234567-abcd?workspac
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">Fetch Audit Logs</h2>
-                    <p className="text-slate-500">Obtain the deep API access telemetry, monitoring recent requests and latencies processed against your workspace.</p>
+                    <p className="text-[var(--muted)]">Obtain the deep API access telemetry, monitoring recent requests and latencies processed against your workspace.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -1729,7 +1729,7 @@ fetch("https://api.clearbook.io/api/v1/logs?workspaceId=${currentWorkspace?.id |
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">Fetch Core Analytics</h2>
-                    <p className="text-slate-500">Aggregates all double-entry ledger lines to compute your core financial footprint in real-time. Calculate your Net Income, OPEX, Assets, and Equity.</p>
+                    <p className="text-[var(--muted)]">Aggregates all double-entry ledger lines to compute your core financial footprint in real-time. Calculate your Net Income, OPEX, Assets, and Equity.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -1771,7 +1771,7 @@ fetch("https://api.clearbook.io/api/v1/metrics/summary?workspaceId=${currentWork
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                    <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">Shifting Telemetry & Metric Audits</h2>
-                   <p className="text-slate-500 font-medium text-xs leading-relaxed">This call allows external systems to query the state of a business workspace without fetching thousands of raw lines. It dynamically outputs targeted vectors shifting based on workspace type (e.g., ARR for SaaS, Cap Rate/NOI for Real Estate, COGS margin for Retail, or run-rate burn modeling for personal portfolios).</p>
+                   <p className="text-[var(--muted)] font-medium text-xs leading-relaxed">This call allows external systems to query the state of a business workspace without fetching thousands of raw lines. It dynamically outputs targeted vectors shifting based on workspace type (e.g., ARR for SaaS, Cap Rate/NOI for Real Estate, COGS margin for Retail, or run-rate burn modeling for personal portfolios).</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -1824,7 +1824,7 @@ fetch("https://api.clearbook.io/api/v1/metrics?workspaceId=${currentWorkspace?.i
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                    <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">Deep Strategic Strategy Auditing</h2>
-                   <p className="text-slate-500 font-medium text-xs leading-relaxed">This high-margin endpoint launches a deep strategic simulation job examining: Velocity AR Bleed (WACC Capital Drag on outstanding invoices), Customer Overconcentration Risks, and Physical/Procurement bulk margin arbitrage. It follows an asynchronous job pattern to avoid HTTP client timeouts.</p>
+                   <p className="text-[var(--muted)] font-medium text-xs leading-relaxed">This high-margin endpoint launches a deep strategic simulation job examining: Velocity AR Bleed (WACC Capital Drag on outstanding invoices), Customer Overconcentration Risks, and Physical/Procurement bulk margin arbitrage. It follows an asynchronous job pattern to avoid HTTP client timeouts.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -1875,7 +1875,7 @@ fetch("https://api.clearbook.io/api/v1/audit/deep", {
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                    <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">Retrieve Deep Strategic Results</h2>
-                   <p className="text-slate-500 font-medium text-xs leading-relaxed">Polls the status of an asynchronous deep audit job. Once the compute is completed, returns granular analytical matrices on EBITDA values, cost-of-capital receivables bleeds, multiple haircuts, and an automated Markdown Executive report.</p>
+                   <p className="text-[var(--muted)] font-medium text-xs leading-relaxed">Polls the status of an asynchronous deep audit job. Once the compute is completed, returns granular analytical matrices on EBITDA values, cost-of-capital receivables bleeds, multiple haircuts, and an automated Markdown Executive report.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -1933,9 +1933,9 @@ fetch("https://api.clearbook.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceI
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                        Update Transaction Record
-                       <span className="text-[10px] bg-yellow-500 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">PUT</span>
+                       <span className="text-[10px] bg-yellow-500 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">PUT</span>
                     </h2>
-                    <p className="text-slate-500">
+                    <p className="text-[var(--muted)]">
                        Allows modifying an existing transaction by ID. Enforces double-entry balances, updates audit logs, and validates target period locking locks.
                     </p>
                  </div>
@@ -1992,9 +1992,9 @@ fetch(url, {
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                        Depreciation Math Engine
-                       <span className="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
+                       <span className="text-[10px] bg-purple-600 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
                     </h2>
-                    <p className="text-slate-500">Calculate straight-line or declining balance asset depreciation using the core engine.</p>
+                    <p className="text-[var(--muted)]">Calculate straight-line or declining balance asset depreciation using the core engine.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -2033,9 +2033,9 @@ const { depreciationPerPeriodCents } = await response.json();`}
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                        Inventory Costing Engine
-                       <span className="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
+                       <span className="text-[10px] bg-purple-600 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
                     </h2>
-                    <p className="text-slate-500">Determine Weighted Average Cost (WAC) dynamically for inventory valuations.</p>
+                    <p className="text-[var(--muted)]">Determine Weighted Average Cost (WAC) dynamically for inventory valuations.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -2072,9 +2072,9 @@ const { newAverageCostCents } = await response.json();`}
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                        Amortization Math Engine
-                       <span className="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
+                       <span className="text-[10px] bg-purple-600 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
                     </h2>
-                    <p className="text-slate-500">Equivalent to the PMT function. Calculates constant periodic loan amortizations.</p>
+                    <p className="text-[var(--muted)]">Equivalent to the PMT function. Calculates constant periodic loan amortizations.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -2111,9 +2111,9 @@ const { periodicPaymentCents } = await response.json();`}
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                        Economic Order Quantity (EOQ) Engine
-                       <span className="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
+                       <span className="text-[10px] bg-purple-600 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
                     </h2>
-                    <p className="text-slate-500">Determine the optimal order quantity to minimize inventory costs.</p>
+                    <p className="text-[var(--muted)]">Determine the optimal order quantity to minimize inventory costs.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -2148,9 +2148,9 @@ const { eoq } = await response.json();`}
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                        Financial Health (KPIs & Ratios)
-                       <span className="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
+                       <span className="text-[10px] bg-purple-600 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
                     </h2>
-                    <p className="text-slate-500">Dynamic API for bulk calculating advanced enterprise ratios (ROI, NPV, Break-Even, Liquidity).</p>
+                    <p className="text-[var(--muted)]">Dynamic API for bulk calculating advanced enterprise ratios (ROI, NPV, Break-Even, Liquidity).</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -2190,9 +2190,9 @@ const kpiResults = await response.json();
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                        Temporal Validity Engine
-                       <span className="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
+                       <span className="text-[10px] bg-purple-600 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
                     </h2>
-                    <p className="text-slate-500">Resolves time-bound financial configurations (Tax changes, Currency fluctuations) efficiently.</p>
+                    <p className="text-[var(--muted)]">Resolves time-bound financial configurations (Tax changes, Currency fluctuations) efficiently.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
@@ -2236,9 +2236,9 @@ const { effectiveValue, calculatedAmountCents } = await response.json();
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                        List Managed Workspaces
-                       <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">GET</span>
+                       <span className="text-[10px] bg-blue-600 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">GET</span>
                     </h2>
-                    <p className="text-slate-500">
+                    <p className="text-[var(--muted)]">
                        Queries and returns all workspace accounts owned or co-managed by this profile context. You can use this to select which workspace to perform financial API calls upon.
                     </p>
                  </div>
@@ -2269,9 +2269,9 @@ fetch("https://api.clearbook.io/api/v1/workspaces", {
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                        List Workspace Projects
-                       <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">GET</span>
+                       <span className="text-[10px] bg-blue-600 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">GET</span>
                     </h2>
-                    <p className="text-slate-500">
+                    <p className="text-[var(--muted)]">
                        Retrieves the list of active business projects configured inside your workspace under ledger parameters.
                     </p>
                  </div>
@@ -2302,9 +2302,9 @@ fetch("https://api.clearbook.io/api/v1/projects?workspaceId=${currentWorkspace?.
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
                        Create Business Project
-                       <span className="text-[10px] bg-green-600 text-white px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
+                       <span className="text-[10px] bg-green-600 text-[var(--panel)] px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
                     </h2>
-                    <p className="text-slate-500">
+                    <p className="text-[var(--muted)]">
                        Registers a new corporate project resource inside your workspace ledger to enable targeted activity tracking.
                     </p>
                  </div>
@@ -2371,13 +2371,13 @@ fetch(url, {
                 </div>
                 <div>
                   <h3 className="font-header font-bold text-[var(--text)]">Configure Live Request</h3>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Interactive Sandbox Engine</p>
+                  <p className="text-[10px] text-[var(--faint)] uppercase tracking-widest font-black">Interactive Sandbox Engine</p>
                 </div>
               </div>
 
               {/* Endpoint select dropdown */}
               <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-wider text-slate-500">Select API Route</label>
+                <label className="text-[11px] font-black uppercase tracking-wider text-[var(--muted)]">Select API Route</label>
                 <select
                   value={sandboxEndpoint}
                   onChange={(e) => {
@@ -2400,7 +2400,7 @@ fetch(url, {
                   <option value="POST_v1_projects">POST /api/v1/projects (Map Corporate Scenario Submodule)</option>
                   <option value="GET_v1_metrics">GET /api/v1/metrics (Retrieve Sifting KPIs)</option>
                   <option value="POST_ledger_match">POST /api/v1/ledger/match (Parallel Rule Matching)</option>
-                  <option value="POST_brain_analyze">POST /api/v1/brain/analyze (Query Clearbook AI Cognitive AI)</option>
+                  <option value="POST_brain_analyze">POST /api/v1/brain/analyze (Query LedgerFlow AI Cognitive AI)</option>
                   <option value="POST_v1_brain_classify_batch">POST /api/v1/brain/classify-batch (10x Cognitive NLP Batch Categorizer)</option>
                   <option value="GET_v1_ecommerce">GET /api/v1/ecommerce (Fetch Channels)</option>
                   <option value="POST_v1_ecommerce">POST /api/v1/ecommerce (Sync Channel)</option>
@@ -2425,7 +2425,7 @@ fetch(url, {
                     onClick={() => setSandboxCredType('session')}
                     className={cn(
                       "flex-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border cursor-pointer text-center",
-                      sandboxCredType === 'session' ? "bg-slate-950 text-white border-slate-950" : "bg-[var(--surface)] text-[var(--text)] border-[var(--line)] hover:bg-[var(--ink)]"
+                      sandboxCredType === 'session' ? "bg-slate-950 text-[var(--panel)] border-slate-950" : "bg-[var(--surface)] text-[var(--text)] border-[var(--line)] hover:bg-[var(--ink)]"
                     )}
                   >
                     Active Admin JWT Session
@@ -2439,7 +2439,7 @@ fetch(url, {
                     }}
                     className={cn(
                       "flex-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border cursor-pointer text-center",
-                      sandboxCredType === 'key' ? "bg-slate-950 text-white border-slate-950" : "bg-[var(--surface)] text-[var(--text)] border-[var(--line)] hover:bg-[var(--ink)]"
+                      sandboxCredType === 'key' ? "bg-slate-950 text-[var(--panel)] border-slate-950" : "bg-[var(--surface)] text-[var(--text)] border-[var(--line)] hover:bg-[var(--ink)]"
                     )}
                   >
                     API Bearer Key
@@ -2456,7 +2456,7 @@ fetch(url, {
                       <select
                         value={sandboxSelectedKey}
                         onChange={(e) => setSandboxSelectedKey(e.target.value)}
-                        className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-lg px-2.5 py-1.5 text-[11px] font-mono focus:outline-none"
+                        className="w-full bg-[var(--surface)] rounded-lg px-2.5 py-1.5 text-[11px] font-mono focus:outline-none"
                       >
                         {publicKeys.map((k) => (
                           <option key={k.id} value={k.id}>
@@ -2478,39 +2478,39 @@ fetch(url, {
                   <div className="space-y-3 animate-in fade-in duration-150">
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-slate-500">Transaction Date</label>
+                        <label className="text-[9px] font-black uppercase text-[var(--muted)]">Transaction Date</label>
                         <input
                           type="date"
                           value={fieldDate}
                           onChange={(e) => setFieldDate(e.target.value)}
-                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
+                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-slate-500">Amount (Cents)</label>
+                        <label className="text-[9px] font-black uppercase text-[var(--muted)]">Amount (Cents)</label>
                         <input
                           type="number"
                           value={fieldAmountCents}
                           onChange={(e) => setFieldAmountCents(parseFloat(e.target.value) || 0)}
-                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950 font-mono"
+                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950 font-mono"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-slate-500">Transaction Narration / Description</label>
+                      <label className="text-[9px] font-black uppercase text-[var(--muted)]">Transaction Narration / Description</label>
                       <input
                         type="text"
                         value={fieldDesc}
                         onChange={(e) => setFieldDesc(e.target.value)}
                         placeholder="e.g. AWS S3 Storage Billing Tier"
-                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
+                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
                       />
                     </div>
 
                     <div className="space-y-1.5 p-3 rounded-lg border border-[var(--line)] bg-[var(--ink)]/50">
                       <div className="flex items-center justify-between">
-                        <label className="text-[9px] font-black uppercase text-slate-500">Idempotency Cryptic Key</label>
+                        <label className="text-[9px] font-black uppercase text-[var(--muted)]">Idempotency Cryptic Key</label>
                         <button
                           onClick={() => setFieldIdempotencyKey('lf_idem_' + Math.random().toString(36).substring(2, 10))}
                           className="text-[9px] font-bold text-indigo-600 hover:underline bg-transparent border-0 cursor-pointer"
@@ -2522,14 +2522,14 @@ fetch(url, {
                         type="text"
                         value={fieldIdempotencyKey}
                         onChange={(e) => setFieldIdempotencyKey(e.target.value)}
-                        className="w-full text-xs font-mono p-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-md focus:outline-none focus:ring-1 focus:ring-slate-950"
+                        className="w-full text-xs font-mono p-1.5 bg-[var(--surface)] rounded-md focus:outline-none focus:ring-1 focus:ring-slate-950"
                       />
                     </div>
 
                     <div className="flex items-center justify-between p-1">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-slate-700">Dry-Run Mode</span>
-                        <span className="text-[9px] text-slate-400">Validate values without storage commit.</span>
+                        <span className="text-[9px] text-[var(--faint)]">Validate values without storage commit.</span>
                       </div>
                       <input
                         type="checkbox"
@@ -2545,21 +2545,21 @@ fetch(url, {
                 {sandboxEndpoint === 'POST_v1_ledger' && (
                   <div className="space-y-3 animate-in fade-in duration-150">
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-slate-500">Account Node Name</label>
+                      <label className="text-[9px] font-black uppercase text-[var(--muted)]">Account Node Name</label>
                       <input
                         type="text"
                         value={fieldCOAName}
                         onChange={(e) => setFieldCOAName(e.target.value)}
-                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-slate-500">Account Type Class</label>
+                        <label className="text-[9px] font-black uppercase text-[var(--muted)]">Account Type Class</label>
                         <select
                           value={fieldCOAType}
                           onChange={(e) => setFieldCOAType(e.target.value)}
-                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none font-sans"
+                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] rounded-lg focus:outline-none font-sans"
                         >
                           <option value="asset">Asset (Liquid/Tangible)</option>
                           <option value="liability">Liability (Leases/Payable)</option>
@@ -2569,13 +2569,13 @@ fetch(url, {
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-slate-500">Subledger Account Code</label>
+                        <label className="text-[9px] font-black uppercase text-[var(--muted)]">Subledger Account Code</label>
                         <input
                           type="text"
                           value={fieldCOACode}
                           onChange={(e) => setFieldCOACode(e.target.value)}
                           placeholder="e.g. 5230"
-                          className="w-full text-xs font-mono p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1"
+                          className="w-full text-xs font-mono p-2 bg-[var(--surface)] rounded-lg focus:outline-none focus:ring-1"
                         />
                       </div>
                     </div>
@@ -2586,22 +2586,22 @@ fetch(url, {
                 {sandboxEndpoint === 'POST_v1_projects' && (
                   <div className="space-y-3 animate-in fade-in duration-150">
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-slate-500">Venture/Project Name</label>
+                      <label className="text-[9px] font-black uppercase text-[var(--muted)]">Venture/Project Name</label>
                       <input
                         type="text"
                         value={fieldProjectName}
                         onChange={(e) => setFieldProjectName(e.target.value)}
-                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-slate-500">Designation Code ID</label>
+                      <label className="text-[9px] font-black uppercase text-[var(--muted)]">Designation Code ID</label>
                       <input
                         type="text"
                         value={fieldProjectCode}
                         onChange={(e) => setFieldProjectCode(e.target.value)}
                         placeholder="INT-PHX-11"
-                        className="w-full text-xs font-mono p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none"
+                        className="w-full text-xs font-mono p-2 bg-[var(--surface)] rounded-lg focus:outline-none"
                       />
                     </div>
                   </div>
@@ -2612,19 +2612,19 @@ fetch(url, {
                   <div className="space-y-3 animate-in fade-in duration-150">
                     <div className="space-y-1">
                       <div className="flex justify-between items-center">
-                        <label className="text-[9px] font-black uppercase text-slate-500">Descriptions feedstock array (one-per-line)</label>
+                        <label className="text-[9px] font-black uppercase text-[var(--muted)]">Descriptions feedstock array (one-per-line)</label>
                         <span className={cn(
                           "text-[9px] font-semibold px-1.5 rounded",
                           sandboxEndpoint === 'POST_v1_brain_classify_batch' ? "bg-purple-50 text-purple-650" : "bg-emerald-50 text-[#228B22]"
                         )}>
-                          {sandboxEndpoint === 'POST_v1_brain_classify_batch' ? "Clearbook AI AI engine" : "Bayesian matching pipeline"}
+                          {sandboxEndpoint === 'POST_v1_brain_classify_batch' ? "LedgerFlow AI engine" : "Bayesian matching pipeline"}
                         </span>
                       </div>
                       <textarea
                         rows={4}
                         value={fieldMatchDesc}
                         onChange={(e) => setFieldMatchDesc(e.target.value)}
-                        className="w-full font-mono text-[11px] p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                        className="w-full font-mono text-[11px] p-2 bg-[var(--surface)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
                         placeholder={sandboxEndpoint === 'POST_v1_brain_classify_batch' ? "Google Workspace Subscription\nUber Trip Ride NY\nRent Office Suite 12\nHardware Store Staples" : "Uber trip ride...\nAWS Web Services"}
                       />
                     </div>
@@ -2636,14 +2636,14 @@ fetch(url, {
                   <div className="space-y-3 animate-in fade-in duration-150">
                     <div className="space-y-1">
                       <div className="flex justify-between items-center">
-                        <label className="text-[9px] font-black uppercase text-slate-500">Cognitive Prompt Directive</label>
-                        <span className="text-[9px] text-[#800080] font-semibold bg-purple-50 px-1.5 rounded">Clearbook AI AI Model</span>
+                        <label className="text-[9px] font-black uppercase text-[var(--muted)]">Cognitive Prompt Directive</label>
+                        <span className="text-[9px] text-[#800080] font-semibold bg-purple-50 px-1.5 rounded">LedgerFlow AI Model</span>
                       </div>
                       <textarea
                         rows={4}
-                        value={fieldClearbookAIPrompt}
-                        onChange={(e) => setFieldClearbookAIPrompt(e.target.value)}
-                        className="w-full text-xs p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                        value={fieldAIPrompt}
+                        onChange={(e) => setFieldAIPrompt(e.target.value)}
+                        className="w-full text-xs p-2 bg-[var(--surface)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
                         placeholder="Provide details..."
                       />
                     </div>
@@ -2653,8 +2653,8 @@ fetch(url, {
                 {/* Static / Empty params notice */}
                 {(sandboxEndpoint.startsWith('GET_') || sandboxEndpoint === 'DELETE_') && (
                   <div className="py-4 text-center border border-[var(--line)] bg-[var(--ink)]/50 rounded-lg">
-                    <p className="text-[11px] font-medium text-slate-500 italic">No request body required for this rest protocol query.</p>
-                    <p className="text-[9px] text-slate-400 mt-1 font-mono">{`Method: ${sandboxEndpoint.split('_')[0]} | Workspace: ${currentWorkspace?.id || ''}`}</p>
+                    <p className="text-[11px] font-medium text-[var(--muted)] italic">No request body required for this rest protocol query.</p>
+                    <p className="text-[9px] text-[var(--faint)] mt-1 font-mono">{`Method: ${sandboxEndpoint.split('_')[0]} | Workspace: ${currentWorkspace?.id || ''}`}</p>
                   </div>
                 )}
               </div>
@@ -2663,7 +2663,7 @@ fetch(url, {
               <button
                 onClick={runSandboxRequest}
                 disabled={sandboxLoading}
-                className="w-full py-3.5 bg-slate-950 text-white font-black uppercase tracking-wider text-xs rounded-xl hover:bg-slate-800 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:scale-[1.01]"
+                className="w-full py-3.5 bg-slate-950 text-[var(--panel)] font-black uppercase tracking-wider text-xs rounded-xl hover:bg-slate-800 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:scale-[1.01]"
               >
                 {sandboxLoading ? (
                   <>
@@ -2685,25 +2685,25 @@ fetch(url, {
             <div className="ledger-card p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-900"></div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--ink)]"></div>
                   <h4 className="font-header font-bold text-sm text-[var(--text)]">Dynamic Client SDK Generator</h4>
                 </div>
                 <div className="flex bg-[var(--ink)] rounded-lg p-0.5 border border-[var(--line)] gap-1">
                   <button
                     onClick={() => setSandboxLang('curl')}
-                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'curl' ? "bg-[var(--surface)] text-slate-950 shadow-3xs" : "text-slate-500")}
+                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'curl' ? "bg-[var(--surface)] text-slate-950 shadow-sm" : "text-[var(--muted)]")}
                   >
                     cURL
                   </button>
                   <button
                     onClick={() => setSandboxLang('python')}
-                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'python' ? "bg-[var(--surface)] text-slate-950 shadow-3xs" : "text-slate-500")}
+                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'python' ? "bg-[var(--surface)] text-slate-950 shadow-sm" : "text-[var(--muted)]")}
                   >
                     Python
                   </button>
                   <button
                     onClick={() => setSandboxLang('node')}
-                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'node' ? "bg-[var(--surface)] text-slate-950 shadow-3xs" : "text-slate-500")}
+                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'node' ? "bg-[var(--surface)] text-slate-950 shadow-sm" : "text-[var(--muted)]")}
                   >
                     Node.js
                   </button>
@@ -2772,9 +2772,9 @@ fetch(url, {
 
                 {sandboxStatus !== null && (
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] text-slate-400 font-mono font-bold uppercase">Latency: <strong className="text-[var(--text)]">{sandboxLatency} ms</strong></span>
+                    <span className="text-[10px] text-[var(--faint)] font-mono font-bold uppercase">Latency: <strong className="text-[var(--text)]">{sandboxLatency} ms</strong></span>
                     <span className={cn(
-                      "px-2 px-1 py-0.5 rounded-md text-[10px] font-black tracking-wider uppercase font-mono text-white",
+                      "px-2 px-1 py-0.5 rounded-md text-[10px] font-black tracking-wider uppercase font-mono text-[var(--panel)]",
                       sandboxStatus >= 200 && sandboxStatus < 300 ? "bg-emerald-500" : "bg-rose-500"
                     )}>
                       Status {sandboxStatus}
@@ -2784,7 +2784,7 @@ fetch(url, {
               </div>
 
               {!sandboxLoading && !sandboxResult && (
-                <div className="p-4 md:p-8 text-center text-slate-400 italic text-xs space-y-2 border border-dashed border-[var(--line)] bg-[var(--ink)]/50 rounded-xl">
+                <div className="p-4 md:p-8 text-center text-[var(--faint)] italic text-xs space-y-2 border border-dashed border-[var(--line)] bg-[var(--ink)]/50 rounded-xl">
                   <p>Execute an API query inside the left configuration deck to view operational responses in real-time.</p>
                   <p className="text-[10px] text-slate-350 font-mono">Payload parameters are completely sanitised & verified against your active database ledger nodes.</p>
                 </div>
@@ -2816,7 +2816,7 @@ fetch(url, {
                       {JSON.stringify(sandboxResult, null, 2)}
                     </pre>
                   </div>
-                  <div className="flex justify-between items-center bg-[var(--ink)] border border-slate-220/80 rounded-xl px-4 py-3 text-[10px] text-slate-500 font-medium">
+                  <div className="flex justify-between items-center bg-[var(--ink)] border border-slate-220/80 rounded-xl px-4 py-3 text-[10px] text-[var(--muted)] font-medium">
                     <span className="flex items-center gap-1.5"><Shield size={12} className="text-emerald-600" /> Double-entry verified successfully</span>
                     <span className="font-mono text-slate-600">Computation: {sandboxStatus === 201 || sandboxEndpoint.includes('POST_brain') ? '15 units computed' : '1 unit computed'}</span>
                   </div>
@@ -2836,7 +2836,7 @@ fetch(url, {
               </div>
               <div>
                 <h3 className="font-header font-bold text-[var(--text)]">API Pipeline Chronological Logs</h3>
-                <p className="text-xs text-slate-400 font-medium">Diagnostic ledger feed & key consumption audits.</p>
+                <p className="text-xs text-[var(--faint)] font-medium">Diagnostic ledger feed & key consumption audits.</p>
               </div>
             </div>
 
@@ -2852,18 +2852,18 @@ fetch(url, {
 
           {/* Table display */}
           {apiLogs.length === 0 ? (
-            <div className="py-12 text-center border border-slate-150 bg-[var(--ink)]/50 rounded-[32px]">
+            <div className="py-12 text-center border border-slate-150 bg-[var(--ink)]/50 rounded-xl">
               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                <Activity size={20} className="text-slate-400" />
+                <Activity size={20} className="text-[var(--faint)]" />
               </div>
-              <p className="text-xs text-slate-500 font-medium italic">No integration API requests have been processed in this workspace yet.</p>
-              <p className="text-[10px] text-slate-400 mt-1">Make API queries via the <strong>Playground Sandbox</strong> or integrations to populate this monitor.</p>
+              <p className="text-xs text-[var(--muted)] font-medium italic">No integration API requests have been processed in this workspace yet.</p>
+              <p className="text-[10px] text-[var(--faint)] mt-1">Make API queries via the <strong>Playground Sandbox</strong> or integrations to populate this monitor.</p>
             </div>
           ) : (
-            <div className="border border-slate-150 rounded-[32px] shadow-3xs overflow-hidden">
+            <div className="border border-slate-150 rounded-xl shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-[#FAFBFB] border-b border-slate-150 text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">
+                  <thead className="bg-[#FAFBFB] border-b border-slate-150 text-[10px] text-[var(--faint)] uppercase tracking-wider font-extrabold">
                     <tr>
                       <th className="p-4">Timestamp</th>
                       <th className="p-4">Request Specs</th>
@@ -2884,7 +2884,7 @@ fetch(url, {
                           <td className="p-4">
                             <div className="flex items-center gap-2.5">
                               <span className={cn(
-                                "px-2 py-0.5 rounded text-[9px] font-medium uppercase tracking-wider font-mono text-white",
+                                "px-2 py-0.5 rounded text-[9px] font-medium uppercase tracking-wider font-mono text-[var(--panel)]",
                                 log.method === 'POST' ? "bg-emerald-500" :
                                 log.method === 'PUT' ? "bg-amber-500" :
                                 log.method === 'DELETE' ? "bg-rose-500" : "bg-blue-500"
@@ -2906,7 +2906,7 @@ fetch(url, {
                           </td>
                           <td className="p-4 whitespace-nowrap">
                             <span className={cn(
-                              "px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide font-mono uppercase text-white",
+                              "px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide font-mono uppercase text-[var(--panel)]",
                               isSuccess ? "bg-emerald-500" : "bg-rose-500"
                             )}>
                               {log.status || 200} {isSuccess ? 'Success' : 'Error'}
@@ -2916,7 +2916,7 @@ fetch(url, {
                             <button
                               onClick={() => {
                                 toast.info("API Frame Inspected", {
-                                  description: <div className="font-mono text-[9px] text-left overflow-x-auto max-h-[140px] bg-slate-900 text-slate-200 p-2 rounded mt-2">{JSON.stringify(log, null, 2)}</div>,
+                                  description: <div className="font-mono text-[9px] text-left overflow-x-auto max-h-[140px] bg-[var(--ink)] text-slate-200 p-2 rounded mt-2">{JSON.stringify(log, null, 2)}</div>,
                                   duration: 6000
                                 });
                               }}
@@ -2939,64 +2939,64 @@ fetch(url, {
       {activeTab === 'billing' && (
         <div className="space-y-6 animate-in fade-in duration-300">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="ledger-card p-6 space-y-3 shadow-3xs hover:border-slate-300 transition-all border border-slate-150">
+            <div className="ledger-card p-6 space-y-3 shadow-sm hover:border-slate-300 transition-all border border-slate-150">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Workspace Plan Tier</span>
+                <span className="text-[10px] font-black uppercase text-[var(--faint)] tracking-wider">Workspace Plan Tier</span>
                 <span className="px-2 py-0.5 bg-purple-100 text-[#8A2BE2] text-[9px] font-black rounded-full uppercase tracking-wider">Enterprise API</span>
               </div>
               <div className="flex items-baseline gap-1 pt-1.5">
                 <span className="text-2xl font-black text-[var(--text)] font-display">SaaS Growth</span>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium">Billed dynamically based on computational complexity parameters processed.</p>
+              <p className="text-[10px] text-[var(--faint)] font-medium">Billed dynamically based on computational complexity parameters processed.</p>
             </div>
 
-            <div className="ledger-card p-6 space-y-3 shadow-3xs hover:border-slate-300 transition-all border border-slate-150">
+            <div className="ledger-card p-6 space-y-3 shadow-sm hover:border-slate-300 transition-all border border-slate-150">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Remaining Compute Balance</span>
+                <span className="text-[10px] font-black uppercase text-[var(--faint)] tracking-wider">Remaining Compute Balance</span>
                 <Zap size={14} className="text-[#FFD700] fill-[#FFD700]" />
               </div>
               <div className="flex items-baseline gap-1 pt-1.5">
                 <span className="text-2xl font-black text-[var(--text)] font-mono">100,000 / 100,000</span>
-                <span className="text-[10px] text-slate-400 font-black">UNITS</span>
+                <span className="text-[10px] text-[var(--faint)] font-black">UNITS</span>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium">Quota allocated monthly. Resets in 23 days.</p>
+              <p className="text-[10px] text-[var(--faint)] font-medium">Quota allocated monthly. Resets in 23 days.</p>
             </div>
 
-            <div className="ledger-card p-6 space-y-3 shadow-3xs hover:border-slate-300 transition-all border border-slate-150">
+            <div className="ledger-card p-6 space-y-3 shadow-sm hover:border-slate-300 transition-all border border-slate-150">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total Operations Calculated</span>
+                <span className="text-[10px] font-black uppercase text-[var(--faint)] tracking-wider">Total Operations Calculated</span>
                 <TrendingUp size={14} className="text-emerald-500" />
               </div>
               <div className="flex items-baseline gap-1 pt-1.5">
                 <span className="text-2xl font-black text-[var(--text)] font-mono">{apiLogs.length}</span>
-                <span className="text-[11px] text-slate-400 font-bold uppercase tracking-widest font-mono">Operations</span>
+                <span className="text-[11px] text-[var(--faint)] font-bold uppercase tracking-widest font-mono">Operations</span>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium">Audit logs track execution and delta mappings securely.</p>
+              <p className="text-[10px] text-[var(--faint)] font-medium">Audit logs track execution and delta mappings securely.</p>
             </div>
 
-            <div className="ledger-card p-6 space-y-3 shadow-3xs hover:border-slate-300 transition-all border border-slate-150">
+            <div className="ledger-card p-6 space-y-3 shadow-sm hover:border-slate-300 transition-all border border-slate-150">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Seat Booking Capacity</span>
-                <Users size={14} className="text-slate-400" />
+                <span className="text-[10px] font-black uppercase text-[var(--faint)] tracking-wider">Seat Booking Capacity</span>
+                <Users size={14} className="text-[var(--faint)]" />
               </div>
               <div className="flex items-baseline gap-1 pt-1.5">
                 <span className="text-2xl font-black text-[var(--text)] font-mono">1 / 50</span>
-                <span className="text-[10px] text-slate-400 font-bold">SEATS</span>
+                <span className="text-[10px] text-[var(--faint)] font-bold">SEATS</span>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium">Seats can be scaled with slider simulation below.</p>
+              <p className="text-[10px] text-[var(--faint)] font-medium">Seats can be scaled with slider simulation below.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Interactive seat allocation slider for CFOs / Persons */}
-            <div className="ledger-card p-6 space-y-5 shadow-3xs border border-slate-150">
+            <div className="ledger-card p-6 space-y-5 shadow-sm border border-slate-150">
               <div className="flex items-center gap-3 border-b border-indigo-50 pb-3">
                 <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
                   <Sliders size={16} />
                 </div>
                 <div>
                   <h4 className="font-header font-bold text-[var(--text)] text-sm">Strategic Corporate Capacity Modeler</h4>
-                  <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Capacity Allocation & Cost Estimations</p>
+                  <p className="text-[9px] text-[var(--faint)] uppercase tracking-widest font-black">Capacity Allocation & Cost Estimations</p>
                 </div>
               </div>
 
@@ -3014,7 +3014,7 @@ fetch(url, {
                     onChange={(e) => setSimSeatsCount(parseInt(e.target.value))}
                     className="w-full accent-indigo-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg appearance-none"
                   />
-                  <div className="flex justify-between text-[9px] text-slate-400">
+                  <div className="flex justify-between text-[9px] text-[var(--faint)]">
                     <span>1 Seat (Sole Agent)</span>
                     <span>50 Seats (Enterprise Suite)</span>
                   </div>
@@ -3022,35 +3022,35 @@ fetch(url, {
 
                 <div className="pt-3 border-t border-[var(--line)] space-y-2">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 font-bold">Projected Monthly Platform License</span>
+                    <span className="text-[var(--muted)] font-bold">Projected Monthly Platform License</span>
                     <span className="font-mono font-bold text-slate-950">${(simSeatsCount * 12).toFixed(2)} USD</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 font-bold">Workspace compute priority</span>
+                    <span className="text-[var(--muted)] font-bold">Workspace compute priority</span>
                     <span className="font-bold text-emerald-600">{simSeatsCount > 25 ? '🔥 High Priority Core Threads' : 'Standard Queue Thread'}</span>
                   </div>
                 </div>
 
                 <button
                   onClick={() => handleCheckout("pro")}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-[var(--panel)] font-black uppercase tracking-wider text-[10px] rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <TrendingUp size={12} />
                   Upgrade to Pro ($5/mo)
                 </button>
-                <p className="text-[10px] text-center text-slate-500 font-medium">Over limit requests will be billed based on API compute utilization securely via Stripe.</p>
+                <p className="text-[10px] text-center text-[var(--muted)] font-medium">Over limit requests will be billed based on API compute utilization securely via Stripe.</p>
               </div>
             </div>
 
             {/* Load Stress-Tester tool */}
-            <div className="ledger-card p-6 space-y-5 shadow-3xs border border-slate-150">
+            <div className="ledger-card p-6 space-y-5 shadow-sm border border-slate-150">
               <div className="flex items-center gap-3 border-b border-purple-50 pb-3">
                 <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
                   <Gauge size={16} />
                 </div>
                 <div>
                   <h4 className="font-header font-bold text-[var(--text)] text-sm">TruthEngine Stress-Testing Console</h4>
-                  <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Simulate burst programmatic telemetry</p>
+                  <p className="text-[9px] text-[var(--faint)] uppercase tracking-widest font-black">Simulate burst programmatic telemetry</p>
                 </div>
               </div>
 
@@ -3069,7 +3069,7 @@ fetch(url, {
                     onChange={(e) => setSimRequestsCount(parseInt(e.target.value))}
                     className="w-full accent-purple-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg appearance-none"
                   />
-                  <div className="flex justify-between text-[9px] text-slate-400">
+                  <div className="flex justify-between text-[9px] text-[var(--faint)]">
                     <span>10 hits (Light check)</span>
                     <span>100 hits (Intense Stress)</span>
                   </div>
@@ -3093,7 +3093,7 @@ fetch(url, {
                     );
                   }}
                   disabled={isSimulatingBurst}
-                  className="w-full py-3 bg-[#8A2BE2] disabled:bg-slate-350 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs hover:scale-[1.01]"
+                  className="w-full py-3 bg-[#8A2BE2] disabled:bg-slate-350 text-[var(--panel)] font-black uppercase tracking-wider text-[10px] rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:scale-[1.01]"
                 >
                   <Coins size={12} />
                   TRIGGER programatic stress test
@@ -3103,7 +3103,7 @@ fetch(url, {
           </div>
 
           {/* Subledgers trace of compute costs */}
-          <div className="ledger-card p-6 space-y-4 shadow-3xs border border-slate-150">
+          <div className="ledger-card p-6 space-y-4 shadow-sm border border-slate-150">
             <div className="flex items-center gap-2 border-b border-[var(--line)] pb-3">
               <Zap size={14} className="text-purple-600" />
               <h4 className="font-header font-bold text-[#8A2BE2] text-sm uppercase tracking-wide">Ledger computational processing trace</h4>

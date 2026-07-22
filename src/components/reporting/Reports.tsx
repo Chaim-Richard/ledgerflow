@@ -174,28 +174,28 @@ const Reports = React.memo(({ transactions = [], accounts = [], projects = [], b
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[var(--line)]/60">
         <div className="space-y-0.5">
-          <div className="flex items-center gap-1.5 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
+          <div className="flex items-center gap-1.5 text-[var(--faint)] font-bold uppercase tracking-widest text-[9px]">
             <Activity size={11} />
             Financial Intelligence Hub
           </div>
           <h1 className="text-2xl font-black text-[var(--text)] tracking-tight">Financial Reports</h1>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 bg-[var(--ink)] p-1.5 rounded-xl border border-[var(--line)]/60 shadow-3xs">
+        <div className="flex flex-wrap items-center gap-2 bg-[var(--ink)] p-1.5 rounded-xl border border-[var(--line)]/60 shadow-sm">
           <button onClick={() => onAction('generate')} className="px-3.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors">
             Generate
           </button>
           
-          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
+          <div className="flex items-center gap-1 bg-[var(--panel)] border border-[var(--line)] p-0.5 rounded-lg">
             {(['month', 'quarter', 'year'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTimeframe(t)}
                 className={cn(
-                  "px-3.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
+                  "px-3.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer",
                   timeframe === t 
-                    ? "bg-[var(--surface)] text-slate-950 shadow-xs" 
-                    : "text-slate-500 hover:text-[var(--text)]"
+                    ? "bg-[var(--brass)] text-black shadow-sm font-bold" 
+                    : "text-[var(--muted)] hover:text-[var(--text)]"
                 )}
               >
                 {t}
@@ -203,13 +203,13 @@ const Reports = React.memo(({ transactions = [], accounts = [], projects = [], b
             ))}
           </div>
 
-          <div className="h-4 w-px bg-slate-200" />
+          <div className="h-4 w-px bg-[var(--line)]" />
 
           {/* Dynamic Year Selector */}
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-[10px] font-bold text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-950 cursor-pointer"
+            className="px-3 py-1.5 bg-[var(--surface)] rounded-lg text-[10px] font-bold text-[var(--text)] hover:border-[var(--brass-line)] focus:outline-none focus:ring-1 focus:ring-[var(--brass)] cursor-pointer"
           >
             {availableYears.map(year => (
               <option key={year} value={year}>{year}</option>
@@ -221,7 +221,7 @@ const Reports = React.memo(({ transactions = [], accounts = [], projects = [], b
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-[10px] font-bold text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-950 cursor-pointer animate-fade-in"
+              className="px-3 py-1.5 bg-[var(--surface)] rounded-lg text-[10px] font-bold text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-950 cursor-pointer animate-fade-in"
             >
               {monthNames.map((name, idx) => (
                 <option key={name} value={idx}>{name}</option>
@@ -236,7 +236,7 @@ const Reports = React.memo(({ transactions = [], accounts = [], projects = [], b
                 const q = Number(e.target.value);
                 setSelectedMonth(q * 3);
               }}
-              className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-[10px] font-bold text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-950 cursor-pointer animate-fade-in"
+              className="px-3 py-1.5 bg-[var(--surface)] rounded-lg text-[10px] font-bold text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-950 cursor-pointer animate-fade-in"
             >
               {quarterNames.map((name, idx) => (
                 <option key={name} value={idx}>{name}</option>
@@ -246,11 +246,11 @@ const Reports = React.memo(({ transactions = [], accounts = [], projects = [], b
 
           <div className="h-4 w-px bg-slate-200" />
           
-          <button onClick={() => onAction('export')} className="h-7 px-3 bg-[var(--surface)] text-slate-700 border border-[var(--line)] rounded-md shadow-xs hover:bg-[var(--ink)] flex items-center justify-center transition-colors tooltip" aria-label="Export">
+          <button onClick={() => onAction('export')} className="h-7 px-3 bg-[var(--surface)] text-slate-700 border border-[var(--line)] rounded-md shadow-sm hover:bg-[var(--ink)] flex items-center justify-center transition-colors tooltip" aria-label="Export">
             <Download size={14} />
           </button>
           
-          <button onClick={() => onAction('print')} className="h-7 px-3 flex items-center justify-center text-slate-600 bg-[var(--surface)] border border-[var(--line)] rounded-md shadow-xs hover:bg-[var(--ink)] transition-colors">
+          <button onClick={() => onAction('print')} className="h-7 px-3 flex items-center justify-center text-slate-600 bg-[var(--surface)] rounded-md shadow-sm hover:bg-[var(--ink)] transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
           </button>
         </div>
@@ -265,8 +265,8 @@ const Reports = React.memo(({ transactions = [], accounts = [], projects = [], b
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border",
               activeTab === tab.id
-                ? "bg-slate-900 border-slate-950 text-white shadow-xs"
-                : "bg-[var(--surface)] border-[var(--line)]/80 text-slate-500 hover:border-slate-300 hover:text-[var(--text)] shadow-3xs"
+                ? "bg-[var(--ink)] border-slate-950 text-[var(--panel)] shadow-sm"
+                : "bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:border-slate-300 hover:text-[var(--text)] shadow-sm"
             )}
           >
             <tab.icon size={14} />
@@ -315,7 +315,7 @@ const Reports = React.memo(({ transactions = [], accounts = [], projects = [], b
       <div className="flex justify-center pt-12">
         <button 
           onClick={() => onAction('export')}
-          className="flex items-center gap-3 px-10 py-5 bg-[var(--surface)] border-2 border-zinc-900 rounded-full text-[var(--text)] font-medium uppercase tracking-wider text-xs hover:bg-zinc-900 hover:text-white transition-all group"
+          className="flex items-center gap-3 px-10 py-5 bg-[var(--surface)] border-2 border-zinc-900 rounded-full text-[var(--text)] font-medium uppercase tracking-wider text-xs hover:bg-[var(--ink)] hover:text-[var(--panel)] transition-all group"
         >
           <Download size={16} className="group-hover:translate-y-0.5 transition-transform" />
           Export Full Financial Package

@@ -97,13 +97,12 @@ export default function Sales({
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-           <div className="flex flex-wrap bg-[var(--ink)] p-1.5 rounded-[32px] border border-[var(--line)]">
-            
+          <div className="flex items-center bg-[var(--surface)] p-1 rounded-xl border border-[var(--line)] shadow-xs">
             <button 
               onClick={() => setActiveSubTab('invoices')}
               className={cn(
-                "px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all",
-                activeSubTab === 'invoices' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-[var(--text)]"
+                "px-4 py-2 rounded-lg text-xs font-semibold transition-all",
+                activeSubTab === 'invoices' ? "bg-[var(--brass)] text-black shadow-xs" : "text-[var(--muted)] hover:text-[var(--text)]"
               )}
             >
               Invoices & Receipts
@@ -111,8 +110,8 @@ export default function Sales({
             <button 
               onClick={() => setActiveSubTab('customers')}
               className={cn(
-                "px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all",
-                activeSubTab === 'customers' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-[var(--text)]"
+                "px-4 py-2 rounded-lg text-xs font-semibold transition-all",
+                activeSubTab === 'customers' ? "bg-[var(--brass)] text-black shadow-xs" : "text-[var(--muted)] hover:text-[var(--text)]"
               )}
             >
               Customers
@@ -120,71 +119,74 @@ export default function Sales({
           </div>
           <button 
             onClick={() => activeSubTab === 'invoices' ? setIsInvoiceModalOpen(true) : setIsCustomerModalOpen(true)}
-            className="flex items-center gap-2 px-8 py-3.5 bg-slate-900 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider hover:bg-slate-900/90 transition-all shadow-2xl"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--brass)] text-black rounded-xl text-xs font-semibold hover:opacity-90 transition-all shadow-sm cursor-pointer"
           >
-            <Plus size={18} />
+            <Plus size={16} />
             {activeSubTab === 'invoices' ? 'Create Invoice' : 'Add Customer'}
           </button>
         </div>
       </div>
 
       {/* Psychological Header */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-          <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-4 relative z-10 flex items-center gap-2">
-            <AlertCircle size={12} />
+          <p className="text-[10px] font-mono uppercase tracking-widest text-rose-500 font-semibold mb-3 relative z-10 flex items-center gap-2">
+            <AlertCircle size={14} />
             Delinquent Nodes
           </p>
-          <p className="text-2xl md:text-4xl font-black text-rose-600 font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.overdue)}</p>
-          <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest opacity-40">
-             <Clock size={10} />
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-rose-600 tracking-tight relative z-10">{formatCurrency(agingBuckets.overdue)}</p>
+          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
+             <Clock size={12} />
              Critical Resolution Required
           </div>
         </div>
         
-        <div className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group">
+        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-          <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] mb-4 relative z-10 flex items-center gap-2">
-            <Activity size={12} />
+          <p className="text-[10px] font-mono uppercase tracking-widest text-amber-500 font-semibold mb-3 relative z-10 flex items-center gap-2">
+            <Activity size={14} />
             Proximal Velocity (30d)
           </p>
-          <p className="text-2xl md:text-4xl font-black text-amber-600 font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.dueSoon)}</p>
-          <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest opacity-40">
-             <RefreshCw size={10} className="hidden" />
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-amber-600 tracking-tight relative z-10">{formatCurrency(agingBuckets.dueSoon)}</p>
+          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
+             <RefreshCw size={12} className="hidden" />
              Anticipated Liquidity Event
           </div>
         </div>
 
-        <div className="p-4 md:p-8 bg-slate-900 text-white rounded-[32px] shadow-2xl relative overflow-hidden group">
-          <div className="absolute technical-grid inset-0 opacity-10 pointer-events-none" />
-          <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 relative z-10">Total Aggregate Exposure</p>
-          <p className="text-2xl md:text-4xl font-black text-indigo-400 font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.total)}</p>
-          <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-white/20 uppercase tracking-widest">
-             <ShieldCheck size={10} />
+        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--brass-line)] shadow-sm relative overflow-hidden group bg-gradient-to-b from-[var(--brass-soft)] to-[var(--panel)]">
+          <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
+          <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-semibold mb-3 relative z-10 flex items-center gap-2">
+            <ShieldCheck size={14} className="text-[var(--brass)]" />
+            Total Aggregate Exposure
+          </p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10">{formatCurrency(agingBuckets.total)}</p>
+          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
+             <ShieldCheck size={12} />
              Verified Asset Cluster
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between pb-4 border-b border-[var(--line)]">
+      <div className="flex items-center justify-between gap-4 pb-4 border-b border-[var(--line)]">
         <div className="relative group max-w-md w-full">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-600 transition-colors" size={20} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--text)] transition-colors" size={16} />
           <input 
             type="text"
             placeholder="Search invoices by customer, number, tags, or metadata..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-14 pr-6 py-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:bg-[var(--surface)] transition-all text-sm font-bold text-[var(--text)] placeholder:text-slate-500/40 shadow-sm"
+            className="w-full pl-10 pr-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--brass-line)] transition-all text-xs font-medium text-[var(--text)] placeholder:text-[var(--faint)] shadow-xs"
           />
         </div>
         
-        <div className="flex items-center gap-3">
-          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all">
-            <Filter size={20} />
+        <div className="flex items-center gap-2">
+          <button className="p-2.5 bg-[var(--panel)] border border-[var(--line)] rounded-xl text-[var(--muted)] hover:text-[var(--text)] transition-all cursor-pointer">
+            <Filter size={16} />
           </button>
-          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all">
-            <Download size={20} />
+          <button className="p-2.5 bg-[var(--panel)] border border-[var(--line)] rounded-xl text-[var(--muted)] hover:text-[var(--text)] transition-all cursor-pointer">
+            <Download size={16} />
           </button>
         </div>
       </div>
@@ -211,7 +213,7 @@ export default function Sales({
 
       
       {activeSubTab === 'invoices' && (
-        <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
+        <div className="bg-[var(--panel)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>

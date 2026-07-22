@@ -826,7 +826,7 @@ async function startServer() {
 
         return next();
       } catch (err: any) {
-        return res.status(500).json({ status: "error", message: "Decryption / Verification failure within Clearbook core.", details: err.message });
+        return res.status(500).json({ status: "error", message: "Decryption / Verification failure within LedgerFlow core.", details: err.message });
       }
     }
 
@@ -936,7 +936,7 @@ async function startServer() {
 
       res.json({
         status: "active",
-        service: "Clearbook Deep API Engine",
+        service: "LedgerFlow Deep API Engine",
         workspaceId,
         metadata: {
           name: wsName,
@@ -1657,7 +1657,7 @@ async function startServer() {
 
       res.status(dryRun ? 200 : 201).json({
         status: "success",
-        message: dryRun ? "Dry run successful. Transaction would be valid and the Bayesian model has learned the mapping." : "Double-entry transaction balances perfectly inside Clearbook database registers.",
+        message: dryRun ? "Dry run successful. Transaction would be valid and the Bayesian model has learned the mapping." : "Double-entry transaction balances perfectly inside LedgerFlow database registers.",
         transactionId: dryRun ? "N/A" : transactionId,
         modelLearned: true,
         data: newTx
@@ -2554,7 +2554,7 @@ async function startServer() {
 
       // Markdown Strategic narrative
       const markdownReport = `### EXECUTIVE STRATEGIC DECISION AUDIT SUMMARY
-Report generated chronologically for workspace **${wsData.name || 'Clearbook Register'}** on **${new Date().toISOString().substring(0, 10)}** via Clearbook Deep API.
+Report generated chronologically for workspace **${wsData.name || 'LedgerFlow Register'}** on **${new Date().toISOString().substring(0, 10)}** via LedgerFlow Deep API.
 
 #### 1. VELOCITY RECEIVABLES ANALYSIS (DSO & WACC DRAG)
 * Outstanding accounts receivable function effectively as 0% interest lines of credit to clients.
@@ -2902,7 +2902,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         contextSummary = `- Accounts Map: [${accountsSummary}]\n- Relevancy Filtered Records (${relevantTx.length} items):\n${transactionSummary || 'None'}`;
       }
 
-      const finalPrompt = `You are Clearbook's intelligent financial co-pilot (called Clearbook AI Brain).
+      const finalPrompt = `You are LedgerFlow's intelligent financial co-pilot (called LedgerFlow AI Brain).
 You have secure API-level read access to the developer's financial data. Here is the context summary:
 - Total Database Size: ${txCount} entries
 ${contextSummary}
@@ -3929,7 +3929,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         user: {
           client_user_id: authReq.user.uid,
         },
-        client_name: "Clearbook Finance",
+        client_name: "LedgerFlow Finance",
         products: ["transactions", "auth"] as any[],
         country_codes: ["US"] as any[],
         language: "en",
@@ -4535,7 +4535,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 }
 
-console.log("🌀 [Server] Booting Clearbook Backend...");
+console.log("🌀 [Server] Booting LedgerFlow Backend...");
 startServer().catch(err => {
   console.error("💥 [Server] Critical Startup Failure:", err);
   process.exit(1);

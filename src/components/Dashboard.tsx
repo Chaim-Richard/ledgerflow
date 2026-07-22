@@ -155,49 +155,63 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1360px] mx-auto text-[var(--text)]">
-      {/* Header section with lens selector */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-[var(--line)]">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            {lens === 'owner' ? 'Real-Time Financial Ledger' : 'Consolidated Double-Entry Trial Balance'}
-          </h1>
-          <p className="text-sm text-[var(--muted)] mt-1">
-            Connected to live store —{' '}
-            <span className="text-[var(--brass)] font-medium">
-              {lens === 'owner' ? 'owner perspective on assets, cash & net worth.' : 'audit-ready debits and credits.'}
-            </span>
-          </p>
-        </div>
+      {/* Header section with lens selector and subtle gold gradient backdrop */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[var(--brass-soft)] via-[var(--surface)]/40 to-[var(--panel)] p-6 rounded-2xl border border-[var(--brass-line)]/50 shadow-sm">
+        {/* Subtle radial ambient glow */}
+        <div className="absolute -top-16 -left-16 w-56 h-56 bg-[var(--brass)]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-[var(--brass-soft)]/20 via-transparent to-transparent pointer-events-none" />
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center bg-[var(--surface)] border border-[var(--line)] rounded-lg p-1 text-xs font-medium">
-            <button
-              onClick={() => setLens('owner')}
-              className={cn(
-                "px-3 py-1.5 rounded-md transition-colors",
-                lens === 'owner' ? "bg-[var(--brass)] text-black font-semibold" : "text-[var(--muted)] hover:text-[var(--text)]"
-              )}
-            >
-              Owner Lens
-            </button>
-            <button
-              onClick={() => setLens('accountant')}
-              className={cn(
-                "px-3 py-1.5 rounded-md transition-colors",
-                lens === 'accountant' ? "bg-[var(--brass)] text-black font-semibold" : "text-[var(--muted)] hover:text-[var(--text)]"
-              )}
-            >
-              Accountant Lens
-            </button>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)]/60 text-[11px] font-mono text-[var(--brass)] font-semibold mb-2 shadow-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--brass)] animate-pulse" />
+              FINANCIAL COMMAND CENTER
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              {lens === 'owner' ? 'Real-Time Financial Ledger' : 'Consolidated Double-Entry Trial Balance'}
+            </h1>
+            <p className="text-sm text-[var(--muted)] mt-1">
+              Connected to live store —{' '}
+              <span className="text-[var(--brass)] font-medium">
+                {lens === 'owner' ? 'owner perspective on assets, cash & net worth.' : 'audit-ready debits and credits.'}
+              </span>
+            </p>
           </div>
 
-          <button
-            onClick={() => setQuickEntryOpen(true)}
-            className="flex items-center gap-1.5 bg-[var(--brass)] hover:opacity-90 text-black px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer"
-          >
-            <Plus size={14} />
-            Add Entry
-          </button>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center bg-[var(--surface)]/80 border border-[var(--line)] rounded-xl p-1 text-xs font-medium shadow-inner backdrop-blur-sm">
+              <button
+                onClick={() => setLens('owner')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg transition-all cursor-pointer",
+                  lens === 'owner' 
+                    ? "bg-gradient-to-r from-[var(--brass)] to-[#e5be6b] text-black font-semibold shadow-sm" 
+                    : "text-[var(--muted)] hover:text-[var(--text)]"
+                )}
+              >
+                Owner Lens
+              </button>
+              <button
+                onClick={() => setLens('accountant')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg transition-all cursor-pointer",
+                  lens === 'accountant' 
+                    ? "bg-gradient-to-r from-[var(--brass)] to-[#e5be6b] text-black font-semibold shadow-sm" 
+                    : "text-[var(--muted)] hover:text-[var(--text)]"
+                )}
+              >
+                Accountant Lens
+              </button>
+            </div>
+
+            <button
+              onClick={() => setQuickEntryOpen(true)}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] hover:opacity-95 text-black px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md hover:shadow-lg cursor-pointer active:scale-95"
+            >
+              <Plus size={15} />
+              Add Entry
+            </button>
+          </div>
         </div>
       </div>
 
@@ -222,27 +236,29 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Summary Tiles from REAL Data */}
+      {/* Summary Tiles from REAL Data with layered gold/brass gradients */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Tile 1: Net Worth */}
-        <div className="bg-[var(--panel)] border border-[var(--brass-line)] rounded-2xl p-5 relative overflow-hidden shadow-sm bg-gradient-to-b from-[var(--brass-soft)] to-[var(--panel)]">
-          <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--muted)] font-semibold flex items-center justify-between">
+        <div className="bg-[var(--panel)] border border-[var(--brass-line)] rounded-2xl p-5 relative overflow-hidden shadow-sm bg-gradient-to-b from-[var(--brass-soft)] via-[var(--brass-soft)]/20 to-[var(--panel)] group hover:border-[var(--brass)]/80 transition-all">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--brass)] to-transparent" />
+          <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--brass)] font-semibold flex items-center justify-between">
             <span>Net Worth</span>
-            <Building2 size={14} className="text-[var(--brass)]" />
+            <Building2 size={15} className="text-[var(--brass)] group-hover:scale-110 transition-transform" />
           </div>
           <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight mt-1 text-[var(--text)]">
             {formatCurrency(metrics.netWorth)}
           </div>
-          <div className="font-mono text-xs text-[var(--muted)] mt-2">
-            Assets: {formatCurrency(metrics.totalAssets)}
+          <div className="font-mono text-xs text-[var(--muted)] mt-2 flex items-center justify-between">
+            <span>Assets: {formatCurrency(metrics.totalAssets)}</span>
+            <span className="text-[10px] text-[var(--brass)] bg-[var(--brass-soft)] px-1.5 py-0.5 rounded border border-[var(--brass-line)]/50">Primary</span>
           </div>
         </div>
 
         {/* Tile 2: Revenue / Money In */}
-        <div className="bg-[var(--panel)] border border-[var(--line)] rounded-2xl p-5 relative overflow-hidden shadow-sm">
+        <div className="bg-[var(--panel)] border border-[var(--line)] hover:border-[var(--brass-line)] rounded-2xl p-5 relative overflow-hidden shadow-sm bg-gradient-to-b from-[var(--brass-soft)]/40 via-[var(--panel)]/50 to-[var(--panel)] transition-all group">
           <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--muted)] font-semibold flex items-center justify-between">
             <span>Money In (Revenue)</span>
-            <ArrowUpRight size={14} className="text-[var(--pos)]" />
+            <ArrowUpRight size={15} className="text-[var(--pos)] group-hover:scale-110 transition-transform" />
           </div>
           <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight mt-1 text-[var(--pos)]">
             {formatCurrency(metrics.totalRevenue)}
@@ -253,10 +269,10 @@ export default function Dashboard() {
         </div>
 
         {/* Tile 3: Safe to Spend / Liquid Cash */}
-        <div className="bg-[var(--panel)] border border-[var(--line)] rounded-2xl p-5 relative overflow-hidden shadow-sm">
+        <div className="bg-[var(--panel)] border border-[var(--line)] hover:border-[var(--brass-line)] rounded-2xl p-5 relative overflow-hidden shadow-sm bg-gradient-to-b from-[var(--brass-soft)]/50 via-[var(--panel)]/50 to-[var(--panel)] transition-all group">
           <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--muted)] font-semibold flex items-center justify-between">
             <span>Liquid Cash</span>
-            <Wallet size={14} className="text-[var(--brass)]" />
+            <Wallet size={15} className="text-[var(--brass)] group-hover:scale-110 transition-transform" />
           </div>
           <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight mt-1 text-[var(--text)]">
             {formatCurrency(metrics.liquidCash)}
@@ -267,10 +283,10 @@ export default function Dashboard() {
         </div>
 
         {/* Tile 4: Double-Entry Audit */}
-        <div className="bg-[var(--panel)] border border-[var(--line)] rounded-2xl p-5 relative overflow-hidden shadow-sm">
+        <div className="bg-[var(--panel)] border border-[var(--line)] hover:border-[var(--brass-line)] rounded-2xl p-5 relative overflow-hidden shadow-sm bg-gradient-to-b from-[var(--brass-soft)]/30 via-[var(--panel)]/50 to-[var(--panel)] transition-all group">
           <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--muted)] font-semibold flex items-center justify-between">
             <span>Books Balanced</span>
-            <ShieldCheck size={14} className={metrics.isBalanced ? "text-[var(--pos)]" : "text-[var(--neg)]"} />
+            <ShieldCheck size={15} className={metrics.isBalanced ? "text-[var(--pos)] group-hover:scale-110 transition-transform" : "text-[var(--neg)] group-hover:scale-110 transition-transform"} />
           </div>
           <div className={cn(
             "font-mono text-2xl sm:text-3xl font-bold tracking-tight mt-1",

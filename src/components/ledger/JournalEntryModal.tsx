@@ -91,7 +91,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   const autoRules = useLedgerStore(s => s.autoRules);
   const matchingThreshold = useLedgerStore(s => s.matchingThreshold);
   
-  const engine = useMemo(() => new MatchingEngine(autoRules, analyticalPatternCache, undefined, matchingThreshold, transactions), [autoRules, analyticalPatternCache, transactions, matchingThreshold]);
+  const engine = useMemo(() => new MatchingEngine(autoRules, analyticalPatternCache, undefined, matchingThreshold, transactions, workspace?.dimensionNodes), [autoRules, analyticalPatternCache, transactions, matchingThreshold, workspace?.dimensionNodes]);
   
   const spellChecker = useMemo(() => {
     const dictionary = [
@@ -255,34 +255,34 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
+            className="absolute inset-0 bg-[var(--ink)]/60 backdrop-blur-md"
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[32px] md:rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[95dvh] md:max-h-[90dvh]"
+            className="relative w-full max-w-4xl bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[95dvh] md:max-h-[90dvh]"
           >
             {/* Header */}
             <div className="p-4 md:p-6 lg:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30 gap-4">
               <div className="flex items-center gap-3 md:gap-4">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-900 rounded-xl md:rounded-[32px] flex items-center justify-center text-white shadow-lg shadow-ledger-ink/20 shrink-0">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-[var(--brass)] text-black rounded-xl flex items-center justify-center shadow-md shrink-0">
                   <ArrowRightLeft size={20} className="md:size-[24px]" />
                 </div>
                 <div>
                   <h2 className="text-xl md:text-2xl font-bold text-[var(--text)] tracking-tight">New Journal Entry</h2>
-                  <p className="text-xs md:text-sm text-slate-500 font-medium">Record manual adjustments to the ledger</p>
+                  <p className="text-xs md:text-sm text-[var(--muted)] font-medium">Record manual adjustments to the ledger</p>
                 </div>
               </div>
-              <button onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors shrink-0">
-                <X size={20} className="text-slate-500" />
+              <button onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors shrink-0 cursor-pointer">
+                <X size={20} className="text-[var(--muted)]" />
               </button>
             </div>
 
             {/* Form Content */}
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
               {isLocked && (
-                <div className="p-4 rounded-[32px] bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 flex items-start gap-3">
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 flex items-start gap-3">
                   <AlertCircle size={20} className="shrink-0 mt-0.5" />
                   <div>
                     <p className="font-bold text-xs uppercase tracking-wider">Accounting Period Sealed</p>
@@ -297,24 +297,24 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
               {/* Meta Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <div className="space-y-2">
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Date</label>
+                  <label className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Date</label>
                   <input 
                     type="date" 
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--surface)] transition-all font-bold"
+                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--brass-line)] focus:bg-[var(--surface)] transition-all font-bold text-[var(--text)]"
                   />
                 </div>
                 <div className="md:col-span-2 space-y-2 relative">
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Description</label>
+                  <label className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Description</label>
                   <input 
                     type="text" 
                     required
                     value={description}
                     onChange={(e) => handleDescriptionChange(e.target.value)}
                     placeholder="e.g. Monthly depreciation adjustment"
-                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--surface)] transition-all font-bold"
+                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--brass-line)] focus:bg-[var(--surface)] transition-all font-bold text-[var(--text)]"
                   />
                   
                   <AnimatePresence>
@@ -330,7 +330,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                            setDescription(words.join(' ') + ' ');
                            setSuggestion(null);
                         }}
-                        className="absolute right-4 top-1/2 translate-y-1 py-1 px-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-[9px] font-black uppercase flex items-center gap-2 hover:bg-amber-100 transition-all shadow-lg z-20"
+                        className="absolute right-4 top-1/2 translate-y-1 py-1 px-3 bg-[var(--brass-soft)] border border-[var(--brass-line)] text-[var(--brass)] rounded-lg text-[9px] font-black uppercase flex items-center gap-2 hover:bg-[var(--brass-soft)]/80 transition-all shadow-lg z-20 cursor-pointer"
                       >
                         <TypeIcon size={10} />
                         Did you mean "{suggestion}"?
@@ -339,22 +339,22 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                   </AnimatePresence>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Reference (Optional)</label>
+                  <label className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Reference (Optional)</label>
                   <input 
                     type="text" 
                     value={reference}
                     onChange={(e) => setReference(e.target.value)}
                     placeholder="e.g. JE-2026-001"
-                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--surface)] transition-all shadow-sm font-bold"
+                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--brass-line)] focus:bg-[var(--surface)] transition-all shadow-sm font-bold text-[var(--text)]"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Currency</label>
+                   <label className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Currency</label>
                    <select 
                      value={transactionCurrency}
                      onChange={(e) => setTransactionCurrency(e.target.value)}
-                     className="w-full px-4 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--surface)] transition-all font-bold appearance-none"
+                     className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--brass-line)] focus:bg-[var(--surface)] transition-all font-bold appearance-none text-[var(--text)] cursor-pointer"
                    >
                      {['USD', 'EUR', 'GBP', 'ILS', 'JPY', 'CAD'].map(cur => (
                        <option key={cur} value={cur}>{cur}</option>
@@ -364,7 +364,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 
                 {transactionCurrency !== baseCurrency && (
                    <div className="space-y-2">
-                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                     <label className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">
                        Exchange Rate ({transactionCurrency} → {baseCurrency})
                      </label>
                      <input 
@@ -374,7 +374,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                        onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
                        placeholder="e.g. 1.08"
                        required
-                       className="w-full px-4 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--surface)] transition-all font-mono font-bold"
+                       className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--brass-line)] focus:bg-[var(--surface)] transition-all font-mono font-bold text-[var(--text)]"
                      />
                    </div>
                 )}
@@ -390,39 +390,39 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                         type="checkbox" 
                         checked={showDimensions} 
                         onChange={e => setShowDimensions(e.target.checked)} 
-                        className="rounded border-zinc-300 text-[var(--text)] focus:ring-indigo-600"
+                        className="rounded border-[var(--line)] text-[var(--brass)] focus:ring-[var(--brass)]"
                       />
-                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Show Dimensions</span>
+                      <span className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Show Dimensions</span>
                     </label>
                     <button 
                       type="button"
                       onClick={handleAddLine}
-                      className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[var(--text)] transition-colors"
+                      className="flex items-center gap-2 text-xs font-bold text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
                     >
                       <Plus size={14} /> Add Line
                     </button>
                   </div>
                 </div>
 
-                <div className="border border-[var(--line)] rounded-[32px] md:rounded-[32px] overflow-hidden overflow-x-auto custom-scrollbar">
+                <div className="border border-[var(--line)] rounded-xl overflow-hidden overflow-x-auto custom-scrollbar">
                   <table className="w-full border-collapse text-sm min-w-[600px]">
                     <thead>
                       <tr className="text-left border-b border-[var(--line)] bg-[var(--ink)]/50">
-                        <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Account</th>
+                        <th className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]">Account</th>
                         {showDimensions && activeDimensions.map(dim => (
-                          <th key={dim.id} className={cn("p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]", dim.isWorld && "text-indigo-500")}>
+                          <th key={dim.id} className={cn("p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]", dim.isWorld && "text-[var(--brass)]")}>
                             {dim.name}
                           </th>
                         ))}
-                        <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px] text-right w-32">Debit</th>
-                        <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px] text-right w-32">Credit</th>
-                        <th className="p-4 w-12"></th>
+                        <th className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px] text-right w-32">Debit</th>
+                        <th className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px] text-right w-32">Credit</th>
+                        <th className="p-3.5 w-12"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-ledger-line/30">
+                    <tbody className="divide-y divide-[var(--line)]">
                       {lines.map((line, idx) => (
                         <tr key={idx} className="group hover:bg-[var(--ink)]/50 transition-colors">
-                          <td className="p-3">
+                          <td className="p-2.5">
                             <div className="relative">
                               <input 
                                 required
@@ -433,7 +433,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                                   handleLineChange(idx, 'accountId', acc ? acc.id : e.target.value);
                                 }}
                                 placeholder="Select Account..."
-                                className="w-full px-4 py-2.5 bg-transparent border-none focus:ring-0 font-bold text-[var(--text)] min-w-[150px]"
+                                className="w-full px-3 py-2 bg-transparent border-none focus:ring-0 font-bold text-[var(--text)] min-w-[150px]"
                               />
                               <datalist id={`je-account-${idx}`}>
                                 {accounts.map(acc => (
@@ -443,42 +443,42 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                             </div>
                           </td>
                           {showDimensions && activeDimensions.map(dim => (
-                            <td key={dim.id} className="p-3">
+                            <td key={dim.id} className="p-2.5">
                               <div className="relative">
                                 <input 
                                   value={line.dimensions?.[dim.id.toLowerCase()] || (line as any)[dim.id.toLowerCase()] || ''}
                                   onChange={(e) => handleDimensionChange(idx, dim.id, e.target.value)}
                                   placeholder={`Select ${dim.name}...`}
-                                  className="w-full px-4 py-2.5 bg-[var(--ink)]/50 border border-transparent rounded-xl focus:bg-[var(--surface)] focus:border-[var(--line)] font-bold min-w-[120px]"
+                                  className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] font-bold min-w-[120px] text-[var(--text)]"
                                 />
                               </div>
                             </td>
                           ))}
-                          <td className="p-3">
+                          <td className="p-2.5">
                             <input 
                               type="number" 
                               step="0.01"
                               value={line.debit > 0 ? line.debit / 100 : ''}
                               onChange={(e) => handleLineChange(idx, 'debit', e.target.value)}
                               placeholder="0.00"
-                              className="w-full px-4 py-2.5 bg-[var(--ink)]/50 border border-transparent rounded-xl focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold"
+                              className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold text-[var(--text)]"
                             />
                           </td>
-                          <td className="p-3">
+                          <td className="p-2.5">
                             <input 
                               type="number" 
                               step="0.01"
                               value={line.credit > 0 ? line.credit / 100 : ''}
                               onChange={(e) => handleLineChange(idx, 'credit', e.target.value)}
                               placeholder="0.00"
-                              className="w-full px-4 py-2.5 bg-[var(--ink)]/50 border border-transparent rounded-xl focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold"
+                              className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold text-[var(--text)]"
                             />
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-2.5 text-center">
                             <button 
                               type="button"
                               onClick={() => handleRemoveLine(idx)}
-                              className="p-2 text-slate-500 hover:text-rose-600 transition-colors"
+                              className="p-2 text-[var(--muted)] hover:text-rose-600 transition-colors cursor-pointer"
                             >
                               <Trash2 size={16} />
                             </button>
@@ -488,9 +488,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                     </tbody>
                     <tfoot>
                       <tr className="bg-[var(--ink)]/50 font-bold">
-                        <td className="p-6 text-right uppercase tracking-widest text-[10px] text-slate-500" colSpan={showDimensions ? 4 : 1}>Totals</td>
-                        <td className="p-6 text-right font-mono text-[var(--text)]">{formatCurrency(totals.debit)}</td>
-                        <td className="p-6 text-right font-mono text-[var(--text)]">{formatCurrency(totals.credit)}</td>
+                        <td className="p-4 text-right uppercase tracking-widest text-[10px] text-[var(--muted)]" colSpan={showDimensions ? 4 : 1}>Totals</td>
+                        <td className="p-4 text-right font-mono text-[var(--text)]">{formatCurrency(totals.debit)}</td>
+                        <td className="p-4 text-right font-mono text-[var(--text)]">{formatCurrency(totals.credit)}</td>
                         <td></td>
                       </tr>
                     </tfoot>
@@ -500,16 +500,16 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
 
               {/* Validation Status */}
               <div className={cn(
-                "p-5 md:p-6 rounded-[32px] border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300 shadow-sm",
+                "p-4 md:p-5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300 shadow-sm",
                 totals.isBalanced 
-                  ? "bg-emerald-50/5 border-emerald-200/30 text-emerald-600" 
-                  : "bg-rose-50/5 border-rose-200/30 text-rose-600"
+                  ? "bg-[var(--pos)]/10 border-[var(--pos)]/30 text-[var(--pos)]" 
+                  : "bg-rose-500/10 border-rose-500/30 text-rose-500"
               )}>
                 <div className="flex items-start sm:items-center gap-3">
-                  {totals.isBalanced ? <CheckCircle2 size={24} className="shrink-0 mt-1 sm:mt-0" /> : <AlertCircle size={24} className="shrink-0 mt-1 sm:mt-0" />}
+                  {totals.isBalanced ? <CheckCircle2 size={22} className="shrink-0 mt-1 sm:mt-0" /> : <AlertCircle size={22} className="shrink-0 mt-1 sm:mt-0" />}
                   <div>
-                    <p className="font-bold text-sm tracking-tight">{totals.isBalanced ? "TOPOLOGY SYNCED: BALANCED" : "IMBALANCE DETECTED"}</p>
-                    <p className="text-xs opacity-80 font-medium">
+                    <p className="font-bold text-xs uppercase tracking-wider">{totals.isBalanced ? "TOPOLOGY SYNCED: BALANCED" : "IMBALANCE DETECTED"}</p>
+                    <p className="text-xs opacity-90 font-medium mt-0.5">
                       {totals.isBalanced 
                         ? "The total debits equal the total credits. Your fiscal structure is integrity-verified." 
                         : "Dimensional mismatch: Debits and credits must be equivalent to commit."}
@@ -518,17 +518,17 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 </div>
                 <div className="text-left sm:text-right shrink-0">
                   <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Delta</p>
-                  <p className="text-xl font-bold font-mono tracking-tighter">{formatCurrency(Math.abs(totals.debit - totals.credit))}</p>
+                  <p className="text-lg font-bold font-mono tracking-tight">{formatCurrency(Math.abs(totals.debit - totals.credit))}</p>
                 </div>
               </div>
             </form>
 
             {/* Footer Actions */}
-            <div className="p-4 md:p-6 lg:p-8 border-t border-[var(--line)] bg-[var(--ink)]/30 flex flex-col sm:flex-row gap-3">
+            <div className="p-4 md:p-6 border-t border-[var(--line)] bg-[var(--ink)]/30 flex flex-col sm:flex-row gap-3">
               <button 
                 type="button"
                 onClick={onClose}
-                className="py-3.5 md:py-4 px-4 bg-[var(--surface)] border border-[var(--line)] text-slate-500 rounded-[32px] font-bold hover:bg-[var(--ink)] transition-all order-2 sm:order-1 sm:flex-1"
+                className="py-3 px-4 bg-[var(--surface)] text-[var(--muted)] rounded-xl font-bold hover:bg-[var(--ink)] hover:text-[var(--text)] transition-all order-2 sm:order-1 sm:flex-1 cursor-pointer text-xs uppercase tracking-wider"
               >
                 Discard Entry
               </button>
@@ -536,10 +536,10 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 onClick={handleSubmit}
                 disabled={!totals.isBalanced || isLocked}
                 className={cn(
-                  "py-3.5 md:py-4 px-4 rounded-[32px] font-bold transition-all shadow-xl order-1 sm:order-2 sm:flex-[2]",
+                  "py-3 px-4 rounded-xl font-bold transition-all shadow-md order-1 sm:order-2 sm:flex-[2] text-xs uppercase tracking-wider",
                   (totals.isBalanced && !isLocked)
-                    ? "bg-slate-900 text-white hover:bg-slate-800 shadow-ledger-ink/20 cursor-pointer" 
-                    : "bg-[var(--ink)] text-slate-500 cursor-not-allowed shadow-none"
+                    ? "bg-[var(--brass)] text-black hover:opacity-90 cursor-pointer" 
+                    : "bg-[var(--ink)] text-[var(--muted)] cursor-not-allowed shadow-none"
                 )}
               >
                 {isLocked ? "PERIOD IS SEALED" : "COMMIT TO LEDGER"}

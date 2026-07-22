@@ -122,7 +122,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
           <div 
             key={stage.id} 
             className={cn(
-              "flex-1 min-w-[340px] max-w-[380px] flex flex-col h-full rounded-[32px] border p-4 transition-all duration-300 relative",
+              "flex-1 min-w-[340px] max-w-[380px] flex flex-col h-full rounded-xl border p-4 transition-all duration-300 relative",
               dragOverStage === stage.id ? "bg-slate-100 border-indigo-300 ring-4 ring-indigo-50" : "bg-[var(--ink)]/50 border-[var(--line)]/60"
             )}
             onDragOver={(e) => handleDragOver(e, stage.id)}
@@ -132,19 +132,19 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
             {/* Stage Header */}
             <div className="flex items-center justify-between mb-4 px-2">
               <div className="flex items-center gap-3">
-                <div className={cn("w-10 h-10 rounded-[32px] flex items-center justify-center border shadow-xs transition-transform hover:scale-105", stage.color, stage.borderColor)}>
+                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm transition-transform hover:scale-105", stage.color, stage.borderColor)}>
                   <stage.icon size={18} className="opacity-90" />
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--text)] tracking-tight">{stage.label}</h3>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400 mt-0.5">{stageProjects.length} Projects</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--faint)] mt-0.5">{stageProjects.length} Projects</p>
                 </div>
               </div>
             </div>
 
             <div className="px-2 mb-4 space-y-1">
               <div className="flex justify-between items-end">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Budget</span>
+                <span className="text-[10px] font-bold text-[var(--faint)] uppercase tracking-widest">Total Budget</span>
                 <span className="font-mono font-black text-[var(--text)] tracking-tighter">{formatCurrency(totalBudget)}</span>
               </div>
             </div>
@@ -167,13 +167,13 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     className={cn(
-                      "bg-[var(--surface)] border rounded-[32px] p-5 cursor-grab active:cursor-grabbing hover:shadow-xl transition-all group relative overflow-hidden",
-                      draggedProjectId === project.id ? "opacity-50 border-slate-300 border-dashed" : "border-[var(--line)]/80 shadow-sm hover:border-slate-300"
+                      "bg-[var(--panel)] border rounded-2xl p-5 cursor-grab active:cursor-grabbing hover:shadow-xl transition-all group relative overflow-hidden",
+                      draggedProjectId === project.id ? "opacity-50 border-slate-300 border-dashed" : "border-[var(--line)] shadow-sm hover:border-slate-300"
                     )}
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{project.type}</p>
+                        <p className="text-[10px] font-bold text-[var(--faint)] uppercase tracking-widest mb-1">{project.type}</p>
                         <h4 className="font-black text-[var(--text)] leading-tight">{project.name}</h4>
                       </div>
                       <GripVertical size={14} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -182,13 +182,13 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
                     <div className="pt-4 border-t border-[var(--line)] space-y-3">
                       <div className="flex items-end justify-between">
                         <div className="space-y-1">
-                          <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Budget</p>
+                          <p className="text-[8px] font-bold uppercase tracking-wider text-[var(--faint)]">Budget</p>
                           <p className="text-xs font-bold text-[var(--text)] font-mono">
                             {formatCurrency(stats.budgetCents)}
                           </p>
                         </div>
                         <div className="text-right">
-                           <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Spent</p>
+                           <p className="text-[8px] font-bold uppercase tracking-wider text-[var(--faint)]">Spent</p>
                           <span className="text-xs font-black font-mono tracking-tighter text-slate-600">
                             {formatCurrency(stats.expenseCents)}
                           </span>
@@ -205,7 +205,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
                           style={{ width: `${Math.min(progress, 100)}%` }}
                         />
                       </div>
-                      <div className="flex justify-between items-center text-[9px] font-medium uppercase tracking-wider text-slate-400">
+                      <div className="flex justify-between items-center text-[9px] font-medium uppercase tracking-wider text-[var(--faint)]">
                          <span>{progress.toFixed(0)}% Used</span>
                          <div className="flex items-center gap-1"><Users size={10} /> {(project.splitRules || []).length || 1} Mbrs</div>
                       </div>
@@ -217,10 +217,10 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
               {/* Empty state for the column */}
               {stageProjects.length === 0 && (
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center text-center opacity-40 w-full h-full pointer-events-none">
-                   <div className="w-12 h-12 bg-slate-100 rounded-[32px] border-2 border-[var(--line)] border-dashed flex items-center justify-center mb-3">
-                     <stage.icon size={20} className="text-slate-400" />
+                   <div className="w-12 h-12 bg-slate-100 rounded-xl border-2 border-[var(--line)] border-dashed flex items-center justify-center mb-3">
+                     <stage.icon size={20} className="text-[var(--faint)]" />
                    </div>
-                   <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Drop Here</p>
+                   <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">Drop Here</p>
                 </div>
               )}
             </div>

@@ -33,21 +33,21 @@ export default function CashFlowPredictor() {
   const forecastMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 
   return (
-    <div className="h-full flex flex-col bg-[#FAFAFA]">
-      <div className="px-8 py-6 bg-slate-900 text-white flex justify-between items-start">
+    <div className="h-full flex flex-col bg-[var(--ink)] text-[var(--text)]">
+      <div className="px-8 py-6 bg-[var(--surface)] border-b border-[var(--line)] text-[var(--text)] flex justify-between items-start shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-3">
-            <TrendingUp className="w-6 h-6 text-emerald-400" />
-            Algorithmic Cash Flow Predictor
+          <h1 className="text-2xl font-bold flex items-center gap-3 text-[var(--text)]">
+            <TrendingUp className="w-6 h-6 text-emerald-500" />
+            Cash Forecasting
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-[var(--muted)] mt-1">
             Time-series forecasting using Double Exponential Smoothing (Holt's Method).
           </p>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
+        <div className="flex p-1 bg-[var(--panel)] border border-[var(--line)] rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'forecast', label: 'Predictive Forecast (6-Mo)', icon: Activity },
             { id: 'trends', label: 'Historical Trend', icon: BarChart }
@@ -57,7 +57,7 @@ export default function CashFlowPredictor() {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={cn(
                    "px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all",
-                   activeTab === tab.id ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-[var(--ink)]"
+                   activeTab === tab.id ? "bg-[var(--ink)] text-[var(--panel)]" : "text-[var(--muted)] hover:bg-[var(--ink)]"
                 )}
              >
                 <tab.icon className="w-4 h-4" /> {tab.label}
@@ -66,14 +66,14 @@ export default function CashFlowPredictor() {
         </div>
 
         {activeTab === 'forecast' && (
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-[var(--surface)] rounded-2xl overflow-hidden shadow-sm">
             <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)] flex items-center justify-between">
                <h2 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
                   <Zap className="w-4 h-4 text-emerald-500" />
                   Forward Predictions (Holt's Method, α=0.3, β=0.2)
                </h2>
             </div>
-            <div className="grid grid-cols-12 p-4 bg-[var(--ink)] border-b border-[var(--line)] text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+            <div className="grid grid-cols-12 p-4 bg-[var(--ink)] border-b border-[var(--line)] text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
               <div className="col-span-4">Future Period</div>
               <div className="col-span-4 text-right">Predicted Net Cash Flow</div>
               <div className="col-span-4 text-right">Trend Velocity</div>
@@ -85,7 +85,7 @@ export default function CashFlowPredictor() {
                  return (
                    <div key={idx} className="grid grid-cols-12 p-4 items-center hover:bg-[var(--ink)] transition-colors">
                      <div className="col-span-4 flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-slate-400" />
+                        <Calendar className="w-4 h-4 text-[var(--faint)]" />
                         <span className="font-bold text-[var(--text)]">2027 {forecastMonths[idx]}</span>
                      </div>
                      <div className="col-span-4 text-right font-mono font-bold text-emerald-600">
@@ -108,7 +108,7 @@ export default function CashFlowPredictor() {
         )}
 
         {activeTab === 'trends' && (
-           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 shadow-sm">
+           <div className="bg-[var(--surface)] rounded-2xl p-6 shadow-sm">
              <div className="flex h-64 items-end gap-2 mt-4">
                 {historicalData.map((val, idx) => {
                    const max = Math.max(...historicalData);
@@ -116,11 +116,11 @@ export default function CashFlowPredictor() {
                    return (
                       <div key={idx} className="flex-1 flex flex-col justify-end items-center gap-2 group relative">
                          <div className="w-full bg-slate-200 rounded-t-sm hover:bg-slate-300 transition-colors relative" style={{ height: `${height}%` }}>
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap pointer-events-none z-10">
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[var(--ink)] text-[var(--panel)] text-[10px] py-1 px-2 rounded whitespace-nowrap pointer-events-none z-10">
                                ${val.toLocaleString()}
                             </div>
                          </div>
-                         <div className="text-[10px] font-bold text-slate-500 uppercase">{months[idx]}</div>
+                         <div className="text-[10px] font-bold text-[var(--muted)] uppercase">{months[idx]}</div>
                       </div>
                    )
                 })}

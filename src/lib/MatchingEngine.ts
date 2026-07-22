@@ -1,25 +1,29 @@
 import { AhoCorasick, lexicalSimilarity, optimizedTransactionSimilarity, BayesianClassifier, SpellChecker } from './algorithms';
-import { Transaction, AutoRule } from '../types';
+import { Transaction, AutoRule, DimensionNode } from '../types';
 
 /**
  * Deterministic Entity Resolution & Matching Engine
- * Implements Layer 2 of the Clearbook Architecture.
+ * Implements Layer 2 of the LedgerFlow Architecture.
  * Uses Aho-Corasick for O(N) multi-pattern matching and Levenshtein for fuzzy resolution.
  */
 export class MatchingEngine {
   private ac: AhoCorasick | null = null;
+  private dimAc: AhoCorasick | null = null;
   private rules: AutoRule[] = [];
   private analyticalCache: Record<string, any> = {};
   private bayes: BayesianClassifier;
   private spellChecker: SpellChecker;
   private analyticalSalt: string;
   private threshold: number;
+  private dimensionNodes: DimensionNode[] = [];
 
-  constructor(rules: AutoRule[], analyticalCache: Record<string, any> = {}, analyticalSalt = '', threshold = 0.85, allTransactions?: Transaction[]) {
+  constructor(rules: AutoRule[], analyticalCache: Record<string, any> = {}, analyticalSalt = '', threshold = 0.85, allTransactions?: Transaction[], dimensionNodes?: DimensionNode[]) {
     this.rules = rules;
     this.analyticalCache = analyticalCache;
     this.analyticalSalt = analyticalSalt;
     this.threshold = threshold;
+    this.dimensionNodes = dimensionNodes || [];
+    
     this.bayes = new BayesianClassifier();
     this.spellChecker = new SpellChecker(Object.keys(analyticalCache));
 
@@ -34,6 +38,21 @@ export class MatchingEngine {
       
       if (patterns.length > 0) {
         this.ac = new AhoCorasick(patterns);
+      }
+    }
+
+    // 1.5. Initialize AC Trie for dimension nodes
+    if (this.dimensionNodes.length > 0) {
+      const dimPatterns = this.dimensionNodes.flatMap(node => {
+        const patterns = [...(node.aliases || [])];
+        // Also use the description and ID as patterns if they are substantial
+        if (node.description && node.description.length > 3) patterns.push(node.description);
+        patterns.push(node.id); // e.g. "P1"
+        return patterns.map(p => ({ pattern: p, ruleId: node.id }));
+      });
+      
+      if (dimPatterns.length > 0) {
+        this.dimAc = new AhoCorasick(dimPatterns);
       }
     }
 
@@ -66,6 +85,21 @@ export class MatchingEngine {
     if (!lowerDesc) return null;
 
     const isClient = typeof window !== 'undefined';
+    let baseDimensions: Record<string, string> | undefined = undefined;
+
+    // LAYER 0.5: Dimension Node resolution
+    if (this.dimAc) {
+      const dimMatches = this.dimAc.search(description);
+      if (dimMatches.length > 0) {
+        baseDimensions = {};
+        for (const matchId of dimMatches) {
+          const node = this.dimensionNodes.find(n => n.id === matchId);
+          if (node && !baseDimensions[node.dimensionId]) {
+            baseDimensions[node.dimensionId] = node.id;
+          }
+        }
+      }
+    }
 
     // LAYER 1: Hardened Deterministic Rules (Aho-Corasick Trie) - O(N)
     if (this.ac) {
@@ -75,20 +109,20 @@ export class MatchingEngine {
         const rule = this.rules.find(r => r.id === matchId);
         if (rule?.action.targetCategory) return { 
           accountName: rule.action.targetCategory,
-          dimensions: rule.action.targetDimensions
+          dimensions: { ...baseDimensions, ...(rule.action.targetDimensions || {}) }
         };
       }
     }
 
     // LAYER 2: Analytical Memory (Exact Match)
     const exactCache = this.analyticalCache[lowerDesc];
-    if (exactCache) return { accountName: exactCache.accountName, tags: exactCache.tags };
+    if (exactCache) return { accountName: exactCache.accountName, tags: exactCache.tags, dimensions: baseDimensions };
 
     // LAYER 3: Analytical Memory (Partial Word Match)
     const partialMatch = Object.entries(this.analyticalCache).find(([key]) => 
       lowerDesc.includes(key) || key.includes(lowerDesc)
     );
-    if (partialMatch) return { accountName: partialMatch[1].accountName, tags: partialMatch[1].tags };
+    if (partialMatch) return { accountName: partialMatch[1].accountName, tags: partialMatch[1].tags, dimensions: baseDimensions };
     
     // LAYER 4: Analytical Similarity (Jaro-Winkler + Semantic Overlap)
     if (lowerDesc.length > 3) {
@@ -109,7 +143,7 @@ export class MatchingEngine {
           bestFuzzy = { accountName: val.accountName, tags: val.tags, score };
         }
       }
-      if (bestFuzzy.accountName) return { accountName: bestFuzzy.accountName, tags: bestFuzzy.tags };
+      if (bestFuzzy.accountName) return { accountName: bestFuzzy.accountName, tags: bestFuzzy.tags, dimensions: baseDimensions };
     }
 
     // LAYER 5: Statistical Inference (Probabilistic Models)
@@ -117,7 +151,7 @@ export class MatchingEngine {
       const prediction = this.bayes.classify(lowerDesc);
       // Use configured threshold
       if (prediction && prediction.confidence > this.threshold) {
-        return { accountName: prediction.category };
+        return { accountName: prediction.category, dimensions: baseDimensions };
       }
     }
 
@@ -125,19 +159,45 @@ export class MatchingEngine {
     const typoCorrection = this.spellChecker.findClosest(lowerDesc, 2);
     if (typoCorrection) {
       const match = this.analyticalCache[typoCorrection];
-      if (match) return { accountName: match.accountName, tags: match.tags };
+      if (match) return { accountName: match.accountName, tags: match.tags, dimensions: baseDimensions };
     }
 
     // LAYER 7: Fail-safe to Manual Review
-    return { accountName: 'Manual Review', tags: ['UNRESOLVED_ENTRY'] };
+    return { accountName: 'Manual Review', tags: ['UNRESOLVED_ENTRY'], dimensions: baseDimensions };
   }
 
   /**
    * Explains and debugs which mathematical layer matched a description
    */
-  debugResolveCategory(description: string): { accountName: string; layer: string; confidence?: number } {
+  debugResolveCategory(description: string): { accountName: string; layer: string; confidence?: number; dimensions?: Record<string, string> } {
     const lowerDesc = (description || '').toLowerCase().trim();
     if (!lowerDesc) return { accountName: 'Manual Review', layer: 'Empty Input' };
+
+    let dimensionReason = '';
+    let baseDimensions: Record<string, string> | undefined = undefined;
+    
+    // LAYER 0.5: Dimension Node resolution
+    if (this.dimAc) {
+      const dimMatches = this.dimAc.search(description);
+      if (dimMatches.length > 0) {
+        baseDimensions = {};
+        const foundAliases: string[] = [];
+        for (const matchId of dimMatches) {
+          const node = this.dimensionNodes.find(n => n.id === matchId);
+          if (node) {
+            if (!baseDimensions[node.dimensionId]) {
+              baseDimensions[node.dimensionId] = node.id;
+            }
+            if (!foundAliases.includes(node.id)) {
+              foundAliases.push(node.id);
+            }
+          }
+        }
+        if (foundAliases.length > 0) {
+          dimensionReason = ` (Matched alias: ${foundAliases.join(', ')})`;
+        }
+      }
+    }
 
     // LAYER 1: Hardened Deterministic Rules (Aho-Corasick Trie) - O(N)
     if (this.ac) {
@@ -147,7 +207,7 @@ export class MatchingEngine {
         const rule = this.rules.find(r => r.id === matchId);
         if (rule?.action.targetCategory) {
           const ruleName = rule.condition.vendor || rule.condition.descriptionContains || rule.id;
-          return { accountName: rule.action.targetCategory, layer: 'Rule: ' + ruleName, confidence: 1.0 };
+          return { accountName: rule.action.targetCategory, layer: 'Rule: ' + ruleName + dimensionReason, confidence: 1.0, dimensions: { ...baseDimensions, ...(rule.action.targetDimensions || {}) } };
         }
       }
     }
@@ -155,7 +215,7 @@ export class MatchingEngine {
     // LAYER 2: Analytical Memory (Exact Match)
     const exactCache = this.analyticalCache[lowerDesc];
     if (exactCache) {
-      return { accountName: exactCache.accountName, layer: 'Exact Cache Pattern Match', confidence: 1.0 };
+      return { accountName: exactCache.accountName, layer: 'Exact Cache Pattern Match' + dimensionReason, confidence: 1.0, dimensions: baseDimensions };
     }
 
     // LAYER 3: Analytical Memory (Partial Word Match)
@@ -163,7 +223,7 @@ export class MatchingEngine {
       lowerDesc.includes(key) || key.includes(lowerDesc)
     );
     if (partialMatch) {
-      return { accountName: partialMatch[1].accountName, layer: 'Partial Cache Pattern', confidence: 0.95 };
+      return { accountName: partialMatch[1].accountName, layer: 'Partial Cache Pattern' + dimensionReason, confidence: 0.95, dimensions: baseDimensions };
     }
     
     // LAYER 4: Analytical Similarity (Jaro-Winkler + Semantic Overlap)
@@ -186,7 +246,7 @@ export class MatchingEngine {
         }
       }
       if (bestFuzzy.accountName) {
-        return { accountName: bestFuzzy.accountName, layer: 'Fuzzy Jaro-Winkler Metric', confidence: Number(bestFuzzy.score.toFixed(2)) };
+        return { accountName: bestFuzzy.accountName, layer: 'Fuzzy Jaro-Winkler Metric' + dimensionReason, confidence: Number(bestFuzzy.score.toFixed(2)), dimensions: baseDimensions };
       }
     }
 
@@ -196,8 +256,9 @@ export class MatchingEngine {
       if (prediction) {
         return { 
           accountName: prediction.category, 
-          layer: 'Bayesian Auto-Learning Model', 
-          confidence: Number(prediction.confidence.toFixed(2)) 
+          layer: 'Bayesian Auto-Learning Model' + dimensionReason, 
+          confidence: Number(prediction.confidence.toFixed(2)),
+          dimensions: baseDimensions
         };
       }
     }
@@ -207,11 +268,11 @@ export class MatchingEngine {
     if (typoCorrection) {
       const match = this.analyticalCache[typoCorrection];
       if (match) {
-        return { accountName: match.accountName, layer: `Typo Correction: ${typoCorrection}`, confidence: 0.8 };
+        return { accountName: match.accountName, layer: `Typo Correction: ${typoCorrection}` + dimensionReason, confidence: 0.8, dimensions: baseDimensions };
       }
     }
 
-    return { accountName: 'Manual Review', layer: 'Fallback Manual Intervention' };
+    return { accountName: 'Manual Review', layer: 'Fallback Manual Intervention' + dimensionReason, dimensions: baseDimensions };
   }
 
   /**

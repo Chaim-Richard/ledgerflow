@@ -27,7 +27,7 @@ export default function OwnerLens() {
     <div className="space-y-8 max-w-5xl mx-auto py-8">
       <div>
         <h1 className="text-3xl font-black text-[var(--text)] tracking-tight">Plain English Books</h1>
-        <p className="text-slate-500 mt-2 text-lg">No debits or credits. Just what you need to know.</p>
+        <p className="text-[var(--muted)] mt-2 text-lg">No debits or credits. Just what you need to know.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -85,14 +85,14 @@ export default function OwnerLens() {
         </div>
         <div className="space-y-3">
           {(showAllActivity ? transactions : transactions.slice(0, 5)).map(t => (
-            <div key={t.id} className="flex items-center justify-between p-4 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-sm">
+            <div key={t.id} className="flex items-center justify-between p-4 bg-[var(--panel)] border border-[var(--line)] rounded-2xl shadow-sm">
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${t.totalAmountCents > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-600'}`}>
                   {t.totalAmountCents > 0 ? <ArrowUpRight className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
                 </div>
                 <div>
                   <p className="font-bold text-[var(--text)]">{t.payee || t.description}</p>
-                  <p className="text-sm text-slate-500">{t.date}</p>
+                  <p className="text-sm text-[var(--muted)]">{t.date}</p>
                 </div>
               </div>
               <p className={`font-black text-lg ${t.totalAmountCents > 0 ? 'text-emerald-600' : 'text-[var(--text)]'}`}>

@@ -28,19 +28,19 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-[var(--ink)] p-6">
-          <div className="bg-[var(--surface)] p-4 md:p-8 rounded-[32px] border border-rose-100 shadow-sm max-w-xl w-full text-center space-y-6">
-            <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-[32px] mx-auto flex items-center justify-center">
+          <div className="bg-[var(--panel)] p-4 md:p-8 rounded-2xl border border-rose-100 shadow-sm max-w-xl w-full text-center space-y-6">
+            <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-xl mx-auto flex items-center justify-center">
               <AlertCircle size={32} />
             </div>
             
             <div className="space-y-2">
               <h1 className="text-2xl font-semibold text-[var(--text)] tracking-tight font-display">System Exception Detected</h1>
-              <p className="text-sm font-medium text-slate-500">
+              <p className="text-sm font-medium text-[var(--muted)]">
                 The application encountered an unexpected error. Please reload the interface.
               </p>
             </div>
 
-            <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] text-left overflow-auto max-h-40">
+            <div className="p-4 bg-[var(--ink)] rounded-xl border border-[var(--line)] text-left overflow-auto max-h-40">
               <code className="text-xs font-mono text-rose-600 break-words">
                 {this.state.error?.message || "Unknown rendering exception"}
               </code>

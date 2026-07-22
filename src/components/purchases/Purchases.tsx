@@ -128,13 +128,12 @@ export default function Purchases({
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-           <div className="flex flex-wrap bg-[var(--ink)] p-1.5 rounded-[32px] border border-[var(--line)]">
-            
+          <div className="flex items-center bg-[var(--surface)] p-1 rounded-xl border border-[var(--line)] shadow-xs">
             <button 
               onClick={() => setActiveSubTab('bills')}
               className={cn(
-                "px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all",
-                activeSubTab === 'bills' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-[var(--text)]"
+                "px-4 py-2 rounded-lg text-xs font-semibold transition-all",
+                activeSubTab === 'bills' ? "bg-[var(--brass)] text-black shadow-xs" : "text-[var(--muted)] hover:text-[var(--text)]"
               )}
             >
               Bills & AP
@@ -142,8 +141,8 @@ export default function Purchases({
             <button 
               onClick={() => setActiveSubTab('vendors')}
               className={cn(
-                "px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all",
-                activeSubTab === 'vendors' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-[var(--text)]"
+                "px-4 py-2 rounded-lg text-xs font-semibold transition-all",
+                activeSubTab === 'vendors' ? "bg-[var(--brass)] text-black shadow-xs" : "text-[var(--muted)] hover:text-[var(--text)]"
               )}
             >
               Vendors & Suppliers
@@ -151,112 +150,111 @@ export default function Purchases({
           </div>
           <button 
             onClick={() => activeSubTab === 'bills' ? setIsBillModalOpen(true) : setIsVendorModalOpen(true)}
-            className="flex items-center gap-2 px-8 py-3.5 bg-slate-900 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider hover:bg-slate-900/90 transition-all shadow-2xl"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--brass)] text-black rounded-xl text-xs font-semibold hover:opacity-90 transition-all shadow-sm cursor-pointer"
           >
-            <Plus size={18} />
+            <Plus size={16} />
             {activeSubTab === 'bills' ? 'Add Bill' : 'Add Vendor'}
           </button>
         </div>
       </div>
 
       {/* Psychological Header: Aging Buckets */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group"
+          className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group"
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-          <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-4 relative z-10">Critical Overdue</p>
-          <p className="text-2xl md:text-4xl font-black text-rose-600 font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.overdue)}</p>
-          <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest opacity-40">
-             <AlertCircle size={10} />
+          <p className="text-[10px] font-mono uppercase tracking-widest text-rose-500 font-semibold mb-3 relative z-10">Critical Overdue</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-rose-600 tracking-tight relative z-10">{formatCurrency(agingBuckets.overdue)}</p>
+          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
+             <AlertCircle size={12} />
              Immediate Disbursement Priority
           </div>
         </motion.div>
         
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group"
+          className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group"
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-          <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] mb-4 relative z-10">Short-Term (30d)</p>
-          <p className="text-2xl md:text-4xl font-black text-amber-600 font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.due30)}</p>
-          <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest opacity-40">
-             <Activity size={10} />
+          <p className="text-[10px] font-mono uppercase tracking-widest text-amber-500 font-semibold mb-3 relative z-10">Short-Term (30d)</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-amber-600 tracking-tight relative z-10">{formatCurrency(agingBuckets.due30)}</p>
+          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
+             <Activity size={12} />
              Operational Outflow Expected
           </div>
         </motion.div>
 
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group"
+          className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group"
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4 relative z-10">Mid-Term (30-60d)</p>
-          <p className="text-2xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.due60)}</p>
-          <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest opacity-40">
-             <Clock size={10} />
+          <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-semibold mb-3 relative z-10">Mid-Term (30-60d)</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10">{formatCurrency(agingBuckets.due60)}</p>
+          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
+             <Clock size={12} />
              Liquidity Forecast Cluster
           </div>
         </motion.div>
 
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="p-4 md:p-8 bg-slate-900 text-white rounded-[32px] shadow-2xl relative overflow-hidden group border border-white/5"
+          className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--brass-line)] shadow-sm relative overflow-hidden group bg-gradient-to-b from-[var(--brass-soft)] to-[var(--panel)]"
         >
-          <div className="absolute technical-grid inset-0 opacity-10 pointer-events-none" />
-          <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 relative z-10">Total Aggregate Payable</p>
-          <p className="text-2xl md:text-4xl font-black text-indigo-400 font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.current)}</p>
-          <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-white/20 uppercase tracking-widest">
-             <ShieldCheck size={10} />
+          <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
+          <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-semibold mb-3 relative z-10">Total Aggregate Payable</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10">{formatCurrency(agingBuckets.current)}</p>
+          <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
+             <ShieldCheck size={12} className="text-[var(--brass)]" />
              Verified System Liability
           </div>
         </motion.div>
       </div>
 
       {/* Timeline Visualization */}
-      <div className="ledger-card p-4 md:p-10 rounded-[32px] relative overflow-hidden group">
+      <div className="p-6 bg-[var(--panel)] border border-[var(--line)] rounded-2xl shadow-sm relative overflow-hidden group">
         <div className="absolute technical-grid inset-0 opacity-[0.02] pointer-events-none" />
-        <div className="flex items-center justify-between mb-10">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-slate-900 rounded-[32px] flex items-center justify-center text-indigo-400 border border-white/5 shadow-2xl">
-              <Calendar size={28} />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[var(--surface)] border border-[var(--line)] rounded-xl flex items-center justify-center text-[var(--brass)] shadow-xs">
+              <Calendar size={20} />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase italic">Disbursement Horizon</h3>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-1 opacity-50">30-Day Predictive Cash Outflow Map</p>
+              <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">Disbursement Horizon</h3>
+              <p className="text-xs text-[var(--muted)]">30-Day Predictive Cash Outflow Map</p>
             </div>
           </div>
         </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-6 custom-scrollbar px-2">
+        <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
           {timelineData.map((day, i) => (
             <motion.div 
               key={i}
-              whileHover={{ y: -5, scale: 1.02 }}
+              whileHover={{ y: -2 }}
               className={cn(
-                "flex-shrink-0 w-24 flex flex-col items-center gap-3 p-5 rounded-[32px] transition-all relative overflow-hidden",
+                "flex-shrink-0 w-20 flex flex-col items-center gap-2 p-3 rounded-xl transition-all relative overflow-hidden",
                 day.amountCents > 0 
-                  ? "bg-slate-900 text-white border border-white/10 shadow-2xl" 
-                  : "bg-[var(--surface)] border border-[var(--line)] opacity-60"
+                  ? "bg-[var(--brass-soft)] border border-[var(--brass-line)] text-[var(--text)] shadow-xs" 
+                  : "bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] opacity-60"
               )}
             >
               <span className={cn(
-                "text-[10px] font-medium uppercase tracking-wider",
-                day.amountCents > 0 ? "text-indigo-400" : "text-slate-500"
+                "text-[10px] font-mono uppercase font-semibold",
+                day.amountCents > 0 ? "text-[var(--brass)]" : "text-[var(--muted)]"
               )}>{format(day.date, 'EEE')}</span>
-              <span className="text-xl font-black italic">{format(day.date, 'dd')}</span>
+              <span className="text-base font-mono font-bold">{format(day.date, 'dd')}</span>
               {day.amountCents > 0 ? (
-                <div className="flex flex-col items-center pt-2 border-t border-white/10 w-full mt-2">
-                  <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-pulse shadow-[0_0_10px_#10b981] mb-2" />
-                  <span className="text-[11px] font-black font-mono tracking-tighter text-white">
+                <div className="flex flex-col items-center pt-1 border-t border-[var(--brass-line)]/40 w-full mt-1">
+                  <span className="text-[10px] font-mono font-bold text-[var(--text)]">
                     ${(day.amountCents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
                 </div>

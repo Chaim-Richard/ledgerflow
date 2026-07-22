@@ -54,37 +54,37 @@ export default function ToolsCatalog() {
        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10 mb-12">
           <div className="space-y-4">
              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-slate-900 rounded-[32px] flex items-center justify-center text-white shadow-2xl">
-                   <Library size={28} />
+                <div className="w-12 h-12 bg-[var(--brass)] rounded-xl flex items-center justify-center text-black shadow-lg">
+                   <Library size={24} />
                 </div>
                 <div>
-                  <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-[var(--text)]">Tool Catalog</h1>
-                  <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest truncate mt-3 opacity-50">Enterprise Financial Capabilities Suite</p>
+                  <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase leading-none text-[var(--text)]">Tool Catalog</h1>
+                  <p className="text-[11px] font-black text-[var(--muted)] uppercase tracking-widest truncate mt-3">Enterprise Financial Capabilities Suite</p>
                 </div>
              </div>
           </div>
 
           <div className="flex items-center gap-6">
              <div className="relative group">
-                <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-[var(--text)] transition-colors" />
+                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--text)] transition-colors" />
                 <input 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Query capabilities..." 
-                  className="w-80 h-14 pl-14 pr-8 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-xs font-bold outline-none focus:border-slate-800 transition-all shadow-sm"
+                  className="w-80 h-11 pl-12 pr-6 bg-[var(--panel)] border border-[var(--line)] rounded-2xl text-xs font-bold text-[var(--text)] outline-none focus:border-[var(--brass-line)] transition-all shadow-sm"
                 />
              </div>
           </div>
        </div>
 
-       <div className="flex gap-4 mb-10 overflow-x-auto pb-4 custom-scrollbar">
+       <div className="flex gap-2.5 mb-8 overflow-x-auto pb-2 custom-scrollbar">
           {CATEGORIES.map(cat => (
             <button
               key={cat}
               onClick={() => setActiveCat(cat)}
               className={cn(
-                "px-8 py-3 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all whitespace-nowrap",
-                activeCat === cat ? "bg-slate-900 text-white shadow-xl" : "bg-[var(--surface)] border border-[var(--line)] text-slate-500 hover:border-slate-800 hover:text-[var(--text)]"
+                "px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer",
+                activeCat === cat ? "bg-[var(--brass)] text-black shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--brass-line)] hover:text-[var(--text)]"
               )}
             >
               {cat}
@@ -122,23 +122,23 @@ export default function ToolsCatalog() {
                   )}
 
                   <div className="space-y-6">
-                     <div className="w-14 h-14 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-[var(--text)] border border-[var(--line)] group-hover:bg-slate-900 group-hover:text-white transition-all">
-                        <tool.icon size={28} />
+                     <div className="w-11 h-11 bg-[var(--ink)] rounded-xl flex items-center justify-center text-[var(--text)] border border-[var(--line)] group-hover:bg-[var(--brass)] group-hover:text-black transition-all">
+                        <tool.icon size={22} />
                      </div>
                      <div>
-                        <h3 className="text-xl font-black text-[var(--text)] tracking-tight uppercase italic mb-2 leading-none">{tool.name}</h3>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-60 mb-4">{tool.cat}</p>
-                        <p className="text-xs font-medium text-slate-500 leading-relaxed italic line-clamp-2">"{tool.desc}"</p>
+                        <h3 className="text-lg font-black text-[var(--text)] tracking-tight uppercase mb-2 leading-tight">{tool.name}</h3>
+                        <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-3">{tool.cat}</p>
+                        <p className="text-xs font-medium text-[var(--muted)] leading-relaxed line-clamp-2">{tool.desc}</p>
                      </div>
                   </div>
 
-                  <div className="mt-8 pt-8 border-t border-[var(--line)] flex items-center justify-between">
+                  <div className="mt-6 pt-6 border-t border-[var(--line)] flex items-center justify-between">
                      <button className={cn(
-                       "flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider transition-all",
-                       tool.implemented ? "text-[var(--text)] hover:underline" : "text-slate-500 cursor-not-allowed"
+                       "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-all",
+                       tool.implemented ? "text-[var(--text)] group-hover:text-[var(--brass)]" : "text-[var(--muted)] cursor-not-allowed"
                      )}>
                         {tool.implemented ? 'Open Mathematical Sandbox' : 'In Development'}
-                        {tool.implemented && <Zap size={14} className="text-indigo-600" />}
+                        {tool.implemented && <Zap size={14} className="text-[var(--brass)]" />}
                      </button>
                   </div>
                </motion.div>
@@ -147,8 +147,8 @@ export default function ToolsCatalog() {
              {/* End of results */}
           </div>
 
-          <div className="mt-20 py-12 text-center border-t border-[var(--line)]/50">
-             <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.5em] italic">Listing {filteredTools.length} Active Financial Modules</p>
+          <div className="mt-20 py-12 text-center border-t border-[var(--line)]">
+             <p className="text-[11px] font-black text-[var(--muted)] uppercase tracking-[0.5em] italic">Listing {filteredTools.length} Active Financial Modules</p>
           </div>
        </div>
 

@@ -28,16 +28,16 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-2xl bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-2xl overflow-y-auto custom-scrollbar p-12"
+            className="relative w-full max-w-2xl bg-[var(--ink)] rounded-xl border border-[var(--line)] shadow-2xl overflow-y-auto custom-scrollbar p-12"
           >
             <div className="flex items-center justify-between mb-12">
                <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 bg-slate-900 text-zinc-100 rounded-[32px] flex items-center justify-center shadow-2xl shadow-ledger-ink/20 transform -rotate-1">
+                 <div className="w-12 h-12 bg-[var(--ink)] text-zinc-100 rounded-xl flex items-center justify-center shadow-2xl shadow-ledger-ink/20 transform -rotate-1">
                     <Layers size={24} />
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-[var(--text)] tracking-tight">System Architecture</h3>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">High-Level Deterministic Data Flow</p>
+                    <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest mt-1">High-Level Deterministic Data Flow</p>
                   </div>
                </div>
                <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-all">
@@ -47,7 +47,7 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
 
             <ArchitectureMonitor layerStatus={telemetry.layerStatus} />
 
-            <div className="mt-12 p-4 md:p-8 bg-zinc-900 rounded-[32px] text-zinc-400 space-y-6 relative overflow-hidden">
+            <div className="mt-12 p-4 md:p-8 bg-[var(--ink)] rounded-xl text-[var(--faint)] space-y-6 relative overflow-hidden">
                <div className="absolute top-0 right-0 p-4 md:p-8 opacity-5">
                   <Terminal size={120} />
                </div>
@@ -56,7 +56,7 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
                   <div>
                      <h4 className="text-zinc-100 text-[10px] font-medium uppercase tracking-wider mb-2">Analytical Summary</h4>
                      <p className="text-xs leading-relaxed text-zinc-300">
-                        The LedgerFlow data pipeline implements a <span className="text-white font-bold italic">Deterministic Intelligence</span> protocol. 
+                        The LedgerFlow data pipeline implements a <span className="text-[var(--panel)] font-bold italic">Deterministic Intelligence</span> protocol. 
                         Every transaction passes through O(1) Bloom filters, MinHash Entity Resolution, and Trend Analysis 
                         before being committed to the ledger.
                      </p>
@@ -70,7 +70,7 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
                         </div>
                      ))}
                   </div>
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">All Nodes Certified & Signed</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--muted)]">All Nodes Certified & Signed</span>
                </div>
             </div>
           </motion.div>

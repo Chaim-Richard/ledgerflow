@@ -426,28 +426,28 @@ export default function AnalyticalCenter({
           1. Sidebar (Master Panel) - Pristine Layout
           ------------------------------------------------------------- */}
       {!isFocusMode && (
-        <aside className="lg:w-72 border-r border-[var(--line)]/80 bg-[var(--ink)]/70 hidden lg:flex flex-col h-full overflow-hidden shrink-0">
+        <aside className="lg:w-72 border-r border-[var(--line)] bg-[var(--surface)] hidden lg:flex flex-col h-full overflow-hidden shrink-0">
           
           {/* Executive identity header */}
-          <div className="p-5 border-b border-slate-250/50 bg-[#fafbfe]/80 shrink-0 space-y-3">
+          <div className="p-4 border-b border-[var(--line)] bg-[var(--panel)] shrink-0 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white shrink-0">
+                <div className="w-7 h-7 bg-[var(--brass)] text-black rounded-lg flex items-center justify-center shrink-0 shadow-xs font-bold">
                   <Target size={14} className="stroke-[2.5px]" />
                 </div>
                 <div>
                   <h2 className="text-xs font-bold text-[var(--text)] leading-snug">Advanced Overview</h2>
-                  <p className="text-[9px] font-mono font-medium text-slate-400">Financial Metrics</p>
+                  <p className="text-[9px] font-mono font-medium text-[var(--muted)]">Financial Metrics</p>
                 </div>
               </div>
               
               {/* Stability Node Pulse */}
-              <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-100/60 px-1.5 py-0.5 rounded-full select-none">
+              <div className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full select-none">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                 </span>
-                <span className="text-[8px] font-bold font-mono tracking-wide text-emerald-800">SECURE</span>
+                <span className="text-[8px] font-mono font-bold tracking-wide text-emerald-600 uppercase">Live</span>
               </div>
             </div>
 
@@ -458,11 +458,11 @@ export default function AnalyticalCenter({
                 placeholder="Search analytics & auditing..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full text-xs px-3 py-1.5 pl-8 bg-[var(--surface)] border border-[var(--line)]/85 hover:border-slate-300 focus:border-indigo-500 focus:outline-none rounded-lg transition-all focus:shadow-3xs text-slate-700"
+                className="w-full text-xs px-3 py-1.5 pl-8 bg-[var(--surface)] border border-[var(--line)] focus:border-[var(--brass-line)] focus:outline-none rounded-lg transition-all text-[var(--text)] placeholder:text-[var(--faint)]"
               />
-              <Search size={11} className="absolute left-2.5 top-2.5 text-slate-400" />
+              <Search size={12} className="absolute left-2.5 top-2.5 text-[var(--muted)]" />
               {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 font-mono text-[11px] px-1">
+                <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1.5 text-[var(--muted)] hover:text-[var(--text)] font-mono text-[11px] px-1">
                   ×
                 </button>
               )}
@@ -470,14 +470,14 @@ export default function AnalyticalCenter({
           </div>
 
           {/* Categorized Options List as Cards */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar select-none">
+          <div className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar select-none">
             {filteredChannels.map((group, groupIdx) => (
               <div key={groupIdx} className="space-y-1">
                 <div className="px-2 pb-1 flex items-center justify-between">
-                  <span className="text-[8.5px] font-bold uppercase tracking-[0.12em] text-slate-400 block">
+                  <span className="text-[8.5px] font-mono font-bold uppercase tracking-widest text-[var(--muted)] block">
                     {group.group[language] || group.group['en']}
                   </span>
-                  <span className="text-[8px] font-mono text-slate-300 font-semibold">{group.items.length} LENSES</span>
+                  <span className="text-[8px] font-mono text-[var(--faint)] font-semibold">{group.items.length} LENSES</span>
                 </div>
                 
                 <div className="space-y-0.5">
@@ -491,26 +491,26 @@ export default function AnalyticalCenter({
                         className={cn(
                           "w-full flex items-start gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150 border cursor-pointer group",
                           isActive
-                            ? "bg-[var(--surface)] border-[var(--line)] text-[var(--text)] shadow-3xs"
-                            : "bg-transparent border-transparent text-slate-500 hover:bg-slate-200/35 hover:text-[var(--text)]"
+                            ? "bg-[var(--brass-soft)] border-[var(--brass-line)] text-[var(--text)] shadow-xs font-semibold"
+                            : "bg-transparent border-transparent text-[var(--muted)] hover:bg-[var(--panel)] hover:text-[var(--text)]"
                         )}
                       >
                         <div className={cn(
                           "w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 transition-colors",
-                          isActive ? "bg-indigo-50 text-indigo-650" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600"
+                          isActive ? "bg-[var(--brass)] text-black font-bold" : "bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] group-hover:text-[var(--text)]"
                         )}>
                           <IconComponent size={12} className="stroke-[2.2px]" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className={cn("text-[11.5px] leading-none tracking-tight transition-colors", isActive ? "font-bold text-[var(--text)]" : "font-medium text-slate-700")}>
+                          <p className={cn("text-[11.5px] leading-none tracking-tight transition-colors", isActive ? "font-bold text-[var(--text)]" : "font-medium text-[var(--text)]")}>
                             {((item as any).label?.[language] || (item as any).label?.['en']) || (item as any).name || item.id}
                           </p>
-                          <p className="text-[9px] text-slate-400 mt-1 leading-normal font-medium truncate group-hover:text-slate-500 transition-colors">
+                          <p className="text-[9px] text-[var(--muted)] mt-1 leading-normal font-medium truncate group-hover:text-[var(--text)] transition-colors">
                             {((item as any).desc?.[language] || (item as any).desc?.['en']) || item.description || ''}
                           </p>
                         </div>
                         {isActive && (
-                          <div className="w-1 h-3 rounded-full bg-indigo-600 shrink-0 self-center" />
+                          <div className="w-1 h-3 rounded-full bg-[var(--brass)] shrink-0 self-center" />
                         )}
                       </button>
                     );
@@ -520,19 +520,19 @@ export default function AnalyticalCenter({
             ))}
             
             {filteredChannels.length === 0 && (
-              <p className="text-center text-[10px] text-slate-400 font-mono py-6">No specific intelligence lenses matched.</p>
+              <p className="text-center text-[10px] text-[var(--muted)] font-mono py-6">No specific intelligence lenses matched.</p>
             )}
           </div>
           
           {/* Sidebar Footer with Workspace Stats summary info */}
-          <div className="p-4 border-t border-[var(--line)] bg-[#f8fafc] shrink-0 text-[10px] space-y-1 font-mono text-slate-400">
+          <div className="p-3 border-t border-[var(--line)] bg-[var(--panel)] shrink-0 text-[10px] space-y-1 font-mono text-[var(--muted)]">
              <div className="flex items-center justify-between">
                <span>Total Transactions</span>
-               <span className="font-bold text-slate-700 tabular-nums">{transactions.length} items</span>
+               <span className="font-bold text-[var(--text)] tabular-nums">{transactions.length} items</span>
              </div>
              <div className="flex items-center justify-between">
                <span>Active Accounts</span>
-               <span className="font-bold text-slate-700 tabular-nums">{accounts.length} nodes</span>
+               <span className="font-bold text-[var(--text)] tabular-nums">{accounts.length} nodes</span>
              </div>
           </div>
         </aside>
@@ -1104,8 +1104,8 @@ export default function AnalyticalCenter({
                             className={cn(
                               "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left border cursor-pointer text-[11.5px]",
                               isActive
-                                ? "bg-slate-100/70 border-[var(--line)] text-slate-950 font-bold"
-                                : "bg-transparent border-transparent text-slate-500 hover:bg-[var(--ink)]"
+                                ? "bg-[var(--brass)]/15 border-[var(--brass-line)] text-[var(--text)] font-bold"
+                                : "bg-transparent border-transparent text-[var(--muted)] hover:bg-[var(--ink)]"
                             )}
                           >
                             <IconComponent size={13} className={cn(isActive ? "text-indigo-600" : "text-slate-400")} />

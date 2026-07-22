@@ -35,6 +35,7 @@ export interface Workspace {
   apiQuotaMonthlyLimitCents?: number;
   computeCreditBalance?: number;
   dimensions?: DimensionDefinition[]; // Dynamic workspace dimensional coordinate schema
+  dimensionNodes?: DimensionNode[];   // Nodes/labels within dimensions (e.g., P1 under property)
   allowedWorldPaths?: string[];       // Coordinate-scoped permissions for sub-ledgers
 }
 
@@ -45,6 +46,15 @@ export interface DimensionDefinition {
   isWorld?: boolean;      // True if this axis forms an independent sub-ledger with single-world statements & elimination
   sortOrder?: number;
   systemDefault?: boolean;
+}
+
+export interface DimensionNode {
+  id: string;            // The short code, e.g. "P1"
+  dimensionId: string;   // Maps to DimensionDefinition.id, e.g. "property"
+  description: string;   // Full meaning, e.g. "123 Ocean Ave Maint"
+  aliases?: string[];    // Aliases for the statement matching engine e.g. ["123 OCEAN AVE MAINT", "123 Ocean"]
+  status?: 'active' | 'archived'; // Keeps nodes append-only so ID's aren't reused if "deleted"
+  createdAt?: string;
 }
 
 export interface SplitAllocation {

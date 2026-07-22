@@ -33,10 +33,10 @@ export default function ShortcutSettings() {
     <div className="space-y-8 animate-fade-in">
       <div>
         <h2 className="text-2xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
-          <Keyboard size={24} className="text-slate-400" />
+          <Keyboard size={24} className="text-[var(--faint)]" />
           Speed Dial Shortcuts
         </h2>
-        <p className="text-slate-500 mt-2">
+        <p className="text-[var(--muted)] mt-2">
           Assign <code>Alt + [Key]</code> to quickly navigate to any tool or tab.
         </p>
       </div>
@@ -45,7 +45,7 @@ export default function ShortcutSettings() {
         <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-wider mb-4">Add New Speed Dial</h3>
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-1 space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Key (e.g. 1, 2, A)</label>
+            <label className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Key (e.g. 1, 2, A)</label>
             <input 
               type="text" 
               maxLength={1}
@@ -56,7 +56,7 @@ export default function ShortcutSettings() {
             />
           </div>
           <div className="flex-1 space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Target Tool</label>
+            <label className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Target Tool</label>
             <select 
               value={selectedTab}
               onChange={(e) => setSelectedTab(e.target.value)}
@@ -73,7 +73,7 @@ export default function ShortcutSettings() {
           <button 
             onClick={handleAdd}
             disabled={!newKey || !selectedTab}
-            className="h-10 px-6 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+            className="h-10 px-6 bg-[var(--ink)] text-[var(--panel)] rounded-xl font-medium hover:bg-slate-800 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
           >
             <Plus size={16} />
             Add
@@ -84,7 +84,7 @@ export default function ShortcutSettings() {
       <div className="space-y-4">
         <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-wider">Active Speed Dials</h3>
         {!speedDials || Object.entries(speedDials).length === 0 ? (
-          <div className="p-8 border border-dashed border-[var(--line)] rounded-2xl text-center text-slate-500">
+          <div className="p-8 border border-dashed border-[var(--line)] rounded-2xl text-center text-[var(--muted)]">
             No speed dials configured.
           </div>
         ) : (
@@ -92,7 +92,7 @@ export default function ShortcutSettings() {
             {Object.entries(speedDials).map(([key, tabId]) => {
               const tab = ALL_TOOLS.find(t => t.id === tabId);
               return (
-                <div key={key} className="flex items-center justify-between p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-sm">
+                <div key={key} className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-2xl shadow-sm">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-slate-100 text-[var(--text)] rounded-xl flex items-center justify-center font-mono font-bold">
                       ⌥ {key.toUpperCase()}
@@ -101,12 +101,12 @@ export default function ShortcutSettings() {
                       <div className="text-sm font-semibold text-[var(--text)]">
                         {tab ? (((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id) : tabId}
                       </div>
-                      <div className="text-xs text-slate-500">Alt + {key.toUpperCase()}</div>
+                      <div className="text-xs text-[var(--muted)]">Alt + {key.toUpperCase()}</div>
                     </div>
                   </div>
                   <button 
                     onClick={() => removeSpeedDial(key)}
-                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    className="p-2 text-[var(--faint)] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                   >
                     <Trash2 size={16} />
                   </button>

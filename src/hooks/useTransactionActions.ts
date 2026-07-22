@@ -131,7 +131,8 @@ export function useTransactionActions() {
         );
         const rulesSnap = await getDocs(qRules);
         const activeRules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        const engine = new MatchingEngine(activeRules, analyticalPatternCache, user.uid, matchingThreshold, existingTransactions);
+        const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
+        const engine = new MatchingEngine(activeRules, analyticalPatternCache, user.uid, matchingThreshold, existingTransactions, currentWorkspace?.dimensionNodes);
 
         const accountsByName = new Map<string, any>();
         const accountsById = new Map<string, any>();

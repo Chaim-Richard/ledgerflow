@@ -1,6 +1,6 @@
 
 /**
- * Clearbook High-Precision Telemetry System
+ * LedgerFlow High-Precision Telemetry System
  * Tracks micro-timing for component 'opens', module imports, and mathematical execution.
  */
 

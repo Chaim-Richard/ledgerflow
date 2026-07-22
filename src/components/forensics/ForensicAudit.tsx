@@ -135,24 +135,24 @@ const ForensicAudit = React.memo(() => {
             Forensic Integrity Suite
           </div>
           <h2 className="text-2xl md:text-4xl font-black text-[var(--text)] tracking-tight">Audit Intelligence</h2>
-          <p className="text-slate-500 font-medium text-sm">Automated fraud detection and anomaly projection across the general ledger.</p>
+          <p className="text-[var(--muted)] font-medium text-sm">Automated fraud detection and anomaly projection across the general ledger.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
         {/* Benford's Law Analysis */}
-        <div className="xl:col-span-12 google-card p-4 md:p-10 bg-slate-900 text-white overflow-hidden relative">
+        <div className="xl:col-span-12 google-card p-4 md:p-10 bg-[var(--ink)] text-[var(--panel)] overflow-hidden relative">
            <div className="relative z-10 flex flex-col lg:flex-row gap-12">
               <div className="lg:w-1/3 space-y-6">
                  <div className="flex items-center gap-3 text-indigo-400">
                     <Fingerprint size={28} />
-                    <h3 className="text-xl font-medium uppercase tracking-wider text-white">Benford Patterns</h3>
+                    <h3 className="text-xl font-medium uppercase tracking-wider text-[var(--panel)]">Benford Patterns</h3>
                  </div>
-                 <p className="text-sm text-zinc-400 leading-relaxed">
+                 <p className="text-sm text-[var(--faint)] leading-relaxed">
                     Analyzing the distribution of first digits. In a natural dataset, the digit '1' should appear roughly 30% of the time, while '9' appears less than 5%. Deviations here indicate potential artificial entry or systematic errors.
                  </p>
                  <div className="pt-6">
-                    <div className="p-4 bg-[var(--surface)]/5 rounded-[32px] border border-white/10 italic text-[11px] text-zinc-500">
+                    <div className="p-4 bg-[var(--surface)]/5 rounded-xl border border-white/10 italic text-[11px] text-[var(--muted)]">
                        "{benfordConfidence}"
                     </div>
                  </div>
@@ -195,7 +195,7 @@ const ForensicAudit = React.memo(() => {
                     <Brain className="text-indigo-600" size={24} />
                     Statistical Outliers
                  </h3>
-                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Z-Score Deviation Map (&gt;2.5σ)</p>
+                 <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-1">Z-Score Deviation Map (&gt;2.5σ)</p>
               </div>
               <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-500 rounded-lg text-[9px] font-medium uppercase tracking-wider border border-amber-500/20">
                  High Sensitivity Active
@@ -204,28 +204,28 @@ const ForensicAudit = React.memo(() => {
 
            <div className="space-y-4">
               {anomalies.length > 0 ? anomalies.map((t: any, i: number) => (
-                 <div key={t.id} className="p-6 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] flex items-center justify-between group hover:border-indigo-600 transition-all">
+                 <div key={t.id} className="p-6 bg-[var(--ink)] rounded-xl border border-[var(--line)] flex items-center justify-between group hover:border-indigo-600 transition-all">
                     <div className="flex items-center gap-6">
-                       <div className="w-12 h-12 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-[var(--text)] border border-[var(--line)] font-black text-sm">
+                       <div className="w-12 h-12 bg-[var(--panel)] rounded-2xl flex items-center justify-center text-[var(--text)] border border-[var(--line)] font-black text-sm">
                           {format(new Date(t.date), 'dd')}
                        </div>
                        <div>
                           <p className="text-sm font-black text-[var(--text)] tracking-tight">{t.description}</p>
-                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 mt-1">
+                          <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest flex items-center gap-2 mt-1">
                              {t.lines?.[0]?.accountName} • <span className="text-rose-600">Deviation: {t.zScore.toFixed(2)}σ</span>
                           </p>
                        </div>
                     </div>
                     <div className="text-right">
                        <p className="text-lg font-black text-[var(--text)] mono-value">{CURRENCY.format(Math.abs(t.totalAmountCents) / 100)}</p>
-                       <p className="text-[9px] font-black text-slate-500 flex items-center justify-end gap-1 mt-1">
+                       <p className="text-[9px] font-black text-[var(--muted)] flex items-center justify-end gap-1 mt-1">
                           <History size={10} />
                           {format(new Date(t.date), 'MMM yyyy')}
                        </p>
                     </div>
                  </div>
               )) : (
-                 <div className="h-60 flex flex-col items-center justify-center text-slate-500 space-y-4 border-2 border-dashed border-[var(--line)] rounded-[32px]">
+                 <div className="h-60 flex flex-col items-center justify-center text-[var(--muted)] space-y-4 border-2 border-dashed border-[var(--line)] rounded-xl">
                     <ShieldAlert size={48} className="opacity-10" />
                     <p className="text-xs font-medium uppercase tracking-wider opacity-40">No significant statistical anomalies detected.</p>
                  </div>
@@ -235,14 +235,14 @@ const ForensicAudit = React.memo(() => {
 
         {/* Audit Shortcuts */}
         <div className="xl:col-span-4 space-y-8">
-           <div className="google-card p-4 md:p-8 border-[var(--line)] bg-slate-900/5">
+           <div className="google-card p-4 md:p-8 border-[var(--line)] bg-[var(--ink)]/5">
               <h4 className="text-xs font-medium uppercase tracking-wider text-[var(--text)] mb-6 flex items-center gap-2">
                  <AlertCircle size={16} />
                  Compliance Radar
               </h4>
               <div className="space-y-4">
                  {complianceStats.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm">
+                    <div key={i} className="flex items-center justify-between p-4 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm">
                        <span className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">{item.label}</span>
                        <div className="flex items-center gap-2">
                           <span className={cn("text-xs font-black", item.status === 'pass' ? 'text-emerald-600' : 'text-amber-500')}>{item.count}</span>
@@ -253,14 +253,14 @@ const ForensicAudit = React.memo(() => {
               </div>
            </div>
 
-           <div className="google-card p-4 md:p-8 border-[var(--line)] bg-slate-900 text-white">
+           <div className="google-card p-4 md:p-8 border-[var(--line)] bg-[var(--ink)] text-[var(--panel)]">
               <h4 className="text-xs font-medium uppercase tracking-wider text-indigo-400 mb-6">
                  Audit Protocol
               </h4>
-              <p className="text-[11px] text-zinc-400 leading-relaxed">
+              <p className="text-[11px] text-[var(--faint)] leading-relaxed">
                  All transactions are passed through a series of deterministic and heuristic filters. The integrity suite continuously monitors for data drift and classification mismatches to ensure audit-ready ledger states.
               </p>
-              <button className="w-full mt-6 py-3 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 text-white rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all">
+              <button className="w-full mt-6 py-3 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 text-[var(--panel)] rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all">
                  Generate Full Audit Log
               </button>
            </div>

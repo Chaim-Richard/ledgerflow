@@ -1,6 +1,6 @@
-# Clearbook Plugin System 🔌
+# LedgerFlow Plugin System 🔌
 
-Clearbook includes an ultra-efficient, zero-configuration plugin system.
+LedgerFlow includes an ultra-efficient, zero-configuration plugin system.
 This answers the request to "plug in afew lins of code, to the data, and if deleat just plug out nd chang file".
 
 If you want to create a new tool or tab, you **do not** need to edit `registry.tsx` or `App.tsx`.

@@ -109,8 +109,8 @@ const TabButton = ({ id, label, icon: Icon, active, onClick, cardKey }: { id: Su
     className={cn(
       "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border",
       active 
-        ? "bg-slate-900 border-slate-950 text-white shadow-xs" 
-        : "bg-[var(--surface)] border-[var(--line)]/80 text-slate-500 hover:border-slate-300 hover:text-[var(--text)] shadow-3xs"
+        ? "bg-[var(--ink)] border-slate-950 text-[var(--panel)] shadow-sm" 
+        : "bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:border-slate-300 hover:text-[var(--text)] shadow-sm"
     )}
   >
     <Icon size={14} />
@@ -227,7 +227,7 @@ const Ledger = React.memo(({
       {/* Rule Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[var(--line)]/60">
         <div>
-          <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate mb-1">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--faint)] uppercase tracking-widest truncate mb-1">
             <Layers size={12} />
             <LexiconText cardKey="ledger.unifiedFinancialLedger" defaultVal="Unified Financial Ledger" />
           </div>
@@ -236,20 +236,20 @@ const Ledger = React.memo(({
             cardKey="ledger.coreMatrixSubtitle" 
             defaultVal="High-fidelity double-entry synchronization with immutable forensic trails." 
             as="p" 
-            className="text-xs text-slate-500 font-medium" 
+            className="text-xs text-[var(--muted)] font-medium" 
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button 
             onClick={() => setActiveModal('journal')}
-            className="h-10 px-4 bg-[var(--surface)] text-[var(--text)] rounded-xl text-xs font-bold hover:bg-[var(--ink)] transition-all border border-[var(--line)] shadow-3xs flex items-center gap-2"
+            className="h-10 px-4 bg-[var(--panel)] text-[var(--text)] rounded-2xl text-xs font-bold hover:bg-[var(--ink)] transition-all border border-[var(--line)] shadow-sm flex items-center gap-2"
           >
             <ArrowRightLeft size={14} />
             <LexiconText cardKey="ledger.button.journalEntry" defaultVal="Journal Entry" />
           </button>
           <button 
             onClick={() => setActiveModal('account')}
-            className="h-10 px-5 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-xs font-bold font-sans transition-all flex items-center justify-center gap-2 shadow-xs"
+            className="h-10 px-5 bg-[var(--ink)] text-[var(--panel)] hover:bg-slate-800 rounded-xl text-xs font-bold font-sans transition-all flex items-center justify-center gap-2 shadow-sm"
           >
             <Plus size={14} className="stroke-[3px]" />
             <LexiconText cardKey="ledger.button.appendNode" defaultVal="Append Node" />
@@ -259,9 +259,9 @@ const Ledger = React.memo(({
 
       {/* Deterministic Ledger Pulse */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs hover:border-slate-350 transition-all relative overflow-hidden group">
+        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm hover:border-slate-350 transition-all relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
-          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-2 relative z-10 flex items-center gap-1.5">
+          <p className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider truncate mb-2 relative z-10 flex items-center gap-1.5">
             <Scale size={12} className="text-blue-500" />
             <LexiconText cardKey="ledger.stabilityVector" defaultVal="Stability Vector" />
           </p>
@@ -269,28 +269,28 @@ const Ledger = React.memo(({
             <div className={cn("w-2 h-2 rounded-full shrink-0", totalProfitCents !== undefined ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-rose-500")} />
             <LexiconText cardKey="ledger.verifiedStatus" defaultVal="Verified" as="p" className="text-lg font-black text-[var(--text)] uppercase tracking-tight" />
           </div>
-          <div className="mt-3 text-[8px] font-bold text-slate-400 uppercase tracking-wider opacity-60">
+          <div className="mt-3 text-[8px] font-bold text-[var(--faint)] uppercase tracking-wider opacity-60">
             <LexiconText cardKey="ledger.equilibriumSyncActive" defaultVal="Equilibrium Sync Active" />
           </div>
         </div>
 
-        <div className="p-5 bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs hover:border-slate-350 transition-all relative overflow-hidden group">
+        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm hover:border-slate-350 transition-all relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
-          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-2 relative z-10">
+          <p className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider truncate mb-2 relative z-10">
             <LexiconText cardKey="ledger.netInternalFlux" defaultVal="Net Internal Flux" />
           </p>
           <p className={cn("text-xl font-bold font-mono tracking-tight relative z-10 truncate mt-1", totalProfitCents >= 0 ? "text-emerald-700" : "text-rose-700")}>
             {formatCurrency(totalProfitCents)}
           </p>
-          <div className="mt-3 flex items-center gap-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider opacity-60">
+          <div className="mt-3 flex items-center gap-1 text-[8px] font-bold text-[var(--faint)] uppercase tracking-wider opacity-60">
              <Activity size={11} className="text-amber-550 shrink-0" />
              <LexiconText cardKey="ledger.liveThrottling" defaultVal="Live Throttling" />
           </div>
         </div>
 
-        <div className="p-5 bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs hover:border-slate-350 transition-all relative overflow-hidden group">
+        <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm hover:border-slate-350 transition-all relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
-          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-2 relative z-10">
+          <p className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider truncate mb-2 relative z-10">
             <LexiconText cardKey="ledger.forensicIntegrity" defaultVal="Forensic Integrity" />
           </p>
           <div className="flex items-center gap-2 mt-1">
@@ -303,9 +303,9 @@ const Ledger = React.memo(({
           </div>
         </div>
 
-        <div className="p-5 bg-slate-900 text-white rounded-xl shadow-sm relative overflow-hidden group">
+        <div className="p-5 bg-[var(--ink)] text-[var(--panel)] rounded-xl shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-10 pointer-events-none" />
-          <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider truncate mb-2 relative z-10">
+          <p className="text-[9px] font-bold text-[var(--panel)]/40 uppercase tracking-wider truncate mb-2 relative z-10">
             <LexiconText cardKey="ledger.coreBackboneProtocol" defaultVal="Core Backbone Protocol" />
           </p>
           <div className="flex items-center gap-3 mt-1 relative z-10">
@@ -314,7 +314,7 @@ const Ledger = React.memo(({
             </div>
             <p className="text-[11px] font-mono font-bold text-amber-300 tracking-wider truncate">CB-0x{(workspaceId || 'TEMP_WS').slice(0, 6).toUpperCase()}</p>
           </div>
-          <div className="mt-3 flex items-center gap-1 text-[8px] font-bold text-white/30 uppercase tracking-wider">
+          <div className="mt-3 flex items-center gap-1 text-[8px] font-bold text-[var(--panel)]/30 uppercase tracking-wider">
              <ShieldCheck size={11} className="shrink-0" />
              <LexiconText cardKey="ledger.nexusSecurityActive" defaultVal="Nexus Security Active" />
           </div>
@@ -339,13 +339,13 @@ const Ledger = React.memo(({
 
         {activeSubTab === 'coa' && (
           <div className="relative group max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-600 transition-colors" size={16} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--faint)] group-focus-within:text-slate-600 transition-colors" size={16} />
             <input 
               type="text" 
               placeholder="Search accounts by name, code, or type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:border-slate-950 focus:bg-[var(--surface)] transition-all text-sm font-medium text-[var(--text)] placeholder:text-slate-400"
+              className="w-full pl-11 pr-4 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:border-slate-950 focus:bg-[var(--surface)] transition-all text-sm font-medium text-[var(--text)] placeholder:text-[var(--faint)]"
             />
           </div>
         )}
@@ -373,7 +373,7 @@ const Ledger = React.memo(({
                 />
               ))}
             </div>
-            <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Synchronizing real-time ledger layers...</p>
+            <p className="text-[10px] font-black uppercase text-[var(--muted)] tracking-[0.2em]">Synchronizing real-time ledger layers...</p>
           </div>
         }>
           {activeSubTab === 'inbox' && (
@@ -423,14 +423,14 @@ const Ledger = React.memo(({
               <div className="flex justify-end gap-3">
                 <button 
                   onClick={() => setActiveModal('bank_import')}
-                  className="flex items-center gap-3 px-8 py-4 bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] rounded-[32px] text-sm font-medium uppercase tracking-wider hover:bg-[var(--ink)] transition-all shadow-sm"
+                  className="flex items-center gap-3 px-8 py-4 bg-[var(--panel)] text-[var(--text)] border border-[var(--line)] rounded-2xl text-sm font-medium uppercase tracking-wider hover:bg-[var(--ink)] transition-all shadow-sm"
                 >
                   <ArrowDownRight size={18} />
                   Import CSV
                 </button>
                 <button 
                   onClick={() => setActiveModal('recon')}
-                  className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-[32px] text-sm font-medium uppercase tracking-wider hover:bg-slate-900/90 transition-all shadow-2xl"
+                  className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-[var(--panel)] rounded-xl text-sm font-medium uppercase tracking-wider hover:bg-[var(--ink)]/90 transition-all shadow-2xl"
                 >
                   <RefreshCw size={18} />
                   Initiate Sync
@@ -494,40 +494,40 @@ const Ledger = React.memo(({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setActiveModal(null)}
-              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
+              className="absolute inset-0 bg-[var(--ink)]/60 backdrop-blur-md"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-[var(--ink)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden p-4 md:p-10"
+              className="relative w-full max-w-lg bg-[var(--ink)] rounded-3xl shadow-2xl border border-[var(--line)] overflow-hidden p-4 md:p-10"
             >
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase italic">Add New Account</h2>
                 <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors">
-                  <Plus className="rotate-45 text-slate-500" size={24} />
+                  <Plus className="rotate-45 text-[var(--muted)]" size={24} />
                 </button>
               </div>
 
               <form onSubmit={handleAddAccount} className="space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Account Code</label>
+                    <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50">Account Code</label>
                     <input 
                       type="text" 
                       required
                       value={newAccount.code}
                       onChange={(e) => setNewAccount({ ...newAccount, code: e.target.value })}
                       placeholder="e.g. 1001"
-                      className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-mono text-[var(--text)]"
+                      className="w-full px-5 py-3.5 bg-[var(--surface)] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-mono text-[var(--text)]"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Account Type</label>
+                    <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50">Account Type</label>
                     <select 
                       value={newAccount.type}
                       onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value as any })}
-                      className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)] appearance-none cursor-pointer"
+                      className="w-full px-5 py-3.5 bg-[var(--surface)] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)] appearance-none cursor-pointer"
                     >
                       <option value="asset">Asset</option>
                       <option value="liability">Liability</option>
@@ -539,42 +539,42 @@ const Ledger = React.memo(({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Account Name</label>
+                  <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50">Account Name</label>
                   <input 
                     type="text" 
                     required
                     value={newAccount.name}
                     onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
                     placeholder="e.g. Main Operating Account"
-                    className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
+                    className="w-full px-5 py-3.5 bg-[var(--surface)] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Category (Optional)</label>
+                  <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50">Category (Optional)</label>
                   <input 
                     type="text" 
                     value={newAccount.category}
                     onChange={(e) => setNewAccount({ ...newAccount, category: e.target.value })}
                     placeholder="e.g. Current Assets"
-                    className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all text-[var(--text)]"
+                    className="w-full px-5 py-3.5 bg-[var(--surface)] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all text-[var(--text)]"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Description</label>
+                  <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50">Description</label>
                   <textarea 
                     value={newAccount.description}
                     onChange={(e) => setNewAccount({ ...newAccount, description: e.target.value })}
                     placeholder="Briefly describe the purpose of this account..."
                     rows={3}
-                    className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all resize-none text-[var(--text)]"
+                    className="w-full px-5 py-3.5 bg-[var(--surface)] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all resize-none text-[var(--text)]"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Parent Account</label>
+                    <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50">Parent Account</label>
                     <div className="relative">
                       <input 
                         list="ledger-parent-account"
@@ -584,7 +584,7 @@ const Ledger = React.memo(({
                           setNewAccount({ ...newAccount, parentId: acc ? acc.id : e.target.value });
                         }}
                         placeholder="None (Root)"
-                        className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
+                        className="w-full px-5 py-3.5 bg-[var(--surface)] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
                       />
                       <datalist id="ledger-parent-account">
                         {accounts.map(acc => (
@@ -594,7 +594,7 @@ const Ledger = React.memo(({
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Opening Balance ($)</label>
+                    <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50">Opening Balance ($)</label>
                     <input 
                       type="number" 
                       step="0.01"
@@ -603,18 +603,18 @@ const Ledger = React.memo(({
                         const val = parseFloat(e.target.value || '0');
                         setNewAccount({ ...newAccount, openingBalanceCents: Math.round((Math.round(val * 100) / 100) * 100) });
                       }}
-                      className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-mono text-[var(--text)] text-right"
+                      className="w-full px-5 py-3.5 bg-[var(--surface)] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-mono text-[var(--text)] text-right"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">As of Date</label>
+                  <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50">As of Date</label>
                   <input 
                     type="date" 
                     value={newAccount.asOfDate}
                     onChange={(e) => setNewAccount({ ...newAccount, asOfDate: e.target.value })}
-                    className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
+                    className="w-full px-5 py-3.5 bg-[var(--surface)] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
                   />
                 </div>
 
@@ -622,13 +622,13 @@ const Ledger = React.memo(({
                   <button 
                     type="button"
                     onClick={() => setActiveModal(null)}
-                    className="flex-1 py-4 bg-[var(--ink)] text-slate-500 rounded-[32px] font-black hover:text-[var(--text)] transition-all uppercase tracking-widest text-[10px]"
+                    className="flex-1 py-4 bg-[var(--ink)] text-[var(--muted)] rounded-xl font-black hover:text-[var(--text)] transition-all uppercase tracking-widest text-[10px]"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
-                    className="flex-1 py-4 bg-indigo-600 text-white rounded-[32px] font-black hover:opacity-90 transition-all shadow-xl shadow-ledger-accent/20 uppercase tracking-widest text-[10px]"
+                    className="flex-1 py-4 bg-indigo-600 text-[var(--panel)] rounded-xl font-black hover:opacity-90 transition-all shadow-xl shadow-ledger-accent/20 uppercase tracking-widest text-[10px]"
                   >
                     Establish Node
                   </button>
@@ -648,39 +648,39 @@ const Ledger = React.memo(({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setActiveModal(null)}
-              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
+              className="absolute inset-0 bg-[var(--ink)]/60 backdrop-blur-md"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden p-4 md:p-10"
+              className="relative w-full max-w-md bg-[var(--surface)] rounded-3xl shadow-2xl border border-[var(--line)] overflow-hidden p-4 md:p-10"
             >
               <div className="flex items-center gap-5 mb-8">
-                <div className="w-16 h-16 bg-amber-50 rounded-[32px] flex items-center justify-center text-amber-600 border border-amber-100">
+                <div className="w-16 h-16 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 border border-amber-100">
                   <ShieldCheck size={32} />
                 </div>
                 <div>
                   <h2 className="text-2xl font-black text-[var(--text)] tracking-tight">Close Period</h2>
-                  <p className="text-sm text-zinc-500">Locking {format(new Date(), 'MMMM yyyy')}</p>
+                  <p className="text-sm text-[var(--muted)]">Locking {format(new Date(), 'MMMM yyyy')}</p>
                 </div>
               </div>
 
               <div className="space-y-8">
-                <div className="p-4 md:p-8 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] space-y-6">
+                <div className="p-4 md:p-8 bg-[var(--ink)] rounded-xl border border-[var(--line)] space-y-6">
                   <div className="flex justify-between items-center">
-                    <span className="text-zinc-500 text-sm font-medium">Net Income</span>
+                    <span className="text-[var(--muted)] text-sm font-medium">Net Income</span>
                     <span className="font-black text-[var(--text)] text-lg">{formatCurrency(totalProfitCents)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-zinc-500 text-sm font-medium">Unreconciled Items</span>
+                    <span className="text-[var(--muted)] text-sm font-medium">Unreconciled Items</span>
                     <span className="font-black text-amber-600">
                       {transactions.filter(t => !t.clearedAt).length}
                     </span>
                   </div>
                 </div>
 
-                <div className="p-5 bg-amber-50 border border-amber-100 rounded-[32px] flex gap-4">
+                <div className="p-5 bg-amber-50 border border-amber-100 rounded-xl flex gap-4">
                   <AlertCircle className="text-amber-600 shrink-0" size={20} />
                   <p className="text-xs text-amber-800 leading-relaxed font-medium">
                     Closing a period will lock all transactions and journal entries. This action is usually performed by a professional accountant after tax verification.
@@ -690,7 +690,7 @@ const Ledger = React.memo(({
                 <div className="flex gap-4">
                   <button 
                     onClick={() => setActiveModal(null)}
-                    className="flex-1 py-4 bg-zinc-100 text-zinc-600 rounded-[32px] font-black hover:bg-zinc-200 transition-all"
+                    className="flex-1 py-4 bg-[var(--surface)] text-[var(--text)] rounded-xl font-black hover:bg-zinc-200 transition-all"
                   >
                     Cancel
                   </button>
@@ -699,7 +699,7 @@ const Ledger = React.memo(({
                       setActiveModal(null);
                       toast.success('Period closed successfully');
                     }}
-                    className="flex-1 py-4 bg-zinc-900 text-white rounded-[32px] font-black hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20"
+                    className="flex-1 py-4 bg-[var(--ink)] text-[var(--panel)] rounded-xl font-black hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20"
                   >
                     Confirm Close
                   </button>

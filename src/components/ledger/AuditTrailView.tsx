@@ -15,39 +15,39 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
   if (!log) return null;
 
   return (
-    <div style={style} className="px-8 flex items-center">
-      <div className="w-full flex items-center justify-between p-6 bg-[var(--ink)]/20 rounded-[32px] border border-[var(--line)] hover:border-indigo-600/30 transition-all group overflow-hidden">
-        <div className="flex items-center gap-6 overflow-hidden">
-          <div className="w-12 h-12 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-slate-500 shadow-inner border border-[var(--line)] shrink-0">
-            <Activity size={20} className="group-hover:text-indigo-600 transition-colors" />
+    <div style={style} className="px-6 flex items-center">
+      <div className="w-full flex items-center justify-between p-4 bg-[var(--ink)]/30 rounded-xl border border-[var(--line)] hover:border-[var(--brass-line)] transition-all group overflow-hidden">
+        <div className="flex items-center gap-4 overflow-hidden">
+          <div className="w-10 h-10 bg-[var(--surface)] rounded-lg flex items-center justify-center text-[var(--muted)] border border-[var(--line)] shrink-0">
+            <Activity size={18} className="group-hover:text-[var(--brass)] transition-colors" />
           </div>
           <div className="overflow-hidden">
-            <div className="flex items-center gap-3 mb-1.5">
+            <div className="flex items-center gap-2 mb-1">
               <span className={cn(
-                "px-2 py-0.5 rounded text-[8px] font-medium uppercase tracking-wider ring-1 ring-inset",
-                log.action?.toLowerCase() === 'create' ? "bg-emerald-500/10 text-emerald-500 ring-emerald-500/20" :
-                log.action?.toLowerCase() === 'update' ? "bg-amber-500/10 text-amber-500 ring-amber-500/20" :
-                "bg-rose-500/10 text-rose-500 ring-rose-500/20"
+                "px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider",
+                log.action?.toLowerCase() === 'create' ? "bg-[var(--pos)]/10 text-[var(--pos)]" :
+                log.action?.toLowerCase() === 'update' ? "bg-amber-500/10 text-amber-500" :
+                "bg-rose-500/10 text-rose-500"
               )}>
                 {log.action}
               </span>
-              <p className="text-xs font-black text-[var(--text)] uppercase tracking-tight truncate">
-                {log.entityType} <span className="opacity-20 mx-2">//</span> {log.details?.description || log.entityId}
+              <p className="text-xs font-bold text-[var(--text)] uppercase tracking-tight truncate">
+                {log.entityType} <span className="text-[var(--muted)] opacity-40 mx-1.5">//</span> {log.details?.description || log.entityId}
               </p>
             </div>
-            <div className="flex items-center gap-6 text-[9px] font-black text-slate-500 uppercase tracking-widest italic opacity-60">
-              <span className="flex items-center gap-2"><History size={11} className="text-indigo-600/40" />{log.timestamp ? format(new Date(log.timestamp), 'MMM dd, HH:mm:ss') : 'N/A'}</span>
-              <span className="flex items-center gap-2"><User size={11} className="text-indigo-600/40" />{log.email || log.userEmail || (log.uid && log.uid.substring(0, 8)) || 'System'}</span>
+            <div className="flex items-center gap-4 text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider italic">
+              <span className="flex items-center gap-1.5"><History size={11} className="text-[var(--brass)]" />{log.timestamp ? format(new Date(log.timestamp), 'MMM dd, HH:mm:ss') : 'N/A'}</span>
+              <span className="flex items-center gap-1.5"><User size={11} className="text-[var(--brass)]" />{log.email || log.userEmail || (log.uid && log.uid.substring(0, 8)) || 'System'}</span>
             </div>
           </div>
         </div>
         <div className="text-right hidden md:block shrink-0">
-          <div className="px-3 py-1 bg-[var(--ink)] rounded-lg border border-[var(--line)] mb-1">
-            <p className="text-[9px] font-mono font-bold text-indigo-600">
+          <div className="px-2.5 py-1 bg-[var(--surface)] rounded border border-[var(--line)] mb-0.5">
+            <p className="text-[9px] font-mono font-bold text-[var(--brass)]">
               0x{(log.id || 'xxxxxxxxx').substring(0, 10).toUpperCase()}
             </p>
           </div>
-          <p className="text-[7px] text-slate-500 uppercase tracking-[0.3em] font-black opacity-30">Integrity Hash</p>
+          <p className="text-[7px] text-[var(--muted)] uppercase tracking-[0.2em] font-bold">Integrity Hash</p>
         </div>
       </div>
     </div>
@@ -64,27 +64,27 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
   }, [auditLogs]);
 
   return (
-    <div className="bg-[var(--surface)] rounded-[40px] border border-[var(--line)] shadow-sm overflow-hidden flex-1 min-h-[500px] flex flex-col">
-      <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30 shrink-0">
+    <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden flex-1 min-h-[500px] flex flex-col">
+      <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30 shrink-0">
         <div>
-          <h3 className="text-xl font-black text-[var(--text)] uppercase italic tracking-tighter">Audit Trail Matrix</h3>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1 opacity-40">Immutable cryptographic record of system directives</p>
+          <h3 className="text-lg font-black text-[var(--text)] uppercase tracking-tight">Audit Trail Matrix</h3>
+          <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-0.5">Immutable cryptographic record of system directives</p>
         </div>
-        <div className="flex items-center gap-3 px-5 py-2.5 bg-indigo-600 text-white rounded-xl border border-indigo-600/20 shadow-lg shadow-ledger-accent/10">
-          <ShieldCheck size={18} />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Authenticity Verified</span>
+        <div className="flex items-center gap-2 px-4 py-2 bg-[var(--brass-soft)] text-[var(--brass)] rounded-xl border border-[var(--brass-line)] shadow-sm">
+          <ShieldCheck size={16} />
+          <span className="text-[10px] font-bold uppercase tracking-wider">Authenticity Verified</span>
         </div>
       </div>
-      <div className="flex-1 min-h-0 bg-[var(--surface)]/50">
+      <div className="flex-1 min-h-0 bg-[var(--surface)]">
         {sortedLogs.length > 0 ? (
           <AutoSizer>
             {({ height, width }) => (
               <List
                 height={height}
                 itemCount={sortedLogs.length}
-                itemSize={112}
+                itemSize={100}
                 width={width}
-                className="py-6"
+                className="py-4"
                 itemData={sortedLogs}
               >
                 {Row}
@@ -93,10 +93,10 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
           </AutoSizer>
         ) : (
           <div className="h-full flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-20 h-20 bg-[var(--ink)] rounded-[32px] flex items-center justify-center mx-auto mb-6 border border-[var(--line)] shadow-inner">
-              <ShieldCheck size={40} className="opacity-10 text-indigo-600" />
+            <div className="w-16 h-16 bg-[var(--ink)] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[var(--line)]">
+              <ShieldCheck size={32} className="text-[var(--muted)]" />
             </div>
-            <p className="font-medium uppercase tracking-wider truncate text-[10px] text-slate-500">Zero directives detected in current mesh</p>
+            <p className="font-bold uppercase tracking-wider text-[10px] text-[var(--muted)]">Zero directives detected in current mesh</p>
           </div>
         )}
       </div>

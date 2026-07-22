@@ -1,4 +1,4 @@
-import { TransactionLine, Transaction, DimensionDefinition, SplitAllocation } from '../types';
+import { TransactionLine, Transaction, DimensionDefinition, SplitAllocation, DimensionNode } from '../types';
 
 export const DEFAULT_WORKSPACE_DIMENSIONS: DimensionDefinition[] = [
   { id: 'category', name: 'Category', systemDefault: true, sortOrder: 0 },
@@ -7,6 +7,23 @@ export const DEFAULT_WORKSPACE_DIMENSIONS: DimensionDefinition[] = [
   { id: 'location', name: 'Location', sortOrder: 3 },
   { id: 'project', name: 'Project', sortOrder: 4 }
 ];
+
+/**
+ * Suggests the next short code for a dimension (e.g. 'P6' for 'property') based on existing nodes.
+ */
+export function suggestNextDimensionNodeId(dimensionId: string, nodes: DimensionNode[] | undefined): string {
+  const prefix = dimensionId.substring(0, 1).toUpperCase();
+  if (!nodes || nodes.length === 0) return `${prefix}1`;
+
+  const existingIds = nodes
+    .filter(n => n.dimensionId === dimensionId && n.id.startsWith(prefix))
+    .map(n => parseInt(n.id.substring(1), 10))
+    .filter(n => !isNaN(n));
+
+  if (existingIds.length === 0) return `${prefix}1`;
+  const max = Math.max(...existingIds);
+  return `${prefix}${max + 1}`;
+}
 
 /**
  * Gets the string value of a specified dimension for a transaction line.

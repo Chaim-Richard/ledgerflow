@@ -28,6 +28,7 @@ import PivotView from '../transactions/PivotView';
 import SelectionBar from '../transactions/SelectionBar';
 import { useAuditTelemetry } from '../../hooks/useAuditTelemetry';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { useLedgerComputation } from '../../hooks/useLedgerComputation';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
@@ -118,7 +119,7 @@ const GridEditor = ({
              // Delay to allow suggestion click
              setTimeout(() => handleEvaluateAndSave(val), 200);
           }}
-          className="w-full bg-transparent border-none outline-none font-mono text-xs font-black text-white uppercase tracking-wider placeholder:text-white/10"
+          className="w-full bg-transparent border-none outline-none font-mono text-xs font-black text-[var(--panel)] uppercase tracking-wider placeholder:text-[var(--panel)]/10"
         />
       </div>
       {suggestions.length > 0 && (
@@ -132,8 +133,8 @@ const GridEditor = ({
                }}
                className="w-full text-left px-4 py-2 hover:bg-[var(--surface)]/5 flex items-center justify-between group/s"
              >
-                <span className="text-[10px] font-black text-white/60 uppercase tracking-widest group-hover/s:text-emerald-400">{s.name}</span>
-                <span className="text-[8px] font-bold text-white/20 uppercase">TAB</span>
+                <span className="text-[10px] font-black text-[var(--panel)]/60 uppercase tracking-widest group-hover/s:text-emerald-400">{s.name}</span>
+                <span className="text-[8px] font-bold text-[var(--panel)]/20 uppercase">TAB</span>
              </button>
            ))}
         </div>
@@ -590,7 +591,8 @@ export default function TransactionGrid({
     const state = useLedgerStore.getState();
     const rules = state.autoRules;
     const accounts = state.accounts;
-    const engine = new MatchingEngine(rules, state.analyticalPatternCache, undefined, state.matchingThreshold, transactionsWithBalance as any);
+    const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
+    const engine = new MatchingEngine(rules, state.analyticalPatternCache, undefined, state.matchingThreshold, transactionsWithBalance as any, currentWorkspace?.dimensionNodes);
     
     const suggestions = await engine.suggestCategoriesAsync(transactionsWithBalance as any, Math.round);
     
@@ -709,20 +711,20 @@ export default function TransactionGrid({
       onDragOver={handleDrag}
       onDrop={handleDrop}
       className={cn(
-        "ledger-card flex flex-col min-h-full transition-all bg-[var(--surface)] border border-[var(--line)] shadow-sm relative", 
+        "ledger-card flex flex-col min-h-full transition-all bg-[var(--surface)] shadow-sm relative", 
         isCompactMode && "rounded-none border-none",
         dragActive && "ring-4 ring-indigo-600 ring-inset"
       )}
     >
       {dragActive && (
         <div className="absolute inset-0 z-[100] bg-indigo-600/10 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-          <div className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] shadow-2xl border-2 border-indigo-600 flex flex-col items-center gap-4 animate-in fade-in zoom-in slide-in-from-bottom-4">
+          <div className="p-4 md:p-8 bg-[var(--panel)] rounded-2xl shadow-2xl border-2 border-indigo-600 flex flex-col items-center gap-4 animate-in fade-in zoom-in slide-in-from-bottom-4">
              <div className="w-16 h-16 rounded-full bg-indigo-600/10 flex items-center justify-center text-indigo-600">
                 <Plus size={32} />
              </div>
              <div className="text-center">
                 <p className="text-xl font-bold text-[var(--text)] uppercase tracking-tight">Drop receipts here</p>
-                <p className="text-sm text-slate-500">AI will auto-categorize and balance them</p>
+                <p className="text-sm text-[var(--muted)]">AI will auto-categorize and balance them</p>
              </div>
           </div>
         </div>
@@ -738,7 +740,7 @@ export default function TransactionGrid({
                 initial={{ x: 300, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: 300, opacity: 0 }}
-                className="p-3 bg-slate-900 rounded-xl shadow-2xl border border-white/10 flex items-center gap-3 pointer-events-auto"
+                className="p-3 bg-[var(--ink)] rounded-xl shadow-2xl border border-white/10 flex items-center gap-3 pointer-events-auto"
               >
                 <div className="w-8 h-8 rounded-lg bg-[var(--surface)]/5 flex items-center justify-center">
                   {item.status === 'done' ? (
@@ -750,15 +752,15 @@ export default function TransactionGrid({
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest leading-none mb-1">AI Processor</p>
-                  <p className="text-[11px] font-medium text-white truncate">{item.name}</p>
+                  <p className="text-[10px] font-bold text-[var(--panel)]/50 uppercase tracking-widest leading-none mb-1">AI Processor</p>
+                  <p className="text-[11px] font-medium text-[var(--panel)] truncate">{item.name}</p>
                 </div>
                 {item.status === 'error' && (
                   <button 
                     onClick={() => setParsingQueue(parsingQueue.filter(i => i.id !== item.id))}
                     className="p-1 hover:bg-[var(--surface)]/10 rounded"
                   >
-                    <Plus size={10} className="text-white rotate-45" />
+                    <Plus size={10} className="text-[var(--panel)] rotate-45" />
                   </button>
                 )}
               </motion.div>
@@ -785,7 +787,7 @@ export default function TransactionGrid({
         )}
       </AnimatePresence>
 
-      <div className="p-5 border-b border-[var(--line)] space-y-4 bg-[var(--surface)]/95 backdrop-blur-md sticky top-0 z-30 shadow-xs">
+      <div className="p-5 border-b border-[var(--line)] space-y-4 bg-[var(--surface)]/95 backdrop-blur-md sticky top-0 z-30 shadow-sm">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex flex-col">
@@ -797,20 +799,20 @@ export default function TransactionGrid({
                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.4)]" />
                    <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Integrity Scan Active</span>
                 </div>
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Matrix Synchronized</span>
+                <span className="text-[9px] font-bold text-[var(--faint)] uppercase tracking-wider">Matrix Synchronized</span>
               </div>
             </div>
             <div className="hidden sm:block h-10 w-px bg-slate-200 mx-2" />
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-[var(--line)]/40 self-stretch sm:self-auto shadow-3xs">
+            <div className="flex bg-[var(--panel)] p-1 rounded-xl border border-[var(--line)] self-stretch sm:self-auto shadow-sm">
               <button 
                 onClick={() => setViewMode('grid')}
-                className={cn("flex-1 sm:flex-none h-8 px-4 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all", viewMode === 'grid' ? "bg-[var(--surface)] text-slate-950 shadow-xs scale-[1.02]" : "text-slate-500 hover:text-slate-950")}
+                className={cn("flex-1 sm:flex-none h-8 px-4 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all", viewMode === 'grid' ? "bg-[var(--brass)] text-black shadow-sm scale-[1.02]" : "text-[var(--muted)] hover:text-[var(--text)]")}
               >
                 Grid View
               </button>
               <button 
                 onClick={() => setViewMode('pivot')}
-                className={cn("flex-1 sm:flex-none h-8 px-4 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all", viewMode === 'pivot' ? "bg-[var(--surface)] text-slate-950 shadow-xs scale-[1.02]" : "text-slate-500 hover:text-slate-950")}
+                className={cn("flex-1 sm:flex-none h-8 px-4 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all", viewMode === 'pivot' ? "bg-[var(--brass)] text-black shadow-sm scale-[1.02]" : "text-[var(--muted)] hover:text-[var(--text)]")}
               >
                 Pivot Matrix
               </button>
@@ -821,20 +823,20 @@ export default function TransactionGrid({
              <button 
                 onClick={toggleSelectAll}
                 className={cn(
-                  "hidden xl:flex h-10 px-4 items-center gap-3 rounded-xl border transition-all text-[9px] font-bold uppercase tracking-wider shrink-0",
+                  "hidden xl:flex h-10 px-4 items-center gap-3 rounded-xl border transition-all text-[9px] font-bold uppercase tracking-wider shrink-0 cursor-pointer",
                   selectedIds.size > 0 
-                  ? "bg-slate-900 text-white border-slate-950 shadow-xs" 
-                  : "bg-[var(--surface)] text-slate-505 border-[var(--line)]/80 hover:border-slate-400 hover:text-[var(--text)] shadow-3xs"
+                  ? "bg-[var(--brass)] text-black border-[var(--brass-line)] shadow-sm" 
+                  : "bg-[var(--surface)] text-[var(--muted)] border-[var(--line)] hover:border-[var(--brass-line)] hover:text-[var(--text)] shadow-sm"
                 )}
               >
                 <div className={cn(
                   "w-4 h-4 rounded border flex items-center justify-center transition-all",
                   selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0
-                  ? "bg-slate-900 border-slate-900 text-white" 
-                  : "border-slate-300 bg-[var(--surface)]"
+                  ? "bg-black border-black text-[var(--panel)]" 
+                  : "border-[var(--line)] bg-[var(--surface)]"
                 )}>
                   {selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0 && <Check size={10} className="stroke-[3px]" />}
-                  {selectedIds.size > 0 && selectedIds.size < transactionsWithBalance.length && <div className="w-2 h-0.5 bg-slate-900" />}
+                  {selectedIds.size > 0 && selectedIds.size < transactionsWithBalance.length && <div className="w-2 h-0.5 bg-black" />}
                 </div>
                 <span>{selectedIds.size > 0 ? `${selectedIds.size} Selected` : 'Select All'}</span>
               </button>
@@ -844,10 +846,10 @@ export default function TransactionGrid({
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 p-2 bg-slate-900/10 border border-indigo-600/20 rounded-xl"
+                  className="flex items-center gap-2 p-2 bg-[var(--ink)]/10 border border-indigo-600/20 rounded-xl"
                 >
                   <span className="text-xs font-bold text-indigo-600 px-2">{selectedIds.size} Selected</span>
-                  <div className="h-4 w-px bg-slate-900/20" />
+                  <div className="h-4 w-px bg-[var(--ink)]/20" />
                   
                   {/* State Machine Actions */}
                   <button onClick={() => handleBulkUpdate({ isLocked: true })} className="flex items-center gap-1.5 px-3 py-1 bg-[var(--surface)] hover:bg-[var(--ink)] text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-[var(--line)] transition-colors">
@@ -867,14 +869,14 @@ export default function TransactionGrid({
                   </button>
                   
                   <div className="flex-1" />
-                  <button onClick={() => setSelectedIds(new Set())} className="p-1 hover:bg-black/5 rounded text-slate-500">
+                  <button onClick={() => setSelectedIds(new Set())} className="p-1 hover:bg-black/5 rounded text-[var(--muted)]">
                     <X size={14} />
                   </button>
                 </motion.div>
               )}
 
               <div className="relative group/search flex-1 flex flex-col lg:block">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover/search:text-slate-600 transition-colors" size={16} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--faint)] group-hover/search:text-slate-600 transition-colors" size={16} />
                 <input 
                   ref={searchInputRef}
                   type="text" 
@@ -882,7 +884,7 @@ export default function TransactionGrid({
                   value={searchTerm}
                   dir="auto"
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full h-10 pl-11 pr-4 lg:pr-[230px] bg-[var(--ink)]/50 hover:bg-[var(--ink)] border border-[var(--line)] rounded-xl text-sm focus:outline-none focus:border-slate-950 focus:bg-[var(--surface)] transition-all placeholder:text-slate-400 font-medium font-sans"
+                  className="w-full h-10 pl-11 pr-4 lg:pr-[230px] bg-[var(--ink)]/50 hover:bg-[var(--ink)] border border-[var(--line)] rounded-xl text-sm focus:outline-none focus:border-slate-950 focus:bg-[var(--surface)] transition-all placeholder:text-[var(--faint)] font-medium font-sans"
                 />
                 <div className="absolute right-[210px] top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-2">
                    {searchTerm.length > 0 && (
@@ -909,16 +911,16 @@ export default function TransactionGrid({
                   <button 
                     onClick={() => setActiveFilterColumn(activeFilterColumn === 'visibility' ? null : 'visibility')}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border shrink-0",
-                      activeFilterColumn === 'visibility' ? "bg-slate-950 text-white border-slate-950" : "bg-[var(--surface)] text-slate-500 border-[var(--line)] hover:text-[var(--text)] shadow-3xs"
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border shrink-0 cursor-pointer",
+                      activeFilterColumn === 'visibility' ? "bg-[var(--brass)] text-black border-[var(--brass-line)] font-bold" : "bg-[var(--surface)] text-[var(--muted)] border-[var(--line)] hover:text-[var(--text)] shadow-sm"
                     )}
                   >
                     <Layers size={12} className="shrink-0" />
                     Columns
                   </button>
                   {activeFilterColumn === 'visibility' && (
-                    <div className="absolute top-10 right-0 z-[150] w-56 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-lg p-3 normal-case font-medium text-[var(--text)]">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Visible Columns</p>
+                    <div className="absolute top-10 right-0 z-[150] w-56 bg-[var(--panel)] border border-[var(--line)] rounded-2xl shadow-lg p-3 normal-case font-medium text-[var(--text)]">
+                      <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest mb-2">Visible Columns</p>
                       <div className="space-y-1">
                         {['date', 'description', 'category', 'project', 'amount', 'status'].map(col => (
                           <label key={col} className="flex items-center gap-2 p-1.5 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
@@ -926,7 +928,7 @@ export default function TransactionGrid({
                               type="checkbox" 
                               checked={visibleColumns.has(col)}
                               onChange={() => toggleColumnVisibility(col)}
-                              className="w-3.5 h-3.5 rounded border-slate-300 text-slate-950 focus:ring-slate-955"
+                              className="w-3.5 h-3.5 rounded border-[var(--line)] text-[var(--brass)] focus:ring-[var(--brass)]"
                             />
                             <span className="text-xs text-[var(--text)] capitalize">{col}</span>
                           </label>
@@ -936,17 +938,17 @@ export default function TransactionGrid({
                   )}
                   <button 
                     onClick={handleExportCSV}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] text-slate-500 border border-[var(--line)] rounded-lg text-[9px] font-bold uppercase tracking-wider hover:text-[var(--text)] transition-all shrink-0 shadow-3xs"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] rounded-lg text-[9px] font-bold uppercase tracking-wider hover:text-[var(--text)] transition-all shrink-0 shadow-sm cursor-pointer"
                   >
                     <ArrowDownRight size={12} className="rotate-90 shrink-0" />
                     Export
                   </button>
                   <button 
                     onClick={() => onAction?.('open-command-center')}
-                    className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center hover:bg-emerald-600 transition-all shadow-sm shrink-0"
+                    className="w-8 h-8 bg-[var(--brass)] text-black rounded-lg flex items-center justify-center hover:opacity-90 transition-all shadow-sm shrink-0 cursor-pointer"
                     title="Open Command Center"
                   >
-                    <Sparkles size={14} className="shrink-0 text-amber-300" />
+                    <Sparkles size={14} className="shrink-0 text-black" />
                   </button>
                 </div>
               </div>
@@ -954,7 +956,7 @@ export default function TransactionGrid({
             
             <button 
               onClick={onNewEntry}
-              className="h-10 px-5 bg-slate-900 text-white hover:bg-emerald-600 rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap flex items-center gap-2 shadow-xs"
+              className="h-10 px-5 bg-[var(--brass)] text-black hover:opacity-90 rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap flex items-center gap-2 shadow-sm cursor-pointer"
             >
               <Plus size={14} className="stroke-[3px]" />
               New Entry
@@ -979,7 +981,7 @@ export default function TransactionGrid({
              )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 md:gap-4 bg-[var(--ink)]/20 p-1.5 rounded-[32px] border border-[var(--line)]/40 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 bg-[var(--ink)]/20 p-1.5 rounded-xl border border-[var(--line)]/40 w-full sm:w-auto">
             <button 
               onClick={() => {
                 const headers = ['Date', 'Description', 'Amount', 'Currency', 'Account', 'Project', 'Notes'];
@@ -1007,7 +1009,7 @@ export default function TransactionGrid({
                 document.body.removeChild(link);
                 toast.success('Matrix exported to Excel-compatible CSV.');
               }}
-              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-[var(--text)] hover:bg-[var(--surface)] rounded-xl transition-all"
+              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-[var(--muted)] uppercase tracking-widest hover:text-[var(--text)] hover:bg-[var(--surface)] rounded-xl transition-all"
             >
               <TableIcon size={16} />
               <span className="hidden sm:inline">Export Matrix</span>
@@ -1016,7 +1018,7 @@ export default function TransactionGrid({
             <div className="w-px h-6 bg-slate-200 opacity-50" />
             <button 
               onClick={handleBulkSweep}
-              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-[var(--surface)] border border-indigo-600/20 hover:border-indigo-600 rounded-xl transition-all shadow-sm shrink-0"
+              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-[var(--panel)] border border-indigo-600/20 hover:border-indigo-600 rounded-2xl transition-all shadow-sm shrink-0"
             >
               <Sparkles size={16} className="shrink-0" />
               <span className="hidden sm:inline">Analytical Categorization</span>
@@ -1029,12 +1031,12 @@ export default function TransactionGrid({
       {/* Active Filter Chips */}
       {filterCriteria && Object.keys(filterCriteria).length > 0 && (
         <div className="px-8 pb-4 flex flex-wrap gap-2">
-           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest self-center mr-2">Active Filters:</span>
+           <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest self-center mr-2">Active Filters:</span>
            {Object.entries(filterCriteria).map(([key, value]) => {
              if (!value) return null;
              return (
                <div key={key} className="flex items-center gap-2 bg-[var(--ink)] border border-[var(--line)] px-3 py-1 rounded-full text-[10px] font-bold text-[var(--text)] group/chip hover:border-indigo-600 transition-all">
-                 <span className="text-slate-500 uppercase tracking-widest text-[9px]">{key}:</span>
+                 <span className="text-[var(--muted)] uppercase tracking-widest text-[9px]">{key}:</span>
                  <span>{String(value)}</span>
                  <button 
                    onClick={() => {
@@ -1061,7 +1063,7 @@ export default function TransactionGrid({
       <div className="flex-1 overflow-hidden relative bg-[var(--surface)]" dir="auto">
         {viewMode === 'grid' ? (
           <div className="h-full flex flex-col">
-            <div className="grid sticky top-0 bg-slate-900 text-white/40 z-20" style={{ gridTemplateColumns: gridCols }}>
+            <div className="grid sticky top-0 bg-[var(--ink)] text-[var(--panel)]/40 z-20" style={{ gridTemplateColumns: gridCols }}>
               <div className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-center">
                 <input type="checkbox" checked={selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0} onChange={(e) => setSelectedIds(e.target.checked ? new Set(transactionsWithBalance.map(t => t.id)) : new Set())} className="w-4 h-4 rounded border-white/20 bg-transparent accent-emerald-500" />
               </div>
@@ -1078,7 +1080,7 @@ export default function TransactionGrid({
                 </button>
                 {activeFilterColumn === 'date' && (
                   <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Date Selection</p>
+                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Date Selection</p>
                     <div className="space-y-4">
                        <button 
                          onClick={() => { setSearchTerm('today'); setActiveFilterColumn(null); }}
@@ -1099,7 +1101,7 @@ export default function TransactionGrid({
                          This Year
                        </button>
                        <div className="pt-2 border-t border-[var(--line)]">
-                         <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Custom Range</p>
+                         <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest mb-2">Custom Range</p>
                          <div className="grid grid-cols-2 gap-2">
                            <input 
                              type="date" 
@@ -1130,7 +1132,7 @@ export default function TransactionGrid({
                 </button>
                 {activeFilterColumn === 'description' && (
                   <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Text Filters</p>
+                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Text Filters</p>
                     <div className="space-y-1">
                        <button onClick={() => { setSearchTerm('starts with '); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-sm">Starts with...</button>
                        <button onClick={() => { setSearchTerm('ends with '); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-sm">Ends with...</button>
@@ -1153,9 +1155,9 @@ export default function TransactionGrid({
                   </button>
                   {activeFilterColumn === 'category' && (
                     <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter Category</p>
+                      <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Filter Category</p>
                       <div className="mb-3 relative group/lsearch">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover/lsearch:text-indigo-600 transition-colors" size={12} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] group-hover/lsearch:text-indigo-600 transition-colors" size={12} />
                         <input 
                           type="text" 
                           placeholder="Search categories..."
@@ -1182,7 +1184,7 @@ export default function TransactionGrid({
                       <div className="mt-4 pt-3 border-t border-[var(--line)] flex justify-between">
                          <button 
                            onClick={() => onFilterApplied({ ...filterCriteria, selectedCategories: [] })}
-                           className="text-[10px] font-bold text-slate-500 hover:text-[var(--text)] uppercase tracking-wider"
+                           className="text-[10px] font-bold text-[var(--muted)] hover:text-[var(--text)] uppercase tracking-wider"
                          >
                            Reset
                          </button>
@@ -1211,9 +1213,9 @@ export default function TransactionGrid({
                   </button>
                   {activeFilterColumn === 'project' && (
                     <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter Projects</p>
+                      <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Filter Projects</p>
                       <div className="mb-3 relative group/psearch">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover/psearch:text-indigo-600 transition-colors" size={12} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] group-hover/psearch:text-indigo-600 transition-colors" size={12} />
                         <input 
                           type="text" 
                           placeholder="Search entities..."
@@ -1255,7 +1257,7 @@ export default function TransactionGrid({
                   </button>
                   {activeFilterColumn === 'class' && (
                     <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter by Class</p>
+                      <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Filter by Class</p>
                       <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar">
                         {useLedgerStore.getState().classes?.map(val => (
                           <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
@@ -1287,7 +1289,7 @@ export default function TransactionGrid({
                   </button>
                   {activeFilterColumn === 'location' && (
                     <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter by Location</p>
+                      <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Filter by Location</p>
                       <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar">
                         {useLedgerStore.getState().locations?.map(val => (
                           <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
@@ -1305,7 +1307,7 @@ export default function TransactionGrid({
                   )}
                 </div>
               )}
-              {((isProMode || isCompactMode) && !isMobileGrid && !isTabletGrid) ? (<><div className="p-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-right">Debit</div><div className="p-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-right">Credit</div></>) : (
+              {((isProMode || isCompactMode) && !isMobileGrid && !isTabletGrid) ? (<><div className="p-4 font-black text-[10px] uppercase tracking-widest text-[var(--muted)] text-right">Debit</div><div className="p-4 font-black text-[10px] uppercase tracking-widest text-[var(--muted)] text-right">Credit</div></>) : (
               <div 
                 onClick={() => handleSort('amount')}
                 className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-right flex items-center justify-end gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
@@ -1319,13 +1321,13 @@ export default function TransactionGrid({
                 </button>
                 {activeFilterColumn === 'amount' && (
                   <div className="absolute top-full right-0 z-[100] mt-1 w-72 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-5 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Amount Range Logic</p>
+                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-4">Amount Range Logic</p>
                     <div className="space-y-5">
                        <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                             <label className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Min Value</label>
+                             <label className="text-[9px] font-black uppercase text-[var(--muted)] tracking-wider">Min Value</label>
                              <div className="relative">
-                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[10px] italic">$</span>
+                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-[10px] italic">$</span>
                                <input 
                                   type="number" 
                                   placeholder="0" 
@@ -1336,9 +1338,9 @@ export default function TransactionGrid({
                              </div>
                           </div>
                           <div className="space-y-2">
-                             <label className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Max Value</label>
+                             <label className="text-[9px] font-black uppercase text-[var(--muted)] tracking-wider">Max Value</label>
                              <div className="relative">
-                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[10px] italic">$</span>
+                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-[10px] italic">$</span>
                                <input 
                                   type="number" 
                                   placeholder="∞" 
@@ -1351,7 +1353,7 @@ export default function TransactionGrid({
                        </div>
                        
                        <div className="pt-4 border-t border-[var(--line)] space-y-2">
-                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Statistical Segments</p>
+                          <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-widest mb-2">Statistical Segments</p>
                           <div className="grid grid-cols-1 gap-1">
                              <button onClick={() => { setSearchTerm('above average'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Above Average
@@ -1377,7 +1379,7 @@ export default function TransactionGrid({
                           </button>
                           <button 
                             onClick={() => setActiveFilterColumn(null)}
-                            className="flex-1 py-2.5 bg-slate-900 text-white text-[9px] font-medium uppercase tracking-wider rounded-lg hover:bg-black transition-all"
+                            className="flex-1 py-2.5 bg-[var(--ink)] text-[var(--panel)] text-[9px] font-medium uppercase tracking-wider rounded-lg hover:bg-black transition-all"
                           >
                             Apply
                           </button>
@@ -1404,7 +1406,7 @@ export default function TransactionGrid({
                   </button>
                   {activeFilterColumn === 'status' && (
                     <div className="absolute top-full right-0 z-[100] mt-1 w-48 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter Type</p>
+                      <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Filter Type</p>
                       <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar">
                         {['Active', 'Pending', 'Void', 'Reconciled'].map(val => (
                           <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
@@ -1428,12 +1430,12 @@ export default function TransactionGrid({
                 </div>
               )}
             </div>
-            <div className="px-4 md:px-8 py-4 lg:py-0 bg-[#090A0C] border-t border-white/5 flex flex-col md:flex-row md:items-center justify-between text-white/40 overflow-hidden relative gap-4">
+            <div className="px-4 md:px-8 py-4 lg:py-0 bg-[#090A0C] border-t border-white/5 flex flex-col md:flex-row md:items-center justify-between text-[var(--panel)]/40 overflow-hidden relative gap-4">
               <div className="absolute inset-0 technical-grid opacity-[0.03] pointer-events-none" />
               <div className="flex flex-wrap items-center gap-4 lg:gap-10 relative z-10 w-full overflow-x-auto no-scrollbar pb-2 md:pb-0">
                  <div className="flex flex-col whitespace-nowrap">
                    <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 opacity-40">Dataset Depth</p>
-                   <p className="text-lg font-black italic text-white/80">{transactionsWithBalance.length} Nodes</p>
+                   <p className="text-lg font-black italic text-[var(--panel)]/80">{transactionsWithBalance.length} Nodes</p>
                  </div>
                  <div className="hidden sm:block w-px h-10 bg-[var(--surface)]/10" />
                  <div className="flex flex-col whitespace-nowrap">
@@ -1457,7 +1459,7 @@ export default function TransactionGrid({
                             {formatCurrency(selectedMetricsResult.sum)}
                           </p>
                         </div>
-                        <div className="flex flex-col text-white/60 whitespace-nowrap">
+                        <div className="flex flex-col text-[var(--panel)]/60 whitespace-nowrap">
                           <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 opacity-40">Mean Vector</p>
                           <p className="text-xl font-black font-mono tracking-tighter uppercase">
                             {formatCurrency(selectedMetricsResult.mean)}

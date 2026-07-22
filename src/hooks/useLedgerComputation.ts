@@ -39,6 +39,9 @@ export function useLedgerComputation(
   sortConfig?: { key: string, direction: 'asc' | 'desc' } | null
 ) {
   const user = useAuthStore(s => s.user);
+  const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
+  const dimensionNodes = currentWorkspace?.dimensionNodes || [];
+  
   const scenarios = useScenarioStore(state => state.scenarios);
   const activeScenarioId = useScenarioStore(state => state.activeScenarioId);
   const activeScenario = Array.isArray(scenarios) ? scenarios.find(s => s.id === activeScenarioId) : null;
@@ -176,6 +179,31 @@ export function useLedgerComputation(
   // Pre-normalize for speed
   const normalized = useMemo(() => LedgerEngine.normalize(sortedExpandedTransactions), [sortedExpandedTransactions]);
 
+  // True O(1) Reverse Index for Dimension Lookup (Performance Optimization for 100k+ scaling)
+  const reverseDimensionIndex = useMemo(() => {
+    const idx = new Map<string, Set<string>>();
+    for (let i = 0; i < normalized.length; i++) {
+      const t = normalized[i];
+      if (t.dimensions) {
+        for (const nodeId of Object.values(t.dimensions)) {
+          if (!idx.has(nodeId as string)) idx.set(nodeId as string, new Set());
+          idx.get(nodeId as string)!.add(t.id);
+        }
+      }
+      if (t.lines) {
+        for (const line of t.lines) {
+          if (line.dimensions) {
+            for (const nodeId of Object.values(line.dimensions)) {
+              if (!idx.has(nodeId as string)) idx.set(nodeId as string, new Set());
+              idx.get(nodeId as string)!.add(t.id);
+            }
+          }
+        }
+      }
+    }
+    return idx;
+  }, [normalized]);
+
   const thresholds = useMemo(() => {
     if (normalized.length === 0) return { avg: 0, totalVolume: 0, percentiles: { top10: 0, top25: 0, bottom10: 0 } };
     
@@ -238,6 +266,24 @@ export function useLedgerComputation(
     
     // Convert to Set for O(1) lookup inside the 100k hot-loop
     const recognizedAccountNamesSet = new Set(recognizedAccountNames);
+    
+    // Dimension Node Intent Resolver
+    const recognizedDimensionNodeIds = possibleEntityMatch ? dimensionNodes.filter(n => 
+      (n.id || '').toLowerCase() === lowerSearch || 
+      (n.description || '').toLowerCase().includes(lowerSearch) ||
+      n.aliases?.some(a => a.toLowerCase().includes(lowerSearch)) ||
+      jaroWinklerSimilarity(lowerSearch, (n.description || '').toLowerCase()) > 0.88
+    ).map(n => n.id) : [];
+    const recognizedDimensionNodeIdsSet = new Set(recognizedDimensionNodeIds);
+
+    // Pull directly from O(1) reverse index for dimension matches to avoid scanning dimensions in loop
+    const matchedByDimensionTxIds = new Set<string>();
+    if (recognizedDimensionNodeIds.length > 0) {
+       recognizedDimensionNodeIds.forEach(nId => {
+          const txs = reverseDimensionIndex.get(nId);
+          if (txs) txs.forEach(tId => matchedByDimensionTxIds.add(tId));
+       });
+    }
 
     // Intent Resolution & Sub-Hot-Loop Pre-computation (CRITICAL FOR PERFORMANCE AT 100k RECORDS)
     const opVal = opMatch ? { op: opMatch[1], val: TruthEngine.parseAmountToCents(opMatch[2]) / 100 } : null;
@@ -459,12 +505,13 @@ export function useLedgerComputation(
               isMatch = true;
             } else {
               // Rapid short-circuit boundary for massive performance scaling
+              const hasEntityMatch = t.lines?.some((l: any) => recognizedAccountNamesSet.has(l.accountName)) || 
+                                     matchedByDimensionTxIds.has(t.id);
+              
               if (normalized.length <= 10000) {
                 const similarity = jaroWinklerSimilarity(lowerSearch, (t.description || '').toLowerCase(), user?.uid, t._normalized.sanitizedDescription);
-                const hasEntityMatch = t.lines?.some((l: any) => recognizedAccountNamesSet.has(l.accountName));
                 if (similarity < 0.85 && !hasEntityMatch) isMatch = false;
               } else {
-                const hasEntityMatch = t.lines?.some((l: any) => recognizedAccountNamesSet.has(l.accountName));
                 if (!hasEntityMatch) isMatch = false;
               }
             }
@@ -475,7 +522,7 @@ export function useLedgerComputation(
 
       return true;
     });
-  }, [normalized, transactions, filterCriteria, searchTerm]);
+  }, [normalized, transactions, filterCriteria, searchTerm, accounts, dimensionNodes, user?.uid]);
 
   const chronologicalRunningBalances = useMemo(() => {
     // Chronologically compute historical running balance for every transaction to ensure mathematical stability.

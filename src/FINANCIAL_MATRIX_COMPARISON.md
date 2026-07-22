@@ -1,10 +1,10 @@
-# Clearbook vs. Traditional Systems
+# LedgerFlow vs. Traditional Systems
 
 This document outlines the synthesis of Excel's mathematical flexibility and QuickBooks' structured rigidity, evolving into the **Core Integrity** engine.
 
 ## 1. Feature Synthesis Matrix
 
-| Feature | Excel | QuickBooks | Clearbook | Status |
+| Feature | Excel | QuickBooks | LedgerFlow | Status |
 | :--- | :---: | :---: | :---: | :---: |
 | **Recursive Aggregation** | Manual | Rigid | Real-time / Automatic | ✅ Implemented |
 | **Dynamic Sorting** | Static | Fixed Columns | Multi-vector (Deterministic) | ✅ Implemented |
@@ -19,13 +19,13 @@ This document outlines the synthesis of Excel's mathematical flexibility and Qui
 | **Pivot Logic** | Pivot Tables | Classes | Rule Pivot / Topology | ✅ Implemented |
 | **Inventory Intelligence** | Manual List | Basic Tracking | Sourcing Arbitrage / Velocity | ✅ Implemented |
 
-## 2. The Clearbook Difference (The Core Integrity)
+## 2. The LedgerFlow Difference (The Core Integrity)
 
-Unlike traditional systems that rely on user-inputted "tags," Clearbook uses **Transaction Chain Analysis**:
+Unlike traditional systems that rely on user-inputted "tags," LedgerFlow uses **Transaction Chain Analysis**:
 
-1.  **Integrity over Entry**: Traditional apps trust the user's manual entry. Clearbook calculates an **Integrity Score** based on transaction consistency and source variety.
+1.  **Integrity over Entry**: Traditional apps trust the user's manual entry. LedgerFlow calculates an **Integrity Score** based on transaction consistency and source variety.
 2.  **Symmetry Verification**: Every action is cross-referenced for **Ledger Equilibrium**. If a transaction drifts too far from historical norms, the **Anomaly Engine** flags it instantly.
-3.  **Arbitrage Intelligence**: Traditional inventory tells you what you have. Clearbook tells you **where it should have come from** to maximize margin.
+3.  **Arbitrage Intelligence**: Traditional inventory tells you what you have. LedgerFlow tells you **where it should have come from** to maximize margin.
 
 ## 3. Implemented Tools (Excel/QB Equivalents)
 
@@ -34,7 +34,7 @@ Unlike traditional systems that rely on user-inputted "tags," Clearbook uses **T
 *   **Audit Trail**: A high-fidelity timeline of every deterministic change.
 *   **Amount Range**: Advanced amount filtering (Greater than, Less than, Between) with statistical segments (Above/Below Average).
 
-## 4. Planned Clearbook Evolution
+## 4. Planned LedgerFlow Evolution
 
 *   **Sub-Atomic Accounts**: Deeply nested Chart of Accounts hierarchy (Beyond standard nodes).
 *   **Automatic Node Mapping**: AI-driven categorization based on historical "Core Integrity" patterns.

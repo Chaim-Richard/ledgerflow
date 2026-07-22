@@ -34,15 +34,15 @@ export default function TagInput({ tags, onChange, disabled, placeholder = "Add 
   };
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-1.5 p-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl focus-within:border-zinc-400 transition-colors", className, disabled && "opacity-50 bg-[var(--ink)] cursor-not-allowed")}>
+    <div className={cn("flex flex-wrap items-center gap-1.5 p-1.5 bg-[var(--panel)] border border-[var(--line)] rounded-2xl focus-within:border-zinc-400 transition-colors", className, disabled && "opacity-50 bg-[var(--ink)] cursor-not-allowed")}>
       {tags.map((tag, index) => (
-        <span key={index} className="flex items-center gap-1 px-2 py-0.5 bg-zinc-100 text-zinc-700 text-xs rounded-md">
+        <span key={index} className="flex items-center gap-1 px-2 py-0.5 bg-[var(--surface)] text-zinc-700 text-xs rounded-md">
           {tag}
           {!disabled && (
             <button
               type="button"
               onClick={() => removeTag(index)}
-              className="text-zinc-400 hover:text-zinc-600 focus:outline-none"
+              className="text-[var(--faint)] hover:text-[var(--text)] focus:outline-none"
             >
               <X size={12} />
             </button>
@@ -56,7 +56,7 @@ export default function TagInput({ tags, onChange, disabled, placeholder = "Add 
         onKeyDown={handleKeyDown}
         disabled={disabled}
         placeholder={tags.length === 0 ? placeholder : ""}
-        className="flex-1 min-w-[60px] bg-transparent text-xs text-zinc-700 outline-none px-1 py-0.5 placeholder:text-zinc-400"
+        className="flex-1 min-w-[60px] bg-transparent text-xs text-zinc-700 outline-none px-1 py-0.5 placeholder:text-[var(--faint)]"
       />
     </div>
   );

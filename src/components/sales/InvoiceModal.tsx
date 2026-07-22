@@ -84,25 +84,25 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-[var(--ink)]/40 backdrop-blur-sm"
       />
       
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
+        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-3xl shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
       >
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
           <div>
             <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Create New Invoice</h3>
-            <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Sales & Receivables</p>
+            <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest">Sales & Receivables</p>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => window.print()} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400" title="Print Invoice">
+            <button type="button" onClick={() => window.print()} className="p-2 hover:bg-[var(--surface)] rounded-full transition-colors text-[var(--faint)]" title="Print Invoice">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
             </button>
-            <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400">
+            <button onClick={onClose} className="p-2 hover:bg-[var(--surface)] rounded-full transition-colors text-[var(--faint)]">
               <X size={24} />
             </button>
           </div>
@@ -122,7 +122,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                     setInvoice({ ...invoice, customerId: cust ? cust.id : `new-${Date.now()}`, customerName: cust ? cust.name : e.target.value });
                   }}
                   placeholder="Type or select customer"
-                  className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                  className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
                 />
                 <datalist id="invoice-customer-list">
                   {safeCustomers.map(c => <option key={c.id} value={c.name} />)}
@@ -136,7 +136,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                 required
                 value={invoice.number}
                 onChange={(e) => setInvoice({ ...invoice, number: e.target.value })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-mono font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono font-bold"
               />
             </div>
             <div className="space-y-2">
@@ -144,7 +144,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               <select 
                 value={invoice.status}
                 onChange={(e) => setInvoice({ ...invoice, status: e.target.value as any })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="pending">Pending</option>
                 <option value="sent">Sent</option>
@@ -160,7 +160,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               <select 
                 value={invoice.type || 'standard'}
                 onChange={(e) => setInvoice({ ...invoice, type: e.target.value as any })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="standard">Standard</option>
                 <option value="recurring">Recurring</option>
@@ -174,7 +174,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  <select 
                    value={invoice.recurringInterval || 'monthly'}
                    onChange={(e) => setInvoice({ ...invoice, recurringInterval: e.target.value as any })}
-                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
                  >
                    <option value="weekly">Weekly</option>
                    <option value="monthly">Monthly</option>
@@ -192,7 +192,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                    max="100"
                    value={invoice.progressPercentage || 0}
                    onChange={(e) => setInvoice({ ...invoice, progressPercentage: parseInt(e.target.value) })}
-                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
                  />
                </div>
             )}
@@ -206,7 +206,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                 required
                 value={invoice.date}
                 onChange={(e) => setInvoice({ ...invoice, date: e.target.value })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               />
             </div>
             <div className="space-y-2">
@@ -216,7 +216,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                 required
                 value={invoice.dueDate}
                 onChange={(e) => setInvoice({ ...invoice, dueDate: e.target.value })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               />
             </div>
           </div>
@@ -296,7 +296,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               <button 
                 type="button"
                 onClick={() => setItems([...items, { description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }])}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all"
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--surface)] text-[var(--text)] rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all"
               >
                 <Plus size={14} />
                 Add Item
@@ -305,9 +305,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             
             <div className="space-y-3">
               {items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
+                <div key={idx} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-xl border border-[var(--line)]">
                   <div className="col-span-12 md:col-span-4 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Description</label>
+                    <label className="text-[10px] font-bold text-[var(--faint)] uppercase">Description</label>
                     <input 
                       type="text"
                       value={item.description}
@@ -317,11 +317,11 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                         setItems(newItems);
                       }}
                       placeholder="Service or Product"
-                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
+                      className="w-full px-4 py-2 bg-[var(--panel)] border border-[var(--line)] rounded-2xl outline-none focus:ring-2 focus:ring-zinc-900"
                     />
                   </div>
                   <div className="col-span-6 md:col-span-2 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Qty</label>
+                    <label className="text-[10px] font-bold text-[var(--faint)] uppercase">Qty</label>
                     <input 
                       type="number"
                       step="0.01"
@@ -334,11 +334,11 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                         newItems[idx].amountCents = Math.round(qty * newItems[idx].rateCents);
                         setItems(newItems);
                       }}
-                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
+                      className="w-full px-4 py-2 bg-[var(--panel)] border border-[var(--line)] rounded-2xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
                     />
                   </div>
                   <div className="col-span-6 md:col-span-2 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Rate ($)</label>
+                    <label className="text-[10px] font-bold text-[var(--faint)] uppercase">Rate ($)</label>
                     <input 
                       type="number"
                       step="0.01"
@@ -351,11 +351,11 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                         newItems[idx].amountCents = Math.round(newItems[idx].quantity * rateCents);
                         setItems(newItems);
                       }}
-                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
+                      className="w-full px-4 py-2 bg-[var(--panel)] border border-[var(--line)] rounded-2xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
                     />
                   </div>
                   <div className="col-span-8 md:col-span-3 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Income Account</label>
+                    <label className="text-[10px] font-bold text-[var(--faint)] uppercase">Income Account</label>
                     <div className="relative">
                       <input 
                         list={`invoice-account-${idx}`}
@@ -367,7 +367,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                           setItems(newItems);
                         }}
                         placeholder="Type or select account"
-                        className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
+                        className="w-full px-4 py-2 bg-[var(--panel)] border border-[var(--line)] rounded-2xl outline-none focus:ring-2 focus:ring-zinc-900"
                       />
                       <datalist id={`invoice-account-${idx}`}>
                         {safeAccounts.map(a => <option key={a.id} value={a.name} />)}
@@ -427,15 +427,15 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               <div className="space-y-2">
                 <label className="micro-label">Attachments</label>
                 <div className="flex items-center gap-4">
-                   <label className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
-                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Select Files</span>
+                   <label className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-[var(--surface)] transition-colors">
+                     <span className="text-xs font-bold text-[var(--muted)] uppercase tracking-widest">Select Files</span>
                      <input type="file" multiple className="hidden" onChange={handleFileUpload} />
                    </label>
                 </div>
                 {attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                      {attachments.map((f, i) => (
-                       <span key={i} className="px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded-lg">{f.name}</span>
+                       <span key={i} className="px-2 py-1 bg-[var(--surface)] text-[var(--text)] text-xs rounded-lg">{f.name}</span>
                      ))}
                   </div>
                 )}
@@ -446,7 +446,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
         <div className="p-4 md:p-8 border-t border-[var(--line)] bg-[var(--ink)]/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-col w-full sm:w-auto">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Amount</span>
+            <span className="text-[10px] font-bold text-[var(--faint)] uppercase tracking-widest">Total Amount</span>
             <span className="text-3xl font-black text-[var(--text)] font-mono">
               {(total / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
             </span>
@@ -455,21 +455,21 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             <button 
               type="button"
               onClick={onClose}
-              className="px-6 py-3.5 bg-[var(--surface)] border border-[var(--line)] text-zinc-600 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-[var(--ink)] transition-all"
+              className="px-6 py-3.5 bg-[var(--surface)] text-[var(--text)] rounded-xl font-medium uppercase tracking-wider text-[10px] hover:bg-[var(--ink)] transition-all"
             >
               Cancel
             </button>
             <button 
               type="button"
               onClick={(e) => handleAction(e, 'draft')}
-              className="px-6 py-3.5 bg-zinc-100 text-zinc-700 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-200 transition-all flex items-center gap-2"
+              className="px-6 py-3.5 bg-[var(--surface)] text-zinc-700 rounded-xl font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-200 transition-all flex items-center gap-2"
             >
               Save Draft
             </button>
             <button 
               type="submit"
               onClick={(e) => handleAction(e, 'pending')}
-              className="px-6 py-3.5 bg-zinc-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
+              className="px-6 py-3.5 bg-[var(--ink)] text-[var(--panel)] rounded-xl font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
             >
               <Save size={16} />
               Save & Close
@@ -477,7 +477,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             <button 
               type="button"
               onClick={(e) => handleAction(e, 'sent')}
-              className="px-6 py-3.5 bg-slate-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+              className="px-6 py-3.5 bg-[var(--ink)] text-[var(--panel)] rounded-xl font-medium uppercase tracking-wider text-[10px] hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
             >
               Send Invoice
             </button>

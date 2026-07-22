@@ -19,7 +19,7 @@ export interface SimulationResult {
   serverTimeMs: number;
 }
 
-export class ClearbookAIService {
+export class LedgerFlowAIService {
   /**
    * High-Performance Rule Simulation
    * Combines Fourier-detected seasonality with Geometric Brownian Motion
