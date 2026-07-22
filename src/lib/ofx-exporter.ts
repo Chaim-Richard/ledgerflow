@@ -2,7 +2,7 @@ import { Transaction, ChartAccount } from '../types';
 
 /**
  * Open Financial Exchange (OFX) Export Utility
- * Makes LedgerFlow data compatible with Quicken, QuickBooks, and standard bank imports.
+ * Makes Clearbook data compatible with Quicken, QuickBooks, and standard bank imports.
  */
 export function generateOFX(transactions: Transaction[], account: ChartAccount): string {
   const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);

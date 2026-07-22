@@ -4,7 +4,7 @@ export class AnomalyDetectionEngine {
   /**
    * Detects transactions that are statistical outliers based on historical mean and standard deviation.
    */
-  static detectAmountOutliers(transactions: Transaction[], zScoreThreshold: number = 3.0): Transaction[] {
+  static detectAmountOutliers(transactions: Transaction[], zScoreThreshold: number = 3.0): (Transaction & { zScore: number })[] {
     if (transactions.length < 2) return [];
 
     const amounts = transactions.map(tx => tx.totalAmountCents);
@@ -15,10 +15,14 @@ export class AnomalyDetectionEngine {
 
     if (stdDev === 0) return []; // All amounts are the same
 
-    return transactions.filter(tx => {
-      const zScore = Math.abs(tx.totalAmountCents - mean) / stdDev;
-      return zScore > zScoreThreshold;
-    });
+    const anomalies: (Transaction & { zScore: number })[] = [];
+    for (const tx of transactions) {
+        const zScore = Math.abs(tx.totalAmountCents - mean) / stdDev;
+        if (zScore > zScoreThreshold) {
+            anomalies.push({ ...tx, zScore });
+        }
+    }
+    return anomalies;
   }
 
   /**

@@ -51,8 +51,8 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
     return (
       <React.Fragment key={account.id}>
         <tr className={cn(
-          "group hover:bg-slate-50 transition-colors cursor-pointer border-b border-slate-100",
-          depth > 0 && "bg-slate-50/20"
+          "group hover:bg-[var(--ink)] transition-colors cursor-pointer border-b border-[var(--line)]",
+          depth > 0 && "bg-[var(--ink)]/20"
         )}>
           <td className="p-4 font-mono text-xs text-slate-500" onClick={() => hasChildren && toggleExpand(account.id)}>
             <div className="flex items-center gap-2" style={{ paddingLeft: `${depth * 16}px` }}>
@@ -67,7 +67,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
             </div>
           </td>
           <td className="p-4" onClick={() => onDrillDown(account.name)}>
-            <div className="font-bold text-slate-800 uppercase tracking-tight text-xs">{account.name}</div>
+            <div className="font-bold text-[var(--text)] uppercase tracking-tight text-xs">{account.name}</div>
             {account.description && <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-md">{account.description}</div>}
           </td>
           <td className="p-4">
@@ -84,7 +84,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
           <td className="p-4 text-slate-500 text-[10px] font-medium">{account.category || 'Uncategorized'}</td>
           <td className={cn(
             "p-4 text-right font-bold font-mono text-xs",
-            account.balanceCents < 0 ? "text-rose-600" : "text-slate-800"
+            account.balanceCents < 0 ? "text-rose-600" : "text-[var(--text)]"
           )}>
             {formatCurrency(account.balanceCents)}
           </td>
@@ -94,7 +94,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
                 e.stopPropagation();
                 setShowOptionsId(showOptionsId === account.id ? null : account.id);
               }}
-              className="p-1.5 text-slate-400 hover:text-slate-800 transition-colors rounded hover:bg-slate-100"
+              className="p-1.5 text-slate-400 hover:text-[var(--text)] transition-colors rounded hover:bg-slate-100"
             >
               <MoreVertical size={14} />
             </button>
@@ -106,7 +106,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
                     initial={{ opacity: 0, scale: 0.95, y: -5 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                    className="absolute right-4 top-10 w-44 bg-white border border-slate-200 rounded-lg shadow-md z-[110] overflow-hidden p-1"
+                    className="absolute right-4 top-10 w-44 bg-[var(--surface)] border border-[var(--line)] rounded-lg shadow-md z-[110] overflow-hidden p-1"
                   >
                     <button 
                       onClick={() => {
@@ -135,11 +135,11 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
   ).sort((a, b) => a.code.localeCompare(b.code));
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/85 shadow-3xs overflow-hidden">
+    <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/85 shadow-3xs overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-xs min-w-[750px]">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 font-bold uppercase tracking-wider">
+            <tr className="border-b border-[var(--line)] bg-[var(--ink)]/70 text-slate-500 font-bold uppercase tracking-wider">
               <th className="p-4 font-bold text-[9px] text-slate-400">Node ID</th>
               <th className="p-4 font-bold text-[9px] text-slate-400">Entity Identity</th>
               <th className="p-4 font-bold text-[9px] text-slate-400">Topology Type</th>
@@ -154,11 +154,11 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
               <tr>
                 <td colSpan={6} className="p-16 text-center">
                   <div className="flex flex-col items-center gap-4 max-w-sm mx-auto">
-                    <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 shadow-3xs">
+                    <div className="w-12 h-12 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex items-center justify-center text-slate-400 shadow-3xs">
                       <BookOpen size={20} />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-800 uppercase tracking-wide text-xs">Void Detection</p>
+                      <p className="font-bold text-[var(--text)] uppercase tracking-wide text-xs">Void Detection</p>
                       <p className="text-[11px] text-slate-400 mt-1">Initialize the chart of nodes to establish financial signals. No architectural entities found.</p>
                     </div>
                   </div>

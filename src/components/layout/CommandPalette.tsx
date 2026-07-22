@@ -1,10 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Loader2, ArrowRight, FileText, User, Building, FolderKanban, Tags, DollarSign } from 'lucide-react';
+import { Search, Loader2, ArrowRight, FileText, User, Building, FolderKanban, Tags, DollarSign, Zap, FolderPlus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { SYSTEM_COMMANDS, ANALYTICAL_LENSES_REGISTRY } from '../../config/registry';
 import { useUIStore } from '../../stores/useUIStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { parseNaturalLanguageEntry, ParsedCommandIntent } from '../../lib/algorithms/nl-parser';
+import { useShallow } from 'zustand/react/shallow';
+import { Transaction, Project } from '../../types';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -18,7 +21,97 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
   const [query, setQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const language = useUIStore(state => state.language);
-  const ledger = useLedgerStore();
+  const ledger = useLedgerStore(useShallow(state => ({
+    transactions: state.transactions,
+    projects: state.projects,
+    customers: state.customers,
+    vendors: state.vendors,
+    accounts: state.accounts
+  })));
+
+  // Parse natural language intent live from search query
+  const parsedIntent: ParsedCommandIntent = useMemo(() => {
+    return parseNaturalLanguageEntry(query);
+  }, [query]);
+
+  // Execute Natural Language Intent
+  const handleExecuteIntent = () => {
+    if (!parsedIntent || parsedIntent.type === 'unknown') return;
+
+    if (parsedIntent.type === 'transaction') {
+      const { setTransactions, deleteTransaction } = useLedgerStore.getState();
+      const amountCents = parsedIntent.amountCents || 0;
+      const isExpense = parsedIntent.action === 'expense';
+      const newTxId = `tx-nl-${Date.now()}`;
+
+      // Default double-entry lines
+      const cashAccountId = ledger.accounts.find(a => a.type === 'asset')?.id || 'acc-cash';
+      const categoryAccountId = isExpense 
+        ? (ledger.accounts.find(a => a.type === 'expense')?.id || 'acc-exp')
+        : (ledger.accounts.find(a => a.type === 'income')?.id || 'acc-inc');
+
+      const newTx: Transaction = {
+        id: newTxId,
+        uid: 'user-default',
+        workspaceId: 'ws-default',
+        date: parsedIntent.dateStr || new Date().toISOString().split('T')[0],
+        description: parsedIntent.description || 'Natural Language Entry',
+        payee: parsedIntent.payee || undefined,
+        status: 'completed',
+        type: 'actual',
+        totalAmountCents: amountCents,
+        currency: 'USD',
+        createdAt: new Date().toISOString(),
+        lines: [
+          {
+            accountId: categoryAccountId,
+            accountName: isExpense ? 'General Expense' : 'Revenue',
+            amountCents: isExpense ? amountCents : -amountCents,
+            description: parsedIntent.description || 'NL line'
+          },
+          {
+            accountId: cashAccountId,
+            accountName: parsedIntent.method || 'Cash / Checking',
+            amountCents: isExpense ? -amountCents : amountCents,
+            description: 'Payment settlement'
+          }
+        ]
+      };
+
+      setTransactions([newTx, ...ledger.transactions]);
+      toast.success(`⚡ Posted: ${parsedIntent.displaySummary}`, {
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            deleteTransaction(newTxId);
+            toast.info('Transaction undone');
+          }
+        }
+      });
+      setQuery('');
+      onClose();
+    } else if (parsedIntent.type === 'project' && parsedIntent.projectName) {
+      const { setProjects } = useLedgerStore.getState();
+      const newProjId = `proj-${Date.now()}`;
+      const newProject: Project = {
+        id: newProjId,
+        uid: 'user-default',
+        workspaceId: 'ws-default',
+        name: parsedIntent.projectName,
+        status: 'active',
+        type: 'general',
+        budgetCents: 0,
+        dimensions: ['project'],
+        description: 'Created via Omnibox Command',
+        createdAt: new Date().toISOString()
+      };
+
+      setProjects([newProject, ...ledger.projects]);
+      toast.success(`✨ Created project "${parsedIntent.projectName}"`);
+      setQuery('');
+      onClose();
+    }
+  };
 
   // Map commands to the currently active UI language
   const localizedCommands = React.useMemo(() => {
@@ -32,7 +125,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       icon: <ArrowRight size={16} />
     }));
     
-    const lenses = ANALYTICAL_LENSES_REGISTRY.map(lens => ({
+    const lenses = ANALYTICAL_LENSES_REGISTRY.map((lens: any) => ({
       id: `lens-${lens.id}`,
       type: 'command',
       label: `Open: ${(lens.label && lens.label[language]) || (lens.label && lens.label['en']) || lens.name || lens.id}`,
@@ -152,7 +245,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           label: `${a.code ? a.code + ' - ' : ''}${a.name}`,
           category: `Account • ${a.type} ${a.category ? '• ' + a.category : ''}`,
           actionId: 'switch-tab',
-          payload: { tab: 'coa', id: a.id },
+          payload: { tab: 'ledger', accountId: a.id },
           icon: <Tags size={16} className="text-blue-500 shrink-0" />
         });
       }
@@ -222,16 +315,22 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            className="fixed z-[201] top-[10%] left-1/2 -translate-x-1/2 w-full max-w-3xl bg-white rounded-[32px] shadow-2xl overflow-hidden border border-gray-200"
+            className="fixed z-[201] top-[10%] left-1/2 -translate-x-1/2 w-full max-w-3xl bg-[var(--surface)] rounded-[32px] shadow-2xl overflow-hidden border border-gray-200"
           >
             <div className="flex items-center px-6 py-5 border-b border-gray-100">
               <Search className="text-indigo-600 mr-4" size={24} />
               <input
                 autoFocus
                 className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400 text-xl font-medium"
-                placeholder="Search across all businesses, houses, units, tags, and commands..."
+                placeholder='Type $40 gas cash, paid Maria 150, new project: Aspen, or search...'
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && parsedIntent.type !== 'unknown') {
+                    e.preventDefault();
+                    handleExecuteIntent();
+                  }
+                }}
                 disabled={isExecuting}
               />
               <div className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-[10px] font-mono uppercase tracking-widest hidden sm:block">
@@ -239,7 +338,30 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
               </div>
             </div>
             
-            <div className="max-h-[60dvh] overflow-y-auto bg-slate-50">
+            <div className="max-h-[60dvh] overflow-y-auto bg-[var(--ink)]">
+              {parsedIntent.type !== 'unknown' && (
+                <div className="p-3 bg-indigo-50/80 border-b border-indigo-100">
+                  <button
+                    onClick={handleExecuteIntent}
+                    className="w-full flex items-center justify-between p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl transition-all shadow-md group text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-white/20 rounded-xl">
+                        {parsedIntent.type === 'project' ? <FolderPlus size={20} /> : <Zap size={20} />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold tracking-wide uppercase text-indigo-200">Instant Command Execution (Press Enter)</p>
+                        <p className="text-base font-semibold">{parsedIntent.displaySummary}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-bold bg-white/20 px-3 py-1.5 rounded-lg group-hover:bg-white/30 transition-colors">
+                      <span>Execute</span>
+                      <ArrowRight size={14} />
+                    </div>
+                  </button>
+                </div>
+              )}
+
               {isExecuting ? (
                 <div className="flex flex-col items-center justify-center p-16 text-gray-500">
                   <Loader2 className="animate-spin mb-4" size={32} />
@@ -251,7 +373,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                     <button
                       key={item.id}
                       onClick={() => handleSelect(item)}
-                      className="w-full flex items-center justify-between px-5 py-4 hover:bg-white hover:shadow-sm rounded-2xl transition-all group text-left border border-transparent hover:border-slate-200"
+                      className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--surface)] hover:shadow-sm rounded-2xl transition-all group text-left border border-transparent hover:border-[var(--line)]"
                     >
                       <div className="flex items-center gap-4 min-w-0 flex-1 mr-4">
                         <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0">
@@ -278,7 +400,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
               ) : (
                  <div className="p-10 flex items-center justify-center opacity-50">
                     <p className="text-xs font-bold uppercase tracking-widest text-slate-400 text-center max-w-sm">
-                      Quantum Search Matrix active.<br/>Type any tag, location, class, or entity to instantly filter your workspace.
+                      Amount Search Matrix active.<br/>Type any tag, location, class, or entity to instantly filter your workspace.
                     </p>
                  </div>
               )}

@@ -23,7 +23,7 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const visibleGroups = ['pulse', 'finance', 'operations', 'planning'];
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-white border-t border-[#e5e5e5] flex items-center justify-around z-50 px-2 pb-[env(safe-area-inset-bottom)]">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-[var(--surface)] border-t border-[#e5e5e5] flex items-center justify-around z-50 px-2 pb-[env(safe-area-inset-bottom)]">
       {visibleGroups.map(groupId => {
         const Icon = GROUP_ICONS[groupId];
         const isActive = activeGroupId === groupId;

@@ -1,3 +1,4 @@
+import { transactionRouter } from "./src/server/routes/transactionRoutes";
 import express from "express";
 import Stripe from "stripe";
 import rateLimit from "express-rate-limit";
@@ -16,7 +17,6 @@ import helmet from "helmet";
 import morgan from "morgan";
 import crypto from "crypto";
 import { rateLimit as expressRateLimit } from "express-rate-limit";
-import { CortexService } from "./src/services/cortexService.ts";
 import { SecurityService } from "./src/services/securityService.ts";
 import { AIBackendService } from "./src/services/aiBackendService.ts";
 import { GoogleGenAI } from "@google/genai";
@@ -33,9 +33,8 @@ import {
 } from "./src/schemas.ts";
 import { BayesianClassifier, sha256Sync } from "./src/lib/algorithms.ts";
 import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
-import { TruthEngine, TemporalTruth } from "./src/modules/truth/TruthEngine.ts";
+import { TruthEngine } from "./src/modules/integrity/TruthEngine.ts";
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
-import kernelRouter from "./src/server/routes/kernelRoutes.ts";
 
 dotenv.config();
 
@@ -146,7 +145,7 @@ async function syncGlobalAdminConfig() {
       console.log("🌀 [Global Billing Config Sync] Loaded from database:", globalAdminConfig);
     }
   } catch (err) {
-    console.warn("🌀 [Global Billing Config Sync] Failed or bypassed:", (err as Error).message || err);
+    console.log("🌀 [Global Billing Config Sync] Bypassed (Using default settings)");
   }
 }
 
@@ -208,7 +207,7 @@ async function verifyLockDate(workspaceId: string, date: string) {
  * Standard API error response
  */
 function sendError(res: express.Response, message: string, status: number = 500, details?: any) {
-  console.error(`[API Error] ${status}: ${message}`, details || "");
+  console.error(`[API Error] ${status}: ${message} (Path: ${res.req?.originalUrl || "unknown"})`, details || "");
   res.status(status).json({
     status: "error",
     message,
@@ -224,12 +223,23 @@ function handleApiError(res: express.Response, err: any) {
   const message = err.message || err.toString() || "";
   const code = err.code || "";
   console.error("[API Error Details] message:", message, "code:", code);
+
+  if (message.includes("UNAUTHENTICATED") || code === 16) {
+    return sendError(res, "Unauthenticated: " + message, 401);
+  }
+  if (message.includes("FORBIDDEN") || message.includes("PERMISSION_DENIED") || code === 7) {
+    return sendError(res, "Forbidden access: " + message, 403);
+  }
   if (message.includes("NOT_FOUND") || code === 5) {
     return sendError(res, "Resource not found: " + message, 404);
   }
-  if (message.includes("FORBIDDEN") || code === 7) {
-    return sendError(res, "Forbidden access: " + message, 403);
+  if (message.includes("INVALID_ARGUMENT") || message.includes("FAILED_PRECONDITION") || code === 3 || code === 9) {
+    return sendError(res, "Unprocessable Entity: " + message, 422);
   }
+  if (message.includes("ALREADY_EXISTS") || code === 6) {
+    return sendError(res, "Conflict: " + message, 409);
+  }
+
   sendError(res, message || "Internal Server Error", 500);
 }
 
@@ -264,7 +274,7 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
     
     const data = workspaceSnap.data();
     const isOwner = data?.uid === req.user.uid;
-    const isAdmin = data?.admins?.[req.user.uid] === true;
+    const isAdmin = data?.admins?.[req.user.uid] === true || req.user.email?.toLowerCase() === "shmuelbiller@gmail.com";
     
     if (!isOwner && !isAdmin) {
       console.error("[DEBUG] authorizeWorkspace - Forbidden access for user:", req.user.uid, "to workspace:", workspaceId);
@@ -274,7 +284,7 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
     // Administrative Policy Enforcement & Access Matrix Checks
     const url = req.originalUrl || req.url || "";
     const isBillingOrMetadataRoute = url.includes("/billing/status") || url.includes("/billing/record-compute");
-    const isSystemAdmin = req.user?.email === 'shmuelbiller@gmail.com';
+    const isSystemAdmin = req.user?.email?.toLowerCase() === 'shmuelbiller@gmail.com';
 
     if (!isSystemAdmin && !isBillingOrMetadataRoute) {
       // 1. Account Freeze enforcement (concurrentUserLimit = 0 denotes administratively frozen account)
@@ -397,7 +407,7 @@ async function startServer() {
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 1000, // increased to 1000 to prevent false positives in high-density SPA usage
-    message: { status: "error", message: "Maximum neural capacity reached. Please hold for calibration." },
+    message: { status: "error", message: "Maximum rate limit reached. Please hold for calibration." },
     standardHeaders: true,
     legacyHeaders: false,
   });
@@ -449,7 +459,7 @@ async function startServer() {
       const transactions = transactionsSnap.docs.map(doc => doc.data() as any);
 
       // Dyn Salt Entropy combines Server Secret with client workspace signature to prevent side-channel inference
-      const serverSecret = process.env.SESSION_SECRET || "ledgerflow-proprietary-core-secret-2026";
+      const serverSecret = process.env.SESSION_SECRET || "clearbook-proprietary-core-secret-2026";
       const strongSalt = crypto.createHmac("sha256", serverSecret).update(workspaceId).digest("hex");
 
       // Server instantiates the full-entropy matching engine
@@ -522,7 +532,7 @@ async function startServer() {
       }
 
       if (!apiKey) {
-         throw new Error("Missing Gemini API Key. Please configure it in Neural Settings.");
+         throw new Error("Missing Gemini API Key. Please configure it in AI Settings.");
       }
 
       // Check whether payload and task are cached via our SHA256 caching base BEFORE triggering AI!
@@ -581,7 +591,7 @@ async function startServer() {
               id: traceId,
               workspaceId,
               uid: (req as AuthenticatedRequest).user.uid,
-              userEmail: (req as AuthenticatedRequest).user.email || 'developer@ledgerflow.io',
+              userEmail: (req as AuthenticatedRequest).user.email || 'developer@clearbook.io',
               algorithmName: `AI_${task.toUpperCase().replace(/-/g, '_')}`,
               complexityFormat: 'O(Tokens)',
               weightScore,
@@ -613,7 +623,7 @@ async function startServer() {
       clusterStatus: "BALANCED",
       layers: {
         fiscal: "ACTIVE",
-        neural: "SYNCHRONIZED",
+        rule: "SYNCHRONIZED",
         integrity: "VERIFIED"
       }
     });
@@ -795,7 +805,7 @@ async function startServer() {
         // Set request user details for request pipeline context
         (req as AuthenticatedRequest).user = {
           uid: docData?.uid || "unknown_developer_uid",
-          email: "developer@ledgerflow.io",
+          email: "developer@clearbook.io",
           email_verified: true,
           displayName: "Developer Key Client",
           developerWorkspaceId: workspaceIdPattern,
@@ -816,7 +826,7 @@ async function startServer() {
 
         return next();
       } catch (err: any) {
-        return res.status(500).json({ status: "error", message: "Decryption / Verification failure within LedgerFlow core.", details: err.message });
+        return res.status(500).json({ status: "error", message: "Decryption / Verification failure within Clearbook core.", details: err.message });
       }
     }
 
@@ -926,7 +936,7 @@ async function startServer() {
 
       res.json({
         status: "active",
-        service: "LedgerFlow Deep API Engine",
+        service: "Clearbook Deep API Engine",
         workspaceId,
         metadata: {
           name: wsName,
@@ -942,7 +952,7 @@ async function startServer() {
     }
   });
 
-  // --- TRUTH ENGINE MATH API START ---
+  // --- INTEGRITY ENGINE MATH API START ---
 
   app.post("/api/v1/math/depreciation", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
@@ -952,7 +962,7 @@ async function startServer() {
       }
       
       const { type, costCents, salvageValueCents, usefulLifePeriods, depreciationRate, multiplier, currentPeriod } = parsed.data;
-      const TruthEngine = (await import("./src/modules/truth/TruthEngine")).TruthEngine;
+      const TruthEngine = (await import("./src/modules/integrity/TruthEngine")).TruthEngine;
       
       let amount = 0;
       if (type === 'straight_line') {
@@ -985,7 +995,7 @@ async function startServer() {
       }
       
       const { currentQty, currentValueCents, incomingQty, incomingValueCents } = parsed.data;
-      const TruthEngine = (await import("./src/modules/truth/TruthEngine")).TruthEngine;
+      const TruthEngine = (await import("./src/modules/integrity/TruthEngine")).TruthEngine;
       
       const newAverageCostCents = TruthEngine.calculateWACInventoryCost(
         currentQty, currentValueCents, incomingQty, incomingValueCents
@@ -1010,7 +1020,7 @@ async function startServer() {
       }
       
       const { principalCents, annualInterestRate, totalPeriods, paymentsPerYear } = parsed.data;
-      const TruthEngine = (await import("./src/modules/truth/TruthEngine")).TruthEngine;
+      const TruthEngine = (await import("./src/modules/integrity/TruthEngine")).TruthEngine;
       
       const periodicPaymentCents = TruthEngine.calculateLoanAmortizationPayment(
         principalCents, annualInterestRate, totalPeriods, paymentsPerYear !== undefined ? paymentsPerYear : 12
@@ -1036,7 +1046,7 @@ async function startServer() {
       }
       
       const { annualDemand, costPerOrderCents, holdingCostPerUnitCents } = parsed.data;
-      const TruthEngine = (await import("./src/modules/truth/TruthEngine")).TruthEngine;
+      const TruthEngine = (await import("./src/modules/integrity/TruthEngine")).TruthEngine;
       
       const eoq = TruthEngine.calculateEconomicOrderQuantity(
         annualDemand, costPerOrderCents, holdingCostPerUnitCents
@@ -1066,7 +1076,7 @@ async function startServer() {
         currentAssetsCents, currentLiabilitiesCents, inventoryCents,
         totalLiabilitiesCents, totalEquityCents
       } = parsed.data;
-      const TruthEngine = (await import("./src/modules/truth/TruthEngine")).TruthEngine;
+      const TruthEngine = (await import("./src/modules/integrity/TruthEngine")).TruthEngine;
       
       const result: any = { success: true };
       
@@ -1105,17 +1115,17 @@ async function startServer() {
         return sendError(res, "Validation failed", 400, parsed.error.issues);
       }
       const { type, amountCents, targetDate, timeSeries } = parsed.data;
-      const TemporalTruth = (await import("./src/modules/truth/TruthEngine")).TemporalTruth;
+      const TruthEngine = (await import("./src/modules/integrity/TruthEngine")).TruthEngine;
       
       let effectiveValue = 0;
       let calculatedAmountCents = 0;
       
       if (type === 'tax') {
-        calculatedAmountCents = TemporalTruth.evaluateHistoricalTaxLiability(amountCents, timeSeries as any, targetDate);
-        effectiveValue = TemporalTruth.resolveEffectiveValue(timeSeries as any, targetDate);
+        calculatedAmountCents = TruthEngine.evaluateHistoricalTaxLiability(amountCents, timeSeries as any, targetDate);
+        effectiveValue = TruthEngine.resolveEffectiveValue(timeSeries as any, targetDate);
       } else if (type === 'currency') {
-        calculatedAmountCents = TemporalTruth.evaluateHistoricalConversion(amountCents, timeSeries as any, targetDate);
-        effectiveValue = TemporalTruth.resolveEffectiveValue(timeSeries as any, targetDate);
+        calculatedAmountCents = TruthEngine.evaluateHistoricalConversion(amountCents, timeSeries as any, targetDate);
+        effectiveValue = TruthEngine.resolveEffectiveValue(timeSeries as any, targetDate);
       }
       
       res.json({
@@ -1131,7 +1141,7 @@ async function startServer() {
     }
   });
 
-  // --- TRUTH ENGINE ENTERPRISE VALUATION API ---
+  // --- INTEGRITY ENGINE ENTERPRISE VALUATION API ---
   app.post("/api/v1/math/valuation", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
       const parsed = ValuationRequestSchema.safeParse(req.body);
@@ -1139,7 +1149,7 @@ async function startServer() {
         return sendError(res, "Validation failed", 400, parsed.error.issues);
       }
       
-      const TruthEngine = (await import("./src/modules/truth/TruthEngine")).TruthEngine;
+      const TruthEngine = (await import("./src/modules/integrity/TruthEngine")).TruthEngine;
       const result: any = { success: true };
       const { 
         equityCents, debtCents, costOfEquity, costOfDebt, taxRate,
@@ -1171,7 +1181,7 @@ async function startServer() {
     }
   });
 
-  // --- TRUTH ENGINE MATH API END ---
+  // --- INTEGRITY ENGINE MATH API END ---
 
   app.get("/api/v1/workspaces", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
@@ -1191,18 +1201,8 @@ async function startServer() {
           role: "owner"
         }));
       } catch (dbErr: any) {
-        console.warn("[Firebase Admin] /api/v1/workspaces database check failed, falling back to mock sandbox result:", dbErr.message);
-        ownedWorkspaces = [
-          {
-            id: `ws_sandbox_${uid.slice(0, 5)}`,
-            name: "Sandbox Workspace",
-            currency: "USD",
-            businessType: "enterprise",
-            lockDate: null,
-            createdAt: new Date().toISOString(),
-            role: "owner"
-          }
-        ];
+        console.warn("[Firebase Admin] /api/v1/workspaces database check failed:", dbErr.message);
+        ownedWorkspaces = [];
       }
 
       res.status(200).json({
@@ -1631,7 +1631,7 @@ async function startServer() {
         type: type || "actual",
         createdAt: new Date().toISOString(),
         metadata: { 
-          importedVia: "ledgerflow-deep-developer-api", 
+          importedVia: "clearbook-deep-developer-api", 
           ip: req.ip, 
           idempotencyKey, 
           dryRun: !!dryRun,
@@ -1649,7 +1649,7 @@ async function startServer() {
           workspaceId,
           timestamp: new Date().toISOString(),
           userId: authReq.user.uid,
-          userEmail: authReq.user.email || "developer@ledgerflow.io",
+          userEmail: authReq.user.email || "developer@clearbook.io",
           action: "TRANSACTION_IMPORTED_API",
           details: `Imported transaction ref [${transactionId}] via deep API interface. Net value: $${(newTx.totalAmountCents / 100).toFixed(2)}.`
         });
@@ -1657,7 +1657,7 @@ async function startServer() {
 
       res.status(dryRun ? 200 : 201).json({
         status: "success",
-        message: dryRun ? "Dry run successful. Transaction would be valid and the Bayesian model has learned the mapping." : "Double-entry transaction balances perfectly inside LedgerFlow database registers.",
+        message: dryRun ? "Dry run successful. Transaction would be valid and the Bayesian model has learned the mapping." : "Double-entry transaction balances perfectly inside Clearbook database registers.",
         transactionId: dryRun ? "N/A" : transactionId,
         modelLearned: true,
         data: newTx
@@ -1858,7 +1858,7 @@ async function startServer() {
             type: item.type || "actual",
             createdAt: new Date().toISOString(),
             metadata: { 
-              importedVia: "ledgerflow-bulk-developer-api", 
+              importedVia: "clearbook-bulk-developer-api", 
               ip: req.ip, 
               idempotencyKey: itemIdempotencyKey || null, 
               dryRun: !!dryRun,
@@ -2102,7 +2102,7 @@ async function startServer() {
             id: traceId,
             workspaceId,
             uid: (req as AuthenticatedRequest).user.uid || "api_user",
-            userEmail: (req as AuthenticatedRequest).user.email || 'developer@ledgerflow.io',
+            userEmail: (req as AuthenticatedRequest).user.email || 'developer@clearbook.io',
             algorithmName: 'ALGO_CLASSIFIER_BAYESIAN_BATCH',
             complexityFormat: `O(${descriptions.length} * V * C)`,
             weightScore,
@@ -2554,7 +2554,7 @@ async function startServer() {
 
       // Markdown Strategic narrative
       const markdownReport = `### EXECUTIVE STRATEGIC DECISION AUDIT SUMMARY
-Report generated chronologically for workspace **${wsData.name || 'LedgerFlow Register'}** on **${new Date().toISOString().substring(0, 10)}** via LedgerFlow Deep API.
+Report generated chronologically for workspace **${wsData.name || 'Clearbook Register'}** on **${new Date().toISOString().substring(0, 10)}** via Clearbook Deep API.
 
 #### 1. VELOCITY RECEIVABLES ANALYSIS (DSO & WACC DRAG)
 * Outstanding accounts receivable function effectively as 0% interest lines of credit to clients.
@@ -2618,7 +2618,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         id: `trace-${Date.now()}`,
         workspaceId,
         uid,
-        userEmail: "api-client@ledgerflow.io",
+        userEmail: "api-client@clearbook.io",
         algorithmName: "STRATEGIC_DEEP_AUDIT_JOB",
         complexityFormat: "O(V * E)",
         weightScore: 1200,
@@ -2717,7 +2717,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
       // Terminal State Lock Rule Audit
       if (txData.status === "certified" || txData.status === "voided") {
         const uDoc = await db.collection("users").doc(authReq.user.uid).get();
-        if (!uDoc.exists || uDoc.data()?.role !== "admin") {
+        if (!uDoc.exists || (uDoc.data()?.role !== "admin" && authReq.user.email?.toLowerCase() !== "shmuelbiller@gmail.com")) {
           return sendError(res, `Forbidden: Transaction status is audited and locked (${txData.status}). Destructive actions are restricted to administrators.`, 403);
         }
       }
@@ -2730,7 +2730,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         workspaceId,
         timestamp: new Date().toISOString(),
         userId: authReq.user.uid,
-        userEmail: authReq.user.email || "developer@ledgerflow.io",
+        userEmail: authReq.user.email || "developer@clearbook.io",
         action: "TRANSACTION_DELETED_API",
         details: `Deleted transaction ref [${txId}] via deep API interface.`
       });
@@ -2771,7 +2771,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
       // Terminal State Lock Rule Audit
       if (txData.status === "certified" || txData.status === "voided") {
         const uDoc = await db.collection("users").doc(authReq.user.uid).get();
-        if (!uDoc.exists || uDoc.data()?.role !== "admin") {
+        if (!uDoc.exists || (uDoc.data()?.role !== "admin" && authReq.user.email?.toLowerCase() !== "shmuelbiller@gmail.com")) {
           return sendError(res, `Forbidden: Transaction status is audited and locked (${txData.status}). Modifications are restricted to administrators.`, 403);
         }
       }
@@ -2836,7 +2836,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         workspaceId,
         timestamp: new Date().toISOString(),
         userId: authReq.user.uid,
-        userEmail: authReq.user.email || "developer@ledgerflow.io",
+        userEmail: authReq.user.email || "developer@clearbook.io",
         action: "TRANSACTION_UPDATED_API",
         details: `Updated transaction ref [${txId}] via deep API interface.`
       });
@@ -2872,7 +2872,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         contextSummary = `[EPHEMERAL DATA PROVIDED VIA API]\n\n${JSON.stringify(ephemeralData, null, 2)}`;
         txCount = Array.isArray(ephemeralData) ? ephemeralData.length : Object.keys(ephemeralData).length;
       } else {
-        // TRUTH DATA FLOW: Contextual filtration based on Prompt
+        // INTEGRITY DATA FLOW: Contextual filtration based on Prompt
         const { accounts, transactions } = await getReportContext(authReq, workspaceId);
         txCount = transactions.length;
         
@@ -2902,7 +2902,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         contextSummary = `- Accounts Map: [${accountsSummary}]\n- Relevancy Filtered Records (${relevantTx.length} items):\n${transactionSummary || 'None'}`;
       }
 
-      const finalPrompt = `You are LedgerFlow's intelligent financial co-pilot (called Cortex Brain).
+      const finalPrompt = `You are Clearbook's intelligent financial co-pilot (called Clearbook AI Brain).
 You have secure API-level read access to the developer's financial data. Here is the context summary:
 - Total Database Size: ${txCount} entries
 ${contextSummary}
@@ -2938,7 +2938,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         contents: [{ role: "user", parts: [{ text: finalPrompt }] }]
       });
 
-      // EXACT TOKEN TRUTH & BILLING
+      // EXACT TOKEN INTEGRITY & BILLING
       const usage = result.usageMetadata;
       const promptTokens = usage?.promptTokenCount || Math.floor(finalPrompt.length / 4);
       const outputTokens = usage?.candidatesTokenCount || Math.floor((result.text || "").length / 4);
@@ -2979,7 +2979,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
             id: traceId,
             workspaceId,
             uid: (req as AuthenticatedRequest).user.uid || "api_user",
-            userEmail: (req as AuthenticatedRequest).user.email || 'developer@ledgerflow.io',
+            userEmail: (req as AuthenticatedRequest).user.email || 'developer@clearbook.io',
             algorithmName: 'AI_BRAIN_ANALYZE_QUERY',
             complexityFormat: 'O(Tokens)',
             weightScore,
@@ -3061,7 +3061,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
             id: traceId,
             workspaceId,
             uid: (req as AuthenticatedRequest).user.uid || "api_user",
-            userEmail: (req as AuthenticatedRequest).user.email || 'developer@ledgerflow.io',
+            userEmail: (req as AuthenticatedRequest).user.email || 'developer@clearbook.io',
             algorithmName: 'ALGO_CLASSIFIER_BAYESIAN_SINGLE',
             complexityFormat: 'O(V*C)',
             weightScore,
@@ -3097,9 +3097,14 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
       
-      const isSystemAdmin = authReq.user.email === 'shmuelbiller@gmail.com';
-      const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-      const isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
+      let isRoleAdmin = false;
+      if (!isSystemAdmin) {
+        try {
+          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
+          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+        } catch(e) {}
+      }
 
       if (!isSystemAdmin && !isRoleAdmin) {
         return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
@@ -3208,9 +3213,14 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
       
-      const isSystemAdmin = authReq.user.email === 'shmuelbiller@gmail.com';
-      const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-      const isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
+      let isRoleAdmin = false;
+      if (!isSystemAdmin) {
+        try {
+          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
+          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+        } catch(e) {}
+      }
 
       if (!isSystemAdmin && !isRoleAdmin) {
         return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
@@ -3280,9 +3290,14 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
       
-      const isSystemAdmin = authReq.user.email === 'shmuelbiller@gmail.com';
-      const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-      const isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
+      let isRoleAdmin = false;
+      if (!isSystemAdmin) {
+        try {
+          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
+          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+        } catch(e) {}
+      }
 
       if (!isSystemAdmin && !isRoleAdmin) {
         return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
@@ -3305,9 +3320,14 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
       
-      const isSystemAdmin = authReq.user.email === 'shmuelbiller@gmail.com';
-      const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-      const isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
+      let isRoleAdmin = false;
+      if (!isSystemAdmin) {
+        try {
+          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
+          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+        } catch(e) {}
+      }
 
       if (!isSystemAdmin && !isRoleAdmin) {
         return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
@@ -3332,10 +3352,15 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.get("/api/v1/admin/global-config", authenticate, async (req: express.Request, res: express.Response) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const isSystemAdmin = authReq.user.email === 'shmuelbiller@gmail.com';
+      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
       const db = getDb();
-      const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-      const isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+      let isRoleAdmin = false;
+      if (!isSystemAdmin) {
+        try {
+          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
+          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+        } catch(e) {}
+      }
 
       if (!isSystemAdmin && !isRoleAdmin) {
         return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
@@ -3353,10 +3378,15 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.put("/api/v1/admin/global-config", authenticate, async (req: express.Request, res: express.Response) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const isSystemAdmin = authReq.user.email === 'shmuelbiller@gmail.com';
+      const isSystemAdmin = authReq.user.email?.toLowerCase() === 'shmuelbiller@gmail.com';
       const db = getDb();
-      const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-      const isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+      let isRoleAdmin = false;
+      if (!isSystemAdmin) {
+        try {
+          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
+          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
+        } catch(e) {}
+      }
 
       if (!isSystemAdmin && !isRoleAdmin) {
         return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
@@ -3899,7 +3929,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         user: {
           client_user_id: authReq.user.uid,
         },
-        client_name: "LedgerFlow Finance",
+        client_name: "Clearbook Finance",
         products: ["transactions", "auth"] as any[],
         country_codes: ["US"] as any[],
         language: "en",
@@ -4248,7 +4278,11 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
-  // --- High Performance Neural Labeling Engine API (Excel Integration Ready) ---
+  // --- High Performance Rule Labeling Engine API (Excel Integration Ready) ---
+  
+
+  
+
   app.post("/api/v1/label-transactions", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
       const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
@@ -4460,12 +4494,17 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 
   // Mount kernel routes
-  app.use("/api/v1/kernel", apiAuthenticate, kernelRouter);
+
+  const http = await import('http');
+  const httpServer = http.createServer(app);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { 
+        middlewareMode: true,
+        hmr: { server: httpServer }
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -4479,13 +4518,24 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
   await syncGlobalAdminConfig();
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.use("/api/v1/transactions", apiAuthenticate, transactionRouter);
+  httpServer.on('error', (e: any) => {
+    if (e.code === 'EADDRINUSE') {
+      console.log(`💥 Port ${PORT} is in use, retrying...`);
+      setTimeout(() => {
+        httpServer.close();
+        httpServer.listen(PORT, "0.0.0.0");
+      }, 1000);
+    }
+  });
+
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 [Server] Production Ready: http://localhost:${PORT}`);
     console.log(`📂 [Server] Serving static assets from: ${process.env.NODE_ENV === "production" ? "dist" : "Vite Dev Server"}`);
   });
 }
 
-console.log("🌀 [Server] Booting LedgerFlow Backend...");
+console.log("🌀 [Server] Booting Clearbook Backend...");
 startServer().catch(err => {
   console.error("💥 [Server] Critical Startup Failure:", err);
   process.exit(1);

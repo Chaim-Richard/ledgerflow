@@ -1,6 +1,6 @@
 import { Transaction, ChartAccount, JournalEntry } from '../types';
 import { MerkleTree, MinHash, sha256Sync } from '../lib/algorithms';
-import { ZenithTelemetry } from '../lib/telemetry';
+import { PerformanceTelemetry } from '../lib/telemetry';
 
 export interface AuditResult {
   isBalanced: boolean;
@@ -25,7 +25,7 @@ export const DoubleEntryAuditor = {
     accounts: ChartAccount[], 
     journalEntries: JournalEntry[]
   ): AuditResult => {
-    ZenithTelemetry.start("DoubleEntryAuditor:auditLedger");
+    PerformanceTelemetry.start("DoubleEntryAuditor:auditLedger");
     let totalDebits = 0;
     let totalCredits = 0;
     const imbalances: AuditResult['imbalances'] = [];
@@ -37,7 +37,7 @@ export const DoubleEntryAuditor = {
     const minHash = new MinHash(64);
     const signatures: { id: string; sig: number[] }[] = [];
     
-    // Neural Hash Chain Verification
+    // Rule Hash Chain Verification
     let hashChainValid = true;
     let brokenChainIndex: number | null = null;
     
@@ -149,7 +149,7 @@ export const DoubleEntryAuditor = {
     // 3. Construct Merkle Root of Trust
     const tree = new MerkleTree(chronosTxs.map(t => t.verification?.hash || t.id));
 
-    ZenithTelemetry.end("DoubleEntryAuditor:auditLedger");
+    PerformanceTelemetry.end("DoubleEntryAuditor:auditLedger");
     return {
       isBalanced: Math.abs(totalDebits - totalCredits) < 1,
       totalDebits,

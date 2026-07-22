@@ -41,7 +41,11 @@ import { fetchSnapshotBridge, useSnapshotBridge } from "./useSnapshotBridge";
 
 
 export function useLedgerData() {
-  const { user, currentWorkspaceId, setWorkspaces, setCurrentWorkspaceId, setUserProfile } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const setWorkspaces = useAuthStore(s => s.setWorkspaces);
+  const setCurrentWorkspaceId = useAuthStore(s => s.setCurrentWorkspaceId);
+  const setUserProfile = useAuthStore(s => s.setUserProfile);
   useSnapshotBridge();
 
 
@@ -138,9 +142,9 @@ export function useLedgerData() {
         useLedgerStore.setState({
           runningBalances: {
             ...useLedgerStore.getState().runningBalances,
-            totalIncome: BigInt(data.totalIncome || 0),
-            totalExpense: BigInt(data.totalExpense || 0),
-            totalBalance: BigInt(data.totalBalance || 0)
+            totalIncome: Number(data.totalIncome || 0),
+            totalExpense: Number(data.totalExpense || 0),
+            totalBalance: Number(data.totalBalance || 0)
           }
         });
       }
@@ -188,7 +192,7 @@ export function useLedgerData() {
     };
 
     const criticalListeners = [
-      onSnapshot(query(collection(db, 'transactions'), ...filter, orderBy('date', 'desc'), limit(1000)), (snap) => {
+      onSnapshot(query(collection(db, 'transactions'), ...filter, orderBy('date', 'desc'), limit(5000)), (snap) => {
         scheduleUpdate('transactions', snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'transactions')),
       onSnapshot(query(collection(db, 'chartAccounts'), ...filter), (snap) => {
@@ -197,14 +201,14 @@ export function useLedgerData() {
       onSnapshot(query(collection(db, 'projects'), ...filter), (snap) => {
         scheduleUpdate('projects', snap.docs.map(d => ({ id: d.id, ...d.data() } as Project)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'projects')),
-      onSnapshot(query(collection(db, 'neuralPatterns'), ...filter), (snap) => {
+      onSnapshot(query(collection(db, 'rulePatterns'), ...filter), (snap) => {
         const cache: Record<string, any> = {};
         snap.docs.forEach(d => {
           const data = d.data();
           cache[(data.description || '').toLowerCase().trim()] = data;
         });
         useLedgerStore.getState().setAnalyticalPatternCache(cache);
-      }, (err) => handleFirestoreError(err, OperationType.LIST, 'neuralPatterns')),
+      }, (err) => handleFirestoreError(err, OperationType.LIST, 'rulePatterns')),
     ];
 
     let isCurrent = { active: true };

@@ -1,5 +1,5 @@
 import { Employee, TemporalValidity } from '../types';
-import { TemporalTruth } from '../modules/truth/TruthEngine';
+import { TruthEngine } from '../modules/integrity/TruthEngine';
 
 export interface PayPeriodBreakdown {
   grossPayCents: number;
@@ -165,13 +165,13 @@ export function getRegionalTaxConfig(stateCode: string = 'NY', targetDateStr: st
   return {
     stateCode: config.stateCode,
     stateName: config.stateName,
-    stateRate: TemporalTruth.resolveEffectiveValue(config.stateRateSeries, targetDateStr),
+    stateRate: TruthEngine.resolveEffectiveValue(config.stateRateSeries, targetDateStr),
     cityCode: config.cityCode,
     cityName: config.cityName,
-    cityRate: config.cityRateSeries ? TemporalTruth.resolveEffectiveValue(config.cityRateSeries, targetDateStr) : undefined,
+    cityRate: config.cityRateSeries ? TruthEngine.resolveEffectiveValue(config.cityRateSeries, targetDateStr) : undefined,
     countyCode: config.countyCode,
     countyName: config.countyName,
-    countyRate: config.countyRateSeries ? TemporalTruth.resolveEffectiveValue(config.countyRateSeries, targetDateStr) : undefined
+    countyRate: config.countyRateSeries ? TruthEngine.resolveEffectiveValue(config.countyRateSeries, targetDateStr) : undefined
   };
 }
 

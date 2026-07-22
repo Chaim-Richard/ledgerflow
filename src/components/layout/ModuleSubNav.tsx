@@ -10,7 +10,8 @@ interface ModuleSubNavProps {
 
 export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { user, userProfile } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const userProfile = useAuthStore(s => s.userProfile);
   
   useEffect(() => {
     if (scrollRef.current) {
@@ -30,7 +31,7 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
   if (groupTabs.length <= 1) return null;
 
   return (
-    <div className="bg-[#fafafa] border-b border-[#e5e5e5] px-4 sm:px-8 z-20">
+    <div className="bg-[var(--surface)] border-b border-[var(--line)] px-4 sm:px-6 z-20">
       <div 
         ref={scrollRef}
         className="flex overflow-x-auto no-scrollbar space-x-6 pt-3 -mb-px"
@@ -43,10 +44,10 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
               data-state={isActive ? 'active' : 'inactive'}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "pb-3 text-[13px] font-medium whitespace-nowrap transition-all border-b-2",
+                "pb-2.5 text-[13px] font-medium whitespace-nowrap transition-all border-b-2",
                 isActive 
-                  ? "border-black text-black" 
-                  : "border-transparent text-gray-500 hover:text-black hover:border-gray-300"
+                  ? "border-[var(--brass)] text-[var(--brass)] font-semibold" 
+                  : "border-transparent text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--line)]"
               )}
             >
               {tab.label.en}

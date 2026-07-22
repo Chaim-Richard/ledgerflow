@@ -14,7 +14,7 @@ export function useSituationTelemetry(
   transactions: Transaction[], 
   accounts: ChartAccount[], 
   projects: Project[],
-  metrics: any, // neuralMetrics
+  metrics: any, // ruleMetrics
   strategy: 'growth' | 'stability' | 'tax-optimization' | 'exit',
   stressConfig?: StressConfig
 ) {

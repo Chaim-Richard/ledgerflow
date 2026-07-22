@@ -214,13 +214,13 @@ export default function BlueprintSettings() {
   return (
     <div className="space-y-12">
       {/* 1. Global Accounting Controls */}
-      <div className="ledger-card p-4 md:p-10 bg-white border border-slate-200 shadow-sm space-y-10">
+      <div className="ledger-card p-4 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm space-y-10">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-12 h-12 bg-zinc-950 text-white rounded-[32px] flex items-center justify-center">
             <SlidersHorizontal size={22} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase tracking-widest">Base Ledger Variables</h3>
+            <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest">Base Ledger Variables</h3>
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Core Accounting Configurations</p>
           </div>
         </div>
@@ -228,14 +228,14 @@ export default function BlueprintSettings() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Base Currency Selector */}
           <div className="space-y-4">
-            <label className="text-xs font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
+            <label className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
               <Globe size={13} className="text-zinc-500" />
               Institutional Base Currency
             </label>
             <p className="text-[11px] text-slate-500 leading-relaxed">
               Standardize ledger currency codes across operational, forensic, and projection matrix layers.
             </p>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 bg-white p-1.5 rounded-[32px] border border-slate-200">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 bg-[var(--surface)] p-1.5 rounded-[32px] border border-[var(--line)]">
               {['USD', 'EUR', 'GBP', 'ILS', 'JPY', 'CAD'].map(curr => (
                 <button
                   key={curr}
@@ -244,7 +244,7 @@ export default function BlueprintSettings() {
                   className={`py-3 text-xs font-bold rounded-xl transition-all ${
                     baseCurrency === curr 
                       ? 'bg-zinc-950 text-white shadow-xs' 
-                      : 'hover:bg-zinc-100 text-slate-500 hover:text-slate-900'
+                      : 'hover:bg-zinc-100 text-slate-500 hover:text-[var(--text)]'
                   }`}
                 >
                   {curr}
@@ -255,7 +255,7 @@ export default function BlueprintSettings() {
 
           {/* Ledger Hard Period Lock */}
           <div className="space-y-4">
-            <label className="text-xs font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
+            <label className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
               <FolderLock size={13} className="text-zinc-500" />
               Accounting closing date
             </label>
@@ -268,7 +268,7 @@ export default function BlueprintSettings() {
                   type="date"
                   value={selectedLockDate}
                   onChange={(e) => setSelectedLockDate(e.target.value)}
-                  className="w-full bg-white hover:bg-zinc-50 border border-slate-200 focus:border-zinc-400 focus:outline-none p-3 pl-10 rounded-[32px] text-xs font-bold tracking-wider"
+                  className="w-full bg-[var(--surface)] hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3 pl-10 rounded-[32px] text-xs font-bold tracking-wider"
                 />
                 <Calendar size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
               </div>
@@ -286,14 +286,14 @@ export default function BlueprintSettings() {
       </div>
 
       {/* Ingestion Pipeline Mappings */}
-      <div className="ledger-card p-4 md:p-10 bg-white border border-slate-200 shadow-sm space-y-10 animate-fade-in">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+      <div className="ledger-card p-4 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm space-y-10 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--line)] pb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-zinc-900 text-white rounded-[32px] flex items-center justify-center shadow-lg shadow-zinc-900/10">
               <Zap size={20} className="text-amber-400" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase tracking-widest font-display">Neural Ingestion Architecture</h3>
+              <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest font-display">Rule Ingestion Architecture</h3>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Automated Accounts & Fallback Mappings</p>
             </div>
           </div>
@@ -325,8 +325,8 @@ export default function BlueprintSettings() {
         {/* Fallback Inputs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Debit Fallback (Expense) */}
-          <div className="space-y-3 p-6 bg-slate-50/50 rounded-[32px] border border-slate-200">
-            <label className="text-xs font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
+          <div className="space-y-3 p-6 bg-[var(--ink)]/50 rounded-[32px] border border-[var(--line)]">
+            <label className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               Debit Fallback Account (expense)
             </label>
@@ -336,15 +336,15 @@ export default function BlueprintSettings() {
             <select
               value={mappings['expense'] || ''}
               onChange={(e) => handleUpdateMappingField('expense', e.target.value)}
-              className="w-full bg-white border border-slate-200 focus:border-zinc-400 focus:outline-none p-3.5 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
+              className="w-full bg-[var(--surface)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3.5 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
             >
               {renderAccountOptions()}
             </select>
           </div>
 
           {/* Credit Fallback (Asset) */}
-          <div className="space-y-3 p-6 bg-slate-50/50 rounded-[32px] border border-slate-200">
-            <label className="text-xs font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
+          <div className="space-y-3 p-6 bg-[var(--ink)]/50 rounded-[32px] border border-[var(--line)]">
+            <label className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Credit Fallback Account (asset)
             </label>
@@ -354,7 +354,7 @@ export default function BlueprintSettings() {
             <select
               value={mappings['asset'] || ''}
               onChange={(e) => handleUpdateMappingField('asset', e.target.value)}
-              className="w-full bg-white border border-slate-200 focus:border-zinc-400 focus:outline-none p-3.5 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
+              className="w-full bg-[var(--surface)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3.5 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
             >
               {renderAccountOptions()}
             </select>
@@ -363,8 +363,8 @@ export default function BlueprintSettings() {
 
         {/* Category Specific Overrides */}
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
-            <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Category-Specific Routing Exclusions</h4>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--line)] pb-4">
+            <h4 className="text-xs font-black text-[var(--text)] uppercase tracking-widest">Category-Specific Routing Exclusions</h4>
             <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
               {Object.keys(mappings).filter(k => k !== 'expense' && k !== 'asset').length} rules registered
             </span>
@@ -377,14 +377,14 @@ export default function BlueprintSettings() {
                 const mappedAccountId = mappings[categoryKey];
                 const matchingAccount = accounts.find(a => a.id === mappedAccountId);
                 return (
-                  <div key={categoryKey} className="flex items-center justify-between gap-4 p-4 hover:bg-slate-50 border border-slate-200 rounded-[32px] transition-all">
+                  <div key={categoryKey} className="flex items-center justify-between gap-4 p-4 hover:bg-[var(--ink)] border border-[var(--line)] rounded-[32px] transition-all">
                     <div className="flex items-center gap-3">
-                      <div className="px-3 py-1.5 bg-zinc-100 text-zinc-800 rounded-xl text-[10px] font-bold uppercase tracking-wider font-mono">
+                      <div className="px-3 py-1.5 bg-zinc-100 text-[var(--text)] rounded-xl text-[10px] font-bold uppercase tracking-wider font-mono">
                         {categoryKey}
                       </div>
                       <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
                         <span>→</span>
-                        <span className="text-slate-800 font-display">
+                        <span className="text-[var(--text)] font-display">
                           {matchingAccount ? `${matchingAccount.name} (${matchingAccount.type.toUpperCase()})` : 'Unknown Account'}
                         </span>
                       </div>
@@ -410,7 +410,7 @@ export default function BlueprintSettings() {
           </div>
 
           {/* Add Option Form */}
-          <div className="pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+          <div className="pt-4 border-t border-[var(--line)] grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             <div className="space-y-2">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Category Name (Lower-Case Match)</label>
               <input
@@ -418,7 +418,7 @@ export default function BlueprintSettings() {
                 value={newCatName}
                 onChange={(e) => setNewCatName(e.target.value)}
                 placeholder="e.g. software, rent, utilities"
-                className="w-full bg-white hover:bg-zinc-50 border border-slate-200 focus:border-zinc-400 focus:outline-none p-3 rounded-[32px] text-xs font-bold tracking-wider"
+                className="w-full bg-[var(--surface)] hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3 rounded-[32px] text-xs font-bold tracking-wider"
               />
             </div>
             <div className="space-y-2">
@@ -426,7 +426,7 @@ export default function BlueprintSettings() {
               <select
                 value={newCatAccountId}
                 onChange={(e) => setNewCatAccountId(e.target.value)}
-                className="w-full bg-white hover:bg-zinc-50 border border-slate-200 focus:border-zinc-400 focus:outline-none p-3 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
+                className="w-full bg-[var(--surface)] hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
               >
                 {renderAccountOptions()}
               </select>
@@ -444,13 +444,13 @@ export default function BlueprintSettings() {
       </div>
 
       {/* 2. Visual Tab Visibility Controller */}
-      <div className="ledger-card p-4 md:p-10 bg-white border border-slate-200 shadow-sm space-y-8">
+      <div className="ledger-card p-4 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm space-y-8">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center shadow-lg shadow-indigo-600/15">
             <Eye size={22} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase tracking-widest font-display">Workflow Tab Architect</h3>
+            <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest font-display">Workflow Tab Architect</h3>
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Workspace Navigation Elasticity</p>
           </div>
         </div>
@@ -469,7 +469,7 @@ export default function BlueprintSettings() {
                 className={`p-5 rounded-[32px] border transition-all flex items-center justify-between cursor-pointer group ${
                   isHidden 
                     ? 'border-gray-200 bg-gray-50/50 text-slate-500 hover:border-gray-300' 
-                    : 'border-slate-200 hover:border-indigo-200 bg-white text-slate-900 shadow-xs'
+                    : 'border-[var(--line)] hover:border-indigo-200 bg-[var(--surface)] text-[var(--text)] shadow-xs'
                 }`}
               >
                 <div className="flex items-center gap-3.5">
@@ -481,7 +481,7 @@ export default function BlueprintSettings() {
                     {React.createElement(tab.icon, { size: 16 })}
                   </div>
                   <div className="text-left">
-                    <p className={`text-xs font-black uppercase tracking-wider ${isHidden ? 'line-through text-gray-400' : 'text-slate-900'}`}>
+                    <p className={`text-xs font-black uppercase tracking-wider ${isHidden ? 'line-through text-gray-400' : 'text-[var(--text)]'}`}>
                       {((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id}
                     </p>
                     <p className="text-[9px] text-gray-400 font-mono tracking-tight capitalize mt-0.5">{tab.groupId} module</p>
@@ -506,14 +506,14 @@ export default function BlueprintSettings() {
       </div>
 
       {/* 3. Text Glossary Customizer */}
-      <div className="ledger-card p-4 md:p-10 bg-white border border-slate-200 shadow-sm space-y-8">
+      <div className="ledger-card p-4 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-amber-600 text-white rounded-[32px] flex items-center justify-center shadow-lg shadow-amber-600/15">
               <Sliders size={22} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase tracking-widest">Aesthetic Nomenclature Registry</h3>
+              <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest">Aesthetic Nomenclature Registry</h3>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5 font-display">System-Wide Glossary Patch Engine</p>
             </div>
           </div>
@@ -524,7 +524,7 @@ export default function BlueprintSettings() {
               placeholder="Search labels..."
               value={lexiconSearch}
               onChange={(e) => setLexiconSearch(e.target.value)}
-              className="bg-white p-2.5 pl-9 pr-4 text-xs font-bold hover:bg-zinc-50 border border-slate-200 focus:border-zinc-400 focus:outline-none rounded-xl w-60 tracking-wider"
+              className="bg-[var(--surface)] p-2.5 pl-9 pr-4 text-xs font-bold hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none rounded-xl w-60 tracking-wider"
             />
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           </div>
@@ -534,14 +534,14 @@ export default function BlueprintSettings() {
           Quickly edit titles and descriptive terminology throughout the interface. To override labels permanently, modify words directly in the registry fields below.
         </p>
 
-        <div className="max-h-96 overflow-y-auto custom-scrollbar border border-slate-200 rounded-[32px] bg-white divide-y divide-ledger-line">
+        <div className="max-h-96 overflow-y-auto custom-scrollbar border border-[var(--line)] rounded-[32px] bg-[var(--surface)] divide-y divide-ledger-line">
           {filteredGlossary.map(key => {
             const hasOverride = !!lexiconOverrides[key];
             const isEditing = editingKey === key;
             const originalVal = SYSTEM_GLOSSARY[key];
 
             return (
-              <div key={key} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-zinc-50/50 transition-colors">
+              <div key={key} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-[var(--ink)]/50 transition-colors">
                 <div className="space-y-1.5 md:max-w-md">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-bold text-indigo-600 tracking-tight">{key}</span>
@@ -567,7 +567,7 @@ export default function BlueprintSettings() {
                         value={editValEn}
                         onChange={(e) => setEditValEn(e.target.value)}
                         placeholder="English Override..."
-                        className="p-2 border border-zinc-300 rounded-xl text-xs font-bold bg-white focus:outline-none min-w-[150px]"
+                        className="p-2 border border-zinc-300 rounded-xl text-xs font-bold bg-[var(--surface)] focus:outline-none min-w-[150px]"
                       />
                       {originalVal.he && (
                         <input
@@ -575,7 +575,7 @@ export default function BlueprintSettings() {
                           value={editValHe}
                           onChange={(e) => setEditValHe(e.target.value)}
                           placeholder="Hebrew Override..."
-                          className="p-2 border border-zinc-300 rounded-xl text-xs font-bold bg-white focus:outline-none min-w-[150px]"
+                          className="p-2 border border-zinc-300 rounded-xl text-xs font-bold bg-[var(--surface)] focus:outline-none min-w-[150px]"
                         />
                       )}
                       <button
@@ -594,7 +594,7 @@ export default function BlueprintSettings() {
                   ) : (
                     <button
                       onClick={() => startEditingGlossary(key)}
-                      className="px-4 py-2 border border-slate-200 hover:border-zinc-400 bg-white rounded-xl text-[10px] font-medium uppercase tracking-wider text-[#3d3d3d] transition-all"
+                      className="px-4 py-2 border border-[var(--line)] hover:border-zinc-400 bg-[var(--surface)] rounded-xl text-[10px] font-medium uppercase tracking-wider text-[#3d3d3d] transition-all"
                     >
                       Customize Override
                     </button>

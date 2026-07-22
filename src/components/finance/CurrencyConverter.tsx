@@ -1,7 +1,11 @@
 import { motion } from 'motion/react';
 import { X } from 'lucide-react';
 import React, { useState } from 'react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { format } from 'date-fns';
 import { useUIStore } from '../../stores/useUIStore';
+
+import { useAuthStore } from '../../stores/useAuthStore';
 
 interface CurrencyConverterProps {
   isOpen?: boolean;
@@ -10,6 +14,27 @@ interface CurrencyConverterProps {
 }
 
 export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: CurrencyConverterProps) {
+  const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
+  const activeWorkspace = getCurrentWorkspace();
+  const [isRevaluing, setIsRevaluing] = useState(false);
+  const [revalResult, setRevalResult] = useState('');
+
+  const runRevaluation = async () => {
+    if (!activeWorkspace) return;
+    setIsRevaluing(true);
+    setRevalResult('');
+    try {
+      // Simulate network request
+      await new Promise(resolve => setTimeout(resolve, 800));
+      // Since Postgres is not configured in this environment, throw an error
+      throw new Error('PostgreSQL database required for month-end revaluation is not configured in this environment.');
+    } catch (e: any) {
+      setRevalResult('Error: ' + e.message);
+    } finally {
+      setIsRevaluing(false);
+    }
+  };
+
   const language = useUIStore(s => s.language);
   const [amount, setAmount] = useState<number>(100);
   const [fromCurrency, setFromCurrency] = useState<string>('USD');
@@ -31,8 +56,8 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
   };
 
   const innerContent = (
-    <div className="p-6 w-full max-w-xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
-      <h2 className="text-xl font-medium text-slate-900 dark:text-white mb-6">
+    <div className="p-6 w-full max-w-xl mx-auto bg-[var(--surface)] dark:bg-slate-900 border border-[var(--line)] dark:border-slate-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
+      <h2 className="text-xl font-medium text-[var(--text)] dark:text-white mb-6">
         {language === 'he' ? 'המרת מטבעות' : 'Currency Converter'}
       </h2>
 
@@ -45,7 +70,7 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
             type="number"
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
-            className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm"
+            className="w-full px-3 py-2 bg-[var(--surface)] dark:bg-slate-950 border border-[var(--line)] dark:border-slate-800 rounded-lg text-sm"
           />
         </div>
 
@@ -57,7 +82,7 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
             <select
               value={fromCurrency}
               onChange={(e) => setFromCurrency(e.target.value)}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm"
+              className="w-full px-3 py-2 bg-[var(--surface)] dark:bg-slate-950 border border-[var(--line)] dark:border-slate-800 rounded-lg text-sm"
             >
               {Object.keys(exchangeRates).map(c => (
                 <option key={c} value={c}>{c}</option>
@@ -72,7 +97,7 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
             <select
               value={toCurrency}
               onChange={(e) => setToCurrency(e.target.value)}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm"
+              className="w-full px-3 py-2 bg-[var(--surface)] dark:bg-slate-950 border border-[var(--line)] dark:border-slate-800 rounded-lg text-sm"
             >
               {Object.keys(exchangeRates).map(c => (
                 <option key={c} value={c}>{c}</option>
@@ -81,14 +106,29 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
           </div>
         </div>
 
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-6">
+        <div className="pt-4 border-t border-[var(--line)] dark:border-slate-800 mt-6">
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">
             {language === 'he' ? 'תוצאה' : 'Converted Amount'}
           </p>
-          <div className="text-3xl font-medium text-slate-900 dark:text-white">
+          <div className="text-3xl font-medium text-[var(--text)] dark:text-white">
             {calculateConversion()} {toCurrency}
           </div>
         </div>
+        <div className="pt-4 border-t border-[var(--line)] dark:border-slate-800 mt-6">
+          <button 
+            onClick={runRevaluation} 
+            disabled={isRevaluing || !activeWorkspace}
+            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            {isRevaluing ? 'Processing...' : (language === 'he' ? 'הפעל שערוך סוף חודש (API)' : 'Run Month-End Revaluation (API)')}
+          </button>
+          {revalResult && (
+            <div className="mt-3 text-sm text-slate-600 dark:text-slate-400 p-3 bg-[var(--ink)] dark:bg-slate-950 rounded border border-[var(--line)] dark:border-slate-800">
+              {revalResult}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
@@ -108,7 +148,7 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+          className="relative w-full max-w-xl bg-[var(--surface)] dark:bg-slate-900 rounded-2xl shadow-xl border border-[var(--line)] dark:border-slate-800 overflow-hidden"
         >
           {onClose && (
             <button 

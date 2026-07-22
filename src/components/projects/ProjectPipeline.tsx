@@ -15,7 +15,7 @@ interface ProjectPipelineProps {
 type PipelineStage = 'planning' | 'in_progress' | 'review' | 'completed' | 'archived';
 
 const STAGES: { id: PipelineStage; label: string; icon: React.ElementType; color: string; borderColor: string }[] = [
-  { id: 'planning', label: 'Planning', icon: Target, color: 'bg-slate-100 text-slate-700', borderColor: 'border-slate-200' },
+  { id: 'planning', label: 'Planning', icon: Target, color: 'bg-slate-100 text-slate-700', borderColor: 'border-[var(--line)]' },
   { id: 'in_progress', label: 'In Progress', icon: PlayCircle, color: 'bg-indigo-100 text-indigo-700', borderColor: 'border-indigo-200' },
   { id: 'review', label: 'Review', icon: Clock, color: 'bg-amber-100 text-amber-700', borderColor: 'border-amber-200' },
   { id: 'completed', label: 'Completed', icon: CheckCircle, color: 'bg-emerald-100 text-emerald-700', borderColor: 'border-emerald-200' },
@@ -123,7 +123,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
             key={stage.id} 
             className={cn(
               "flex-1 min-w-[340px] max-w-[380px] flex flex-col h-full rounded-[32px] border p-4 transition-all duration-300 relative",
-              dragOverStage === stage.id ? "bg-slate-100 border-indigo-300 ring-4 ring-indigo-50" : "bg-slate-50/50 border-slate-200/60"
+              dragOverStage === stage.id ? "bg-slate-100 border-indigo-300 ring-4 ring-indigo-50" : "bg-[var(--ink)]/50 border-[var(--line)]/60"
             )}
             onDragOver={(e) => handleDragOver(e, stage.id)}
             onDragLeave={handleDragLeave}
@@ -136,7 +136,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
                   <stage.icon size={18} className="opacity-90" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 tracking-tight">{stage.label}</h3>
+                  <h3 className="font-bold text-[var(--text)] tracking-tight">{stage.label}</h3>
                   <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400 mt-0.5">{stageProjects.length} Projects</p>
                 </div>
               </div>
@@ -145,7 +145,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
             <div className="px-2 mb-4 space-y-1">
               <div className="flex justify-between items-end">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Budget</span>
-                <span className="font-mono font-black text-slate-800 tracking-tighter">{formatCurrency(totalBudget)}</span>
+                <span className="font-mono font-black text-[var(--text)] tracking-tighter">{formatCurrency(totalBudget)}</span>
               </div>
             </div>
 
@@ -167,23 +167,23 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     className={cn(
-                      "bg-white border rounded-[32px] p-5 cursor-grab active:cursor-grabbing hover:shadow-xl transition-all group relative overflow-hidden",
-                      draggedProjectId === project.id ? "opacity-50 border-slate-300 border-dashed" : "border-slate-200/80 shadow-sm hover:border-slate-300"
+                      "bg-[var(--surface)] border rounded-[32px] p-5 cursor-grab active:cursor-grabbing hover:shadow-xl transition-all group relative overflow-hidden",
+                      draggedProjectId === project.id ? "opacity-50 border-slate-300 border-dashed" : "border-[var(--line)]/80 shadow-sm hover:border-slate-300"
                     )}
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{project.type}</p>
-                        <h4 className="font-black text-slate-800 leading-tight">{project.name}</h4>
+                        <h4 className="font-black text-[var(--text)] leading-tight">{project.name}</h4>
                       </div>
                       <GripVertical size={14} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
 
-                    <div className="pt-4 border-t border-slate-100 space-y-3">
+                    <div className="pt-4 border-t border-[var(--line)] space-y-3">
                       <div className="flex items-end justify-between">
                         <div className="space-y-1">
                           <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Budget</p>
-                          <p className="text-xs font-bold text-slate-800 font-mono">
+                          <p className="text-xs font-bold text-[var(--text)] font-mono">
                             {formatCurrency(stats.budgetCents)}
                           </p>
                         </div>
@@ -217,7 +217,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
               {/* Empty state for the column */}
               {stageProjects.length === 0 && (
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center text-center opacity-40 w-full h-full pointer-events-none">
-                   <div className="w-12 h-12 bg-slate-100 rounded-[32px] border-2 border-slate-200 border-dashed flex items-center justify-center mb-3">
+                   <div className="w-12 h-12 bg-slate-100 rounded-[32px] border-2 border-[var(--line)] border-dashed flex items-center justify-center mb-3">
                      <stage.icon size={20} className="text-slate-400" />
                    </div>
                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Drop Here</p>

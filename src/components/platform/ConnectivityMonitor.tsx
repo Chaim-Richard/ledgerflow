@@ -6,7 +6,10 @@ import { onSnapshotsInSync } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 export default function ConnectivityMonitor() {
-  const { isOnline, setIsOnline, isSyncing, setIsSyncing } = useUIStore();
+  const isOnline = useUIStore(s => s.isOnline);
+  const setIsOnline = useUIStore(s => s.setIsOnline);
+  const isSyncing = useUIStore(s => s.isSyncing);
+  const setIsSyncing = useUIStore(s => s.setIsSyncing);
 
   useEffect(() => {
     // Real-time synchronization tracking via Firestore
@@ -18,7 +21,7 @@ export default function ConnectivityMonitor() {
 
     const handleOnline = () => {
       setIsOnline(true);
-      toast.success('Neural link established. Synchronizing...', {
+      toast.success('Rule link established. Synchronizing...', {
         icon: <Wifi className="text-emerald-500" size={16} />,
         duration: 3000
       });
@@ -48,7 +51,7 @@ export default function ConnectivityMonitor() {
         <div className="flex items-center gap-3 px-6 py-3 bg-rose-500 text-white rounded-full shadow-2xl border border-white/20">
           <WifiOff size={16} />
           <span className="text-xs font-medium uppercase tracking-wider">System Offline</span>
-          <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          <div className="w-1.5 h-1.5 rounded-full bg-[var(--surface)] animate-pulse" />
         </div>
       </div>
     );
@@ -59,7 +62,7 @@ export default function ConnectivityMonitor() {
       <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-4">
         <div className="flex items-center gap-3 px-6 py-3 bg-slate-900 text-white rounded-full shadow-2xl border border-white/10">
           <Loader2 size={16} className="animate-spin text-indigo-600" />
-          <span className="text-xs font-medium uppercase tracking-wider">Neural Syncing...</span>
+          <span className="text-xs font-medium uppercase tracking-wider">Rule Syncing...</span>
         </div>
       </div>
     );

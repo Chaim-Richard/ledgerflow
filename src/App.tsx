@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
-import { useZenithTrace } from './hooks/useZenithTrace';
+import { usePerformanceTrace } from './hooks/usePerformanceTrace';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, doc, addDoc, writeBatch, setDoc } from 'firebase/firestore';
@@ -23,13 +23,14 @@ import { useBillingStore } from './modules/billing/BillingService';
 import { AuthScreen } from './core/auth/AuthScreen';
 import { InitializationScreen } from './core/auth/InitializationScreen';
 import { RootLayout } from './core/layout/RootLayout';
-import { LedgerAutoAuditor } from './components/forensics/LedgerAutoAuditor';
+import { lazy, Suspense } from 'react';
+const LedgerAutoAuditor = lazy(() => import('./components/forensics/LedgerAutoAuditor').then(m => ({ default: m.LedgerAutoAuditor })));
 
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   const [isPending, startTransition] = useTransition();
-  useZenithTrace("App");
+  usePerformanceTrace("App");
 
   const [isInitializing, setIsInitializing] = useState(true);
   const user = useAuthStore(state => state.user);
@@ -180,9 +181,9 @@ const shortcutMap = useMemo(() => {
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
-    localStorage.removeItem('ledgerflow_use_sandbox_mode');
-    localStorage.removeItem('ledgerflow_identity_email');
-    localStorage.removeItem('ledgerflow_identity_name');
+    localStorage.removeItem('clearbook_use_sandbox_mode');
+    localStorage.removeItem('clearbook_identity_email');
+    localStorage.removeItem('clearbook_identity_name');
     
     try {
       await signInWithPopup(auth, provider);
@@ -196,9 +197,9 @@ const shortcutMap = useMemo(() => {
   };
 
   const handleEmailLogin = async (email: string, pass: string) => {
-    localStorage.removeItem('ledgerflow_use_sandbox_mode');
-    localStorage.removeItem('ledgerflow_identity_email');
-    localStorage.removeItem('ledgerflow_identity_name');
+    localStorage.removeItem('clearbook_use_sandbox_mode');
+    localStorage.removeItem('clearbook_identity_email');
+    localStorage.removeItem('clearbook_identity_name');
     
     try {
       await signInWithEmailAndPassword(auth, email, pass);
@@ -213,9 +214,9 @@ const shortcutMap = useMemo(() => {
   };
 
   const handleEmailSignup = async (email: string, pass: string) => {
-    localStorage.removeItem('ledgerflow_use_sandbox_mode');
-    localStorage.removeItem('ledgerflow_identity_email');
-    localStorage.removeItem('ledgerflow_identity_name');
+    localStorage.removeItem('clearbook_use_sandbox_mode');
+    localStorage.removeItem('clearbook_identity_email');
+    localStorage.removeItem('clearbook_identity_name');
     
     try {
       await createUserWithEmailAndPassword(auth, email, pass);
@@ -230,9 +231,9 @@ const shortcutMap = useMemo(() => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('ledgerflow_use_sandbox_mode');
-    localStorage.removeItem('ledgerflow_identity_email');
-    localStorage.removeItem('ledgerflow_identity_name');
+    localStorage.removeItem('clearbook_use_sandbox_mode');
+    localStorage.removeItem('clearbook_identity_email');
+    localStorage.removeItem('clearbook_identity_name');
     
     setUser(null);
     useLedgerStore.setState({ 
@@ -381,7 +382,7 @@ const shortcutMap = useMemo(() => {
 
       setTemplateSelectorOpen(false);
       
-      setActiveTab('ledger'); // Navigate to the Ledger/Chart of Accounts (the "Truth")
+      setActiveTab('ledger'); // Navigate to the Ledger/Chart of Accounts (the "Integrity")
       
       toast.success(`STRUCTURE TRANSGRESSED TO ${(template.name || 'UNKNOWN').toUpperCase()}`, { id: loader });
     } catch (e) {
@@ -450,7 +451,7 @@ const shortcutMap = useMemo(() => {
 
   return (
     <ErrorBoundary>
-      <div className="h-[100dvh] w-full bg-[#fbfbfc] overflow-hidden flex flex-col font-sans text-slate-900">
+      <div className="h-[100dvh] w-full bg-[var(--ink)] overflow-hidden flex flex-col font-sans text-[var(--text)]">
         <Toaster theme="light" position="top-right" expand={false} richColors closeButton className={isQuietMode ? 'opacity-0 pointer-events-none' : ''} />
         {/* Google-grade Progress Line */}
         {isPending && (
@@ -463,7 +464,7 @@ const shortcutMap = useMemo(() => {
               />
           </div>
         )}
-        <LedgerAutoAuditor />
+        <Suspense fallback={null}><LedgerAutoAuditor /></Suspense>
         <RootLayout 
           handleAction={handleAction} 
           coreSystemProps={coreSystemProps} 

@@ -13,6 +13,25 @@
   --color-ledger-error: #ef4444;
   --color-ledger-warning: #f59e0b;
 
+  /* Clearbook Theme */
+  --color-meridian-ink: var(--ink);
+  --color-meridian-surface: var(--surface);
+  --color-meridian-panel: var(--panel);
+  --color-meridian-elevated: var(--elevated);
+  --color-meridian-line: var(--line);
+  --color-meridian-text: var(--text);
+  --color-meridian-muted: var(--muted);
+  --color-meridian-faint: var(--faint);
+  --color-meridian-brass: var(--brass);
+  --color-meridian-brass-soft: var(--brass-soft);
+  --color-meridian-brass-line: var(--brass-line);
+  --color-meridian-pos: var(--pos);
+  --color-meridian-neg: var(--neg);
+  --color-w-personal: var(--w-personal);
+  --color-w-charity: var(--w-charity);
+  --color-w-book: var(--w-book);
+  --color-w-estate: var(--w-estate);
+
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
@@ -51,6 +70,25 @@
 }
 
 @layer base {
+  :root {
+    --ink: #0A1920; --surface: #0F242D; --panel: #122A33; --elevated: #173741;
+    --line: #20414B; --grid: rgba(120, 170, 175, 0.06);
+    --text: #DEE8E6; --muted: #87A0A2; --faint: #5E787C;
+    --brass: #D6A852; --brass-soft: rgba(214, 168, 82, 0.14); --brass-line: rgba(214, 168, 82, 0.4);
+    --pos: #49B67F; --neg: #DE6E52;
+    --w-personal: #6488AC; --w-charity: #63977B; --w-book: #9E7EBA; --w-estate: #BE7392;
+    color-scheme: dark;
+  }
+  .light {
+    --ink: #E7EDEB; --surface: #F4F8F7; --panel: #FFFFFF; --elevated: #FFFFFF;
+    --line: #D4DEDB; --grid: rgba(20, 60, 64, 0.05);
+    --text: #0E2229; --muted: #57706F; --faint: #8199A0;
+    --brass: #956613; --brass-soft: rgba(149, 102, 19, 0.10); --brass-line: rgba(149, 102, 19, 0.35);
+    --pos: #1E8A57; --neg: #C0503A;
+    --w-personal: #4E6E92; --w-charity: #3F7C5E; --w-book: #7E5DA0; --w-estate: #A5537A;
+    color-scheme: light;
+  }
+
   * {
     @apply transition-colors duration-150 outline-none;
   }
@@ -58,8 +96,12 @@
     @apply scroll-smooth;
   }
   body {
-    @apply bg-ledger-bg text-ledger-ink font-sans antialiased selection:bg-black selection:text-white overflow-hidden;
+    @apply bg-[var(--ink)] text-[var(--text)] font-sans antialiased selection:bg-[var(--brass)] selection:text-black;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 34px 34px;
     cursor: default;
   }
   button, a, [role="button"] {

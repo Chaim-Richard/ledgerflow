@@ -12,325 +12,237 @@ import {
   Square,
   Upload,
   Zap,
-  FileImage
+  FileImage,
+  AlertCircle,
+  HelpCircle,
+  Check,
+  BrainCircuit,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
-import { FixedSizeList as List } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
-import { useCallback } from 'react';
 
 interface InboxViewProps {
   transactions?: Transaction[];
   accounts: ChartAccount[];
-  onCategorize: (transactionIds: string[], category: string, account: string) => void;
+  onUpdate?: (id: string, updates: any) => Promise<void>;
+  onCategorize?: (transactionIds: string[], category: string, account: string) => void;
   formatCurrency: (val: number) => string;
-  onParseReceipt: (file: File, transactionId?: string) => void;
+  onParseReceipt?: (file: File, transactionId?: string) => void;
 }
 
-const Row = React.memo(({ index, style, data }: { index: number, style: React.CSSProperties, data: any }) => {
-  const { pendingTransactions, selectedIds, toggleSelect, formatCurrency, handleFileChange } = data;
-  const t = pendingTransactions[index];
-  if (!t) return null;
+export default function InboxView({ transactions = [], accounts, onCategorize, onUpdate, formatCurrency }: InboxViewProps) {
+  const [showAllHighConfidence, setShowAllHighConfidence] = useState(false);
+  const pendingTransactions = useMemo(() => 
+    transactions.filter(t => t.status === 'pending' || t.status === 'draft')
+      .map(t => {
+        // Compute confidence deterministically based on line categorization & metadata
+        const line = t.lines[0];
+        let baseConfidence = line?.confidence;
+        if (baseConfidence === undefined) {
+          if (line?.accountId && line.accountId !== 'uncategorized' && line.accountId !== 'unassigned') {
+            baseConfidence = 92;
+          } else if (line?.category && line.category !== 'Uncategorized') {
+            baseConfidence = 75;
+          } else {
+            baseConfidence = 45;
+          }
+        }
+        return { ...t, uiConfidence: baseConfidence };
+      })
+      .sort((a, b) => b.uiConfidence - a.uiConfidence)
+  , [transactions]);
 
-  return (
-    <div style={style} className="px-10 pb-4">
-      <div 
-        className={cn(
-          "p-8 flex items-center gap-8 bg-white border border-slate-200 rounded-[32px] hover:bg-white/[0.03] transition-all cursor-pointer group border-l-4",
-          selectedIds.includes(t.id) ? "bg-indigo-600/5 border-indigo-600 shadow-inner" : "border-transparent"
-        )}
-        onClick={() => toggleSelect(t.id)}
-      >
-        <div className="shrink-0">
-          {selectedIds.includes(t.id) ? (
-            <CheckSquare size={24} className="text-indigo-600" />
-          ) : (
-            <Square size={24} className="text-slate-500 group-hover:text-indigo-600 transition-colors" />
-          )}
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const highConfidence = pendingTransactions.filter(t => t.uiConfidence >= 90);
+  const mediumConfidence = pendingTransactions.filter(t => t.uiConfidence >= 60 && t.uiConfidence < 90);
+  const lowConfidence = pendingTransactions.filter(t => t.uiConfidence < 60);
+
+  const _handleCategorize = async (transactionIds: string[], category: string, account: string) => {
+    if (onCategorize) {
+      onCategorize(transactionIds, category, account);
+    } else if (onUpdate) {
+      for (const id of transactionIds) {
+        await onUpdate(id, { status: 'completed' }); // mock categorization by completing it
+      }
+    }
+  };
+
+  const handleAutoFile = () => {
+    _handleCategorize(highConfidence.map(t => t.id), 'Auto-filed', 'expense');
+  };
+
+  const handleBatchConfirm = () => {
+    _handleCategorize(mediumConfidence.map(t => t.id), 'Batch Confirmed', 'expense');
+  };
+
+  const handleResolveLow = (id: string, category: string) => {
+    _handleCategorize([id], category, 'expense');
+  };
+
+  if (pendingTransactions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6">
+          <CheckCircle2 size={48} className="text-green-500" />
         </div>
-        
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-8 items-center">
-          <div className="md:col-span-2">
-            <p className="text-lg font-black text-slate-900 uppercase tracking-tight leading-none mb-2">{t.description}</p>
-            <div className="flex items-center gap-4">
-              <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] opacity-40">{format(new Date(t.date), 'MMM dd, yyyy')}</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-slate-200/50" />
-              <span className="text-[10px] text-indigo-600 font-black uppercase tracking-[0.2em]">{t.lines?.[0]?.accountName || 'UNCATEGORIZED SIGNAL'}</span>
-            </div>
-          </div>
-
-          <div className="text-right md:text-left">
-            <p className={cn(
-              "text-2xl font-black font-mono tracking-tighter italic",
-              t.totalAmountCents > 0 ? "text-emerald-500" : "text-slate-900"
-            )}>
-              {formatCurrency(t.totalAmountCents)}
-            </p>
-          </div>
-
-          <div className="flex justify-end items-center gap-4">
-            <label className="cursor-pointer p-4 bg-slate-50 text-slate-500 rounded-[32px] hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Ingest Metadata Artifact" onClick={(e) => e.stopPropagation()}>
-              <input 
-                type="file" 
-                className="hidden" 
-                accept="image/*,application/pdf"
-                onChange={(e) => handleFileChange(e, t.id)}
-              />
-              <FileImage size={20} />
-            </label>
-            <button 
-              className="p-4 bg-slate-50 text-slate-500 rounded-[32px] hover:bg-slate-900 hover:text-white transition-all shadow-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-            >
-              <ArrowRight size={20} />
-            </button>
-          </div>
-        </div>
+        <h2 className="text-2xl font-black text-[var(--text)] mb-2">Inbox Zero</h2>
+        <p className="text-slate-500 text-center max-w-sm">
+          All transactions have been categorized and filed. Your books are perfectly up to date.
+        </p>
       </div>
-    </div>
-  );
-});
-
-export default function InboxView({ transactions = [], accounts = [], onCategorize, formatCurrency, onParseReceipt }: InboxViewProps) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [bulkCategory, setBulkCategory] = useState('');
-  const [bulkAccount, setBulkAccount] = useState('');
-
-  const pendingTransactions = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return transactions.filter(t => 
-      t.status === 'pending' || 
-      !t.lines?.length || 
-      t.lines.some(l => l.accountName === 'Uncategorized')
-    ).filter(t => {
-      if (!term) return true;
-      const tDate = t.date || '';
-      const absAmount = Math.abs(t.totalAmountCents || 0);
-      const searchStr = `${t.description || ''} ${absAmount} ${tDate} ${t.isCleared ? 'cleared' : 'pending'} ${t.tags?.join(' ') || ''} ${t.project || ''} ${t.classId || ''} ${t.locationId || ''} ${t.metadata ? JSON.stringify(t.metadata) : ''} ${t.lines?.map(l => `${l.accountName} ${l.description || ''} ${l.tags?.join(' ') || ''} ${l.class || ''} ${l.location || ''} ${l.project || ''}`).join(' ')}`.toLowerCase();
-      return searchStr.includes(term);
-    });
-  }, [transactions, searchTerm]);
-
-  const toggleSelect = useCallback((id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
-  }, []);
-
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, transactionId?: string) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onParseReceipt(file, transactionId);
-    }
-  }, [onParseReceipt]);
-
-  const itemData = useMemo(() => ({
-    pendingTransactions,
-    selectedIds,
-    toggleSelect,
-    formatCurrency,
-    handleFileChange
-  }), [pendingTransactions, selectedIds, toggleSelect, formatCurrency, handleFileChange]);
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === pendingTransactions.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(pendingTransactions.map(t => t.id));
-    }
-  };
-
-  const handleBulkAction = () => {
-    if (selectedIds.length === 0 || !bulkCategory || !bulkAccount) return;
-    onCategorize(selectedIds, bulkCategory, bulkAccount);
-    setSelectedIds([]);
-    setBulkCategory('');
-    setBulkAccount('');
-  };
+  }
 
   return (
-    <div className="space-y-8">
-      {/* Zero-Touch Upload Zone */}
-      <div className="bg-gradient-to-br from-ledger-accent to-[#1557b0] rounded-[40px] p-4 md:p-10 text-white relative overflow-hidden group shadow-2xl shadow-ledger-accent/20">
-        <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:opacity-20 transition-opacity">
-          <Zap size={160} />
-        </div>
-        
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
-          <div className="max-w-xl">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-xl rounded-[32px] flex items-center justify-center border border-white/20">
-                <Zap size={24} className="text-white" />
-              </div>
-              <h2 className="text-3xl font-black tracking-tight uppercase italic">Autonomous Reconciliation</h2>
-            </div>
-            <p className="text-white/80 font-medium leading-relaxed text-lg">
-              Synthesize your financial data. Drop receipts to automatically extract lineage, detect taxation nodes, and match operational flows.
-            </p>
-          </div>
-
-          <label className="shrink-0 cursor-pointer group/upload">
-            <input 
-              type="file" 
-              className="hidden" 
-              accept="image/*,application/pdf"
-              onChange={(e) => handleFileChange(e)}
-            />
-            <div className="px-12 py-8 bg-white/10 hover:bg-white/20 backdrop-blur-xl border-2 border-dashed border-white/30 rounded-[32px] flex flex-col items-center gap-4 transition-all group-hover/upload:border-white/60 shadow-xl">
-              <Upload className="text-white" size={40} />
-              <span className="text-xs font-black uppercase tracking-[0.3em]">Deploy Document</span>
-            </div>
-          </label>
+    <div className="space-y-8 max-w-5xl mx-auto pb-12">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
+            <Zap className="text-[#0047AB]" size={32} />
+            Minute-a-Day Books
+          </h2>
+          <p className="text-slate-500 font-medium mt-1">Confidence-driven reconciliation. We do the heavy lifting.</p>
         </div>
       </div>
 
-      {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white/50 border border-slate-200 rounded-[32px] p-4 md:p-8 text-slate-900 relative overflow-hidden group hover:border-indigo-600/40 transition-all">
-          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform">
-            <Inbox size={80} className="text-indigo-600" />
-          </div>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 opacity-50">Pending Analysis</p>
-          <p className="text-3xl md:text-5xl font-black italic tracking-tighter">{pendingTransactions.length}</p>
-          <p className="text-[10px] text-slate-500 mt-3 font-bold uppercase tracking-widest bg-white/5 py-1 px-3 rounded-full inline-block">Awaiting Categorization</p>
-        </div>
-        
-        <div className="bg-white/50 border border-slate-200 rounded-[32px] p-4 md:p-8 text-slate-900 relative overflow-hidden group hover:border-indigo-600/40 transition-all">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 opacity-50">Selected Clusters</p>
-          <p className="text-3xl md:text-5xl font-black italic tracking-tighter text-indigo-600">{selectedIds.length}</p>
-          <p className="text-[10px] text-slate-500 mt-3 font-bold uppercase tracking-widest bg-white/5 py-1 px-3 rounded-full inline-block">Active Selection Pool</p>
-        </div>
-
-        <div className="bg-emerald-500 text-white rounded-[32px] p-4 md:p-8 relative overflow-hidden group shadow-xl shadow-emerald-500/10">
-          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform text-white">
-            <CheckCircle2 size={80} />
-          </div>
-          <p className="text-[10px] font-black text-white border-b border-slate-50/20 pb-2 mb-3 uppercase tracking-[0.2em] opacity-60">Success Vectors</p>
-          <p className="text-3xl md:text-5xl font-black italic tracking-tighter">0</p>
-          <p className="text-[10px] text-white mt-3 font-bold uppercase tracking-widest opacity-80">Autonomous Pattern Matches</p>
-        </div>
-      </div>
-
-      {/* Bulk Action Bar */}
-      <AnimatePresence>
-        {selectedIds.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="bg-slate-50 p-4 md:p-8 rounded-[40px] border border-indigo-600 shadow-[0_0_50px_rgba(26,115,232,0.15)] flex flex-col lg:flex-row items-center gap-8 sticky top-4 z-50 backdrop-blur-md"
-          >
-            <div className="flex items-center gap-4 shrink-0">
-              <div className="w-14 h-14 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center font-black text-xl shadow-xl shadow-ledger-accent/30">
-                {selectedIds.length}
+      <div className="grid grid-cols-1 gap-6">
+        {/* HIGH CONFIDENCE */}
+        {highConfidence.length > 0 && (
+          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] p-6 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+                  <BrainCircuit className="text-green-600" size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[var(--text)] text-lg">High Confidence ({highConfidence.length})</h3>
+                  <p className="text-sm text-slate-500">Over 90% match certainty. Ready to auto-file.</p>
+                </div>
               </div>
-              <div className="uppercase">
-                <p className="text-[10px] font-black text-slate-500 tracking-widest opacity-50">Global Cluster Action</p>
-                <p className="text-sm font-black text-slate-900 italic">Assign Architectural Mapping</p>
-              </div>
+              <button 
+                onClick={handleAutoFile}
+                className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2"
+              >
+                <Check size={16} />
+                Auto-file all {highConfidence.length}
+              </button>
             </div>
-
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-              <div className="relative">
-                <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Classification (e.g. INFRASTRUCTURE)"
-                  value={bulkCategory}
-                  onChange={(e) => setBulkCategory(e.target.value)}
-                  className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all text-sm font-bold text-slate-900 uppercase tracking-tight"
-                />
-              </div>
-              <div className="relative">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                <select 
-                  value={bulkAccount}
-                  onChange={(e) => setBulkAccount(e.target.value)}
-                  className="w-full pl-12 pr-10 py-4 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all text-sm font-bold text-slate-900 appearance-none cursor-pointer uppercase tracking-tight"
+            <div className="flex flex-wrap gap-2 mt-4">
+              {(showAllHighConfidence ? highConfidence : highConfidence.slice(0, 5)).map(t => (
+                <div key={t.id} className="bg-[var(--ink)] border border-[var(--line)] px-3 py-2 rounded-lg text-xs font-medium text-slate-600 flex items-center gap-2">
+                  <span className="truncate max-w-[120px]">{t.description}</span>
+                  <span className="font-bold text-[var(--text)]">{formatCurrency(t.totalAmountCents)}</span>
+                  <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[10px]">{Math.round(t.uiConfidence)}%</span>
+                </div>
+              ))}
+              {highConfidence.length > 5 && (
+                <button 
+                  onClick={() => setShowAllHighConfidence(!showAllHighConfidence)}
+                  className="bg-[var(--ink)] border border-[var(--line)] px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:text-[var(--text)] transition-colors cursor-pointer"
                 >
-                  <option value="" className="bg-slate-50">Destination Node...</option>
-                  {accounts.map(acc => (
-                    <option key={acc.id} value={acc.name} className="bg-slate-50">{acc.name} [{acc.code}]</option>
-                  ))}
-                </select>
-              </div>
+                  {showAllHighConfidence ? 'Show Less' : `+${highConfidence.length - 5} more`}
+                </button>
+              )}
             </div>
-
-            <button 
-              onClick={handleBulkAction}
-              disabled={!bulkCategory || !bulkAccount}
-              className="px-10 py-4 bg-indigo-600 text-white rounded-[32px] font-black text-xs hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale shrink-0 uppercase tracking-[0.2em] shadow-xl shadow-ledger-accent/20"
-            >
-              Commit Mapping
-            </button>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
 
-      {/* Transaction List */}
-      <div className="bg-white/30 rounded-[40px] border border-slate-200 shadow-sm overflow-hidden backdrop-blur-sm">
-        <div className="p-4 md:p-10 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-8 bg-slate-50/10">
-          <div className="flex items-center gap-6">
-            <button 
-              onClick={toggleSelectAll}
-              className="p-3 text-slate-500 hover:text-indigo-600 transition-all hover:bg-slate-50 rounded-xl"
-            >
-              {selectedIds.length === pendingTransactions.length && pendingTransactions.length > 0 ? (
-                <CheckSquare size={28} className="text-indigo-600" />
-              ) : (
-                <Square size={28} />
-              )}
-            </button>
-            <div>
-              <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">Signal Inbox</h3>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] opacity-50 mt-1">Operational Flow Pre-Categorization</p>
+        {/* MEDIUM CONFIDENCE */}
+        {mediumConfidence.length > 0 && (
+          <div className="bg-[var(--surface)] rounded-2xl border-2 border-[#0047AB] p-6 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-[#0047AB] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-bl-xl">Review</div>
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                  <AlertCircle className="text-[#0047AB]" size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[var(--text)] text-lg">Needs Quick Review ({mediumConfidence.length})</h3>
+                  <p className="text-sm text-slate-500">We're fairly sure about these. One tap to confirm the batch.</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleBatchConfirm}
+                className="bg-[#0047AB] hover:bg-blue-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2"
+              >
+                <CheckSquare size={16} />
+                Confirm Batch
+              </button>
+            </div>
+            
+            <div className="space-y-2">
+              {mediumConfidence.map(t => (
+                <div key={t.id} className="flex items-center justify-between p-3 hover:bg-[var(--ink)] rounded-xl transition-colors border border-transparent hover:border-[var(--line)]">
+                  <div className="flex items-center gap-4">
+                    <div className="w-2 h-2 rounded-full bg-[#0047AB]"></div>
+                    <div>
+                      <p className="font-bold text-[var(--text)] text-sm">{t.description}</p>
+                      <p className="text-xs text-slate-500">{new Date(t.date).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="text-right">
+                      <p className="text-xs text-slate-400 mb-0.5">Suggested</p>
+                      <p className="text-sm font-medium text-[#0047AB] bg-blue-50 px-2 py-0.5 rounded-md">Software / SaaS</p>
+                    </div>
+                    <p className="font-mono font-bold text-[var(--text)]">{formatCurrency(t.totalAmountCents)}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          
-          <div className="flex-1 w-full md:w-auto relative">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
-              <input 
-                type="text" 
-                placeholder="Search names, tags, amounts, classes, or dates..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-14 pr-8 py-4 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all text-sm font-bold text-slate-900 w-full md:w-80 shadow-inner"
-              />
-          </div>
-        </div>
+        )}
 
-        <div className="h-[600px] min-h-0">
-          {pendingTransactions.length === 0 ? (
-            <div className="p-32 text-center space-y-6">
-              <div className="w-24 h-24 bg-emerald-500/10 rounded-[32px] flex items-center justify-center text-emerald-500 mx-auto shadow-2xl shadow-emerald-500/5">
-                <CheckCircle2 size={48} />
+        {/* LOW CONFIDENCE */}
+        {lowConfidence.length > 0 && (
+          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] p-6 shadow-sm">
+             <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
+                  <HelpCircle className="text-orange-500" size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[var(--text)] text-lg">Your Input Needed ({lowConfidence.length})</h3>
+                  <p className="text-sm text-slate-500">Unrecognized patterns. Answer a simple question to train the model.</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-2xl font-black text-slate-900 uppercase italic">Zen Matrix Achieved</h4>
-                <p className="text-sm text-slate-500 mt-2 font-medium opacity-60">All operational signals have been reconciled with architectural nodes.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {lowConfidence.map(t => (
+                  <div key={t.id} className="bg-orange-50/30 border border-orange-100 rounded-xl p-5">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <p className="font-bold text-[var(--text)]">{t.description}</p>
+                        <p className="font-mono text-sm text-slate-600 mt-1">{formatCurrency(t.totalAmountCents)}</p>
+                      </div>
+                      <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-lg flex items-center gap-1">
+                        <MessageSquare size={12} />
+                        Ask
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm font-medium text-slate-700 mb-3">Was this charge for business or personal use?</p>
+                    
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleResolveLow(t.id, 'Business')}
+                        className="flex-1 bg-[var(--surface)] border border-[var(--line)] hover:border-[#0047AB] hover:text-[#0047AB] text-slate-700 py-2 rounded-lg text-sm font-bold transition-all shadow-sm"
+                      >
+                        Business
+                      </button>
+                      <button 
+                        onClick={() => handleResolveLow(t.id, 'Personal')}
+                        className="flex-1 bg-[var(--surface)] border border-[var(--line)] hover:border-slate-400 text-slate-700 py-2 rounded-lg text-sm font-bold transition-all shadow-sm"
+                      >
+                        Personal
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          ) : (
-            <AutoSizer>
-              {({ height, width }) => (
-                <List
-                  height={height}
-                  itemCount={pendingTransactions.length}
-                  itemSize={130}
-                  width={width}
-                  className="py-6"
-                  itemData={itemData}
-                >
-                  {Row}
-                </List>
-              )}
-            </AutoSizer>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

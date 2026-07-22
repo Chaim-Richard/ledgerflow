@@ -48,7 +48,10 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
   const [extractedData, setExtractedData] = useState<any>(null);
 
   useEffect(() => {
-    if (!workspaceId || !uid) return;
+    if (!workspaceId || !uid) {
+      setLoading(false);
+      return;
+    }
 
     const q = query(
       collection(db, 'documents'),
@@ -60,8 +63,8 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CloudDocument));
       setDocuments(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setLoading(false);
-    });
-  }, [workspaceId]);
+    }, () => setLoading(false));
+  }, [workspaceId, uid]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -188,12 +191,12 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
     <div className="space-y-8 h-full flex flex-col">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter mb-2">Digital Vault</h2>
+          <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter mb-2">Digital Vault</h2>
           <p className="text-slate-500 font-black text-[10px] uppercase tracking-widest truncate opacity-40">Enterprise Secure Storage • Encryption Active</p>
         </div>
         <div className="flex items-center gap-4">
           <label className="h-14 px-8 bg-slate-900 text-white rounded-[32px] cursor-pointer flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-xl group">
-            <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-8 h-8 bg-[var(--surface)]/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
               <Upload size={18} />
             </div>
             Protocol Upload
@@ -202,7 +205,7 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-4 bg-white p-3 rounded-[32px] border border-slate-200 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.1)]">
+      <div className="flex items-center gap-4 bg-[var(--surface)] p-3 rounded-[32px] border border-[var(--line)] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.1)]">
         <div className="relative flex-1">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 opacity-40" size={24} />
           <input 
@@ -222,7 +225,7 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
                 "px-6 h-10 rounded-[32px] text-[10px] font-black uppercase tracking-[0.2em] transition-all border",
                 (filterTag === tag || (tag === 'all' && !filterTag))
                   ? "bg-slate-900 text-white border-slate-800 shadow-lg" 
-                  : "bg-slate-50/50 text-slate-500 border-slate-200 hover:bg-slate-50"
+                  : "bg-[var(--ink)]/50 text-slate-500 border-[var(--line)] hover:bg-[var(--ink)]"
               )}
             >
               {tag}
@@ -238,10 +241,10 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
               layout
               key={docItem.id}
               onClick={() => setSelectedDoc(docItem)}
-              className="bg-white p-4 md:p-8 rounded-[32px] flex flex-col gap-6 group cursor-pointer border border-slate-200 hover:border-slate-800/20 shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-2xl hover:-translate-y-2 transition-all relative overflow-hidden"
+              className="bg-[var(--surface)] p-4 md:p-8 rounded-[32px] flex flex-col gap-6 group cursor-pointer border border-[var(--line)] hover:border-slate-800/20 shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-2xl hover:-translate-y-2 transition-all relative overflow-hidden"
             >
               <div className="flex items-start justify-between">
-                <div className="w-16 h-16 bg-slate-50 rounded-[32px] flex items-center justify-center text-slate-500 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-sm">
+                <div className="w-16 h-16 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-slate-500 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-sm">
                   <FileText size={32} />
                 </div>
                 <div className="flex items-center gap-2">
@@ -258,8 +261,8 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
               </div>
 
               <div className="space-y-2">
-                <h4 className="text-base font-black text-slate-900 line-clamp-1 leading-none tracking-tight">{docItem.name}</h4>
-                <div className="flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] font-mono opacity-50">
+                <h4 className="text-base font-black text-[var(--text)] line-clamp-1 leading-none tracking-tight">{docItem.name}</h4>
+                <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] font-mono">
                   <span>{format(new Date(docItem.createdAt), 'MMM dd, yyyy')}</span>
                   <span className="w-1 h-1 bg-slate-100 rounded-full" />
                   <span>{(docItem.sizeBytes / 1024).toFixed(1)} KB</span>
@@ -268,7 +271,7 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
 
               <div className="flex flex-wrap gap-2 mt-auto">
                 {docItem.tags?.map(tag => (
-                  <span key={tag} className="px-3 h-6 bg-slate-50 text-[9px] font-black text-slate-500 rounded-full uppercase tracking-[0.1em] border border-slate-200">
+                  <span key={tag} className="px-3 h-6 bg-[var(--ink)] text-[9px] font-black text-slate-500 rounded-full uppercase tracking-[0.1em] border border-[var(--line)]">
                     {tag}
                   </span>
                 ))}
@@ -286,11 +289,11 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
           ))}
 
           {filteredDocs.length === 0 && !loading && (
-            <div className="col-span-full py-40 flex flex-col items-center justify-center bg-slate-50/20 border-4 border-dashed border-slate-200 rounded-[32px] text-center">
-              <div className="w-32 h-32 bg-white rounded-[32px] flex items-center justify-center text-slate-200 mb-8 shadow-sm">
+            <div className="col-span-full py-40 flex flex-col items-center justify-center bg-[var(--ink)]/20 border-4 border-dashed border-[var(--line)] rounded-[32px] text-center">
+              <div className="w-32 h-32 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-slate-200 mb-8 shadow-sm">
                 <File size={64} />
               </div>
-              <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-3">Vault Depleted</h3>
+              <h3 className="text-3xl font-black text-[var(--text)] tracking-tight mb-3">Vault Depleted</h3>
               <p className="text-slate-500 max-w-sm mx-auto text-xs font-black uppercase tracking-[0.2em] opacity-50">Secure storage is currently empty. Initialize upload to establish audit compliance.</p>
             </div>
           )}
@@ -312,40 +315,40 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 200 }}
-              className="relative w-full max-w-2xl h-full bg-white shadow-[-50px_0_100px_rgba(0,0,0,0.1)] flex flex-col border-l border-slate-200"
+              className="relative w-full max-w-2xl h-full bg-[var(--surface)] shadow-[-50px_0_100px_rgba(0,0,0,0.1)] flex flex-col border-l border-[var(--line)]"
             >
-              <div className="p-4 md:p-10 border-b border-slate-200 flex items-center justify-between bg-[#F9FAFB]">
+              <div className="p-4 md:p-10 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
                 <div className="flex items-center gap-6">
                   <div className="w-16 h-16 bg-slate-900 text-white rounded-[32px] flex items-center justify-center shadow-xl">
                     <FileText size={32} />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tight line-clamp-1 leading-none mb-2">{selectedDoc.name}</h3>
+                    <h3 className="text-2xl font-black text-[var(--text)] tracking-tight line-clamp-1 leading-none mb-2">{selectedDoc.name}</h3>
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-40 font-mono">
                       Timestamp: {format(new Date(selectedDoc.createdAt), 'yyyy-MM-dd HH:mm:ss')}
                     </p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedDoc(null)} className="w-12 h-12 flex items-center justify-center hover:bg-slate-50 rounded-[32px] transition-all text-slate-500">
+                <button onClick={() => setSelectedDoc(null)} className="w-12 h-12 flex items-center justify-center hover:bg-[var(--ink)] rounded-[32px] transition-all text-slate-500">
                   <X size={28} />
                 </button>
               </div>
 
-              <div className="flex-1 bg-slate-50/20 p-12 flex items-center justify-center overflow-auto">
+              <div className="flex-1 bg-[var(--ink)]/20 p-12 flex items-center justify-center overflow-auto">
                 {selectedDoc.mimeType.startsWith('image/') ? (
                   <img 
                     src={selectedDoc.fileUrl} 
                     alt={selectedDoc.name}
-                    className="max-w-full max-h-full rounded-[32px] shadow-[0_40px_100px_rgba(0,0,0,0.2)] border border-slate-200 object-contain"
+                    className="max-w-full max-h-full rounded-[32px] shadow-[0_40px_100px_rgba(0,0,0,0.2)] border border-[var(--line)] object-contain"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
                   <div className="text-center space-y-6">
-                    <div className="w-24 h-24 bg-white rounded-[32px] flex items-center justify-center text-slate-200 mx-auto shadow-sm">
+                    <div className="w-24 h-24 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-slate-200 mx-auto shadow-sm">
                       <File size={48} />
                     </div>
                     <div>
-                      <h4 className="text-xl font-black text-slate-900 tracking-tight">Preview Restricted</h4>
+                      <h4 className="text-xl font-black text-[var(--text)] tracking-tight">Preview Restricted</h4>
                       <p className="text-sm font-medium text-slate-500 mt-2">MIME: {selectedDoc.mimeType}</p>
                     </div>
                     <a 
@@ -361,9 +364,9 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
                 )}
               </div>
 
-              <div className="p-4 md:p-10 bg-white border-t border-slate-200 space-y-8">
+              <div className="p-4 md:p-10 bg-[var(--surface)] border-t border-[var(--line)] space-y-8">
                  <div className="grid grid-cols-2 gap-6">
-                    <div className="p-6 bg-slate-50/30 rounded-[32px] border border-slate-200">
+                    <div className="p-6 bg-[var(--ink)]/30 rounded-[32px] border border-[var(--line)]">
                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-40 mb-3">Protocol Status</p>
                        <div className="flex items-center gap-3 font-black text-xs tracking-widest">
                           {selectedDoc.linkedTransactionId ? (
@@ -383,9 +386,9 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
                           )}
                        </div>
                     </div>
-                    <div className="p-6 bg-slate-50/30 rounded-[32px] border border-slate-200 font-mono">
+                    <div className="p-6 bg-[var(--ink)]/30 rounded-[32px] border border-[var(--line)] font-mono">
                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-40 mb-3">Data Magnitude</p>
-                       <p className="font-black text-sm text-slate-900 tracking-tight">{(selectedDoc.sizeBytes / 1024).toFixed(1)} KB</p>
+                       <p className="font-black text-sm text-[var(--text)] tracking-tight">{(selectedDoc.sizeBytes / 1024).toFixed(1)} KB</p>
                     </div>
                  </div>
 
@@ -393,7 +396,7 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
                    <div className="space-y-3">
                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-40 px-1">Linked Transaction Association</p>
                      <div className="p-6 bg-slate-900 text-white rounded-[32px] flex items-center justify-between border border-white/5 shadow-xl group cursor-pointer overflow-hidden relative">
-                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 bg-[var(--surface)]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="relative z-10">
                           <p className="text-sm font-bold tracking-tight">
                             {transactions.find(t => t.id === selectedDoc.linkedTransactionId)?.description || 'Unknown Transaction'}
@@ -461,7 +464,7 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
                       href={selectedDoc.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="h-14 px-8 bg-white border border-slate-200 text-slate-900 rounded-[32px] flex-[0.7] font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-50 transition-all flex items-center justify-center gap-3">
+                      className="h-14 px-8 bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] rounded-[32px] flex-[0.7] font-black text-[10px] uppercase tracking-[0.2em] hover:bg-[var(--ink)] transition-all flex items-center justify-center gap-3">
                       <ExternalLink size={18} />
                       Raw
                     </a>

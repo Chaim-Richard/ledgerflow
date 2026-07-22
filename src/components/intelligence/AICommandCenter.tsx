@@ -85,7 +85,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
         initial={{ opacity: 0, y: -40, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -20, scale: 0.98 }}
-        className="relative w-full max-w-4xl bg-white rounded-[32px] shadow-2xl border border-slate-200 overflow-hidden p-2"
+        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[32px] shadow-2xl border border-[var(--line)] overflow-hidden p-2"
       >
         <div className="bg-slate-900 rounded-[32px] p-4 md:p-10 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 blur-[100px] pointer-events-none" />
@@ -93,7 +93,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
           <form onSubmit={handleSubmit} className="mb-10 relative z-10">
             <div className="flex items-center gap-6 border-b border-white/5 pb-8 mb-8">
                <div className={cn(
-                 "p-4 bg-white/5 rounded-[32px] transition-all",
+                 "p-4 bg-[var(--surface)]/5 rounded-[32px] transition-all",
                  isProcessing ? "text-indigo-500 animate-spin" : "text-indigo-400 shadow-[0_0_20px_rgba(79,70,229,0.3)]"
                )}>
                  <Sparkles size={32} />
@@ -123,7 +123,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                 {isProcessing ? "Processing..." : "Run Analysis"}
                 <Zap size={14} />
               </button>
-              <div className="h-10 w-px bg-white/10 mx-4" />
+              <div className="h-10 w-px bg-[var(--surface)]/10 mx-4" />
               <div className="flex items-center gap-6">
                  <button className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Compare Period</button>
                  <button className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Anomaly Sweep</button>
@@ -139,7 +139,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                   <button 
                     key={i}
                     onClick={() => { setQuery(h); handleSubmit(); }}
-                    className="w-full text-left p-4 rounded-[32px] bg-white/5 border border-white/5 hover:bg-white/10 transition-all flex items-center justify-between group"
+                    className="w-full text-left p-4 rounded-[32px] bg-[var(--surface)]/5 border border-white/5 hover:bg-[var(--surface)]/10 transition-all flex items-center justify-between group"
                   >
                     <span className="text-xs font-bold text-white/60 group-hover:text-white transition-colors">{h}</span>
                     <History size={14} className="text-white/20" />
@@ -158,7 +158,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                    { label: "Reconcile Missing Metadata", icon: Filter, color: 'text-amber-400' },
                    { label: "Predict Q3 Growth Matrix", icon: BarChart3, color: 'text-emerald-400' }
                  ].map((item, i) => (
-                   <button key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-[32px] border border-white/5 hover:border-indigo-500/30 hover:bg-white/10 transition-all group active:scale-95">
+                   <button key={i} className="flex items-center justify-between p-4 bg-[var(--surface)]/5 rounded-[32px] border border-white/5 hover:border-indigo-500/30 hover:bg-[var(--surface)]/10 transition-all group active:scale-95">
                      <div className="flex items-center gap-4">
                        <item.icon size={16} className={item.color} />
                        <span className="text-[10px] font-black text-white/80 uppercase tracking-widest">{item.label}</span>

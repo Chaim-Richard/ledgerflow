@@ -36,9 +36,9 @@ export default function AuditTab({
       exit={{ opacity: 0, y: -10 }}
       className="space-y-10"
     >
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-6 gap-4 animate-fade-in text-left">
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[var(--line)] pb-6 gap-4 animate-fade-in text-left">
         <div>
-          <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">Master Cryptographic Diagnostic Scans</h4>
+          <h4 className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Master Cryptographic Diagnostic Scans</h4>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1 opacity-65">Sequential hashing integrity checks across Merkle roots</p>
         </div>
         <button 
@@ -53,11 +53,11 @@ export default function AuditTab({
 
       {!results && !isVerifying && (
         <div className="py-24 text-center space-y-6 animate-fade-in">
-          <div className="w-24 h-24 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto text-slate-500 border-2 border-dashed border-slate-200 shadow-sm">
+          <div className="w-24 h-24 bg-[var(--ink)] rounded-[32px] flex items-center justify-center mx-auto text-slate-500 border-2 border-dashed border-[var(--line)] shadow-sm">
             <Database size={36} />
           </div>
           <div>
-            <p className="text-sm text-slate-900 font-black uppercase tracking-[0.3em] max-w-xs mx-auto">
+            <p className="text-sm text-[var(--text)] font-black uppercase tracking-[0.3em] max-w-xs mx-auto">
               Verifier Offline
             </p>
             <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] opacity-40 mt-1">
@@ -79,7 +79,7 @@ export default function AuditTab({
               />
             ))}
           </div>
-          <p className="text-xs font-bold text-slate-900 uppercase tracking-[0.3em] animate-pulse">Scanning bi-lateral ledger hashes...</p>
+          <p className="text-xs font-bold text-[var(--text)] uppercase tracking-[0.3em] animate-pulse">Scanning bi-lateral ledger hashes...</p>
         </div>
       )}
 
@@ -87,15 +87,15 @@ export default function AuditTab({
         <div className="space-y-10 animate-fade-in text-left">
           {/* Diagnostic Balances Dashboard */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-4 md:p-8 bg-slate-50/20 rounded-[32px] border border-slate-200 flex flex-col justify-between group hover:bg-white transition-all shadow-sm">
+            <div className="p-4 md:p-8 bg-[var(--ink)]/20 rounded-[32px] border border-[var(--line)] flex flex-col justify-between group hover:bg-[var(--surface)] transition-all shadow-sm">
               <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">Cumulative Debit Values</span>
-              <p className="text-3xl font-black text-slate-900 tracking-tight mt-3">{formatCurrency(results.totalDebits)}</p>
+              <p className="text-3xl font-black text-[var(--text)] tracking-tight mt-3">{formatCurrency(results.totalDebits)}</p>
               <p className="text-[10px] text-emerald-600 font-bold mt-2 uppercase tracking-wide">Matches double-entry target entries</p>
             </div>
 
-            <div className="p-4 md:p-8 bg-slate-50/20 rounded-[32px] border border-slate-200 flex flex-col justify-between group hover:bg-white transition-all shadow-sm">
+            <div className="p-4 md:p-8 bg-[var(--ink)]/20 rounded-[32px] border border-[var(--line)] flex flex-col justify-between group hover:bg-[var(--surface)] transition-all shadow-sm">
               <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">Cumulative Credit Values</span>
-              <p className="text-3xl font-black text-slate-900 tracking-tight mt-3">{formatCurrency(results.totalCredits)}</p>
+              <p className="text-3xl font-black text-[var(--text)] tracking-tight mt-3">{formatCurrency(results.totalCredits)}</p>
               <p className="text-[10px] text-emerald-600 font-bold mt-2 uppercase tracking-wide">Reflects full account double-entry mappings</p>
             </div>
 
@@ -119,11 +119,11 @@ export default function AuditTab({
           {/* Cryptographic Secure Merkle Proof */}
           <div className="p-4 md:p-6 lg:p-8 bg-slate-900 text-white rounded-[32px] flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl border border-slate-800">
             <div className="flex items-center gap-6">
-              <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-emerald-400">
+              <div className="w-12 h-12 bg-[var(--surface)]/10 rounded-xl flex items-center justify-center text-emerald-400">
                 <Lock size={20} />
               </div>
               <div>
-                <p className="text-[9px] font-black text-white/40 uppercase tracking-widest truncate leading-none mb-2">Cryptographic Source of Truth (Merkle root)</p>
+                <p className="text-[9px] font-black text-white/40 uppercase tracking-widest truncate leading-none mb-2">Cryptographic Source of Integrity (Merkle root)</p>
                 <p className="text-xs font-mono text-emerald-300 break-all uppercase tracking-tight">{results.merkleRoot}</p>
               </div>
             </div>
@@ -135,9 +135,9 @@ export default function AuditTab({
 
           {/* Operational Check Categories */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="p-6 bg-white rounded-[32px] border border-slate-200 space-y-4 shadow-sm hover:border-slate-800/20 transition-all">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <span className="text-md font-black text-slate-900 uppercase tracking-tight">Zero-Leaking Bookkeeping</span>
+            <div className="p-6 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] space-y-4 shadow-sm hover:border-slate-800/20 transition-all">
+              <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
+                <span className="text-md font-black text-[var(--text)] uppercase tracking-tight">Zero-Leaking Bookkeeping</span>
                 {results.isBalanced ? <CheckCircle2 className="text-emerald-500" size={18} /> : <AlertCircle className="text-rose-500" size={18} />}
               </div>
               <p className="text-xs text-slate-500 font-medium">Checks if bi-lateral ledger offsets net zero. Solitary entries without corresponding balancing sides are strictly highlighted.</p>
@@ -151,9 +151,9 @@ export default function AuditTab({
               )}
             </div>
 
-            <div className="p-6 bg-white rounded-[32px] border border-slate-200 space-y-4 shadow-sm hover:border-slate-800/20 transition-all">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <span className="text-md font-black text-slate-900 uppercase tracking-tight">Hash Sequence Custody</span>
+            <div className="p-6 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] space-y-4 shadow-sm hover:border-slate-800/20 transition-all">
+              <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
+                <span className="text-md font-black text-[var(--text)] uppercase tracking-tight">Hash Sequence Custody</span>
                 {results.hashChainValid ? <Lock className="text-emerald-500" size={16} /> : <AlertTriangle className="text-rose-500" size={16} />}
               </div>
               <p className="text-xs text-slate-500 font-medium">Verify blockchain-style sequential tracking of prior financial states preventing backdated account changes.</p>

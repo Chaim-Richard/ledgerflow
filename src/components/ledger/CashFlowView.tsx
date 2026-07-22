@@ -6,14 +6,16 @@ import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 export default function CashFlowView() {
-  const { transactions, accounts } = useLedgerStore();
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
   });
   const [isComparative, setIsComparative] = useState(false);
 
-  const { workspaces, currentWorkspaceId } = useAuthStore();
+  const workspaces = useAuthStore(s => s.workspaces);
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
   const businessType = currentWorkspace?.businessType || 'generic';
 
@@ -161,11 +163,11 @@ export default function CashFlowView() {
   return (
     <div className="space-y-6">
       {/* Date Range & Controls */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-white border border-slate-200/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
         <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10 w-full lg:w-auto">
           <div className="flex items-center gap-3 w-full">
-            <div className="w-8 h-8 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center text-slate-500 shrink-0">
+            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-slate-500 shrink-0">
                <Calendar size={13} />
             </div>
             <div className="flex flex-col min-w-0">
@@ -175,14 +177,14 @@ export default function CashFlowView() {
                   type="date" 
                   value={dateRange.start}
                   onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  className="bg-slate-55 bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md focus:ring-1 focus:ring-slate-300 outline-none text-slate-800"
+                  className="bg-slate-55 bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md focus:ring-1 focus:ring-slate-300 outline-none text-[var(--text)]"
                 />
                 <span className="text-slate-300 font-mono text-sm leading-none">/</span>
                 <input 
                   type="date" 
                   value={dateRange.end}
                   onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  className="bg-slate-55 bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md focus:ring-1 focus:ring-slate-300 outline-none text-slate-800"
+                  className="bg-slate-55 bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md focus:ring-1 focus:ring-slate-300 outline-none text-[var(--text)]"
                 />
               </div>
             </div>
@@ -200,12 +202,12 @@ export default function CashFlowView() {
               isComparative ? "bg-indigo-500" : "bg-slate-300"
             )}>
               <div className={cn(
-                "w-3 h-3 bg-white rounded-full shadow-sm transition-transform duration-300",
+                "w-3 h-3 bg-[var(--surface)] rounded-full shadow-sm transition-transform duration-300",
                 isComparative ? "translate-x-4" : "translate-x-0"
               )} />
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-slate-800 transition-colors flex items-center gap-1">
+              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
                 Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-slate-400")} />
               </span>
               <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Compare to Prior Prev</span>
@@ -221,7 +223,7 @@ export default function CashFlowView() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-3xs overflow-hidden relative p-4 md:p-8">
+      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative p-4 md:p-8">
         <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none">
           <Waves size={160} />
         </div>
@@ -229,7 +231,7 @@ export default function CashFlowView() {
         <div className="relative z-10 max-w-4xl mx-auto space-y-12">
            <div className="border-b border-slate-900 pb-4 flex items-end justify-between">
               <div>
-                <h3 className="text-xl font-bold text-slate-800 tracking-tight uppercase italic">{labels.title}</h3>
+                <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase italic">{labels.title}</h3>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">For period ending {dateRange.end}</p>
               </div>
               <Waves size={24} className="text-slate-200" />
@@ -242,7 +244,7 @@ export default function CashFlowView() {
                   { label: labels.financing, desc: labels.financingSub, data: currentData.financing, prev: prevData.financing }
               ].map((section, idx) => (
                   <div key={idx} className="space-y-4">
-                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
                         <h4 className="text-[11px] font-bold bg-slate-900 text-white px-3 py-1 rounded inline-flex uppercase tracking-wider">{section.label}</h4>
                         <span className="text-[9px] font-semibold text-slate-450 uppercase tracking-wider text-slate-400">{section.desc}</span>
                      </div>
@@ -256,15 +258,15 @@ export default function CashFlowView() {
                            <span className="text-slate-600 font-medium">Cash Outflows</span>
                            <span className="font-mono tabular-nums text-rose-600/80">({formatCurrency(section.data.outflow)})</span>
                         </div>
-                        <div className="flex justify-between items-center border-t border-slate-200 pt-2 font-bold cursor-default hover:bg-slate-50 p-1 -mx-1 px-1 rounded transition-colors group">
-                           <span className="text-slate-800 text-sm">{labels.netSectionLabel(section.label)}</span>
+                        <div className="flex justify-between items-center border-t border-[var(--line)] pt-2 font-bold cursor-default hover:bg-[var(--ink)] p-1 -mx-1 px-1 rounded transition-colors group">
+                           <span className="text-[var(--text)] text-sm">{labels.netSectionLabel(section.label)}</span>
                            <div className="flex items-center gap-4">
                              {isComparative && section.prev.total !== 0 && (
                                 <span className={cn("text-[10px] opacity-0 group-hover:opacity-100 transition-opacity", section.data.total >= section.prev.total ? "text-emerald-500" : "text-rose-500")}>
                                    {(((section.data.total - section.prev.total) / Math.abs(section.prev.total)) * 100).toFixed(1)}% vs Prior
                                 </span>
                              )}
-                             <span className="font-mono tabular-nums text-slate-800">{formatCurrency(section.data.total)}</span>
+                             <span className="font-mono tabular-nums text-[var(--text)]">{formatCurrency(section.data.total)}</span>
                            </div>
                         </div>
                      </div>

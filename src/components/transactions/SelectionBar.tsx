@@ -47,18 +47,22 @@ export default function SelectionBar({
       </div>
       
       <div className="flex items-center gap-3">
-        <select 
-          onChange={(e) => {
-            const accId = e.target.value;
-            if (accId) onBulkUpdate({ accountId: accId });
-          }}
-          className="bg-zinc-800 text-[10px] font-medium uppercase tracking-wider px-4 py-2.5 rounded-xl border-none outline-none text-zinc-400 hover:text-white transition-all cursor-pointer"
-        >
-          <option value="">Bulk Categorize...</option>
-          {accounts.map(acc => (
-            <option key={acc.id} value={acc.id}>{acc.name}</option>
-          ))}
-        </select>
+        <div className="relative">
+          <input 
+            list="selection-bulk-account"
+            placeholder="Bulk Categorize..."
+            onChange={(e) => {
+              const acc = accounts.find(a => a.name === e.target.value || a.id === e.target.value);
+              if (acc) onBulkUpdate({ accountId: acc.id });
+            }}
+            className="w-48 bg-zinc-800 text-[10px] font-medium uppercase tracking-wider px-4 py-2.5 rounded-xl border-none outline-none text-zinc-400 hover:text-white transition-all focus:ring-1 focus:ring-indigo-500 placeholder:text-zinc-600"
+          />
+          <datalist id="selection-bulk-account">
+            {accounts.map(acc => (
+              <option key={acc.id} value={acc.name} />
+            ))}
+          </datalist>
+        </div>
 
         <button 
           onClick={() => { onBundle(); toast.success(`Created rule based on ${selectedCount} items.`); }}

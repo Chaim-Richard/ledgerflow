@@ -32,7 +32,11 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 const AVAILABLE_SCOPES: any[] = [];
 
 export default function ApiHub() {
-  const { currentWorkspaceId, getCurrentWorkspace, user, workspaces, setCurrentWorkspaceId } = useAuthStore();
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
+  const user = useAuthStore(s => s.user);
+  const workspaces = useAuthStore(s => s.workspaces);
+  const setCurrentWorkspaceId = useAuthStore(s => s.setCurrentWorkspaceId);
   const currentWorkspace = getCurrentWorkspace();
   const [apiKey, setApiKey] = useState('');
   const [apiLogs, setApiLogs] = useState<any[]>([]);
@@ -91,7 +95,7 @@ export default function ApiHub() {
   const [fieldProjectName, setFieldProjectName] = useState('Project Phoenix Integration');
   const [fieldProjectCode, setFieldProjectCode] = useState('PHX-001');
   const [fieldMatchDesc, setFieldMatchDesc] = useState('Uber Trip transport ride\nAWS Cloud Services database bill\nMonthly advisory fee Deloitte business');
-  const [fieldCortexPrompt, setFieldCortexPrompt] = useState('Explain what operational cost adjustments we should carry out based on our high software subscription drift.');
+  const [fieldClearbookAIPrompt, setFieldClearbookAIPrompt] = useState('Explain what operational cost adjustments we should carry out based on our high software subscription drift.');
 
   const loadBillingStatus = async () => {
     if (!currentWorkspace?.id || !user) return;
@@ -597,7 +601,7 @@ export default function ApiHub() {
       case 'POST_brain_analyze':
         return {
           workspaceId: wsId,
-          prompt: fieldCortexPrompt || "Generate executive review of cash allocation anomalies across our ledger assets."
+          prompt: fieldClearbookAIPrompt || "Generate executive review of cash allocation anomalies across our ledger assets."
         };
       case 'POST_v1_ecommerce':
         return { workspaceId: wsId, channel: "Shopify Store", syncStatus: "live" };
@@ -701,7 +705,7 @@ export default function ApiHub() {
           method = 'POST';
           bodyData = {
             workspaceId: currentWorkspace.id,
-            prompt: fieldCortexPrompt
+            prompt: fieldClearbookAIPrompt
           };
           break;
         case 'POST_v1_transactions_bulk':
@@ -817,11 +821,11 @@ export default function ApiHub() {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pt-4 pb-24">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--line)]">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-800 flex items-center gap-2.5 font-display">
+          <h1 className="text-xl font-bold tracking-tight text-[var(--text)] flex items-center gap-2.5 font-display">
             <Terminal className="text-slate-950" size={18} />
-            Truth API Hub
+            Integrity API Hub
           </h1>
           <p className="text-slate-400 mt-1 max-w-2xl text-xs font-medium">
             Direct interface to the TruthEngine core data engine. Integrate double-entry telemetry, query AI brain analysis, and orchestrate financial pipelines natively.
@@ -829,12 +833,12 @@ export default function ApiHub() {
         </div>
         
         {/* Workspace Quick-Picker */}
-        <div className="flex items-center gap-2.5 self-start md:self-auto bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-lg shadow-3xs">
+        <div className="flex items-center gap-2.5 self-start md:self-auto bg-[var(--ink)] border border-[var(--line)] px-3.5 py-1.5 rounded-lg shadow-3xs">
           <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Workspace:</span>
           <select
             value={currentWorkspaceId || ''}
             onChange={(e) => setCurrentWorkspaceId(e.target.value)}
-            className="bg-transparent border-0 font-bold text-xs text-slate-800 focus:ring-0 focus:outline-none cursor-pointer pr-1"
+            className="bg-transparent border-0 font-bold text-xs text-[var(--text)] focus:ring-0 focus:outline-none cursor-pointer pr-1"
           >
             {workspaces.map((ws) => (
               <option key={ws.id} value={ws.id} className="text-slate-950">
@@ -845,12 +849,12 @@ export default function ApiHub() {
         </div>
       </div>
 
-      <div className="flex bg-slate-50 border border-slate-150 p-1.5 rounded-xl gap-1 mb-6 max-w-4xl shrink-0 overflow-x-auto">
+      <div className="flex bg-[var(--ink)] border border-slate-150 p-1.5 rounded-xl gap-1 mb-6 max-w-4xl shrink-0 overflow-x-auto">
         <button
           onClick={() => setActiveTab('overview')}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'overview' ? "bg-white text-slate-950 shadow-2xs border border-slate-220/80 font-bold" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'overview' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold" : "text-slate-600 hover:text-slate-950"
           )}
         >
           Overview
@@ -859,7 +863,7 @@ export default function ApiHub() {
           onClick={() => setActiveTab('keys')}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'keys' ? "bg-white text-slate-950 shadow-2xs border border-slate-220/80 font-bold" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'keys' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold" : "text-slate-600 hover:text-slate-950"
           )}
         >
           Auth Keys
@@ -868,7 +872,7 @@ export default function ApiHub() {
           onClick={() => setActiveTab('docs')}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'docs' ? "bg-white text-slate-950 shadow-2xs border border-slate-220/80 font-bold" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'docs' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold" : "text-slate-600 hover:text-slate-950"
           )}
         >
           Docs
@@ -877,7 +881,7 @@ export default function ApiHub() {
           onClick={() => setActiveTab('sandbox')}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'sandbox' ? "bg-white text-slate-950 shadow-2xs border border-slate-220/80 font-bold text-emerald-500 font-black" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'sandbox' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold text-emerald-500 font-black" : "text-slate-600 hover:text-slate-950"
           )}
         >
           ⚡ Playground Sandbox
@@ -889,7 +893,7 @@ export default function ApiHub() {
           }}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'logs' ? "bg-white text-slate-950 shadow-2xs border border-slate-220/80 font-bold text-indigo-600" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'logs' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold text-indigo-600" : "text-slate-600 hover:text-slate-950"
           )}
         >
           API Logs
@@ -901,7 +905,7 @@ export default function ApiHub() {
           }}
           className={cn(
             "flex-1 py-1 px-3 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all text-center whitespace-nowrap cursor-pointer",
-            activeTab === 'billing' ? "bg-white text-slate-950 shadow-2xs border border-slate-220/80 font-bold text-[#8A2BE2]" : "text-slate-600 hover:text-slate-950"
+            activeTab === 'billing' ? "bg-[var(--surface)] text-slate-950 shadow-2xs border border-slate-220/80 font-bold text-[#8A2BE2]" : "text-slate-600 hover:text-slate-950"
           )}
         >
           Compute Metering
@@ -916,24 +920,24 @@ export default function ApiHub() {
               Platform Architecture
             </h3>
             <p className="text-sm text-slate-500 leading-relaxed">
-              LedgerFlow's Truth API is built on a high-throughput Express Node architecture, 
+              Clearbook's Integrity API is built on a high-throughput Express Node architecture, 
               connecting natively to the unified workspace data layer. 
               The API guarantees double-entry accounting integrity at the database level for all incoming mutations.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-              <div className="p-4 border border-slate-200 rounded-xl bg-slate-50/50">
+              <div className="p-4 border border-[var(--line)] rounded-xl bg-[var(--ink)]/50">
                  <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Architecture Standard</div>
                  <div className="font-mono text-sm">RESTful JSON over HTTPS</div>
               </div>
-              <div className="p-4 border border-slate-200 rounded-xl bg-slate-50/50">
+              <div className="p-4 border border-[var(--line)] rounded-xl bg-[var(--ink)]/50">
                  <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Base URL</div>
                  <div className="font-mono text-sm">&lt;INSTANCE_URL&gt;/api/v1</div>
               </div>
-              <div className="p-4 border border-slate-200 rounded-xl bg-slate-50/50">
+              <div className="p-4 border border-[var(--line)] rounded-xl bg-[var(--ink)]/50">
                  <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Authorization</div>
                  <div className="font-mono text-sm">Bearer Token</div>
               </div>
-              <div className="p-4 border border-slate-200 rounded-xl bg-slate-50/50">
+              <div className="p-4 border border-[var(--line)] rounded-xl bg-[var(--ink)]/50">
                  <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Rate Limit</div>
                  <div className="font-mono text-sm">100 req / minute</div>
               </div>
@@ -945,7 +949,7 @@ export default function ApiHub() {
                Brain Integration
              </h3>
              <p className="text-xs text-slate-500 mb-4">
-               The API exposes a direct line to the LedgerFlow AI Cortex (`/brain/analyze`), allowing your external services to query the intelligent agent based on live ledger data.
+               The API exposes a direct line to the Clearbook AI (`/brain/analyze`), allowing your external services to query the intelligent agent based on live ledger data.
              </p>
              <div className="p-3 bg-slate-900 text-white rounded-lg font-mono text-[10px] break-all">
                 POST /api/v1/brain/analyze<br/>
@@ -960,7 +964,7 @@ export default function ApiHub() {
       {activeTab === 'keys' && (
         <div className="space-y-6">
           <div className="ledger-card p-4 md:p-8 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--line)] pb-6">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-[32px] bg-slate-950 text-white flex items-center justify-center">
                   <Key size={24} />
@@ -991,11 +995,11 @@ export default function ApiHub() {
                    <h4 className="text-sm font-black uppercase text-emerald-800 tracking-wider">Secret Key Generated Successfully</h4>
                 </div>
                 <p className="text-xs text-emerald-700/80 mb-4 font-medium">
-                  <strong>Private Hashing Notice:</strong> Please copy this secret key now. For your security, LedgerFlow does NOT store this raw token string in the database. You will not be able to retrieve or see these characters again after you close this warning.
+                  <strong>Private Hashing Notice:</strong> Please copy this secret key now. For your security, Clearbook does NOT store this raw token string in the database. You will not be able to retrieve or see these characters again after you close this warning.
                 </p>
 
                 <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-                  <div className="flex-1 font-mono text-xs bg-white border border-emerald-500/30 p-4 rounded-xl text-slate-800 font-bold break-all shadow-3xs">
+                  <div className="flex-1 font-mono text-xs bg-[var(--surface)] border border-emerald-500/30 p-4 rounded-xl text-[var(--text)] font-bold break-all shadow-3xs">
                       {apiKey}
                   </div>
                   <button
@@ -1007,10 +1011,10 @@ export default function ApiHub() {
                   </button>
                 </div>
                 
-                <div className="mt-5 bg-white/40 p-4 rounded-xl border border-emerald-500/10 text-xs">
+                <div className="mt-5 bg-[var(--surface)]/40 p-4 rounded-xl border border-emerald-500/10 text-xs">
                   <div className="font-bold text-emerald-800 mb-2">Configure Client Integrations:</div>
-                  <p className="text-slate-600 mb-2">Provide this credential in the HTTP <code className="bg-white px-1 py-0.5 rounded font-mono font-bold text-slate-800 border">Authorization</code> header as a Bearer credentials token:</p>
-                  <pre className="bg-white/80 p-3 rounded-lg border border-slate-100 font-mono text-[11px] text-slate-800 overflow-x-auto">
+                  <p className="text-slate-600 mb-2">Provide this credential in the HTTP <code className="bg-[var(--surface)] px-1 py-0.5 rounded font-mono font-bold text-[var(--text)] border">Authorization</code> header as a Bearer credentials token:</p>
+                  <pre className="bg-[var(--surface)]/80 p-3 rounded-lg border border-[var(--line)] font-mono text-[11px] text-[var(--text)] overflow-x-auto">
                     {`curl -H "Authorization: Bearer ${apiKey}" \\\n  "https://${window.location.host}/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}"`}
                   </pre>
                 </div>
@@ -1018,18 +1022,18 @@ export default function ApiHub() {
             )}
 
             <div className="mt-6">
-               <h3 className="font-bold text-sm text-slate-800 mb-4 flex items-center gap-2">
+               <h3 className="font-bold text-sm text-[var(--text)] mb-4 flex items-center gap-2">
                  <Shield size={16} className="text-slate-450" />
                  Active Credentials ({publicKeys.length})
                </h3>
                {publicKeys.length === 0 ? (
-                  <div className="text-sm text-slate-500 italic p-6 border border-slate-100 bg-slate-50/50 rounded-[32px] text-center">
+                  <div className="text-sm text-slate-500 italic p-6 border border-[var(--line)] bg-[var(--ink)]/50 rounded-[32px] text-center">
                     No active integration keys registered. Generate an API Key above to begin orchestrating external transactions and AI analyses.
                   </div>
                ) : (
                   <div className="border border-slate-150 rounded-[32px] shadow-3xs overflow-hidden">
                      <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50/80 border-b border-slate-150 text-[10px] uppercase tracking-wider text-slate-400 font-black">
+                        <thead className="bg-[var(--ink)]/80 border-b border-slate-150 text-[10px] uppercase tracking-wider text-slate-400 font-black">
                            <tr>
                               <th className="p-4 py-3.5">Details</th>
                               <th className="p-4 py-3.5">Granted Scopes</th>
@@ -1038,11 +1042,11 @@ export default function ApiHub() {
                               <th className="p-4 py-3.5 text-right">Actions</th>
                            </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
+                        <tbody className="divide-y divide-slate-100 bg-[var(--surface)]">
                            {publicKeys.map((k: any) => {
                              const isExpired = k.expiresAt !== 'never' && new Date(k.expiresAt).getTime() < Date.now();
                              return (
-                               <tr key={k.id} className="hover:bg-slate-50/40 transition-colors">
+                               <tr key={k.id} className="hover:bg-[var(--ink)]/40 transition-colors">
                                   <td className="p-4">
                                      <div className="font-bold text-slate-950 text-xs">{k.name}</div>
                                      <div className="font-mono text-[10px] text-slate-400 mt-0.5">{k.id}</div>
@@ -1051,7 +1055,7 @@ export default function ApiHub() {
                                   <td className="p-4 max-w-xs">
                                      <div className="flex flex-wrap gap-1">
                                         {k.scopes.length === 0 ? (
-                                           <span className="text-[9px] bg-slate-50 text-slate-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-slate-100">No Scopes</span>
+                                           <span className="text-[9px] bg-[var(--ink)] text-slate-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-[var(--line)]">No Scopes</span>
                                         ) : (
                                            k.scopes.map((scope: string) => (
                                               <span 
@@ -1060,7 +1064,7 @@ export default function ApiHub() {
                                                   "text-[9px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded border",
                                                   scope.startsWith('write:') ? "bg-amber-500/5 text-amber-700 border-amber-500/10" :
                                                   scope.startsWith('brain:') ? "bg-purple-500/5 text-purple-700 border-purple-500/10" :
-                                                  "bg-slate-100 text-slate-650 border-slate-200"
+                                                  "bg-slate-100 text-slate-650 border-[var(--line)]"
                                                 )}
                                               >
                                                 {scope}
@@ -1082,12 +1086,12 @@ export default function ApiHub() {
                                           <Shield size={10} className="stroke-[3]" /> Expired
                                         </span>
                                      ) : k.expiresAt === 'never' ? (
-                                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full border border-slate-200">
+                                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full border border-[var(--line)]">
                                           <Lock size={10} /> Indefinite
                                         </span>
                                      ) : (
                                         <div className="text-xs">
-                                          <div className="font-bold text-slate-800">{new Date(k.expiresAt).toLocaleDateString()}</div>
+                                          <div className="font-bold text-[var(--text)]">{new Date(k.expiresAt).toLocaleDateString()}</div>
                                           <div className="text-[10px] text-slate-400 mt-0.5">{new Date(k.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                         </div>
                                      )}
@@ -1118,20 +1122,20 @@ export default function ApiHub() {
           {/* CREATE DETAILED KEY MODAL */}
           {showCreateModal && (
             <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white border border-slate-200 rounded-[32px] w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex justify-between items-center p-6 border-b border-slate-100">
+              <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex justify-between items-center p-6 border-b border-[var(--line)]">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center">
                       <Key size={20} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-800 font-display text-base">Provision New Developer Credential</h3>
+                      <h3 className="font-bold text-[var(--text)] font-display text-base">Provision New Developer Credential</h3>
                       <p className="text-xs text-slate-400 font-mono mt-0.5">Workspace: {currentWorkspace?.name}</p>
                     </div>
                   </div>
                   <button 
                     onClick={() => setShowCreateModal(false)}
-                    className="p-1 px-1.5 text-slate-400 hover:text-slate-950 rounded-lg hover:bg-slate-50"
+                    className="p-1 px-1.5 text-slate-400 hover:text-slate-950 rounded-lg hover:bg-[var(--ink)]"
                   >
                     <X size={18} />
                   </button>
@@ -1146,7 +1150,7 @@ export default function ApiHub() {
                       value={newKeyName}
                       onChange={(e) => setNewKeyName(e.target.value)}
                       placeholder="e.g. Acme Production Integration"
-                      className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-white transition-all shadow-3xs"
+                      className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-3xs"
                     />
                   </div>
 
@@ -1156,7 +1160,7 @@ export default function ApiHub() {
                     <select 
                       value={expiration}
                       onChange={(e: any) => setExpiration(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-white transition-all shadow-3xs"
+                      className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-3xs"
                     >
                       <option value="never">Indefinite (Never Expire)</option>
                       <option value="1h">1 Hour (Ephemeral Transient Testing)</option>
@@ -1187,7 +1191,7 @@ export default function ApiHub() {
                       </div>
                     </div>
                     
-                    <div className="max-h-[180px] overflow-y-auto pr-1 space-y-2 border border-slate-100 p-3.5 rounded-[32px] bg-slate-50/50">
+                    <div className="max-h-[180px] overflow-y-auto pr-1 space-y-2 border border-[var(--line)] p-3.5 rounded-[32px] bg-[var(--ink)]/50">
                       {AVAILABLE_SCOPES.map((scope) => {
                         const checked = selectedScopes.includes(scope.id);
                         return (
@@ -1195,7 +1199,7 @@ export default function ApiHub() {
                             key={scope.id} 
                             className={cn(
                               "flex items-start gap-3 p-2.5 rounded-xl cursor-pointer transition-all border",
-                              checked ? "bg-white border-slate-200 shadow-3xs" : "border-transparent opacity-75 hover:opacity-100"
+                              checked ? "bg-[var(--surface)] border-[var(--line)] shadow-3xs" : "border-transparent opacity-75 hover:opacity-100"
                             )}
                           >
                             <input 
@@ -1211,9 +1215,9 @@ export default function ApiHub() {
                               className="mt-0.5 rounded border-slate-300 text-slate-950 focus:ring-slate-950 cursor-pointer h-4 w-4"
                             />
                             <div>
-                              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              <div className="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
                                 {scope.label}
-                                <span className="font-mono text-[9px] bg-slate-100 text-slate-450 border border-slate-200 px-1 rounded uppercase tracking-wider">{scope.id}</span>
+                                <span className="font-mono text-[9px] bg-slate-100 text-slate-450 border border-[var(--line)] px-1 rounded uppercase tracking-wider">{scope.id}</span>
                               </div>
                               <div className="text-[10px] text-slate-400 mt-0.5">{scope.desc}</div>
                             </div>
@@ -1224,15 +1228,15 @@ export default function ApiHub() {
                   </div>
 
                   {/* Private hashing notice */}
-                  <div className="p-4 rounded-[32px] bg-slate-50 border border-slate-150 text-[11px] text-slate-500 leading-relaxed font-medium">
-                     🔓 <strong>Hashed Storage Guarantee:</strong> LedgerFlow stores credentials using a one-way salt-hashed SHA-256 match protocol. Nobody can ever decrypt or view the original secret sequence. Copy the key safely when displayed.
+                  <div className="p-4 rounded-[32px] bg-[var(--ink)] border border-slate-150 text-[11px] text-slate-500 leading-relaxed font-medium">
+                     🔓 <strong>Hashed Storage Guarantee:</strong> Clearbook stores credentials using a one-way salt-hashed SHA-256 match protocol. Nobody can ever decrypt or view the original secret sequence. Copy the key safely when displayed.
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 p-6 bg-slate-50 border-t border-slate-100">
+                <div className="flex justify-end gap-3 p-6 bg-[var(--ink)] border-t border-[var(--line)]">
                   <button 
                     onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-100 transition-all shrink-0"
+                    className="px-4 py-2 bg-[var(--surface)] border border-[var(--line)] text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-100 transition-all shrink-0"
                   >
                     Cancel
                   </button>
@@ -1252,73 +1256,73 @@ export default function ApiHub() {
 
       {activeTab === 'docs' && (
         <div className="ledger-card p-0 overflow-hidden text-sm flex flex-col md:flex-row min-h-[600px]">
-          <div className="w-full md:w-64 border-r border-slate-200 overflow-y-auto bg-slate-50/20 p-4 shrink-0 space-y-6">
+          <div className="w-full md:w-64 border-r border-[var(--line)] overflow-y-auto bg-[var(--ink)]/20 p-4 shrink-0 space-y-6">
              <div>
                 <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-2">Core Telemetry</div>
                 <div className="space-y-1">
-                  <button onClick={() => setActiveDoc('get-status')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-status' ? "bg-white shadow-sm font-bold border border-slate-200 text-indigo-600" : "hover:bg-slate-50/50")}>GET /status</button>
-                  <button onClick={() => setActiveDoc('get-logs')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-logs' ? "bg-white shadow-sm font-bold border border-slate-200 text-indigo-600" : "hover:bg-slate-50/50")}>GET /logs</button>
-                  <button onClick={() => setActiveDoc('get-metrics')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-metrics' ? "bg-white shadow-sm font-bold border border-slate-200 text-[#8A2BE2]" : "hover:bg-slate-50/50")}>GET /metrics/summary</button>
-                  <button onClick={() => setActiveDoc('shifting-metrics')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'shifting-metrics' ? "bg-white shadow-sm font-bold border border-slate-200 text-[#8A2BE2]" : "hover:bg-slate-50/50")}>GET /metrics (Shifting Telemetry)</button>
+                  <button onClick={() => setActiveDoc('get-status')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-status' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /status</button>
+                  <button onClick={() => setActiveDoc('get-logs')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-logs' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /logs</button>
+                  <button onClick={() => setActiveDoc('get-metrics')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-metrics' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-[#8A2BE2]" : "hover:bg-[var(--ink)]/50")}>GET /metrics/summary</button>
+                  <button onClick={() => setActiveDoc('shifting-metrics')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'shifting-metrics' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-[#8A2BE2]" : "hover:bg-[var(--ink)]/50")}>GET /metrics (Shifting Telemetry)</button>
                 </div>
              </div>
              
              <div>
                 <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-2">Ledger Config</div>
                 <div className="space-y-1">
-                  <button onClick={() => setActiveDoc('get-ledger')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-ledger' ? "bg-white shadow-sm font-bold border border-slate-200 text-indigo-600" : "hover:bg-slate-50/50")}>GET /ledger</button>
-                  <button onClick={() => setActiveDoc('post-ledger')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-ledger' ? "bg-white shadow-sm font-bold border border-slate-200 text-emerald-500" : "hover:bg-slate-50/50")}>POST /ledger</button>
+                  <button onClick={() => setActiveDoc('get-ledger')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-ledger' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /ledger</button>
+                  <button onClick={() => setActiveDoc('post-ledger')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-ledger' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-emerald-500" : "hover:bg-[var(--ink)]/50")}>POST /ledger</button>
                 </div>
              </div>
 
              <div>
                 <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-2">Transactions</div>
                 <div className="space-y-1">
-                  <button onClick={() => setActiveDoc('get-transaction')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-transaction' ? "bg-white shadow-sm font-bold border border-slate-200 text-indigo-600" : "hover:bg-slate-50/50")}>GET /transactions</button>
-                  <button onClick={() => setActiveDoc('post-transaction')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-transaction' ? "bg-white shadow-sm font-bold border border-slate-200 text-emerald-500" : "hover:bg-slate-50/50")}>POST /transactions</button>
-                  <button onClick={() => setActiveDoc('put-transaction')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'put-transaction' ? "bg-white shadow-sm font-bold border border-slate-200 text-amber-500" : "hover:bg-slate-50/50")}>PUT /transactions/:id</button>
-                  <button onClick={() => setActiveDoc('delete-transaction')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'delete-transaction' ? "bg-white shadow-sm font-bold border border-slate-200 text-rose-500" : "hover:bg-slate-50/50")}>DELETE /transactions/:id</button>
+                  <button onClick={() => setActiveDoc('get-transaction')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-transaction' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /transactions</button>
+                  <button onClick={() => setActiveDoc('post-transaction')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-transaction' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-emerald-500" : "hover:bg-[var(--ink)]/50")}>POST /transactions</button>
+                  <button onClick={() => setActiveDoc('put-transaction')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'put-transaction' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-amber-500" : "hover:bg-[var(--ink)]/50")}>PUT /transactions/:id</button>
+                  <button onClick={() => setActiveDoc('delete-transaction')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'delete-transaction' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-rose-500" : "hover:bg-[var(--ink)]/50")}>DELETE /transactions/:id</button>
                 </div>
              </div>
 
              <div>
                 <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 mt-6 px-2">TruthEngine Math</div>
                 <div className="space-y-1">
-                  <button onClick={() => setActiveDoc('math-depreciation')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-depreciation' ? "bg-white shadow-sm font-bold border border-slate-200 text-purple-600" : "hover:bg-slate-50/50")}>POST /math/depreciation</button>
-                  <button onClick={() => setActiveDoc('math-inventory')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-inventory' ? "bg-white shadow-sm font-bold border border-slate-200 text-purple-600" : "hover:bg-slate-50/50")}>POST /math/inventory/wac</button>
-                  <button onClick={() => setActiveDoc('math-eoq')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-eoq' ? "bg-white shadow-sm font-bold border border-slate-200 text-purple-600" : "hover:bg-slate-50/50")}>POST /math/inventory/eoq</button>
-                  <button onClick={() => setActiveDoc('math-amortization')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-amortization' ? "bg-white shadow-sm font-bold border border-slate-200 text-purple-600" : "hover:bg-slate-50/50")}>POST /math/amortization</button>
-                  <button onClick={() => setActiveDoc('math-kpi')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-kpi' ? "bg-white shadow-sm font-bold border border-slate-200 text-purple-600" : "hover:bg-slate-50/50")}>POST /math/kpi</button>
-                  <button onClick={() => setActiveDoc('math-temporal')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-temporal' ? "bg-white shadow-sm font-bold border border-slate-200 text-purple-600" : "hover:bg-slate-50/50")}>POST /math/temporal</button>
+                  <button onClick={() => setActiveDoc('math-depreciation')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-depreciation' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-purple-600" : "hover:bg-[var(--ink)]/50")}>POST /math/depreciation</button>
+                  <button onClick={() => setActiveDoc('math-inventory')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-inventory' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-purple-600" : "hover:bg-[var(--ink)]/50")}>POST /math/inventory/wac</button>
+                  <button onClick={() => setActiveDoc('math-eoq')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-eoq' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-purple-600" : "hover:bg-[var(--ink)]/50")}>POST /math/inventory/eoq</button>
+                  <button onClick={() => setActiveDoc('math-amortization')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-amortization' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-purple-600" : "hover:bg-[var(--ink)]/50")}>POST /math/amortization</button>
+                  <button onClick={() => setActiveDoc('math-kpi')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-kpi' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-purple-600" : "hover:bg-[var(--ink)]/50")}>POST /math/kpi</button>
+                  <button onClick={() => setActiveDoc('math-temporal')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'math-temporal' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-purple-600" : "hover:bg-[var(--ink)]/50")}>POST /math/temporal</button>
                 </div>
              </div>
 
              <div>
                 <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-2">Workspaces & Projects</div>
                 <div className="space-y-1">
-                  <button onClick={() => setActiveDoc('get-workspaces')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-workspaces' ? "bg-white shadow-sm font-bold border border-slate-200 text-indigo-600" : "hover:bg-slate-50/50")}>GET /workspaces</button>
-                  <button onClick={() => setActiveDoc('get-projects')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-projects' ? "bg-white shadow-sm font-bold border border-slate-200 text-indigo-600" : "hover:bg-slate-50/50")}>GET /projects</button>
-                  <button onClick={() => setActiveDoc('post-project')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-project' ? "bg-white shadow-sm font-bold border border-slate-200 text-emerald-500" : "hover:bg-slate-50/50")}>POST /projects</button>
+                  <button onClick={() => setActiveDoc('get-workspaces')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-workspaces' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /workspaces</button>
+                  <button onClick={() => setActiveDoc('get-projects')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'get-projects' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-indigo-600" : "hover:bg-[var(--ink)]/50")}>GET /projects</button>
+                  <button onClick={() => setActiveDoc('post-project')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-project' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-emerald-500" : "hover:bg-[var(--ink)]/50")}>POST /projects</button>
                 </div>
              </div>
 
              <div>
-                <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-2">AI Cortex & ML</div>
+                <div className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mb-3 px-2">AI Clearbook AI & ML</div>
                 <div className="space-y-1">
-                  <button onClick={() => setActiveDoc('post-brain')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-brain' ? "bg-white shadow-sm font-bold border border-slate-200 text-[#8A2BE2]" : "hover:bg-slate-50/50")}>POST /brain/analyze</button>
-                  <button onClick={() => setActiveDoc('post-classify')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-classify' ? "bg-white shadow-sm font-bold border border-slate-200 text-[#d1502c]" : "hover:bg-slate-50/50")}>POST /brain/classify</button>
-                  <button onClick={() => setActiveDoc('deep-audit')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'deep-audit' ? "bg-white shadow-sm font-bold border border-slate-200 text-[#d1502c]" : "hover:bg-slate-50/50")}>POST /audit/deep</button>
-                  <button onClick={() => setActiveDoc('poll-audit')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'poll-audit' ? "bg-white shadow-sm font-bold border border-slate-200 text-[#d1502c]" : "hover:bg-slate-50/50")}>GET /audit/jobs/:job_id</button>
+                  <button onClick={() => setActiveDoc('post-brain')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-brain' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-[#8A2BE2]" : "hover:bg-[var(--ink)]/50")}>POST /brain/analyze</button>
+                  <button onClick={() => setActiveDoc('post-classify')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'post-classify' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-[#d1502c]" : "hover:bg-[var(--ink)]/50")}>POST /brain/classify</button>
+                  <button onClick={() => setActiveDoc('deep-audit')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'deep-audit' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-[#d1502c]" : "hover:bg-[var(--ink)]/50")}>POST /audit/deep</button>
+                  <button onClick={() => setActiveDoc('poll-audit')} className={cn("w-full text-left px-3 py-2 rounded-lg font-mono text-xs transition-all", activeDoc === 'poll-audit' ? "bg-[var(--surface)] shadow-sm font-bold border border-[var(--line)] text-[#d1502c]" : "hover:bg-[var(--ink)]/50")}>GET /audit/jobs/:job_id</button>
                 </div>
              </div>
           </div>
           
           <div className="flex-1 p-4 md:p-6 md:p-10 overflow-y-auto">
              <div className="flex justify-end mb-6">
-                 <div className="flex bg-slate-50 p-1 rounded-lg border border-slate-200">
-                     <button onClick={() => setDocLang('curl')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'curl' ? "bg-white shadow-sm" : "text-slate-500 opacity-70")}>cURL</button>
-                     <button onClick={() => setDocLang('python')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'python' ? "bg-white shadow-sm text-[#3776AB]" : "text-slate-500 opacity-70")}>Python</button>
-                     <button onClick={() => setDocLang('node')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'node' ? "bg-white shadow-sm text-[#339933]" : "text-slate-500 opacity-70")}>Node.js</button>
+                 <div className="flex bg-[var(--ink)] p-1 rounded-lg border border-[var(--line)]">
+                     <button onClick={() => setDocLang('curl')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'curl' ? "bg-[var(--surface)] shadow-sm" : "text-slate-500 opacity-70")}>cURL</button>
+                     <button onClick={() => setDocLang('python')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'python' ? "bg-[var(--surface)] shadow-sm text-[#3776AB]" : "text-slate-500 opacity-70")}>Python</button>
+                     <button onClick={() => setDocLang('node')} className={cn("px-4 py-1.5 text-xs font-bold rounded-md transition-all", docLang === 'node' ? "bg-[var(--surface)] shadow-sm text-[#339933]" : "text-slate-500 opacity-70")}>Node.js</button>
                  </div>
              </div>
 
@@ -1326,23 +1330,23 @@ export default function ApiHub() {
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2">Check Engine Status</h2>
-                    <p className="text-slate-500">Pings the LedgerFlow core API and returns active workspace metadata, currency settings, and uptime telemetry.</p>
+                    <p className="text-slate-500">Pings the Clearbook core API and returns active workspace metadata, currency settings, and uptime telemetry.</p>
                  </div>
                  
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.clearbook.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 headers = {"Authorization": "Bearer <YOUR_API_KEY>"}
 
 response = requests.get(url, headers=headers)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-const url = "https://api.ledgerflow.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}";
+const url = "https://api.clearbook.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}";
 const options = {
   method: 'GET',
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
@@ -1354,8 +1358,8 @@ fetch(url, options)
 </pre>
                  </div>
                  
-                 <h3 className="font-bold text-sm border-b border-slate-200 pb-2 mt-8">Example Response</h3>
-                 <div className="bg-slate-50/50 text-xs p-4 rounded-xl border border-slate-200 font-mono">
+                 <h3 className="font-bold text-sm border-b border-[var(--line)] pb-2 mt-8">Example Response</h3>
+                 <div className="bg-[var(--ink)]/50 text-xs p-4 rounded-xl border border-[var(--line)] font-mono">
 {`{
   "status": "active",
   "service": "TruthEngine API",
@@ -1387,7 +1391,7 @@ fetch(url, options)
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/transactions" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/transactions" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Idempotency-Key: req_123456789" \\
   -H "Content-Type: application/json" \\
@@ -1401,7 +1405,7 @@ fetch(url, options)
  docLang === 'python' ? `import requests
 import uuid
 
-url = "https://api.ledgerflow.io/api/v1/transactions"
+url = "https://api.clearbook.io/api/v1/transactions"
 headers = {
     "Authorization": "Bearer <YOUR_API_KEY>",
     "Idempotency-Key": str(uuid.uuid4()),
@@ -1419,7 +1423,7 @@ print(response.json())` :
 `const fetch = require('node-fetch');
 const crypto = require('crypto');
 
-const url = "https://api.ledgerflow.io/api/v1/transactions";
+const url = "https://api.clearbook.io/api/v1/transactions";
 const payload = {
   workspaceId: "${currentWorkspace?.id || 'ws_123'}",
   date: "2026-05-28",
@@ -1440,8 +1444,8 @@ fetch(url, {
                  </div>
 
                  <p className="text-xs text-slate-500 bg-slate-900/10 p-4 rounded-xl border border-indigo-600/20">
-                   <strong>💡 Auto-Balancing:</strong> The example above uses <code className="bg-white/50 px-1 py-0.5 rounded ml-1">amountCents</code> instead of strict <code className="bg-white/50 px-1 py-0.5 rounded ml-1">lines</code>. 
-                   The LedgerFlow engine will intuitively pair your default operational expense and liquid asset accounts to balance the entry automatically. To specify multi-line distribution, pass an array of <code className="bg-white/50 px-1 py-0.5 rounded ml-1">lines</code>.
+                   <strong>💡 Auto-Balancing:</strong> The example above uses <code className="bg-[var(--surface)]/50 px-1 py-0.5 rounded ml-1">amountCents</code> instead of strict <code className="bg-[var(--surface)]/50 px-1 py-0.5 rounded ml-1">lines</code>. 
+                   The Clearbook engine will intuitively pair your default operational expense and liquid asset accounts to balance the entry automatically. To specify multi-line distribution, pass an array of <code className="bg-[var(--surface)]/50 px-1 py-0.5 rounded ml-1">lines</code>.
                  </p>
                </div>
              )}
@@ -1450,17 +1454,17 @@ fetch(url, {
                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
                  <div>
                     <h2 className="text-2xl font-bold font-display mb-2 flex items-center gap-2">
-                       Analyze with AI Cortex
+                       Analyze with AI Clearbook AI
                        <span className="text-[10px] bg-[#8A2BE2] text-white px-2 py-0.5 rounded-full tracking-widest uppercase">POST</span>
                     </h2>
                     <p className="text-slate-500">
-                      Ask the LedgerFlow AI engine a question about your financial data. The deep engine securely compiles your ledger context and queries the neural models directly.
+                      Ask the Clearbook AI engine a question about your financial data. The deep engine securely compiles your ledger context and queries the rule models directly.
                     </p>
                  </div>
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/brain/analyze" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/brain/analyze" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1469,7 +1473,7 @@ fetch(url, {
   }'` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/brain/analyze"
+url = "https://api.clearbook.io/api/v1/brain/analyze"
 headers = {"Authorization": "Bearer <YOUR_API_KEY>"}
 payload = {
     "workspaceId": "${currentWorkspace?.id || 'ws_123'}",
@@ -1480,7 +1484,7 @@ res = requests.post(url, headers=headers, json=payload)
 print(res.json().get('analysis'))` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/brain/analyze", {
+fetch("https://api.clearbook.io/api/v1/brain/analyze", {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer <YOUR_API_KEY>',
@@ -1510,7 +1514,7 @@ fetch("https://api.ledgerflow.io/api/v1/brain/analyze", {
  
                   <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/brain/classify" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/brain/classify" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1523,7 +1527,7 @@ fetch("https://api.ledgerflow.io/api/v1/brain/analyze", {
   }'` : 
  docLang === 'python' ? `import requests
  
-url = "https://api.ledgerflow.io/api/v1/brain/classify"
+url = "https://api.clearbook.io/api/v1/brain/classify"
 headers = {
     "Authorization": "Bearer <YOUR_API_KEY>",
     "Content-Type": "application/json"
@@ -1538,7 +1542,7 @@ res = requests.post(url, headers=headers, json=payload)
 print(res.json())` : 
 `const fetch = require("node-fetch");
  
-fetch("https://api.ledgerflow.io/api/v1/brain/classify", {
+fetch("https://api.clearbook.io/api/v1/brain/classify", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <YOUR_API_KEY>",
@@ -1553,8 +1557,8 @@ fetch("https://api.ledgerflow.io/api/v1/brain/classify", {
 </pre>
                   </div>
 
-                  <h3 className="font-bold text-sm border-b border-slate-200 pb-2 mt-8">Example Response</h3>
-                  <div className="bg-slate-50/50 text-xs p-4 rounded-xl border border-slate-200 font-mono">
+                  <h3 className="font-bold text-sm border-b border-[var(--line)] pb-2 mt-8">Example Response</h3>
+                  <div className="bg-[var(--ink)]/50 text-xs p-4 rounded-xl border border-[var(--line)] font-mono">
 {`{
   "status": "success",
   "trainedModelCount": 124,
@@ -1577,16 +1581,16 @@ fetch("https://api.ledgerflow.io/api/v1/brain/classify", {
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.clearbook.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.clearbook.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -1602,7 +1606,7 @@ fetch("https://api.ledgerflow.io/api/v1/ledger?workspaceId=${currentWorkspace?.i
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/ledger" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/ledger" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1613,7 +1617,7 @@ fetch("https://api.ledgerflow.io/api/v1/ledger?workspaceId=${currentWorkspace?.i
   }'` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/ledger"
+url = "https://api.clearbook.io/api/v1/ledger"
 payload = {
     "workspaceId": "${currentWorkspace?.id || 'ws_123'}",
     "name": "Fleet Vehicles",
@@ -1624,7 +1628,7 @@ response = requests.post(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"}
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/ledger", {
+fetch("https://api.clearbook.io/api/v1/ledger", {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer <YOUR_API_KEY>',
@@ -1650,16 +1654,16 @@ fetch("https://api.ledgerflow.io/api/v1/ledger", {
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.clearbook.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.clearbook.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -1678,16 +1682,16 @@ fetch("https://api.ledgerflow.io/api/v1/transactions?workspaceId=${currentWorksp
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X DELETE "https://api.ledgerflow.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X DELETE "https://api.clearbook.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.clearbook.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.delete(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.clearbook.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   method: 'DELETE',
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
@@ -1704,16 +1708,16 @@ fetch("https://api.ledgerflow.io/api/v1/transactions/api-1701234567-abcd?workspa
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.clearbook.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.clearbook.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -1729,23 +1733,23 @@ fetch("https://api.ledgerflow.io/api/v1/logs?workspaceId=${currentWorkspace?.id 
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.clearbook.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.clearbook.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
                  </div>
                  
-                 <h3 className="font-bold text-sm border-b border-slate-200 pb-2 mt-8">Example Response</h3>
-                 <div className="bg-slate-50/50 text-xs p-4 rounded-xl border border-slate-200 font-mono">
+                 <h3 className="font-bold text-sm border-b border-[var(--line)] pb-2 mt-8">Example Response</h3>
+                 <div className="bg-[var(--ink)]/50 text-xs p-4 rounded-xl border border-[var(--line)] font-mono">
 {`{
   "status": "success",
   "workspaceId": "${currentWorkspace?.id || 'ws_123'}",
@@ -1771,23 +1775,23 @@ fetch("https://api.ledgerflow.io/api/v1/metrics/summary?workspaceId=${currentWor
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.clearbook.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.clearbook.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
                  </div>
                  
-                 <h3 className="font-bold text-sm border-b border-slate-200 pb-2 mt-8">Example Response (SaaS Archetype example)</h3>
-                 <div className="bg-slate-50/50 text-xs p-4 rounded-xl border border-slate-200 font-mono font-medium">
+                 <h3 className="font-bold text-sm border-b border-[var(--line)] pb-2 mt-8">Example Response (SaaS Archetype example)</h3>
+                 <div className="bg-[var(--ink)]/50 text-xs p-4 rounded-xl border border-[var(--line)] font-mono font-medium">
 {`{
   "status": "success",
   "workspaceId": "${currentWorkspace?.id || 'ws_123'}",
@@ -1824,7 +1828,7 @@ fetch("https://api.ledgerflow.io/api/v1/metrics?workspaceId=${currentWorkspace?.
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/audit/deep" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/audit/deep" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1832,7 +1836,7 @@ fetch("https://api.ledgerflow.io/api/v1/metrics?workspaceId=${currentWorkspace?.
   }'` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/audit/deep"
+url = "https://api.clearbook.io/api/v1/audit/deep"
 headers = {
     "Authorization": "Bearer <YOUR_API_KEY>",
     "Content-Type": "application/json"
@@ -1844,7 +1848,7 @@ response = requests.post(url, headers=headers, json=payload)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/audit/deep", {
+fetch("https://api.clearbook.io/api/v1/audit/deep", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <YOUR_API_KEY>",
@@ -1855,8 +1859,8 @@ fetch("https://api.ledgerflow.io/api/v1/audit/deep", {
 </pre>
                  </div>
                  
-                 <h3 className="font-bold text-sm border-b border-slate-200 pb-2 mt-8">Example Response (Asynchronous job accepted)</h3>
-                 <div className="bg-slate-50/50 text-xs p-4 rounded-xl border border-slate-200 font-mono font-medium">
+                 <h3 className="font-bold text-sm border-b border-[var(--line)] pb-2 mt-8">Example Response (Asynchronous job accepted)</h3>
+                 <div className="bg-[var(--ink)]/50 text-xs p-4 rounded-xl border border-[var(--line)] font-mono font-medium">
 {`{
   "status": "processing",
   "message": "Strategic simulation launched asynchronously. Please poll job endpoint for results.",
@@ -1875,23 +1879,23 @@ fetch("https://api.ledgerflow.io/api/v1/audit/deep", {
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.clearbook.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.clearbook.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
                  </div>
                  
-                 <h3 className="font-bold text-sm border-b border-slate-200 pb-2 mt-8">Example Response (Complete Audit Report)</h3>
-                 <div className="bg-slate-50/50 text-xs p-4 rounded-xl border border-slate-200 font-mono font-medium font-medium">
+                 <h3 className="font-bold text-sm border-b border-[var(--line)] pb-2 mt-8">Example Response (Complete Audit Report)</h3>
+                 <div className="bg-[var(--ink)]/50 text-xs p-4 rounded-xl border border-[var(--line)] font-mono font-medium font-medium">
 {`{
   "status": "success",
   "job_id": "job_1701234567_abcd",
@@ -1938,7 +1942,7 @@ fetch("https://api.ledgerflow.io/api/v1/audit/jobs/job_1701234567_abcd?workspace
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X PUT "https://api.ledgerflow.io/api/v1/transactions/<TRANSACTION_ID>" \\
+{docLang === 'curl' ? `curl -X PUT "https://api.clearbook.io/api/v1/transactions/<TRANSACTION_ID>" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1948,7 +1952,7 @@ fetch("https://api.ledgerflow.io/api/v1/audit/jobs/job_1701234567_abcd?workspace
   }'` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/transactions/<TRANSACTION_ID>"
+url = "https://api.clearbook.io/api/v1/transactions/<TRANSACTION_ID>"
 headers = {
     "Authorization": "Bearer <YOUR_API_KEY>",
     "Content-Type": "application/json"
@@ -1963,7 +1967,7 @@ response = requests.put(url, headers=headers, json=payload)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-const url = "https://api.ledgerflow.io/api/v1/transactions/<TRANSACTION_ID>";
+const url = "https://api.clearbook.io/api/v1/transactions/<TRANSACTION_ID>";
 const payload = {
   workspaceId: "${currentWorkspace?.id || 'ws_123'}",
   description: "AWS Hosting Tier Upgrade",
@@ -1994,7 +1998,7 @@ fetch(url, {
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/depreciation" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/depreciation" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "type": "double_declining_balance",
@@ -2003,7 +2007,7 @@ fetch(url, {
     "usefulLifePeriods": 60,
     "multiplier": 2
   }'` : 
-`const response = await fetch("https://api.ledgerflow.io/api/v1/math/depreciation", {
+`const response = await fetch("https://api.clearbook.io/api/v1/math/depreciation", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2035,7 +2039,7 @@ const { depreciationPerPeriodCents } = await response.json();`}
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/inventory/wac" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/inventory/wac" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "currentQty": 100,
@@ -2043,7 +2047,7 @@ const { depreciationPerPeriodCents } = await response.json();`}
     "incomingQty": 50,
     "incomingValueCents": 300000
   }'` : 
-`const response = await fetch("https://api.ledgerflow.io/api/v1/math/inventory/wac", {
+`const response = await fetch("https://api.clearbook.io/api/v1/math/inventory/wac", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2074,7 +2078,7 @@ const { newAverageCostCents } = await response.json();`}
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/amortization" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/amortization" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "principalCents": 10000000,
@@ -2082,7 +2086,7 @@ const { newAverageCostCents } = await response.json();`}
     "totalPeriods": 360,
     "paymentsPerYear": 12
   }'` : 
-`const response = await fetch("https://api.ledgerflow.io/api/v1/math/amortization", {
+`const response = await fetch("https://api.clearbook.io/api/v1/math/amortization", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2113,14 +2117,14 @@ const { periodicPaymentCents } = await response.json();`}
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/inventory/eoq" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/inventory/eoq" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "annualDemand": 10000,
     "costPerOrderCents": 50000,
     "holdingCostPerUnitCents": 200
   }'` : 
-`const response = await fetch("https://api.ledgerflow.io/api/v1/math/inventory/eoq", {
+`const response = await fetch("https://api.clearbook.io/api/v1/math/inventory/eoq", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2150,7 +2154,7 @@ const { eoq } = await response.json();`}
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/kpi" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/kpi" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "netProfitCents": 1500000,
@@ -2158,7 +2162,7 @@ const { eoq } = await response.json();`}
     "currentAssetsCents": 5000000,
     "currentLiabilitiesCents": 2000000
   }'` : 
-`const response = await fetch("https://api.ledgerflow.io/api/v1/math/kpi", {
+`const response = await fetch("https://api.clearbook.io/api/v1/math/kpi", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2192,7 +2196,7 @@ const kpiResults = await response.json();
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/temporal" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/temporal" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "type": "tax",
@@ -2203,7 +2207,7 @@ const kpiResults = await response.json();
       { "validFrom": "2024-01-01", "validTo": "9999-12-31", "value": 0.095 }
     ]
   }'` : 
-`const response = await fetch("https://api.ledgerflow.io/api/v1/math/temporal", {
+`const response = await fetch("https://api.clearbook.io/api/v1/math/temporal", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2212,7 +2216,7 @@ const kpiResults = await response.json();
   body: JSON.stringify({
     type: "tax", // or "currency"
     amountCents: 1500000, // $15,000.00
-    targetDate: "2024-03-01", // The transaction date you need truth for
+    targetDate: "2024-03-01", // The transaction date you need integrity for
     timeSeries: [
       { validFrom: "0000-01-01", validTo: "2023-12-31", value: 0.08 }, // 8% tax rate
       { validFrom: "2024-01-01", validTo: "9999-12-31", value: 0.095 } // Tax increased to 9.5%
@@ -2241,18 +2245,18 @@ const { effectiveValue, calculatedAmountCents } = await response.json();
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/workspaces" \\
+{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/workspaces" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/workspaces"
+url = "https://api.clearbook.io/api/v1/workspaces"
 headers = {"Authorization": "Bearer <YOUR_API_KEY>"}
 
 response = requests.get(url, headers=headers)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/workspaces", {
+fetch("https://api.clearbook.io/api/v1/workspaces", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -2274,18 +2278,18 @@ fetch("https://api.ledgerflow.io/api/v1/workspaces", {
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.clearbook.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 headers = {"Authorization": "Bearer <YOUR_API_KEY>"}
 
 response = requests.get(url, headers=headers)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.ledgerflow.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.clearbook.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -2307,7 +2311,7 @@ fetch("https://api.ledgerflow.io/api/v1/projects?workspaceId=${currentWorkspace?
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/projects" \\
+{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/projects" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -2318,7 +2322,7 @@ fetch("https://api.ledgerflow.io/api/v1/projects?workspaceId=${currentWorkspace?
   }'` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.ledgerflow.io/api/v1/projects"
+url = "https://api.clearbook.io/api/v1/projects"
 headers = {
     "Authorization": "Bearer <YOUR_API_KEY>",
     "Content-Type": "application/json"
@@ -2333,7 +2337,7 @@ response = requests.post(url, headers=headers, json=payload)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-const url = "https://api.ledgerflow.io/api/v1/projects";
+const url = "https://api.clearbook.io/api/v1/projects";
 const payload = {
   workspaceId: "${currentWorkspace?.id || 'ws_123'}",
   name: "Integration Project",
@@ -2361,12 +2365,12 @@ fetch(url, {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-300">
           <div className="lg:col-span-5 space-y-6">
             <div className="ledger-card p-6 space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3 border-b border-[var(--line)] pb-4">
                 <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
                   <Play size={18} />
                 </div>
                 <div>
-                  <h3 className="font-header font-bold text-slate-800">Configure Live Request</h3>
+                  <h3 className="font-header font-bold text-[var(--text)]">Configure Live Request</h3>
                   <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Interactive Sandbox Engine</p>
                 </div>
               </div>
@@ -2382,7 +2386,7 @@ fetch(url, {
                     setSandboxStatus(null);
                     setSandboxLatency(null);
                   }}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-bold font-mono focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                  className="w-full bg-[var(--ink)] border border-[var(--line)] rounded-xl p-3 text-xs font-bold font-mono focus:ring-1 focus:ring-slate-950 focus:outline-none"
                 >
                   <option value="GET_v1_status">GET /api/v1/status (Verify Core Gateway Status)</option>
                   <option value="GET_v1_workspaces">GET /api/v1/workspaces (Query Tenant Profiles)</option>
@@ -2395,8 +2399,8 @@ fetch(url, {
                   <option value="GET_v1_projects">GET /api/v1/projects (Query Active Ventures)</option>
                   <option value="POST_v1_projects">POST /api/v1/projects (Map Corporate Scenario Submodule)</option>
                   <option value="GET_v1_metrics">GET /api/v1/metrics (Retrieve Sifting KPIs)</option>
-                  <option value="POST_ledger_match">POST /api/v1/ledger/match (Parallel Neural Matching)</option>
-                  <option value="POST_brain_analyze">POST /api/v1/brain/analyze (Query Cortex Cognitive AI)</option>
+                  <option value="POST_ledger_match">POST /api/v1/ledger/match (Parallel Rule Matching)</option>
+                  <option value="POST_brain_analyze">POST /api/v1/brain/analyze (Query Clearbook AI Cognitive AI)</option>
                   <option value="POST_v1_brain_classify_batch">POST /api/v1/brain/classify-batch (10x Cognitive NLP Batch Categorizer)</option>
                   <option value="GET_v1_ecommerce">GET /api/v1/ecommerce (Fetch Channels)</option>
                   <option value="POST_v1_ecommerce">POST /api/v1/ecommerce (Sync Channel)</option>
@@ -2414,14 +2418,14 @@ fetch(url, {
               </div>
 
               {/* Credentials auth select */}
-              <div className="space-y-3 p-4 bg-slate-50 border border-slate-150 rounded-xl">
+              <div className="space-y-3 p-4 bg-[var(--ink)] border border-slate-150 rounded-xl">
                 <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 block">Security Authentication Identity</label>
                 <div className="flex gap-2.5">
                   <button
                     onClick={() => setSandboxCredType('session')}
                     className={cn(
                       "flex-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border cursor-pointer text-center",
-                      sandboxCredType === 'session' ? "bg-slate-950 text-white border-slate-950" : "bg-white text-slate-600 border-slate-250/70 hover:bg-slate-100"
+                      sandboxCredType === 'session' ? "bg-slate-950 text-white border-slate-950" : "bg-[var(--surface)] text-[var(--text)] border-[var(--line)] hover:bg-[var(--ink)]"
                     )}
                   >
                     Active Admin JWT Session
@@ -2435,7 +2439,7 @@ fetch(url, {
                     }}
                     className={cn(
                       "flex-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border cursor-pointer text-center",
-                      sandboxCredType === 'key' ? "bg-slate-950 text-white border-slate-950" : "bg-white text-slate-600 border-slate-250/70 hover:bg-slate-100"
+                      sandboxCredType === 'key' ? "bg-slate-950 text-white border-slate-950" : "bg-[var(--surface)] text-[var(--text)] border-[var(--line)] hover:bg-[var(--ink)]"
                     )}
                   >
                     API Bearer Key
@@ -2452,7 +2456,7 @@ fetch(url, {
                       <select
                         value={sandboxSelectedKey}
                         onChange={(e) => setSandboxSelectedKey(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[11px] font-mono focus:outline-none"
+                        className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-lg px-2.5 py-1.5 text-[11px] font-mono focus:outline-none"
                       >
                         {publicKeys.map((k) => (
                           <option key={k.id} value={k.id}>
@@ -2466,7 +2470,7 @@ fetch(url, {
               </div>
 
               {/* Dynamic input blocks based on active endpoint path selection */}
-              <div className="space-y-4 pt-2 border-t border-slate-100">
+              <div className="space-y-4 pt-2 border-t border-[var(--line)]">
                 <h4 className="text-[11px] font-extrabold uppercase text-slate-450 tracking-widest">Aperiodic Scope Parameters</h4>
 
                 {/* POST TRANSACTION inputs */}
@@ -2479,7 +2483,7 @@ fetch(url, {
                           type="date"
                           value={fieldDate}
                           onChange={(e) => setFieldDate(e.target.value)}
-                          className="w-full text-xs font-semibold p-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
+                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
                         />
                       </div>
                       <div className="space-y-1">
@@ -2488,7 +2492,7 @@ fetch(url, {
                           type="number"
                           value={fieldAmountCents}
                           onChange={(e) => setFieldAmountCents(parseFloat(e.target.value) || 0)}
-                          className="w-full text-xs font-semibold p-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950 font-mono"
+                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950 font-mono"
                         />
                       </div>
                     </div>
@@ -2500,11 +2504,11 @@ fetch(url, {
                         value={fieldDesc}
                         onChange={(e) => setFieldDesc(e.target.value)}
                         placeholder="e.g. AWS S3 Storage Billing Tier"
-                        className="w-full text-xs font-semibold p-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
+                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
                       />
                     </div>
 
-                    <div className="space-y-1.5 p-3 rounded-lg border border-slate-100 bg-slate-50/50">
+                    <div className="space-y-1.5 p-3 rounded-lg border border-[var(--line)] bg-[var(--ink)]/50">
                       <div className="flex items-center justify-between">
                         <label className="text-[9px] font-black uppercase text-slate-500">Idempotency Cryptic Key</label>
                         <button
@@ -2518,7 +2522,7 @@ fetch(url, {
                         type="text"
                         value={fieldIdempotencyKey}
                         onChange={(e) => setFieldIdempotencyKey(e.target.value)}
-                        className="w-full text-xs font-mono p-1.5 bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-950"
+                        className="w-full text-xs font-mono p-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-md focus:outline-none focus:ring-1 focus:ring-slate-950"
                       />
                     </div>
 
@@ -2546,7 +2550,7 @@ fetch(url, {
                         type="text"
                         value={fieldCOAName}
                         onChange={(e) => setFieldCOAName(e.target.value)}
-                        className="w-full text-xs font-semibold p-2 bg-white border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -2555,7 +2559,7 @@ fetch(url, {
                         <select
                           value={fieldCOAType}
                           onChange={(e) => setFieldCOAType(e.target.value)}
-                          className="w-full text-xs font-semibold p-2 bg-white border border-slate-200 rounded-lg focus:outline-none font-sans"
+                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none font-sans"
                         >
                           <option value="asset">Asset (Liquid/Tangible)</option>
                           <option value="liability">Liability (Leases/Payable)</option>
@@ -2571,7 +2575,7 @@ fetch(url, {
                           value={fieldCOACode}
                           onChange={(e) => setFieldCOACode(e.target.value)}
                           placeholder="e.g. 5230"
-                          className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1"
+                          className="w-full text-xs font-mono p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1"
                         />
                       </div>
                     </div>
@@ -2587,7 +2591,7 @@ fetch(url, {
                         type="text"
                         value={fieldProjectName}
                         onChange={(e) => setFieldProjectName(e.target.value)}
-                        className="w-full text-xs font-semibold p-2 bg-white border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
                       />
                     </div>
                     <div className="space-y-1">
@@ -2597,7 +2601,7 @@ fetch(url, {
                         value={fieldProjectCode}
                         onChange={(e) => setFieldProjectCode(e.target.value)}
                         placeholder="INT-PHX-11"
-                        className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-lg focus:outline-none"
+                        className="w-full text-xs font-mono p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none"
                       />
                     </div>
                   </div>
@@ -2613,14 +2617,14 @@ fetch(url, {
                           "text-[9px] font-semibold px-1.5 rounded",
                           sandboxEndpoint === 'POST_v1_brain_classify_batch' ? "bg-purple-50 text-purple-650" : "bg-emerald-50 text-[#228B22]"
                         )}>
-                          {sandboxEndpoint === 'POST_v1_brain_classify_batch' ? "Cortex AI engine" : "Bayesian matching pipeline"}
+                          {sandboxEndpoint === 'POST_v1_brain_classify_batch' ? "Clearbook AI AI engine" : "Bayesian matching pipeline"}
                         </span>
                       </div>
                       <textarea
                         rows={4}
                         value={fieldMatchDesc}
                         onChange={(e) => setFieldMatchDesc(e.target.value)}
-                        className="w-full font-mono text-[11px] p-2 bg-white border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                        className="w-full font-mono text-[11px] p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
                         placeholder={sandboxEndpoint === 'POST_v1_brain_classify_batch' ? "Google Workspace Subscription\nUber Trip Ride NY\nRent Office Suite 12\nHardware Store Staples" : "Uber trip ride...\nAWS Web Services"}
                       />
                     </div>
@@ -2633,13 +2637,13 @@ fetch(url, {
                     <div className="space-y-1">
                       <div className="flex justify-between items-center">
                         <label className="text-[9px] font-black uppercase text-slate-500">Cognitive Prompt Directive</label>
-                        <span className="text-[9px] text-[#800080] font-semibold bg-purple-50 px-1.5 rounded">Cortex AI Model</span>
+                        <span className="text-[9px] text-[#800080] font-semibold bg-purple-50 px-1.5 rounded">Clearbook AI AI Model</span>
                       </div>
                       <textarea
                         rows={4}
-                        value={fieldCortexPrompt}
-                        onChange={(e) => setFieldCortexPrompt(e.target.value)}
-                        className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                        value={fieldClearbookAIPrompt}
+                        onChange={(e) => setFieldClearbookAIPrompt(e.target.value)}
+                        className="w-full text-xs p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
                         placeholder="Provide details..."
                       />
                     </div>
@@ -2648,7 +2652,7 @@ fetch(url, {
 
                 {/* Static / Empty params notice */}
                 {(sandboxEndpoint.startsWith('GET_') || sandboxEndpoint === 'DELETE_') && (
-                  <div className="py-4 text-center border border-slate-100 bg-slate-50/50 rounded-lg">
+                  <div className="py-4 text-center border border-[var(--line)] bg-[var(--ink)]/50 rounded-lg">
                     <p className="text-[11px] font-medium text-slate-500 italic">No request body required for this rest protocol query.</p>
                     <p className="text-[9px] text-slate-400 mt-1 font-mono">{`Method: ${sandboxEndpoint.split('_')[0]} | Workspace: ${currentWorkspace?.id || ''}`}</p>
                   </div>
@@ -2679,27 +2683,27 @@ fetch(url, {
           <div className="lg:col-span-12 xl:col-span-7 space-y-6">
             {/* Realtime generated code blocks side-by-side! */}
             <div className="ledger-card p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-slate-900"></div>
-                  <h4 className="font-header font-bold text-sm text-slate-800">Dynamic Client SDK Generator</h4>
+                  <h4 className="font-header font-bold text-sm text-[var(--text)]">Dynamic Client SDK Generator</h4>
                 </div>
-                <div className="flex bg-slate-50 rounded-lg p-0.5 border border-slate-200 gap-1">
+                <div className="flex bg-[var(--ink)] rounded-lg p-0.5 border border-[var(--line)] gap-1">
                   <button
                     onClick={() => setSandboxLang('curl')}
-                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'curl' ? "bg-white text-slate-950 shadow-3xs" : "text-slate-500")}
+                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'curl' ? "bg-[var(--surface)] text-slate-950 shadow-3xs" : "text-slate-500")}
                   >
                     cURL
                   </button>
                   <button
                     onClick={() => setSandboxLang('python')}
-                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'python' ? "bg-white text-slate-950 shadow-3xs" : "text-slate-500")}
+                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'python' ? "bg-[var(--surface)] text-slate-950 shadow-3xs" : "text-slate-500")}
                   >
                     Python
                   </button>
                   <button
                     onClick={() => setSandboxLang('node')}
-                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'node' ? "bg-white text-slate-950 shadow-3xs" : "text-slate-500")}
+                    className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md cursor-pointer", sandboxLang === 'node' ? "bg-[var(--surface)] text-slate-950 shadow-3xs" : "text-slate-500")}
                   >
                     Node.js
                   </button>
@@ -2760,15 +2764,15 @@ fetch(url, {
 
             {/* Sandbox response view box */}
             <div className="ledger-card p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
                 <div className="flex items-center gap-2">
                   <Database size={16} className="text-slate-450" />
-                  <span className="font-header font-bold text-sm text-slate-800">Truth Engine Response Buffer</span>
+                  <span className="font-header font-bold text-sm text-[var(--text)]">Integrity Engine Response Buffer</span>
                 </div>
 
                 {sandboxStatus !== null && (
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] text-slate-400 font-mono font-bold uppercase">Latency: <strong className="text-slate-800">{sandboxLatency} ms</strong></span>
+                    <span className="text-[10px] text-slate-400 font-mono font-bold uppercase">Latency: <strong className="text-[var(--text)]">{sandboxLatency} ms</strong></span>
                     <span className={cn(
                       "px-2 px-1 py-0.5 rounded-md text-[10px] font-black tracking-wider uppercase font-mono text-white",
                       sandboxStatus >= 200 && sandboxStatus < 300 ? "bg-emerald-500" : "bg-rose-500"
@@ -2780,17 +2784,17 @@ fetch(url, {
               </div>
 
               {!sandboxLoading && !sandboxResult && (
-                <div className="p-4 md:p-8 text-center text-slate-400 italic text-xs space-y-2 border border-dashed border-slate-200 bg-slate-50/50 rounded-xl">
+                <div className="p-4 md:p-8 text-center text-slate-400 italic text-xs space-y-2 border border-dashed border-[var(--line)] bg-[var(--ink)]/50 rounded-xl">
                   <p>Execute an API query inside the left configuration deck to view operational responses in real-time.</p>
                   <p className="text-[10px] text-slate-350 font-mono">Payload parameters are completely sanitised & verified against your active database ledger nodes.</p>
                 </div>
               )}
 
               {sandboxLoading && (
-                <div className="p-12 text-center border border-slate-100 bg-slate-50/20 rounded-xl flex flex-col items-center justify-center space-y-4 animate-in fade-in">
+                <div className="p-12 text-center border border-[var(--line)] bg-[var(--ink)]/20 rounded-xl flex flex-col items-center justify-center space-y-4 animate-in fade-in">
                   <RefreshCw size={24} className="animate-spin text-slate-550" />
                   <div className="space-y-1">
-                    <p className="text-xs font-bold text-slate-700">Inquiring Truth Ledger Gateways...</p>
+                    <p className="text-xs font-bold text-slate-700">Inquiring Integrity Ledger Gateways...</p>
                     <p className="text-[10px] text-slate-450">Verifying signature key matching and double-entry transaction locks</p>
                   </div>
                 </div>
@@ -2812,7 +2816,7 @@ fetch(url, {
                       {JSON.stringify(sandboxResult, null, 2)}
                     </pre>
                   </div>
-                  <div className="flex justify-between items-center bg-slate-50 border border-slate-220/80 rounded-xl px-4 py-3 text-[10px] text-slate-500 font-medium">
+                  <div className="flex justify-between items-center bg-[var(--ink)] border border-slate-220/80 rounded-xl px-4 py-3 text-[10px] text-slate-500 font-medium">
                     <span className="flex items-center gap-1.5"><Shield size={12} className="text-emerald-600" /> Double-entry verified successfully</span>
                     <span className="font-mono text-slate-600">Computation: {sandboxStatus === 201 || sandboxEndpoint.includes('POST_brain') ? '15 units computed' : '1 unit computed'}</span>
                   </div>
@@ -2825,13 +2829,13 @@ fetch(url, {
 
       {activeTab === 'logs' && (
         <div className="ledger-card p-6 space-y-6 animate-in fade-in duration-300 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--line)] pb-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-indigo-600 flex items-center justify-center">
                 <FileText size={20} />
               </div>
               <div>
-                <h3 className="font-header font-bold text-slate-800">API Pipeline Chronological Logs</h3>
+                <h3 className="font-header font-bold text-[var(--text)]">API Pipeline Chronological Logs</h3>
                 <p className="text-xs text-slate-400 font-medium">Diagnostic ledger feed & key consumption audits.</p>
               </div>
             </div>
@@ -2839,7 +2843,7 @@ fetch(url, {
             <div className="flex flex-wrap gap-2 items-center">
               <button
                 onClick={fetchLogs}
-                className="p-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-100 transition-all flex items-center gap-1.5 text-xs font-bold shrink-0 cursor-pointer"
+                className="p-2 bg-[var(--ink)] border border-[var(--line)] text-slate-700 rounded-lg hover:bg-slate-100 transition-all flex items-center gap-1.5 text-xs font-bold shrink-0 cursor-pointer"
               >
                 <RefreshCw size={12} /> Sync Feed
               </button>
@@ -2848,7 +2852,7 @@ fetch(url, {
 
           {/* Table display */}
           {apiLogs.length === 0 ? (
-            <div className="py-12 text-center border border-slate-150 bg-slate-50/50 rounded-[32px]">
+            <div className="py-12 text-center border border-slate-150 bg-[var(--ink)]/50 rounded-[32px]">
               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
                 <Activity size={20} className="text-slate-400" />
               </div>
@@ -2869,11 +2873,11 @@ fetch(url, {
                       <th className="p-4 text-right">Details</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody className="divide-y divide-slate-100 bg-[var(--surface)]">
                     {apiLogs.map((log: any, idx: number) => {
                       const isSuccess = log.status >= 200 && log.status < 300;
                       return (
-                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                        <tr key={idx} className="hover:bg-[var(--ink)]/50 transition-colors">
                           <td className="p-4 whitespace-nowrap text-xs font-mono font-bold text-slate-450 text-[11px]">
                             {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString()}
                           </td>
@@ -2887,7 +2891,7 @@ fetch(url, {
                               )}>
                                 {log.method || 'GET'}
                               </span>
-                              <span className="font-mono text-xs text-slate-800 font-bold max-w-[200px] truncate">{log.path || '/api/v1/status'}</span>
+                              <span className="font-mono text-xs text-[var(--text)] font-bold max-w-[200px] truncate">{log.path || '/api/v1/status'}</span>
                             </div>
                           </td>
                           <td className="p-4 whitespace-nowrap">
@@ -2896,7 +2900,7 @@ fetch(url, {
                             </span>
                           </td>
                           <td className="p-4 whitespace-nowrap">
-                            <span className="text-[11px] font-mono bg-slate-50 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
+                            <span className="text-[11px] font-mono bg-[var(--ink)] text-slate-600 px-2 py-0.5 rounded border border-[var(--line)]">
                               {log.apiKeyUsed === 'Active Admin Session' ? '🖥️ Admin Session' : `🔑 Key: lf_id_${String(log.apiKeyUsed).slice(-6)}`}
                             </span>
                           </td>
@@ -2941,7 +2945,7 @@ fetch(url, {
                 <span className="px-2 py-0.5 bg-purple-100 text-[#8A2BE2] text-[9px] font-black rounded-full uppercase tracking-wider">Enterprise API</span>
               </div>
               <div className="flex items-baseline gap-1 pt-1.5">
-                <span className="text-2xl font-black text-slate-800 font-display">SaaS Growth</span>
+                <span className="text-2xl font-black text-[var(--text)] font-display">SaaS Growth</span>
               </div>
               <p className="text-[10px] text-slate-400 font-medium">Billed dynamically based on computational complexity parameters processed.</p>
             </div>
@@ -2952,7 +2956,7 @@ fetch(url, {
                 <Zap size={14} className="text-[#FFD700] fill-[#FFD700]" />
               </div>
               <div className="flex items-baseline gap-1 pt-1.5">
-                <span className="text-2xl font-black text-slate-800 font-mono">100,000 / 100,000</span>
+                <span className="text-2xl font-black text-[var(--text)] font-mono">100,000 / 100,000</span>
                 <span className="text-[10px] text-slate-400 font-black">UNITS</span>
               </div>
               <p className="text-[10px] text-slate-400 font-medium">Quota allocated monthly. Resets in 23 days.</p>
@@ -2964,7 +2968,7 @@ fetch(url, {
                 <TrendingUp size={14} className="text-emerald-500" />
               </div>
               <div className="flex items-baseline gap-1 pt-1.5">
-                <span className="text-2xl font-black text-slate-800 font-mono">{apiLogs.length}</span>
+                <span className="text-2xl font-black text-[var(--text)] font-mono">{apiLogs.length}</span>
                 <span className="text-[11px] text-slate-400 font-bold uppercase tracking-widest font-mono">Operations</span>
               </div>
               <p className="text-[10px] text-slate-400 font-medium">Audit logs track execution and delta mappings securely.</p>
@@ -2976,7 +2980,7 @@ fetch(url, {
                 <Users size={14} className="text-slate-400" />
               </div>
               <div className="flex items-baseline gap-1 pt-1.5">
-                <span className="text-2xl font-black text-slate-800 font-mono">1 / 50</span>
+                <span className="text-2xl font-black text-[var(--text)] font-mono">1 / 50</span>
                 <span className="text-[10px] text-slate-400 font-bold">SEATS</span>
               </div>
               <p className="text-[10px] text-slate-400 font-medium">Seats can be scaled with slider simulation below.</p>
@@ -2991,7 +2995,7 @@ fetch(url, {
                   <Sliders size={16} />
                 </div>
                 <div>
-                  <h4 className="font-header font-bold text-slate-800 text-sm">Strategic Corporate Capacity Modeler</h4>
+                  <h4 className="font-header font-bold text-[var(--text)] text-sm">Strategic Corporate Capacity Modeler</h4>
                   <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Capacity Allocation & Cost Estimations</p>
                 </div>
               </div>
@@ -3016,7 +3020,7 @@ fetch(url, {
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 space-y-2">
+                <div className="pt-3 border-t border-[var(--line)] space-y-2">
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500 font-bold">Projected Monthly Platform License</span>
                     <span className="font-mono font-bold text-slate-950">${(simSeatsCount * 12).toFixed(2)} USD</span>
@@ -3045,7 +3049,7 @@ fetch(url, {
                   <Gauge size={16} />
                 </div>
                 <div>
-                  <h4 className="font-header font-bold text-slate-800 text-sm">TruthEngine Stress-Testing Console</h4>
+                  <h4 className="font-header font-bold text-[var(--text)] text-sm">TruthEngine Stress-Testing Console</h4>
                   <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Simulate burst programmatic telemetry</p>
                 </div>
               </div>
@@ -3100,27 +3104,27 @@ fetch(url, {
 
           {/* Subledgers trace of compute costs */}
           <div className="ledger-card p-6 space-y-4 shadow-3xs border border-slate-150">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2 border-b border-[var(--line)] pb-3">
               <Zap size={14} className="text-purple-600" />
               <h4 className="font-header font-bold text-[#8A2BE2] text-sm uppercase tracking-wide">Ledger computational processing trace</h4>
             </div>
 
             <div className="bg-[#FAFBFB] p-4 rounded-xl border border-slate-150 space-y-2 text-[11px] font-mono leading-relaxed text-slate-550">
-              <p className="font-bold text-slate-800">Double-Entry ledger integrity is managed with complexity weight algorithms:</p>
+              <p className="font-bold text-[var(--text)]">Double-Entry ledger integrity is managed with complexity weight algorithms:</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 pt-1">
-                <div className="flex justify-between border-b border-dashed border-slate-200 py-0.5">
+                <div className="flex justify-between border-b border-dashed border-[var(--line)] py-0.5">
                   <span>BAYESIAN_CLASSIFIER_PASS:</span>
                   <span className="font-bold text-slate-700">3 units computed</span>
                 </div>
-                <div className="flex justify-between border-b border-dashed border-slate-200 py-0.5">
+                <div className="flex justify-between border-b border-dashed border-[var(--line)] py-0.5">
                   <span>CORTEX_AI_ANALYSIS:</span>
                   <span className="font-bold text-slate-700">10 units computed</span>
                 </div>
-                <div className="flex justify-between border-b border-dashed border-slate-200 py-0.5">
+                <div className="flex justify-between border-b border-dashed border-[var(--line)] py-0.5">
                   <span>LEDGER_BALANCE_VALIDATION:</span>
                   <span className="font-bold text-slate-700">1 unit computed</span>
                 </div>
-                <div className="flex justify-between border-b border-dashed border-slate-200 py-0.5">
+                <div className="flex justify-between border-b border-dashed border-[var(--line)] py-0.5">
                   <span>METRICS_CORRELATION_PASS:</span>
                   <span className="font-bold text-slate-700">1 unit computed</span>
                 </div>

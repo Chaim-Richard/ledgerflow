@@ -2,9 +2,16 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import path from 'path';
 
 export default defineConfig({
-  resolve: { dedupe: ["react", "react-dom"] },
+  resolve: { 
+    alias: {
+      react: path.resolve('./node_modules/react'),
+      'react-dom': path.resolve('./node_modules/react-dom')
+    },
+    dedupe: ["react", "react-dom"] 
+  },
   plugins: [react(), tailwindcss(), VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["**/*"],

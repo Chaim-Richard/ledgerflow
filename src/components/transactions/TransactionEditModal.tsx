@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { auth } from '../../firebase';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import TagInput from './TagInput';
 
 interface TransactionEditModalProps {
   isOpen: boolean;
@@ -46,7 +47,9 @@ export default function TransactionEditModal({
   const [originalCurrency, setOriginalCurrency] = useState(transaction.originalCurrency || 'USD');
   const [exchangeRate, setExchangeRate] = useState<number>(transaction.exchangeRate || 1.0);
   const [isFetchingRate, setIsFetchingRate] = useState(false);
-  const { classes, locations, projects } = useLedgerStore();
+  const classes = useLedgerStore(s => s.classes);
+  const locations = useLedgerStore(s => s.locations);
+  const projects = useLedgerStore(s => s.projects);
   
   // Manage lines for splitting and multiple assignments
   const [lines, setLines] = useState<TransactionLine[]>([]);
@@ -111,7 +114,7 @@ export default function TransactionEditModal({
 
   const handleSave = () => {
     if (isLocked) {
-      toast.error('Period is sealed. Changes are prohibited to protect general ledger truth.');
+      toast.error('Period is sealed. Changes are prohibited to protect general ledger integrity.');
       return;
     }
 
@@ -196,16 +199,16 @@ export default function TransactionEditModal({
           initial={{ opacity: 0, scale: 0.98, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.98, y: 15 }}
-          className="relative w-full max-w-4xl bg-white rounded-[32px] shadow-2xl border border-zinc-200 overflow-hidden flex flex-col max-h-[90dvh]"
+          className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[32px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
         >
           {/* Header with audit indicators */}
-          <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+          <div className="px-6 py-5 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-zinc-900 text-white rounded-xl flex items-center justify-center shadow-md shadow-zinc-800/10">
                 <Sliders size={18} className="text-zinc-100" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[var(--text)] tracking-tight flex items-center gap-2">
                   Edit Ledger Entry details
                 </h3>
                 <p className="text-[10px] text-zinc-400 font-mono uppercase tracking-widest mt-0.5">
@@ -216,7 +219,7 @@ export default function TransactionEditModal({
 
             <button 
               onClick={onClose} 
-              className="p-2 hover:bg-zinc-100 rounded-full transition-all text-zinc-400 hover:text-zinc-900"
+              className="p-2 hover:bg-zinc-100 rounded-full transition-all text-zinc-400 hover:text-[var(--text)]"
             >
               <X size={18} />
             </button>
@@ -230,7 +233,7 @@ export default function TransactionEditModal({
               <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-[32px] text-amber-800">
                 <ShieldAlert className="shrink-0 mt-0.5 text-amber-600" size={18} />
                 <div className="text-xs space-y-1">
-                  <p className="font-bold">Period Locked (Absolute Truth Principle)</p>
+                  <p className="font-bold">Period Locked (Absolute Integrity Principle)</p>
                   <p className="text-amber-700/90 leading-relaxed">
                     This transaction Date ({date}) is prior to the lock date ({lockDate}). You cannot edit this record unless you update the organization lock threshold in System Settings.
                   </p>
@@ -250,7 +253,7 @@ export default function TransactionEditModal({
                   disabled={isLocked}
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200/80 rounded-xl focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-950 focus:bg-white outline-none transition-all text-sm font-medium text-zinc-800 disabled:opacity-50"
+                  className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)]/80 rounded-xl focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-950 focus:bg-[var(--surface)] outline-none transition-all text-sm font-medium text-[var(--text)] disabled:opacity-50"
                 />
               </div>
 
@@ -264,7 +267,7 @@ export default function TransactionEditModal({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="e.g. AWS Production Virtual Servers"
-                  className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200/80 rounded-xl focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-950 focus:bg-white outline-none transition-all text-sm font-semibold text-zinc-800 placeholder:text-zinc-300 disabled:opacity-50"
+                  className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)]/80 rounded-xl focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-950 focus:bg-[var(--surface)] outline-none transition-all text-sm font-semibold text-[var(--text)] placeholder:text-zinc-300 disabled:opacity-50"
                 />
               </div>
 
@@ -283,7 +286,7 @@ export default function TransactionEditModal({
                   value={payee}
                   onChange={(e) => setPayee(e.target.value)}
                   placeholder="e.g. Amazon Web Services"
-                  className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200/80 rounded-xl focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-950 focus:bg-white outline-none transition-all text-xs font-semibold text-zinc-800"
+                  className="w-full px-4 py-2 bg-[var(--ink)] border border-[var(--line)]/80 rounded-xl focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-950 focus:bg-[var(--surface)] outline-none transition-all text-xs font-semibold text-[var(--text)]"
                 />
               </div>
 
@@ -297,7 +300,7 @@ export default function TransactionEditModal({
                   value={project}
                   onChange={(e) => setProject(e.target.value)}
                   placeholder="e.g. PRJ-METRICS"
-                  className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200/80 rounded-xl focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-950 focus:bg-white outline-none transition-all text-xs font-semibold text-zinc-800 uppercase"
+                  className="w-full px-4 py-2 bg-[var(--ink)] border border-[var(--line)]/80 rounded-xl focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-950 focus:bg-[var(--surface)] outline-none transition-all text-xs font-semibold text-[var(--text)] uppercase"
                 />
               </div>
 
@@ -309,7 +312,7 @@ export default function TransactionEditModal({
                   disabled={isLocked}
                   value={type}
                   onChange={(e) => setType(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 hover:border-zinc-300 rounded-xl text-xs font-semibold text-zinc-800 outline-none focus:bg-white"
+                  className="w-full px-3 py-2 bg-[var(--ink)] border border-[var(--line)] hover:border-zinc-300 rounded-xl text-xs font-semibold text-[var(--text)] outline-none focus:bg-[var(--surface)]"
                 >
                   <option value="actual">Actual Ledger Node</option>
                   <option value="forecast">Forecast projection</option>
@@ -326,7 +329,7 @@ export default function TransactionEditModal({
                   disabled={isLocked}
                   value={status}
                   onChange={(e) => setStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 hover:border-zinc-300 rounded-xl text-xs font-semibold text-zinc-800 outline-none focus:bg-white"
+                  className="w-full px-3 py-2 bg-[var(--ink)] border border-[var(--line)] hover:border-zinc-300 rounded-xl text-xs font-semibold text-[var(--text)] outline-none focus:bg-[var(--surface)]"
                 >
                   <option value="completed">Completed / Signed</option>
                   <option value="pending">Pending Validation</option>
@@ -343,7 +346,7 @@ export default function TransactionEditModal({
                   disabled={isLocked}
                   value={originalCurrency}
                   onChange={(e) => setOriginalCurrency(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 hover:border-zinc-300 rounded-xl text-xs font-semibold text-zinc-800 outline-none focus:bg-white"
+                  className="w-full px-3 py-2 bg-[var(--ink)] border border-[var(--line)] hover:border-zinc-300 rounded-xl text-xs font-semibold text-[var(--text)] outline-none focus:bg-[var(--surface)]"
                 >
                   {['USD', 'EUR', 'GBP', 'ILS', 'JPY', 'CAD'].map(cur => (
                     <option key={cur} value={cur}>{cur}</option>
@@ -408,9 +411,9 @@ export default function TransactionEditModal({
 
             {/* Structural Double-Entry Ledger Lines splits section */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
+              <div className="flex items-center justify-between border-b border-[var(--line)] pb-2">
                 <div>
-                  <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
                     <Hash size={13} className="text-zinc-500" /> Ledger Line Distribution Coordinates
                   </h4>
                   <p className="text-[10px] text-zinc-400">Specify precise split mappings to enforce trial balance zero-sum equivalence</p>
@@ -452,7 +455,7 @@ export default function TransactionEditModal({
                 {lines.map((line, idx) => (
                   <div 
                     key={idx}
-                    className="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-[32px] border border-zinc-200 bg-zinc-50/20 hover:bg-zinc-50/50 transition-colors"
+                    className="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-[32px] border border-[var(--line)] bg-[var(--ink)]/20 hover:bg-[var(--ink)]/50 transition-colors"
                   >
                     {/* Top Row: Account & Amount & Delete */}
                     <div className="md:col-span-6 space-y-1">
@@ -467,7 +470,7 @@ export default function TransactionEditModal({
                             accountName: acc ? acc.name : '' 
                           });
                         }}
-                        className="w-full bg-white border border-zinc-200 hover:border-zinc-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-zinc-800 outline-none"
+                        className="w-full bg-[var(--surface)] border border-[var(--line)] hover:border-zinc-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-[var(--text)] outline-none"
                       >
                         <option value="uncategorized">Select Account</option>
                         {accounts.map(acc => (
@@ -492,7 +495,7 @@ export default function TransactionEditModal({
                             const val = parseFloat(e.target.value || '0');
                             handleLineChange(idx, { amountCents: Math.round(val * 100) });
                           }}
-                          className="w-full bg-white border border-zinc-200 rounded-xl pl-6 pr-2.5 py-1.5 text-xs text-right text-zinc-800 font-mono font-bold outline-none"
+                          className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl pl-6 pr-2.5 py-1.5 text-xs text-right text-[var(--text)] font-mono font-bold outline-none"
                         />
                       </div>
                     </div>
@@ -513,55 +516,62 @@ export default function TransactionEditModal({
                     {/* Bottom Row: Additional Dimensions */}
                     <div className="md:col-span-2 space-y-1">
                       <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Class</div>
-                      <select
-                        value={line.class || ''}
-                        disabled={isLocked}
-                        onChange={(e) => handleLineChange(idx, { class: e.target.value })}
-                        className="w-full bg-white border border-zinc-200 rounded-xl px-2.5 py-1.5 text-xs text-zinc-800 outline-none focus:border-zinc-400"
-                      >
-                         <option value="">Unspecified</option>
-                         {classes.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
+                      <div className="relative">
+                        <input
+                          list={`class-list-${idx}`}
+                          value={line.class || ''}
+                          disabled={isLocked}
+                          onChange={(e) => handleLineChange(idx, { class: e.target.value })}
+                          placeholder="Type or select class"
+                          className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--text)] outline-none focus:border-zinc-400"
+                        />
+                        <datalist id={`class-list-${idx}`}>
+                          {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                        </datalist>
+                      </div>
                     </div>
 
                     <div className="md:col-span-2 space-y-1">
                       <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Location</div>
-                      <select
-                        value={line.location || ''}
-                        disabled={isLocked}
-                        onChange={(e) => handleLineChange(idx, { location: e.target.value })}
-                        className="w-full bg-white border border-zinc-200 rounded-xl px-2.5 py-1.5 text-xs text-zinc-800 outline-none focus:border-zinc-400"
-                      >
-                         <option value="">Unspecified</option>
-                         {locations.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
+                      <div className="relative">
+                        <input
+                          list={`location-list-${idx}`}
+                          value={line.location || ''}
+                          disabled={isLocked}
+                          onChange={(e) => handleLineChange(idx, { location: e.target.value })}
+                          placeholder="Type or select location"
+                          className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--text)] outline-none focus:border-zinc-400"
+                        />
+                        <datalist id={`location-list-${idx}`}>
+                          {locations.map(c => <option key={c} value={c}>{c}</option>)}
+                        </datalist>
+                      </div>
                     </div>
 
                     <div className="md:col-span-2 space-y-1">
                       <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Project</div>
-                      <select
-                        value={line.project || ''}
-                        disabled={isLocked}
-                        onChange={(e) => handleLineChange(idx, { project: e.target.value })}
-                        className="w-full bg-white border border-zinc-200 rounded-xl px-2.5 py-1.5 text-xs text-zinc-800 outline-none focus:border-zinc-400"
-                      >
-                         <option value="">Unspecified</option>
-                         {projects.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                      </select>
+                      <div className="relative">
+                        <input
+                          list={`project-list-${idx}`}
+                          value={line.project || ''}
+                          disabled={isLocked}
+                          onChange={(e) => handleLineChange(idx, { project: e.target.value })}
+                          placeholder="Type or select project"
+                          className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--text)] outline-none focus:border-zinc-400"
+                        />
+                        <datalist id={`project-list-${idx}`}>
+                          {projects.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                        </datalist>
+                      </div>
                     </div>
 
                     <div className="md:col-span-3 space-y-1">
-                      <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Tags (Comma separated)</div>
-                      <input
-                        type="text"
-                        placeholder="e.g. Bldg 1, Apt 4B"
+                      <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Tags</div>
+                      <TagInput
+                        tags={line.tags || []}
+                        onChange={(tags) => handleLineChange(idx, { tags })}
                         disabled={isLocked}
-                        value={line.tags ? line.tags.join(', ') : ''}
-                        onChange={(e) => {
-                          const tagArray = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
-                          handleLineChange(idx, { tags: tagArray });
-                        }}
-                        className="w-full bg-white border border-zinc-200 rounded-xl px-2.5 py-1.5 text-xs text-zinc-700 outline-none focus:border-zinc-400"
+                        placeholder="Add tag and press Enter"
                       />
                     </div>
 
@@ -573,7 +583,7 @@ export default function TransactionEditModal({
                         disabled={isLocked}
                         value={line.description || ''}
                         onChange={(e) => handleLineChange(idx, { description: e.target.value })}
-                        className="w-full bg-white border border-zinc-200 rounded-xl px-2.5 py-1.5 text-xs text-zinc-700 outline-none focus:border-zinc-400"
+                        className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-2.5 py-1.5 text-xs text-zinc-700 outline-none focus:border-zinc-400"
                       />
                     </div>
                   </div>
@@ -582,7 +592,7 @@ export default function TransactionEditModal({
             </div>
 
             {/* Reconciliation and Balance audit strip */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-50 p-4 rounded-[32px] border border-zinc-150">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[var(--ink)] p-4 rounded-[32px] border border-zinc-150">
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Reconciliation Checklist</span>
                 <div className="flex gap-4 items-center">
@@ -592,7 +602,7 @@ export default function TransactionEditModal({
                       disabled={isLocked}
                       checked={isCleared}
                       onChange={(e) => setIsCleared(e.target.checked)}
-                      className="rounded text-zinc-900 focus:ring-zinc-900/10 cursor-pointer accent-zinc-900"
+                      className="rounded text-[var(--text)] focus:ring-zinc-900/10 cursor-pointer accent-zinc-900"
                     />
                     <span className="text-xs text-zinc-600 font-medium">Cleared and Verified</span>
                   </label>
@@ -603,7 +613,7 @@ export default function TransactionEditModal({
                       disabled={isLocked}
                       checked={isFlagged}
                       onChange={(e) => setIsFlagged(e.target.checked)}
-                      className="rounded text-zinc-900 focus:ring-zinc-900/10 cursor-pointer accent-zinc-900"
+                      className="rounded text-[var(--text)] focus:ring-zinc-900/10 cursor-pointer accent-zinc-900"
                     />
                     <span className="text-xs text-amber-600 font-medium">Flag for deep auditing</span>
                   </label>
@@ -612,7 +622,7 @@ export default function TransactionEditModal({
 
               <div className="text-right flex flex-col justify-center space-y-0.5">
                 <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Total Transaction Sum</span>
-                <div className="text-sm font-mono font-black text-zinc-800">
+                <div className="text-sm font-mono font-black text-[var(--text)]">
                   {new Intl.NumberFormat('en-US', { style: 'currency', currency: transaction.currency || 'USD' }).format(totalAmountCents / 100)}
                 </div>
                 {sumLines !== 0 && (
@@ -624,15 +634,15 @@ export default function TransactionEditModal({
             </div>
 
             {/* Document Management Section */}
-            <div className="bg-zinc-50/50 p-4 rounded-[32px] border border-zinc-150 space-y-3">
+            <div className="bg-[var(--ink)]/50 p-4 rounded-[32px] border border-zinc-150 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
                     <FileText size={13} className="text-zinc-500" /> Source Documents & Receipts
                   </h4>
                   <p className="text-[10px] text-zinc-400">Attach underlying evidence for this specific vector node.</p>
                 </div>
-                <label className="flex items-center gap-1 px-3 py-1 bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-200 text-[11px] font-bold rounded-lg transition-all cursor-pointer">
+                <label className="flex items-center gap-1 px-3 py-1 bg-[var(--surface)] hover:bg-zinc-100 text-[var(--text)] border border-[var(--line)] text-[11px] font-bold rounded-lg transition-all cursor-pointer">
                   <Plus size={12} />
                   <span>Attach Document</span>
                   <input
@@ -660,7 +670,7 @@ export default function TransactionEditModal({
               {fileUrls.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
                   {fileUrls.map((url, i) => (
-                    <div key={i} className="relative group rounded-xl border border-zinc-200 overflow-hidden bg-white h-24 flex items-center justify-center">
+                    <div key={i} className="relative group rounded-xl border border-[var(--line)] overflow-hidden bg-[var(--surface)] h-24 flex items-center justify-center">
                       {url.startsWith('data:image') ? (
                         <img src={url} alt="Attached receipt" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
                       ) : (
@@ -687,11 +697,11 @@ export default function TransactionEditModal({
           </div>
 
           {/* Actions footer */}
-          <div className="px-6 py-4 bg-zinc-50 border-t border-zinc-100 flex items-center justify-end gap-3 shrink-0">
+          <div className="px-6 py-4 bg-[var(--ink)] border-t border-[var(--line)] flex items-center justify-end gap-3 shrink-0">
             <button
               onClick={onClose}
               type="button"
-              className="px-4 py-2 hover:bg-zinc-100 rounded-xl text-xs font-semibold text-zinc-500 hover:text-zinc-800 transition-colors"
+              className="px-4 py-2 hover:bg-zinc-100 rounded-xl text-xs font-semibold text-zinc-500 hover:text-[var(--text)] transition-colors"
             >
               Cancel
             </button>

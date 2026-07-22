@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Transaction, ChartAccount, AnalyticalMetrics } from '../types';
 import { subDays, format } from 'date-fns';
 import { SpectralAnalyzer, ComplianceEngine, AnomalyDetector, InvariantReconciliation } from '../lib/algorithms';
-import { ZenithTelemetry } from '../lib/telemetry';
+import { PerformanceTelemetry } from '../lib/telemetry';
 
 /**
  * High-Performance Single-Pass Financial Telemetry Hook
@@ -46,7 +46,7 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
       return cached;
     }
 
-    ZenithTelemetry.start("useAuditTelemetry:compute");
+    PerformanceTelemetry.start("useAuditTelemetry:compute");
     const now = new Date();
     const isYearlyMode = days > 60;
     const cutoffCurrent = isYearlyMode ? 0 : subDays(now, days).getTime(); // In yearly mode, we don't cutoff
@@ -370,7 +370,7 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
     const analysisToken = `${safeTxs.length}_${days}`;
     
     if (performDeepAnalysis && metrics.timeSeries.length >= 20) {
-      ZenithTelemetry.start("useAuditTelemetry:deepAnalysis");
+      PerformanceTelemetry.start("useAuditTelemetry:deepAnalysis");
       const outflowSignal = metrics.timeSeries.map(d => d.outflow);
       
       // Periodicity detection is O(N*L)
@@ -406,7 +406,7 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
           .sort((a, b) => b.score - a.score)
           .slice(0, 5);
       }
-      ZenithTelemetry.end("useAuditTelemetry:deepAnalysis");
+      PerformanceTelemetry.end("useAuditTelemetry:deepAnalysis");
     }
 
     // Ground Layer Status in Real Audit Results
@@ -446,7 +446,7 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
       { name: 'Historical Sampling', status: 'active', algorithm: 'Periodic Variance Analysis' }
     ];
 
-    ZenithTelemetry.end("useAuditTelemetry:compute");
+    PerformanceTelemetry.end("useAuditTelemetry:compute");
     if (telemetryCache.size > 100) {
       telemetryCache.clear();
     }

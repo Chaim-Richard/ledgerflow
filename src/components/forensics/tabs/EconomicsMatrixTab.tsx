@@ -54,14 +54,14 @@ export default function EconomicsMatrixTab({
       className="space-y-12 animate-fade-in"
     >
       {/* Intro Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between border-b border-slate-200 pb-6 gap-6 text-left">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between border-b border-[var(--line)] pb-6 gap-6 text-left">
         <div className="space-y-1">
-          <h4 className="text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-            <Brain className="text-slate-900 animate-pulse" size={24} />
-            Zenith Economics Thinking Engine
+          <h4 className="text-2xl font-black text-[var(--text)] uppercase tracking-tight flex items-center gap-2">
+            <Brain className="text-[var(--text)] animate-pulse" size={24} />
+            LedgerFlow Economics Thinking Engine
           </h4>
           <p className="text-xs text-slate-500 font-medium uppercase tracking-wider opacity-65">
-            Unified Strategic Comparison Matrix & Macroeconomic Truth Arbiter
+            Unified Strategic Comparison Matrix & Macroeconomic Integrity Arbiter
           </p>
         </div>
         <div className="px-5 py-2.5 bg-slate-900 text-emerald-400 rounded-xl font-mono text-[9px] uppercase tracking-[0.2em] font-black flex items-center gap-2 self-start lg:self-center">
@@ -70,13 +70,13 @@ export default function EconomicsMatrixTab({
       </div>
 
       {/* Economic Scenario Sandbox & Simulator */}
-      <div className="p-4 md:p-8 bg-slate-50 border border-slate-200 rounded-[32px] space-y-8 text-left">
+      <div className="p-4 md:p-8 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] space-y-8 text-left">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shadow-md">
             <Scale size={16} />
           </div>
           <div>
-            <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider">Macro-Economic Truth Stress Simulator</h4>
+            <h4 className="text-sm font-black text-[var(--text)] uppercase tracking-wider">Macro-Economic Integrity Stress Simulator</h4>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Determine the true purchasing value of ledger liquidity by modeling real monetary forces</p>
           </div>
         </div>
@@ -84,9 +84,9 @@ export default function EconomicsMatrixTab({
         {/* 3 Interactive Sliders */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Slider 1 */}
-          <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-[var(--surface)] p-6 rounded-[32px] border border-[var(--line)] shadow-sm space-y-4">
             <div className="flex justify-between items-center text-xs">
-              <span className="font-black text-slate-900 uppercase tracking-wider flex items-center gap-1">
+              <span className="font-black text-[var(--text)] uppercase tracking-wider flex items-center gap-1">
                 <Coins size={12} className="text-indigo-400" /> Annualized Inflation
               </span>
               <span className="font-mono font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg text-[10px]">{inflationScenario.toFixed(1)}%</span>
@@ -105,9 +105,9 @@ export default function EconomicsMatrixTab({
           </div>
 
           {/* Slider 2 */}
-          <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-[var(--surface)] p-6 rounded-[32px] border border-[var(--line)] shadow-sm space-y-4">
             <div className="flex justify-between items-center text-xs">
-              <span className="font-black text-slate-900 uppercase tracking-wider flex items-center gap-1">
+              <span className="font-black text-[var(--text)] uppercase tracking-wider flex items-center gap-1">
                 <FileSpreadsheet size={12} className="text-emerald-400" /> Est. Marginal Tax Rate
               </span>
               <span className="font-mono font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg text-[10px]">{taxClassification}%</span>
@@ -126,9 +126,9 @@ export default function EconomicsMatrixTab({
           </div>
 
           {/* Slider 3 */}
-          <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-[var(--surface)] p-6 rounded-[32px] border border-[var(--line)] shadow-sm space-y-4">
             <div className="flex justify-between items-center text-xs">
-              <span className="font-black text-slate-900 uppercase tracking-wider flex items-center gap-1">
+              <span className="font-black text-[var(--text)] uppercase tracking-wider flex items-center gap-1">
                 <Wand2 size={12} className="text-amber-400" /> Cost of Outside Capital
               </span>
               <span className="font-mono font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg text-[10px]">{costOfCapital.toFixed(1)}%</span>
@@ -150,11 +150,11 @@ export default function EconomicsMatrixTab({
         {/* Calculations & Worth Output Displays - Desktop side-by-side, mobile stacked */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
           {/* Nominal Bookkeeping Balance Sheet Valuation */}
-          <div className="p-4 md:p-8 bg-white border border-slate-200 rounded-[32px] space-y-4 relative overflow-hidden text-left" id="nominal-kpi">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 opacity-40 rounded-full blur-2xl pointer-events-none" />
+          <div className="p-4 md:p-8 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] space-y-4 relative overflow-hidden text-left" id="nominal-kpi">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--ink)] opacity-40 rounded-full blur-2xl pointer-events-none" />
             <div>
               <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">QuickBooks Nominal Net Valuation</span>
-              <p className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight mt-3">{formatCurrency(bookAssets - Math.abs(bookLiabilities))}</p>
+              <p className="text-2xl md:text-4xl font-black text-[var(--text)] tracking-tight mt-3">{formatCurrency(bookAssets - Math.abs(bookLiabilities))}</p>
             </div>
             <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pt-2 flex items-center gap-2">
               <Info size={12} className="text-slate-400" />
@@ -166,7 +166,7 @@ export default function EconomicsMatrixTab({
           <div className="p-4 md:p-8 bg-slate-900 text-white rounded-[32px] space-y-4 relative overflow-hidden shadow-2xl border border-slate-800 text-left" id="economic-kpi">
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
             <div>
-              <span className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.3em]">Zenith TRUE Adjusted Economic Worth</span>
+              <span className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.3em]">LedgerFlow TRUE Adjusted Economic Worth</span>
               <p className="text-2xl md:text-4xl font-black text-emerald-400 tracking-tight mt-3">{formatCurrency(trueEconomicWORTH)}</p>
             </div>
             <div className="text-[10px] text-white/50 font-medium uppercase tracking-wider pt-2 flex items-center gap-2">
@@ -184,27 +184,27 @@ export default function EconomicsMatrixTab({
             <Layers size={16} />
           </div>
           <div>
-            <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider">Continuous Feature & Core Architecture Verification</h4>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Objective engineering gap audit of QuickBooks and Excel versus LedgerFlow core "TRUTH" protocols</p>
+            <h4 className="text-sm font-black text-[var(--text)] uppercase tracking-wider">Continuous Feature & Core Architecture Verification</h4>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Objective engineering gap audit of QuickBooks and Excel versus LedgerFlow core "INTEGRITY" protocols</p>
           </div>
         </div>
 
-        <div className="border border-slate-200 rounded-[32px] overflow-hidden bg-white shadow-xl max-w-full overflow-x-auto">
+        <div className="border border-[var(--line)] rounded-[32px] overflow-hidden bg-[var(--surface)] shadow-xl max-w-full overflow-x-auto">
           <table className="w-full text-xs text-left min-w-[650px]" id="comparison-table">
             <thead>
               <tr className="bg-slate-900 text-white text-[9px] uppercase tracking-widest font-black font-mono border-b border-transparent">
                 <th className="p-5 w-1/3">Accounting Tool Concept</th>
                 <th className="p-5 text-center text-slate-400">QuickBooks Online</th>
                 <th className="p-5 text-center text-slate-400">Microsoft Excel</th>
-                <th className="p-5 text-center text-emerald-400 bg-slate-950/50">LedgerFlow (Absolute Truth)</th>
+                <th className="p-5 text-center text-emerald-400 bg-slate-950/50">LedgerFlow (Absolute Integrity)</th>
                 <th className="p-5 text-right font-mono">Integrity Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-ledger-line font-medium text-slate-900">
+            <tbody className="divide-y divide-ledger-line font-medium text-[var(--text)]">
               {/* Concept 1 */}
-              <tr className="hover:bg-slate-50 transition-colors">
+              <tr className="hover:bg-[var(--ink)] transition-colors">
                 <td className="p-5">
-                  <span className="font-black uppercase tracking-tight text-slate-800 block">Double-Entry Ledger Structures</span>
+                  <span className="font-black uppercase tracking-tight text-[var(--text)] block">Double-Entry Ledger Structures</span>
                   <span className="text-[9px] text-slate-500 mt-1 uppercase font-mono block">Rigid bookkeeping journal ledger logs</span>
                 </td>
                 <td className="p-5 text-center">
@@ -228,9 +228,9 @@ export default function EconomicsMatrixTab({
               </tr>
 
               {/* Concept 2 */}
-              <tr className="hover:bg-slate-50 transition-colors">
+              <tr className="hover:bg-[var(--ink)] transition-colors">
                 <td className="p-5">
-                  <span className="font-black uppercase tracking-tight text-slate-800 block">Cell Formula Precedent Tracing</span>
+                  <span className="font-black uppercase tracking-tight text-[var(--text)] block">Cell Formula Precedent Tracing</span>
                   <span className="text-[9px] text-slate-500 mt-1 uppercase font-mono block">Audit total summaries to raw entries</span>
                 </td>
                 <td className="p-5 text-center text-rose-600 font-bold uppercase font-mono text-[10px]">❌ Pending Data Connection</td>
@@ -254,9 +254,9 @@ export default function EconomicsMatrixTab({
               </tr>
 
               {/* Concept 3 */}
-              <tr className="hover:bg-slate-50 transition-colors">
+              <tr className="hover:bg-[var(--ink)] transition-colors">
                 <td className="p-5">
-                  <span className="font-black uppercase tracking-tight text-slate-800 block">Cryptographic Merkle Proofs</span>
+                  <span className="font-black uppercase tracking-tight text-[var(--text)] block">Cryptographic Merkle Proofs</span>
                   <span className="text-[9px] text-slate-500 mt-1 uppercase font-mono block">Sequential ledger chain verification securing history</span>
                 </td>
                 <td className="p-5 text-center text-rose-600 font-bold uppercase font-mono text-[10px]">❌ None (Unsecured database)</td>
@@ -278,9 +278,9 @@ export default function EconomicsMatrixTab({
               </tr>
 
               {/* Concept 4 */}
-              <tr className="hover:bg-slate-50 transition-colors">
+              <tr className="hover:bg-[var(--ink)] transition-colors">
                 <td className="p-5">
-                  <span className="font-black uppercase tracking-tight text-slate-800 block">Bilateral Zero-Delta Matcher</span>
+                  <span className="font-black uppercase tracking-tight text-[var(--text)] block">Bilateral Zero-Delta Matcher</span>
                   <span className="text-[9px] text-slate-500 mt-1 uppercase font-mono block">Zero-leak statement reconciliation</span>
                 </td>
                 <td className="p-5 text-center">
@@ -289,7 +289,7 @@ export default function EconomicsMatrixTab({
                 <td className="p-5 text-center text-rose-600 font-bold uppercase font-mono text-[10px]">❌ Manual lookup formulas</td>
                 <td className="p-5 text-center bg-slate-950/[0.01] font-bold text-emerald-600">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded-lg">
-                    ✅ Automated neural match
+                    ✅ Automated rule match
                   </span>
                 </td>
                 <td className="p-5 text-right">
@@ -304,9 +304,9 @@ export default function EconomicsMatrixTab({
               </tr>
 
               {/* Concept 5 */}
-              <tr className="hover:bg-slate-50 transition-colors">
+              <tr className="hover:bg-[var(--ink)] transition-colors">
                 <td className="p-5">
-                  <span className="font-black uppercase tracking-tight text-slate-800 block">Macroeconomic Stress-Testing</span>
+                  <span className="font-black uppercase tracking-tight text-[var(--text)] block">Macroeconomic Stress-Testing</span>
                   <span className="text-[9px] text-slate-500 mt-1 uppercase font-mono block">Model real purchasing positions instantly</span>
                 </td>
                 <td className="p-5 text-center text-rose-600 font-bold uppercase font-mono text-[10px]">❌ Bookkeeping only</td>
@@ -330,12 +330,12 @@ export default function EconomicsMatrixTab({
       </div>
 
       {/* ==================== SCALE STRESS SIMULATOR (200+ NODES) ==================== */}
-      <div className="pt-10 border-t border-slate-200 space-y-8 text-left">
+      <div className="pt-10 border-t border-[var(--line)] space-y-8 text-left">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-left">
           <div className="space-y-1">
-            <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+            <h4 className="text-lg font-black text-[var(--text)] uppercase tracking-tight flex items-center gap-2">
               <Activity className="text-indigo-600 animate-pulse" size={20} />
-              Zenith Depth Monitor: 200+ Transaction Stress Simulator
+              Clearbook Depth Monitor: 200+ Transaction Stress Simulator
             </h4>
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wider opacity-65">
               Verify real-time computation speeds & zero-leak ledger balancing under high-frequency enterprise streams
@@ -367,10 +367,10 @@ export default function EconomicsMatrixTab({
         </div>
 
         {isStressRunning && (
-          <div className="p-16 text-center border border-dashed border-slate-200 rounded-[32px] bg-slate-50/50 space-y-4 animate-pulse">
+          <div className="p-16 text-center border border-dashed border-[var(--line)] rounded-[32px] bg-[var(--ink)]/50 space-y-4 animate-pulse">
             <RefreshCw className="animate-spin text-indigo-500 mx-auto" size={32} />
             <div className="space-y-1">
-              <p className="text-xs font-black uppercase text-slate-800 tracking-wider">Compiling Double-Entry Array...</p>
+              <p className="text-xs font-black uppercase text-[var(--text)] tracking-wider">Compiling Double-Entry Array...</p>
               <p className="text-[10px] text-slate-400 uppercase font-mono animate-pulse">Generating chronological ledger sequence & cryptolink hashes</p>
             </div>
           </div>
@@ -380,15 +380,15 @@ export default function EconomicsMatrixTab({
           <div className="space-y-8 animate-fade-in text-left">
             {/* Telemetry Indicator Blocks */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-6 bg-white border border-slate-200 rounded-[32px] flex flex-col justify-between shadow-sm text-left">
+              <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] flex flex-col justify-between shadow-sm text-left">
                 <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Chronological Volume</span>
                 <div>
-                  <p className="text-2xl font-black text-slate-800 mt-2">{stressTelemetry.txCount} Splits</p>
+                  <p className="text-2xl font-black text-[var(--text)] mt-2">{stressTelemetry.txCount} Splits</p>
                   <p className="text-[9px] text-emerald-600 font-bold uppercase mt-1">100% Core compliance</p>
                 </div>
               </div>
 
-              <div className="p-6 bg-white border border-slate-200 rounded-[32px] flex flex-col justify-between shadow-sm text-left">
+              <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] flex flex-col justify-between shadow-sm text-left">
                 <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Comp. Re-hash Latency</span>
                 <div>
                   <p className="text-2xl font-black text-indigo-600 mt-2">{stressTelemetry.verificationMs} ms</p>
@@ -398,18 +398,18 @@ export default function EconomicsMatrixTab({
                 </div>
               </div>
 
-              <div className="p-6 bg-white border border-slate-200 rounded-[32px] flex flex-col justify-between shadow-sm text-left">
+              <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] flex flex-col justify-between shadow-sm text-left">
                 <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Zero-Sum Drift Value</span>
                 <div>
-                  <p className="text-2xl font-black text-slate-800 mt-2">$0.00</p>
+                  <p className="text-2xl font-black text-[var(--text)] mt-2">$0.00</p>
                   <p className="text-[9px] text-emerald-600 font-bold uppercase mt-1">Zero-Leak Check [OK]</p>
                 </div>
               </div>
 
-              <div className="p-6 bg-white border border-slate-200 rounded-[32px] flex flex-col justify-between shadow-sm text-left">
+              <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] flex flex-col justify-between shadow-sm text-left">
                 <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Memory Footprint</span>
                 <div>
-                  <p className="text-2xl font-black text-slate-800 mt-2">~{stressTelemetry.memoryKb} KB</p>
+                  <p className="text-2xl font-black text-[var(--text)] mt-2">~{stressTelemetry.memoryKb} KB</p>
                   <p className="text-[9px] text-slate-400 font-mono uppercase mt-1">Ultra-light footprint</p>
                 </div>
               </div>
@@ -428,7 +428,7 @@ export default function EconomicsMatrixTab({
 
             {/* Grid: Curve Chart & Interactive Real-Time Security Log Console */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
-              <div className="p-6 bg-slate-50 border border-slate-200 rounded-[32px] space-y-4 text-left">
+              <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] space-y-4 text-left">
                 <div>
                   <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block">Volume Dispersion Curve (Amount vs Index)</span>
                   <p className="text-[10px] text-slate-500 font-bold mt-0.5">Visualize mathematical balance symmetry across 235 dataset nodes</p>
@@ -458,9 +458,9 @@ export default function EconomicsMatrixTab({
                           if (active && payload && payload.length) {
                             const data = payload[0].payload;
                             return (
-                              <div className="p-3 bg-white border border-slate-200 shadow-xl rounded-xl text-[10px] space-y-1 text-left">
+                              <div className="p-3 bg-[var(--surface)] border border-[var(--line)] shadow-xl rounded-xl text-[10px] space-y-1 text-left">
                                 <p className="font-mono text-slate-400">Node ID: #{data.index}</p>
-                                <p className="font-black uppercase text-slate-800 truncate max-w-[180px]">{data.name}</p>
+                                <p className="font-black uppercase text-[var(--text)] truncate max-w-[180px]">{data.name}</p>
                                 <p className="font-mono font-black text-indigo-600">${data.amount.toFixed(2)}</p>
                               </div>
                             );
@@ -515,11 +515,11 @@ export default function EconomicsMatrixTab({
         )}
         
         {!isStressRunning && !stressTelemetry && (
-          <div className="py-12 text-center border border-dashed border-slate-200 rounded-[32px] bg-slate-50/50">
+          <div className="py-12 text-center border border-dashed border-[var(--line)] rounded-[32px] bg-[var(--ink)]/50">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">No active simulation compiled</p>
             <button 
               onClick={handleRunStressSimulation}
-              className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-[10px] font-mono uppercase tracking-[0.1em] text-slate-700 shadow-sm active:scale-95 transition-all font-black"
+              className="px-5 py-2.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:bg-[var(--ink)] text-[10px] font-mono uppercase tracking-[0.1em] text-slate-700 shadow-sm active:scale-95 transition-all font-black"
             >
               [Initialize 200+ Enterprise Load Validation]
             </button>

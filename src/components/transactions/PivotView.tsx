@@ -11,13 +11,13 @@ export default function PivotView({ pivotData, formatCurrency }: PivotViewProps)
   return (
     <div className="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {pivotData.map((item) => (
-        <div key={item.name} className="bg-white border border-zinc-100 rounded-[32px] p-6 shadow-sm hover:shadow-md transition-all group">
+        <div key={item.name} className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] p-6 shadow-sm hover:shadow-md transition-all group">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-zinc-50 rounded-[32px] flex items-center justify-center text-zinc-400 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors">
+              <div className="w-10 h-10 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-zinc-400 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors">
                 <ChevronRight size={20} />
               </div>
-              <h3 className="font-bold text-zinc-900">{item.name}</h3>
+              <h3 className="font-bold text-[var(--text)]">{item.name}</h3>
             </div>
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{item.count} txns</span>
           </div>

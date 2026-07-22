@@ -64,18 +64,18 @@ export const SystemSearch = ({ isOpen, onClose, transactions, onNavigate }: Syst
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-[32px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.2)] overflow-hidden"
+            className="relative w-full max-w-2xl bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.2)] overflow-hidden"
           >
-            <div className="p-4 md:p-8 border-b border-slate-200 flex items-center gap-6">
+            <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center gap-6">
                <Search size={28} className="text-slate-400 opacity-40" />
                <input 
                  ref={inputRef}
                  value={query}
                  onChange={(e) => setQuery(e.target.value)}
                  placeholder="Type command or search records..."
-                 className="flex-1 bg-transparent border-none outline-none text-2xl font-black text-slate-900 uppercase tracking-tighter placeholder:text-slate-400/20"
+                 className="flex-1 bg-transparent border-none outline-none text-2xl font-black text-[var(--text)] uppercase tracking-tighter placeholder:text-slate-400/20"
                />
-               <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+               <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--ink)] rounded-xl border border-[var(--line)] text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   <Command size={14} />
                   K
                </div>
@@ -93,13 +93,13 @@ export const SystemSearch = ({ isOpen, onClose, transactions, onNavigate }: Syst
                       </div>
                       <span className="text-lg font-black uppercase tracking-tight">{smartCommand.label}</span>
                    </div>
-                   <kbd className="px-2 py-1 bg-white/10 rounded-lg text-[9px] font-medium uppercase tracking-wider">ENTER</kbd>
+                   <kbd className="px-2 py-1 bg-[var(--surface)]/10 rounded-lg text-[9px] font-medium uppercase tracking-wider">ENTER</kbd>
                  </button>
                )}
 
                {query.trim().length === 0 && (
                  <div className="p-4 md:p-8 text-center space-y-4">
-                    <div className="w-16 h-16 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto text-indigo-600 border border-slate-200">
+                    <div className="w-16 h-16 bg-[var(--ink)] rounded-[32px] flex items-center justify-center mx-auto text-indigo-600 border border-[var(--line)]">
                        <Zap size={28} className="animate-pulse" />
                     </div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Search Active</p>
@@ -111,13 +111,13 @@ export const SystemSearch = ({ isOpen, onClose, transactions, onNavigate }: Syst
                    <button 
                      key={cmd.id}
                      onClick={() => { cmd.action(); onClose(); }}
-                     className="w-full flex items-center justify-between p-6 hover:bg-slate-50 rounded-[32px] transition-all group"
+                     className="w-full flex items-center justify-between p-6 hover:bg-[var(--ink)] rounded-[32px] transition-all group"
                    >
                      <div className="flex items-center gap-6">
                         <div className="w-12 h-12 bg-slate-900 text-emerald-400 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                            <cmd.icon size={22} />
                         </div>
-                        <span className="text-xl font-black text-slate-900 uppercase tracking-tight">{cmd.label}</span>
+                        <span className="text-xl font-black text-[var(--text)] uppercase tracking-tight">{cmd.label}</span>
                      </div>
                      <ArrowRight size={20} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                    </button>
@@ -130,14 +130,14 @@ export const SystemSearch = ({ isOpen, onClose, transactions, onNavigate }: Syst
                        <button 
                          key={tx.id}
                          onClick={() => { onNavigate('transactions', { selectedId: tx.id }); onClose(); }}
-                         className="w-full flex items-center justify-between p-6 hover:bg-slate-50 rounded-[32px] transition-all group"
+                         className="w-full flex items-center justify-between p-6 hover:bg-[var(--ink)] rounded-[32px] transition-all group"
                        >
                          <div className="flex items-center gap-6">
-                            <div className="w-12 h-12 bg-white border border-slate-200 text-slate-900 rounded-xl flex items-center justify-center shadow-sm font-mono text-[10px] font-black">
+                            <div className="w-12 h-12 bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] rounded-xl flex items-center justify-center shadow-sm font-mono text-[10px] font-black">
                                DNA
                             </div>
                             <div className="text-left">
-                               <p className="text-lg font-black text-slate-900 uppercase tracking-tight leading-tight">{tx.description}</p>
+                               <p className="text-lg font-black text-[var(--text)] uppercase tracking-tight leading-tight">{tx.description}</p>
                                <p className="text-[10px] font-bold text-slate-400 uppercase opacity-40">{tx.payee} • {tx.date}</p>
                             </div>
                          </div>

@@ -20,8 +20,10 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { transactions, accounts, projects } = useLedgerStore();
-  const { userProfile } = useAuthStore();
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
+  const projects = useLedgerStore(s => s.projects);
+  const userProfile = useAuthStore(s => s.userProfile);
   const userKey = userProfile?.geminiApiKey;
 
   useEffect(() => {
@@ -93,15 +95,15 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
         );
         break;
       case 'accounts':
-        accounts.slice(0, 10).forEach(a => {
+        accounts.forEach(a => {
           newHistory.push(`  [Node] ${a.name.padEnd(20)} | Bal: $${((a.balanceCents || 0) / 100).toLocaleString()}`);
         });
-        if (accounts.length > 10) newHistory.push(`  ... and ${accounts.length - 10} more.`);
         break;
       case 'history':
-        transactions.slice(0, 5).forEach(t => {
+        transactions.slice(0, 25).forEach(t => {
           newHistory.push(`  [Tx] ${t.date} | ${t.description.slice(0, 30).padEnd(32)} | $${(t.totalAmountCents / 100).toLocaleString()}`);
         });
+        if (transactions.length > 25) newHistory.push(`  ... and ${transactions.length - 25} more transactions.`);
         break;
       case 'audit':
         setIsProcessing(true);
@@ -180,7 +182,7 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
 
             <div 
               ref={scrollRef}
-              className="h-[350px] p-6 overflow-y-auto custom-scrollbar text-[12px] leading-relaxed text-slate-100"
+              className="min-h-[250px] max-h-[55vh] p-6 overflow-y-auto custom-scrollbar text-[12px] leading-relaxed text-slate-100"
             >
               {history.map((line, i) => (
                 <div key={i} className={cn(

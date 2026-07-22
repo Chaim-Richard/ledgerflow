@@ -34,6 +34,24 @@ export interface Workspace {
   apiQuotaTotalCentsUsed?: number;
   apiQuotaMonthlyLimitCents?: number;
   computeCreditBalance?: number;
+  dimensions?: DimensionDefinition[]; // Dynamic workspace dimensional coordinate schema
+  allowedWorldPaths?: string[];       // Coordinate-scoped permissions for sub-ledgers
+}
+
+export interface DimensionDefinition {
+  id: string;             // Unique dimension key (e.g. 'category', 'world', 'class', 'location', 'project', 'property')
+  name: string;           // Display title (e.g. 'World / Entity', 'Class', 'Location', 'Project')
+  label?: string;
+  isWorld?: boolean;      // True if this axis forms an independent sub-ledger with single-world statements & elimination
+  sortOrder?: number;
+  systemDefault?: boolean;
+}
+
+export interface SplitAllocation {
+  dimensions: Record<string, string>; // e.g. { property: 'homes/maui', class: 'operations' }
+  weight: number;                     // Weight decimal between 0.0 and 1.0 (Must sum to 1.0)
+  amountCents?: number;
+  description?: string;
 }
 
 export interface TransactionLine {
@@ -41,21 +59,23 @@ export interface TransactionLine {
   accountName: string;
   amountCents: number; // Positive for Debit, Negative for Credit
   description?: string;
-  category?: string;    // New: Category for price intel
-  total_impact?: number; // New: Risk/Impact factor
+  category?: string;    // Category for price intel / account category
+  total_impact?: number; // Risk/Impact factor
   taxRate?: number;
   taxAmountCents?: number;
   project?: string;
   department?: string;
   location?: string;
-  class?: string;        // Explicit Class dimension for QBO parity
+  class?: string;        // Explicit Class dimension
+  dimensions?: Record<string, string>; // Hierarchical coordinate map: { world: 'bookco', property: 'homes/maui', class: 'ops' }
+  splitAllocations?: SplitAllocation[]; // Split allocations with 1.0 weight integrity
   tags?: string[];
   metadata?: Record<string, any>;
   quantity?: number;
   unitPriceCents?: number;
-  isAutoTagged?: boolean; // New: System-detected line
-  isHeuristicTagged?: boolean; // New: Pattern match
-  isAnalyticalTagged?: boolean; // New: Analytical telemetry tagging
+  isAutoTagged?: boolean; // System-detected line
+  isHeuristicTagged?: boolean; // Pattern match
+  isAnalyticalTagged?: boolean; // Analytical telemetry tagging
   confidence?: number;
 }
 
@@ -114,6 +134,8 @@ export interface Transaction {
   reversalEventId?: string;
 
   project?: string; // Legacy field for migration
+  dimensions?: Record<string, string>;
+  isIntercompany?: boolean;
 
   createdAt: string;
   deletedAt?: string; 
@@ -335,6 +357,7 @@ export interface JournalLine {
   project?: string;
   class?: string;
   location?: string;
+  dimensions?: Record<string, string>;
 }
 
 export interface Budget {
@@ -365,6 +388,7 @@ export interface AutoRule {
     targetCategory?: string;
     targetClass?: string;
     targetLocation?: string;
+    targetDimensions?: Record<string, string>;
     flagForReview?: boolean;
   };
   confidence: number; // 0 to 1

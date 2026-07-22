@@ -1,5 +1,5 @@
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { TruthEngine } from '../../modules/truth/TruthEngine';
+import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React,
  { useState, useMemo } from 'react';
 import { Transaction, ChartAccount } from '../../types';
@@ -130,25 +130,25 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-5xl bg-slate-50 rounded-[40px] shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90dvh]"
+        className="relative w-full max-w-5xl bg-[var(--ink)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
       >
         {/* Header */}
-        <div className="p-4 md:p-10 border-b border-slate-200 flex items-center justify-between bg-slate-50/30">
+        <div className="p-4 md:p-10 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30">
           <div className="flex items-center gap-6">
             <div className="w-16 h-16 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center border border-indigo-600/20 shadow-lg shadow-ledger-accent/10">
               <RefreshCw size={32} />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Reconciliation Wizard</h2>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1 opacity-40">Step {step} of 2 // {step === 1 ? 'Statement Target Definition' : 'Neural Transaction Alignment'}</p>
+              <h2 className="text-2xl font-black text-[var(--text)] uppercase italic tracking-tighter">Reconciliation Wizard</h2>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1 opacity-40">Step {step} of 2 // {step === 1 ? 'Statement Target Definition' : 'Rule Transaction Alignment'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-12 h-12 bg-slate-50 hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-slate-500 transition-all">
+          <button onClick={onClose} className="w-12 h-12 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-slate-500 transition-all">
             <X size={24} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-auto p-4 md:p-10 bg-slate-50">
+        <div className="flex-1 overflow-auto p-4 md:p-10 bg-[var(--ink)]">
           <AnimatePresence mode="wait">
             {step === 1 ? (
               <motion.div 
@@ -164,11 +164,11 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                     <select 
                       value={selectedAccount}
                       onChange={(e) => setSelectedAccount(e.target.value)}
-                      className="w-full px-8 py-5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-slate-900 uppercase italic tracking-tight"
+                      className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-[var(--text)] uppercase italic tracking-tight"
                     >
-                      <option value="" className="bg-slate-50">Protocol pending selection...</option>
+                      <option value="" className="bg-[var(--ink)]">Protocol pending selection...</option>
                       {accounts.filter(a => a.type === 'asset' || a.type === 'liability').map(acc => (
-                        <option key={acc.id} value={acc.name} className="bg-slate-50 uppercase">{acc.name}</option>
+                        <option key={acc.id} value={acc.name} className="bg-[var(--ink)] uppercase">{acc.name}</option>
                       ))}
                     </select>
                   </div>
@@ -180,26 +180,26 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                         type="date"
                         value={statementDate}
                         onChange={(e) => setStatementDate(e.target.value)}
-                        className="w-full px-8 py-5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-slate-900 uppercase italic tracking-tight"
+                        className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-[var(--text)] uppercase italic tracking-tight"
                       />
                     </div>
                     <div className="space-y-3">
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic ml-2">Terminal Quantum Balance ($)</label>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic ml-2">Terminal Amount Balance ($)</label>
                       <input 
                         type="number"
                         step="0.01"
                         value={endingBalance}
                         onChange={(e) => setEndingBalance(e.target.value)}
-                        className="w-full px-8 py-5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-mono font-black text-slate-900 text-lg italic"
+                        className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-mono font-black text-[var(--text)] text-lg italic"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="p-4 md:p-8 bg-slate-50/40 border border-slate-200 rounded-[32px] flex gap-5 shadow-inner">
+                <div className="p-4 md:p-8 bg-[var(--ink)]/40 border border-[var(--line)] rounded-[32px] flex gap-5 shadow-inner">
                   <AlertCircle className="text-indigo-600 shrink-0" size={24} />
                   <p className="text-[11px] text-slate-500 leading-relaxed font-bold italic opacity-70">
-                    Precision is mandatory. Enter terminal statement values exactly as specified by the regulatory entity. This defines the target resonance for the neural alignment phase.
+                    Precision is mandatory. Enter terminal statement values exactly as specified by the regulatory entity. This defines the target resonance for the rule alignment phase.
                   </p>
                 </div>
               </motion.div>
@@ -213,17 +213,17 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               >
                 {/* Summary Bar */}
                 <div className="grid grid-cols-4 gap-6">
-                  <div className="p-7 bg-slate-50 rounded-[32px] border border-slate-200 shadow-inner">
+                  <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 italic">Statement Horizon</p>
-                    <p className="text-xl font-black text-slate-900 font-mono italic tracking-tight">{formatCurrency(stats.targetBalance)}</p>
+                    <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight">{formatCurrency(stats.targetBalance)}</p>
                   </div>
-                  <div className="p-7 bg-slate-50 rounded-[32px] border border-slate-200 shadow-inner">
+                  <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 italic">Aligned Quanta</p>
-                    <p className="text-xl font-black text-slate-900 font-mono italic tracking-tight">{formatCurrency(stats.cleared)}</p>
+                    <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight">{formatCurrency(stats.cleared)}</p>
                   </div>
-                  <div className="p-7 bg-slate-50 rounded-[32px] border border-slate-200 shadow-inner">
+                  <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 italic">Current Registry</p>
-                    <p className="text-xl font-black text-slate-900 font-mono italic tracking-tight">{formatCurrency(stats.currentBalance)}</p>
+                    <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight">{formatCurrency(stats.currentBalance)}</p>
                   </div>
                   <div className={cn(
                     "p-7 rounded-[32px] border transition-all shadow-lg",
@@ -241,10 +241,10 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                 </div>
 
                 {/* Matching Interface */}
-                <div className="bg-white rounded-[40px] border border-slate-200 overflow-hidden shadow-sm">
-                  <div className="p-6 border-b border-slate-200 bg-slate-50/30 flex justify-between items-center">
+                <div className="bg-[var(--surface)] rounded-[40px] border border-[var(--line)] overflow-hidden shadow-sm">
+                  <div className="p-6 border-b border-[var(--line)] bg-[var(--ink)]/30 flex justify-between items-center">
                     <div>
-                        <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.3em] italic">Orphaned Nodes</h3>
+                        <h3 className="text-[10px] font-black text-[var(--text)] uppercase tracking-[0.3em] italic">Orphaned Nodes</h3>
                         <p className="text-[8px] font-black text-slate-500 uppercase mt-1 opacity-40">Awaiting registry alignment</p>
                     </div>
                     <div className="relative">
@@ -254,7 +254,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                         placeholder="Search Registry..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-11 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black uppercase italic tracking-tight focus:outline-none focus:ring-1 focus:ring-indigo-600 text-slate-900 w-64 transition-all"
+                        className="pl-11 pr-5 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[10px] font-black uppercase italic tracking-tight focus:outline-none focus:ring-1 focus:ring-indigo-600 text-[var(--text)] w-64 transition-all"
                       />
                     </div>
                   </div>
@@ -264,23 +264,23 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                         key={t.id}
                         onClick={() => handleToggle(t.id)}
                         className={cn(
-                          "p-6 flex items-center justify-between hover:bg-slate-50/40 transition-all cursor-pointer group",
+                          "p-6 flex items-center justify-between hover:bg-[var(--ink)]/40 transition-all cursor-pointer group",
                           reconciledIds.includes(t.id) && "bg-indigo-600/[0.03]"
                         )}
                       >
                         <div className="flex items-center gap-6">
                           <div className={cn(
                             "w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all transform",
-                            reconciledIds.includes(t.id) ? "bg-indigo-600 border-indigo-600 text-white scale-105" : "border-slate-200 bg-slate-50 group-hover:bg-slate-200/50"
+                            reconciledIds.includes(t.id) ? "bg-indigo-600 border-indigo-600 text-white scale-105" : "border-[var(--line)] bg-[var(--ink)] group-hover:bg-slate-200/50"
                           )}>
                             {reconciledIds.includes(t.id) && <CheckSquare size={16} />}
                           </div>
                           <div>
-                            <p className="text-xs font-black text-slate-900 uppercase italic tracking-tight">{t.description}</p>
+                            <p className="text-xs font-black text-[var(--text)] uppercase italic tracking-tight">{t.description}</p>
                             <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1 opacity-50">{format(new Date(t.date), 'MMM dd, yyyy')} // NODE_ID: {t.id.substring(0,8)}</p>
                           </div>
                         </div>
-                        <p className="text-sm font-black font-mono text-slate-900 italic tracking-tight">
+                        <p className="text-sm font-black font-mono text-[var(--text)] italic tracking-tight">
                           {formatCurrency(t.relevantAmountCents)}
                         </p>
                       </div>
@@ -296,11 +296,11 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
         </div>
 
         {/* Footer */}
-        <div className="p-4 md:p-10 border-t border-slate-200 flex justify-between bg-slate-50/20">
+        <div className="p-4 md:p-10 border-t border-[var(--line)] flex justify-between bg-[var(--ink)]/20">
           {step === 2 && (
             <button 
               onClick={() => setStep(1)}
-              className="flex items-center gap-3 px-8 py-4 bg-slate-50 text-slate-500 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] border border-slate-200 hover:text-slate-900 transition-all"
+              className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-slate-500 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] border border-[var(--line)] hover:text-[var(--text)] transition-all"
             >
               <ChevronLeft size={18} />
               Rollback
@@ -325,10 +325,10 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
             <div className="flex items-center gap-5">
               <button 
                 onClick={handleAutoMatch}
-                className="flex items-center gap-3 px-8 py-4 bg-slate-50 text-indigo-600 rounded-[32px] font-black uppercase tracking-[0.1em] text-[10px] border border-indigo-600/20 hover:bg-indigo-600/10 transition-all"
+                className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-indigo-600 rounded-[32px] font-black uppercase tracking-[0.1em] text-[10px] border border-indigo-600/20 hover:bg-indigo-600/10 transition-all"
               >
                 <Sparkles size={18} />
-                Neural Auto-Match
+                Rule Auto-Match
               </button>
               <button 
                 onClick={handleFinalize}
@@ -336,7 +336,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                   "flex items-center gap-3 px-12 py-4 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-xl",
                   Math.abs(stats.difference) < 1 
                     ? "bg-slate-900 text-white hover:brightness-110 shadow-ledger-google-blue/20" 
-                    : "bg-slate-50 text-slate-500/30 cursor-not-allowed border border-slate-200 grayscale"
+                    : "bg-[var(--ink)] text-slate-500/30 cursor-not-allowed border border-[var(--line)] grayscale"
                 )}
               >
                 <CheckCircle2 size={18} />

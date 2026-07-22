@@ -11,13 +11,30 @@ import { motion, AnimatePresence } from 'motion/react';
 import ToolSandbox from './ToolSandbox';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
 
-const CATEGORIES = ['All', 'Reporting', 'Automation', 'Compliance', 'Intelligence', 'Operations', 'Finance'];
+const CATEGORIES = ['All', 'Compliance', 'Intelligence', 'Automation', 'Planning', 'Valuation', 'Operations', 'Finance'];
 
-const TOOLS = Object.values(FINANCIAL_ALGORITHMS).map((algo: any, i: number) => ({
+const getCategoryForAlgo = (algo: any): string => {
+  const domain = (algo.domain || '').toLowerCase();
+  if (domain === 'forensics') return 'Compliance';
+  if (domain === 'planning') return 'Planning';
+  if (domain === 'valuation') return 'Valuation';
+  if (domain === 'ease') return 'Automation';
+  if (domain === 'recon') return 'Compliance';
+  if (domain === 'ops') return 'Operations';
+  if (algo.tags && algo.tags.length > 0) {
+    if (algo.tags.includes('Audit') || algo.tags.includes('Compliance')) return 'Compliance';
+    if (algo.tags.includes('AI') || algo.tags.includes('Pattern')) return 'Intelligence';
+    if (algo.tags.includes('Automation')) return 'Automation';
+    if (algo.tags.includes('Forecasting') || algo.tags.includes('Cash')) return 'Planning';
+  }
+  return 'Finance';
+};
+
+const TOOLS = Object.values(FINANCIAL_ALGORITHMS).map((algo: any) => ({
   id: algo.id,
   name: algo.name,
   desc: algo.description,
-  cat: ['Operations', 'Intelligence', 'Reporting', 'Automation', 'Finance'][i % 5],
+  cat: getCategoryForAlgo(algo),
   implemented: true,
   icon: Zap
 }));
@@ -33,7 +50,7 @@ export default function ToolsCatalog() {
   );
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 p-4 md:p-10 overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--ink)] p-4 md:p-10 overflow-hidden">
        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10 mb-12">
           <div className="space-y-4">
              <div className="flex items-center gap-4">
@@ -41,7 +58,7 @@ export default function ToolsCatalog() {
                    <Library size={28} />
                 </div>
                 <div>
-                  <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">Tool Catalog</h1>
+                  <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-[var(--text)]">Tool Catalog</h1>
                   <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest truncate mt-3 opacity-50">Enterprise Financial Capabilities Suite</p>
                 </div>
              </div>
@@ -49,12 +66,12 @@ export default function ToolsCatalog() {
 
           <div className="flex items-center gap-6">
              <div className="relative group">
-                <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-slate-900 transition-colors" />
+                <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-[var(--text)] transition-colors" />
                 <input 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Query capabilities..." 
-                  className="w-80 h-14 pl-14 pr-8 bg-white border border-slate-200 rounded-[32px] text-xs font-bold outline-none focus:border-slate-800 transition-all shadow-sm"
+                  className="w-80 h-14 pl-14 pr-8 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-xs font-bold outline-none focus:border-slate-800 transition-all shadow-sm"
                 />
              </div>
           </div>
@@ -67,7 +84,7 @@ export default function ToolsCatalog() {
               onClick={() => setActiveCat(cat)}
               className={cn(
                 "px-8 py-3 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all whitespace-nowrap",
-                activeCat === cat ? "bg-slate-900 text-white shadow-xl" : "bg-white border border-slate-200 text-slate-500 hover:border-slate-800 hover:text-slate-900"
+                activeCat === cat ? "bg-slate-900 text-white shadow-xl" : "bg-[var(--surface)] border border-[var(--line)] text-slate-500 hover:border-slate-800 hover:text-[var(--text)]"
               )}
             >
               {cat}
@@ -89,7 +106,7 @@ export default function ToolsCatalog() {
                    }
                  }}
                  className={cn(
-                   "google-card p-10 bg-white border-slate-200 transition-all group flex flex-col justify-between relative",
+                   "google-card p-10 bg-[var(--surface)] border-[var(--line)] transition-all group flex flex-col justify-between relative",
                    tool.implemented ? "cursor-pointer hover:border-slate-800 hover:shadow-lg hover:-translate-y-1" : "opacity-80 grayscale-[0.5]"
                  )}
                >
@@ -105,20 +122,20 @@ export default function ToolsCatalog() {
                   )}
 
                   <div className="space-y-6">
-                     <div className="w-14 h-14 bg-slate-50 rounded-[32px] flex items-center justify-center text-slate-900 border border-slate-200 group-hover:bg-slate-900 group-hover:text-white transition-all">
+                     <div className="w-14 h-14 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-[var(--text)] border border-[var(--line)] group-hover:bg-slate-900 group-hover:text-white transition-all">
                         <tool.icon size={28} />
                      </div>
                      <div>
-                        <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic mb-2 leading-none">{tool.name}</h3>
+                        <h3 className="text-xl font-black text-[var(--text)] tracking-tight uppercase italic mb-2 leading-none">{tool.name}</h3>
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-60 mb-4">{tool.cat}</p>
                         <p className="text-xs font-medium text-slate-500 leading-relaxed italic line-clamp-2">"{tool.desc}"</p>
                      </div>
                   </div>
 
-                  <div className="mt-8 pt-8 border-t border-slate-200 flex items-center justify-between">
+                  <div className="mt-8 pt-8 border-t border-[var(--line)] flex items-center justify-between">
                      <button className={cn(
                        "flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider transition-all",
-                       tool.implemented ? "text-slate-900 hover:underline" : "text-slate-500 cursor-not-allowed"
+                       tool.implemented ? "text-[var(--text)] hover:underline" : "text-slate-500 cursor-not-allowed"
                      )}>
                         {tool.implemented ? 'Open Mathematical Sandbox' : 'In Development'}
                         {tool.implemented && <Zap size={14} className="text-indigo-600" />}
@@ -130,7 +147,7 @@ export default function ToolsCatalog() {
              {/* End of results */}
           </div>
 
-          <div className="mt-20 py-12 text-center border-t border-slate-200/50">
+          <div className="mt-20 py-12 text-center border-t border-[var(--line)]/50">
              <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.5em] italic">Listing {filteredTools.length} Active Financial Modules</p>
           </div>
        </div>

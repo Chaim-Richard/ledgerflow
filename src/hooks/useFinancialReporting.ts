@@ -5,8 +5,11 @@ import { ChartAccount, Transaction } from '../types';
 import { toast } from 'sonner';
 
 export function useFinancialReporting() {
-  const { currentWorkspaceId } = useAuthStore();
-  const { transactions, accounts, invoices, bills } = useLedgerStore();
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
+  const invoices = useLedgerStore(s => s.invoices);
+  const bills = useLedgerStore(s => s.bills);
   const [loading, setLoading] = useState(false);
   const [apiReports, setApiReports] = useState<any>({ pl: null, aging: null, agingAP: null, cashFlow: null });
 

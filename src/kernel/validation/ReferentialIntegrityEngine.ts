@@ -1,6 +1,6 @@
 import { Transaction, Invoice, Bill } from '../../types';
 
-export class ReferentialIntegrityEngine {
+export class ReferentialTruthEngine {
   static canDeleteAccount(accountId: string, transactions: Transaction[]): boolean {
     return !transactions.some(tx => tx.lines?.some(l => l.accountId === accountId));
   }

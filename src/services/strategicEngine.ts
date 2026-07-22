@@ -1,5 +1,5 @@
 import { Transaction, Project, TransactionLine, AnalyticalMetrics } from "../types";
-import { TruthEngine } from '../modules/truth/TruthEngine';
+import { TruthEngine } from '../modules/integrity/TruthEngine';
 
 import { format, addMonths } from "date-fns";
 
@@ -597,7 +597,7 @@ export class StrategicEngine {
       const profitContribution = (salesCount * margin) / 100;
       const stratValue = Number(((profitContribution * 0.1) + (marginPct / 5) + (monthlyVelocity / 2)).toFixed(2));
 
-      // TRUE EOQ VIA TRUTH ENGINE
+      // TRUE EOQ VIA INTEGRITY ENGINE
       const annualDemandEstimate = Math.round(monthlyVelocity * 12);
       let eoq = 0;
       try {

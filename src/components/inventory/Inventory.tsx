@@ -1,4 +1,4 @@
-import { TruthEngine } from '../../modules/truth/TruthEngine';
+import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -32,6 +32,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { InventoryItem, Transaction } from '../../types';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import { toast } from 'sonner';
 import { StrategicEngine } from '../../services/strategicEngine';
 
@@ -42,15 +43,19 @@ interface InventoryProps {
 }
 
 export default function Inventory({ workspaceId, uid, formatCurrency }: InventoryProps) {
+  const storeTransactions = useLedgerStore(s => s.transactions);
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showNeuralIntel, setShowNeuralIntel] = useState(false);
+  const [showRuleIntel, setShowRuleIntel] = useState(false);
 
   useEffect(() => {
-    if (!workspaceId || !uid) return;
+    if (!workspaceId || !uid) {
+      setLoading(false);
+      return;
+    }
 
     const q = query(
       collection(db, 'inventory'),
@@ -62,7 +67,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
       setItems(data);
       setLoading(false);
-    });
+    }, () => setLoading(false));
 
     const tq = query(
       collection(db, 'transactions'),
@@ -79,11 +84,13 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
       unsubInventory();
       unsubTransactions();
     };
-  }, [workspaceId]);
+  }, [workspaceId, uid]);
+
+  const activeTransactions = transactions.length > 0 ? transactions : storeTransactions;
 
   const economicItems = useMemo(() => {
-    return StrategicEngine.analyzeUnitEconomics(items, transactions);
-  }, [items, transactions]);
+    return StrategicEngine.analyzeUnitEconomics(items, activeTransactions);
+  }, [items, activeTransactions]);
 
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
@@ -157,7 +164,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
     item.sku.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const displayItems = showNeuralIntel ? economicItems.filter((i: any) => 
+  const displayItems = showRuleIntel ? economicItems.filter((i: any) => 
     i.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     i.sku.toLowerCase().includes(searchTerm.toLowerCase())
   ) : filteredItems;
@@ -166,14 +173,14 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 py-6 px-4 border-b border-slate-200/30 mb-10">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 py-6 px-4 border-b border-[var(--line)]/30 mb-10">
         <div className="space-y-4">
           <div className="flex items-center gap-6">
              <div className="w-16 h-16 rounded-[32px] bg-slate-900 flex items-center justify-center text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.2)] border border-white/5 group hover:scale-110 transition-transform">
                <Package size={32} className="animate-pulse" />
              </div>
              <div>
-                <h1 className="text-4xl md:text-6xl font-display font-black text-slate-900 tracking-tight flex items-baseline gap-3">
+                <h1 className="text-4xl md:text-6xl font-display font-black text-[var(--text)] tracking-tight flex items-baseline gap-3">
                   Inventory 
                 </h1>
                 <div className="flex items-center gap-3">
@@ -192,21 +199,21 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                 placeholder="Scan sku or entity DNA..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-14 pr-8 py-4 bg-white border-2 border-slate-200 rounded-[32px] focus:outline-none focus:border-slate-800 focus:shadow-2xl transition-all font-black text-sm uppercase tracking-tight w-full sm:w-[320px] placeholder:text-slate-500/20"
+                className="pl-14 pr-8 py-4 bg-[var(--surface)] border-2 border-[var(--line)] rounded-[32px] focus:outline-none focus:border-slate-800 focus:shadow-2xl transition-all font-black text-sm uppercase tracking-tight w-full sm:w-[320px] placeholder:text-slate-500/20"
               />
            </div>
            
            <button 
-             onClick={() => setShowNeuralIntel(!showNeuralIntel)}
+             onClick={() => setShowRuleIntel(!showRuleIntel)}
              className={cn(
                "px-8 py-4 rounded-[32px] font-black text-xs uppercase tracking-widest transition-all border-2 flex items-center gap-3",
-               showNeuralIntel 
+               showRuleIntel 
                  ? "bg-slate-900 text-emerald-400 border-slate-800 shadow-2xl scale-105" 
-                 : "bg-white text-slate-500 border-slate-200 hover:border-slate-800"
+                 : "bg-[var(--surface)] text-slate-500 border-[var(--line)] hover:border-slate-800"
              )}
            >
              <BarChart3 size={18} />
-             {showNeuralIntel ? "Cortex Active" : "Neural Intel"}
+             {showRuleIntel ? "LedgerFlow AI Active" : "Rule Intel"}
            </button>
 
            <div className="h-12 w-px bg-slate-200 opacity-20 hidden xl:block" />
@@ -229,17 +236,17 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
            </div>
            <div className="relative z-10 w-full md:w-2/3">
               <div className="flex items-center gap-6 mb-6">
-                 <div className="w-16 h-16 bg-white/10 rounded-[32px] flex items-center justify-center text-white border border-white/5 shadow-2xl">
+                 <div className="w-16 h-16 bg-[var(--surface)]/10 rounded-[32px] flex items-center justify-center text-white border border-white/5 shadow-2xl">
                     <Zap size={32} />
                  </div>
                  <div>
-                    <h3 className="text-3xl font-black uppercase tracking-tighter">Neural Inventory Core</h3>
+                    <h3 className="text-3xl font-black uppercase tracking-tighter">Rule Inventory Core</h3>
                     <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest truncate italic font-mono">Real-time Data Chain Synthesis Enabled</p>
                  </div>
               </div>
               <p className="text-sm text-white/50 leading-relaxed font-medium">
                  Synthesizing <span className="text-white font-black">{transactions.length}</span> transaction nodes for <span className="text-white font-black">{items.length}</span> SKUs. 
-                 The "Core Truth" engine has cross-referenced historical sourcing, overhead vectors, and market arbitrage with weighted recency bias.
+                 The "Core Integrity" engine has cross-referenced historical sourcing, overhead vectors, and market arbitrage with weighted recency bias.
               </p>
            </div>
            <div className="relative z-10 flex flex-col items-center md:items-end w-full md:w-1/3">
@@ -255,7 +262,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                        <span className="text-[8px] font-bold text-white/40 uppercase tracking-tighter">Confidence Index</span>
                     </div>
                  </div>
-                 <div className="w-48 h-1.5 bg-white/10 rounded-full mt-6 overflow-hidden">
+                 <div className="w-48 h-1.5 bg-[var(--surface)]/10 rounded-full mt-6 overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${economicItems.length > 0 ? Math.round(economicItems.reduce((acc: number, i: any) => acc + i.integrityScore, 0) / (economicItems.length || 1)) : 0}%` }}
@@ -267,7 +274,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
            </div>
         </div>
 
-        <div className="bg-white p-12 rounded-[32px] border border-slate-200 flex flex-col justify-between shadow-sm group hover:border-rose-400 transition-all">
+        <div className="bg-[var(--surface)] p-12 rounded-[32px] border border-[var(--line)] flex flex-col justify-between shadow-sm group hover:border-rose-400 transition-all">
            <div>
               <div className="flex items-center gap-4 mb-6">
                  <div className="w-12 h-12 bg-rose-50 rounded-[32px] flex items-center justify-center text-rose-500 border border-rose-100">
@@ -276,7 +283,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                  <span className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Asset Risk</span>
               </div>
               <div className="flex items-baseline gap-3">
-                 <span className="text-3xl md:text-5xl font-black text-slate-900">
+                 <span className="text-3xl md:text-5xl font-black text-[var(--text)]">
                     {economicItems.filter((i: any) => i.anomaly || i.resilience === 'Critical').length}
                  </span>
                  <span className="text-xs font-black text-rose-500 uppercase tracking-widest">At Risk</span>
@@ -289,7 +296,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                     "w-2 h-2 rounded-full animate-pulse",
                     economicItems.some((i: any) => i.anomaly) ? "bg-rose-500" : "bg-emerald-500"
                  )} />
-                 <span className="text-[10px] font-black text-slate-900 uppercase">
+                 <span className="text-[10px] font-black text-[var(--text)] uppercase">
                     {economicItems.some((i: any) => i.anomaly) ? "Anomalous Price Drift" : "Optimal Sourcing"}
                  </span>
               </div>
@@ -297,24 +304,24 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
         </div>
       </div>
 
-      <div className="bg-white rounded-[40px] border border-zinc-200 overflow-hidden shadow-sm">
+      <div className="bg-[var(--surface)] rounded-[40px] border border-[var(--line)] overflow-hidden shadow-sm">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-zinc-50 border-b border-zinc-100">
+            <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
               <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Item / SKU</th>
               <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</th>
               <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Stock Level</th>
-              <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">{showNeuralIntel ? "Neural True Cost" : "Unit Cost"}</th>
-              <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">{showNeuralIntel ? "Net Margin %" : "Unit Price"}</th>
+              <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">{showRuleIntel ? "Rule True Cost" : "Unit Cost"}</th>
+              <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">{showRuleIntel ? "Net Margin %" : "Unit Price"}</th>
               <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {displayItems.map((item: any) => (
-              <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors group">
+              <tr key={item.id} className="hover:bg-[var(--ink)]/50 transition-colors group">
                 <td className="px-8 py-5">
                   <div>
-                    <p className="text-sm font-black text-zinc-900">{item.name}</p>
+                    <p className="text-sm font-black text-[var(--text)]">{item.name}</p>
                     <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{item.sku}</p>
                   </div>
                 </td>
@@ -327,7 +334,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                   <div className="flex items-center gap-2">
                     <span className={cn(
                       "text-sm font-black font-mono",
-                      item.quantityAtHand <= item.reorderPoint ? "text-rose-600" : "text-zinc-900"
+                      item.quantityAtHand <= item.reorderPoint ? "text-rose-600" : "text-[var(--text)]"
                     )}>
                       {item.quantityAtHand}
                     </span>
@@ -337,12 +344,12 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                   </div>
                 </td>
                 <td className="px-8 py-5">
-                  {showNeuralIntel ? (
+                  {showRuleIntel ? (
                     <div className={cn(!item.isAnalysisAccurate && "opacity-30 grayscale")}>
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className={cn(
                           "text-sm font-black font-mono",
-                          item.anomaly ? "text-rose-600" : "text-zinc-900"
+                          item.anomaly ? "text-rose-600" : "text-[var(--text)]"
                         )}>{formatCurrency(item.trueCostCents)}</span>
                         {item.integrityScore > 75 && <ShieldCheck size={12} className="text-emerald-500" />}
                         {item.anomaly && <AlertTriangle size={10} className="text-rose-500" />}
@@ -380,7 +387,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                   )}
                 </td>
                 <td className="px-8 py-5">
-                  {showNeuralIntel ? (
+                  {showRuleIntel ? (
                     <div className={cn("flex flex-col gap-1.5", !item.isAnalysisAccurate && "opacity-30")}>
                       <div className="flex items-center justify-between">
                          <div className="flex items-center gap-1">
@@ -397,11 +404,11 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                       <div className={cn(
                         "p-2 rounded-lg border transition-all",
                         item.arbitrage.saving > 0 ? "bg-emerald-50/50 border-emerald-100" : 
-                        item.anomaly ? "bg-rose-50/50 border-rose-100" : "bg-zinc-100/50 border-zinc-200/50"
+                        item.anomaly ? "bg-rose-50/50 border-rose-100" : "bg-zinc-100/50 border-[var(--line)]/50"
                       )}>
                          <div className="flex items-center justify-between gap-4">
                             <span className="text-[9px] font-bold text-zinc-500 truncate max-w-[80px]">{item.arbitrage.bestVendor}</span>
-                            <span className="text-xs font-black text-zinc-900 font-mono italic">
+                            <span className="text-xs font-black text-[var(--text)] font-mono italic">
                                {item.arbitrage.bestPrice > 0 ? formatCurrency(item.arbitrage.bestPrice) : "---"}
                             </span>
                          </div>
@@ -418,10 +425,10 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                         </div>
                         <span className="text-[8px] font-black text-zinc-400 uppercase">{item.confidence}</span>
                       </div>
-                      <div className="flex items-center justify-between mt-1 pt-1 border-t border-zinc-100">
+                      <div className="flex items-center justify-between mt-1 pt-1 border-t border-[var(--line)]">
                          <div className="flex flex-col">
                             <span className="text-[7px] font-bold text-zinc-400 uppercase">Strategic Value</span>
-                            <span className="text-[9px] font-black text-slate-900 font-mono">{item.strategicValue.toFixed(1)}</span>
+                            <span className="text-[9px] font-black text-[var(--text)] font-mono">{item.strategicValue.toFixed(1)}</span>
                          </div>
                          <div className="flex flex-col items-center">
                             <span className="text-[7px] font-bold text-zinc-400 uppercase">EOQ</span>
@@ -456,7 +463,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                   <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={() => setEditingItem(item)}
-                      className="p-2 hover:bg-white rounded-xl border border-transparent hover:border-zinc-200 transition-all"
+                      className="p-2 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
                     >
                       <Edit2 size={14} className="text-zinc-400" />
                     </button>
@@ -497,10 +504,10 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl border border-zinc-200 overflow-hidden"
+              className="relative w-full max-w-2xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden"
             >
-              <div className="p-4 md:p-8 border-b border-zinc-100 flex items-center justify-between">
-                <h3 className="text-xl font-black text-zinc-900 tracking-tighter">
+              <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
+                <h3 className="text-xl font-black text-[var(--text)] tracking-tighter">
                   {editingItem ? 'Edit Inventory Item' : 'New Inventory Item'}
                 </h3>
                 <button 
@@ -520,7 +527,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                     name="name" 
                     defaultValue={editingItem?.name}
                     required 
-                    className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
@@ -529,7 +536,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                     name="sku" 
                     defaultValue={editingItem?.sku}
                     required 
-                    className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
@@ -537,7 +544,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                   <input 
                     name="category" 
                     defaultValue={editingItem?.category}
-                    className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
@@ -548,7 +555,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                     step="0.01" 
                     defaultValue={editingItem ? editingItem.unitCostCents / 100 : undefined}
                     required 
-                    className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
@@ -559,7 +566,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                     step="0.01" 
                     defaultValue={editingItem ? editingItem.unitPriceCents / 100 : undefined}
                     required 
-                    className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
@@ -569,7 +576,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                     type="number" 
                     defaultValue={editingItem?.quantityAtHand}
                     required 
-                    className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
@@ -579,7 +586,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                     type="number" 
                     defaultValue={editingItem?.reorderPoint}
                     required 
-                    className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
@@ -589,7 +596,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                     type="text" 
                     defaultValue={editingItem?.measurementUnit}
                     placeholder="Optional"
-                    className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
@@ -600,7 +607,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                     defaultValue={editingItem?.unitsPerPackage}
                     placeholder="1"
                     min="1"
-                    className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
                 <div className="col-span-2 pt-4">

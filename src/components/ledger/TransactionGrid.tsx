@@ -1,4 +1,4 @@
-import { TruthEngine } from '../../modules/truth/TruthEngine';
+import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Transaction } from '../../types';
 import { 
@@ -130,7 +130,7 @@ const GridEditor = ({
                  e.stopPropagation();
                  handleEvaluateAndSave(s.name);
                }}
-               className="w-full text-left px-4 py-2 hover:bg-white/5 flex items-center justify-between group/s"
+               className="w-full text-left px-4 py-2 hover:bg-[var(--surface)]/5 flex items-center justify-between group/s"
              >
                 <span className="text-[10px] font-black text-white/60 uppercase tracking-widest group-hover/s:text-emerald-400">{s.name}</span>
                 <span className="text-[8px] font-bold text-white/20 uppercase">TAB</span>
@@ -303,7 +303,10 @@ export default function TransactionGrid({
   };
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  const { parsingQueue, setParsingQueue, splittingTxId, setSplittingTxId } = useUIStore();
+  const parsingQueue = useUIStore(s => s.parsingQueue);
+  const setParsingQueue = useUIStore(s => s.setParsingQueue);
+  const splittingTxId = useUIStore(s => s.splittingTxId);
+  const setSplittingTxId = useUIStore(s => s.setSplittingTxId);
   const accounts = useLedgerStore(state => state.accounts);
   const projects = useLedgerStore(state => state.projects);
   const { handleParseReceipt, handleToggleFlag, handleDuplicateTransaction } = useTransactionActions();
@@ -579,7 +582,7 @@ export default function TransactionGrid({
   }, [selectedIds, onUpdate]);
 
   const handleBulkSweep = useCallback(async () => {
-    const loaderId = toast.loading('Initializing neural telemetry bulk resolution...');
+    const loaderId = toast.loading('Initializing rule telemetry bulk resolution...');
     
     // Defer the heavy engine boot sequence to a task so UI repaints the toast first
     await new Promise(r => setTimeout(r, 50)); 
@@ -597,16 +600,17 @@ export default function TransactionGrid({
     const txMap = new Map(transactionsWithBalance.map(t => [t.id, t]));
     const accountNameMap = new Map(accounts.map(a => [a.name, a]));
 
-    suggestions.forEach((categoryName, id) => {
+    suggestions.forEach((suggestion, id) => {
       const tx = txMap.get(id);
-      const targetAcc = accountNameMap.get(categoryName);
+      const targetAcc = accountNameMap.get(suggestion.accountName);
       
       if (tx && targetAcc && (!tx.lines || tx.lines.length === 0 || tx.lines[0].accountName === 'Uncategorized' || tx.lines[0].accountName === 'Unassigned')) {
         onUpdate?.(id, { 
           lines: [{ 
             accountId: targetAcc.id, 
             accountName: targetAcc.name, 
-            amountCents: tx.totalAmountCents 
+            amountCents: tx.totalAmountCents,
+            dimensions: suggestion.dimensions || undefined
           }] 
         });
         count++;
@@ -614,9 +618,9 @@ export default function TransactionGrid({
     });
     
     if (count > 0) {
-      toast.success(`Bayesian neural network categorized ${count} items.`, { id: loaderId });
+      toast.success(`Bayesian rule network categorized ${count} items.`, { id: loaderId });
     } else {
-      toast.info('No auto-resolvable patterns found. Try adjusting Neural Matching thresholds.', { id: loaderId });
+      toast.info('No auto-resolvable patterns found. Try adjusting Rule Matching thresholds.', { id: loaderId });
     }
   }, [transactionsWithBalance, onUpdate]);
 
@@ -705,19 +709,19 @@ export default function TransactionGrid({
       onDragOver={handleDrag}
       onDrop={handleDrop}
       className={cn(
-        "ledger-card flex flex-col h-full overflow-hidden transition-all bg-white border border-slate-200 shadow-sm relative", 
+        "ledger-card flex flex-col min-h-full transition-all bg-[var(--surface)] border border-[var(--line)] shadow-sm relative", 
         isCompactMode && "rounded-none border-none",
         dragActive && "ring-4 ring-indigo-600 ring-inset"
       )}
     >
       {dragActive && (
         <div className="absolute inset-0 z-[100] bg-indigo-600/10 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-          <div className="p-4 md:p-8 bg-white rounded-[32px] shadow-2xl border-2 border-indigo-600 flex flex-col items-center gap-4 animate-in fade-in zoom-in slide-in-from-bottom-4">
+          <div className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] shadow-2xl border-2 border-indigo-600 flex flex-col items-center gap-4 animate-in fade-in zoom-in slide-in-from-bottom-4">
              <div className="w-16 h-16 rounded-full bg-indigo-600/10 flex items-center justify-center text-indigo-600">
                 <Plus size={32} />
              </div>
              <div className="text-center">
-                <p className="text-xl font-bold text-slate-900 uppercase tracking-tight">Drop receipts here</p>
+                <p className="text-xl font-bold text-[var(--text)] uppercase tracking-tight">Drop receipts here</p>
                 <p className="text-sm text-slate-500">AI will auto-categorize and balance them</p>
              </div>
           </div>
@@ -736,7 +740,7 @@ export default function TransactionGrid({
                 exit={{ x: 300, opacity: 0 }}
                 className="p-3 bg-slate-900 rounded-xl shadow-2xl border border-white/10 flex items-center gap-3 pointer-events-auto"
               >
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-[var(--surface)]/5 flex items-center justify-center">
                   {item.status === 'done' ? (
                     <ShieldCheck size={16} className="text-emerald-500" />
                   ) : item.status === 'error' ? (
@@ -752,7 +756,7 @@ export default function TransactionGrid({
                 {item.status === 'error' && (
                   <button 
                     onClick={() => setParsingQueue(parsingQueue.filter(i => i.id !== item.id))}
-                    className="p-1 hover:bg-white/10 rounded"
+                    className="p-1 hover:bg-[var(--surface)]/10 rounded"
                   >
                     <Plus size={10} className="text-white rotate-45" />
                   </button>
@@ -781,12 +785,12 @@ export default function TransactionGrid({
         )}
       </AnimatePresence>
 
-      <div className="p-5 border-b border-slate-100 space-y-4 bg-white/95 backdrop-blur-md sticky top-0 z-30 shadow-xs">
+      <div className="p-5 border-b border-[var(--line)] space-y-4 bg-[var(--surface)]/95 backdrop-blur-md sticky top-0 z-30 shadow-xs">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex flex-col">
-              <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight leading-none">
-                General Ledger
+              <h2 className="text-xl md:text-2xl font-black text-[var(--text)] tracking-tight leading-none">
+                Journal Entries
               </h2>
               <div className="flex items-center gap-3 mt-2">
                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 border border-emerald-500/20 rounded-full">
@@ -797,16 +801,16 @@ export default function TransactionGrid({
               </div>
             </div>
             <div className="hidden sm:block h-10 w-px bg-slate-200 mx-2" />
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/40 self-stretch sm:self-auto shadow-3xs">
+            <div className="flex bg-slate-100 p-1 rounded-xl border border-[var(--line)]/40 self-stretch sm:self-auto shadow-3xs">
               <button 
                 onClick={() => setViewMode('grid')}
-                className={cn("flex-1 sm:flex-none h-8 px-4 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all", viewMode === 'grid' ? "bg-white text-slate-950 shadow-xs scale-[1.02]" : "text-slate-500 hover:text-slate-950")}
+                className={cn("flex-1 sm:flex-none h-8 px-4 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all", viewMode === 'grid' ? "bg-[var(--surface)] text-slate-950 shadow-xs scale-[1.02]" : "text-slate-500 hover:text-slate-950")}
               >
                 Grid View
               </button>
               <button 
                 onClick={() => setViewMode('pivot')}
-                className={cn("flex-1 sm:flex-none h-8 px-4 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all", viewMode === 'pivot' ? "bg-white text-slate-950 shadow-xs scale-[1.02]" : "text-slate-500 hover:text-slate-950")}
+                className={cn("flex-1 sm:flex-none h-8 px-4 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all", viewMode === 'pivot' ? "bg-[var(--surface)] text-slate-950 shadow-xs scale-[1.02]" : "text-slate-500 hover:text-slate-950")}
               >
                 Pivot Matrix
               </button>
@@ -820,14 +824,14 @@ export default function TransactionGrid({
                   "hidden xl:flex h-10 px-4 items-center gap-3 rounded-xl border transition-all text-[9px] font-bold uppercase tracking-wider shrink-0",
                   selectedIds.size > 0 
                   ? "bg-slate-900 text-white border-slate-950 shadow-xs" 
-                  : "bg-white text-slate-505 border-slate-200/80 hover:border-slate-400 hover:text-slate-800 shadow-3xs"
+                  : "bg-[var(--surface)] text-slate-505 border-[var(--line)]/80 hover:border-slate-400 hover:text-[var(--text)] shadow-3xs"
                 )}
               >
                 <div className={cn(
                   "w-4 h-4 rounded border flex items-center justify-center transition-all",
                   selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0
                   ? "bg-slate-900 border-slate-900 text-white" 
-                  : "border-slate-300 bg-white"
+                  : "border-slate-300 bg-[var(--surface)]"
                 )}>
                   {selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0 && <Check size={10} className="stroke-[3px]" />}
                   {selectedIds.size > 0 && selectedIds.size < transactionsWithBalance.length && <div className="w-2 h-0.5 bg-slate-900" />}
@@ -846,10 +850,10 @@ export default function TransactionGrid({
                   <div className="h-4 w-px bg-slate-900/20" />
                   
                   {/* State Machine Actions */}
-                  <button onClick={() => handleBulkUpdate({ isLocked: true })} className="flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-slate-200 transition-colors">
+                  <button onClick={() => handleBulkUpdate({ isLocked: true })} className="flex items-center gap-1.5 px-3 py-1 bg-[var(--surface)] hover:bg-[var(--ink)] text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-[var(--line)] transition-colors">
                     Lock
                   </button>
-                  <button onClick={() => handleBulkUpdate({ isLocked: false })} className="flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-slate-200 transition-colors">
+                  <button onClick={() => handleBulkUpdate({ isLocked: false })} className="flex items-center gap-1.5 px-3 py-1 bg-[var(--surface)] hover:bg-[var(--ink)] text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-[var(--line)] transition-colors">
                     Unlock
                   </button>
                   <button onClick={() => handleBulkUpdate({ status: 'approved' })} className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-200 transition-colors">
@@ -878,14 +882,14 @@ export default function TransactionGrid({
                   value={searchTerm}
                   dir="auto"
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full h-10 pl-11 pr-4 lg:pr-[230px] bg-slate-50/50 hover:bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-950 focus:bg-white transition-all placeholder:text-slate-400 font-medium font-sans"
+                  className="w-full h-10 pl-11 pr-4 lg:pr-[230px] bg-[var(--ink)]/50 hover:bg-[var(--ink)] border border-[var(--line)] rounded-xl text-sm focus:outline-none focus:border-slate-950 focus:bg-[var(--surface)] transition-all placeholder:text-slate-400 font-medium font-sans"
                 />
                 <div className="absolute right-[210px] top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-2">
                    {searchTerm.length > 0 && (
                       <motion.div 
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 rounded-full border border-slate-200"
+                        className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 rounded-full border border-[var(--line)]"
                       >
                          <div className="flex gap-0.5">
                             {[1,2,3].map(i => (
@@ -897,7 +901,7 @@ export default function TransactionGrid({
                               />
                             ))}
                          </div>
-                         <span className="text-[8px] font-bold text-slate-800 uppercase tracking-wider leading-none">Scoping...</span>
+                         <span className="text-[8px] font-bold text-[var(--text)] uppercase tracking-wider leading-none">Scoping...</span>
                       </motion.div>
                    )}
                 </div>
@@ -906,25 +910,25 @@ export default function TransactionGrid({
                     onClick={() => setActiveFilterColumn(activeFilterColumn === 'visibility' ? null : 'visibility')}
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border shrink-0",
-                      activeFilterColumn === 'visibility' ? "bg-slate-950 text-white border-slate-950" : "bg-white text-slate-500 border-slate-200 hover:text-slate-800 shadow-3xs"
+                      activeFilterColumn === 'visibility' ? "bg-slate-950 text-white border-slate-950" : "bg-[var(--surface)] text-slate-500 border-[var(--line)] hover:text-[var(--text)] shadow-3xs"
                     )}
                   >
                     <Layers size={12} className="shrink-0" />
                     Columns
                   </button>
                   {activeFilterColumn === 'visibility' && (
-                    <div className="absolute top-10 right-0 z-[150] w-56 bg-white border border-slate-200/80 rounded-xl shadow-lg p-3 normal-case font-medium text-slate-800">
+                    <div className="absolute top-10 right-0 z-[150] w-56 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-lg p-3 normal-case font-medium text-[var(--text)]">
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Visible Columns</p>
                       <div className="space-y-1">
                         {['date', 'description', 'category', 'project', 'amount', 'status'].map(col => (
-                          <label key={col} className="flex items-center gap-2 p-1.5 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                          <label key={col} className="flex items-center gap-2 p-1.5 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
                             <input 
                               type="checkbox" 
                               checked={visibleColumns.has(col)}
                               onChange={() => toggleColumnVisibility(col)}
                               className="w-3.5 h-3.5 rounded border-slate-300 text-slate-950 focus:ring-slate-955"
                             />
-                            <span className="text-xs text-slate-700 capitalize">{col}</span>
+                            <span className="text-xs text-[var(--text)] capitalize">{col}</span>
                           </label>
                         ))}
                       </div>
@@ -932,7 +936,7 @@ export default function TransactionGrid({
                   )}
                   <button 
                     onClick={handleExportCSV}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-500 border border-slate-200 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:text-slate-800 transition-all shrink-0 shadow-3xs"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] text-slate-500 border border-[var(--line)] rounded-lg text-[9px] font-bold uppercase tracking-wider hover:text-[var(--text)] transition-all shrink-0 shadow-3xs"
                   >
                     <ArrowDownRight size={12} className="rotate-90 shrink-0" />
                     Export
@@ -959,12 +963,12 @@ export default function TransactionGrid({
         </div>
 
         {/* Global Action Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 lg:gap-6 pt-6 lg:pt-8 border-t border-slate-200/30">
+        <div className="flex flex-wrap items-center justify-between gap-4 lg:gap-6 pt-6 lg:pt-8 border-t border-[var(--line)]/30">
           <div className="flex flex-wrap items-center gap-4 lg:gap-12">
              <div className="flex items-center gap-3">
                 <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", stats.discrepancies > 0 ? "bg-rose-50 animate-pulse" : "bg-emerald-50 shadow-[0_0_8px_rgba(16,185,129,0.4)]")} />
-                <span className="text-[9px] sm:text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">
-                  {stats.count.toLocaleString()} Quantum Matches
+                <span className="text-[9px] sm:text-[11px] font-black text-[var(--text)] uppercase tracking-[0.3em]">
+                  {stats.count.toLocaleString()} Amount Matches
                 </span>
              </div>
              {searchTerm && (
@@ -975,7 +979,7 @@ export default function TransactionGrid({
              )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 md:gap-4 bg-slate-50/20 p-1.5 rounded-[32px] border border-slate-200/40 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 bg-[var(--ink)]/20 p-1.5 rounded-[32px] border border-[var(--line)]/40 w-full sm:w-auto">
             <button 
               onClick={() => {
                 const headers = ['Date', 'Description', 'Amount', 'Currency', 'Account', 'Project', 'Notes'];
@@ -1003,7 +1007,7 @@ export default function TransactionGrid({
                 document.body.removeChild(link);
                 toast.success('Matrix exported to Excel-compatible CSV.');
               }}
-              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-900 hover:bg-white rounded-xl transition-all"
+              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-[var(--text)] hover:bg-[var(--surface)] rounded-xl transition-all"
             >
               <TableIcon size={16} />
               <span className="hidden sm:inline">Export Matrix</span>
@@ -1012,7 +1016,7 @@ export default function TransactionGrid({
             <div className="w-px h-6 bg-slate-200 opacity-50" />
             <button 
               onClick={handleBulkSweep}
-              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-white border border-indigo-600/20 hover:border-indigo-600 rounded-xl transition-all shadow-sm shrink-0"
+              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-[var(--surface)] border border-indigo-600/20 hover:border-indigo-600 rounded-xl transition-all shadow-sm shrink-0"
             >
               <Sparkles size={16} className="shrink-0" />
               <span className="hidden sm:inline">Analytical Categorization</span>
@@ -1029,7 +1033,7 @@ export default function TransactionGrid({
            {Object.entries(filterCriteria).map(([key, value]) => {
              if (!value) return null;
              return (
-               <div key={key} className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full text-[10px] font-bold text-slate-900 group/chip hover:border-indigo-600 transition-all">
+               <div key={key} className="flex items-center gap-2 bg-[var(--ink)] border border-[var(--line)] px-3 py-1 rounded-full text-[10px] font-bold text-[var(--text)] group/chip hover:border-indigo-600 transition-all">
                  <span className="text-slate-500 uppercase tracking-widest text-[9px]">{key}:</span>
                  <span>{String(value)}</span>
                  <button 
@@ -1054,7 +1058,7 @@ export default function TransactionGrid({
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden relative bg-white" dir="auto">
+      <div className="flex-1 overflow-hidden relative bg-[var(--surface)]" dir="auto">
         {viewMode === 'grid' ? (
           <div className="h-full flex flex-col">
             <div className="grid sticky top-0 bg-slate-900 text-white/40 z-20" style={{ gridTemplateColumns: gridCols }}>
@@ -1063,7 +1067,7 @@ export default function TransactionGrid({
               </div>
               <div 
                 onClick={() => handleSort('date')}
-                className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group cursor-pointer hover:bg-white/5 transition-colors relative"
+                className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
               >
                 Date {sortConfig?.key === 'date' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                 <button 
@@ -1073,38 +1077,38 @@ export default function TransactionGrid({
                   <Filter size={10} />
                 </button>
                 {activeFilterColumn === 'date' && (
-                  <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-slate-50 border border-slate-200 rounded-xl shadow-2xl p-4 normal-case font-medium text-slate-900 cursor-default" onClick={e => e.stopPropagation()}>
+                  <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Date Selection</p>
                     <div className="space-y-4">
                        <button 
                          onClick={() => { setSearchTerm('today'); setActiveFilterColumn(null); }}
-                         className="w-full text-left p-2 hover:bg-slate-50 rounded-lg text-sm"
+                         className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-sm"
                        >
                          Today
                        </button>
                        <button 
                          onClick={() => { setSearchTerm('last month'); setActiveFilterColumn(null); }}
-                         className="w-full text-left p-2 hover:bg-slate-50 rounded-lg text-sm"
+                         className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-sm"
                        >
                          Last Month
                        </button>
                        <button 
                          onClick={() => { setSearchTerm('this year'); setActiveFilterColumn(null); }}
-                         className="w-full text-left p-2 hover:bg-slate-50 rounded-lg text-sm"
+                         className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-sm"
                        >
                          This Year
                        </button>
-                       <div className="pt-2 border-t border-slate-200">
+                       <div className="pt-2 border-t border-[var(--line)]">
                          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Custom Range</p>
                          <div className="grid grid-cols-2 gap-2">
                            <input 
                              type="date" 
-                             className="text-xs p-1 h-8 bg-slate-50 border border-slate-200 rounded" 
+                             className="text-xs p-1 h-8 bg-[var(--ink)] border border-[var(--line)] rounded" 
                              onChange={(e) => onFilterApplied({ ...filterCriteria, startDate: e.target.value })}
                            />
                            <input 
                              type="date" 
-                             className="text-xs p-1 h-8 bg-slate-50 border border-slate-200 rounded"
+                             className="text-xs p-1 h-8 bg-[var(--ink)] border border-[var(--line)] rounded"
                              onChange={(e) => onFilterApplied({ ...filterCriteria, endDate: e.target.value })}
                            />
                          </div>
@@ -1115,22 +1119,22 @@ export default function TransactionGrid({
               </div>
               <div 
                 onClick={() => handleSort('description')}
-                className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-white/5 transition-colors"
+                className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
               >
                 Description {sortConfig?.key === 'description' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                 <button 
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'description' ? null : 'description'); }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all"
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all"
                 >
                   <Filter size={10} />
                 </button>
                 {activeFilterColumn === 'description' && (
-                  <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-slate-50 border border-slate-200 rounded-xl shadow-2xl p-4 normal-case font-medium text-slate-900 cursor-default" onClick={e => e.stopPropagation()}>
+                  <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Text Filters</p>
                     <div className="space-y-1">
-                       <button onClick={() => { setSearchTerm('starts with '); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-slate-50 rounded-lg text-sm">Starts with...</button>
-                       <button onClick={() => { setSearchTerm('ends with '); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-slate-50 rounded-lg text-sm">Ends with...</button>
-                       <button onClick={() => { setSearchTerm('contains '); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-slate-50 rounded-lg text-sm">Contains...</button>
+                       <button onClick={() => { setSearchTerm('starts with '); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-sm">Starts with...</button>
+                       <button onClick={() => { setSearchTerm('ends with '); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-sm">Ends with...</button>
+                       <button onClick={() => { setSearchTerm('contains '); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-sm">Contains...</button>
                     </div>
                   </div>
                 )}
@@ -1138,24 +1142,24 @@ export default function TransactionGrid({
               {!isMobileGrid && (
                 <div 
                   onClick={() => handleSort('category')}
-                  className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-white/5 transition-colors"
+                  className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
                 >
                   Category {sortConfig?.key === 'category' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'category' ? null : 'category'); }}
-                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all", (filterCriteria?.selectedCategories?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedCategories?.length > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter size={10} />
                   </button>
                   {activeFilterColumn === 'category' && (
-                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-slate-50 border border-slate-200 rounded-xl shadow-2xl p-4 normal-case font-medium text-slate-900 cursor-default" onClick={e => e.stopPropagation()}>
+                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter Category</p>
                       <div className="mb-3 relative group/lsearch">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover/lsearch:text-indigo-600 transition-colors" size={12} />
                         <input 
                           type="text" 
                           placeholder="Search categories..."
-                          className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-600"
+                          className="w-full pl-8 pr-3 py-1.5 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-600"
                           value={columnSearchTerms.category || ''}
                           onChange={(e) => setColumnSearchTerms(prev => ({ ...prev, category: e.target.value }))}
                         />
@@ -1164,21 +1168,21 @@ export default function TransactionGrid({
                         {columnFilterValues.category
                           .filter(val => !columnSearchTerms.category || (val || '').toLowerCase().includes(columnSearchTerms.category.toLowerCase()))
                           .map(val => (
-                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
                             <input 
                               type="checkbox" 
                               checked={filterCriteria?.selectedCategories?.includes(val)}
                               onChange={() => toggleColumnFilter('category', val)}
-                              className="w-4 h-4 rounded border-slate-200 text-indigo-600"
+                              className="w-4 h-4 rounded border-[var(--line)] text-indigo-600"
                             />
-                            <span className="text-sm text-slate-900 truncate">{val}</span>
+                            <span className="text-sm text-[var(--text)] truncate">{val}</span>
                           </label>
                         ))}
                       </div>
-                      <div className="mt-4 pt-3 border-t border-slate-200 flex justify-between">
+                      <div className="mt-4 pt-3 border-t border-[var(--line)] flex justify-between">
                          <button 
                            onClick={() => onFilterApplied({ ...filterCriteria, selectedCategories: [] })}
-                           className="text-[10px] font-bold text-slate-500 hover:text-slate-900 uppercase tracking-wider"
+                           className="text-[10px] font-bold text-slate-500 hover:text-[var(--text)] uppercase tracking-wider"
                          >
                            Reset
                          </button>
@@ -1196,24 +1200,24 @@ export default function TransactionGrid({
               {!isMobileGrid && !isTabletGrid && (
                 <div 
                   onClick={() => handleSort('project')}
-                  className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-white/5 transition-colors"
+                  className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
                 >
                   Project {sortConfig?.key === 'project' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'project' ? null : 'project'); }}
-                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all", (filterCriteria?.selectedProjects?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedProjects?.length > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter size={10} />
                   </button>
                   {activeFilterColumn === 'project' && (
-                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-slate-50 border border-slate-200 rounded-xl shadow-2xl p-4 normal-case font-medium text-slate-900 cursor-default" onClick={e => e.stopPropagation()}>
+                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter Projects</p>
                       <div className="mb-3 relative group/psearch">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover/psearch:text-indigo-600 transition-colors" size={12} />
                         <input 
                           type="text" 
                           placeholder="Search entities..."
-                          className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-600"
+                          className="w-full pl-8 pr-3 py-1.5 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-600"
                           value={columnSearchTerms.project || ''}
                           onChange={(e) => setColumnSearchTerms(prev => ({ ...prev, project: e.target.value }))}
                         />
@@ -1222,14 +1226,14 @@ export default function TransactionGrid({
                         {columnFilterValues.project
                           .filter(val => !columnSearchTerms.project || (val || '').toLowerCase().includes(columnSearchTerms.project.toLowerCase()))
                           .map(val => (
-                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
                             <input 
                               type="checkbox" 
                               checked={filterCriteria?.selectedProjects?.includes(val)}
                               onChange={() => toggleColumnFilter('project', val)}
-                              className="w-4 h-4 rounded border-slate-200 text-indigo-600"
+                              className="w-4 h-4 rounded border-[var(--line)] text-indigo-600"
                             />
-                            <span className="text-sm text-slate-900 truncate">{val}</span>
+                            <span className="text-sm text-[var(--text)] truncate">{val}</span>
                           </label>
                         ))}
                       </div>
@@ -1240,28 +1244,28 @@ export default function TransactionGrid({
               {!isMobileGrid && !isTabletGrid && (
                 <div 
                   onClick={() => handleSort('class')}
-                  className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-white/5 transition-colors relative"
+                  className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
                   <div className="flex items-center gap-2">Class {sortConfig?.key === 'class' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}</div>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'class' ? null : 'class'); }}
-                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all", (filterCriteria?.selectedClasses?.length || 0) > 0 && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedClasses?.length || 0) > 0 && "opacity-100 text-emerald-500")}
                   >
                     <Filter size={10} />
                   </button>
                   {activeFilterColumn === 'class' && (
-                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-slate-50 border border-slate-200 rounded-xl shadow-2xl p-4 normal-case font-medium text-slate-900 cursor-default" onClick={e => e.stopPropagation()}>
+                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter by Class</p>
                       <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar">
                         {useLedgerStore.getState().classes?.map(val => (
-                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
                             <input 
                               type="checkbox" 
                               checked={filterCriteria?.selectedClasses?.includes(val)}
                               onChange={() => toggleColumnFilter('class', val)}
-                              className="w-4 h-4 rounded border-slate-200 text-indigo-600"
+                              className="w-4 h-4 rounded border-[var(--line)] text-indigo-600"
                             />
-                            <span className="text-sm text-slate-900 truncate">{val}</span>
+                            <span className="text-sm text-[var(--text)] truncate">{val}</span>
                           </label>
                         ))}
                       </div>
@@ -1272,28 +1276,28 @@ export default function TransactionGrid({
               {!isMobileGrid && !isTabletGrid && (
                 <div 
                   onClick={() => handleSort('location')}
-                  className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-white/5 transition-colors relative"
+                  className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
                   <div className="flex items-center gap-2">Location {sortConfig?.key === 'location' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}</div>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'location' ? null : 'location'); }}
-                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all", (filterCriteria?.selectedLocations?.length || 0) > 0 && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedLocations?.length || 0) > 0 && "opacity-100 text-emerald-500")}
                   >
                     <Filter size={10} />
                   </button>
                   {activeFilterColumn === 'location' && (
-                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-slate-50 border border-slate-200 rounded-xl shadow-2xl p-4 normal-case font-medium text-slate-900 cursor-default" onClick={e => e.stopPropagation()}>
+                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter by Location</p>
                       <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar">
                         {useLedgerStore.getState().locations?.map(val => (
-                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
                             <input 
                               type="checkbox" 
                               checked={filterCriteria?.selectedLocations?.includes(val)}
                               onChange={() => toggleColumnFilter('location', val)}
-                              className="w-4 h-4 rounded border-slate-200 text-indigo-600"
+                              className="w-4 h-4 rounded border-[var(--line)] text-indigo-600"
                             />
-                            <span className="text-sm text-slate-900 truncate">{val}</span>
+                            <span className="text-sm text-[var(--text)] truncate">{val}</span>
                           </label>
                         ))}
                       </div>
@@ -1304,18 +1308,18 @@ export default function TransactionGrid({
               {((isProMode || isCompactMode) && !isMobileGrid && !isTabletGrid) ? (<><div className="p-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-right">Debit</div><div className="p-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-right">Credit</div></>) : (
               <div 
                 onClick={() => handleSort('amount')}
-                className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-right flex items-center justify-end gap-2 group relative cursor-pointer hover:bg-white/5 transition-colors"
+                className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-right flex items-center justify-end gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
               >
                 Amount {sortConfig?.key === 'amount' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                 <button 
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'amount' ? null : 'amount'); }}
-                  className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all", (filterCriteria?.minAmount !== undefined || filterCriteria?.maxAmount !== undefined) && "opacity-100 text-emerald-500")}
+                  className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.minAmount !== undefined || filterCriteria?.maxAmount !== undefined) && "opacity-100 text-emerald-500")}
                 >
                   <Filter size={10} />
                 </button>
                 {activeFilterColumn === 'amount' && (
-                  <div className="absolute top-full right-0 z-[100] mt-1 w-72 bg-slate-50 border border-slate-200 rounded-xl shadow-2xl p-5 normal-case font-medium text-slate-900 cursor-default" onClick={e => e.stopPropagation()}>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Quantum Range Logic</p>
+                  <div className="absolute top-full right-0 z-[100] mt-1 w-72 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-5 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Amount Range Logic</p>
                     <div className="space-y-5">
                        <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -1325,7 +1329,7 @@ export default function TransactionGrid({
                                <input 
                                   type="number" 
                                   placeholder="0" 
-                                  className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:ring-1 focus:ring-indigo-600 outline-none"
+                                  className="w-full pl-6 pr-3 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs font-mono focus:ring-1 focus:ring-indigo-600 outline-none"
                                   value={filterCriteria?.minAmount || ''}
                                   onChange={(e) => onFilterApplied({ ...filterCriteria, minAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
                                />
@@ -1338,7 +1342,7 @@ export default function TransactionGrid({
                                <input 
                                   type="number" 
                                   placeholder="∞" 
-                                  className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:ring-1 focus:ring-indigo-600 outline-none"
+                                  className="w-full pl-6 pr-3 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs font-mono focus:ring-1 focus:ring-indigo-600 outline-none"
                                   value={filterCriteria?.maxAmount || ''}
                                   onChange={(e) => onFilterApplied({ ...filterCriteria, maxAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
                                />
@@ -1346,18 +1350,18 @@ export default function TransactionGrid({
                           </div>
                        </div>
                        
-                       <div className="pt-4 border-t border-slate-200 space-y-2">
+                       <div className="pt-4 border-t border-[var(--line)] space-y-2">
                           <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Statistical Segments</p>
                           <div className="grid grid-cols-1 gap-1">
-                             <button onClick={() => { setSearchTerm('above average'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-slate-50 rounded-lg text-xs font-bold flex justify-between items-center group">
+                             <button onClick={() => { setSearchTerm('above average'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Above Average
                                 <TrendingUp size={12} className="opacity-0 group-hover:opacity-100 text-emerald-500" />
                              </button>
-                             <button onClick={() => { setSearchTerm('top 10 %'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-slate-50 rounded-lg text-xs font-bold flex justify-between items-center group">
+                             <button onClick={() => { setSearchTerm('top 10 %'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Top 10% (High Value)
                                 <Sparkles size={12} className="opacity-0 group-hover:opacity-100 text-amber-500" />
                              </button>
-                             <button onClick={() => { setSearchTerm('below average'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-slate-50 rounded-lg text-xs font-bold flex justify-between items-center group">
+                             <button onClick={() => { setSearchTerm('below average'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Below Average
                                 <TrendingDown size={12} className="opacity-0 group-hover:opacity-100 text-rose-500" />
                              </button>
@@ -1367,7 +1371,7 @@ export default function TransactionGrid({
                        <div className="flex gap-2 pt-2">
                           <button 
                             onClick={() => { onFilterApplied({ ...filterCriteria, minAmount: undefined, maxAmount: undefined }); setActiveFilterColumn(null); }}
-                            className="flex-1 py-2.5 bg-slate-50 text-[9px] font-medium uppercase tracking-wider rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all"
+                            className="flex-1 py-2.5 bg-[var(--ink)] text-[9px] font-medium uppercase tracking-wider rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all"
                           >
                             Reset
                           </button>
@@ -1389,28 +1393,28 @@ export default function TransactionGrid({
               {!isMobileGrid && (
                 <div 
                   onClick={() => handleSort('status')}
-                  className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-center flex items-center justify-center gap-2 group cursor-pointer hover:bg-white/5 transition-colors relative"
+                  className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-center flex items-center justify-center gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
                   System Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'status' ? null : 'status'); }}
-                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all", (filterCriteria?.selectedStatuses?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedStatuses?.length > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter size={10} />
                   </button>
                   {activeFilterColumn === 'status' && (
-                    <div className="absolute top-full right-0 z-[100] mt-1 w-48 bg-slate-50 border border-slate-200 rounded-xl shadow-2xl p-4 normal-case font-medium">
+                    <div className="absolute top-full right-0 z-[100] mt-1 w-48 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium">
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter Type</p>
                       <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar">
                         {['Active', 'Pending', 'Void', 'Reconciled'].map(val => (
-                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
                             <input 
                               type="checkbox" 
                               checked={filterCriteria?.selectedStatuses?.includes(val)}
                               onChange={() => toggleColumnFilter('status', val)}
-                              className="w-4 h-4 rounded border-slate-200 text-indigo-600"
+                              className="w-4 h-4 rounded border-[var(--line)] text-indigo-600"
                             />
-                            <span className="text-sm text-slate-900 truncate">{val}</span>
+                            <span className="text-sm text-[var(--text)] truncate">{val}</span>
                           </label>
                         ))}
                       </div>
@@ -1431,7 +1435,7 @@ export default function TransactionGrid({
                    <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 opacity-40">Dataset Depth</p>
                    <p className="text-lg font-black italic text-white/80">{transactionsWithBalance.length} Nodes</p>
                  </div>
-                 <div className="hidden sm:block w-px h-10 bg-white/10" />
+                 <div className="hidden sm:block w-px h-10 bg-[var(--surface)]/10" />
                  <div className="flex flex-col whitespace-nowrap">
                    <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 opacity-40">Equilibrium</p>
                    <p className={cn(
@@ -1445,7 +1449,7 @@ export default function TransactionGrid({
                  </div>
                  {selectedIds.size > 0 && (
                    <>
-                     <div className="hidden sm:block w-px h-10 bg-white/10" />
+                     <div className="hidden sm:block w-px h-10 bg-[var(--surface)]/10" />
                      <div className="flex items-center gap-4 lg:gap-10">
                         <div className="flex flex-col text-emerald-400 whitespace-nowrap">
                           <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 opacity-40">Sum ({selectedIds.size})</p>

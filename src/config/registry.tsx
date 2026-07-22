@@ -1,7 +1,3 @@
-import VendorPriceVariance from '../components/finance/VendorPriceVariance';
-import WorkCenterRouting from '../components/operations/WorkCenterRouting';
-import DemandForecasting from '../components/operations/DemandForecasting';
-import MachineLearningOps from '../components/ledger/MachineLearningOps';
 /*
  * REGISTRY MAP - HOW TO MODIFY:
  * ---------------------------------
@@ -51,147 +47,51 @@ for (const path in pluginModules) {
 
 // 1. Definition of all View Components
 export const VIEW_COMPONENTS: Record<string, any> = {
+  'inventory': lazy(() => import('../components/inventory/Inventory')),
   ...dynamicComponents,
   'dashboard': lazy(() => import('../components/Dashboard')),
-  'system-command-center': lazy(() => import('../components/platform/SystemCommandCenter')),
-  'esg-ledger': lazy(() => import('../components/operations/EsgLedger')),
-  'autonomous-agents': lazy(() => import('../components/system/AutonomousAgents')),
-  'cap-table': lazy(() => import('../components/finance/CapTableManager')),
-  'factoring': lazy(() => import('../components/finance/FactoringManager')),
-  'dms': lazy(() => import('../components/operations/DocumentManager')),
-  'subscription-billing': lazy(() => import('../components/sales/SubscriptionBilling')),
-  'maintenance': lazy(() => import('../components/operations/MaintenanceManager')),
-  'field-service': lazy(() => import('../components/operations/FieldService')),
-  'quality-control': lazy(() => import('../components/operations/QualityControl')),
-  'property-manager': lazy(() => import('../components/operations/PropertyManager')),
-  'pricing-engine': lazy(() => import('../components/sales/PricingEngine')),
-
-
-  'crm': lazy(() => import('../components/sales/CrmPipeline')),
-  'procurement': lazy(() => import('../components/purchases/PurchasePipeline')),
-  'recruiting': lazy(() => import('../components/operations/ApplicantTracking')),
-  'mrp': lazy(() => import('../components/operations/ManufacturingBOM')),
-  'helpdesk': lazy(() => import('../components/operations/SupportHelpdesk')),
-  'fleet': lazy(() => import('../components/operations/FleetLogistics')),
-  'revrec': lazy(() => import('../components/finance/RevenueRecognition')),
-  'forensics': lazy(() => import('../components/reporting/ForensicAuditor')),
-  'currency-hub': lazy(() => import('../components/finance/MultiCurrencyManager')),
-  'leave-management': lazy(() => import('../components/operations/LeaveManagement')),
-  'multi-warehouse': lazy(() => import('../components/operations/MultiWarehouse')),
-  'expense-claims': lazy(() => import('../components/operations/ExpenseClaims')),
-  'ecommerce-integrations': lazy(() => import('../components/operations/EcommerceIntegrations')),
-  'custom-fields': lazy(() => import('../components/operations/CustomFieldsManager')),
-  'pos': lazy(() => import('../components/sales/PosTerminal')),
-  'treasury': lazy(() => import('../components/finance/TreasuryHub')),
-  'wealth': lazy(() => import('../components/finance/WealthHub')),
-  'tax-nexus': lazy(() => import('../components/finance/SalesTaxNexus')),
 
 
   'architecture': lazy(() => import('../components/system/ArchitectureViewer')),
   'intelligence': lazy(() => import('../components/intelligence/IntelligenceCenter')),
   'copilot': lazy(() => import('../components/intelligence/Copilot')),
   'audit': lazy(() => import('../components/forensics/ForensicAudit')),
-  'transactions': lazy(() => import('../components/ledger/TransactionGrid')),
-  '1099-compliance': lazy(() => import('../components/finance/ContractorCompliance')),
-  'projects': lazy(() => import('../components/projects/Projects')),
+  'transactions': lazy(() => import('../components/ledger/TransactionGrid')),  'projects': lazy(() => import('../components/projects/Projects')),
   'reports': lazy(() => import('../components/reporting/Reports')),
-  'ledger': lazy(() => import('../components/ledger/Ledger')),
+  'ledger': lazy(() => import('../components/ledger/TwoLensesLedger')),
   'sales': lazy(() => import('../components/sales/Sales')),
   'purchases': lazy(() => import('../components/purchases/Purchases')),
   'settings': lazy(() => import('../components/platform/Settings')),
   'api-hub': lazy(() => import('../components/platform/ApiHub')),
-  'inventory': lazy(() => import('../components/inventory/Inventory')),
-  'assets': lazy(() => import('../components/assets/FixedAssets')),
-  'aging': lazy(() => import('../components/finance/AgingReport')),
-  'recurring': lazy(() => import('../components/ledger/RecurringTransactions')),
-  'reconciliation': lazy(() => import('../components/ledger/Reconciliation')),
-  'statement-rec': lazy(() => import('../components/finance/StatementReconciliation')),
-  'forecaster': lazy(() => import('../components/planning/CashFlowPredictor')),
+
+  'reconciliation': lazy(() => import('../components/ledger/Reconciliation')),  'forecaster': lazy(() => import('../components/planning/CashFlowPredictor')),
   'budgets': lazy(() => import('../components/planning/BudgetManager')),
-  'taxes': lazy(() => import('../components/finance/TaxManager')),
-  'payroll': lazy(() => import('../components/finance/PayrollHub')),
-  'audit-vault': lazy(() => import('../components/forensics/UnifiedSecurityLayer')),
-  'currency': lazy(() => import('../components/finance/CurrencyHub')),
-  'vault': lazy(() => import('../components/forensics/Vault')),
-  'integrity': lazy(() => import('../components/forensics/UnifiedSecurityLayer')),
-  'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
-  'matrix': lazy(() => import('../components/reporting/FiscalMatrix')),
-  'vendors': lazy(() => import('../components/reporting/UnifiedReportingMatrix')),
-  'customers': lazy(() => import('../components/reporting/UnifiedReportingMatrix')),
-  'consolidated': lazy(() => import('../components/ledger/ConsolidatedLedger')),
-  'forensic-anatomy': lazy(() => import('../components/forensics/UnifiedSecurityLayer')),
-  'tax-optimizer': lazy(() => import('../components/finance/TaxOptimizer')),
-  'global-map': lazy(() => import('../components/finance/GlobalLiquidityMap')),
-  'excel-qbo-bridge': lazy(() => import('../components/ledger/ExcelQboBridge')),
-  'saas-optimizer': lazy(() => import('../components/finance/SaaSOptimizer')),
-  'wealth-hub': lazy(() => import('../components/finance/WealthHub')),
-  'split-expenses': lazy(() => import('../components/finance/SplitExpenses')),
-  'financial-goals': lazy(() => import('../components/finance/FinancialGoals')),
-  'market-multiplier': lazy(() => import('../components/intelligence/UnifiedIntelligenceCore')),
-  'ceo-boardroom': lazy(() => import('../components/intelligence/UnifiedIntelligenceCore')),
-  'treasury-sim': lazy(() => import('../components/planning/UnifiedPlanningEngine')),
-  'cfo-at-home': lazy(() => import('../components/intelligence/UnifiedIntelligenceCore')),
-  'business-oxygen': lazy(() => import('../components/intelligence/UnifiedIntelligenceCore')),
-  'growth-strategy': lazy(() => import('../components/intelligence/UnifiedIntelligenceCore')),
-  'pricing': lazy(() => import('../components/intelligence/UnifiedIntelligenceCore')),
-  'algorithmic-truth': lazy(() => import('../components/intelligence/AlgorithmicTruth')),
-  'predictive-maintenance': lazy(() => import('../components/intelligence/UnifiedIntelligenceCore')),
-  'smart-reconciliation': lazy(() => import('../components/intelligence/UnifiedIntelligenceCore')),
-  'inventory-eoq': lazy(() => import('../components/intelligence/UnifiedIntelligenceCore')),
-  'ledger-autopilot': lazy(() => import('../components/intelligence/UnifiedIntelligenceCore')),
-  'velocity': lazy(() => import('../components/intelligence/NetworkTopology')),
-  'split-transaction': lazy(() => import('../components/ledger/SplitTransaction')),
-  'expense-capture': lazy(() => import('../components/ledger/ExpenseCapture')),
-  'categorization-rules': lazy(() => import('../components/ledger/CategorizationRules')),
-  'project-profitability': lazy(() => import('../components/ledger/ProjectProfitabilityView')),
-  'class-location-manager': lazy(() => import('../components/ledger/ClassLocationManager')),
-  'custom-fields-manager': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'bulk-reclassify': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'segmented-reporting': lazy(() => import('../components/ledger/SegmentedReporting')),
-  'time-tracker': lazy(() => import('../components/projects/TimeTracker')),
-  'bank-feeds': lazy(() => import('../components/ledger/BankFeedReconciliation')),
-  'proposals': lazy(() => import('../components/sales/SalesProposalHub')),
-  'banking-hub': lazy(() => import('../components/finance/TreasuryHub')),
-  'automation': lazy(() => import('../components/system/ProcessAutomationHub')),
-  'universal-ops': lazy(() => import('../components/operations/UniversalOperations')),
-  'manufacturing-hub': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'sales-crm': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'hr-hub': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'ecommerce': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'marketing': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'credit-control': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'period-close': lazy(() => import('../components/finance/PeriodCloseManager')),
-  'journal-approval': lazy(() => import('../components/ledger/JournalApprovalWorkflow')),
-  'inventory-valuation': lazy(() => import('../components/inventory/InventoryValuation')),
-  'supply-chain': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'equity-grants': lazy(() => import('../components/finance/EquityGrants')),
-  'fleet-management': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'legal-contracts': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'real-estate-leasing': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'fixed-assets': lazy(() => import('../components/finance/FixedAssets')),
-  'intercompany': lazy(() => import('../components/finance/Intercompany')),
-  'budgeting': lazy(() => import('../components/planning/Budgeting')),
-  'project-accounting': lazy(() => import('../components/operations/ProjectAccounting')),
+  'time-machine': lazy(() => import('../components/ledger/TimeMachine')),
+  'inbox': lazy(() => import('../components/ledger/InboxView')),
+  'ask': lazy(() => import('../components/ledger/AskLoop')),
+  'magic': lazy(() => import('../components/ledger/MagicEntry')),
+
+  'vault': lazy(() => import('../components/forensics/Vault')),  'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
+  'system-command-center': lazy(() => import('../components/platform/SystemCommandCenter')),
   'consolidation': lazy(() => import('../components/finance/Consolidation')),
-  'retainers': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'sox-compliance': lazy(() => import('../components/system/SOXCompliance')),
-  'approvals-matrix': lazy(() => import('../components/system/ApprovalsMatrix')),
-  'tags-dimensions': lazy(() => import('../components/finance/TagsDimensions')),
-  'capital-budgeting': lazy(() => import('../components/planning/UnifiedPlanningEngine')),
-  'webhooks': lazy(() => import('../components/system/WebhookManager')),
-  'stock-transfers': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'landed-costs': lazy(() => import('../components/finance/LandedCosts')),
-  'vendor-scorecards': lazy(() => import('../components/operations/UnifiedOperationsHub')),
-  'EpsGrowthCalculator': lazy(() => import('../components/finance/UnifiedCalculator')),
-  'BetaCalculator': lazy(() => import('../components/finance/UnifiedCalculator')),
-  'MacdCalculator': lazy(() => import('../components/finance/UnifiedCalculator')),
-  'BollingerBandsCalculator': lazy(() => import('../components/finance/UnifiedCalculator')),
-  'CostOfDebtCalculator': lazy(() => import('../components/finance/UnifiedCalculator')),
-  'RealInterestRateCalculator': lazy(() => import('../components/finance/UnifiedCalculator')),
-  'CacCalculator': lazy(() => import('../components/finance/UnifiedCalculator')),
-  'FireCalculator': lazy(() => import('../components/finance/UnifiedCalculator')),
-  'CapitalGainsCalculator': lazy(() => import('../components/finance/UnifiedCalculator')),
-  'DebtSnowballCalculator': lazy(() => import('../components/finance/UnifiedCalculator'))
+  'taxes': lazy(() => import('../components/finance/TaxManager')),
+
+  
+  
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
 };
 
 // 2. Types
@@ -205,73 +105,27 @@ export interface AppTabDefinition {
 
 export const APP_TABS: AppTabDefinition[] = [
   { id: 'dashboard', label: { en: 'Command Center', he: 'לוח בקרה' }, icon: Home, groupId: 'pulse' },
-  { id: 'architecture', label: { en: 'Dev Hub', he: 'מפת מערכת' }, icon: Network, groupId: 'pulse' },
   { id: 'copilot', label: { en: 'AI Co-pilot', he: 'טייס משנה אינטליגנטי' }, icon: Sparkles, groupId: 'pulse' },
+  { id: 'inbox', label: { en: 'AI Inbox', he: 'AI Inbox' }, icon: Zap, groupId: 'finance' },
+  { id: 'ask', label: { en: 'Accountant Ask', he: 'שאלות מרואה חשבון' }, icon: Zap, groupId: 'finance' },
+  { id: 'magic', label: { en: 'Magic Entry', he: 'הזנה קסומה' }, icon: Zap, groupId: 'finance' },
   { id: 'transactions', label: { en: 'Journal Entries', he: 'תנועות' }, icon: Layers, groupId: 'finance' },
   { id: 'ledger', label: { en: 'General Ledger', he: 'ספר ראשי' }, icon: Database, groupId: 'finance' },
-  { id: 'banking-hub', label: { en: 'Treasury & Cash', he: 'מרכז בנקאות' }, icon: Building, groupId: 'finance' },
   { id: 'reconciliation', label: { en: 'Smart Matching', he: 'התאמות חכמות' }, icon: RefreshCw, groupId: 'finance' },
-  { id: 'assets', label: { en: 'Fixed Assets', he: 'רכוש קבוע' }, icon: Briefcase, groupId: 'finance' },
   { id: 'sales', label: { en: 'Invoicing & AR', he: 'כסף נכנס' }, icon: ArrowUpRight, groupId: 'operations' },
-
-  { id: 'pos', label: { en: 'Point of Sale (POS)', he: 'נקודת מכירה' }, icon: Store, groupId: 'operations' },
-
   { id: 'purchases', label: { en: 'Bills & AP', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'operations' },
   { id: 'projects', label: { en: 'Project Tracking', he: 'פרויקטים' }, icon: FolderKanban, groupId: 'operations' },
-
-  { id: 'crm', label: { en: 'CRM & Pipeline', he: 'ניהול לקוחות' }, icon: Users, groupId: 'operations' },
-  { id: 'mrp', label: { en: 'Manufacturing (MRP)', he: 'ייצור' }, icon: CpuIcon, groupId: 'operations' },
-  { id: 'procurement', label: { en: 'Procurement (PO)', he: 'רכש' }, icon: ShoppingCart, groupId: 'operations' },
-  { id: 'helpdesk', label: { en: 'Support Helpdesk', he: 'תמיכה' }, icon: Headphones, groupId: 'operations' },
-  { id: 'fleet', label: { en: 'Fleet & Logistics', he: 'צי רכב ולוגיסטיקה' }, icon: Truck, groupId: 'operations' },
-  { id: 'recruiting', label: { en: 'Applicant Tracking', he: 'גיוס עובדים' }, icon: Briefcase, groupId: 'operations' },
-  { id: 'revrec', label: { en: 'Revenue Recognition', he: 'הכרת הכנסה' }, icon: Layers, groupId: 'finance' },
-  { id: 'currency-hub', label: { en: 'Multi-Currency', he: 'ריבוי מטבעות' }, icon: Globe, groupId: 'finance' },
-
-  { id: 'treasury', label: { en: 'Corporate Treasury', he: 'גזברות' }, icon: Coins, groupId: 'finance' },
-  { id: 'wealth', label: { en: 'Wealth & Portfolio', he: 'ניהול הון' }, icon: Wallet, groupId: 'finance' },
-  { id: 'tax-nexus', label: { en: 'Global Tax Nexus', he: 'מס גלובלי' }, icon: Globe, groupId: 'finance' },
   { id: 'consolidation', label: { en: 'Multi-Entity Consolidation', he: 'איחוד חברות' }, icon: Layers, groupId: 'finance' },
-  { id: 'autonomous-agents', label: { en: 'Agentic Finance', he: 'סוכנים אוטונומיים' }, icon: CpuIcon, groupId: 'system' },
-  { id: 'esg-ledger', label: { en: 'ESG & Carbon Ledger', he: 'פנקס פליטות' }, icon: Leaf, groupId: 'operations' },
-
-  { id: 'forensics', label: { en: 'Forensic Audit', he: 'ביקורת' }, icon: ShieldCheck, groupId: 'system' },
-
   { id: 'inventory', label: { en: 'Inventory', he: 'מלאי' }, icon: FolderKanban, groupId: 'operations' },
-  { id: 'payroll', label: { en: 'Payroll Center', he: 'שכר מרוכז' }, icon: Users, groupId: 'operations' },
-
-  { id: 'leave-management', label: { en: 'HR & Leaves', he: 'חופשות ומשאבי אנוש' }, icon: Users, groupId: 'operations' },
-  { id: 'multi-warehouse', label: { en: 'Multi-Warehouse', he: 'ניהול מחסנים' }, icon: Package, groupId: 'operations' },
-  { id: 'expense-claims', label: { en: 'Expense Claims', he: 'החזרי הוצאות' }, icon: Receipt, groupId: 'operations' },
-  { id: 'ecommerce-integrations', label: { en: 'E-Commerce Hub', he: 'מסחר אלקטרוני' }, icon: ShoppingBag, groupId: 'operations' },
-
   { id: 'reports', label: { en: 'Financial Reports', he: 'דוחות' }, icon: FileText, groupId: 'planning' },
   { id: 'forecaster', label: { en: 'Cash Forecasting', he: 'תחזית תזרים' }, icon: TrendingUp, groupId: 'planning' },
-  { id: 'budgeting', label: { en: 'Budgeting & Planning', he: 'תקציב ותכנון' }, icon: Target, groupId: 'planning' },
   { id: 'intelligence', label: { en: 'Advanced Intel', he: 'מודיעין מתקדם' }, icon: BarChart3, groupId: 'planning' },
   { id: 'taxes', label: { en: 'Tax Management', he: 'ניהול מיסים' }, icon: ShieldCheck, groupId: 'finance' },
-  { id: 'vault', label: { en: 'Documents', he: 'כספת מסמכים' }, icon: ShieldCheck, groupId: 'system' },
-  { id: 'automation', label: { en: 'Automations', he: 'אוטומציה עסקית' }, icon: Zap, groupId: 'system' },
-  { id: 'settings', label: { en: 'Settings', he: 'הגדרות' }, icon: Settings, groupId: 'system' },
+  { id: 'time-machine', label: { en: 'Time Machine', he: 'Time Machine' }, icon: GitMerge, groupId: 'finance' },
+  { id: 'vault', label: { en: 'Documents', he: 'כספת מסמכים' }, icon: ShieldCheck, groupId: 'system' },  { id: 'settings', label: { en: 'Settings', he: 'הגדרות' }, icon: Settings, groupId: 'system' },
   { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת מתקדם' }, icon: Search, groupId: 'system' },
   { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'system' },
-
-  { id: 'cap-table', label: { en: 'Cap Table & Equity', he: 'טבלת הון' }, icon: PieChart, groupId: 'finance' },
-  { id: 'factoring', label: { en: 'A/R Factoring', he: 'ניכיון כרטיסים' }, icon: Coins, groupId: 'finance' },
-  { id: 'subscription-billing', label: { en: 'Recurring Billing', he: 'חיובים חוזרים' }, icon: RefreshCw, groupId: 'operations' },
-  { id: 'dms', label: { en: 'Document Manager (DMS)', he: 'מסמכים' }, icon: FileText, groupId: 'operations' },
-  { id: 'maintenance', label: { en: 'Maintenance & EAM', he: 'תחזוקה' }, icon: Wrench, groupId: 'operations' },
-  { id: 'system-command-center', label: { en: 'Admin Panel', he: 'Admin Panel' }, icon: Building, groupId: 'admin', requiresOwner: true },
-
-
-  { id: 'field-service', label: { en: 'Field Service (FSM)', he: 'שירות שטח' }, icon: Tool, groupId: 'operations' },
-  { id: 'quality-control', label: { en: 'Quality Control (QA)', he: 'בקרת איכות' }, icon: ShieldCheck, groupId: 'operations' },
-  { id: 'property-manager', label: { en: 'Property Manager', he: 'ניהול נכסים' }, icon: Building, groupId: 'operations' },
-  { id: 'pricing-engine', label: { en: 'Advanced Pricing', he: 'תמחור מתקדם' }, icon: Tag, groupId: 'operations' },
-
-
-  { id: 'custom-fields', label: { en: 'Custom Fields & Data', he: 'שדות מותאמים' }, icon: Blocks, groupId: 'system' },
-
+  { id: 'system-command-center', label: { en: 'Admin Panel', he: 'Admin Panel' }, icon: Building, groupId: 'admin', requiresOwner: true }
 ];
 
 export const NAV_GROUPS: Record<string, Record<string, string>> = {
@@ -362,14 +216,14 @@ export interface CommandDefinition {
 }
 
 export const SYSTEM_COMMANDS: CommandDefinition[] = [
-  { id: 'reconcile', label: { en: 'Reconcile Ledger', he: 'התאמת ספר יומן' }, category: 'Operations', actionId: 'start-reconciliation' },
-  { id: 'generate-report', label: { en: 'Generate Financial Report', he: 'הפקת דוחות כספיים' }, category: 'Insights', actionId: 'reports' },
-  { id: 'calibrate', label: { en: 'Calibrate Volatility', he: 'כיול תנודתיות' }, category: 'System', actionId: 'open-converter' },
-  { id: 'quick-entry', label: { en: 'Add New Transaction', he: 'הוספת תנועה חדשה' }, category: 'Operations', actionId: 'quick-entry' },
-  { id: 'switch-tab-ledger', label: { en: 'Go to Ledger', he: 'מעבר לספר ראשי' }, category: 'Navigation', actionId: 'switch-tab', payload: { tab: 'ledger' } },
-  { id: 'switch-tab-reports', label: { en: 'Go to Reports', he: 'מעבר לדוחות' }, category: 'Navigation', actionId: 'switch-tab', payload: { tab: 'reports' } },
-  { id: 'run-audit', label: { en: 'Run Audit Vault', he: 'הרצת ביקורת כספת' }, category: 'System', actionId: 'open-integrity' },
-  { id: 'system-center', label: { en: 'Open System Admin Center', he: 'פתיחת מרכז ניהול מערכת' }, category: 'System', actionId: 'open-command-center' },
+  { id: 'reconcile', label: { en: 'Smart Matching', he: 'התאמות חכמות' }, category: 'Operations', actionId: 'start-reconciliation' },
+  { id: 'generate-report', label: { en: 'Financial Reports', he: 'דוחות כספיים' }, category: 'Insights', actionId: 'reports' },
+  { id: 'calibrate', label: { en: 'Currency Converter', he: 'המרת מטבעות' }, category: 'System', actionId: 'open-converter' },
+  { id: 'quick-entry', label: { en: 'Add New Entry', he: 'הוספת תנועה חדשה' }, category: 'Operations', actionId: 'quick-entry' },
+  { id: 'switch-tab-ledger', label: { en: 'Go to General Ledger', he: 'מעבר לספר ראשי' }, category: 'Navigation', actionId: 'switch-tab', payload: { tab: 'ledger' } },
+  { id: 'switch-tab-reports', label: { en: 'Go to Financial Reports', he: 'מעבר לדוחות' }, category: 'Navigation', actionId: 'switch-tab', payload: { tab: 'reports' } },
+  { id: 'run-audit', label: { en: 'Ledger Integrity Auditor', he: 'ביקורת תקינות ספר ראשי' }, category: 'System', actionId: 'open-integrity' },
+  { id: 'system-center', label: { en: 'Admin Panel', he: 'פתיחת מרכז ניהול מערכת' }, category: 'System', actionId: 'open-command-center' },
 ];
 
 export interface DashboardKpiDefinition {
@@ -415,7 +269,7 @@ export const DASHBOARD_KPI_REGISTRY: DashboardKpiDefinition[] = [
   },
   {
     id: 'runway',
-    title: { en: 'Current Runway', he: 'תזרים לבנייה גמישה' },
+    title: { en: 'Current Runway', he: 'תחזית נזילות' },
     icon: Calendar,
     color: 'amber',
     actionId: 'switch-tab',
@@ -429,58 +283,42 @@ export const REPORT_COMPONENTS: Record<string, any> = {
   'PNLView': lazy(() => import('../components/ledger/ProfitAndLossView')),
   'BalanceSheetReportView': lazy(() => import('../components/ledger/BalanceSheetView')),
   'CashFlowView': lazy(() => import('../components/ledger/CashFlowView')),
-  'BudgetActualView': lazy(() => import('../components/reporting/UnifiedReportingMatrix')),
-  'TrendsView': lazy(() => import('../components/reporting/UnifiedReportingMatrix')),
-  'ProjectVelocityView': lazy(() => import('../components/reporting/UnifiedReportingMatrix')),
-  'TaxReportView': lazy(() => import('../components/reporting/UnifiedReportingMatrix'))
+  
+  
+  
+  
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = [
-  { id: 'erp_0', label: { en: 'Economic Order Quantity (EOQ)', he: 'כמות הזמנה כלכלית' }, componentName: 'ToolSandbox' },
-  { id: 'erp_1', label: { en: 'WACC Calculator', he: 'מחשבון WACC' }, componentName: 'ToolSandbox' },
-  { id: 'erp_2', label: { en: 'Black-Scholes Options Pricing', he: 'תמחור אופציות' }, componentName: 'ToolSandbox' },
-  { id: 'erp_3', label: { en: 'Customer Lifetime Value (CLV)', he: 'ערך חיי לקוח' }, componentName: 'ToolSandbox' },
-
-  {
-    id: 'ml_ops',
-    name: 'Machine Learning Auto-Categorization',
-    description: 'Monitor and tune Bayesian probability models for bank feed resolution.',
-    component: 'MachineLearningOps'
-  },
-
-  { id: 'EpsGrowthCalculator', label: { en: 'EPS Growth Calculator', he: 'מחשבון צמיחת EPS' }, componentName: 'EpsGrowthCalculator' },
-  { id: 'BetaCalculator', label: { en: 'Beta Calculator', he: 'מחשבון בטא' }, componentName: 'BetaCalculator' },
-  { id: 'MacdCalculator', label: { en: 'MACD Calculator', he: 'מחשבון MACD' }, componentName: 'MacdCalculator' }
+  { id: 'forensics_1', label: { en: 'Forensic Anomaly Detection', he: 'זיהוי חריגות פיננסיות' }, componentName: 'ToolSandbox' },
+  { id: 'forensics_2', label: { en: 'Categorization Consistency Checker', he: 'בדיקת עקביות סיווגים' }, componentName: 'ToolSandbox' }
 ];
 
 export const LENS_COMPONENTS: Record<string, any> = {
-  'EpsGrowthCalculator': VIEW_COMPONENTS['EpsGrowthCalculator'],
-  'BetaCalculator': VIEW_COMPONENTS['BetaCalculator'],
-  'MacdCalculator': VIEW_COMPONENTS['MacdCalculator'],
-  'BollingerBandsCalculator': VIEW_COMPONENTS['BollingerBandsCalculator'],
-  'CostOfDebtCalculator': VIEW_COMPONENTS['CostOfDebtCalculator'],
-  'RealInterestRateCalculator': VIEW_COMPONENTS['RealInterestRateCalculator'],
-  'CacCalculator': VIEW_COMPONENTS['CacCalculator'],
-  'FireCalculator': VIEW_COMPONENTS['FireCalculator'],
-  'CapitalGainsCalculator': VIEW_COMPONENTS['CapitalGainsCalculator'],
-  'DebtSnowballCalculator': VIEW_COMPONENTS['DebtSnowballCalculator']
+  'ToolSandbox': lazy(() => import('../components/platform/ToolsCatalog'))
 };
-
 export const REPORT_TABS_REGISTRY = [
   { id: 'pnl', label: { en: 'Profit & Loss', he: 'רווח והפסד' }, componentName: 'PNLView', icon: Activity },
   { id: 'balance-sheet', label: { en: 'Balance Sheet', he: 'מאזן' }, componentName: 'BalanceSheetReportView', icon: Layers },
   { id: 'cash-flow', label: { en: 'Cash Flow', he: 'תזרים' }, componentName: 'CashFlowView', icon: RefreshCw },
-  { id: 'budget-actual', label: { en: 'Budget vs Actual', he: 'תקציב מול ביצוע' }, componentName: 'BudgetActualView', icon: Target }
 ];
 
 export const SETTINGS_TABS_REGISTRY = [
   { id: 'billing', label: { en: 'Billing & Plan', he: 'תוכניות וחיוב' }, componentName: 'BillingView', icon: CreditCard },
-  { id: 'templates', label: { en: 'Custom Templates', he: 'תבניות' }, componentName: 'TemplatesView', icon: FileText }
+  { id: 'templates', label: { en: 'Custom Templates', he: 'תבניות' }, componentName: 'TemplatesView', icon: FileText },
+  { id: 'security', label: { en: 'Security', he: 'אבטחה' }, componentName: 'SecurityView', icon: ShieldCheck },
+  { id: 'rule', label: { en: 'AI & Rules', he: 'בינה מלאכותית' }, componentName: 'AISettingsView', icon: CpuIcon },
+  { id: 'developer', label: { en: 'Developer', he: 'מפתחים' }, componentName: 'DeveloperView', icon: TerminalIcon },
+  { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ];
 
 export const SETTINGS_COMPONENTS: Record<string, any> = {
-  'BillingView': lazy(() => import('../components/platform/Settings')),
-  'TemplatesView': lazy(() => import('../components/platform/Settings'))
+  'BillingView': lazy(() => import('../components/platform/settings/BillingSettings')),
+  'TemplatesView': lazy(() => import('../components/platform/settings/BlueprintSettings')),
+  'SecurityView': lazy(() => import('../components/platform/settings/SecuritySettings')),
+  'AISettingsView': lazy(() => import('../components/platform/settings/AISettings')),
+  'DeveloperView': lazy(() => import('../components/platform/settings/DeveloperSettings')),
+  'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };
 
 export const INTELLIGENCE_TABS_REGISTRY = [

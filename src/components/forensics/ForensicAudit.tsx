@@ -1,6 +1,4 @@
-import React,
-
- { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -16,11 +14,13 @@ import { Transaction, ChartAccount } from '../../types';
 import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 
 
 
 const ForensicAudit = React.memo(() => {
-  const { transactions, accounts } = useLedgerStore();
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
   // 1. BENFORD'S LAW CALCULATION
   const benfordAnalysis = useMemo(() => {
     const counts = Uint32Array ? new Uint32Array(9) : Array(9).fill(0);
@@ -57,45 +57,32 @@ const ForensicAudit = React.memo(() => {
   }, [transactions]);
 
   // 2. Z-SCORE ANOMALY DETECTION
-  const anomalies = useMemo(() => {
-    if (transactions.length < 5) return [];
-    
-    let sum = 0;
-    let validCount = 0;
-    for (let i = 0; i < transactions.length; i++) {
-      if (transactions[i].deletedAt) continue;
-      sum += Math.abs(transactions[i].totalAmountCents) / 100;
-      validCount++;
-    }
-    
-    if (validCount < 5) return [];
-    const mean = sum / validCount;
-    
-    let varianceSum = 0;
-    for (let i = 0; i < transactions.length; i++) {
-        if (transactions[i].deletedAt) continue;
-        const amount = Math.abs(transactions[i].totalAmountCents) / 100;
-        varianceSum += Math.pow(amount - mean, 2);
-    }
-    
-    const stdDev = Math.sqrt(varianceSum / validCount);
-    if (stdDev === 0) return [];
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const [anomalies, setAnomalies] = useState<any[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
 
-    const results = [];
-    for (let i = 0; i < transactions.length; i++) {
-        const t = transactions[i];
-        if (t.deletedAt) continue;
-        const amount = Math.abs(t.totalAmountCents) / 100;
-        const zScore = (amount - mean) / stdDev;
-        if (Math.abs(zScore) > 2.5) {
-            results.push({ ...t, zScore });
+  useEffect(() => {
+    async function scan() {
+      if (transactions.length < 5 || !currentWorkspaceId) return;
+      setIsScanning(true);
+      try {
+        const res = await fetch('/api/v1/forensics/anomaly-scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workspaceId: currentWorkspaceId })
+        });
+        const data = await res.json();
+        if (data.anomalies) {
+          setAnomalies(data.anomalies);
         }
+      } catch (e) {
+        console.error('Anomaly scan failed', e);
+      } finally {
+        setIsScanning(false);
+      }
     }
-
-    return results
-      .sort((a, b) => Math.abs(b.zScore) - Math.abs(a.zScore))
-      .slice(0, 10);
-  }, [transactions]);
+    scan();
+  }, [transactions, currentWorkspaceId]);
 
   // 3. COMPLIANCE STATS
   const complianceStats = useMemo(() => {
@@ -147,7 +134,7 @@ const ForensicAudit = React.memo(() => {
             <ShieldAlert size={12} />
             Forensic Integrity Suite
           </div>
-          <h2 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">Audit Intelligence</h2>
+          <h2 className="text-2xl md:text-4xl font-black text-[var(--text)] tracking-tight">Audit Intelligence</h2>
           <p className="text-slate-500 font-medium text-sm">Automated fraud detection and anomaly projection across the general ledger.</p>
         </div>
       </div>
@@ -157,7 +144,7 @@ const ForensicAudit = React.memo(() => {
         <div className="xl:col-span-12 google-card p-4 md:p-10 bg-slate-900 text-white overflow-hidden relative">
            <div className="relative z-10 flex flex-col lg:flex-row gap-12">
               <div className="lg:w-1/3 space-y-6">
-                 <div className="flex items-center gap-3 text-indigo-600">
+                 <div className="flex items-center gap-3 text-indigo-400">
                     <Fingerprint size={28} />
                     <h3 className="text-xl font-medium uppercase tracking-wider text-white">Benford Patterns</h3>
                  </div>
@@ -165,7 +152,7 @@ const ForensicAudit = React.memo(() => {
                     Analyzing the distribution of first digits. In a natural dataset, the digit '1' should appear roughly 30% of the time, while '9' appears less than 5%. Deviations here indicate potential artificial entry or systematic errors.
                  </p>
                  <div className="pt-6">
-                    <div className="p-4 bg-white/5 rounded-[32px] border border-white/10 italic text-[11px] text-zinc-500">
+                    <div className="p-4 bg-[var(--surface)]/5 rounded-[32px] border border-white/10 italic text-[11px] text-zinc-500">
                        "{benfordConfidence}"
                     </div>
                  </div>
@@ -201,10 +188,10 @@ const ForensicAudit = React.memo(() => {
         </div>
 
         {/* Z-Score Anomalies */}
-        <div className="xl:col-span-8 google-card p-4 md:p-10 space-y-10 border-slate-200">
+        <div className="xl:col-span-8 google-card p-4 md:p-10 space-y-10 border-[var(--line)]">
            <div className="flex items-center justify-between">
               <div>
-                 <h3 className="text-xl font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                 <h3 className="text-xl font-black text-[var(--text)] uppercase tracking-widest flex items-center gap-3">
                     <Brain className="text-indigo-600" size={24} />
                     Statistical Outliers
                  </h3>
@@ -216,21 +203,21 @@ const ForensicAudit = React.memo(() => {
            </div>
 
            <div className="space-y-4">
-              {anomalies.length > 0 ? anomalies.map((t, i) => (
-                 <div key={t.id} className="p-6 bg-slate-50 rounded-[32px] border border-slate-200 flex items-center justify-between group hover:border-indigo-600 transition-all">
+              {anomalies.length > 0 ? anomalies.map((t: any, i: number) => (
+                 <div key={t.id} className="p-6 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] flex items-center justify-between group hover:border-indigo-600 transition-all">
                     <div className="flex items-center gap-6">
-                       <div className="w-12 h-12 bg-white rounded-[32px] flex items-center justify-center text-slate-900 border border-slate-200 font-black text-sm">
+                       <div className="w-12 h-12 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-[var(--text)] border border-[var(--line)] font-black text-sm">
                           {format(new Date(t.date), 'dd')}
                        </div>
                        <div>
-                          <p className="text-sm font-black text-slate-900 tracking-tight">{t.description}</p>
+                          <p className="text-sm font-black text-[var(--text)] tracking-tight">{t.description}</p>
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 mt-1">
                              {t.lines?.[0]?.accountName} • <span className="text-rose-600">Deviation: {t.zScore.toFixed(2)}σ</span>
                           </p>
                        </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-lg font-black text-slate-900 mono-value">{CURRENCY.format(Math.abs(t.totalAmountCents) / 100)}</p>
+                       <p className="text-lg font-black text-[var(--text)] mono-value">{CURRENCY.format(Math.abs(t.totalAmountCents) / 100)}</p>
                        <p className="text-[9px] font-black text-slate-500 flex items-center justify-end gap-1 mt-1">
                           <History size={10} />
                           {format(new Date(t.date), 'MMM yyyy')}
@@ -238,7 +225,7 @@ const ForensicAudit = React.memo(() => {
                     </div>
                  </div>
               )) : (
-                 <div className="h-60 flex flex-col items-center justify-center text-slate-500 space-y-4 border-2 border-dashed border-slate-200 rounded-[32px]">
+                 <div className="h-60 flex flex-col items-center justify-center text-slate-500 space-y-4 border-2 border-dashed border-[var(--line)] rounded-[32px]">
                     <ShieldAlert size={48} className="opacity-10" />
                     <p className="text-xs font-medium uppercase tracking-wider opacity-40">No significant statistical anomalies detected.</p>
                  </div>
@@ -248,15 +235,15 @@ const ForensicAudit = React.memo(() => {
 
         {/* Audit Shortcuts */}
         <div className="xl:col-span-4 space-y-8">
-           <div className="google-card p-4 md:p-8 border-slate-200 bg-slate-900/5">
-              <h4 className="text-xs font-medium uppercase tracking-wider text-slate-900 mb-6 flex items-center gap-2">
+           <div className="google-card p-4 md:p-8 border-[var(--line)] bg-slate-900/5">
+              <h4 className="text-xs font-medium uppercase tracking-wider text-[var(--text)] mb-6 flex items-center gap-2">
                  <AlertCircle size={16} />
                  Compliance Radar
               </h4>
               <div className="space-y-4">
                  {complianceStats.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 bg-white rounded-[32px] border border-slate-200 shadow-sm">
-                       <span className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">{item.label}</span>
+                    <div key={i} className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm">
+                       <span className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">{item.label}</span>
                        <div className="flex items-center gap-2">
                           <span className={cn("text-xs font-black", item.status === 'pass' ? 'text-emerald-600' : 'text-amber-500')}>{item.count}</span>
                           {item.status === 'pass' ? <CheckCircle2 size={14} className="text-emerald-600" /> : <AlertCircle size={14} className="text-amber-500" />}
@@ -266,14 +253,14 @@ const ForensicAudit = React.memo(() => {
               </div>
            </div>
 
-           <div className="google-card p-4 md:p-8 border-slate-200 bg-slate-900 text-white">
-              <h4 className="text-xs font-medium uppercase tracking-wider text-indigo-600 mb-6">
+           <div className="google-card p-4 md:p-8 border-[var(--line)] bg-slate-900 text-white">
+              <h4 className="text-xs font-medium uppercase tracking-wider text-indigo-400 mb-6">
                  Audit Protocol
               </h4>
               <p className="text-[11px] text-zinc-400 leading-relaxed">
                  All transactions are passed through a series of deterministic and heuristic filters. The integrity suite continuously monitors for data drift and classification mismatches to ensure audit-ready ledger states.
               </p>
-              <button className="w-full mt-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all">
+              <button className="w-full mt-6 py-3 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 text-white rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all">
                  Generate Full Audit Log
               </button>
            </div>

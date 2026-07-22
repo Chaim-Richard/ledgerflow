@@ -51,22 +51,22 @@ export default function BookClosureTab() {
       exit={{ opacity: 0, y: -10 }}
       className="space-y-8 animate-fade-in text-left"
     >
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-6 gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[var(--line)] pb-6 gap-4">
         <div>
-          <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">Close the Books (Immutable Locking)</h4>
+          <h4 className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Close the Books (Immutable Locking)</h4>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1 opacity-65">
             Prevent changes to historical transactions before a designated closing date.
           </p>
         </div>
       </div>
 
-      <div className="bg-slate-50 border border-slate-200 rounded-[32px] p-8 max-w-2xl mx-auto space-y-8">
+      <div className="bg-[var(--ink)] border border-[var(--line)] rounded-[32px] p-8 max-w-2xl mx-auto space-y-8">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
             {lockDate ? <Lock size={24} /> : <Unlock size={24} />}
           </div>
           <div>
-            <h5 className="font-black text-lg text-slate-800 uppercase tracking-tight">
+            <h5 className="font-black text-lg text-[var(--text)] uppercase tracking-tight">
               {lockDate ? 'Periods are Locked' : 'Periods are Open'}
             </h5>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">
@@ -84,7 +84,7 @@ export default function BookClosureTab() {
               type="date" 
               value={dateInput}
               onChange={(e) => setDateInput(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-600 disabled:opacity-50"
+              className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-600 disabled:opacity-50"
               disabled={!!lockDate}
             />
           </div>
@@ -96,14 +96,14 @@ export default function BookClosureTab() {
               placeholder="Enter master admin password to verify"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm shadow-sm outline-none focus:ring-2 focus:ring-indigo-600"
+              className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-sm shadow-sm outline-none focus:ring-2 focus:ring-indigo-600"
             />
             <p className="text-[10px] text-slate-400 leading-relaxed max-w-md">
               Restricts access to designated closing periods, preventing prior year tax or reconciliation drift over recorded accounting.
             </p>
           </div>
 
-          <div className="pt-4 border-t border-slate-200">
+          <div className="pt-4 border-t border-[var(--line)]">
             {lockDate ? (
               <button 
                 onClick={handleUnlockBooks}

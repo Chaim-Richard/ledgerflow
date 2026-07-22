@@ -34,7 +34,7 @@ export default function DeveloperSettings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ledgerflow_${defaultAcc.code}_${new Date().toISOString().split('T')[0]}.ofx`;
+    a.download = `clearbook_${defaultAcc.code}_${new Date().toISOString().split('T')[0]}.ofx`;
     a.click();
     toast.success("OFX Export Layer Successful");
   };
@@ -45,26 +45,26 @@ export default function DeveloperSettings() {
 
   return (
     <div className="space-y-10">
-      <div className="ledger-card p-12 bg-white border-slate-200 shadow-sm">
+      <div className="ledger-card p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
         <div className="flex items-center gap-5 mb-10">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center shadow-xl shadow-indigo-600/20">
             <Globe size={28} />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase tracking-widest">Enterprise API & Webhooks</h3>
+            <h3 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase tracking-widest">Enterprise API & Webhooks</h3>
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">Autonomous Event Propagation</p>
           </div>
         </div>
 
         <div className="space-y-12">
           <div className="space-y-6">
-            <h4 className="text-xs font-black uppercase text-slate-900 tracking-widest border-l-4 border-indigo-600 pl-4">Active Webhooks</h4>
-            <div className="p-4 md:p-8 bg-white rounded-[32px] border border-slate-200 flex flex-col items-center justify-center text-center gap-4 py-16">
+            <h4 className="text-xs font-black uppercase text-[var(--text)] tracking-widest border-l-4 border-indigo-600 pl-4">Active Webhooks</h4>
+            <div className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] flex flex-col items-center justify-center text-center gap-4 py-16">
               <Webhook size={40} className="text-slate-200" />
               <div className="space-y-1">
-                <p className="text-sm font-bold text-slate-900">No External Nodes Connected</p>
+                <p className="text-sm font-bold text-[var(--text)]">No External Nodes Connected</p>
                 <p className="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
-                  Register endpoints to receive real-time neural updates and fiscal anomaly detected events.
+                  Register endpoints to receive real-time rule updates and fiscal anomaly detected events.
                 </p>
               </div>
               <button className="mt-4 px-8 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-slate-800 transition-all">
@@ -74,11 +74,11 @@ export default function DeveloperSettings() {
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-xs font-black uppercase text-slate-900 tracking-widest border-l-4 border-indigo-600 pl-4">Visual Content & Lexicon Engine</h4>
-            <div className="p-4 md:p-8 bg-white rounded-[32px] border border-slate-200 space-y-6">
+            <h4 className="text-xs font-black uppercase text-[var(--text)] tracking-widest border-l-4 border-indigo-600 pl-4">Visual Content & Lexicon Engine</h4>
+            <div className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <p className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <p className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
                     <FileJson size={16} className="text-indigo-600 animate-pulse" />
                     Interactive Translation Overwrites
                   </p>
@@ -99,7 +99,7 @@ export default function DeveloperSettings() {
 
               {hasOverrides ? (
                 <div className="space-y-4">
-                  <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl bg-white p-4 space-y-2 text-xs custom-scrollbar">
+                  <div className="max-h-40 overflow-y-auto border border-[var(--line)] rounded-xl bg-[var(--surface)] p-4 space-y-2 text-xs custom-scrollbar">
                     {Object.entries(lexiconOverrides).map(([key, value]) => (
                       <div key={key} className="flex justify-between items-center py-1.5 border-b border-gray-50 last:border-0 font-mono">
                         <span className="text-indigo-600 font-bold max-w-[40%] truncate" title={key}>{key}</span>
@@ -117,7 +117,7 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
                       </pre>
                       <button 
                         onClick={copyLexiconCodeToClipboard}
-                        className="absolute top-2 right-2 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
+                        className="absolute top-2 right-2 p-2 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 text-white rounded-lg transition-colors cursor-pointer"
                         title="Copy Config Patch"
                       >
                         <Copy size={12} />
@@ -134,18 +134,18 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-xs font-black uppercase text-slate-900 tracking-widest border-l-4 border-indigo-600 pl-4">Institutional Export Protocols</h4>
+            <h4 className="text-xs font-black uppercase text-[var(--text)] tracking-widest border-l-4 border-indigo-600 pl-4">Institutional Export Protocols</h4>
             <div className="grid grid-cols-2 gap-6">
               <button 
                 onClick={() => exportData('json')}
-                className="flex items-center justify-between p-6 bg-white border border-slate-200 rounded-[32px] hover:border-indigo-600 transition-all group"
+                className="flex items-center justify-between p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] hover:border-indigo-600 transition-all group"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white rounded-[32px] flex items-center justify-center text-slate-900 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                  <div className="w-10 h-10 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-[var(--text)] group-hover:bg-indigo-600 group-hover:text-white transition-all">
                     <Download size={20} />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Full Archive (JSON)</p>
+                    <p className="text-sm font-black text-[var(--text)] uppercase tracking-tight">Full Archive (JSON)</p>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Machine Readable</p>
                   </div>
                 </div>
@@ -154,14 +154,14 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
 
               <button 
                 onClick={() => exportData('csv')}
-                className="flex items-center justify-between p-6 bg-white border border-slate-200 rounded-[32px] hover:border-indigo-600 transition-all group"
+                className="flex items-center justify-between p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] hover:border-indigo-600 transition-all group"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white rounded-[32px] flex items-center justify-center text-slate-900 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                  <div className="w-10 h-10 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-[var(--text)] group-hover:bg-indigo-600 group-hover:text-white transition-all">
                     <Database size={20} />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Standard Ledger (CSV)</p>
+                    <p className="text-sm font-black text-[var(--text)] uppercase tracking-tight">Standard Ledger (CSV)</p>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Excel / Audit Ready</p>
                   </div>
                 </div>
@@ -170,14 +170,14 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
 
               <button 
                 onClick={handleOFXExport}
-                className="flex items-center justify-between p-6 bg-white border border-slate-200 rounded-[32px] hover:border-indigo-600 transition-all group"
+                className="flex items-center justify-between p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] hover:border-indigo-600 transition-all group"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white rounded-[32px] flex items-center justify-center text-slate-900 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                  <div className="w-10 h-10 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-[var(--text)] group-hover:bg-indigo-600 group-hover:text-white transition-all">
                     <RefreshCw size={20} />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Bank Interchange (OFX)</p>
+                    <p className="text-sm font-black text-[var(--text)] uppercase tracking-tight">Bank Interchange (OFX)</p>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Intuit / Quicken Compatible</p>
                   </div>
                 </div>

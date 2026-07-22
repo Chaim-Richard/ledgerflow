@@ -35,9 +35,9 @@ export default function TracerTab({
       exit={{ opacity: 0, y: -10 }}
       className="space-y-10 animate-fade-in"
     >
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-6 gap-4 text-left">
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[var(--line)] pb-6 gap-4 text-left">
         <div>
-          <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">Excel formula cell precedent tracer</h4>
+          <h4 className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Excel formula cell precedent tracer</h4>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1 opacity-65">Isolate precedent accounts driving aggregate values</p>
         </div>
       </div>
@@ -59,11 +59,11 @@ export default function TracerTab({
               value={tracerSearch}
               onChange={(e) => setTracerSearch(e.target.value)}
               placeholder="Search target account..."
-              className="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black uppercase tracking-wider outline-none focus:bg-white focus:border-slate-300 transition-all font-sans"
+              className="w-full pl-10 pr-4 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-black uppercase tracking-wider outline-none focus:bg-[var(--surface)] focus:border-slate-300 transition-all font-sans"
             />
           </div>
 
-          <div className="border border-slate-200 rounded-[32px] overflow-hidden max-h-[350px] overflow-y-auto bg-white shadow-sm pr-1">
+          <div className="border border-[var(--line)] rounded-[32px] overflow-hidden max-h-[350px] overflow-y-auto bg-[var(--surface)] shadow-sm pr-1">
             <div className="divide-y divide-ledger-line">
               {filteredAccounts.length === 0 ? (
                 <div className="p-4 md:p-8 text-center text-xs text-slate-500 font-bold uppercase tracking-widest font-mono">
@@ -76,7 +76,7 @@ export default function TracerTab({
                     onClick={() => setSelectedAccountId(acc.id)}
                     className={cn(
                       "w-full p-4 text-left text-xs transition-colors flex justify-between items-center",
-                      selectedAccountId === acc.id ? "bg-slate-900 text-white" : "hover:bg-slate-50 text-slate-800"
+                      selectedAccountId === acc.id ? "bg-slate-900 text-white" : "hover:bg-[var(--ink)] text-[var(--text)]"
                     )}
                   >
                     <div className="space-y-1">
@@ -85,7 +85,7 @@ export default function TracerTab({
                     </div>
                     <span className={cn(
                       "font-mono font-bold",
-                      selectedAccountId === acc.id ? "text-emerald-400" : "text-slate-800"
+                      selectedAccountId === acc.id ? "text-emerald-400" : "text-[var(--text)]"
                     )}>
                       {formatCurrency(acc.balanceCents)}
                     </span>
@@ -101,33 +101,33 @@ export default function TracerTab({
           {activeTracerAccount && auditTrace ? (
             <>
               {/* Formula Panel visual */}
-              <div className="bg-slate-50 border border-slate-200 rounded-[32px] p-4 md:p-8 space-y-6">
+              <div className="bg-[var(--ink)] border border-[var(--line)] rounded-[32px] p-4 md:p-8 space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shadow-md">
                     <FileSpreadsheet size={16} />
                   </div>
                   <div>
-                    <h5 className="font-black text-slate-900 uppercase tracking-wider text-xs">Excel formula cell simulator</h5>
+                    <h5 className="font-black text-[var(--text)] uppercase tracking-wider text-xs">Excel formula cell simulator</h5>
                     <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Cell index location: B{activeTracerAccount.code.substring(0,3)}</p>
                   </div>
                 </div>
 
                 {/* The excel bar */}
-                <div className="flex border border-slate-300 rounded-xl overflow-hidden shadow-inner bg-white font-mono text-xs items-center" id="formula-bar-sim">
-                  <div className="bg-slate-100 px-4 py-3.5 border-r border-slate-200 font-extrabold text-slate-600 uppercase tracking-widest text-[10px] select-none">
+                <div className="flex border border-slate-300 rounded-xl overflow-hidden shadow-inner bg-[var(--surface)] font-mono text-xs items-center" id="formula-bar-sim">
+                  <div className="bg-slate-100 px-4 py-3.5 border-r border-[var(--line)] font-extrabold text-slate-600 uppercase tracking-widest text-[10px] select-none">
                     fx
                   </div>
-                  <div className="p-3.5 flex-1 select-all font-bold text-slate-800 selection:bg-indigo-100 overflow-x-auto truncate">
+                  <div className="p-3.5 flex-1 select-all font-bold text-[var(--text)] selection:bg-indigo-100 overflow-x-auto truncate">
                     {auditTrace.formula}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-5 bg-white border border-slate-200 rounded-[32px]">
+                  <div className="p-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px]">
                     <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-2">Simulated evaluation value</span>
-                    <span className="text-xl font-black font-mono text-slate-800">{formatCurrency(auditTrace.value)}</span>
+                    <span className="text-xl font-black font-mono text-[var(--text)]">{formatCurrency(auditTrace.value)}</span>
                   </div>
-                  <div className="p-5 bg-white border border-slate-200 rounded-[32px]">
+                  <div className="p-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px]">
                     <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Precedent complexity weight</span>
                     <span className="text-xl font-black font-mono text-indigo-600">{auditTrace.precedents.length} accounts</span>
                   </div>
@@ -141,10 +141,10 @@ export default function TracerTab({
                   <span className="text-xs font-bold text-slate-500 font-mono italic">Trace paths showing ledger inflows</span>
                 </div>
 
-                <div className="border border-slate-200 rounded-[32px] overflow-hidden bg-white shadow-sm">
+                <div className="border border-[var(--line)] rounded-[32px] overflow-hidden bg-[var(--surface)] shadow-sm">
                   <table className="w-full text-xs text-left" id="precedents-tracer-table">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-[9px] uppercase tracking-widest text-slate-500 font-black font-mono">
+                      <tr className="bg-[var(--ink)] border-b border-[var(--line)] text-[9px] uppercase tracking-widest text-slate-500 font-black font-mono">
                         <th className="p-4">Precedent Account</th>
                         <th className="p-4">Standard Nature</th>
                         <th className="p-4 text-right">Dr/Cr Weight</th>
@@ -152,11 +152,11 @@ export default function TracerTab({
                         <th className="p-4 text-center">Path links</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-ledger-line font-medium text-slate-900">
+                    <tbody className="divide-y divide-ledger-line font-medium text-[var(--text)]">
                       {auditTrace.precedents.map((pre: any, idx: number) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                        <tr key={idx} className="hover:bg-[var(--ink)] transition-colors">
                           <td className="p-4">
-                            <span className="font-extrabold text-slate-800 uppercase block">{pre.name}</span>
+                            <span className="font-extrabold text-[var(--text)] uppercase block">{pre.name}</span>
                             <span className="text-[9px] text-slate-500 uppercase font-mono block">{pre.code}</span>
                           </td>
                           <td className="p-4 uppercase text-slate-500 font-bold">{pre.type}</td>
@@ -194,7 +194,7 @@ export default function TracerTab({
               </div>
             </>
           ) : (
-            <div className="py-24 text-center text-slate-500 border border-dashed border-slate-200 rounded-[32px]">
+            <div className="py-24 text-center text-slate-500 border border-dashed border-[var(--line)] rounded-[32px]">
               No target account active. Select an analytical asset, liability, or capital code in left sheet registers to plot precendents.
             </div>
           )}

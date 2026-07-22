@@ -4,7 +4,8 @@ import { useLedgerStore } from "../stores/useLedgerStore";
 import { useAuthStore } from "../stores/useAuthStore";
 
 export function useSnapshotBridge() {
-  const { currentWorkspaceId, user } = useAuthStore();
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const user = useAuthStore(s => s.user);
   const balances = useLedgerStore(state => state.runningBalances);
   const hasTransactions = useLedgerStore(state => state.transactions.length > 0);
 

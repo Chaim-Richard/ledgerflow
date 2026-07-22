@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { mean, standardDeviation, calculateZScore, calculateBenfordsDistribution, benfordsLawExpected } from '../../lib/algorithms/math';
 
-export default function AlgorithmicTruth() {
+export default function AlgorithmicIntegrity() {
   const [activeTab, setActiveTab] = useState<'anomalies' | 'benford'>('anomalies');
 
   // Ledger data for algorithms
@@ -41,7 +41,7 @@ export default function AlgorithmicTruth() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3">
             <Brain className="w-6 h-6 text-fuchsia-400" />
-            Algorithmic Truth Engine
+            Algorithmic Integrity Engine
           </h1>
           <p className="text-sm text-slate-400 mt-1">
             Uncover hidden patterns, statistical anomalies, and forensic deviations in the general ledger.
@@ -56,7 +56,7 @@ export default function AlgorithmicTruth() {
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
+        <div className="flex p-1 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'anomalies', label: 'Z-Score Outliers', icon: Radar },
             { id: 'benford', label: 'Benford\'s Law Test', icon: BarChart }
@@ -66,7 +66,7 @@ export default function AlgorithmicTruth() {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={cn(
                    "px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all",
-                   activeTab === tab.id ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
+                   activeTab === tab.id ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-[var(--ink)]"
                 )}
              >
                 <tab.icon className="w-4 h-4" /> {tab.label}
@@ -75,15 +75,15 @@ export default function AlgorithmicTruth() {
         </div>
 
         {activeTab === 'anomalies' && (
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)] flex items-center justify-between">
+               <h2 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
                   <ShieldAlert className="w-4 h-4 text-rose-500" />
                   Detected Statistical Anomalies (|Z| &gt; 2.5)
                </h2>
                <div className="text-xs text-slate-500 font-mono">μ = ${m.toFixed(2)} | σ = ${std.toFixed(2)}</div>
             </div>
-            <div className="grid grid-cols-12 p-4 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+            <div className="grid grid-cols-12 p-4 bg-[var(--ink)] border-b border-[var(--line)] text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               <div className="col-span-2">Date</div>
               <div className="col-span-3">Transaction ID</div>
               <div className="col-span-2">Account</div>
@@ -92,11 +92,11 @@ export default function AlgorithmicTruth() {
             </div>
             <div className="divide-y divide-slate-200">
               {anomalies.map(a => (
-                <div key={a.id} className="grid grid-cols-12 p-4 items-center hover:bg-slate-50 transition-colors">
+                <div key={a.id} className="grid grid-cols-12 p-4 items-center hover:bg-[var(--ink)] transition-colors">
                   <div className="col-span-2 text-xs font-mono text-slate-600">{a.date}</div>
-                  <div className="col-span-3 font-bold text-slate-900">{a.id}</div>
+                  <div className="col-span-3 font-bold text-[var(--text)]">{a.id}</div>
                   <div className="col-span-2 text-xs font-bold text-slate-700">{a.account}</div>
-                  <div className="col-span-2 text-right font-mono font-bold text-slate-900">
+                  <div className="col-span-2 text-right font-mono font-bold text-[var(--text)]">
                      ${a.amount.toLocaleString()}
                   </div>
                   <div className="col-span-3 flex justify-end">
@@ -114,8 +114,8 @@ export default function AlgorithmicTruth() {
         )}
 
         {activeTab === 'benford' && (
-           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-             <h2 className="text-lg font-bold text-slate-900 mb-2">Benford's Law Distribution</h2>
+           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 shadow-sm">
+             <h2 className="text-lg font-bold text-[var(--text)] mb-2">Benford's Law Distribution</h2>
              <p className="text-sm text-slate-500 mb-8">Compares the distribution of leading digits in the ledger against the expected logarithmic distribution. Large variances indicate potential data manipulation or artificial entries.</p>
              
              <div className="space-y-4">

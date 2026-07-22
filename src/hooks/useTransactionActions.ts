@@ -32,11 +32,17 @@ import {
 import { safeAsync, safeConfirm } from '../lib/utils';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { useBillingStore } from '../modules/billing/BillingService';
-import { TruthEngine } from '../modules/truth/TruthEngine';
+import { TruthEngine } from '../modules/integrity/TruthEngine';
 
 export function useTransactionActions() {
-  const { user, userProfile, currentWorkspaceId, getCurrentWorkspace } = useAuthStore();
-  const { setTransactions, accounts, analyticalPatternCache, matchingThreshold } = useLedgerStore();
+  const user = useAuthStore(s => s.user);
+  const userProfile = useAuthStore(s => s.userProfile);
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
+  const setTransactions = useLedgerStore(s => s.setTransactions);
+  const accounts = useLedgerStore(s => s.accounts);
+  const analyticalPatternCache = useLedgerStore(s => s.analyticalPatternCache);
+  const matchingThreshold = useLedgerStore(s => s.matchingThreshold);
   
   const userKey = userProfile?.geminiApiKey;
   const { setIsSyncing } = useUIStore.getState();
@@ -84,10 +90,11 @@ export function useTransactionActions() {
     }
 
     const [data, err] = await safeAsync(
-      updateDoc(doc(db, 'transactions', id), {
-        status: 'failed',
-        deletedAt: new Date().toISOString()
-      }),
+      fetch(`/api/v1/transactions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+      body: JSON.stringify({ partialUpdate: { status: 'failed', deletedAt: new Date().toISOString() } })
+    }),
       OperationType.UPDATE,
       `transactions/${id}`,
       { action: 'VOID_TRANSACTION' }
@@ -148,7 +155,7 @@ export function useTransactionActions() {
             lines[0].accountName !== 'Manual Review';
 
           if (!isPreCategorized) {
-            // Priority 1: Deterministic Truth (Rules and Local Engine) over AI
+            // Priority 1: Deterministic Integrity (Rules and Local Engine) over AI
             let targetCategoryResult = engine.resolveCategory(tx.description);
             let usedAI = false;
             let isSmartTransfer = false;
@@ -212,6 +219,7 @@ export function useTransactionActions() {
                 accountName: account?.name || targetCategoryResult.accountName,
                 amountCents: tx.amountCents || tx.totalAmountCents || 0,
                 tags: targetCategoryResult.tags || (isSmartTransfer ? ['Auto-Transfer'] : []),
+                dimensions: targetCategoryResult.dimensions || undefined,
                 description: isSmartTransfer ? 'Auto-Transfer Detection' : (usedAI ? 'Auto-categorized by AI' : 'Auto-categorized by Rule Engine')
               }];
             }
@@ -246,7 +254,7 @@ export function useTransactionActions() {
               lines: balancedLines,
               uid: user.uid,
               workspaceId: currentWorkspaceId,
-              status: 'reconciled',
+              status: (tx as any).isAI ? 'draft' : 'pending',
               type: 'actual',
               createdAt: new Date().toISOString()
             };
@@ -259,6 +267,9 @@ export function useTransactionActions() {
                   if (resolved) {
                     return { ...line, accountId: resolved.id };
                   }
+                }
+                if (line.accountId && line.accountId !== "uncategorized" && !accountsById.has(line.accountId)) {
+                  return { ...line, accountId: "uncategorized", accountName: "Manual Review" };
                 }
                 return line;
               });
@@ -286,7 +297,7 @@ export function useTransactionActions() {
                 if (line.accountName && line.accountName !== 'Uncategorized') {
                   const searchDesc = line.description || finalTx.description;
                   if (searchDesc) {
-                    recordNeuralPattern(searchDesc, line.accountId || 'uncategorized', line.accountName, line.tags);
+                    recordRulePattern(searchDesc, line.accountId || 'uncategorized', line.accountName, line.tags);
                   }
                 }
               });
@@ -310,7 +321,7 @@ export function useTransactionActions() {
     }
   };
 
-  const recordNeuralPattern = async (description: string, accountId: string, accountName: string, tags?: string[]) => {
+  const recordRulePattern = async (description: string, accountId: string, accountName: string, tags?: string[]) => {
     if (!user || !currentWorkspaceId || !description) return;
     
     // Normalize to extract the core merchant/pattern (strip dates, long numbers, transaction IDs)
@@ -325,7 +336,7 @@ export function useTransactionActions() {
     const patternId = cleanDesc.replace(/[^a-z0-9]/g, '_');
     
     try {
-      const patternRef = doc(db, 'neuralPatterns', `${currentWorkspaceId}_${patternId}`);
+      const patternRef = doc(db, 'rulePatterns', `${currentWorkspaceId}_${patternId}`);
       const existingPattern = analyticalPatternCache[cleanDesc] as any;
       const newCount = (existingPattern?.count || 0) + 1;
 
@@ -373,7 +384,7 @@ export function useTransactionActions() {
         }
       }
     } catch (e) {
-      console.warn("Neural learning deferred", e);
+      console.warn("Rule learning deferred", e);
     }
   };
 
@@ -437,10 +448,10 @@ export function useTransactionActions() {
   const handleQuickAdd = async (data: Partial<Transaction>) => {
     if (!user || !currentWorkspaceId) return;
     
-    // Core App Feature: Truth Enforcement
+    // Core App Feature: Integrity Enforcement
     try {
       if (data.lines) {
-        TruthEngine.validateAccountingTruth(data.lines.map((l: TransactionLine) => ({
+        TruthEngine.validateAccountingIntegrity(data.lines.map((l: TransactionLine) => ({
           amount: l.amountCents,
           type: l.amountCents > 0 ? 'debit' : 'credit' // Simple mapping for validation demo
         })));
@@ -486,11 +497,11 @@ export function useTransactionActions() {
       lines: balancedData.lines || []
     };
 
-    // --- Persistent Neural Learning ---
+    // --- Persistent Rule Learning ---
     if (optimisticTx.description && optimisticTx.lines && optimisticTx.lines.length > 0) {
       const mainLine = optimisticTx.lines[0];
       if (mainLine.accountName && mainLine.accountName !== 'Uncategorized') {
-        recordNeuralPattern(optimisticTx.description, mainLine.accountId || 'unassigned', mainLine.accountName);
+        recordRulePattern(optimisticTx.description, mainLine.accountId || 'unassigned', mainLine.accountName);
       }
     }
 
@@ -543,67 +554,40 @@ export function useTransactionActions() {
       }, 500);
     }
 
-    // Deferred to ledger truth stream
+    // Deferred to ledger integrity stream
     setIsSyncing(true);
 
-    const [dataOut, err] = await safeAsync(
-      runTransaction(db, async (transaction) => {
-        const txDraft = {
-          ...balancedData,
-          totalAmountCents: Math.round(balancedData.totalAmountCents || 0),
-          schemaVersion: '1.1',
-          uid: user.uid,
-          workspaceId: currentWorkspaceId,
-          status: 'completed',
-          type: 'actual',
-          createdAt: new Date().toISOString()
-        };
-
-        // Resolution check: If accountName was provided, resolve its ID FIRST
-        if (txDraft.lines && txDraft.lines.length > 0) {
-          txDraft.lines = txDraft.lines.map((line: any) => {
-            if (line.accountName && (!line.accountId || line.accountId === 'uncategorized' || line.accountId === 'unassigned')) {
-              const resolved = accounts.find(a => a.name === line.accountName);
-              if (resolved) {
-                return { ...line, accountId: resolved.id };
-              }
-            }
-            return line;
-          });
-        }
-
-        const finalTx = {
-          ...txDraft,
-          verification: {
-            status: 'verified' as const,
-            verifiedAt: new Date().toISOString(),
-            method: 'manual' as const,
-            hash: DoubleEntryAuditor.computeHash(txDraft as any),
-            timestamp: new Date().toISOString()
-          }
-        };
-
-        const docRef = doc(collection(db, 'transactions'));
-        transaction.set(docRef, finalTx);
-        
-        const auditRef = doc(collection(db, 'auditLogs'));
-        transaction.set(auditRef, {
-          uid: user.uid,
-          email: user.email,
-          action: 'CREATE_TRANSACTION',
-          entityType: 'transaction',
-          entityId: docRef.id,
-          details: { description: data.description, amount: data.totalAmountCents },
-          timestamp: new Date().toISOString()
-        });
-
-        return docRef.id;
-      }),
-      OperationType.WRITE,
-      'transactions/new',
-      { data }
-    );
-
+    
+    const token = await user?.getIdToken();
+    let dataOut, err;
+    try {
+      const finalTx = {
+        ...balancedData,
+        id: optimisticTx.id,
+        totalAmountCents: Math.round(balancedData.totalAmountCents || 0),
+        schemaVersion: '1.1',
+        uid: user.uid,
+        workspaceId: currentWorkspaceId,
+        status: 'completed',
+        type: 'actual',
+        createdAt: new Date().toISOString()
+      };
+      // Let's preserve the optimistic ID
+      finalTx.id = optimisticTx.id;
+      
+      const res = await fetch('/api/v1/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ transaction: finalTx })
+      });
+      if (!res.ok) {
+         const data = await res.json();
+         throw new Error(data.error || 'Failed to save transaction');
+      }
+      dataOut = true; err = null;
+    } catch(e: any) {
+      err = e;
+    }
     if (!err) {
       incrementTransaction();
       toast.success('Transaction added and certified');
@@ -730,7 +714,7 @@ export function useTransactionActions() {
           description: data.vendorName
         }];
 
-        await handleQuickAdd({
+        await handleQuickAdd({ 
           description: data.vendorName,
           totalAmountCents: data.totalAmountCents,
           date: data.date || new Date().toISOString().split('T')[0],
@@ -814,9 +798,9 @@ export function useTransactionActions() {
           computedAccounts: [],
           totalLedgerBalance: 0,
           runningBalances: {
-              totalIncome: 0n,
-              totalExpense: 0n,
-              totalBalance: 0n,
+              totalIncome: 0,
+              totalExpense: 0,
+              totalBalance: 0,
               projectMetrics: {},
               categoryMetrics: {}
           }
@@ -866,9 +850,10 @@ export function useTransactionActions() {
     const tx = useLedgerStore.getState().transactions.find(t => t.id === id);
     if (!tx) return;
     
-    await updateDoc(doc(db, 'transactions', id), {
-      isFlagged: !tx.isFlagged,
-      updatedAt: new Date().toISOString()
+    await fetch(`/api/v1/transactions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+      body: JSON.stringify({ partialUpdate: { isFlagged: !tx.isFlagged, updatedAt: new Date().toISOString() } })
     });
     toast.info(tx.isFlagged ? 'Transaction flag removed' : 'Transaction flagged for review');
   };
@@ -878,7 +863,7 @@ export function useTransactionActions() {
     if (!tx) return;
 
     const { id: _, createdAt: __, verification: ___, ...txData } = tx;
-    await handleQuickAdd({
+    await handleQuickAdd({ 
       ...txData,
       description: `${txData.description} (Copy)`,
       date: new Date().toISOString().split('T')[0]
@@ -926,30 +911,36 @@ export function useTransactionActions() {
     setTransactions(nextTransactions);
     setIsSyncing(true);
 
-    const [dataOut, err] = await safeAsync(
-      runTransaction(db, async (transaction) => {
-        const txRef = doc(db, 'transactions', id);
-        const txSnap = await transaction.get(txRef);
-        
-        if (!txSnap.exists()) {
-          throw new Error("Transaction not found for sync.");
-        }
-
-        transaction.update(txRef, {
-          ...updates,
-          ...(updatedVerification ? { verification: updatedVerification } : {}),
-          updatedAt: new Date().toISOString()
-        });
-      }),
-      OperationType.UPDATE,
-      `transactions/${id}`,
-      { updates }
-    );
+    
+    const token = await user?.getIdToken();
+    let dataOut, err;
+    try {
+      const payload = {
+        ...tx,
+        ...updates,
+        ...(updatedVerification ? { verification: updatedVerification } : {}),
+        updatedAt: new Date().toISOString()
+      };
+      const res = await fetch(`/api/v1/transactions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ transaction: payload })
+      });
+      if (!res.ok) {
+         const data = await res.json();
+         throw new Error(data.error || 'Failed to update transaction');
+      }
+      dataOut = true; err = null;
+    } catch(e: any) {
+      err = e;
+      toast.error('Network sync failed. Initiating atomic rollback.');
+      setTransactions(originalTransactions);
+    }
 
     if (!err) {
       await recordAudit('UPDATE_TRANSACTION', 'transaction', id, updates);
 
-      // --- Persistent Neural Learning ---
+      // --- Persistent Rule Learning ---
       // If user manually updated the category, check if we should suggest a permanent rule
       if (updates.lines && Array.isArray(updates.lines) && updates.lines.length > 0) {
         const { autoRules, accounts } = useLedgerStore.getState();
@@ -958,7 +949,7 @@ export function useTransactionActions() {
         
         // Push to autonomous cache for immediate "soft" learning
         if (mainLine.accountId && mainLine.accountName) {
-          recordNeuralPattern(description, mainLine.accountId, mainLine.accountName);
+          recordRulePattern(description, mainLine.accountId, mainLine.accountName);
         }
         
         const existingRule = Array.isArray(autoRules) ? autoRules.find(r => 
@@ -1076,11 +1067,14 @@ export function useTransactionActions() {
     setIsSyncing(true);
     try {
       await runTransaction(db, async (transaction) => {
-        const bankRef = doc(db, 'bankLines', bankLineId);
-        const txRef = doc(db, 'transactions', transactionId);
-        
-        transaction.update(bankRef, { status: 'matched', matchedTransactionId: transactionId });
-        transaction.update(txRef, { status: 'reconciled' });
+        await fetch('/api/v1/transactions/reconcile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+          body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: [
+            { type: 'updateBankLine', id: bankLineId, data: { status: 'matched', matchedTransactionId: transactionId } },
+            { type: 'updateTransaction', id: transactionId, data: { status: 'reconciled' } }
+          ]})
+        });
       });
       toast.success('Alignment confirmed and certified.');
     } catch (error) {
@@ -1114,7 +1108,7 @@ export function useTransactionActions() {
           date: bankLine.date,
           description: bankLine.description,
           totalAmountCents: Math.abs(bankLine.amountCents),
-          status: 'reconciled',
+          status: 'pending',
           type: 'actual',
           createdAt: new Date().toISOString(),
           lines: balancedLines
@@ -1133,14 +1127,15 @@ export function useTransactionActions() {
     setIsSyncing(true);
     try {
       await runTransaction(db, async (transaction) => {
-        const bankRef = doc(db, 'bankLines', bankLineId);
-        transaction.update(bankRef, { status: 'pending', matchedTransactionId: null });
-        
+        const operations: any[] = [{ type: 'updateBankLine', id: bankLineId, data: { status: 'pending', matchedTransactionId: null } }];
         if (transactionId) {
-          const txRef = doc(db, 'transactions', transactionId);
-          // Set transaction status back to completed (or delete / null status) so it is no longer reconciled
-          transaction.update(txRef, { status: 'completed' });
+           operations.push({ type: 'updateTransaction', id: transactionId, data: { status: 'completed' } });
         }
+        await fetch('/api/v1/transactions/reconcile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+          body: JSON.stringify({ workspaceId: currentWorkspaceId, operations })
+        });
       });
       toast.success('Alignment reverted successfully. Re-inserted into potential pipeline matches.');
     } catch (error) {
@@ -1299,6 +1294,9 @@ export function useTransactionActions() {
                         accountName: account.name
                      };
                  }
+                if (line.accountId && line.accountId !== "uncategorized" && !accountMap.has(line.accountId)) {
+                  return { ...line, accountId: "uncategorized", accountName: "Manual Review" };
+                }
                  return line;
               }),
               updatedAt: new Date().toISOString()
@@ -1343,12 +1341,18 @@ export function useTransactionActions() {
     try {
       const batch = writeBatch(db);
       repairedTxs.forEach(tx => {
-        batch.update(doc(db, 'transactions', tx.id), {
-          verification: tx.verification,
-          updatedAt: new Date().toISOString()
-        });
+        if (!(globalThis as any)._bulkRepair) (globalThis as any)._bulkRepair = [];
+        (globalThis as any)._bulkRepair.push({ id: tx.id, data: { verification: tx.verification } });
       });
       await batch.commit();
+      if ((globalThis as any)._bulkRepair) {
+         await fetch('/api/v1/transactions/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+            body: JSON.stringify({ workspaceId: currentWorkspaceId, updates: (globalThis as any)._bulkRepair })
+         });
+         (globalThis as any)._bulkRepair = null;
+      }
       toast.success('Ledger chain cryptographically certified.', { id: loader });
     } catch (error) {
       toast.error('Sync failed.', { id: loader });
@@ -1440,13 +1444,24 @@ export function useTransactionActions() {
 
         // 3. Apply Matches in Transaction
         optimalMatches.forEach((txId, blId) => {
-          transaction.update(doc(db, 'bankLines', blId), { status: 'matched', matchedTransactionId: txId });
-          transaction.update(doc(db, 'transactions', txId), { status: 'reconciled' });
+          if (!(globalThis as any)._autoReconcile) (globalThis as any)._autoReconcile = [];
+          (globalThis as any)._autoReconcile.push(
+            { type: 'updateBankLine', id: blId, data: { status: 'matched', matchedTransactionId: txId } },
+            { type: 'updateTransaction', id: txId, data: { status: 'reconciled' } }
+          );
           matchCount++;
         });
 
         return matchCount;
-      }).then((matchCount) => {
+      }).then(async (matchCount) => {
+        if ((globalThis as any)._autoReconcile) {
+           await fetch('/api/v1/transactions/reconcile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+              body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: (globalThis as any)._autoReconcile })
+           });
+           (globalThis as any)._autoReconcile = null;
+        }
         if (matchCount && matchCount > 0) {
           toast.success(`Optimal alignment complete. ${matchCount} nodes synchronized.`, { id: loader });
         } else {

@@ -15,8 +15,8 @@ export interface AlgoResult {
   insights: string[];
 }
 
-// SOURCE OF TRUTH:
-// All algorithms receive the raw `Transaction[]` and `ChartAccount[]` as the absolute source of truth.
+// SOURCE OF INTEGRITY:
+// All algorithms receive the raw `Transaction[]` and `ChartAccount[]` as the absolute source of integrity.
 // Do NOT fetch data directly inside the algorithm. Only compute based on the provided arrays.
 export type AlgoFn = (transactions: Transaction[], accounts: ChartAccount[], inputs: Record<string, number>) => AlgoResult;
 

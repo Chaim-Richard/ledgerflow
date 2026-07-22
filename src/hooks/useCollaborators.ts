@@ -18,7 +18,7 @@ const COLORS = [
 ];
 
 export function useCollaborators() {
-  const { userProfile } = useAuthStore();
+  const userProfile = useAuthStore(s => s.userProfile);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
 
   useEffect(() => {

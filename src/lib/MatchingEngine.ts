@@ -3,7 +3,7 @@ import { Transaction, AutoRule } from '../types';
 
 /**
  * Deterministic Entity Resolution & Matching Engine
- * Implements Layer 2 of the LedgerFlow Architecture.
+ * Implements Layer 2 of the Clearbook Architecture.
  * Uses Aho-Corasick for O(N) multi-pattern matching and Levenshtein for fuzzy resolution.
  */
 export class MatchingEngine {
@@ -61,7 +61,7 @@ export class MatchingEngine {
   /**
    * Resolves category based on description patterns with multi-layer fallback.
    */
-  resolveCategory(description: string): { accountName: string, tags?: string[] } | null {
+  resolveCategory(description: string): { accountName: string, tags?: string[], dimensions?: Record<string, string> } | null {
     const lowerDesc = (description || '').toLowerCase().trim();
     if (!lowerDesc) return null;
 
@@ -73,7 +73,10 @@ export class MatchingEngine {
       if (matches.length > 0) {
         const matchId = matches[0];
         const rule = this.rules.find(r => r.id === matchId);
-        if (rule?.action.targetCategory) return { accountName: rule.action.targetCategory };
+        if (rule?.action.targetCategory) return { 
+          accountName: rule.action.targetCategory,
+          dimensions: rule.action.targetDimensions
+        };
       }
     }
 
@@ -268,8 +271,8 @@ export class MatchingEngine {
    * Suggests categories for a batch of transactions asynchronously in time-sliced chunks.
    * Prevents UI thread blocking when running massive classification on tons of info.
    */
-  async suggestCategoriesAsync(transactions: Transaction[], onProgress?: (pct: number) => void): Promise<Map<string, string>> {
-    const suggestions = new Map<string, string>();
+  async suggestCategoriesAsync(transactions: Transaction[], onProgress?: (pct: number) => void): Promise<Map<string, { accountName: string, dimensions?: Record<string, string> }>> {
+    const suggestions = new Map<string, { accountName: string, dimensions?: Record<string, string> }>();
     const chunkSize = 200; // Optimal yielding threshold for React/Vite loop constraints
     
     for (let i = 0; i < transactions.length; i += chunkSize) {
@@ -278,7 +281,10 @@ export class MatchingEngine {
       chunk.forEach(tx => {
         const ruleMatch = this.resolveCategory(tx.description);
         if (ruleMatch) {
-          suggestions.set(tx.id, ruleMatch.accountName);
+          suggestions.set(tx.id, {
+            accountName: ruleMatch.accountName,
+            dimensions: ruleMatch.dimensions
+          });
         }
       });
       

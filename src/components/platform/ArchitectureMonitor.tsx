@@ -43,8 +43,8 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
       count: SETTINGS_TABS_REGISTRY.length,
       icon: Settings,
       color: 'text-slate-600',
-      bg: 'bg-slate-50',
-      border: 'border-slate-200',
+      bg: 'bg-[var(--ink)]',
+      border: 'border-[var(--line)]',
       desc: 'Platform & workspace settings'
     },
     {
@@ -72,7 +72,7 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
   const totalModules = structureNodes.reduce((acc, curr) => acc + curr.count, 0);
 
   return (
-    <div className="p-6 md:p-8 bg-slate-50 rounded-[32px] border border-slate-200 relative overflow-hidden">
+    <div className="p-6 md:p-8 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] relative overflow-hidden">
       <div className="absolute top-0 right-0 p-4 md:p-8 z-20">
         <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 h-fit shadow-sm">
           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
@@ -95,7 +95,7 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
               </div>
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-1">State Machine</h4>
               <h3 className="text-xl font-bold text-white tracking-tight">Zustand Central Store</h3>
-              <p className="text-xs text-slate-400 mt-2">Single source of truth for UI state, Active Tools, and Global Data.</p>
+              <p className="text-xs text-slate-400 mt-2">Single source of integrity for UI state, Active Tools, and Global Data.</p>
             </div>
           </div>
         </motion.div>
@@ -116,13 +116,13 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
           transition={{ delay: 0.1 }}
           className="w-full max-w-sm"
         >
-          <div className="p-6 bg-white border border-slate-200 rounded-[32px] shadow-sm relative overflow-hidden group hover:border-emerald-300 transition-all">
+          <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-sm relative overflow-hidden group hover:border-emerald-300 transition-all">
             <div className="relative z-10 flex flex-col items-center text-center">
               <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 flex items-center justify-center mb-4 shadow-inner">
                 <Database size={24} />
               </div>
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-1">Data Access Layer (DAL)</h4>
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight">Abstract Storage Provider</h3>
+              <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">Abstract Storage Provider</h3>
               <p className="text-xs text-slate-500 mt-2">Currently mapped to FirebaseAdapter. Ready to swap to SupabaseAdapter with zero UI changes.</p>
             </div>
           </div>
@@ -143,7 +143,7 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className="w-full bg-white p-8 rounded-[32px] border border-slate-200 shadow-xl"
+          className="w-full bg-[var(--surface)] p-8 rounded-[32px] border border-[var(--line)] shadow-xl"
         >
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
@@ -151,7 +151,7 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
                 <GitCommit size={24} />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight">Dynamic Registry Hub</h3>
+                <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">Dynamic Registry Hub</h3>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">{totalModules} Total Active Modules</p>
               </div>
             </div>
@@ -164,18 +164,18 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 + (i * 0.05) }}
-                className="p-5 border border-slate-100 bg-slate-50 rounded-2xl flex flex-col gap-3 hover:border-indigo-200 hover:bg-white transition-all hover:shadow-md group"
+                className="p-5 border border-[var(--line)] bg-[var(--ink)] rounded-2xl flex flex-col gap-3 hover:border-indigo-200 hover:bg-[var(--surface)] transition-all hover:shadow-md group"
               >
                 <div className="flex items-center justify-between">
                   <div className={"w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm transition-colors " + node.bg + " " + node.color + " " + node.border}>
                     <node.icon size={18} />
                   </div>
-                  <div className="px-2.5 py-1 bg-white border border-slate-200 rounded-full shadow-sm text-[10px] font-bold text-slate-700">
+                  <div className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] rounded-full shadow-sm text-[10px] font-bold text-slate-700">
                     {node.count} Nodes
                   </div>
                 </div>
                 <div>
-                  <h5 className="text-sm font-bold text-slate-900 tracking-tight">{node.name}</h5>
+                  <h5 className="text-sm font-bold text-[var(--text)] tracking-tight">{node.name}</h5>
                   <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-snug">{node.desc}</p>
                 </div>
               </motion.div>
@@ -192,7 +192,7 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
         >
           <Code size={16} className="text-indigo-600" />
           <p className="text-xs font-medium text-indigo-900">
-            <strong>Highly Extensible:</strong> Adding new features simply requires appending to the arrays in <code className="bg-white px-1.5 py-0.5 rounded text-indigo-600 font-mono text-[10px] border border-indigo-200">src/config/registry.tsx</code>. The UI dynamically adapts.
+            <strong>Highly Extensible:</strong> Adding new features simply requires appending to the arrays in <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-indigo-600 font-mono text-[10px] border border-indigo-200">src/config/registry.tsx</code>. The UI dynamically adapts.
           </p>
         </motion.div>
 

@@ -5,7 +5,7 @@ import {
   BarChart, Bar,
   Radar, RadarChart, PolarGrid, PolarAngleAxis
 } from 'recharts';
-import { BarChart3, ShieldCheck, Target, Download, Maximize2, Minimize2, BrainCircuit, TrendingUp, Activity, Info, ChevronRight, Sparkles, Menu, X, Search, Calendar, Flame, Loader2, LayoutGrid, Building, Clock, DollarSign, Users, BarChart as BarChartIcon, Calculator } from 'lucide-react';
+import { BarChart3, ShieldCheck, Target, Download, Maximize2, Minimize2, BrainCircuit, TrendingUp, Activity, Info, ChevronRight, Sparkles, Menu, X, Search, Calendar, Flame, Loader2, LayoutGrid, Building, Clock, DollarSign, Users, BarChart as BarChartIcon, Calculator, Zap } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuditTelemetry } from '../../hooks/useAuditTelemetry';
@@ -13,7 +13,13 @@ import * as d3 from 'd3';
 import { Transaction, ChartAccount, Project, Bill, Invoice } from '../../types';
 import { useUIStore } from '../../stores/useUIStore';
 import ForensicAuditor from '../reporting/ForensicAuditor';
-import EntityConsolidation from '../finance/EntityConsolidation';
+import PivotSheet from '../ledger/PivotSheet';
+import BudgetManager from '../planning/BudgetManager';
+import TaxManager from '../finance/TaxManager';
+import Consolidation from '../finance/Consolidation';
+import ToolSandbox from '../platform/ToolSandbox';
+import FinancialCalculatorView from './FinancialCalculatorView';
+import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
 import { ANALYTICAL_LENSES_REGISTRY, LENS_COMPONENTS } from '../../config/registry';
 
 // -------------------------------------------------------------
@@ -215,14 +221,14 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
   }, [data, dimensions]);
 
   return (
-    <div ref={containerRef} className="w-full bg-white rounded-[32px] p-5 border border-slate-200/80 relative shadow-3xs overflow-hidden group">
+    <div ref={containerRef} className="w-full bg-[var(--surface)] rounded-[32px] p-5 border border-[var(--line)]/80 relative shadow-3xs overflow-hidden group">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-3">
          <div className="flex items-center gap-2">
            <Activity size={13} className="text-indigo-600 shrink-0" />
            <span className="text-[10px] font-mono font-bold tracking-wider text-slate-500 uppercase">Recent Transaction Volume</span>
          </div>
          <div className="flex items-center gap-2">
-           <span className="px-2 py-0.5 bg-slate-50 border border-slate-200 text-slate-700 text-[8px] font-mono font-black uppercase rounded-sm">Current</span>
+           <span className="px-2 py-0.5 bg-[var(--ink)] border border-[var(--line)] text-slate-700 text-[8px] font-mono font-black uppercase rounded-sm">Current</span>
          </div>
       </div>
       
@@ -278,7 +284,7 @@ const CHANNELS = [
   {
     group: { en: 'Executive Overview', he: 'סקירת מנהלים' },
     items: [
-      { id: 'radar', icon: Activity, label: { en: 'Metrics Radar', he: 'רדאר בריאות' }, desc: { en: 'Live volumetric operational spider web view', he: 'תצוגת רדאר תקציבית חיה' } },
+      { id: 'radar', icon: Activity, label: { en: 'Metrics Radar', he: 'רדאר מדדים' }, desc: { en: 'Live volumetric operational spider web view', he: 'תצוגת רדאר תקציבית חיה' } },
       { id: 'roi', icon: Target, label: { en: 'ROI Matrix', he: 'מטריצת החזר השקעה' }, desc: { en: 'Calculates true velocity and margin projections', he: 'חישוב מהירות החזר השקעה' } }
     ]
   },
@@ -286,189 +292,36 @@ const CHANNELS = [
     group: { en: 'Financial Core', he: 'פיננסים' },
     items: [
       { id: 'pivot', icon: LayoutGrid, label: { en: 'Pivot Sheet', he: 'גיליון ציר' }, desc: { en: 'Advanced pivot tables for transactions', he: 'טבלאות ציר מתקדמות לתנועות' } },
-      { id: 'assets', icon: Building, label: { en: 'Fixed Assets', he: 'רכוש קבוע' }, desc: { en: 'Track depreciation and lifecycle', he: 'מעקב אחר פחת ומחזור חיים' } },
-      { id: 'amortization', icon: Clock, label: { en: 'Amortization Tool', he: 'לוח סילוקין' }, desc: { en: 'Loan and amortization schedules', he: 'לוחות סילוקין להלוואות' } }
+      { id: 'budgets', icon: DollarSign, label: { en: 'Budget Analysis', he: 'ניתוח תקציב' }, desc: { en: 'Budget vs Actual variance reporting', he: 'דוחות סטיות של תקציב מול מציאות' } },
+      { id: 'nexus', icon: ShieldCheck, label: { en: 'Tax Nexus', he: 'מיסוי מקומי' }, desc: { en: 'Identify tax liabilities across jurisdictions', he: 'זיהוי חבויות מס ברחבי המדינות' } },
+      { id: 'entities', icon: Building, label: { en: 'Entity Consolidation', he: 'איחוד ישויות' }, desc: { en: 'Multi-company ledger aggregation', he: 'ריכוז ואיחוד ספרי הנהלת חשבונות' } },
+      { id: 'forensics', icon: ShieldCheck, label: { en: 'Audit & Forensics', he: 'ביקורת וממצאים' }, desc: { en: 'Deep scan integrity ledger evaluation', he: 'סריקת עומק והערכת תקינות ספר יומן' } }
     ]
   },
   {
     group: { en: 'Calculators', he: 'מחשבונים' },
     items: [
-      { id: 'currency', icon: DollarSign, label: { en: 'Currency Converter', he: 'המרת מטבעות' }, desc: { en: 'Real-time exchange rate calculation', he: 'חישוב שערי חליפין בזמן אמת' } },
-      { id: 'margin', icon: TrendingUp, label: { en: 'Margin & Markup', he: 'מחשבון שולי רווח' }, desc: { en: 'Calculate profit margins and markup', he: 'חישוב שולי רווח וסימון' } },
       { id: 'breakeven', icon: Target, label: { en: 'Break-Even Analysis', he: 'ניתוח נקודת איזון' }, desc: { en: 'Calculate break-even units and revenue', he: 'חישוב יחידות והכנסות לנקודת איזון' } },
-      { id: 'compound', icon: Target, label: { en: 'Compound Interest', he: 'ריבית דריבית' }, desc: { en: 'Calculate compounding investment returns', he: 'חישוב תשואות השקעה בריבית דריבית' } },
+      { id: 'compound', icon: Calculator, label: { en: 'Compound Interest', he: 'ריבית דריבית' }, desc: { en: 'Calculate compounding investment returns', he: 'חישוב תשואות השקעה בריבית דריבית' } },
       { id: 'rule72', icon: Activity, label: { en: 'Rule of 72', he: 'כלל ה-72' }, desc: { en: 'Calculate years to double investment', he: 'חישוב שנים להכפלת השקעה' } },
-      { id: 'ltv', icon: Users, label: { en: 'LTV', he: 'LTV' }, desc: { en: 'Customer Lifetime Value', he: 'ערך חיי לקוח' } },
-      { id: 'npv', icon: BarChartIcon, label: { en: 'NPV', he: 'NPV' }, desc: { en: 'Net Present Value', he: 'ערך נוכחי נקי' } },
-      { id: 'cac', icon: Users, label: { en: 'CAC', he: 'CAC' }, desc: { en: 'Customer Acquisition Cost', he: 'עלות רכישת לקוח' } },
-      { id: 'wacc', icon: BarChart3, label: { en: 'WACC', he: 'WACC' }, desc: { en: 'Weighted Average Cost of Capital', he: 'עלות הון משוקללת' } },
-      { id: 'roas', icon: TrendingUp, label: { en: 'ROAS Calculator', he: 'החזר הוצאות פרסום' }, desc: { en: 'Return on Ad Spend', he: 'החזר על הוצאות פרסום' } },
-      { id: 'caprate', icon: Building, label: { en: 'Cap Rate', he: 'שיעור היוון' }, desc: { en: 'Real Estate Capitalization Rate', he: 'שיעור היוון לנדל״ן' } }
+      { id: 'ltv', icon: Users, label: { en: 'Customer Lifetime Value (LTV)', he: 'ערך חיי לקוח (LTV)' }, desc: { en: 'Customer Lifetime Value metrics', he: 'חישוב ערך חיי לקוח' } },
+      { id: 'cac', icon: Users, label: { en: 'Customer Acquisition Cost (CAC)', he: 'עלות רכישת לקוח (CAC)' }, desc: { en: 'Customer Acquisition Cost metrics', he: 'חישוב עלות רכישת לקוח' } },
+      { id: 'npv', icon: BarChartIcon, label: { en: 'Net Present Value (NPV)', he: 'ערך נוכחי נקי (NPV)' }, desc: { en: 'Discounted cash flow NPV calculator', he: 'חישוב ערך נוכחי נקי' } },
+      { id: 'wacc', icon: BarChart3, label: { en: 'Weighted Average Cost of Capital (WACC)', he: 'עלות הון משוקללת (WACC)' }, desc: { en: 'Cost of capital computation', he: 'חישוב עלות הון משוקללת' } },
+      { id: 'roas', icon: TrendingUp, label: { en: 'Return on Ad Spend (ROAS)', he: 'החזר על הוצאות פרסום (ROAS)' }, desc: { en: 'Ad campaign ROI calculation', he: 'חישוב תשואה על קמפיינים' } },
+      { id: 'caprate', icon: Building, label: { en: 'Cap Rate', he: 'שיעור היוון נדל״ן' }, desc: { en: 'Real estate capitalization rate', he: 'שיעור היוון לנדל״ן' } },
+      { id: 'ratios', icon: BarChart3, label: { en: 'Financial Ratios', he: 'יחסים פיננסיים' }, desc: { en: 'In-depth financial metric analysis', he: 'ניתוח עומק של יחסים ومדדים' } },
+      { id: 'ebitda', icon: BarChart3, label: { en: 'EBITDA Calculator', he: 'מחשבון EBITDA' }, desc: { en: 'Earnings Before Interest, Taxes, Depreciation', he: 'רווח לפני ריבית, מסים ופחת' } }
     ]
   },
   {
-    group: { en: 'Reporting & Compliance', he: 'דוחות וציות' },
-    items: [
-      { id: 'nexus', label: { en: 'Tax Nexus', he: 'מיסוי מקומי' }, icon: ShieldCheck, desc: { en: 'Identify tax liabilities across states', he: 'זיהוי חבויות מס ברחבי המדינות' } },
-      { id: 'ratios', label: { en: 'Financial Ratios', he: 'יחסים פיננסיים' }, icon: BarChart3, desc: { en: 'In-depth ratio and metric analysis', he: 'ניתוח עומק של יחסים ומדדים' } },
-      { id: 'budgets', label: { en: 'Budget Analysis', he: 'ניתוח תקציב' }, icon: DollarSign, desc: { en: 'Budget vs Actual variance reporting', he: 'דוחות סטיות של תקציב מול מציאות' } },
-      { id: 'ebitda', label: { en: 'EBITDA', he: 'EBITDA' }, icon: BarChart3, desc: { en: 'Earnings Before Interest, Taxes, Depreciation', he: 'רווח לפני ריבית, מסים, פחת והפחתות' } }
-    ]
-  },
-  {
-    group: { en: 'Advanced Systems', he: 'מערכות מתקדמות' },
-    items: [
-      { id: 'forensics', icon: ShieldCheck, label: { en: 'Audit & Forensics', he: 'ביקורת וממצאים' }, desc: { en: 'Deep scan integrity ledger evaluation', he: 'סריקת עומק והערכת תקינות ספר יומן' } },
-      { id: 'entities', icon: Building, label: { en: 'Entity Consolidation', he: 'איחוד ישויות' }, desc: { en: 'Multi-company ledger aggregation', he: 'ריכוז ואיחוד ספרי הנהלת חשבונות' } }
-    ]
-  }
-,
-  {
-    group: { en: 'Additional Tools 1', he: 'כלים נוספים 1' },
-    items: [
-      { id: 'altmanZScore', icon: Calculator, label: { en: 'Altman Z Score', he: 'Altman Z Score' }, desc: { en: 'Altman Z Score tool', he: 'כלי Altman Z Score' } },
-      { id: 'apy', icon: Calculator, label: { en: 'Apy', he: 'Apy' }, desc: { en: 'Apy tool', he: 'כלי Apy' } },
-      { id: 'assetTurnover', icon: Calculator, label: { en: 'Asset Turnover', he: 'Asset Turnover' }, desc: { en: 'Asset Turnover tool', he: 'כלי Asset Turnover' } },
-      { id: 'autoLoan', icon: Calculator, label: { en: 'Auto Loan', he: 'Auto Loan' }, desc: { en: 'Auto Loan tool', he: 'כלי Auto Loan' } },
-      { id: 'beta', icon: Calculator, label: { en: 'Beta', he: 'Beta' }, desc: { en: 'Beta tool', he: 'כלי Beta' } },
-      { id: 'blackScholes', icon: Calculator, label: { en: 'Black Scholes', he: 'Black Scholes' }, desc: { en: 'Black Scholes tool', he: 'כלי Black Scholes' } },
-      { id: 'bollingerBands', icon: Calculator, label: { en: 'Bollinger Bands', he: 'Bollinger Bands' }, desc: { en: 'Bollinger Bands tool', he: 'כלי Bollinger Bands' } },
-      { id: 'bondPrice', icon: Calculator, label: { en: 'Bond Price', he: 'Bond Price' }, desc: { en: 'Bond Price tool', he: 'כלי Bond Price' } },
-      { id: 'breakEven', icon: Calculator, label: { en: 'Break Even', he: 'Break Even' }, desc: { en: 'Break Even tool', he: 'כלי Break Even' } },
-      { id: 'cacLtv', icon: Calculator, label: { en: 'Cac Ltv', he: 'Cac Ltv' }, desc: { en: 'Cac Ltv tool', he: 'כלי Cac Ltv' } },
-      { id: 'cagr', icon: Calculator, label: { en: 'Cagr', he: 'Cagr' }, desc: { en: 'Cagr tool', he: 'כלי Cagr' } },
-      { id: 'capRate', icon: Calculator, label: { en: 'Cap Rate', he: 'Cap Rate' }, desc: { en: 'Cap Rate tool', he: 'כלי Cap Rate' } },
-      { id: 'capitalGains', icon: Calculator, label: { en: 'Capital Gains', he: 'Capital Gains' }, desc: { en: 'Capital Gains tool', he: 'כלי Capital Gains' } },
-      { id: 'capitalGainsTax', icon: Calculator, label: { en: 'Capital Gains Tax', he: 'Capital Gains Tax' }, desc: { en: 'Capital Gains Tax tool', he: 'כלי Capital Gains Tax' } },
-      { id: 'capm', icon: Calculator, label: { en: 'Capm', he: 'Capm' }, desc: { en: 'Capm tool', he: 'כלי Capm' } },
-      { id: 'carAffordability', icon: Calculator, label: { en: 'Car Affordability', he: 'Car Affordability' }, desc: { en: 'Car Affordability tool', he: 'כלי Car Affordability' } },
-      { id: 'cashOnCash', icon: Calculator, label: { en: 'Cash On Cash', he: 'Cash On Cash' }, desc: { en: 'Cash On Cash tool', he: 'כלי Cash On Cash' } },
-      { id: 'cashRatio', icon: Calculator, label: { en: 'Cash Ratio', he: 'Cash Ratio' }, desc: { en: 'Cash Ratio tool', he: 'כלי Cash Ratio' } },
-      { id: 'ccc', icon: Calculator, label: { en: 'Ccc', he: 'Ccc' }, desc: { en: 'Ccc tool', he: 'כלי Ccc' } },
-      { id: 'collegeSavings', icon: Calculator, label: { en: 'College Savings', he: 'College Savings' }, desc: { en: 'College Savings tool', he: 'כלי College Savings' } }
-    ]
-  },
-  {
-    group: { en: 'Additional Tools 2', he: 'כלים נוספים 2' },
-    items: [
-      { id: 'costOfDebt', icon: Calculator, label: { en: 'Cost Of Debt', he: 'Cost Of Debt' }, desc: { en: 'Cost Of Debt tool', he: 'כלי Cost Of Debt' } },
-      { id: 'costOfDelay', icon: Calculator, label: { en: 'Cost Of Delay', he: 'Cost Of Delay' }, desc: { en: 'Cost Of Delay tool', he: 'כלי Cost Of Delay' } },
-      { id: 'dcf', icon: Calculator, label: { en: 'Dcf', he: 'Dcf' }, desc: { en: 'Dcf tool', he: 'כלי Dcf' } },
-      { id: 'ddm', icon: Calculator, label: { en: 'Ddm', he: 'Ddm' }, desc: { en: 'Ddm tool', he: 'כלי Ddm' } },
-      { id: 'debtSnowball', icon: Calculator, label: { en: 'Debt Snowball', he: 'Debt Snowball' }, desc: { en: 'Debt Snowball tool', he: 'כלי Debt Snowball' } },
-      { id: 'debtToAsset', icon: Calculator, label: { en: 'Debt To Asset', he: 'Debt To Asset' }, desc: { en: 'Debt To Asset tool', he: 'כלי Debt To Asset' } },
-      { id: 'debtToCapital', icon: Calculator, label: { en: 'Debt To Capital', he: 'Debt To Capital' }, desc: { en: 'Debt To Capital tool', he: 'כלי Debt To Capital' } },
-      { id: 'debtToEquity', icon: Calculator, label: { en: 'Debt To Equity', he: 'Debt To Equity' }, desc: { en: 'Debt To Equity tool', he: 'כלי Debt To Equity' } },
-      { id: 'depreciation', icon: Calculator, label: { en: 'Depreciation', he: 'Depreciation' }, desc: { en: 'Depreciation tool', he: 'כלי Depreciation' } },
-      { id: 'dfl', icon: Calculator, label: { en: 'Dfl', he: 'Dfl' }, desc: { en: 'Dfl tool', he: 'כלי Dfl' } },
-      { id: 'dio', icon: Calculator, label: { en: 'Dio', he: 'Dio' }, desc: { en: 'Dio tool', he: 'כלי Dio' } },
-      { id: 'discount', icon: Calculator, label: { en: 'Discount', he: 'Discount' }, desc: { en: 'Discount tool', he: 'כלי Discount' } },
-      { id: 'discountYield', icon: Calculator, label: { en: 'Discount Yield', he: 'Discount Yield' }, desc: { en: 'Discount Yield tool', he: 'כלי Discount Yield' } },
-      { id: 'dividendCoverage', icon: Calculator, label: { en: 'Dividend Coverage', he: 'Dividend Coverage' }, desc: { en: 'Dividend Coverage tool', he: 'כלי Dividend Coverage' } },
-      { id: 'dividendPayout', icon: Calculator, label: { en: 'Dividend Payout', he: 'Dividend Payout' }, desc: { en: 'Dividend Payout tool', he: 'כלי Dividend Payout' } },
-      { id: 'dividendYield', icon: Calculator, label: { en: 'Dividend Yield', he: 'Dividend Yield' }, desc: { en: 'Dividend Yield tool', he: 'כלי Dividend Yield' } },
-      { id: 'dol', icon: Calculator, label: { en: 'Dol', he: 'Dol' }, desc: { en: 'Dol tool', he: 'כלי Dol' } },
-      { id: 'dpo', icon: Calculator, label: { en: 'Dpo', he: 'Dpo' }, desc: { en: 'Dpo tool', he: 'כלי Dpo' } },
-      { id: 'dscr', icon: Calculator, label: { en: 'Dscr', he: 'Dscr' }, desc: { en: 'Dscr tool', he: 'כלי Dscr' } },
-      { id: 'dso', icon: Calculator, label: { en: 'Dso', he: 'Dso' }, desc: { en: 'Dso tool', he: 'כלי Dso' } }
-    ]
-  },
-  {
-    group: { en: 'Additional Tools 3', he: 'כלים נוספים 3' },
-    items: [
-      { id: 'dti', icon: Calculator, label: { en: 'Dti', he: 'Dti' }, desc: { en: 'Dti tool', he: 'כלי Dti' } },
-      { id: 'duPontAnalysis', icon: Calculator, label: { en: 'Du Pont Analysis', he: 'Du Pont Analysis' }, desc: { en: 'Du Pont Analysis tool', he: 'כלי Du Pont Analysis' } },
-      { id: 'dupontAnalysis', icon: Calculator, label: { en: 'Dupont Analysis', he: 'Dupont Analysis' }, desc: { en: 'Dupont Analysis tool', he: 'כלי Dupont Analysis' } },
-      { id: 'earningsYield', icon: Calculator, label: { en: 'Earnings Yield', he: 'Earnings Yield' }, desc: { en: 'Earnings Yield tool', he: 'כלי Earnings Yield' } },
-      { id: 'ebitdaValuation', icon: Calculator, label: { en: 'Ebitda Valuation', he: 'Ebitda Valuation' }, desc: { en: 'Ebitda Valuation tool', he: 'כלי Ebitda Valuation' } },
-      { id: 'ema', icon: Calculator, label: { en: 'Ema', he: 'Ema' }, desc: { en: 'Ema tool', he: 'כלי Ema' } },
-      { id: 'emergencyFund', icon: Calculator, label: { en: 'Emergency Fund', he: 'Emergency Fund' }, desc: { en: 'Emergency Fund tool', he: 'כלי Emergency Fund' } },
-      { id: 'enterpriseValue', icon: Calculator, label: { en: 'Enterprise Value', he: 'Enterprise Value' }, desc: { en: 'Enterprise Value tool', he: 'כלי Enterprise Value' } },
-      { id: 'eps', icon: Calculator, label: { en: 'Eps', he: 'Eps' }, desc: { en: 'Eps tool', he: 'כלי Eps' } },
-      { id: 'epsGrowth', icon: Calculator, label: { en: 'Eps Growth', he: 'Eps Growth' }, desc: { en: 'Eps Growth tool', he: 'כלי Eps Growth' } },
-      { id: 'equityMultiplier', icon: Calculator, label: { en: 'Equity Multiplier', he: 'Equity Multiplier' }, desc: { en: 'Equity Multiplier tool', he: 'כלי Equity Multiplier' } },
-      { id: 'equityToAsset', icon: Calculator, label: { en: 'Equity To Asset', he: 'Equity To Asset' }, desc: { en: 'Equity To Asset tool', he: 'כלי Equity To Asset' } },
-      { id: 'evEbitda', icon: Calculator, label: { en: 'Ev Ebitda', he: 'Ev Ebitda' }, desc: { en: 'Ev Ebitda tool', he: 'כלי Ev Ebitda' } },
-      { id: 'eva', icon: Calculator, label: { en: 'Eva', he: 'Eva' }, desc: { en: 'Eva tool', he: 'כלי Eva' } },
-      { id: 'expenseRatio', icon: Calculator, label: { en: 'Expense Ratio', he: 'Expense Ratio' }, desc: { en: 'Expense Ratio tool', he: 'כלי Expense Ratio' } },
-      { id: 'fcf', icon: Calculator, label: { en: 'Fcf', he: 'Fcf' }, desc: { en: 'Fcf tool', he: 'כלי Fcf' } },
-      { id: 'fcfYield', icon: Calculator, label: { en: 'Fcf Yield', he: 'Fcf Yield' }, desc: { en: 'Fcf Yield tool', he: 'כלי Fcf Yield' } },
-      { id: 'fcfe', icon: Calculator, label: { en: 'Fcfe', he: 'Fcfe' }, desc: { en: 'Fcfe tool', he: 'כלי Fcfe' } },
-      { id: 'fica', icon: Calculator, label: { en: 'Fica', he: 'Fica' }, desc: { en: 'Fica tool', he: 'כלי Fica' } },
-      { id: 'fire', icon: Calculator, label: { en: 'Fire', he: 'Fire' }, desc: { en: 'Fire tool', he: 'כלי Fire' } }
-    ]
-  },
-  {
-    group: { en: 'Additional Tools 4', he: 'כלים נוספים 4' },
-    items: [
-      { id: 'fixedAssetTurnover', icon: Calculator, label: { en: 'Fixed Asset Turnover', he: 'Fixed Asset Turnover' }, desc: { en: 'Fixed Asset Turnover tool', he: 'כלי Fixed Asset Turnover' } },
-      { id: 'fv', icon: Calculator, label: { en: 'Fv', he: 'Fv' }, desc: { en: 'Fv tool', he: 'כלי Fv' } },
-      { id: 'gordonGrowth', icon: Calculator, label: { en: 'Gordon Growth', he: 'Gordon Growth' }, desc: { en: 'Gordon Growth tool', he: 'כלי Gordon Growth' } },
-      { id: 'grm', icon: Calculator, label: { en: 'Grm', he: 'Grm' }, desc: { en: 'Grm tool', he: 'כלי Grm' } },
-      { id: 'grossMargin', icon: Calculator, label: { en: 'Gross Margin', he: 'Gross Margin' }, desc: { en: 'Gross Margin tool', he: 'כלי Gross Margin' } },
-      { id: 'houseFlip', icon: Calculator, label: { en: 'House Flip', he: 'House Flip' }, desc: { en: 'House Flip tool', he: 'כלי House Flip' } },
-      { id: 'inflation', icon: Calculator, label: { en: 'Inflation', he: 'Inflation' }, desc: { en: 'Inflation tool', he: 'כלי Inflation' } },
-      { id: 'interestCoverage', icon: Calculator, label: { en: 'Interest Coverage', he: 'Interest Coverage' }, desc: { en: 'Interest Coverage tool', he: 'כלי Interest Coverage' } },
-      { id: 'inventoryTurnover', icon: Calculator, label: { en: 'Inventory Turnover', he: 'Inventory Turnover' }, desc: { en: 'Inventory Turnover tool', he: 'כלי Inventory Turnover' } },
-      { id: 'irr', icon: Calculator, label: { en: 'Irr', he: 'Irr' }, desc: { en: 'Irr tool', he: 'כלי Irr' } },
-      { id: 'leaseVsBuy', icon: Calculator, label: { en: 'Lease Vs Buy', he: 'Lease Vs Buy' }, desc: { en: 'Lease Vs Buy tool', he: 'כלי Lease Vs Buy' } },
-      { id: 'liquidity', icon: Calculator, label: { en: 'Liquidity', he: 'Liquidity' }, desc: { en: 'Liquidity tool', he: 'כלי Liquidity' } },
-      { id: 'loan', icon: Calculator, label: { en: 'Loan', he: 'Loan' }, desc: { en: 'Loan tool', he: 'כלי Loan' } },
-      { id: 'macaulayDuration', icon: Calculator, label: { en: 'Macaulay Duration', he: 'Macaulay Duration' }, desc: { en: 'Macaulay Duration tool', he: 'כלי Macaulay Duration' } },
-      { id: 'macd', icon: Calculator, label: { en: 'Macd', he: 'Macd' }, desc: { en: 'Macd tool', he: 'כלי Macd' } },
-      { id: 'marginMarkup', icon: Calculator, label: { en: 'Margin Markup', he: 'Margin Markup' }, desc: { en: 'Margin Markup tool', he: 'כלי Margin Markup' } },
-      { id: 'marginOfSafety', icon: Calculator, label: { en: 'Margin Of Safety', he: 'Margin Of Safety' }, desc: { en: 'Margin Of Safety tool', he: 'כלי Margin Of Safety' } },
-      { id: 'netProfitMargin', icon: Calculator, label: { en: 'Net Profit Margin', he: 'Net Profit Margin' }, desc: { en: 'Net Profit Margin tool', he: 'כלי Net Profit Margin' } },
-      { id: 'netWorth', icon: Calculator, label: { en: 'Net Worth', he: 'Net Worth' }, desc: { en: 'Net Worth tool', he: 'כלי Net Worth' } },
-      { id: 'ocfRatio', icon: Calculator, label: { en: 'Ocf Ratio', he: 'Ocf Ratio' }, desc: { en: 'Ocf Ratio tool', he: 'כלי Ocf Ratio' } }
-    ]
-  },
-  {
-    group: { en: 'Additional Tools 5', he: 'כלים נוספים 5' },
-    items: [
-      { id: 'operatingMargin', icon: Calculator, label: { en: 'Operating Margin', he: 'Operating Margin' }, desc: { en: 'Operating Margin tool', he: 'כלי Operating Margin' } },
-      { id: 'paybackPeriod', icon: Calculator, label: { en: 'Payback Period', he: 'Payback Period' }, desc: { en: 'Payback Period tool', he: 'כלי Payback Period' } },
-      { id: 'peRatio', icon: Calculator, label: { en: 'Pe Ratio', he: 'Pe Ratio' }, desc: { en: 'Pe Ratio tool', he: 'כלי Pe Ratio' } },
-      { id: 'pegRatio', icon: Calculator, label: { en: 'Peg Ratio', he: 'Peg Ratio' }, desc: { en: 'Peg Ratio tool', he: 'כלי Peg Ratio' } },
-      { id: 'piotroskiFScore', icon: Calculator, label: { en: 'Piotroski F Score', he: 'Piotroski F Score' }, desc: { en: 'Piotroski F Score tool', he: 'כלי Piotroski F Score' } },
-      { id: 'pretaxMargin', icon: Calculator, label: { en: 'Pretax Margin', he: 'Pretax Margin' }, desc: { en: 'Pretax Margin tool', he: 'כלי Pretax Margin' } },
-      { id: 'priceToBook', icon: Calculator, label: { en: 'Price To Book', he: 'Price To Book' }, desc: { en: 'Price To Book tool', he: 'כלי Price To Book' } },
-      { id: 'priceToCashFlow', icon: Calculator, label: { en: 'Price To Cash Flow', he: 'Price To Cash Flow' }, desc: { en: 'Price To Cash Flow tool', he: 'כלי Price To Cash Flow' } },
-      { id: 'priceToSales', icon: Calculator, label: { en: 'Price To Sales', he: 'Price To Sales' }, desc: { en: 'Price To Sales tool', he: 'כלי Price To Sales' } },
-      { id: 'profitMargin', icon: Calculator, label: { en: 'Profit Margin', he: 'Profit Margin' }, desc: { en: 'Profit Margin tool', he: 'כלי Profit Margin' } },
-      { id: 'pv', icon: Calculator, label: { en: 'Pv', he: 'Pv' }, desc: { en: 'Pv tool', he: 'כלי Pv' } },
-      { id: 'quickRatio', icon: Calculator, label: { en: 'Quick Ratio', he: 'Quick Ratio' }, desc: { en: 'Quick Ratio tool', he: 'כלי Quick Ratio' } },
-      { id: 'realInterestRate', icon: Calculator, label: { en: 'Real Interest Rate', he: 'Real Interest Rate' }, desc: { en: 'Real Interest Rate tool', he: 'כלי Real Interest Rate' } },
-      { id: 'rentVsBuy', icon: Calculator, label: { en: 'Rent Vs Buy', he: 'Rent Vs Buy' }, desc: { en: 'Rent Vs Buy tool', he: 'כלי Rent Vs Buy' } },
-      { id: 'rentalYield', icon: Calculator, label: { en: 'Rental Yield', he: 'Rental Yield' }, desc: { en: 'Rental Yield tool', he: 'כלי Rental Yield' } },
-      { id: 'retentionRatio', icon: Calculator, label: { en: 'Retention Ratio', he: 'Retention Ratio' }, desc: { en: 'Retention Ratio tool', he: 'כלי Retention Ratio' } },
-      { id: 'retirement', icon: Calculator, label: { en: 'Retirement', he: 'Retirement' }, desc: { en: 'Retirement tool', he: 'כלי Retirement' } },
-      { id: 'rmd', icon: Calculator, label: { en: 'Rmd', he: 'Rmd' }, desc: { en: 'Rmd tool', he: 'כלי Rmd' } },
-      { id: 'roa', icon: Calculator, label: { en: 'Roa', he: 'Roa' }, desc: { en: 'Roa tool', he: 'כלי Roa' } },
-      { id: 'roe', icon: Calculator, label: { en: 'Roe', he: 'Roe' }, desc: { en: 'Roe tool', he: 'כלי Roe' } }
-    ]
-  },
-  {
-    group: { en: 'Additional Tools 6', he: 'כלים נוספים 6' },
-    items: [
-      { id: 'roic', icon: Calculator, label: { en: 'Roic', he: 'Roic' }, desc: { en: 'Roic tool', he: 'כלי Roic' } },
-      { id: 'rsi', icon: Calculator, label: { en: 'Rsi', he: 'Rsi' }, desc: { en: 'Rsi tool', he: 'כלי Rsi' } },
-      { id: 'ruleOf72', icon: Calculator, label: { en: 'Rule Of72', he: 'Rule Of72' }, desc: { en: 'Rule Of72 tool', he: 'כלי Rule Of72' } },
-      { id: 'ruleOf78', icon: Calculator, label: { en: 'Rule Of78', he: 'Rule Of78' }, desc: { en: 'Rule Of78 tool', he: 'כלי Rule Of78' } },
-      { id: 'salaryHourly', icon: Calculator, label: { en: 'Salary Hourly', he: 'Salary Hourly' }, desc: { en: 'Salary Hourly tool', he: 'כלי Salary Hourly' } },
-      { id: 'sharpeRatio', icon: Calculator, label: { en: 'Sharpe Ratio', he: 'Sharpe Ratio' }, desc: { en: 'Sharpe Ratio tool', he: 'כלי Sharpe Ratio' } },
-      { id: 'sinkingFund', icon: Calculator, label: { en: 'Sinking Fund', he: 'Sinking Fund' }, desc: { en: 'Sinking Fund tool', he: 'כלי Sinking Fund' } },
-      { id: 'sma', icon: Calculator, label: { en: 'Sma', he: 'Sma' }, desc: { en: 'Sma tool', he: 'כלי Sma' } },
-      { id: 'stockAverage', icon: Calculator, label: { en: 'Stock Average', he: 'Stock Average' }, desc: { en: 'Stock Average tool', he: 'כלי Stock Average' } },
-      { id: 'sustainableGrowth', icon: Calculator, label: { en: 'Sustainable Growth', he: 'Sustainable Growth' }, desc: { en: 'Sustainable Growth tool', he: 'כלי Sustainable Growth' } },
-      { id: 'taxEquivalentYield', icon: Calculator, label: { en: 'Tax Equivalent Yield', he: 'Tax Equivalent Yield' }, desc: { en: 'Tax Equivalent Yield tool', he: 'כלי Tax Equivalent Yield' } },
-      { id: 'tieRatio', icon: Calculator, label: { en: 'Tie Ratio', he: 'Tie Ratio' }, desc: { en: 'Tie Ratio tool', he: 'כלי Tie Ratio' } },
-      { id: 'timesInterestEarned', icon: Calculator, label: { en: 'Times Interest Earned', he: 'Times Interest Earned' }, desc: { en: 'Times Interest Earned tool', he: 'כלי Times Interest Earned' } },
-      { id: 'tip', icon: Calculator, label: { en: 'Tip', he: 'Tip' }, desc: { en: 'Tip tool', he: 'כלי Tip' } },
-      { id: 'vat', icon: Calculator, label: { en: 'Vat', he: 'Vat' }, desc: { en: 'Vat tool', he: 'כלי Vat' } },
-      { id: 'workingCapital', icon: Calculator, label: { en: 'Working Capital', he: 'Working Capital' }, desc: { en: 'Working Capital tool', he: 'כלי Working Capital' } },
-      { id: 'ytm', icon: Calculator, label: { en: 'Ytm', he: 'Ytm' }, desc: { en: 'Ytm tool', he: 'כלי Ytm' } }
-    ]
+    group: { en: 'Algorithmic Intelligence Tools', he: 'כלי בינה אלגוריתמיים' },
+    items: Object.entries(FINANCIAL_ALGORITHMS).map(([id, algo]) => ({
+      id,
+      icon: Zap,
+      label: { en: algo.name, he: algo.name },
+      desc: { en: algo.description, he: algo.description }
+    }))
   }
 ];
 
@@ -499,9 +352,9 @@ export default function AnalyticalCenter({
   const metrics = useAuditTelemetry(transactions, accounts, timeRange, (timeRange === 30) ? passedMetrics : undefined);
 
   // Active channel attributes lookup
-  const activeChannelDef = useMemo(() => {
+  const activeChannelDef: any = useMemo(() => {
     for (const group of CHANNELS) {
-      const match = group.items.find((item: any) => item.id === activeChannel);
+      const match = group.items.find((item: any) => item?.id === activeChannel);
       if (match) return match;
     }
     return CHANNELS[0].items[0];
@@ -533,17 +386,21 @@ export default function AnalyticalCenter({
     return CHANNELS.map(g => ({
       ...g,
       items: g.items.filter((i: any) => 
-        i.label.en.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        i.desc.en.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (i.label.he && i.label.he.includes(searchTerm))
+        i?.label?.en?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        i?.desc?.en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (i?.label?.he && i.label.he.includes(searchTerm))
       )
     })).filter(g => g.items.length > 0);
   }, [searchTerm]);
 
-  const activeChannelName = (activeChannelDef.label && (activeChannelDef.label[language] || activeChannelDef.label['en'])) || (activeChannelDef as any).name || activeChannelDef.id;
+  const activeChannelName = activeChannelDef ? ((activeChannelDef.label && (activeChannelDef.label[language] || activeChannelDef.label['en'])) || (activeChannelDef as any).name || activeChannelDef.id) : '';
+
+  if (!activeChannelDef) {
+    return null;
+  }
 
   return (
-    <div className="flex flex-col lg:flex-row h-full min-h-[660px] overflow-hidden bg-white border border-slate-200/80 rounded-[32px] shadow-sm relative text-slate-800 font-sans">
+    <div className="flex flex-col lg:flex-row h-full min-h-[660px] overflow-hidden bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-sm relative text-[var(--text)] font-sans">
       
       {/* -------------------------------------------------------------
           Smart localized CSS adjustment to style nested modules flawlessly
@@ -569,7 +426,7 @@ export default function AnalyticalCenter({
           1. Sidebar (Master Panel) - Pristine Layout
           ------------------------------------------------------------- */}
       {!isFocusMode && (
-        <aside className="lg:w-72 border-r border-slate-200/80 bg-slate-50/70 hidden lg:flex flex-col h-full overflow-hidden shrink-0">
+        <aside className="lg:w-72 border-r border-[var(--line)]/80 bg-[var(--ink)]/70 hidden lg:flex flex-col h-full overflow-hidden shrink-0">
           
           {/* Executive identity header */}
           <div className="p-5 border-b border-slate-250/50 bg-[#fafbfe]/80 shrink-0 space-y-3">
@@ -579,7 +436,7 @@ export default function AnalyticalCenter({
                   <Target size={14} className="stroke-[2.5px]" />
                 </div>
                 <div>
-                  <h2 className="text-xs font-bold text-slate-800 leading-snug">Advanced Overview</h2>
+                  <h2 className="text-xs font-bold text-[var(--text)] leading-snug">Advanced Overview</h2>
                   <p className="text-[9px] font-mono font-medium text-slate-400">Financial Metrics</p>
                 </div>
               </div>
@@ -601,7 +458,7 @@ export default function AnalyticalCenter({
                 placeholder="Search analytics & auditing..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full text-xs px-3 py-1.5 pl-8 bg-white border border-slate-200/85 hover:border-slate-300 focus:border-indigo-500 focus:outline-none rounded-lg transition-all focus:shadow-3xs text-slate-700"
+                className="w-full text-xs px-3 py-1.5 pl-8 bg-[var(--surface)] border border-[var(--line)]/85 hover:border-slate-300 focus:border-indigo-500 focus:outline-none rounded-lg transition-all focus:shadow-3xs text-slate-700"
               />
               <Search size={11} className="absolute left-2.5 top-2.5 text-slate-400" />
               {searchTerm && (
@@ -634,8 +491,8 @@ export default function AnalyticalCenter({
                         className={cn(
                           "w-full flex items-start gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150 border cursor-pointer group",
                           isActive
-                            ? "bg-white border-slate-200 text-slate-800 shadow-3xs"
-                            : "bg-transparent border-transparent text-slate-500 hover:bg-slate-200/35 hover:text-slate-800"
+                            ? "bg-[var(--surface)] border-[var(--line)] text-[var(--text)] shadow-3xs"
+                            : "bg-transparent border-transparent text-slate-500 hover:bg-slate-200/35 hover:text-[var(--text)]"
                         )}
                       >
                         <div className={cn(
@@ -645,7 +502,7 @@ export default function AnalyticalCenter({
                           <IconComponent size={12} className="stroke-[2.2px]" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className={cn("text-[11.5px] leading-none tracking-tight transition-colors", isActive ? "font-bold text-slate-800" : "font-medium text-slate-700")}>
+                          <p className={cn("text-[11.5px] leading-none tracking-tight transition-colors", isActive ? "font-bold text-[var(--text)]" : "font-medium text-slate-700")}>
                             {((item as any).label?.[language] || (item as any).label?.['en']) || (item as any).name || item.id}
                           </p>
                           <p className="text-[9px] text-slate-400 mt-1 leading-normal font-medium truncate group-hover:text-slate-500 transition-colors">
@@ -668,7 +525,7 @@ export default function AnalyticalCenter({
           </div>
           
           {/* Sidebar Footer with Workspace Stats summary info */}
-          <div className="p-4 border-t border-slate-200 bg-[#f8fafc] shrink-0 text-[10px] space-y-1 font-mono text-slate-400">
+          <div className="p-4 border-t border-[var(--line)] bg-[#f8fafc] shrink-0 text-[10px] space-y-1 font-mono text-slate-400">
              <div className="flex items-center justify-between">
                <span>Total Transactions</span>
                <span className="font-bold text-slate-700 tabular-nums">{transactions.length} items</span>
@@ -684,10 +541,10 @@ export default function AnalyticalCenter({
       {/* -------------------------------------------------------------
           2. Main Workspace Detail View (Pristine Canvas)
           ------------------------------------------------------------- */}
-      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-white">
+      <main className="flex-1 flex flex-col min-w-0 min-h-full bg-[var(--surface)]">
         
         {/* Dynamic header toolbar */}
-        <header className="px-5 py-3 border-b border-slate-200 flex items-center justify-between shrink-0 bg-slate-50/50">
+        <header className="px-5 py-3 border-b border-[var(--line)] flex items-center justify-between shrink-0 bg-[var(--ink)]/50">
           <div className="flex items-center gap-3">
             {/* Mobile menu trigger */}
             <button 
@@ -705,7 +562,7 @@ export default function AnalyticalCenter({
                 <ChevronRight size={10} className="text-slate-350" />
                 <span className="text-[9px] font-semibold text-slate-450 uppercase tracking-wider">{activeChannelDef.id} lens</span>
               </div>
-              <h1 className="text-sm font-bold tracking-tight text-slate-800 flex items-center gap-1.5 leading-none">
+              <h1 className="text-sm font-bold tracking-tight text-[var(--text)] flex items-center gap-1.5 leading-none">
                 <activeChannelDef.icon size={14} className="text-indigo-600 shrink-0" />
                 <span>{activeChannelName}</span>
               </h1>
@@ -714,14 +571,14 @@ export default function AnalyticalCenter({
 
           <div className="flex items-center gap-2">
             {/* Time interval selection pills */}
-            <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200/80 shrink-0">
+            <div className="flex bg-slate-100 p-0.5 rounded-lg border border-[var(--line)]/80 shrink-0">
               {[30, 90, 365].map(days => (
                 <button
                   key={days}
                   onClick={() => setTimeRange(days)}
                   className={cn(
                     "px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap",
-                    timeRange === days ? "bg-white text-slate-800 border border-slate-100 shadow-3xs" : "text-slate-500 hover:text-slate-800"
+                    timeRange === days ? "bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] shadow-3xs" : "text-slate-500 hover:text-[var(--text)]"
                   )}
                 >
                   {days}D
@@ -733,7 +590,7 @@ export default function AnalyticalCenter({
             <button
               onClick={() => onAction?.('toggle-focus-mode')}
               title={isFocusMode ? "Standard Workspace View" : "Maximize Intelligence Lens"}
-              className="p-1.5 border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-500 hover:text-slate-800 shadow-3xs cursor-pointer transition-all shrink-0"
+              className="p-1.5 border border-[var(--line)] hover:bg-[var(--ink)] rounded-lg text-slate-500 hover:text-[var(--text)] shadow-3xs cursor-pointer transition-all shrink-0"
             >
               {isFocusMode ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
             </button>
@@ -752,7 +609,7 @@ export default function AnalyticalCenter({
         {/* -------------------------------------------------------------
             3. Workspace Canvas View: Unified, single scrolling layer
             ------------------------------------------------------------- */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 custom-scrollbar bg-slate-50/30 lens-canvas-wrapper">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 custom-scrollbar bg-[var(--ink)]/30 lens-canvas-wrapper">
           
           {isFocusMode && (
             <div className="mb-4 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-between gap-3 text-[10.5px] animate-in slide-in-from-top-1 shadow-3xs">
@@ -787,13 +644,13 @@ export default function AnalyticalCenter({
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   
                   {/* Card 1: Integrity */}
-                  <div className="p-4 bg-white border border-slate-200/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
+                  <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
                     <div className="flex items-center justify-between text-slate-400 mb-2">
                       <span className="text-[8.5px] font-bold uppercase tracking-wider text-slate-400">Data Integrity</span>
                       <ShieldCheck size={14} className="text-emerald-500" />
                     </div>
                     <div className="space-y-0.5">
-                      <p className="text-lg font-black text-slate-800 leading-none">
+                      <p className="text-lg font-black text-[var(--text)] leading-none">
                         {integrityStatus.isConsistent ? 'VERIFIED' : 'VARIANCE'}
                       </p>
                       <p className="text-[9px] text-slate-500 font-mono tracking-tight leading-normal">
@@ -803,13 +660,13 @@ export default function AnalyticalCenter({
                   </div>
 
                   {/* Card 2: Enterprise Viability Score */}
-                  <div className="p-4 bg-white border border-slate-200/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
+                  <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
                     <div className="flex items-center justify-between text-slate-400 mb-2">
                       <span className="text-[8.5px] font-bold uppercase tracking-wider">Health Score</span>
                       <Sparkles size={14} className="text-indigo-500" />
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-lg font-black text-slate-800 leading-none">
+                      <p className="text-lg font-black text-[var(--text)] leading-none">
                         {metrics?.kpis?.healthScore || 0}%
                       </p>
                       {/* Metric visual micro-progress bar */}
@@ -823,29 +680,29 @@ export default function AnalyticalCenter({
                   </div>
 
                   {/* Card 3: Cash Solvent Runway */}
-                  <div className="p-4 bg-white border border-slate-200/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
+                  <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
                     <div className="flex items-center justify-between text-slate-400 mb-2">
                       <span className="text-[8.5px] font-bold uppercase tracking-wider">Estimated Runway</span>
                       <Calendar size={14} className="text-amber-500" />
                     </div>
                     <div className="space-y-0.5">
-                      <p className="text-lg font-black text-slate-800 leading-none">
+                      <p className="text-lg font-black text-[var(--text)] leading-none whitespace-nowrap">
                         {metrics.kpis.runwayMonths.toFixed(1)} Months
                       </p>
-                      <p className="text-[9px] text-slate-500 font-mono tracking-tight leading-normal">
+                      <p className="text-[9px] text-slate-500 font-mono tracking-tight leading-normal whitespace-nowrap truncate">
                         At ${Math.round((metrics.kpis.burnRate * 30) / 100).toLocaleString()}/Mo burn
                       </p>
                     </div>
                   </div>
 
                   {/* Card 4: Index Volatility */}
-                  <div className="p-4 bg-white border border-slate-200/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
+                  <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
                     <div className="flex items-center justify-between text-slate-400 mb-2">
                       <span className="text-[8.5px] font-bold uppercase tracking-wider">Trend Volatility</span>
                       <Flame size={14} className="text-rose-500" />
                     </div>
                     <div className="space-y-0.5">
-                      <p className="text-lg font-black text-slate-800 leading-none">
+                      <p className="text-lg font-black text-[var(--text)] leading-none">
                         {metrics.kpis.volatility.toFixed(1)}%
                       </p>
                       <p className="text-[9px] text-slate-500 font-mono tracking-tight leading-normal">
@@ -860,10 +717,10 @@ export default function AnalyticalCenter({
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
                   
                   {/* Radar Performance Web Grid */}
-                  <div className="xl:col-span-7 bg-white border border-slate-200/80 rounded-[32px] p-5 flex flex-col justify-between shadow-3xs min-h-[420px]">
-                     <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
+                  <div className="xl:col-span-7 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] p-5 flex flex-col justify-between shadow-3xs min-h-[420px]">
+                     <div className="pb-3 border-b border-[var(--line)] flex items-center justify-between">
                         <div>
-                           <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Metric Distribution Web</h3>
+                           <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Metric Distribution Web</h3>
                            <p className="text-[9px] text-slate-400">Comparative metrics across baseline dimensions</p>
                         </div>
                      </div>
@@ -884,7 +741,7 @@ export default function AnalyticalCenter({
                         </ResponsiveContainer>
                      </div>
 
-                     <div className="pt-3 border-t border-slate-100 grid grid-cols-3 gap-2 text-center bg-slate-50/50 -mx-5 -mb-5 rounded-b-2xl p-3">
+                     <div className="pt-3 border-t border-[var(--line)] grid grid-cols-3 gap-2 text-center bg-[var(--ink)]/50 -mx-5 -mb-5 rounded-b-2xl p-3">
                         <div>
                            <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Quick Liquidity</p>
                            <p className="text-xs font-bold text-indigo-600 mt-0.5">{(metrics?.kpis?.currentRatio || 0).toFixed(2)}x</p>
@@ -895,24 +752,24 @@ export default function AnalyticalCenter({
                         </div>
                         <div>
                            <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Yield Factor</p>
-                           <p className="text-xs font-bold text-slate-800 mt-0.5">{metrics?.kpis?.yieldEfficiency || 0}%</p>
+                           <p className="text-xs font-bold text-[var(--text)] mt-0.5">{metrics?.kpis?.yieldEfficiency || 0}%</p>
                         </div>
                      </div>
                   </div>
 
                   {/* Refined clean actionable summary list (Clean typography) */}
-                  <div className="xl:col-span-5 bg-white border border-slate-200/80 rounded-[32px] p-5 shadow-3xs h-[420px] flex flex-col justify-between">
+                  <div className="xl:col-span-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] p-5 shadow-3xs h-[420px] flex flex-col justify-between">
                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 pb-2.5 border-b border-slate-100">
+                        <div className="flex items-center gap-2 pb-2.5 border-b border-[var(--line)]">
                           <BrainCircuit size={15} className="text-indigo-600 shrink-0" />
-                          <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Key Metrics Summary</h3>
+                          <h3 className="text-xs font-extrabold text-[var(--text)] uppercase tracking-wider">Key Metrics Summary</h3>
                         </div>
                         
                         <div className="space-y-3.5">
                            {[
                              { 
                                title: 'Runway Estimate', 
-                               text: `Healthy reserves to support ${metrics.kpis.runwayMonths.toFixed(1)} months of activity without adjustments.`, 
+                               text: `Estimated reserves to support ${metrics.kpis.runwayMonths.toFixed(1)} months of activity without adjustments.`, 
                                status: metrics.kpis.runwayMonths < 6 ? 'WARNING' : 'STABLE',
                                color: metrics.kpis.runwayMonths < 6 ? 'border-amber-500' : 'border-emerald-500'
                              },
@@ -931,10 +788,10 @@ export default function AnalyticalCenter({
                                color: metrics.anomalies.length > 0 ? 'border-rose-500' : 'border-emerald-500'
                              }
                            ].map((item: any, i: number) => (
-                             <div key={i} className={cn("p-2.5 border-l-2 bg-slate-50/50 rounded-r-lg space-y-1.5 transition-all hover:bg-slate-50", item.color)}>
+                             <div key={i} className={cn("p-2.5 border-l-2 bg-[var(--ink)]/50 rounded-r-lg space-y-1.5 transition-all hover:bg-[var(--ink)]", item.color)}>
                                <div className="flex items-center justify-between">
                                  <span className="text-[10px] font-bold text-slate-850">{item.title}</span>
-                                 <span className="text-[8px] font-mono font-black tracking-wider uppercase bg-white border px-1.5 py-0.5 rounded-sm text-slate-500">
+                                 <span className="text-[8px] font-mono font-black tracking-wider uppercase bg-[var(--surface)] border px-1.5 py-0.5 rounded-sm text-slate-500">
                                    {item.status}
                                  </span>
                                </div>
@@ -972,8 +829,8 @@ export default function AnalyticalCenter({
                 className="space-y-5"
               >
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                   <div className="p-5 bg-white border border-slate-200/80 rounded-[32px] shadow-3xs flex flex-col h-[320px]">
-                      <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">Project Raw Revenue & Profit Matrix</h4>
+                   <div className="p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-3xs flex flex-col h-[320px]">
+                      <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3 pb-2 border-b border-[var(--line)]">Project Raw Revenue & Profit Matrix</h4>
                       <div className="flex-1 min-h-[180px]">
                          <ResponsiveContainer width="100%" height="100%">
                             <BarChart 
@@ -999,8 +856,8 @@ export default function AnalyticalCenter({
                       <p className="text-[8px] font-mono text-slate-400 uppercase text-center mt-3 tracking-wider">Click columns to filter transaction explorer down to project bounds</p>
                    </div>
 
-                   <div className="p-5 bg-white border border-slate-200/80 rounded-[32px] shadow-3xs flex flex-col h-[320px]">
-                      <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">Relative Profit Margins</h4>
+                   <div className="p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-3xs flex flex-col h-[320px]">
+                      <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3 pb-2 border-b border-[var(--line)]">Relative Profit Margins</h4>
                       <div className="flex-1 min-h-[180px]">
                          <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={projectStats}>
@@ -1026,11 +883,11 @@ export default function AnalyticalCenter({
                 </div>
 
                 {/* Strategic Profitability List */}
-                <div className="p-5 bg-white border border-slate-200/80 rounded-[32px] shadow-3xs">
-                   <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Enterprise Segment Allocations Performance</h4>
+                <div className="p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-3xs">
+                   <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3">Enterprise Segment Allocations Performance</h4>
                    <div className="space-y-2">
                       {projectStats.map((p, i) => (
-                         <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl hover:bg-slate-100/40 transition-colors gap-3">
+                         <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-[var(--ink)]/50 border border-[var(--line)]/60 rounded-xl hover:bg-slate-100/40 transition-colors gap-3">
                             <div className="flex items-center gap-3">
                                <div className="w-6 h-6 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center shrink-0">
                                   <TrendingUp size={11} className="stroke-[2.5px]" />
@@ -1038,7 +895,7 @@ export default function AnalyticalCenter({
                                <div>
                                   <p className="text-xs font-bold text-slate-850">{p.name}</p>
                                   <p className="text-[9.5px] text-slate-500 mt-0.5 leading-none">
-                                     Operating profit bounds: <span className="font-semibold text-slate-700">${p.profit.toLocaleString()}</span>
+                                     Operating profit bounds: <span className="font-semibold text-slate-700 whitespace-nowrap">${p.profit.toLocaleString()}</span>
                                   </p>
                                </div>
                             </div>
@@ -1046,7 +903,7 @@ export default function AnalyticalCenter({
                             {/* Project profitability indicators */}
                             <div className="flex items-center gap-4">
                                <div className="flex flex-col items-end text-right">
-                                  <span className="text-[10px] font-extrabold text-slate-800">{p.margin.toFixed(1)}% Margin</span>
+                                  <span className="text-[10px] font-extrabold text-[var(--text)]">{p.margin.toFixed(1)}% Margin</span>
                                   <span className="text-[8px] text-slate-400 uppercase tracking-wider">Ratio yield</span>
                                </div>
                                <span className={cn(
@@ -1086,12 +943,69 @@ export default function AnalyticalCenter({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
               >
-                <EntityConsolidation />
+                <Consolidation />
               </motion.div>
             )}
 
+            {/* ----------------- PIVOT SHEET ----------------- */}
+            {activeChannel === 'pivot' && (
+              <motion.div
+                key="pivot"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+              >
+                <PivotSheet transactions={transactions} isEmbedded={true} />
+              </motion.div>
+            )}
+
+            {/* ----------------- BUDGET ANALYSIS ----------------- */}
+            {activeChannel === 'budgets' && (
+              <motion.div
+                key="budgets"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+              >
+                <BudgetManager />
+              </motion.div>
+            )}
+
+            {/* ----------------- TAX NEXUS & MANAGEMENT ----------------- */}
+            {activeChannel === 'nexus' && (
+              <motion.div
+                key="nexus"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+              >
+                <TaxManager />
+              </motion.div>
+            )}
+
+            {/* ----------------- FINANCIAL CALCULATORS & LENSES ----------------- */}
+            {['breakeven', 'compound', 'rule72', 'ltv', 'npv', 'cac', 'wacc', 'roas', 'caprate', 'ratios', 'ebitda'].includes(activeChannel) && (
+              <motion.div
+                key={activeChannel}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+              >
+                <FinancialCalculatorView type={activeChannel as any} />
+              </motion.div>
+            )}
+
+            {/* ----------------- ALGORITHM TOOL SANDBOX ----------------- */}
+            {FINANCIAL_ALGORITHMS[activeChannel] && (
+              <ToolSandbox 
+                toolId={activeChannel} 
+                toolName={FINANCIAL_ALGORITHMS[activeChannel]?.name || 'Algorithm Sandbox'} 
+                onClose={() => setActiveChannel('radar')} 
+              />
+            )}
+
             {/* ----------------- DYNAMIC REGISTRY REFERRED LENSES ----------------- */}
-            {activeChannel !== 'radar' && activeChannel !== 'roi' && activeChannel !== 'forensics' && activeChannel !== 'entities' && (() => {
+            {activeChannel !== 'radar' && activeChannel !== 'roi' && activeChannel !== 'forensics' && activeChannel !== 'entities' && activeChannel !== 'pivot' && activeChannel !== 'budgets' && activeChannel !== 'nexus' && !['breakeven', 'compound', 'rule72', 'ltv', 'npv', 'cac', 'wacc', 'roas', 'caprate', 'ratios', 'ebitda'].includes(activeChannel) && !FINANCIAL_ALGORITHMS[activeChannel] && (() => {
               const lensDef = ANALYTICAL_LENSES_REGISTRY.find(l => l.id === activeChannel);
               if (lensDef && lensDef.componentName) {
                 const Component = LENS_COMPONENTS[lensDef.componentName];
@@ -1105,13 +1019,12 @@ export default function AnalyticalCenter({
                       className="h-full"
                     >
                       <React.Suspense fallback={
-                        <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-white border border-slate-200 rounded-[32px] min-h-[380px] text-center">
+                        <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] min-h-[380px] text-center">
                           <Loader2 className="w-7 h-7 text-indigo-650 animate-spin shrink-0" />
                           <p className="text-[10px] uppercase font-mono font-bold tracking-widest text-slate-400">Restructuring Lens Component...</p>
                         </div>
                       }>
                         <Component 
-                          
                           accounts={accounts} 
                           computedAccounts={accounts} 
                           budgets={budgets} 
@@ -1124,7 +1037,7 @@ export default function AnalyticalCenter({
                 }
               }
               return (
-                <div className="p-4 md:p-8 text-center bg-white border border-slate-200 rounded-[32px]">
+                <div className="p-4 md:p-8 text-center bg-[var(--surface)] border border-[var(--line)] rounded-[32px]">
                   <p className="text-slate-400 text-xs font-mono">Select a channel lens to align telemetry parameters.</p>
                 </div>
               );
@@ -1155,16 +1068,16 @@ export default function AnalyticalCenter({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="lg:hidden absolute top-0 bottom-0 left-0 w-72 bg-white z-50 shadow-xl border-r border-slate-250 flex flex-col h-full"
+              className="lg:hidden absolute top-0 bottom-0 left-0 w-72 bg-[var(--surface)] z-50 shadow-xl border-r border-slate-250 flex flex-col h-full"
             >
-              <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+              <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)] flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-1.5">
                   <Target size={14} className="text-indigo-650 stroke-[2.5px]" />
-                  <span className="text-xs font-bold text-slate-800 tracking-tight">Advanced Overview</span>
+                  <span className="text-xs font-bold text-[var(--text)] tracking-tight">Advanced Overview</span>
                 </div>
                 <button 
                   onClick={() => setMobileMenuOpen(false)} 
-                  className="p-1 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-500 cursor-pointer"
+                  className="p-1 border border-[var(--line)] hover:bg-slate-100 rounded-lg text-slate-500 cursor-pointer"
                 >
                   <X size={13} />
                 </button>
@@ -1191,8 +1104,8 @@ export default function AnalyticalCenter({
                             className={cn(
                               "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left border cursor-pointer text-[11.5px]",
                               isActive
-                                ? "bg-slate-100/70 border-slate-200 text-slate-950 font-bold"
-                                : "bg-transparent border-transparent text-slate-500 hover:bg-slate-50"
+                                ? "bg-slate-100/70 border-[var(--line)] text-slate-950 font-bold"
+                                : "bg-transparent border-transparent text-slate-500 hover:bg-[var(--ink)]"
                             )}
                           >
                             <IconComponent size={13} className={cn(isActive ? "text-indigo-600" : "text-slate-400")} />

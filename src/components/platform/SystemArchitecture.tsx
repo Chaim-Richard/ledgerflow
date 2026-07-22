@@ -28,7 +28,7 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-2xl bg-slate-50 rounded-[32px] border border-slate-200 shadow-2xl overflow-y-auto custom-scrollbar p-12"
+            className="relative w-full max-w-2xl bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-2xl overflow-y-auto custom-scrollbar p-12"
           >
             <div className="flex items-center justify-between mb-12">
                <div className="flex items-center gap-4">
@@ -36,7 +36,7 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
                     <Layers size={24} />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900 tracking-tight">System Architecture</h3>
+                    <h3 className="text-2xl font-bold text-[var(--text)] tracking-tight">System Architecture</h3>
                     <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">High-Level Deterministic Data Flow</p>
                   </div>
                </div>

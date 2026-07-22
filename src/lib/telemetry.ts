@@ -1,10 +1,10 @@
 
 /**
- * Zenith High-Precision Telemetry System
+ * Clearbook High-Precision Telemetry System
  * Tracks micro-timing for component 'opens', module imports, and mathematical execution.
  */
 
-export class ZenithTelemetry {
+export class PerformanceTelemetry {
   private static markers: Map<string, number> = new Map();
 
   static start(label: string) {

@@ -8,8 +8,10 @@ import { toast } from 'sonner';
 import { reportError, OperationType } from '../lib/utils';
 
 export function useAIActions() {
-  const { currentWorkspaceId, workspaces, userProfile } = useAuthStore();
-  const { transactions } = useLedgerStore();
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const workspaces = useAuthStore(s => s.workspaces);
+  const userProfile = useAuthStore(s => s.userProfile);
+  const transactions = useLedgerStore(s => s.transactions);
   const uiStore = useUIStore();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [strategicInsights, setStrategicInsights] = useState<any>(null);
@@ -95,7 +97,7 @@ export function useAIActions() {
       if (result?.category) filter.category = result.category;
       if (result?.project) filter.project = result.project;
       
-      // Handle Amount (Algorithmic or Neural)
+      // Handle Amount (Algorithmic or Rule)
       if (result?.minAmountCents !== undefined) filter.minAmount = result.minAmountCents / 100;
       if (result?.maxAmountCents !== undefined) filter.maxAmount = result.maxAmountCents / 100;
       
@@ -110,7 +112,7 @@ export function useAIActions() {
       
       uiStore.setFilterCriteria(filter);
       uiStore.setActiveTab('transactions');
-      toast.success(`Neural resolution complete: "${query}"`, { id: loader });
+      toast.success(`Rule resolution complete: "${query}"`, { id: loader });
       
       return result;
     } catch (error) {

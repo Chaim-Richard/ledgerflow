@@ -62,7 +62,7 @@ export default function PlaidConnectButton({ onSuccessSync }: { onSuccessSync?: 
     <button 
       onClick={() => open()}
       disabled={!ready}
-      className="h-12 px-6 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center gap-2 active:scale-95 disabled:opacity-50"
+      className="h-12 px-6 bg-slate-100 hover:bg-slate-200 border border-[var(--line)] text-[var(--text)] font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center gap-2 active:scale-95 disabled:opacity-50"
     >
       <Link2 size={14} />
       <span>Connect Bank</span>

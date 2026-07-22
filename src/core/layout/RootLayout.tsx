@@ -8,17 +8,16 @@ import Header from '../../components/layout/Header';
 import ModuleSubNav from '../../components/layout/ModuleSubNav';
 import BottomNav from '../../components/layout/BottomNav';
 import MainViewSwitcher from '../../components/layout/MainViewSwitcher';
-import CommandPalette from '../../components/layout/CommandPalette';
-import CommandPortal from '../../components/layout/CommandPortal';
+const CommandPalette = React.lazy(() => import('../../components/layout/CommandPalette'));
+const CommandPortal = React.lazy(() => import('../../components/layout/CommandPortal'));
 import StatusBar from '../../components/layout/StatusBar';
-import LedgerInterruptOverlay from '../../components/forensics/LedgerInterruptOverlay';
+const LedgerInterruptOverlay = React.lazy(() => import('../../components/forensics/LedgerInterruptOverlay'));
 
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 
 const ShortcutOverlay = React.lazy(() => import('../../components/layout/ShortcutOverlay'));
-const InstructionGuide = React.lazy(() => import('../../components/layout/InstructionGuide'));
 const DiagnosticConsole = React.lazy(() => import('../../components/intelligence/DiagnosticConsole'));
 
 export function RootLayout({ 
@@ -115,7 +114,7 @@ export function RootLayout({
       />
 
       <main className={cn(
-        "flex-1 flex flex-col overflow-hidden relative transition-all duration-300 bg-[#fafafa] pb-[env(safe-area-inset-bottom)] lg:pb-0",
+        "flex-1 flex flex-col overflow-hidden relative transition-all duration-300 bg-[var(--ink)] text-[var(--text)] pb-[env(safe-area-inset-bottom)] lg:pb-0",
         "pb-[64px] lg:pb-0" // Add 64px padding on mobile specifically for the BottomNav
       )}>
         {!isFocusMode && <Header />}
@@ -131,16 +130,14 @@ export function RootLayout({
       </div>
       
       {/* Overlays & Global Components */}
-      <Suspense fallback={null}>
-         <BottomNav activeTab={activeTab as any} onTabChange={setActiveTab as any} />
-         <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} onAction={handleAction} />
-         <CommandPortal modals={modals} handlers={handlers as any} />
-         <ShortcutOverlay isOpen={isShortcutOverlayOpen} onClose={() => setShortcutOverlayOpen(false)} />
-         <InstructionGuide isOpen={isGuideOpen} onClose={() => setGuideOpen(false)} />
-         <DiagnosticConsole isOpen={isDiagnosticConsoleOpen} onClose={() => setDiagnosticConsoleOpen(false)} />
-      </Suspense>
+      <BottomNav activeTab={activeTab as any} onTabChange={setActiveTab as any} />
+         <Suspense fallback={null}><CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} onAction={handleAction} /></Suspense>
+         <Suspense fallback={null}><CommandPortal modals={modals} handlers={handlers as any} /></Suspense>
+         <Suspense fallback={null}><ShortcutOverlay isOpen={isShortcutOverlayOpen} onClose={() => setShortcutOverlayOpen(false)} /></Suspense>
+         
+         <Suspense fallback={null}><DiagnosticConsole isOpen={isDiagnosticConsoleOpen} onClose={() => setDiagnosticConsoleOpen(false)} /></Suspense>
 
-      <LedgerInterruptOverlay />
+      <Suspense fallback={null}><LedgerInterruptOverlay /></Suspense>
       <StatusBar />
     </div>
   );

@@ -1,4 +1,4 @@
-import { TruthEngine } from '../../modules/truth/TruthEngine';
+import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState } from 'react';
 import { Transaction, TransactionLine, ChartAccount, Project } from '../../types';
 import { Plus, Trash2, Save, X, AlertCircle, Layers } from 'lucide-react';
@@ -61,22 +61,22 @@ export default function SplitEditor({
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-5xl bg-slate-50 rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] border border-[#333537]"
+        className="w-full max-w-5xl bg-[var(--ink)] rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] border border-[#333537]"
       >
-        <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white/50">
+        <div className="p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--surface)]/50">
           <div>
-            <h3 className="text-xl font-medium text-slate-900 tracking-tight flex items-center gap-2">
+            <h3 className="text-xl font-medium text-[var(--text)] tracking-tight flex items-center gap-2">
                <Layers className="text-indigo-600" size={20} />
                Split Transaction Lines
             </h3>
             <p className="text-[10px] text-slate-500 mt-1 font-black uppercase tracking-[0.2em]">{transaction.description} • {new Intl.NumberFormat('en-US', { style: 'currency', currency: transaction.currency }).format(transaction.totalAmountCents / 100)}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-500 hover:text-white">
+          <button onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors text-slate-500 hover:text-white">
             <X size={20} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 custom-scrollbar bg-slate-50">
+        <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 custom-scrollbar bg-[var(--ink)]">
           <div className="min-w-[700px]">
             <div className="grid grid-cols-[1fr_150px_150px_100px_40px] gap-4 px-2 mb-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">
               <div>Account / Item Description</div>
@@ -90,23 +90,27 @@ export default function SplitEditor({
               {lines.map((line, idx) => (
                 <div key={idx} className="space-y-2">
                 <div className={cn(
-                  "grid grid-cols-[1fr_150px_150px_100px_40px] gap-4 items-center p-3 rounded-[32px] border border-slate-200 transition-all group",
-                  expandedIndex === idx ? "bg-slate-50/40 border-indigo-600" : "bg-white/30 hover:bg-slate-50/20"
+                  "grid grid-cols-[1fr_150px_150px_100px_40px] gap-4 items-center p-3 rounded-[32px] border border-[var(--line)] transition-all group",
+                  expandedIndex === idx ? "bg-[var(--ink)]/40 border-indigo-600" : "bg-[var(--surface)]/30 hover:bg-[var(--ink)]/20"
                 )}>
                   <div className="flex flex-col gap-1">
-                    <select 
-                      value={line.accountId}
-                      onChange={(e) => {
-                        const acc = accounts.find(a => a.id === e.target.value);
-                        updateLine(idx, { accountId: e.target.value, accountName: acc?.name || '' });
-                      }}
-                      className="bg-transparent border-none outline-none font-bold text-sm text-slate-900 focus:text-indigo-600 transition-colors appearance-none cursor-pointer"
-                    >
-                      <option value="" className="bg-slate-50">Select Account</option>
-                      {accounts.map(acc => (
-                        <option key={acc.id} value={acc.id} className="bg-slate-50">{acc.name} [{acc.code}]</option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <input 
+                        list={`split-account-${idx}`}
+                        value={line.accountName || line.accountId}
+                        onChange={(e) => {
+                          const acc = accounts.find(a => a.name === e.target.value || a.id === e.target.value);
+                          updateLine(idx, { accountId: acc ? acc.id : 'unassigned', accountName: acc ? acc.name : e.target.value });
+                        }}
+                        placeholder="Type or select account"
+                        className="bg-transparent border-none outline-none font-bold text-sm text-[var(--text)] focus:text-indigo-600 transition-colors"
+                      />
+                      <datalist id={`split-account-${idx}`}>
+                        {accounts.map(acc => (
+                          <option key={acc.id} value={acc.name}>{acc.code}</option>
+                        ))}
+                      </datalist>
+                    </div>
                     <input 
                       type="text"
                       placeholder="Line item description (e.g. Milk 2%)"
@@ -122,7 +126,7 @@ export default function SplitEditor({
                       placeholder="Qty"
                       value={line.quantity || ''}
                       onChange={(e) => updateLine(idx, { quantity: parseFloat(e.target.value) || 1 })}
-                      className="w-16 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-center text-slate-500 focus:border-indigo-600 outline-none"
+                      className="w-16 px-2 py-1.5 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs font-mono text-center text-slate-500 focus:border-indigo-600 outline-none"
                     />
                     <span className="text-slate-500 text-[10px] font-black uppercase">×</span>
                     <input 
@@ -130,7 +134,7 @@ export default function SplitEditor({
                       placeholder="Price"
                       value={line.unitPriceCents ? line.unitPriceCents / 100 : ''}
                       onChange={(e) => updateLine(idx, { unitPriceCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
-                      className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-right text-slate-500 focus:border-indigo-600 outline-none"
+                      className="w-20 px-2 py-1.5 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs font-mono text-right text-slate-500 focus:border-indigo-600 outline-none"
                     />
                   </div>
 
@@ -144,7 +148,7 @@ export default function SplitEditor({
                         const val = parseFloat(e.target.value || '0');
                         updateLine(idx, { amountCents: Math.round(val * 100) });
                       }}
-                      className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-right text-slate-900 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none transition-all"
+                      className="w-full pl-6 pr-3 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-sm font-mono text-right text-[var(--text)] focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none transition-all"
                     />
                   </div>
 
@@ -157,7 +161,7 @@ export default function SplitEditor({
                       onClick={() => setExpandedIndex(expandedIndex === idx ? null : idx)}
                       className={cn(
                         "p-2 rounded-lg transition-all",
-                        expandedIndex === idx ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-slate-50"
+                        expandedIndex === idx ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Layers size={14} />
@@ -175,43 +179,53 @@ export default function SplitEditor({
                   <motion.div 
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
-                    className="overflow-hidden border-x border-b border-slate-200 rounded-b-2xl mx-2 p-4 bg-slate-50/10 flex flex-col gap-4"
+                    className="overflow-hidden border-x border-b border-[var(--line)] rounded-b-2xl mx-2 p-4 bg-[var(--ink)]/10 flex flex-col gap-4"
                   >
                     <div className="flex flex-wrap gap-4">
                       <div className="flex-1 space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dimension Attribution</label>
-                        <select 
-                          value={line.project || ''}
-                          onChange={(e) => updateLine(idx, { project: e.target.value })}
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-black uppercase tracking-wider text-slate-500 focus:text-indigo-600 outline-none cursor-pointer"
-                        >
-                          <option value="" className="bg-slate-50">No Project</option>
-                          {projects.map(p => (
-                            <option key={p.id} value={p.name} className="bg-slate-50">{p.name}</option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <input 
+                            list={`split-project-${idx}`}
+                            value={line.project || ''}
+                            onChange={(e) => updateLine(idx, { project: e.target.value })}
+                            placeholder="Type or select project"
+                            className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[11px] font-black uppercase tracking-wider text-slate-500 focus:text-indigo-600 outline-none"
+                          />
+                          <datalist id={`split-project-${idx}`}>
+                            {projects.map(p => <option key={p.id} value={p.name} />)}
+                          </datalist>
+                        </div>
                       </div>
                       <div className="flex-[0.5] space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Class</label>
-                        <select 
-                          value={line.class || ''}
-                          onChange={(e) => updateLine(idx, { class: e.target.value })}
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-black uppercase tracking-wider text-slate-500 focus:text-indigo-600 outline-none cursor-pointer"
-                        >
-                          <option value="" className="bg-slate-50">No Class</option>
-                          {useLedgerStore.getState().classes?.map(c => <option key={c} value={c} className="bg-slate-50">{c}</option>)}
-                        </select>
+                        <div className="relative">
+                          <input 
+                            list={`split-class-${idx}`}
+                            value={line.class || ''}
+                            onChange={(e) => updateLine(idx, { class: e.target.value })}
+                            placeholder="Type or select class"
+                            className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[11px] font-black uppercase tracking-wider text-slate-500 focus:text-indigo-600 outline-none"
+                          />
+                          <datalist id={`split-class-${idx}`}>
+                            {useLedgerStore.getState().classes?.map(c => <option key={c} value={c} />)}
+                          </datalist>
+                        </div>
                       </div>
                       <div className="flex-[0.5] space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Location</label>
-                        <select 
-                          value={line.location || ''}
-                          onChange={(e) => updateLine(idx, { location: e.target.value })}
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-black uppercase tracking-wider text-slate-500 focus:text-indigo-600 outline-none cursor-pointer"
-                        >
-                          <option value="" className="bg-slate-50">No Location</option>
-                          {useLedgerStore.getState().locations?.map(l => <option key={l} value={l} className="bg-slate-50">{l}</option>)}
-                        </select>
+                        <div className="relative">
+                          <input 
+                            list={`split-location-${idx}`}
+                            value={line.location || ''}
+                            onChange={(e) => updateLine(idx, { location: e.target.value })}
+                            placeholder="Type or select location"
+                            className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[11px] font-black uppercase tracking-wider text-slate-500 focus:text-indigo-600 outline-none"
+                          />
+                          <datalist id={`split-location-${idx}`}>
+                            {useLedgerStore.getState().locations?.map(l => <option key={l} value={l} />)}
+                          </datalist>
+                        </div>
                       </div>
                       <div className="flex-[2] space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
@@ -223,7 +237,7 @@ export default function SplitEditor({
                           placeholder="e.g. Organic, Office Supplies, High Priority"
                           value={line.tags?.join(', ') || ''}
                           onChange={(e) => updateLine(idx, { tags: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:border-indigo-600 outline-none"
+                          className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-medium text-[var(--text)] focus:border-indigo-600 outline-none"
                         />
                       </div>
                     </div>
@@ -235,7 +249,7 @@ export default function SplitEditor({
 
           <button 
             onClick={addLine}
-            className="flex items-center gap-3 px-6 py-4 bg-white/50 hover:bg-slate-50/50 text-indigo-600 rounded-[32px] text-[10px] font-black uppercase tracking-[0.2em] transition-all mt-6 w-full justify-center border border-dashed border-slate-200 group"
+            className="flex items-center gap-3 px-6 py-4 bg-[var(--surface)]/50 hover:bg-[var(--ink)]/50 text-indigo-600 rounded-[32px] text-[10px] font-black uppercase tracking-[0.2em] transition-all mt-6 w-full justify-center border border-dashed border-[var(--line)] group"
           >
             <Plus size={16} className="group-hover:scale-125 transition-transform" />
             Append Split Line
@@ -243,7 +257,7 @@ export default function SplitEditor({
           </div>
         </div>
 
-        <div className="p-4 md:p-6 border-t border-slate-200 bg-white flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="p-4 md:p-6 border-t border-[var(--line)] bg-[var(--surface)] flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className={cn(
               "flex items-center gap-3 px-5 py-2.5 rounded-[32px] text-[10px] font-medium uppercase tracking-wider",
@@ -266,7 +280,7 @@ export default function SplitEditor({
           <div className="flex items-center gap-4">
             <button 
               onClick={onClose} 
-              className="px-6 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-slate-900 transition-all"
+              className="px-6 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-[var(--text)] transition-all"
             >
               Cancel
             </button>

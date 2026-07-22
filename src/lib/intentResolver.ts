@@ -1,5 +1,5 @@
 import { format, startOfMonth, endOfMonth, startOfYear, subMonths, subDays } from 'date-fns';
-import { TruthEngine } from '../modules/truth/TruthEngine';
+import { TruthEngine } from '../modules/integrity/TruthEngine';
 
 export const PATTERNS = {
   OP: /([><=])\s*([\d,]+(\.\d+)?)/,
@@ -138,7 +138,7 @@ export class IntentResolver {
     return result;
   }
 
-  static resolveEntry(input: string, options?: { rules?: any[], accounts?: any[], neuralCache?: Record<string, any> }): any[] | null {
+  static resolveEntry(input: string, options?: { rules?: any[], accounts?: any[], ruleCache?: Record<string, any> }): any[] | null {
     const lines = input.split(/\n+/).filter(line => line.trim().length > 0);
     const results: any[] = [];
 
@@ -146,7 +146,7 @@ export class IntentResolver {
         const lowerInput = line.toLowerCase().trim();
         let learnedCategory: string | null = null;
         let learnedAccount: string | null = null;
-        let isNeuralConfirmed = false;
+        let isRuleConfirmed = false;
 
         // 0. High-Confidence Rule Mapping (Hardened User Rules)
         if (options?.rules) {
@@ -157,16 +157,16 @@ export class IntentResolver {
 
             if (matchingRule) {
                 learnedCategory = matchingRule.action.targetCategory || null;
-                isNeuralConfirmed = true;
+                isRuleConfirmed = true;
             }
         }
 
-        // 0.1 Autonomous Neural Pattern Cache (Soft Learning from History)
-        if (!learnedCategory && options?.neuralCache) {
-            const cacheMatch = Object.entries(options.neuralCache).find(([key]) => lowerInput.includes(key));
+        // 0.1 Autonomous Rule Cache (Soft Learning from History)
+        if (!learnedCategory && options?.ruleCache) {
+            const cacheMatch = Object.entries(options.ruleCache).find(([key]) => lowerInput.includes(key));
             if (cacheMatch) {
                 learnedCategory = cacheMatch[1].accountName;
-                isNeuralConfirmed = true; // Still counts as learned, but soft
+                isRuleConfirmed = true; // Still counts as learned, but soft
             }
         }
         
@@ -294,7 +294,7 @@ export class IntentResolver {
             results.push({
                 amountCents: isIncome ? amt : -amt,
                 description: desc.charAt(0)?.toUpperCase() + desc.slice(1),
-                isLearned: isNeuralConfirmed,
+                isLearned: isRuleConfirmed,
                 dimensions: {
                     category: category,
                     account: "Default Bank"

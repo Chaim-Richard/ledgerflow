@@ -19,7 +19,7 @@ export interface BillingState {
   incrementUserCount: () => void;
   upgradePlan: (plan: 'pro' | 'enterprise') => void;
   fetchSystemCaps: () => Promise<void>;
-  checkQuota: () => boolean; // Enforcement for 'truth' of usage metrics
+  checkQuota: () => boolean; // Enforcement for 'integrity' of usage metrics
 }
 
 export const useBillingStore = create<BillingState>()(
@@ -72,7 +72,7 @@ export const useBillingStore = create<BillingState>()(
       }
     }),
     {
-      name: 'ledgerflow-billing-storage'
+      name: 'clearbook-billing-storage'
     }
   )
 );

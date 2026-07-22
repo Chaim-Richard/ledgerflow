@@ -26,7 +26,6 @@ import { format } from 'date-fns';
 
 import InvoiceModal from './InvoiceModal';
 import CustomerModal from './CustomerModal';
-import SalesPipeline from './SalesPipeline';
 
 interface SalesProps {
   user: User;
@@ -80,52 +79,43 @@ export default function Sales({
       case 'pending':
         return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'overdue': return 'bg-rose-50 text-rose-700 border-rose-200';
-      default: return 'bg-zinc-50 text-zinc-650 border-zinc-200';
+      default: return 'bg-[var(--ink)] text-zinc-650 border-[var(--line)]';
     }
   };
 
   return (
     <div className="space-y-12">
-      {/* Neural Header */}
+      {/* Rule Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate mb-4">
             <TrendingUp size={14} />
             Sales & Customers
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter">Sales Hub</h2>
-          <p className="text-slate-500 font-medium text-lg mt-2 italic opacity-60">Manage invoices, estimates, and customer relationships.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Invoicing & Accounts Receivable</h2>
+          <p className="text-slate-500 font-medium text-lg mt-2 opacity-70">Manage invoices, estimates, and customer accounts.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-           <div className="flex flex-wrap bg-slate-50 p-1.5 rounded-[32px] border border-slate-200">
-            <button 
-              onClick={() => setActiveSubTab('pipeline')}
-              className={cn(
-                "px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all flex items-center gap-2",
-                activeSubTab === 'pipeline' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-slate-900"
-              )}
-            >
-              <Kanban size={14} />
-              CRM Pipeline
-            </button>
+           <div className="flex flex-wrap bg-[var(--ink)] p-1.5 rounded-[32px] border border-[var(--line)]">
+            
             <button 
               onClick={() => setActiveSubTab('invoices')}
               className={cn(
                 "px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all",
-                activeSubTab === 'invoices' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-slate-900"
+                activeSubTab === 'invoices' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-[var(--text)]"
               )}
             >
-              Instruments
+              Invoices & Receipts
             </button>
             <button 
               onClick={() => setActiveSubTab('customers')}
               className={cn(
                 "px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all",
-                activeSubTab === 'customers' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-slate-900"
+                activeSubTab === 'customers' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-[var(--text)]"
               )}
             >
-              Custodians
+              Customers
             </button>
           </div>
           <button 
@@ -133,14 +123,14 @@ export default function Sales({
             className="flex items-center gap-2 px-8 py-3.5 bg-slate-900 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider hover:bg-slate-900/90 transition-all shadow-2xl"
           >
             <Plus size={18} />
-            {activeSubTab === 'invoices' ? 'Issue Instrument' : 'Register Custodian'}
+            {activeSubTab === 'invoices' ? 'Create Invoice' : 'Add Customer'}
           </button>
         </div>
       </div>
 
       {/* Psychological Header */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-4 md:p-8 bg-white rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden group">
+        <div className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-4 relative z-10 flex items-center gap-2">
             <AlertCircle size={12} />
@@ -153,7 +143,7 @@ export default function Sales({
           </div>
         </div>
         
-        <div className="p-4 md:p-8 bg-white rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden group">
+        <div className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] mb-4 relative z-10 flex items-center gap-2">
             <Activity size={12} />
@@ -169,7 +159,7 @@ export default function Sales({
         <div className="p-4 md:p-8 bg-slate-900 text-white rounded-[32px] shadow-2xl relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-10 pointer-events-none" />
           <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 relative z-10">Total Aggregate Exposure</p>
-          <p className="text-2xl md:text-4xl font-black text-indigo-600 font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.total)}</p>
+          <p className="text-2xl md:text-4xl font-black text-indigo-400 font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.total)}</p>
           <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-white/20 uppercase tracking-widest">
              <ShieldCheck size={10} />
              Verified Asset Cluster
@@ -177,7 +167,7 @@ export default function Sales({
         </div>
       </div>
 
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-4 border-b border-[var(--line)]">
         <div className="relative group max-w-md w-full">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-600 transition-colors" size={20} />
           <input 
@@ -185,15 +175,15 @@ export default function Sales({
             placeholder="Search invoices by customer, number, tags, or metadata..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:bg-white transition-all text-sm font-bold text-slate-900 placeholder:text-slate-500/40 shadow-sm"
+            className="w-full pl-14 pr-6 py-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:bg-[var(--surface)] transition-all text-sm font-bold text-[var(--text)] placeholder:text-slate-500/40 shadow-sm"
           />
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="p-4 bg-white border border-slate-200 rounded-[32px] text-slate-500 hover:text-slate-900 hover:bg-white transition-all">
+          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all">
             <Filter size={20} />
           </button>
-          <button className="p-4 bg-white border border-slate-200 rounded-[32px] text-slate-500 hover:text-slate-900 hover:bg-white transition-all">
+          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all">
             <Download size={20} />
           </button>
         </div>
@@ -219,18 +209,13 @@ export default function Sales({
         }}
       />
 
-      {activeSubTab === 'pipeline' && (
-        <div className="pt-4">
-          <SalesPipeline customers={customers} user={user} />
-        </div>
-      )}
-
+      
       {activeSubTab === 'invoices' && (
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="text-left border-b border-slate-200/50">
+                <tr className="text-left border-b border-[var(--line)]/50">
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Node ID</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Custodian</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Timestamp</th>
@@ -241,21 +226,21 @@ export default function Sales({
               </thead>
               <tbody className="divide-y divide-ledger-line/30">
                 {filteredInvoices.map((inv) => (
-                  <tr key={inv.id} className="group hover:bg-slate-50/30 transition-all cursor-pointer">
-                    <td className="p-4 md:p-8 font-mono font-bold text-slate-500 group-hover:text-slate-900 transition-colors">{inv.number}</td>
+                  <tr key={inv.id} className="group hover:bg-[var(--ink)]/30 transition-all cursor-pointer">
+                    <td className="p-4 md:p-8 font-mono font-bold text-slate-500 group-hover:text-[var(--text)] transition-colors">{inv.number}</td>
                     <td className="p-4 md:p-8">
                        <div className="flex flex-col">
-                          <span className="font-black text-slate-900 text-base tracking-tight">{inv.customerName}</span>
+                          <span className="font-black text-[var(--text)] text-base tracking-tight">{inv.customerName}</span>
                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 opacity-50">Identity Verified</span>
                        </div>
                     </td>
                     <td className="p-4 md:p-8">
                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-900">{inv.date ? format(new Date(inv.date), 'MMM dd, yyyy') : 'N/A'}</span>
+                          <span className="font-bold text-[var(--text)]">{inv.date ? format(new Date(inv.date), 'MMM dd, yyyy') : 'N/A'}</span>
                           <span className="text-[10px] font-bold text-rose-500/60 uppercase tracking-widest mt-1">Due {inv.dueDate ? format(new Date(inv.dueDate), 'MMM dd') : 'N/A'}</span>
                        </div>
                     </td>
-                    <td className="p-4 md:p-8 text-right font-black font-mono text-slate-900 text-lg tracking-tighter">
+                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-lg tracking-tighter">
                       {formatCurrency(inv.totalCents || 0)}
                     </td>
                     <td className="p-4 md:p-8">
@@ -300,7 +285,7 @@ export default function Sales({
                          </button>
                          <button 
                            onClick={(e) => { e.stopPropagation(); setTimeout(()=>window.print(), 200); }}
-                           className="w-8 h-8 rounded-lg bg-zinc-500/10 text-zinc-600 hover:bg-zinc-500/20 flex items-center justify-center transition-all"
+                           className="w-8 h-8 rounded-lg bg-[var(--ink)]0/10 text-zinc-600 hover:bg-[var(--ink)]0/20 flex items-center justify-center transition-all"
                            title="Print / PDF Invoice"
                          >
                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
@@ -340,7 +325,7 @@ export default function Sales({
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="text-left border-b border-slate-200/50">
+                <tr className="text-left border-b border-[var(--line)]/50">
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Custodian Identity</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Communication Node</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap text-right">Aggregated Exposure</th>
@@ -349,14 +334,14 @@ export default function Sales({
               </thead>
               <tbody className="divide-y divide-ledger-line/30">
                 {customers.map((cust) => (
-                  <tr key={cust.id} className="group hover:bg-slate-50/30 transition-all cursor-pointer">
+                  <tr key={cust.id} className="group hover:bg-[var(--ink)]/30 transition-all cursor-pointer">
                     <td className="p-4 md:p-8">
                        <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-slate-900 rounded-[32px] flex items-center justify-center text-white font-black text-lg">
                              {(cust.name || 'CU').slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-black text-slate-900 text-base tracking-tight">{cust.name}</span>
+                            <span className="font-black text-[var(--text)] text-base tracking-tight">{cust.name}</span>
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 opacity-50">LTV Optimized</span>
                           </div>
                        </div>
@@ -364,14 +349,14 @@ export default function Sales({
                     <td className="p-4 md:p-8">
                        <div className="flex items-center gap-2 group/email">
                           <Mail size={14} className="text-slate-500 opacity-40" />
-                          <span className="font-bold text-slate-900 group-hover/email:text-indigo-600 transition-colors">{cust.email}</span>
+                          <span className="font-bold text-[var(--text)] group-hover/email:text-indigo-600 transition-colors">{cust.email}</span>
                        </div>
                     </td>
-                    <td className="p-4 md:p-8 text-right font-black font-mono text-slate-900 text-lg tracking-tighter">
+                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-lg tracking-tighter">
                       {formatCurrency(cust.balanceCents || 0)}
                     </td>
                     <td className="p-4 md:p-8">
-                      <button className="p-3 text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 rounded-xl transition-all">
+                      <button className="p-3 text-slate-500 hover:text-[var(--text)] hover:bg-slate-200/50 rounded-xl transition-all">
                         <MoreVertical size={18} />
                       </button>
                     </td>

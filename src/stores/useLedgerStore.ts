@@ -70,11 +70,11 @@ export interface LedgerState {
   baseCurrency: string;
   matchingThreshold: number;
   runningBalances: {
-    totalIncome: bigint;
-    totalExpense: bigint;
-    totalBalance: bigint;
-    projectMetrics: Record<string, { income: bigint, expense: bigint }>;
-    categoryMetrics: Record<string, bigint>;
+    totalIncome: number;
+    totalExpense: number;
+    totalBalance: number;
+    projectMetrics: Record<string, { income: number, expense: number }>;
+    categoryMetrics: Record<string, number>;
   };
 
   // Actions
@@ -146,9 +146,9 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   activityFeed: [],
   analyticalPatternCache: {},
   runningBalances: {
-    totalIncome: 0n,
-    totalExpense: 0n,
-    totalBalance: 0n,
+    totalIncome: 0,
+    totalExpense: 0,
+    totalBalance: 0,
     projectMetrics: {},
     categoryMetrics: {}
   },
@@ -166,14 +166,16 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   totalLedgerBalance: 0,
   projectedBalanceCents: 0,
   lastActivity: '',
-  deleteTransaction: (id) => set((state) => {
+  deleteTransaction: (id) => {
+    const state = get();
     const nextTxs = state.transactions.filter(t => t.id !== id);
-    return { transactions: nextTxs };
-  }),
-  updateTransaction: (id, updates) => set((state) => {
+    state.setTransactions(nextTxs);
+  },
+  updateTransaction: (id, updates) => {
+    const state = get();
     const nextTxs = state.transactions.map(t => t.id === id ? { ...t, ...updates } as typeof t : t);
-    return { transactions: nextTxs };
-  }),
+    state.setTransactions(nextTxs);
+  },
   lockDate: null,
   baseCurrency: 'USD',
   matchingThreshold: 0.8,
@@ -249,72 +251,72 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     set({ integrityStatus: { ...get().integrityStatus, isVerifying: true } });
 
     // Simulate slight delay for "Shadow Verification" feel
-    const truth = {
-      totalIncome: 0n,
-      totalExpense: 0n,
-      totalBalance: 0n,
-      projectMetrics: {} as Record<string, { income: bigint, expense: bigint }>,
-      categoryMetrics: {} as Record<string, bigint>
+    const integrity = {
+      totalIncome: 0,
+      totalExpense: 0,
+      totalBalance: 0,
+      projectMetrics: {} as Record<string, { income: number, expense: number }>,
+      categoryMetrics: {} as Record<string, number>
     };
 
     transactions.forEach(tx => {
-      const amount = BigInt(tx.totalAmountCents || 0);
-      truth.totalBalance += amount;
-      if (amount > 0n) truth.totalIncome += amount;
-      else truth.totalExpense += (-amount);
+      const amount = tx.totalAmountCents || 0;
+      integrity.totalBalance += amount;
+      if (amount > 0) integrity.totalIncome += amount;
+      else integrity.totalExpense += (-amount);
 
       if (tx.projectId) {
-        if (!truth.projectMetrics[tx.projectId]) {
-          truth.projectMetrics[tx.projectId] = { income: 0n, expense: 0n };
+        if (!integrity.projectMetrics[tx.projectId]) {
+          integrity.projectMetrics[tx.projectId] = { income: 0, expense: 0 };
         }
-        if (amount > 0n) truth.projectMetrics[tx.projectId].income += amount;
-        else truth.projectMetrics[tx.projectId].expense += (-amount);
+        if (amount > 0) integrity.projectMetrics[tx.projectId].income += amount;
+        else integrity.projectMetrics[tx.projectId].expense += (-amount);
       }
 
       tx.lines?.forEach(l => {
         const cat = l.category || 'General';
-        truth.categoryMetrics[cat] = (truth.categoryMetrics[cat] || 0n) + BigInt(l.amountCents || 0);
+        integrity.categoryMetrics[cat] = (integrity.categoryMetrics[cat] || 0) + (l.amountCents || 0);
       });
     });
 
     const isConsistent = 
-      truth.totalBalance === runningBalances.totalBalance &&
-      truth.totalIncome === runningBalances.totalIncome;
+      integrity.totalBalance === runningBalances.totalBalance &&
+      integrity.totalIncome === runningBalances.totalIncome;
 
-    const drift = Number(truth.totalBalance - runningBalances.totalBalance);
+    const drift = integrity.totalBalance - runningBalances.totalBalance;
 
     set({ 
       integrityStatus: {
         lastChecked: new Date().toISOString(),
         isConsistent,
         driftCents: drift,
-        shadowTotalCents: Number(truth.totalBalance),
-        incrementalTotalCents: Number(runningBalances.totalBalance),
+        shadowTotalCents: integrity.totalBalance,
+        incrementalTotalCents: runningBalances.totalBalance,
         isVerifying: false
       }
     });
 
     if (!isConsistent) {
-      console.warn('Physical Integrity Variance Detected: Delta engine corrected to O(N) Truth.');
+      console.warn('Physical Integrity Variance Detected: Delta engine corrected to O(N) Integrity.');
       const formattedDelta = `$${(drift / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       const { auditLogs } = get();
       const driftLog = {
         id: `drift_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-        action: `PHYSICAL_INTEGRITY_DRIFT: Balance Delta is ${formattedDelta} [Shadow: $${(Number(truth.totalBalance) / 100).toFixed(2)} · Incremental: $${(Number(runningBalances.totalBalance) / 100).toFixed(2)}]`,
+        action: `PHYSICAL_INTEGRITY_DRIFT: Balance Delta is ${formattedDelta} [Shadow: $${(integrity.totalBalance / 100).toFixed(2)} · Incremental: $${(runningBalances.totalBalance / 100).toFixed(2)}]`,
         entityType: 'system',
         entityId: 'SHADOW_RECONCILER',
-        email: 'SYSTEM_AUTOPILOT@ledgerflow.security',
-        userEmail: 'SYSTEM_AUTOPILOT@ledgerflow.security',
+        email: 'SYSTEM_AUTOPILOT@clearbook.security',
+        userEmail: 'SYSTEM_AUTOPILOT@clearbook.security',
         targetId: 'LEDGER_INTEGRITY_VIOLATION',
         details: {
           driftCents: drift,
-          shadowTotalCents: Number(truth.totalBalance),
-          incrementalTotalCents: Number(runningBalances.totalBalance)
+          shadowTotalCents: integrity.totalBalance,
+          incrementalTotalCents: runningBalances.totalBalance
         },
         timestamp: new Date().toISOString()
       };
       set({ 
-        runningBalances: truth,
+        runningBalances: integrity,
         auditLogs: [driftLog, ...auditLogs]
       });
     }
@@ -337,29 +339,29 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
 
     // Initial Baseline computation (O(N) during load, O(1) thereafter)
     const runningBalances = {
-      totalIncome: 0n,
-      totalExpense: 0n,
-      totalBalance: 0n,
-      projectMetrics: {} as Record<string, { income: bigint, expense: bigint }>,
-      categoryMetrics: {} as Record<string, bigint>
+      totalIncome: 0,
+      totalExpense: 0,
+      totalBalance: 0,
+      projectMetrics: {} as Record<string, { income: number, expense: number }>,
+      categoryMetrics: {} as Record<string, number>
     };
 
     allTxs.forEach(tx => {
-      const amount = BigInt(tx.totalAmountCents);
+      const amount = tx.totalAmountCents || 0;
       runningBalances.totalBalance += amount;
-      if (amount > 0n) runningBalances.totalIncome += amount;
+      if (amount > 0) runningBalances.totalIncome += amount;
       else runningBalances.totalExpense += (-amount);
 
       if (tx.projectId) {
         if (!runningBalances.projectMetrics[tx.projectId]) {
-          runningBalances.projectMetrics[tx.projectId] = { income: 0n, expense: 0n };
+          runningBalances.projectMetrics[tx.projectId] = { income: 0, expense: 0 };
         }
-        if (amount > 0n) runningBalances.projectMetrics[tx.projectId].income += amount;
+        if (amount > 0) runningBalances.projectMetrics[tx.projectId].income += amount;
         else runningBalances.projectMetrics[tx.projectId].expense += (-amount);
       }
-      tx.lines.forEach(l => {
+      tx.lines?.forEach(l => {
         const cat = l.category || 'General';
-        runningBalances.categoryMetrics[cat] = (runningBalances.categoryMetrics[cat] || 0n) + BigInt(l.amountCents);
+        runningBalances.categoryMetrics[cat] = (runningBalances.categoryMetrics[cat] || 0) + (l.amountCents || 0);
       });
     });
 

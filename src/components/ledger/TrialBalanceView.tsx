@@ -38,16 +38,16 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   }, [accounts]);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/80 shadow-3xs overflow-hidden relative group">
+    <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative group">
       <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
       
-      <div className="p-5 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="p-5 border-b border-[var(--line)] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate mb-1">
              <Scale size={12} className="shrink-0" />
              Stability Verification Protocol
           </div>
-          <h3 className="text-xl font-bold text-slate-800 tracking-tight">Trial Balance</h3>
+          <h3 className="text-xl font-bold text-[var(--text)] tracking-tight">Trial Balance</h3>
           <p className="text-[10px] font-semibold text-slate-400 uppercase mt-1">
             ENDING: {format(new Date(), 'yyyy-MM-dd')} • Check: {trialBalance.isBalanced ? 'PASS' : 'FAIL'}
           </p>
@@ -56,11 +56,11 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
         <div className="flex flex-wrap items-center gap-6">
           <div className="text-left sm:text-right">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Debits</p>
-            <p className="text-base font-bold font-mono text-slate-800">{formatCurrency(trialBalance.totalDebits)}</p>
+            <p className="text-base font-bold font-mono text-[var(--text)]">{formatCurrency(trialBalance.totalDebits)}</p>
           </div>
           <div className="text-left sm:text-right">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Credits</p>
-            <p className="text-base font-bold font-mono text-slate-800">{formatCurrency(trialBalance.totalCredits)}</p>
+            <p className="text-base font-bold font-mono text-[var(--text)]">{formatCurrency(trialBalance.totalCredits)}</p>
           </div>
           <motion.div 
             animate={trialBalance.isBalanced ? {} : { x: [0, -4, 4, -4, 4, 0] }}
@@ -96,32 +96,32 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
               >
                 <td className="px-5 py-3">
                    <div className="flex items-center gap-3">
-                     <span className="font-mono text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">{line.code}</span>
+                     <span className="font-mono text-[9px] font-bold text-slate-400 bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)]">{line.code}</span>
                      <div>
-                       <p className="text-xs font-bold text-slate-800 group-hover/row:text-slate-950 transition-colors uppercase">{line.name}</p>
+                       <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-slate-950 transition-colors uppercase">{line.name}</p>
                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">{line.type} Classification</p>
                      </div>
                    </div>
                 </td>
-                <td className="px-5 py-3 text-right font-mono text-slate-800 font-bold">
+                <td className="px-5 py-3 text-right font-mono text-[var(--text)] font-bold">
                   {line.debit > 0 ? formatCurrency(line.debit) : '—'}
                 </td>
-                <td className="px-5 py-3 text-right font-mono text-slate-800 font-bold">
+                <td className="px-5 py-3 text-right font-mono text-[var(--text)] font-bold">
                   {line.credit > 0 ? formatCurrency(line.credit) : '—'}
                 </td>
               </motion.tr>
             ))}
           </tbody>
           <tfoot className="border-t border-slate-250">
-            <tr className="bg-slate-50/50 whitespace-nowrap">
+            <tr className="bg-[var(--ink)]/50 whitespace-nowrap">
               <td className="px-5 py-3.5">
                  <div className="flex items-center gap-2">
                    <Activity size={14} className="text-slate-500 shrink-0" />
-                   <span className="text-sm font-bold text-slate-800 uppercase">Total</span>
+                   <span className="text-sm font-bold text-[var(--text)] uppercase">Total</span>
                  </div>
               </td>
-              <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-slate-800">{formatCurrency(trialBalance.totalDebits)}</td>
-              <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-slate-800">{formatCurrency(trialBalance.totalCredits)}</td>
+              <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-[var(--text)]">{formatCurrency(trialBalance.totalDebits)}</td>
+              <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-[var(--text)]">{formatCurrency(trialBalance.totalCredits)}</td>
             </tr>
           </tfoot>
         </table>

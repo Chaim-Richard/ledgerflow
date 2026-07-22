@@ -283,7 +283,7 @@ export default function Reconciliation({
   }, [unclearedLedgerTransactions, searchQuery]);
 
   return (
-    <div className="flex flex-col h-full bg-slate-50/20 overflow-hidden min-h-[850px] rounded-[32px] border border-slate-200">
+    <div className="flex flex-col h-full bg-[var(--ink)]/20 overflow-hidden min-h-0 flex-1 rounded-[32px] border border-[var(--line)]">
       
       {/* Workspace Header Dashboard */}
       <div className="bg-slate-900 text-white p-6 md:p-8 border-b border-white/5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
@@ -294,7 +294,7 @@ export default function Reconciliation({
              <ArrowLeftRight size={24} className="animate-pulse" />
           </div>
           <div>
-            <h1 className="text-xl md:text-3xl font-black tracking-tight uppercase leading-none">Cognitive Balance Verifier</h1>
+            <h1 className="text-xl md:text-3xl font-black tracking-tight uppercase leading-none">Smart Matching & Bank Reconciliation</h1>
             <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em] mt-1.5 flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
               Ingress Channel Live • Reconciliation Integrity: {((bankLines.length - unmatchedBankLines.length) / (bankLines.length || 1) * 100).toFixed(0)}%
@@ -306,12 +306,12 @@ export default function Reconciliation({
         <div className="relative z-10 flex flex-wrap items-center gap-3">
            
            {/* Segment Selector View */}
-           <div className="flex bg-white/5 p-1 border border-white/10 rounded-xl mr-2">
+           <div className="flex bg-[var(--surface)]/5 p-1 border border-white/10 rounded-xl mr-2">
              <button 
                onClick={() => { setViewMode('pending'); setSelectedBankId(null); setSelectedLedgerId(null); }}
                className={cn(
                  "px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
-                 viewMode === 'pending' ? "bg-white text-slate-900 shadow-md" : "text-white/60 hover:text-white"
+                 viewMode === 'pending' ? "bg-[var(--surface)] text-[var(--text)] shadow-md" : "text-white/60 hover:text-white"
                )}
              >
                <Layers size={11} />
@@ -321,7 +321,7 @@ export default function Reconciliation({
                onClick={() => { setViewMode('history'); setSelectedBankId(null); setSelectedLedgerId(null); }}
                className={cn(
                  "px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
-                 viewMode === 'history' ? "bg-white text-slate-900 shadow-md" : "text-white/60 hover:text-white"
+                 viewMode === 'history' ? "bg-[var(--surface)] text-[var(--text)] shadow-md" : "text-white/60 hover:text-white"
                )}
              >
                <History size={11} />
@@ -350,14 +350,14 @@ export default function Reconciliation({
              </button>
            )}
 
-           <button onClick={() => window.location.reload()} className="w-11 h-11 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all cursor-pointer">
+           <button onClick={() => window.location.reload()} className="w-11 h-11 flex items-center justify-center bg-[var(--surface)]/5 border border-white/10 rounded-xl text-white/40 hover:text-white hover:bg-[var(--surface)]/10 transition-all cursor-pointer">
              <RefreshCw size={18} className={cn(isProcessing && "animate-spin text-emerald-400")} />
            </button>
         </div>
       </div>
 
       {/* Verification Filter & Info Stripe */}
-      <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-[var(--ink)] border-b border-[var(--line)] px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
           <Info size={14} className="text-indigo-500" />
           <span>
@@ -371,7 +371,7 @@ export default function Reconciliation({
           <input
             type="text"
             placeholder="Quick search amounts or labels..."
-            className="w-full h-9 pl-9 pr-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500 transition-all"
+            className="w-full h-9 pl-9 pr-4 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500 transition-all"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -391,8 +391,8 @@ export default function Reconciliation({
           </div>
 
           {/* Left Column: Input Stream Feed */}
-          <div className="bg-white rounded-[32px] border border-slate-200 overflow-hidden flex flex-col shadow-xs">
-             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <div className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] overflow-hidden flex flex-col shadow-xs">
+             <div className="px-5 py-4 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bank Data Stream</span>
                 <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-100">{filteredBankFeed.length} entries pending</span>
              </div>
@@ -410,7 +410,7 @@ export default function Reconciliation({
                         "p-5 rounded-xl transition-all cursor-pointer border flex items-center justify-between group relative overflow-hidden",
                         isSelected 
                           ? "bg-slate-900 text-white border-slate-800 shadow-lg ring-1 ring-white/10" 
-                          : "bg-slate-50 border-slate-100 hover:border-slate-350 hover:bg-slate-100/50"
+                          : "bg-[var(--ink)] border-[var(--line)] hover:border-slate-350 hover:bg-slate-100/50"
                       )}
                     >
                       {/* Interactive Match indicator side mark */}
@@ -437,7 +437,7 @@ export default function Reconciliation({
                         <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                            <button 
                              onClick={(e) => { e.stopPropagation(); onIgnore(btx.id); }} 
-                             className="p-1 px-2 text-[9px] font-bold text-slate-400 hover:text-rose-500 bg-white shadow-xs border border-slate-200 rounded-md cursor-pointer uppercase tracking-tight"
+                             className="p-1 px-2 text-[9px] font-bold text-slate-400 hover:text-rose-500 bg-[var(--surface)] shadow-xs border border-[var(--line)] rounded-md cursor-pointer uppercase tracking-tight"
                              title="Ignore statement item"
                            >
                              Omit
@@ -450,7 +450,7 @@ export default function Reconciliation({
                 {filteredBankFeed.length === 0 && (
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
                      <ShieldCheck size={40} className="text-emerald-500 mb-3" />
-                     <h3 className="font-extrabold text-sm text-slate-800 uppercase tracking-tight">Zero Pending Streams</h3>
+                     <h3 className="font-extrabold text-sm text-[var(--text)] uppercase tracking-tight">Zero Pending Streams</h3>
                      <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-1">Bank Statement Feed is pre-synchronized</p>
                   </div>
                 )}
@@ -458,8 +458,8 @@ export default function Reconciliation({
           </div>
 
           {/* Right Column: Internal Registry Validation */}
-          <div className="bg-white rounded-[32px] border border-slate-200 overflow-hidden flex flex-col shadow-xs">
-             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <div className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] overflow-hidden flex flex-col shadow-xs">
+             <div className="px-5 py-4 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">B: General Ledger Records</span>
                 <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-100">{filteredLedgerEntries.length} uncleared items</span>
              </div>
@@ -479,7 +479,7 @@ export default function Reconciliation({
                           ? "bg-emerald-600 text-white border-emerald-600 shadow-lg ring-1 ring-white/10" 
                           : isPossibleMatch 
                             ? "bg-emerald-50/70 border-emerald-200 ring-2 ring-emerald-500/10 hover:bg-emerald-50" 
-                            : "bg-slate-50 border-slate-100 hover:border-slate-350 hover:bg-slate-100/50"
+                            : "bg-[var(--ink)] border-[var(--line)] hover:border-slate-350 hover:bg-slate-100/50"
                       )}
                     >
                       {isPossibleMatch && (
@@ -493,11 +493,11 @@ export default function Reconciliation({
                           </span>
                           {isPossibleMatch && !isSelected && <Zap size={10} className="text-emerald-500 animate-pulse" />}
                         </div>
-                        <span className={cn("text-sm font-extrabold tracking-tight truncate max-w-[220px] md:max-w-xs", isSelected ? "text-white" : "text-slate-900")}>
+                        <span className={cn("text-sm font-extrabold tracking-tight truncate max-w-[220px] md:max-w-xs", isSelected ? "text-white" : "text-[var(--text)]")}>
                           {ltx.description}
                         </span>
                       </div>
-                      <span className={cn("text-md font-mono font-black tabular-nums tracking-tighter shrink-0 ml-4", isSelected ? "text-white" : "text-slate-900")}>
+                      <span className={cn("text-md font-mono font-black tabular-nums tracking-tighter shrink-0 ml-4", isSelected ? "text-white" : "text-[var(--text)]")}>
                         {formatCurrency(ltx.totalAmountCents)}
                       </span>
                     </motion.div>
@@ -506,7 +506,7 @@ export default function Reconciliation({
                 {filteredLedgerEntries.length === 0 && (
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
                      <ShieldCheck size={40} className="text-indigo-500 mb-3" />
-                     <h3 className="font-extrabold text-sm text-slate-800 uppercase tracking-tight">Registry Unoccupied</h3>
+                     <h3 className="font-extrabold text-sm text-[var(--text)] uppercase tracking-tight">Registry Unoccupied</h3>
                      <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-1">No unverified entries on the active chart</p>
                   </div>
                 )}
@@ -516,10 +516,10 @@ export default function Reconciliation({
       ) : (
         /* HISTORY CLEAR VERIFICATION VIEW */
         <div className="flex-1 p-6 md:p-8">
-          <div className="bg-white rounded-[32px] border border-slate-200 shadow-xs overflow-hidden flex flex-col h-full max-h-[600px]">
-            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+          <div className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-xs overflow-hidden flex flex-col h-full flex-1 min-h-0">
+            <div className="px-5 py-4 border-b border-[var(--line)] bg-[var(--ink)]/50 flex items-center justify-between">
               <div>
-                <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Audit Matrix logs</span>
+                <span className="text-xs font-black text-[var(--text)] uppercase tracking-wider">Audit Matrix logs</span>
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mt-0.5">Physical deposits & ledgers permanently welded and locked</p>
               </div>
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-1">
@@ -544,7 +544,7 @@ export default function Reconciliation({
                       const isSelected = selectedBankId === line.id;
 
                       return (
-                        <div key={line.id} className="hover:bg-slate-50 transition-all">
+                        <div key={line.id} className="hover:bg-[var(--ink)] transition-all">
                           <div 
                              onClick={() => setSelectedBankId(isSelected ? null : line.id)}
                              className="flex flex-col lg:flex-row items-start lg:items-center justify-between p-5 gap-4 cursor-pointer"
@@ -555,8 +555,8 @@ export default function Reconciliation({
                                  <span className="text-[8px] font-black uppercase text-slate-400 font-mono tracking-wider">{line.date}</span>
                                  <span className="px-2 py-0.2 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[7px] font-black uppercase tracking-wider">Locked Status</span>
                                </div>
-                               <h5 className="font-extrabold text-sm text-slate-800 truncate">{line.description}</h5>
-                               <p className="text-[10px] text-slate-400 font-mono mt-0.5">Statement quantum: {formatCurrency(line.amountCents)}</p>
+                               <h5 className="font-extrabold text-sm text-[var(--text)] truncate">{line.description}</h5>
+                               <p className="text-[10px] text-slate-400 font-mono mt-0.5">Statement Amount: {formatCurrency(line.amountCents)}</p>
                              </div>
 
                              {/* Connector Node */}
@@ -602,16 +602,16 @@ export default function Reconciliation({
             initial={{ y: 50, opacity: 0, x: '-50%' }}
             animate={{ y: 0, opacity: 1, x: '-50%' }}
             exit={{ y: 50, opacity: 0, x: '-50%' }}
-            className="fixed bottom-12 md:bottom-14 left-1/2 -translate-x-1/2 w-full max-w-6xl z-[100] px-4 md:px-6"
+            className="fixed bottom-20 lg:bottom-10 left-1/2 -translate-x-1/2 w-full max-w-6xl z-[80] px-4 md:px-6"
           >
             <div className="bg-slate-900 text-white p-5 md:p-6 rounded-[32px] border border-white/10 shadow-[0_45px_100px_-15px_rgba(0,0,0,0.65)] flex flex-col gap-5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-5 font-mono text-[9px] text-white/5 uppercase select-none font-black">Neural Processor Grid</div>
+              <div className="absolute top-0 right-0 p-5 font-mono text-[9px] text-white/5 uppercase select-none font-black">Rule Processor Grid</div>
               
               {/* Top row - Side-by-side nodes comparison matrix */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-center">
                 
                 {/* Node A */}
-                <div className="md:col-span-2 flex flex-col bg-white/5 p-4 rounded-xl border border-white/5 relative overflow-hidden group">
+                <div className="md:col-span-2 flex flex-col bg-[var(--surface)]/5 p-4 rounded-xl border border-white/5 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-2 opacity-5"><Layers size={36} /></div>
                   <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest font-mono">Statement Node A</span>
                   <span className="text-md font-extrabold truncate mt-1 tracking-tight">{selectedBankLine.description}</span>
@@ -636,7 +636,7 @@ export default function Reconciliation({
                        </div>
 
                        {/* Interactive similarity progress tube */}
-                       <div className="w-full bg-white/10 h-1 rounded-full mt-2 overflow-hidden max-w-[120px]">
+                       <div className="w-full bg-[var(--surface)]/10 h-1 rounded-full mt-2 overflow-hidden max-w-[120px]">
                          <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${checkSimilarity.overall}%` }} />
                        </div>
                      </>
@@ -651,7 +651,7 @@ export default function Reconciliation({
                 </div>
 
                 {/* Node B */}
-                <div className="md:col-span-2 flex flex-col bg-white/5 p-4 rounded-xl border border-white/5 relative overflow-hidden group">
+                <div className="md:col-span-2 flex flex-col bg-[var(--surface)]/5 p-4 rounded-xl border border-white/5 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-2 opacity-5"><Maximize2 size={36} /></div>
                   <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest font-mono">Ledger Node B</span>
                   <span className="text-md font-extrabold truncate mt-1 tracking-tight">{selectedLedgerTx?.description || 'Orphan Ledger'}</span>
@@ -753,7 +753,7 @@ export default function Reconciliation({
             initial={{ y: 50, opacity: 0, x: '-50%' }}
             animate={{ y: 0, opacity: 1, x: '-50%' }}
             exit={{ y: 50, opacity: 0, x: '-50%' }}
-            className="fixed bottom-12 md:bottom-14 left-1/2 -translate-x-1/2 w-full max-w-xl z-[100] px-4 md:px-6"
+            className="fixed bottom-20 lg:bottom-10 left-1/2 -translate-x-1/2 w-full max-w-xl z-[80] px-4 md:px-6"
           >
             <div className="bg-zinc-950 text-white p-5 rounded-[32px] border border-white/10 shadow-3xl flex items-center justify-between gap-4">
                <div className="flex items-center gap-3 pl-2">
@@ -771,7 +771,7 @@ export default function Reconciliation({
                        setSelectedBankId(null);
                      }
                  }}
-                 className="px-5 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all cursor-pointer border border-white/10 hover:border-white/20 shadow-sm whitespace-nowrap"
+                 className="px-5 py-2.5 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all cursor-pointer border border-white/10 hover:border-white/20 shadow-sm whitespace-nowrap"
                >
                  Synthesize Record
                </button>
@@ -789,13 +789,13 @@ export default function Reconciliation({
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl z-[200] bg-white rounded-[32px] p-6 md:p-8 shadow-[0_45px_110px_-15px_rgba(0,0,0,0.55)] border border-slate-200 overflow-hidden flex flex-col max-h-[85dvh]"
+                  className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl z-[200] bg-[var(--surface)] rounded-[32px] p-6 md:p-8 shadow-[0_45px_110px_-15px_rgba(0,0,0,0.55)] border border-[var(--line)] overflow-hidden flex flex-col max-h-[85dvh]"
                >
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-100 pb-5 gap-4">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-[var(--line)] pb-5 gap-4">
                     <div className="flex items-center gap-3">
                        <Zap size={24} className="text-amber-500 fill-amber-500" />
                        <div>
-                         <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">
+                         <h3 className="text-xl font-black uppercase tracking-tight text-[var(--text)]">
                             Cognitive Alignments Panel
                          </h3>
                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Select synapses to reconcile at once. Toggle individual checkboxes or apply bulk verification instantly.</p>
@@ -837,14 +837,14 @@ export default function Reconciliation({
                              onClick={() => setSelectedBatchIds(prev => ({ ...prev, [btx.id]: !prev[btx.id] }))}
                              className={cn(
                                "flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer",
-                               isChecked ? "border-emerald-200 bg-emerald-50/20" : "border-slate-150 bg-slate-50/50 opacity-60 hover:opacity-100 hover:border-slate-300"
+                               isChecked ? "border-emerald-200 bg-emerald-50/20" : "border-slate-150 bg-[var(--ink)]/50 opacity-60 hover:opacity-100 hover:border-slate-300"
                              )}
                            >
                               {/* Stateful Row Checkbox wrapper */}
                               <div className="shrink-0 flex items-center justify-center">
                                  <div className={cn(
                                    "w-5.5 h-5.5 rounded-lg border flex items-center justify-center transition-all",
-                                   isChecked ? "bg-emerald-600 border-emerald-600 text-white" : "bg-white border-slate-300"
+                                   isChecked ? "bg-emerald-600 border-emerald-600 text-white" : "bg-[var(--surface)] border-slate-300"
                                  )}>
                                     {isChecked && <Check size={12} strokeWidth={3} />}
                                  </div>
@@ -854,7 +854,7 @@ export default function Reconciliation({
                                 {/* Bank Item info */}
                                 <div className="md:col-span-5 overflow-hidden">
                                    <span className="text-[8px] uppercase tracking-widest font-black text-slate-400 block mb-0.5">Physical Inflow Node</span>
-                                   <p className="font-bold text-slate-900 truncate text-sm">{btx.description}</p>
+                                   <p className="font-bold text-[var(--text)] truncate text-sm">{btx.description}</p>
                                    <p className="text-[10px] font-semibold text-slate-500 font-mono mt-0.5">{btx.date} • {formatCurrency(btx.amountCents)}</p>
                                 </div>
 
@@ -866,7 +866,7 @@ export default function Reconciliation({
                                 {/* Mapped registry internal record item info */}
                                 <div className="md:col-span-5 overflow-hidden text-right">
                                    <span className="text-[8px] uppercase tracking-widest font-black text-slate-400 block mb-0.5">Assigned Target record</span>
-                                   <p className="font-bold text-slate-900 truncate text-sm">{matchedLtx.description}</p>
+                                   <p className="font-bold text-[var(--text)] truncate text-sm">{matchedLtx.description}</p>
                                    <p className="text-[10px] font-semibold text-slate-500 font-mono mt-0.5">{matchedLtx.date} • {formatCurrency(matchedLtx.totalAmountCents)}</p>
                                 </div>
                               </div>
@@ -877,7 +877,7 @@ export default function Reconciliation({
 
                   {/* Batch validation button stripe */}
                   <div className="border-t pt-5 flex items-center justify-between shrink-0">
-                     <button onClick={() => setShowAutoConfirm(false)} className="px-6 py-3 font-bold text-xs uppercase tracking-widest text-slate-500 hover:text-slate-800 transition-colors cursor-pointer">
+                     <button onClick={() => setShowAutoConfirm(false)} className="px-6 py-3 font-bold text-xs uppercase tracking-widest text-slate-500 hover:text-[var(--text)] transition-colors cursor-pointer">
                         Dismiss alignments panel
                      </button>
                      <button 

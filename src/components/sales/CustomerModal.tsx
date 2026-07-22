@@ -37,15 +37,15 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl border border-zinc-200 overflow-hidden"
+        className="relative w-full max-w-lg bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden"
       >
-        <div className="p-4 md:p-8 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+        <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-zinc-900 text-white rounded-[32px] flex items-center justify-center shadow-xl shadow-zinc-900/20">
               <User size={24} />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Add Customer</h3>
+              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Add Customer</h3>
               <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">CRM & Relationships</p>
             </div>
           </div>
@@ -64,7 +64,7 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
               value={customer.name}
               onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
               placeholder="e.g. Acme Corp"
-              className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+              className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
             />
           </div>
 
@@ -76,7 +76,7 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
                 value={customer.email}
                 onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
                 placeholder="billing@acme.com"
-                className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
+                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
               />
             </div>
             <div className="space-y-2">
@@ -86,7 +86,7 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
                 value={customer.phone || ''}
                 onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
                 placeholder="+1 (555) 000-0000"
-                className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
+                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
               />
             </div>
           </div>
@@ -97,7 +97,7 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
               <select 
                 value={customer.pipelineStage || 'lead'}
                 onChange={(e) => setCustomer({ ...customer, pipelineStage: e.target.value as any })}
-                className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
+                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
               >
                 <option value="lead">Lead</option>
                 <option value="prospect">Prospect</option>
@@ -111,7 +111,7 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
               <select 
                 value={customer.customerSegment || 'standard'}
                 onChange={(e) => setCustomer({ ...customer, customerSegment: e.target.value as any })}
-                className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
+                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
               >
                 <option value="standard">Standard</option>
                 <option value="high-value">High Value</option>
@@ -128,7 +128,7 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
                 type="number" min="0" max="100"
                 value={customer.score || 0}
                 onChange={(e) => setCustomer({ ...customer, score: parseInt(e.target.value) || 0 })}
-                className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
+                className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
               />
             </div>
             <div className="space-y-2 flex flex-col justify-center pt-6">
@@ -145,7 +145,7 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
               value={customer.notes || ''}
               onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
               placeholder="e.g. Prefers email contact, introduced by..."
-              className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium resize-none min-h-[100px]"
+              className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium resize-none min-h-[100px]"
             />
           </div>
 
@@ -153,7 +153,7 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
             <button 
               type="button"
               onClick={onClose}
-              className="flex-1 py-4 bg-white border border-zinc-200 text-zinc-600 rounded-[32px] font-medium uppercase tracking-wider text-xs hover:bg-zinc-50 transition-all"
+              className="flex-1 py-4 bg-[var(--surface)] border border-[var(--line)] text-zinc-600 rounded-[32px] font-medium uppercase tracking-wider text-xs hover:bg-[var(--ink)] transition-all"
             >
               Cancel
             </button>

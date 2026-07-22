@@ -48,7 +48,7 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
         initial={{ opacity: 0, scale: 0.9, y: 40 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 40 }}
-        className="relative w-full max-w-7xl h-[85dvh] bg-white rounded-[48px] shadow-2xl border border-zinc-200 overflow-hidden flex flex-col md:flex-row"
+        className="relative w-full max-w-7xl h-[85dvh] bg-[var(--surface)] rounded-[48px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col md:flex-row"
       >
         {/* Left Side: Receipt Image */}
         <div className="flex-1 bg-zinc-100 relative overflow-hidden flex items-center justify-center p-4 md:p-8">
@@ -73,14 +73,14 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
         </div>
 
         {/* Right Side: AI Verification */}
-        <div className="w-full md:w-[480px] flex flex-col bg-white border-l border-zinc-100">
+        <div className="w-full md:w-[480px] flex flex-col bg-[var(--surface)] border-l border-[var(--line)]">
           <div className="p-4 md:p-10 border-b border-zinc-50">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center text-white">
                   <CheckCircle2 size={20} />
                 </div>
-                <h2 className="text-2xl font-black text-zinc-900 tracking-tight">AI Verification</h2>
+                <h2 className="text-2xl font-black text-[var(--text)] tracking-tight">AI Verification</h2>
               </div>
               <div className={cn(
                 "px-3 py-1.5 rounded-full text-[10px] font-medium uppercase tracking-wider border",
@@ -91,27 +91,27 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
             </div>
 
             <div className="space-y-6">
-              <div className="flex items-center gap-4 p-4 bg-zinc-50 rounded-[32px] border border-zinc-100">
+              <div className="flex items-center gap-4 p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)]">
                 <Building2 className="text-zinc-400" size={20} />
                 <div>
                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Vendor</p>
-                  <p className="font-bold text-zinc-900">{parsedData.vendorName}</p>
+                  <p className="font-bold text-[var(--text)]">{parsedData.vendorName}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-4 p-4 bg-zinc-50 rounded-[32px] border border-zinc-100">
+                <div className="flex items-center gap-4 p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)]">
                   <Calendar className="text-zinc-400" size={20} />
                   <div>
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</p>
-                    <p className="font-bold text-zinc-900">{parsedData.date}</p>
+                    <p className="font-bold text-[var(--text)]">{parsedData.date}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 p-4 bg-zinc-50 rounded-[32px] border border-zinc-100">
+                <div className="flex items-center gap-4 p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)]">
                   <DollarSign className="text-zinc-400" size={20} />
                   <div>
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total</p>
-                    <p className="font-bold text-zinc-900">{formatCurrency(parsedData.totalAmountCents)}</p>
+                    <p className="font-bold text-[var(--text)]">{formatCurrency(parsedData.totalAmountCents)}</p>
                   </div>
                 </div>
               </div>
@@ -122,10 +122,10 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
             <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest">Line Item Splits</h3>
             <div className="space-y-3">
               {parsedData.lineItems.map((item, idx) => (
-                <div key={idx} className="group p-4 bg-white border border-zinc-100 rounded-[32px] hover:border-zinc-900 transition-all">
+                <div key={idx} className="group p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] hover:border-zinc-900 transition-all">
                   <div className="flex justify-between items-start mb-2">
-                    <p className="font-bold text-zinc-900 text-sm leading-tight">{item.description}</p>
-                    <p className="font-mono font-bold text-zinc-900">{formatCurrency(item.amountCents)}</p>
+                    <p className="font-bold text-[var(--text)] text-sm leading-tight">{item.description}</p>
+                    <p className="font-mono font-bold text-[var(--text)]">{formatCurrency(item.amountCents)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Tag size={12} className="text-zinc-400" />
@@ -146,10 +146,10 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
             </div>
           </div>
 
-          <div className="p-4 md:p-10 bg-zinc-50 border-t border-zinc-100 flex gap-4">
+          <div className="p-4 md:p-10 bg-[var(--ink)] border-t border-[var(--line)] flex gap-4">
             <button 
               onClick={onClose}
-              className="flex-1 py-4 bg-white text-zinc-600 rounded-[32px] font-black hover:bg-zinc-100 transition-all border border-zinc-200"
+              className="flex-1 py-4 bg-[var(--surface)] text-zinc-600 rounded-[32px] font-black hover:bg-zinc-100 transition-all border border-[var(--line)]"
             >
               Reject
             </button>

@@ -7,7 +7,11 @@ export class SecurityService {
    */
   static generateForensicHash(data: any): string {
     const serialized = JSON.stringify(data);
-    return crypto.createHmac('sha256', process.env.SYSTEM_SALT || 'ledgerflow-zenith-salt')
+    const salt = process.env.SYSTEM_SALT;
+    if (!salt) {
+      throw new Error("SYSTEM_SALT environment variable is not set. Refusing to generate a forensic hash with a fallback.");
+    }
+    return crypto.createHmac('sha256', salt)
       .update(serialized)
       .digest('hex');
   }
@@ -17,7 +21,12 @@ export class SecurityService {
    */
   static verifyIntegrity(data: any, hash: string): boolean {
     const currentHash = this.generateForensicHash(data);
-    return currentHash === hash;
+    const a = Buffer.from(currentHash, 'utf8');
+    const b = Buffer.from(hash, 'utf8');
+    if (a.length !== b.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(a, b);
   }
 
   /**
@@ -25,9 +34,12 @@ export class SecurityService {
    */
   static scrubPII(text: string): string {
     if (!text) return "";
-    // Regex for credit cards, accounts, private identifiers
+    // Enhanced regex for credit cards, accounts, SSNs, emails, phones, private identifiers
     return text
-      .replace(/\b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{1,4}\b/g, "[CREDIT_CARD_MASQUED]")
+      .replace(/\b(?:\d[ -]*?){13,16}\b/g, "[CREDIT_CARD_REDACTED]")
+      .replace(/\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, "[SSN_REDACTED]")
+      .replace(/[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+/g, "[EMAIL_REDACTED]")
+      .replace(/\b(?:\+?1[-. ]?)?\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})\b/g, "[PHONE_REDACTED]")
       .replace(/\b\d{8,12}\b/g, "[ACCOUNT_REDACTED]")
       .replace(/\b\d{9}\b/g, "[ROUTING_REDACTED]");
   }

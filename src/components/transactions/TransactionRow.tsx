@@ -99,33 +99,33 @@ const TransactionRow = React.memo(({
       <div 
         onClick={() => onSelect?.(tx.id)}
         className={cn(
-          "grid w-full h-full items-center transition-all border-b border-slate-200 cursor-pointer relative",
+          "grid w-full h-full items-center transition-all border-b border-[var(--line)] cursor-pointer relative",
           tx.type === 'reversal' && "bg-rose-50/5",
           tx.type === 'adjustment' && "bg-amber-50/5",
           (anomaly || internalConflict) && "bg-indigo-600/[0.03]",
           isSetA && "bg-amber-50/10",
           isSetB && "bg-emerald-50/10",
-          isFocused ? "bg-slate-900/5" : (isEven ? "bg-white" : "bg-slate-50/30"),
-          isSelected && "bg-slate-900/[0.04]",
+          isFocused ? "bg-[var(--brass)]/[0.15]" : (isEven ? "bg-[var(--ink)]" : "bg-[var(--surface)]"),
+          isSelected && "bg-[var(--brass)]/[0.2]",
           tx.isFlagged && "bg-amber-500/5",
-          "hover:bg-slate-900 hover:text-white group/active"
+          "hover:bg-[var(--text)] hover:text-[var(--ink)] group/active"
         )}
         style={{ gridTemplateColumns: gridColumns }}
       >
-        <div className={cn("px-4 relative h-full flex items-center justify-center border-r border-slate-200/50", isProMode && "px-2", isCompactMode && "px-1")}>
+        <div className={cn("px-4 relative h-full flex items-center justify-center border-r border-[var(--line)]/50", isProMode && "px-2", isCompactMode && "px-1")}>
           {isFocused && <div className="absolute inset-y-0 left-0 w-1 bg-slate-900 shadow-[0_0_10px_rgba(0,0,0,0.2)]" />}
           <input 
             type="checkbox" 
             checked={isSelected}
             onChange={(e) => { e.stopPropagation(); onToggleSelection(tx.id); }}
             className={cn(
-              "w-4 h-4 rounded border-slate-200 text-slate-900 focus:ring-slate-900/20 cursor-pointer relative z-10 accent-ledger-ink transition-all group-hover/active:border-white/40",
+              "w-4 h-4 rounded border-[var(--line)] text-[var(--text)] focus:ring-slate-900/20 cursor-pointer relative z-10 accent-ledger-ink transition-all group-hover/active:border-white/40",
               isCompactMode && "w-3.5 h-3.5"
             )}
           />
         </div>
         <div className={cn(
-          "px-4 text-slate-500 font-mono whitespace-nowrap text-[10px] h-full flex items-center border-r border-slate-200/50 transition-colors group-hover/active:text-white/60", 
+          "px-4 text-slate-500 font-mono whitespace-nowrap text-[10px] h-full flex items-center border-r border-[var(--line)]/50 transition-colors group-hover/active:text-white/60", 
           isProMode && "px-2 text-[9px]",
           isCompactMode && "px-1 text-[9px]",
           isFocused && focusedField === 'date' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
@@ -133,7 +133,7 @@ const TransactionRow = React.memo(({
           {format(new Date(displayTx.date), 'dd MMM yyyy')}
         </div>
         <div className={cn(
-          "px-4 font-bold text-slate-900 transition-colors text-xs h-full flex flex-col justify-center relative border-r border-slate-200/50 group-hover/active:text-white", 
+          "px-4 font-bold text-[var(--text)] transition-colors text-xs h-full flex flex-col justify-center relative border-r border-[var(--line)]/50 group-hover/active:text-white", 
           isProMode && "px-2 text-[10px]",
           isFocused && focusedField === 'description' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5",
           "truncate"
@@ -141,7 +141,7 @@ const TransactionRow = React.memo(({
           <span className="truncate w-full font-sans tracking-tight flex items-center gap-1.5 flex-wrap">
             <HighlightMatch text={displayTx.description} match={searchTerm} />
             {isLocked && (
-              <span title="Locked under Absolute Truth">
+              <span title="Locked under Absolute Integrity">
                 <Lock className="text-amber-500 inline shrink-0 animate-pulse" size={11} />
               </span>
             )}
@@ -155,7 +155,7 @@ const TransactionRow = React.memo(({
         </div>
         {!isMobileGrid && (
           <div className={cn(
-            "px-4 h-full flex items-center border-r border-slate-200/50", 
+            "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2", 
             isCompactMode && "px-1",
             isFocused && focusedField === 'category' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
@@ -167,7 +167,7 @@ const TransactionRow = React.memo(({
                   dir="auto"
                   className={cn(
                     "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider truncate w-full border transition-all",
-                    line.amountCents > 0 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover/active:text-white group-hover/active:border-white/20" : "bg-slate-50 text-slate-500 border-slate-200 group-hover/active:bg-white/10 group-hover/active:text-white/80 group-hover/active:border-white/20",
+                    line.amountCents > 0 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover/active:text-white group-hover/active:border-white/20" : "bg-[var(--ink)] text-slate-500 border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-white/80 group-hover/active:border-white/20",
                   )}
                 >
                   <HighlightMatch text={line.accountName} match={searchTerm} />
@@ -181,12 +181,22 @@ const TransactionRow = React.memo(({
                   )}
                 </span>
               ))}
+              
+              {tx.lines?.map(l => l.tags || []).flat().filter((v, i, a) => a.indexOf(v) === i).slice(0, 2).map((tag, idx) => (
+                <span 
+                  key={`tag-${idx}`}
+                  dir="auto"
+                  className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest truncate w-full border transition-all bg-indigo-50 text-indigo-600 border-indigo-200 group-hover/active:bg-indigo-500 group-hover/active:text-white group-hover/active:border-white/20"
+                >
+                  <HighlightMatch text={tag} match={searchTerm} />
+                </span>
+              ))}
             </div>
           </div>
         )}
         {!isMobileGrid && !isTabletGrid && (
           <div className={cn(
-            "px-4 h-full flex items-center border-r border-slate-200/50", 
+            "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
             isFocused && focusedField === 'project' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}>
@@ -198,7 +208,7 @@ const TransactionRow = React.memo(({
                     onProjectClick(tx.lines!.find(l => l.project)!.project!);
                   }}
                   dir="auto"
-                  className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded text-[9px] font-bold border border-slate-200 hover:border-slate-800 transition-colors truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-white/10"
+                  className="px-2 py-0.5 bg-[var(--ink)] text-slate-500 rounded text-[9px] font-bold border border-[var(--line)] hover:border-slate-800 transition-colors truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10"
                 >
                   <HighlightMatch text={tx.lines!.find(l => l.project)!.project!} match={searchTerm} />
                 </button>
@@ -208,13 +218,13 @@ const TransactionRow = React.memo(({
         )}
         {!isMobileGrid && !isTabletGrid && (
           <div className={cn(
-            "px-4 h-full flex items-center border-r border-slate-200/50", 
+            "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
             isFocused && focusedField === 'class' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}>
             <div className="flex flex-wrap gap-1 w-full">
               {tx.lines?.find(l => l.class)?.class && (
-                <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded text-[9px] font-bold border border-slate-200 truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-white/10">
+                <span className="px-2 py-0.5 bg-[var(--ink)] text-slate-500 rounded text-[9px] font-bold border border-[var(--line)] truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10">
                   <HighlightMatch text={tx.lines!.find(l => l.class)!.class!} match={searchTerm} />
                 </span>
               )}
@@ -223,13 +233,13 @@ const TransactionRow = React.memo(({
         )}
         {!isMobileGrid && !isTabletGrid && (
           <div className={cn(
-            "px-4 h-full flex items-center border-r border-slate-200/50", 
+            "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
             isFocused && focusedField === 'location' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}>
             <div className="flex flex-wrap gap-1 w-full">
               {tx.lines?.find(l => l.location)?.location && (
-                <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded text-[9px] font-bold border border-slate-200 truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-white/10">
+                <span className="px-2 py-0.5 bg-[var(--ink)] text-slate-500 rounded text-[9px] font-bold border border-[var(--line)] truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10">
                   <HighlightMatch text={tx.lines!.find(l => l.location)!.location!} match={searchTerm} />
                 </span>
               )}
@@ -238,23 +248,23 @@ const TransactionRow = React.memo(({
         )}
         <div 
           className={cn(
-            "px-4 text-right font-black font-mono transition-colors text-sm h-full flex flex-col justify-center relative overflow-hidden border-r border-slate-200/50 items-end",
+            "px-4 text-right font-black font-mono transition-colors text-sm h-full flex flex-col justify-center relative overflow-hidden border-r border-[var(--line)]/50 items-end",
             tx.totalAmountCents > 0 ? "text-emerald-600 group-hover/active:text-emerald-400" : "text-rose-600 group-hover/active:text-rose-400",
             isFocused && focusedField === 'amountCents' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}
         >
-          <span className={cn("relative z-10 tabular-nums tracking-tighter truncate", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
+          <span className={cn("relative z-10 tabular-nums tracking-tighter truncate whitespace-nowrap", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
             {formatCurrency(displayTx.totalAmountCents)}
           </span>
           {tx.originalCurrency && tx.exchangeRate && (
-            <span className={cn("text-[9px] font-sans font-bold uppercase tracking-wider text-slate-500 mt-0.5 truncate", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
+            <span className={cn("text-[9px] font-sans font-bold uppercase tracking-wider text-slate-500 mt-0.5 truncate whitespace-nowrap", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
               {tx.originalCurrency} @ {tx.exchangeRate.toFixed(4)}
             </span>
           )}
         </div>
         {!isMobileGrid && !isTabletGrid && (
           <div className={cn(
-            "px-4 text-right font-bold font-mono text-slate-500 text-[11px] h-full flex items-center justify-end border-r border-slate-200/50 transition-colors group-hover/active:text-white/60",
+            "px-4 text-right font-bold font-mono text-slate-500 text-[11px] h-full flex items-center justify-end border-r border-[var(--line)]/50 transition-colors group-hover/active:text-white/60 whitespace-nowrap",
             isProMode && "px-2 text-[10px]"
           )}>
             {formatCurrency(tx.balanceCents || 0)}
@@ -262,7 +272,7 @@ const TransactionRow = React.memo(({
         )}
         {!isMobileGrid && (
           <div className={cn(
-            "px-4 text-center h-full flex items-center justify-center border-r border-slate-200/50", 
+            "px-4 text-center h-full flex items-center justify-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
             isFocused && focusedField === 'status' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}>
@@ -271,8 +281,8 @@ const TransactionRow = React.memo(({
               tx.status === 'approved' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover:text-white" :
               tx.status === 'flagged' ? "bg-amber-500/10 text-amber-600 border-amber-500/20 group-hover/active:bg-amber-500 group-hover:text-white" :
               tx.status === 'void' ? "bg-rose-500/10 text-rose-600 border-rose-500/20 group-hover/active:bg-rose-500 group-hover:text-white" :
-              tx.status === 'draft' ? "bg-slate-500/10 text-slate-600 border-slate-500/20 group-hover/active:bg-slate-500 group-hover:text-white" :
-              "bg-slate-50 text-slate-500 border-slate-200 group-hover/active:bg-white/10 group-hover/active:text-white group-hover/active:border-white/20",
+              tx.status === 'draft' ? "bg-[var(--ink)]0/10 text-slate-600 border-slate-500/20 group-hover/active:bg-[var(--ink)]0 group-hover:text-white" :
+              "bg-[var(--ink)] text-slate-500 border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-white group-hover/active:border-white/20",
               tx.lines?.some(l => l.isAnalyticalTagged) && "border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]"
             )}>
               {tx.status || tx.type}

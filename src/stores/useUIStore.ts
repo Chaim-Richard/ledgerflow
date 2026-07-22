@@ -156,7 +156,7 @@ export const useUIStore = create<UIState>((set) => ({
       s.activeIntelChannel = id;
     }
     // Check Settings
-    else if (['billing', 'neural', 'blueprint', 'developer', 'security', 'shortcuts'].includes(id)) {
+    else if (['billing', 'rule', 'blueprint', 'developer', 'security', 'shortcuts'].includes(id)) {
       s.activeTab = 'settings' as any;
       s.activeSettingsTab = id;
     }

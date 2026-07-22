@@ -19,12 +19,16 @@ export class AIBackendService {
   }
 
   public static getCachedResponse(task: string, payload: any): any | null {
-    const key = `${task}-${sha256Sync(JSON.stringify(payload || {}))}`;
+    const wsId = payload?.workspaceId || 'no-ws';
+    const uid = payload?.uid || 'no-uid';
+    const key = `${task}-${wsId}-${uid}-${sha256Sync(JSON.stringify(payload || {}))}`;
     return this.apiCache.get(key) || null;
   }
 
   public static setCachedResponse(task: string, payload: any, response: any): void {
-    const key = `${task}-${sha256Sync(JSON.stringify(payload || {}))}`;
+    const wsId = payload?.workspaceId || 'no-ws';
+    const uid = payload?.uid || 'no-uid';
+    const key = `${task}-${wsId}-${uid}-${sha256Sync(JSON.stringify(payload || {}))}`;
     if (this.apiCache.size >= 1000) {
       const firstKey = this.apiCache.keys().next().value;
       if (firstKey) this.apiCache.delete(firstKey);
@@ -271,7 +275,7 @@ export class AIBackendService {
   }
 
   private async strategicAnalysis(summary: any) {
-     const prompt = `System: Neural Financial Architect. Provide 3 strategic narratives based on these KPIs: ${JSON.stringify(summary)}`;
+     const prompt = `System: Rule Financial Architect. Provide 3 strategic narratives based on these KPIs: ${JSON.stringify(summary)}`;
      const result = await this.generateContent({
         model: this.getModel(summary),
         contents: [{ role: "user", parts: [{ text: prompt }] }],

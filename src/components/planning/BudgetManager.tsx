@@ -1,4 +1,4 @@
-import { TruthEngine } from '../../modules/truth/TruthEngine';
+import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useMemo } from 'react';
 import { 
   Target, 
@@ -21,13 +21,13 @@ import { db } from '../../firebase';
 import { toast } from 'sonner';
 
 interface BudgetManagerProps {
-  budgets: Budget[];
+  budgets?: Budget[];
   transactions?: Transaction[];
-  accounts: ChartAccount[];
-  user: any;
+  accounts?: ChartAccount[];
+  user?: any;
 }
 
-export default function BudgetManager({ budgets = [], transactions = [], accounts = [], user }: BudgetManagerProps) {
+export default function BudgetManager({ budgets = [], transactions = [], accounts = [], user }: BudgetManagerProps = {}) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
   const [newBudget, setNewBudget] = useState({
@@ -66,7 +66,7 @@ export default function BudgetManager({ budgets = [], transactions = [], account
   const budgetAnalysis = useMemo(() => {
     return budgets.map(budget => {
       const actualCents = transactions.reduce((sum, t) => {
-        const lines = t.lines?.filter(l => l.accountName === budget.targetId) || [];
+        const lines = t.lines?.filter(l => l.accountId === budget.targetId || l.accountName === budget.targetId) || [];
         return sum + lines.reduce((s, l) => s + Math.abs(l.amountCents), 0);
       }, 0);
       
@@ -84,14 +84,14 @@ export default function BudgetManager({ budgets = [], transactions = [], account
 
   return (
     <div className="space-y-12">
-      {/* Neural Header */}
+      {/* Rule Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate mb-4">
             <Target size={14} />
             Resource Allocation Matrix
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter">Budget Protocol</h2>
+          <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Budget Protocol</h2>
           <p className="text-slate-500 font-medium text-lg mt-2 italic opacity-60">Strategic variance analysis and predictive consumption monitoring.</p>
         </div>
 
@@ -113,7 +113,7 @@ export default function BudgetManager({ budgets = [], transactions = [], account
             <motion.div 
               key={b.id}
               whileHover={{ y: -5 }}
-              className="ledger-card p-4 md:p-8 rounded-[32px] relative overflow-hidden group border border-slate-200 hover:border-indigo-600/20 transition-all"
+              className="ledger-card p-4 md:p-8 rounded-[32px] relative overflow-hidden group border border-[var(--line)] hover:border-indigo-600/20 transition-all"
             >
               <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
               
@@ -164,7 +164,7 @@ export default function BudgetManager({ budgets = [], transactions = [], account
               </div>
 
               <div className="space-y-2 relative z-10">
-                 <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic truncate">{b.targetId}</h3>
+                 <h3 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase italic truncate">{b.targetId}</h3>
                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] opacity-40">{b.period} Allocation</p>
               </div>
 
@@ -172,7 +172,7 @@ export default function BudgetManager({ budgets = [], transactions = [], account
                 <div className="flex justify-between items-end">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50 mb-1">Consumption Flow</span>
-                    <span className="text-2xl font-black text-slate-900 font-mono tracking-tighter">{formatCurrency(b.actualCents)}</span>
+                    <span className="text-2xl font-black text-[var(--text)] font-mono tracking-tighter">{formatCurrency(b.actualCents)}</span>
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50 mb-1">Cap Magnitude</span>
@@ -180,7 +180,7 @@ export default function BudgetManager({ budgets = [], transactions = [], account
                   </div>
                 </div>
 
-                <div className="relative h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-200">
+                <div className="relative h-4 bg-[var(--ink)] rounded-full overflow-hidden border border-[var(--line)]">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(b.percentUsed, 100)}%` }}
@@ -206,12 +206,12 @@ export default function BudgetManager({ budgets = [], transactions = [], account
                 </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-slate-200 flex justify-between items-center relative z-10">
+              <div className="mt-8 pt-6 border-t border-[var(--line)] flex justify-between items-center relative z-10">
                  <div className="flex items-center gap-2">
                     <Layers size={14} className="text-slate-500 opacity-30" />
                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest opacity-30">Analytical Snapshot Matrix</span>
                  </div>
-                 <button className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition-all border border-slate-200 group-hover:scale-110">
+                 <button className="w-10 h-10 bg-[var(--ink)] rounded-xl flex items-center justify-center text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all border border-[var(--line)] group-hover:scale-110">
                     <ArrowUpRight size={18} />
                  </button>
               </div>
@@ -220,14 +220,14 @@ export default function BudgetManager({ budgets = [], transactions = [], account
         })}
 
         {budgets.length === 0 && (
-          <div className="col-span-full py-32 text-center bg-white rounded-[32px] border border-dashed border-slate-200 relative overflow-hidden group">
+          <div className="col-span-full py-32 text-center bg-[var(--surface)] rounded-[32px] border border-dashed border-[var(--line)] relative overflow-hidden group">
             <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
             <div className="relative z-10 flex flex-col items-center gap-6">
               <div className="w-24 h-24 bg-slate-200/20 rounded-[32px] flex items-center justify-center text-slate-500/30">
                 <Target size={48} />
               </div>
               <div className="space-y-2">
-                <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">Zero Objectives Detected</h3>
+                <h3 className="text-3xl font-black text-[var(--text)] uppercase tracking-tighter italic">Zero Objectives Detected</h3>
                 <p className="text-sm font-black text-slate-500/40 uppercase tracking-widest truncate">Initialize target matrix to begin forensic consumption mapping.</p>
               </div>
               <button 
@@ -256,32 +256,36 @@ export default function BudgetManager({ budgets = [], transactions = [], account
               initial={{ opacity: 0, scale: 0.9, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              className="relative w-full max-w-xl bg-slate-50 rounded-[32px] shadow-2xl border border-slate-200 overflow-hidden p-12"
+              className="relative w-full max-w-xl bg-[var(--ink)] rounded-[32px] shadow-2xl border border-[var(--line)] overflow-hidden p-12"
             >
               <div className="flex items-center justify-between mb-10">
                  <div>
-                    <h2 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight uppercase italic">Define Objective</h2>
+                    <h2 className="text-2xl md:text-4xl font-black text-[var(--text)] tracking-tight uppercase italic">Define Objective</h2>
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-1 opacity-50">Operational Resource Allocation</p>
                  </div>
-                 <button onClick={() => setIsAdding(false)} className="w-12 h-12 bg-slate-50 rounded-[32px] flex items-center justify-center text-slate-500 hover:text-slate-900 transition-all rotate-45 border border-slate-200">
+                 <button onClick={() => setIsAdding(false)} className="w-12 h-12 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-slate-500 hover:text-[var(--text)] transition-all rotate-45 border border-[var(--line)]">
                     <Plus size={24} />
                  </button>
               </div>
 
               <form onSubmit={handleAddBudget} className="space-y-8">
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-50">Neural Mapping (Account)</label>
-                  <select 
-                    value={newBudget.targetId}
-                    onChange={(e) => setNewBudget({ ...newBudget, targetId: e.target.value })}
-                    required
-                    className="w-full px-8 py-5 bg-white border border-slate-200 rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-slate-900 appearance-none cursor-pointer uppercase tracking-widest"
-                  >
-                    <option value="">Select Protocol Node...</option>
-                    {accounts.map(acc => (
-                      <option key={acc.id} value={acc.name}>{acc.code} - {(acc.name || 'UNKNOWN').toUpperCase()}</option>
-                    ))}
-                  </select>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-50">Rule Mapping (Account)</label>
+                  <div className="relative w-full">
+                    <input 
+                      list="budget-account-list"
+                      required
+                      value={newBudget.targetId}
+                      onChange={(e) => setNewBudget({ ...newBudget, targetId: e.target.value })}
+                      placeholder="Select Protocol Node..."
+                      className="w-full px-8 py-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-[var(--text)] uppercase tracking-widest"
+                    />
+                    <datalist id="budget-account-list">
+                      {accounts.map(acc => (
+                        <option key={acc.id} value={acc.name}>{acc.code}</option>
+                      ))}
+                    </datalist>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-8">
@@ -295,7 +299,7 @@ export default function BudgetManager({ budgets = [], transactions = [], account
                         required
                         value={newBudget.amountCents / 100}
                         onChange={(e) => setNewBudget({ ...newBudget, amountCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
-                        className="w-full pl-12 pr-8 py-5 bg-white border border-slate-200 rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-mono font-black text-slate-900 text-right text-xl"
+                        className="w-full pl-12 pr-8 py-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-mono font-black text-[var(--text)] text-right text-xl"
                       />
                     </div>
                   </div>
@@ -304,7 +308,7 @@ export default function BudgetManager({ budgets = [], transactions = [], account
                     <select 
                       value={newBudget.period}
                       onChange={(e) => setNewBudget({ ...newBudget, period: e.target.value as any })}
-                      className="w-full px-8 py-5 bg-white border border-slate-200 rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-slate-900 appearance-none cursor-pointer uppercase tracking-widest"
+                      className="w-full px-8 py-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-[var(--text)] appearance-none cursor-pointer uppercase tracking-widest"
                     >
                       <option value="monthly">Monthly Cycle</option>
                       <option value="quarterly">Quarterly Cycle</option>
@@ -317,7 +321,7 @@ export default function BudgetManager({ budgets = [], transactions = [], account
                   <button 
                     type="button"
                     onClick={() => setIsAdding(false)}
-                    className="flex-1 py-5 bg-slate-50 text-slate-500 opacity-60 rounded-[32px] text-xs font-black uppercase tracking-[0.3em] hover:opacity-100 transition-all"
+                    className="flex-1 py-5 bg-[var(--ink)] text-slate-500 opacity-60 rounded-[32px] text-xs font-black uppercase tracking-[0.3em] hover:opacity-100 transition-all"
                   >
                     Abort
                   </button>

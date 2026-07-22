@@ -1,4 +1,4 @@
-import { TruthEngine } from '../../modules/truth/TruthEngine';
+import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState } from 'react';
 import { 
   X, 
@@ -64,7 +64,7 @@ export default function StatementImporter({
   autoRules,
   patternCache
 }: StatementImporterProps) {
-  const { user } = useAuthStore();
+  const user = useAuthStore(s => s.user);
   const [rawText, setRawText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [parsedTxs, setParsedTxs] = useState<ParsedTx[]>([]);
@@ -139,7 +139,7 @@ export default function StatementImporter({
     setIsParsing(true);
     try {
       const labels = accounts.map(a => a.name);
-      const results = IntentResolver.resolveEntry(rawText, { accounts: accounts.map(a => ({ id: a.id, name: a.name })), neuralCache: patternCache });
+      const results = IntentResolver.resolveEntry(rawText, { accounts: accounts.map(a => ({ id: a.id, name: a.name })), ruleCache: patternCache });
       if (results && results.length > 0) {
         processResults(results);
       } else {
@@ -249,17 +249,17 @@ export default function StatementImporter({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-4xl bg-white rounded-[40px] shadow-2xl border border-zinc-200 overflow-hidden flex flex-col max-h-[90dvh]"
+        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
       >
         {/* Header */}
-        <div className="p-4 md:p-8 border-b border-zinc-100 flex items-center justify-between bg-white">
+        <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--surface)]">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-600/10 rounded-[32px] flex items-center justify-center text-indigo-600">
               <FileText size={24} />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Statement Intelligence</h2>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Neural Parsing & Causal Deduplication</p>
+              <h2 className="text-2xl font-black text-[var(--text)] tracking-tight">Statement Intelligence</h2>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Rule Parsing & Causal Deduplication</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-all text-slate-500">
@@ -302,7 +302,7 @@ export default function StatementImporter({
                     value={rawText}
                     onChange={(e) => setRawText(e.target.value)}
                     placeholder="Paste raw text from your bank statement, CSV, or PDF export here..."
-                    className="w-full h-64 p-6 bg-white border border-slate-200 rounded-[32px] font-mono text-sm text-slate-900 focus:ring-2 focus:ring-indigo-600/20 outline-none transition-all resize-none"
+                    className="w-full h-64 p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] font-mono text-sm text-[var(--text)] focus:ring-2 focus:ring-indigo-600/20 outline-none transition-all resize-none"
                   />
                 </div>
               </motion.div>
@@ -322,11 +322,11 @@ export default function StatementImporter({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {(['date', 'description', 'amount'] as const).map(field => (
                     <div key={field} className="space-y-3">
-                      <label className="micro-label !text-slate-900 capitalize">{field} Column</label>
+                      <label className="micro-label !text-[var(--text)] capitalize">{field} Column</label>
                       <select 
                         value={mapping[field]}
                         onChange={(e) => setMapping({...mapping, [field]: parseInt(e.target.value)})}
-                        className="w-full px-5 py-4 bg-white border border-slate-200 rounded-[32px] font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-600/20"
+                        className="w-full px-5 py-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-600/20"
                       >
                         <option value={-1}>Select Column</option>
                         {csvData[0]?.map((col, idx) => (
@@ -337,22 +337,22 @@ export default function StatementImporter({
                   ))}
                 </div>
 
-                <div className="border border-slate-200 rounded-[32px] overflow-hidden">
-                  <div className="p-4 bg-white border-b border-slate-200">
+                <div className="border border-[var(--line)] rounded-[32px] overflow-hidden">
+                  <div className="p-4 bg-[var(--surface)] border-b border-[var(--line)]">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Data Preview (First 5 Rows)</p>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
-                        <tr className="bg-zinc-50 border-b border-slate-200">
+                        <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
                           {csvData[0]?.map((col, idx) => (
-                            <th key={idx} className="p-4 font-black text-slate-900 truncate max-w-[150px]">{col || `Col ${idx + 1}`}</th>
+                            <th key={idx} className="p-4 font-black text-[var(--text)] truncate max-w-[150px]">{col || `Col ${idx + 1}`}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {csvData.slice(1, 6).map((row, rIdx) => (
-                          <tr key={rIdx} className="border-b border-slate-200/50">
+                          <tr key={rIdx} className="border-b border-[var(--line)]/50">
                             {row.map((cell, cIdx) => (
                               <td key={cIdx} className="p-4 text-slate-500 font-medium truncate max-w-[150px]">{cell}</td>
                             ))}
@@ -394,10 +394,10 @@ export default function StatementImporter({
                     <div 
                       key={idx}
                       className={cn(
-                        "p-4 rounded-[32px] border transition-all flex flex-col gap-3 group bg-white",
+                        "p-4 rounded-[32px] border transition-all flex flex-col gap-3 group bg-[var(--surface)]",
                         tx.selected 
                           ? "border-indigo-600 shadow-lg shadow-ledger-accent/5 ring-1 ring-indigo-600/5" 
-                          : "border-slate-200 opacity-60 grayscale bg-white",
+                          : "border-[var(--line)] opacity-60 grayscale bg-[var(--surface)]",
                         tx.isDuplicate && tx.selected && "border-rose-200 bg-rose-50/30"
                       )}
                     >
@@ -407,7 +407,7 @@ export default function StatementImporter({
                             onClick={(e) => { e.stopPropagation(); toggleSelect(idx); }}
                             className={cn(
                               "w-6 h-6 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
-                              tx.selected ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-slate-200"
+                              tx.selected ? "bg-indigo-600 border-indigo-600 text-white" : "bg-[var(--surface)] border-[var(--line)]"
                             )}
                           >
                             {tx.selected && <Check size={14} />}
@@ -421,19 +421,19 @@ export default function StatementImporter({
                                   tx.isLearned ? "text-indigo-600 bg-indigo-600/5 border-indigo-600/20" : "text-emerald-600 bg-emerald-50 border-emerald-100"
                                 )}>
                                   {tx.isLearned ? <Zap size={8} /> : <Activity size={8} />}
-                                  {tx.isLearned ? "Neural Memory" : `Pattern Resolved (${Math.round((tx.resolutionScore || 0) * 100)}%)`}
+                                  {tx.isLearned ? "Rule Memory" : `Pattern Resolved (${Math.round((tx.resolutionScore || 0) * 100)}%)`}
                                   {tx.suggestedAccount && ` → ${tx.suggestedAccount}`}
                                   {tx.suggestedProject && ` [Proj: ${tx.suggestedProject}]`}
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm font-bold text-slate-900">{tx.description}</p>
+                            <p className="text-sm font-bold text-[var(--text)]">{tx.description}</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className={cn(
                             "text-sm font-black mono-value",
-                            tx.amountCents > 0 ? "text-emerald-600" : "text-slate-900"
+                            tx.amountCents > 0 ? "text-emerald-600" : "text-[var(--text)]"
                           )}>
                             {tx.amountCents > 0 ? '+' : ''}{(tx.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                           </p>
@@ -445,14 +445,14 @@ export default function StatementImporter({
 
                       {/* Sub-item Drilldown */}
                       {tx.lines && tx.lines.length > 1 && (
-                        <div className="mt-2 pt-2 border-t border-slate-200/30 space-y-1.5 pl-10">
+                        <div className="mt-2 pt-2 border-t border-[var(--line)]/30 space-y-1.5 pl-10">
                           {tx.lines.map((item, i) => (
                             <div key={i} className="flex items-center justify-between group/item">
                               <div className="flex flex-col">
-                                <p className="text-[11px] font-medium text-slate-500 group-hover/item:text-slate-900 transition-colors">
+                                <p className="text-[11px] font-medium text-slate-500 group-hover/item:text-[var(--text)] transition-colors">
                                   {item.description}
                                   {item.quantity && item.quantity > 1 && (
-                                    <span className="ml-2 text-[9px] text-slate-500 font-bold px-1 py-0.5 bg-white rounded border border-slate-200">
+                                    <span className="ml-2 text-[9px] text-slate-500 font-bold px-1 py-0.5 bg-[var(--surface)] rounded border border-[var(--line)]">
                                       {item.quantity} units @ {( (item.unitPriceCents || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                                     </span>
                                   )}
@@ -477,11 +477,11 @@ export default function StatementImporter({
         </div>
 
         {/* Footer */}
-        <div className="p-4 md:p-8 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between">
+        <div className="p-4 md:p-8 border-t border-[var(--line)] bg-[var(--ink)] flex items-center justify-between">
           {step !== 'input' ? (
             <button 
               onClick={() => setStep('input')}
-              className="px-6 py-3 text-slate-500 font-bold hover:text-slate-900 transition-all"
+              className="px-6 py-3 text-slate-500 font-bold hover:text-[var(--text)] transition-all"
             >
               Back to Input
             </button>
@@ -497,7 +497,7 @@ export default function StatementImporter({
                 className="px-10 py-4 bg-slate-900 text-white rounded-[32px] font-black hover:bg-black transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-black/10"
               >
                 {isParsing ? <Loader2 className="animate-spin" size={20} /> : <ArrowRight size={20} />}
-                {isParsing ? 'Neural Analysis...' : 'Unstructured Parse'}
+                {isParsing ? 'Rule Analysis...' : 'Unstructured Parse'}
               </button>
             ) : step === 'mapping' ? (
               <button 

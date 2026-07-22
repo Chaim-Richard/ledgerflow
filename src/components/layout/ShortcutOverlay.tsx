@@ -57,17 +57,17 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-4xl bg-white rounded-[32px] shadow-[0_32px_120px_-20px_rgba(0,0,0,0.5)] border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]"
+            className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[32px] shadow-[0_32px_120px_-20px_rgba(0,0,0,0.5)] border border-[var(--line)] overflow-hidden flex flex-col max-h-[85vh]"
           >
-            <div className="p-8 md:p-10 border-b border-slate-200 bg-slate-50/30 shrink-0">
+            <div className="p-8 md:p-10 border-b border-[var(--line)] bg-[var(--ink)]/30 shrink-0">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Command Directives</h2>
+                  <h2 className="text-3xl font-black text-[var(--text)] tracking-tighter">Command Directives</h2>
                   <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Accelerated Keyboard Navigation</p>
                 </div>
                 <button 
                   onClick={onClose}
-                  className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:border-slate-800 transition-all shadow-sm"
+                  className="w-12 h-12 rounded-full bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-slate-500 hover:text-[var(--text)] hover:border-slate-800 transition-all shadow-sm"
                 >
                   <X size={20} />
                 </button>
@@ -76,7 +76,7 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
             
             <div className="flex-1 overflow-y-auto p-8 md:p-10 space-y-12">
               <div>
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-6 flex items-center gap-2">
+                <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-6 flex items-center gap-2">
                   <Command size={14} className="text-slate-400" />
                   System Shortcuts
                 </h3>
@@ -84,17 +84,17 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
                   {shortcuts.map((s, i) => (
                     <div 
                       key={i}
-                      className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 bg-white shadow-sm hover:border-slate-300 transition-all group"
+                      className="flex items-center justify-between p-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:border-slate-300 transition-all group"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-[var(--ink)] border border-[var(--line)] flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors">
                           <s.icon size={16} />
                         </div>
                         <span className="text-sm font-semibold text-slate-700">{s.desc}</span>
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        <span className="px-3 py-1.5 min-h-[30px] min-w-[32px] rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center shadow-inner">
+                        <span className="px-3 py-1.5 min-h-[30px] min-w-[32px] rounded-lg bg-slate-100 border border-[var(--line)] text-slate-700 text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center shadow-inner">
                           {s.key}
                         </span>
                       </div>
@@ -105,7 +105,7 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
 
               {hasSpeedDials && (
                 <div>
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-6 flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-6 flex items-center gap-2">
                     <Zap size={14} className="text-indigo-400" />
                     Configured Speed Dials
                   </h3>
@@ -121,13 +121,13 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
                             <div className="w-8 h-8 rounded-lg bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-600 font-black">
                               {(((tab as any)?.label?.[language] || (tab as any)?.label?.['en']) || (tab as any)?.name || tabId).charAt(0)}
                             </div>
-                            <span className="text-sm font-semibold text-slate-900">
+                            <span className="text-sm font-semibold text-[var(--text)]">
                               {tab ? (((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id) : tabId}
                             </span>
                           </div>
                           
                           <div className="flex items-center gap-2">
-                            <span className="px-3 py-1.5 min-h-[30px] min-w-[32px] rounded-lg bg-white border border-indigo-200 text-indigo-700 text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center shadow-sm">
+                            <span className="px-3 py-1.5 min-h-[30px] min-w-[32px] rounded-lg bg-[var(--surface)] border border-indigo-200 text-indigo-700 text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center shadow-sm">
                               ⌥ + {key.toUpperCase()}
                             </span>
                           </div>

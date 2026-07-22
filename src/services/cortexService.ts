@@ -19,9 +19,9 @@ export interface SimulationResult {
   serverTimeMs: number;
 }
 
-export class CortexService {
+export class ClearbookAIService {
   /**
-   * High-Performance Neural Simulation
+   * High-Performance Rule Simulation
    * Combines Fourier-detected seasonality with Geometric Brownian Motion
    */
   static async runLiquiditySimulation(params: SimulationParams): Promise<SimulationResult> {

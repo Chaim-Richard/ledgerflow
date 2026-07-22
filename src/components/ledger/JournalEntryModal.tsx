@@ -1,4 +1,4 @@
-import { TruthEngine } from '../../modules/truth/TruthEngine';
+import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
 import { ChartAccount, JournalLine } from '../../types';
@@ -14,13 +14,14 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { collection, writeBatch, doc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { db, getIdToken } from '../../firebase';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { MatchingEngine } from '../../lib/MatchingEngine';
 import { SpellChecker } from '../../lib/algorithms';
-import { TemporalTruth } from '../../modules/truth/TruthEngine';
 import { TemporalValidity } from '../../types';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 
 // Temporal series for various currencies (to ensure we use 'rate of date of change' as requested)
 const getTemporalRatesFor = (currency: string): TemporalValidity[] => {
@@ -51,21 +52,31 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   
   const baseCurrency = useLedgerStore(state => state.baseCurrency);
   const lockDate = useLedgerStore(state => state.lockDate);
+  const workspace = useAuthStore(state => state.getCurrentWorkspace());
+  const activeDimensions = (workspace?.dimensions || DEFAULT_WORKSPACE_DIMENSIONS).filter(d => d.id !== 'category');
+  
   const [transactionCurrency, setTransactionCurrency] = useState(baseCurrency || 'USD');
   const [exchangeRate, setExchangeRate] = useState<number>(1.0);
   
   const isLocked = !!(lockDate && date <= lockDate);
 
   const [lines, setLines] = useState<JournalLine[]>([
-    { accountId: '', accountName: '', debit: 0, credit: 0, class: '', location: '', project: '' },
-    { accountId: '', accountName: '', debit: 0, credit: 0, class: '', location: '', project: '' },
+    { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
+    { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
   ]);
+
+  const handleDimensionChange = (index: number, dimensionId: string, value: string) => {
+    const newLines = [...lines];
+    if (!newLines[index].dimensions) newLines[index].dimensions = {};
+    newLines[index].dimensions![dimensionId.toLowerCase()] = value;
+    setLines(newLines);
+  };
 
   React.useEffect(() => {
     if (transactionCurrency !== baseCurrency) {
       try {
         const series = getTemporalRatesFor(transactionCurrency);
-        const rate = TemporalTruth.resolveEffectiveValue(series, date);
+        const rate = TruthEngine.resolveEffectiveValue(series, date);
         setExchangeRate(Number(rate.toFixed(6)));
       } catch (err) {
         setExchangeRate(1.0);
@@ -75,7 +86,10 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
     }
   }, [transactionCurrency, date, baseCurrency]);
 
-  const { transactions, analyticalPatternCache, autoRules, matchingThreshold } = useLedgerStore();
+  const transactions = useLedgerStore(s => s.transactions);
+  const analyticalPatternCache = useLedgerStore(s => s.analyticalPatternCache);
+  const autoRules = useLedgerStore(s => s.autoRules);
+  const matchingThreshold = useLedgerStore(s => s.matchingThreshold);
   
   const engine = useMemo(() => new MatchingEngine(autoRules, analyticalPatternCache, undefined, matchingThreshold, transactions), [autoRules, analyticalPatternCache, transactions, matchingThreshold]);
   
@@ -110,7 +124,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         const found = accounts.find(a => a.name === match.accountName);
         if (found && lines[0].accountId === '') {
           handleLineChange(0, 'accountId', found.id);
-          toast.info(`Smart Category: Suggesting ${found.name} based on neural patterns.`, { duration: 2000 });
+          toast.info(`Smart Category: Suggesting ${found.name} based on rule patterns.`, { duration: 2000 });
         }
       }
     }
@@ -123,7 +137,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   }, [lines]);
 
   const handleAddLine = () => {
-    setLines([...lines, { accountId: '', accountName: '', debit: 0, credit: 0, class: '', location: '', project: '' }]);
+    setLines([...lines, { accountId: '', accountName: '', debit: 0, credit: 0, class: '', location: '', project: '', dimensions: {} }]);
   };
 
   const handleRemoveLine = (index: number) => {
@@ -165,13 +179,8 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
       const isForeignCurrency = transactionCurrency !== baseCurrency;
       const appliedRate = isForeignCurrency ? exchangeRate : 1.0;
       
-      const batch = writeBatch(db);
-      
-      const txRef = doc(collection(db, 'transactions'));
-      const jeRef = doc(collection(db, 'journalEntries'));
-      
       const totalAmountCents = Math.round(totals.debit * appliedRate);
-      batch.set(txRef, {
+      const payload = {
         uid: user.uid,
         workspaceId,
         date,
@@ -185,48 +194,48 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         status: 'completed',
         lines: lines.filter(l => l.accountId && (l.debit > 0 || l.credit > 0)).map(l => {
           const baseCents = Math.round((l.debit > 0 ? l.debit : -l.credit) * appliedRate);
+          const dims: Record<string, string> = { ...(l.dimensions || {}) };
+          if (l.class && !dims.class) dims.class = l.class;
+          if (l.location && !dims.location) dims.location = l.location;
+          if (l.project && !dims.project) dims.project = l.project;
+          if ((l as any).world && !dims.world) dims.world = (l as any).world;
+          
           return {
             accountId: l.accountId,
             accountName: l.accountName,
             amountCents: baseCents,
             class: l.class || undefined,
             location: l.location || undefined,
-            project: l.project || undefined
+            project: l.project || undefined,
+            dimensions: Object.keys(dims).length > 0 ? dims : undefined
           };
         }),
-        isCleared: true,
-        createdAt: new Date().toISOString()
+        isCleared: true
+      };
+
+      const token = await getIdToken();
+      const res = await fetch('/api/v1/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ transaction: payload })
       });
-      
-      batch.set(jeRef, {
-        uid: user.uid,
-        workspaceId,
-        date,
-        description,
-        reference,
-        currency: baseCurrency,
-        originalCurrency: isForeignCurrency ? transactionCurrency : undefined,
-        exchangeRate: isForeignCurrency ? appliedRate : undefined,
-        lines: lines.filter(l => l.accountId && (l.debit > 0 || l.credit > 0)).map(l => {
-           const baseCents = Math.round((l.debit > 0 ? l.debit : -l.credit) * appliedRate);
-           return { ...l, debit: Math.round(l.debit * appliedRate), credit: Math.round(l.credit * appliedRate) };
-        }),
-        createdAt: new Date().toISOString()
-      });
-      
-      await batch.commit();
-      
-      // Update account balances (In a real app, this would be a cloud function or transaction)
-      // Assume the parent component refreshes data to update account balances
-      
+
+      if (!res.ok) {
+        const errObj = await res.json().catch(() => ({}));
+        throw new Error(errObj.error || `HTTP error ${res.status}`);
+      }
+
       toast.success('Journal entry recorded');
       onClose();
       // Reset form
       setDescription('');
       setReference('');
       setLines([
-        { accountId: '', accountName: '', debit: 0, credit: 0 },
-        { accountId: '', accountName: '', debit: 0, credit: 0 },
+        { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
+        { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
       ]);
     } catch (error) {
       console.error("Journal Entry Error:", error);
@@ -252,20 +261,20 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-4xl bg-white rounded-[32px] md:rounded-[40px] shadow-2xl border border-zinc-200 overflow-hidden flex flex-col max-h-[95dvh] md:max-h-[90dvh]"
+            className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[32px] md:rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[95dvh] md:max-h-[90dvh]"
           >
             {/* Header */}
-            <div className="p-4 md:p-6 lg:p-8 border-b border-slate-200 flex items-center justify-between bg-slate-50/30 gap-4">
+            <div className="p-4 md:p-6 lg:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30 gap-4">
               <div className="flex items-center gap-3 md:gap-4">
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-900 rounded-xl md:rounded-[32px] flex items-center justify-center text-white shadow-lg shadow-ledger-ink/20 shrink-0">
                   <ArrowRightLeft size={20} className="md:size-[24px]" />
                 </div>
                 <div>
-                  <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">New Journal Entry</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-[var(--text)] tracking-tight">New Journal Entry</h2>
                   <p className="text-xs md:text-sm text-slate-500 font-medium">Record manual adjustments to the ledger</p>
                 </div>
               </div>
-              <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors shrink-0">
+              <button onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors shrink-0">
                 <X size={20} className="text-slate-500" />
               </button>
             </div>
@@ -294,7 +303,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all font-bold"
+                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--surface)] transition-all font-bold"
                   />
                 </div>
                 <div className="md:col-span-2 space-y-2 relative">
@@ -305,7 +314,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                     value={description}
                     onChange={(e) => handleDescriptionChange(e.target.value)}
                     placeholder="e.g. Monthly depreciation adjustment"
-                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all font-bold"
+                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--surface)] transition-all font-bold"
                   />
                   
                   <AnimatePresence>
@@ -336,7 +345,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                     value={reference}
                     onChange={(e) => setReference(e.target.value)}
                     placeholder="e.g. JE-2026-001"
-                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all shadow-sm font-bold"
+                    className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--surface)] transition-all shadow-sm font-bold"
                   />
                 </div>
                 
@@ -345,7 +354,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                    <select 
                      value={transactionCurrency}
                      onChange={(e) => setTransactionCurrency(e.target.value)}
-                     className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all font-bold appearance-none"
+                     className="w-full px-4 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--surface)] transition-all font-bold appearance-none"
                    >
                      {['USD', 'EUR', 'GBP', 'ILS', 'JPY', 'CAD'].map(cur => (
                        <option key={cur} value={cur}>{cur}</option>
@@ -365,7 +374,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                        onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
                        placeholder="e.g. 1.08"
                        required
-                       className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all font-mono font-bold"
+                       className="w-full px-4 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--surface)] transition-all font-mono font-bold"
                      />
                    </div>
                 )}
@@ -374,35 +383,37 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
               {/* Lines Table */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Entry Lines</h3>
+                  <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-widest">Entry Lines</h3>
                   <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input 
                         type="checkbox" 
                         checked={showDimensions} 
                         onChange={e => setShowDimensions(e.target.checked)} 
-                        className="rounded border-zinc-300 text-slate-900 focus:ring-indigo-600"
+                        className="rounded border-zinc-300 text-[var(--text)] focus:ring-indigo-600"
                       />
                       <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Show Dimensions</span>
                     </label>
                     <button 
                       type="button"
                       onClick={handleAddLine}
-                      className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
+                      className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[var(--text)] transition-colors"
                     >
                       <Plus size={14} /> Add Line
                     </button>
                   </div>
                 </div>
 
-                <div className="border border-slate-200 rounded-[32px] md:rounded-[32px] overflow-hidden overflow-x-auto custom-scrollbar">
+                <div className="border border-[var(--line)] rounded-[32px] md:rounded-[32px] overflow-hidden overflow-x-auto custom-scrollbar">
                   <table className="w-full border-collapse text-sm min-w-[600px]">
                     <thead>
-                      <tr className="text-left border-b border-slate-200 bg-slate-50/50">
+                      <tr className="text-left border-b border-[var(--line)] bg-[var(--ink)]/50">
                         <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Account</th>
-                        {showDimensions && <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Class</th>}
-                        {showDimensions && <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Location</th>}
-                        {showDimensions && <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Project</th>}
+                        {showDimensions && activeDimensions.map(dim => (
+                          <th key={dim.id} className={cn("p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]", dim.isWorld && "text-indigo-500")}>
+                            {dim.name}
+                          </th>
+                        ))}
                         <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px] text-right w-32">Debit</th>
                         <th className="p-4 font-bold text-slate-500 uppercase tracking-widest text-[10px] text-right w-32">Credit</th>
                         <th className="p-4 w-12"></th>
@@ -410,62 +421,39 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                     </thead>
                     <tbody className="divide-y divide-ledger-line/30">
                       {lines.map((line, idx) => (
-                        <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
+                        <tr key={idx} className="group hover:bg-[var(--ink)]/50 transition-colors">
                           <td className="p-3">
-                            <select 
-                              required
-                              value={line.accountId}
-                              onChange={(e) => handleLineChange(idx, 'accountId', e.target.value)}
-                              className="w-full px-4 py-2.5 bg-transparent border-none focus:ring-0 font-bold text-slate-900 appearance-none min-w-[150px]"
-                            >
-                              <option value="">Select Account...</option>
-                              {accounts.map(acc => (
-                                <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
-                              ))}
-                            </select>
+                            <div className="relative">
+                              <input 
+                                required
+                                list={`je-account-${idx}`}
+                                value={accounts.find(a => a.id === line.accountId)?.name || line.accountId || ''}
+                                onChange={(e) => {
+                                  const acc = accounts.find(a => a.name === e.target.value || a.id === e.target.value);
+                                  handleLineChange(idx, 'accountId', acc ? acc.id : e.target.value);
+                                }}
+                                placeholder="Select Account..."
+                                className="w-full px-4 py-2.5 bg-transparent border-none focus:ring-0 font-bold text-[var(--text)] min-w-[150px]"
+                              />
+                              <datalist id={`je-account-${idx}`}>
+                                {accounts.map(acc => (
+                                  <option key={acc.id} value={acc.name}>{acc.code}</option>
+                                ))}
+                              </datalist>
+                            </div>
                           </td>
-                          {showDimensions && (
-                            <td className="p-3">
-                              <select 
-                                value={line.class || ''}
-                                onChange={(e) => handleLineChange(idx, 'class', e.target.value)}
-                                className="w-full px-4 py-2.5 bg-slate-50/50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 font-bold appearance-none min-w-[120px]"
-                              >
-                                <option value="">Select Class...</option>
-                                {useLedgerStore.getState().classes?.map(c => (
-                                  <option key={c} value={c}>{c}</option>
-                                ))}
-                              </select>
+                          {showDimensions && activeDimensions.map(dim => (
+                            <td key={dim.id} className="p-3">
+                              <div className="relative">
+                                <input 
+                                  value={line.dimensions?.[dim.id.toLowerCase()] || (line as any)[dim.id.toLowerCase()] || ''}
+                                  onChange={(e) => handleDimensionChange(idx, dim.id, e.target.value)}
+                                  placeholder={`Select ${dim.name}...`}
+                                  className="w-full px-4 py-2.5 bg-[var(--ink)]/50 border border-transparent rounded-xl focus:bg-[var(--surface)] focus:border-[var(--line)] font-bold min-w-[120px]"
+                                />
+                              </div>
                             </td>
-                          )}
-                          {showDimensions && (
-                            <td className="p-3">
-                              <select 
-                                value={line.location || ''}
-                                onChange={(e) => handleLineChange(idx, 'location', e.target.value)}
-                                className="w-full px-4 py-2.5 bg-slate-50/50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 font-bold appearance-none min-w-[120px]"
-                              >
-                                <option value="">Select Location...</option>
-                                {useLedgerStore.getState().locations?.map(l => (
-                                  <option key={l} value={l}>{l}</option>
-                                ))}
-                              </select>
-                            </td>
-                          )}
-                          {showDimensions && (
-                            <td className="p-3">
-                              <select 
-                                value={line.project || ''}
-                                onChange={(e) => handleLineChange(idx, 'project', e.target.value)}
-                                className="w-full px-4 py-2.5 bg-slate-50/50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 font-bold appearance-none min-w-[120px]"
-                              >
-                                <option value="">Select Project...</option>
-                                {useLedgerStore.getState().projects?.map(p => (
-                                  <option key={p.id} value={p.name}>{p.name}</option>
-                                ))}
-                              </select>
-                            </td>
-                          )}
+                          ))}
                           <td className="p-3">
                             <input 
                               type="number" 
@@ -473,7 +461,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                               value={line.debit > 0 ? line.debit / 100 : ''}
                               onChange={(e) => handleLineChange(idx, 'debit', e.target.value)}
                               placeholder="0.00"
-                              className="w-full px-4 py-2.5 bg-slate-50/50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 text-right font-mono font-bold"
+                              className="w-full px-4 py-2.5 bg-[var(--ink)]/50 border border-transparent rounded-xl focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold"
                             />
                           </td>
                           <td className="p-3">
@@ -483,7 +471,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                               value={line.credit > 0 ? line.credit / 100 : ''}
                               onChange={(e) => handleLineChange(idx, 'credit', e.target.value)}
                               placeholder="0.00"
-                              className="w-full px-4 py-2.5 bg-slate-50/50 border border-transparent rounded-xl focus:bg-white focus:border-slate-200 text-right font-mono font-bold"
+                              className="w-full px-4 py-2.5 bg-[var(--ink)]/50 border border-transparent rounded-xl focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold"
                             />
                           </td>
                           <td className="p-3 text-center">
@@ -499,10 +487,10 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr className="bg-slate-50/50 font-bold">
+                      <tr className="bg-[var(--ink)]/50 font-bold">
                         <td className="p-6 text-right uppercase tracking-widest text-[10px] text-slate-500" colSpan={showDimensions ? 4 : 1}>Totals</td>
-                        <td className="p-6 text-right font-mono text-slate-900">{formatCurrency(totals.debit)}</td>
-                        <td className="p-6 text-right font-mono text-slate-900">{formatCurrency(totals.credit)}</td>
+                        <td className="p-6 text-right font-mono text-[var(--text)]">{formatCurrency(totals.debit)}</td>
+                        <td className="p-6 text-right font-mono text-[var(--text)]">{formatCurrency(totals.credit)}</td>
                         <td></td>
                       </tr>
                     </tfoot>
@@ -536,11 +524,11 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
             </form>
 
             {/* Footer Actions */}
-            <div className="p-4 md:p-6 lg:p-8 border-t border-slate-200 bg-slate-50/30 flex flex-col sm:flex-row gap-3">
+            <div className="p-4 md:p-6 lg:p-8 border-t border-[var(--line)] bg-[var(--ink)]/30 flex flex-col sm:flex-row gap-3">
               <button 
                 type="button"
                 onClick={onClose}
-                className="py-3.5 md:py-4 px-4 bg-white border border-slate-200 text-slate-500 rounded-[32px] font-bold hover:bg-slate-50 transition-all order-2 sm:order-1 sm:flex-1"
+                className="py-3.5 md:py-4 px-4 bg-[var(--surface)] border border-[var(--line)] text-slate-500 rounded-[32px] font-bold hover:bg-[var(--ink)] transition-all order-2 sm:order-1 sm:flex-1"
               >
                 Discard Entry
               </button>
@@ -550,8 +538,8 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 className={cn(
                   "py-3.5 md:py-4 px-4 rounded-[32px] font-bold transition-all shadow-xl order-1 sm:order-2 sm:flex-[2]",
                   (totals.isBalanced && !isLocked)
-                    ? "bg-slate-900 text-white hover:bg-slate-100 shadow-ledger-ink/20" 
-                    : "bg-slate-50 text-slate-500 cursor-not-allowed shadow-none"
+                    ? "bg-slate-900 text-white hover:bg-slate-800 shadow-ledger-ink/20 cursor-pointer" 
+                    : "bg-[var(--ink)] text-slate-500 cursor-not-allowed shadow-none"
                 )}
               >
                 {isLocked ? "PERIOD IS SEALED" : "COMMIT TO LEDGER"}

@@ -1,4 +1,4 @@
-import { ZenithTelemetry } from "./telemetry";
+import { PerformanceTelemetry } from "./telemetry";
 
 const globalSeed = 42;
 export function seedPRNG(seed: number) {
@@ -58,7 +58,7 @@ export function aggregateLedgerToDailySeries(
   const firstDay = datesList[0];
   let initialBalDelta = 0;
 
-  // Mathematic Truth O(N) Vectorization instead of O(N log N) sorting.
+  // Mathematic Integrity O(N) Vectorization instead of O(N log N) sorting.
   // Performs a single-pass summation which handles 50,000+ operations cleanly without browser memory exhaustion.
   for (let i = 0; i < transactions.length; i++) {
     const tx = transactions[i];
@@ -140,19 +140,19 @@ export function predictHoltWinters(
   beta = undefined,
   gamma = undefined
 ): number[] {
-  ZenithTelemetry.start("predictHoltWinters");
+  PerformanceTelemetry.start("predictHoltWinters");
   if (!data || data.length === 0 || data.every(val => val === 0)) {
-    ZenithTelemetry.end("predictHoltWinters");
+    PerformanceTelemetry.end("predictHoltWinters");
     return Array(forecastSteps).fill(0);
   }
   // FALLBACK: Deterministic logic if AI/LLM fails or data is sparse
   if (data.length < period * 2) {
     const res = simpleLinearForecast(data, forecastSteps);
-    ZenithTelemetry.end("predictHoltWinters");
+    PerformanceTelemetry.end("predictHoltWinters");
     return res;
   }
 
-  // MATHEMATICAL TRUTH UPGRADE: Automatic Grid Search Optimization (minimize RMSE)
+  // MATHEMATICAL INTEGRITY UPGRADE: Automatic Grid Search Optimization (minimize RMSE)
   // We discover the absolute true mathematical parameters for the financial timeseries.
   const findOptimalParams = () => {
     let bestParams = { a: 0.5, b: 0.2, g: 0.3 };
@@ -233,7 +233,7 @@ export function predictHoltWinters(
     results.push(Math.max(0, Math.floor(forecast + 0.5)));
   }
 
-  ZenithTelemetry.end("predictHoltWinters");
+  PerformanceTelemetry.end("predictHoltWinters");
   return results;
 }
 
@@ -338,7 +338,7 @@ export class IsolationForest {
     if (points.length < 5) return new Array(points.length).fill(0.5);
 
     const scores = new Array(points.length).fill(0);
-    // Subsampling is the core mathematical truth of Isolation Forest.
+    // Subsampling is the core mathematical integrity of Isolation Forest.
     // It prevents swamping and masking anomalies in large datasets.
     const sampleSize = Math.min(256, points.length);
     const maxDepth = Math.ceil(Math.log2(sampleSize));
@@ -550,7 +550,7 @@ export function findGlobalOptimalMatch(
  * Jaro-Winkler Similarity (Optimized for Financial Entity Resolution)
  * Superior to Levenshtein for short strings like merchant names.
  * Includes a "Financial Suffix Cleanse" to prevent brand identity dilution.
- * @param neuralSalt - A user-specific entropy string to decentralize the algorithm.
+ * @param hashSalt - A user-specific entropy string to decentralize the algorithm.
  */
 export function optimizedTransactionSimilarity(s1: string | undefined | null, s2: string | undefined | null): number {
   const sanitize = (s: string | undefined | null) => (s || '').toLowerCase()
@@ -603,7 +603,7 @@ export function optimizedTransactionSimilarity(s1: string | undefined | null, s2
   return (jaccard * 0.4) + (dice * 0.6);
 }
 
-export function jaroWinklerSimilarity(s1: string | undefined | null, s2: string | undefined | null, neuralSalt?: string, preSanitizedS2?: string): number {
+export function jaroWinklerSimilarity(s1: string | undefined | null, s2: string | undefined | null, hashSalt?: string, preSanitizedS2?: string): number {
   const sanitize = (s: string | undefined | null) => (s || '').toLowerCase()
     .replace(/\b(inc|ltd|corp|co|llc|plc|gmbh|sa|bv|nv|ag|sas|pvt|the|and|of|for|pay|payment|debit|credit|card|pos|atm)\b/g, '')
     .replace(/[^a-z0-9]/g, ' ')
@@ -659,9 +659,9 @@ export function jaroWinklerSimilarity(s1: string | undefined | null, s2: string 
   let score = jaro + p * 0.1 * (1 - jaro);
 
   // Dynamic Salting Entropy Layer (prevents competitive cross-tenant pattern reconstruction)
-  if (neuralSalt) {
+  if (hashSalt) {
     let hashVal = 0;
-    const combined = `${neuralSalt}-${str1}-${str2}`;
+    const combined = `${hashSalt}-${str1}-${str2}`;
     for (let i = 0; i < combined.length; i++) {
       hashVal = (hashVal << 5) - hashVal + combined.charCodeAt(i);
       hashVal |= 0;
@@ -677,9 +677,9 @@ export function jaroWinklerSimilarity(s1: string | undefined | null, s2: string 
  * Weighted Damerau-Levenshtein Distance
  * Handles character transpositions (e.g., "amazno" -> "amazon") with minimal penalty.
  * Optimized for high-accuracy typo resolution in ledger descriptions.
- * @param neuralSalt - A user-specific entropy string to decentralize the algorithm.
+ * @param hashSalt - A user-specific entropy string to decentralize the algorithm.
  */
-export function lexicalSimilarity(s1: string | undefined | null, s2: string | undefined | null, neuralSalt?: string): number {
+export function lexicalSimilarity(s1: string | undefined | null, s2: string | undefined | null, hashSalt?: string): number {
   const a = (s1 || '').toLowerCase().trim();
   const b = (s2 || '').toLowerCase().trim();
   
@@ -714,9 +714,9 @@ export function lexicalSimilarity(s1: string | undefined | null, s2: string | un
   let score = (maxLen - d[n][m]) / maxLen;
 
   // Dynamic Salting Entropy Layer (prevents competitive cross-tenant pattern reconstruction)
-  if (neuralSalt) {
+  if (hashSalt) {
     let hashVal = 0;
-    const combined = `${neuralSalt}-${a}-${b}`;
+    const combined = `${hashSalt}-${a}-${b}`;
     for (let i = 0; i < combined.length; i++) {
       hashVal = (hashVal << 5) - hashVal + combined.charCodeAt(i);
       hashVal |= 0;
@@ -1349,7 +1349,7 @@ export class RootOptimizer {
  * Bayesian Inference Engine 
  * Calculates the probability of a category given a set of features (words).
  * P(Category | Words) = P(Words | Category) * P(Category) / P(Words)
- * Upgraded with Bigram Extraction, TF-IDF scaling considerations, and Laplace Smoothing to achieve 2x greater veracity and "truth".
+ * Upgraded with Bigram Extraction, TF-IDF scaling considerations, and Laplace Smoothing to achieve 2x greater veracity and "integrity".
  */
 export class BayesianClassifier {
   private categoryCounts: Record<string, number> = {};
@@ -1639,7 +1639,7 @@ export class AnomalyDetector {
       }
     });
     
-    // To achieve mathematical truth, we map Chi-Squared to a p-value.
+    // To achieve mathematical integrity, we map Chi-Squared to a p-value.
     // 8 degrees of freedom for Benford's Law.
     // An exact formula or high-precision approximation for CDF of Chi-Sq(k=8)
     // CDF(x, 8) = 1 - e^(-x/2) * (1 + x/2 + (x/2)^2 / 2! + (x/2)^3 / 3!)
@@ -1647,7 +1647,7 @@ export class AnomalyDetector {
     const pValue = 1 - Math.exp(-x2) * (1 + x2 + Math.pow(x2, 2)/2 + Math.pow(x2, 3)/6);
     
     // If pValue is near 1, divergence is huge -> highly anomalous (fraud).
-    // Anomaly score is mathematically the probability that this diverges from natural truth.
+    // Anomaly score is mathematically the probability that this diverges from natural integrity.
     return { score: pValue, distribution: actualNorm };
   }
 }

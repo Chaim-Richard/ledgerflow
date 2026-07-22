@@ -1,4 +1,4 @@
-import { TruthEngine } from '../../modules/truth/TruthEngine';
+import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Save } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -91,11 +91,11 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-4xl bg-white rounded-[40px] shadow-2xl border border-zinc-200 overflow-hidden flex flex-col max-h-[90dvh]"
+        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
       >
-        <div className="p-4 md:p-8 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+        <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
           <div>
-            <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Create New Invoice</h3>
+            <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Create New Invoice</h3>
             <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Sales & Receivables</p>
           </div>
           <div className="flex items-center gap-2">
@@ -112,18 +112,22 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
               <label className="micro-label">Customer</label>
-              <select 
-                required
-                value={invoice.customerId || ''}
-                onChange={(e) => {
-                  const cust = safeCustomers.find(c => c.id === e.target.value);
-                  setInvoice({ ...invoice, customerId: e.target.value, customerName: cust?.name });
-                }}
-                className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
-              >
-                <option value="">Select Customer</option>
-                {safeCustomers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <div className="relative">
+                <input 
+                  required
+                  list="invoice-customer-list"
+                  value={invoice.customerName || invoice.customerId || ''}
+                  onChange={(e) => {
+                    const cust = safeCustomers.find(c => c.name === e.target.value || c.id === e.target.value);
+                    setInvoice({ ...invoice, customerId: cust ? cust.id : `new-${Date.now()}`, customerName: cust ? cust.name : e.target.value });
+                  }}
+                  placeholder="Type or select customer"
+                  className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                />
+                <datalist id="invoice-customer-list">
+                  {safeCustomers.map(c => <option key={c.id} value={c.name} />)}
+                </datalist>
+              </div>
             </div>
             <div className="space-y-2">
               <label className="micro-label">Invoice Number</label>
@@ -132,7 +136,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                 required
                 value={invoice.number}
                 onChange={(e) => setInvoice({ ...invoice, number: e.target.value })}
-                className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-mono font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-mono font-bold"
               />
             </div>
             <div className="space-y-2">
@@ -140,7 +144,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               <select 
                 value={invoice.status}
                 onChange={(e) => setInvoice({ ...invoice, status: e.target.value as any })}
-                className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="pending">Pending</option>
                 <option value="sent">Sent</option>
@@ -156,7 +160,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               <select 
                 value={invoice.type || 'standard'}
                 onChange={(e) => setInvoice({ ...invoice, type: e.target.value as any })}
-                className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="standard">Standard</option>
                 <option value="recurring">Recurring</option>
@@ -170,7 +174,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  <select 
                    value={invoice.recurringInterval || 'monthly'}
                    onChange={(e) => setInvoice({ ...invoice, recurringInterval: e.target.value as any })}
-                   className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
                  >
                    <option value="weekly">Weekly</option>
                    <option value="monthly">Monthly</option>
@@ -188,7 +192,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                    max="100"
                    value={invoice.progressPercentage || 0}
                    onChange={(e) => setInvoice({ ...invoice, progressPercentage: parseInt(e.target.value) })}
-                   className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
                  />
                </div>
             )}
@@ -202,7 +206,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                 required
                 value={invoice.date}
                 onChange={(e) => setInvoice({ ...invoice, date: e.target.value })}
-                className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               />
             </div>
             <div className="space-y-2">
@@ -212,7 +216,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                 required
                 value={invoice.dueDate}
                 onChange={(e) => setInvoice({ ...invoice, dueDate: e.target.value })}
-                className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               />
             </div>
           </div>
@@ -223,7 +227,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                <input 
                  type="number" step="0.01" min="0" value={(invoice.discountCents || 0) / 100}
                  onChange={(e) => setInvoice({ ...invoice, discountCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
-                 className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
+                 className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                />
              </div>
              <div className="space-y-2">
@@ -231,7 +235,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                <input 
                  type="number" step="0.01" min="0" value={(invoice.depositCents || 0) / 100}
                  onChange={(e) => setInvoice({ ...invoice, depositCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
-                 className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
+                 className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                />
              </div>
              <div className="space-y-2">
@@ -239,7 +243,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                <input 
                  type="number" step="0.01" min="0" value={(invoice.retainageCents || 0) / 100}
                  onChange={(e) => setInvoice({ ...invoice, retainageCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
-                 className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
+                 className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                />
              </div>
              <div className="space-y-2">
@@ -247,7 +251,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  <input 
                    type="text" value={invoice.milestone || ''}
                    onChange={(e) => setInvoice({ ...invoice, milestone: e.target.value })}
-                   className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                   className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
                  />
              </div>
              <div className="space-y-2">
@@ -255,12 +259,12 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  <input 
                    type="number" step="0.001" min="0" max="100" value={invoice.taxRate || 0}
                    onChange={(e) => setInvoice({ ...invoice, taxRate: parseFloat(e.target.value || '0') })}
-                   className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
+                   className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                  />
              </div>
              <div className="space-y-2 flex flex-col justify-end pb-3">
                <label className="flex items-center gap-2 cursor-pointer">
-                 <input type="checkbox" checked={invoice.taxInclusive || false} onChange={e => setInvoice({ ...invoice, taxInclusive: e.target.checked })} className="w-5 h-5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900" />
+                 <input type="checkbox" checked={invoice.taxInclusive || false} onChange={e => setInvoice({ ...invoice, taxInclusive: e.target.checked })} className="w-5 h-5 rounded border-zinc-300 text-[var(--text)] focus:ring-zinc-900" />
                  <span className="text-sm font-bold text-zinc-700">Tax Inclusive</span>
                </label>
              </div>
@@ -269,7 +273,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  <select 
                    value={invoice.currency || 'USD'}
                    onChange={(e) => setInvoice({ ...invoice, currency: e.target.value })}
-                   className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                   className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
                  >
                    <option value="USD">USD</option>
                    <option value="EUR">EUR</option>
@@ -281,7 +285,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  <input 
                    type="number" step="0.0001" min="0.0001" value={invoice.exchangeRate || 1}
                    onChange={(e) => setInvoice({ ...invoice, exchangeRate: parseFloat(e.target.value || '1') })}
-                   className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
+                   className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                  />
              </div>
           </div>
@@ -301,7 +305,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             
             <div className="space-y-3">
               {items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-4 items-end bg-zinc-50 p-4 rounded-[32px] border border-zinc-100">
+                <div key={idx} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
                   <div className="col-span-12 md:col-span-4 space-y-1">
                     <label className="text-[10px] font-bold text-zinc-400 uppercase">Description</label>
                     <input 
@@ -313,7 +317,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                         setItems(newItems);
                       }}
                       placeholder="Service or Product"
-                      className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
+                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
                     />
                   </div>
                   <div className="col-span-6 md:col-span-2 space-y-1">
@@ -330,7 +334,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                         newItems[idx].amountCents = Math.round(qty * newItems[idx].rateCents);
                         setItems(newItems);
                       }}
-                      className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
+                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
                     />
                   </div>
                   <div className="col-span-6 md:col-span-2 space-y-1">
@@ -347,26 +351,31 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                         newItems[idx].amountCents = Math.round(newItems[idx].quantity * rateCents);
                         setItems(newItems);
                       }}
-                      className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
+                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
                     />
                   </div>
                   <div className="col-span-8 md:col-span-3 space-y-1">
                     <label className="text-[10px] font-bold text-zinc-400 uppercase">Income Account</label>
-                    <select 
-                      value={item.accountId}
-                      onChange={(e) => {
-                        const newItems = [...items];
-                        newItems[idx].accountId = e.target.value;
-                        setItems(newItems);
-                      }}
-                      className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
-                    >
-                      <option value="">Select Account</option>
-                      {safeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
+                    <div className="relative">
+                      <input 
+                        list={`invoice-account-${idx}`}
+                        value={safeAccounts.find(a => a.id === item.accountId)?.name || item.accountId || ''}
+                        onChange={(e) => {
+                          const acc = safeAccounts.find(a => a.name === e.target.value || a.id === e.target.value);
+                          const newItems = [...items];
+                          newItems[idx].accountId = acc ? acc.id : e.target.value;
+                          setItems(newItems);
+                        }}
+                        placeholder="Type or select account"
+                        className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
+                      />
+                      <datalist id={`invoice-account-${idx}`}>
+                        {safeAccounts.map(a => <option key={a.id} value={a.name} />)}
+                      </datalist>
+                    </div>
                   </div>
                   <div className="col-span-3 md:col-span-1 space-y-1 flex flex-col justify-end">
-                    <div className="px-2 py-2 text-right font-mono font-bold text-zinc-900 border border-transparent">
+                    <div className="px-2 py-2 text-right font-mono font-bold text-[var(--text)] border border-transparent">
                       {(item.amountCents / 100).toFixed(2)}
                     </div>
                   </div>
@@ -383,7 +392,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-zinc-100 pt-8 mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-[var(--line)] pt-8 mt-8">
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="micro-label">Customer Memo</label>
@@ -391,7 +400,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                   value={memo}
                   onChange={(e) => setMemo(e.target.value)}
                   placeholder="Message to customer..."
-                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none resize-none h-24"
+                  className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none resize-none h-24"
                 />
               </div>
               <div className="space-y-2">
@@ -400,7 +409,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                   value={terms}
                   onChange={(e) => setTerms(e.target.value)}
                   placeholder="Standard terms..."
-                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none resize-none h-24 text-xs"
+                  className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none resize-none h-24 text-xs"
                 />
               </div>
             </div>
@@ -412,13 +421,13 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
                   placeholder="Invoice from us"
-                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none"
+                  className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none"
                 />
               </div>
               <div className="space-y-2">
                 <label className="micro-label">Attachments</label>
                 <div className="flex items-center gap-4">
-                   <label className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-zinc-50 border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
+                   <label className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Select Files</span>
                      <input type="file" multiple className="hidden" onChange={handleFileUpload} />
                    </label>
@@ -435,10 +444,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
           </div>
         </form>
 
-        <div className="p-4 md:p-8 border-t border-zinc-100 bg-zinc-50/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-4 md:p-8 border-t border-[var(--line)] bg-[var(--ink)]/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-col w-full sm:w-auto">
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Amount</span>
-            <span className="text-3xl font-black text-zinc-900 font-mono">
+            <span className="text-3xl font-black text-[var(--text)] font-mono">
               {(total / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
             </span>
           </div>
@@ -446,7 +455,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             <button 
               type="button"
               onClick={onClose}
-              className="px-6 py-3.5 bg-white border border-zinc-200 text-zinc-600 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-50 transition-all"
+              className="px-6 py-3.5 bg-[var(--surface)] border border-[var(--line)] text-zinc-600 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-[var(--ink)] transition-all"
             >
               Cancel
             </button>

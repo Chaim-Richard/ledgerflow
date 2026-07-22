@@ -1,6 +1,6 @@
 {
-  "name": "Financial Control Room",
-  "description": "Professional financial management, smart auditing, and reporting platform.",
+  "name": "LedgerFlow",
+  "description": "Enterprise Resource Planning & Continuous Financial Ledger platform with multi-world coordinate simulation and localized forensics.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

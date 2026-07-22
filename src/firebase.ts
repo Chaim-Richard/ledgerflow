@@ -1,9 +1,9 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, disableNetwork, enableNetwork, memoryLocalCache } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, disableNetwork, enableNetwork, memoryLocalCache } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firestore with modern persistent cache configuration (replaces deprecated enableMultiTabIndexedDbPersistence)
 const getDatabaseId = () => {
@@ -37,7 +37,15 @@ const getCacheConfig = () => {
   }
 };
 
-export const db = initializeFirestore(app, getCacheConfig(), getDatabaseId());
+let firestoreInstance;
+const dbId = getDatabaseId();
+try {
+  firestoreInstance = dbId ? initializeFirestore(app, getCacheConfig(), dbId) : initializeFirestore(app, getCacheConfig());
+} catch (e) {
+  firestoreInstance = dbId ? getFirestore(app, dbId) : getFirestore(app);
+}
+
+export const db = firestoreInstance;
 
 export const auth = getAuth(app);
 

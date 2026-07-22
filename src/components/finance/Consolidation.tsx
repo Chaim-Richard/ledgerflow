@@ -1,9 +1,32 @@
-import React, { useState } from 'react';
-import { Layers, Download, BarChart3, TrendingUp } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Layers, Download, BarChart3, TrendingUp, Globe } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { IntercompanyEliminationEngine } from '../../lib/intercompanyElimination';
 
 export default function Consolidation() {
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
+  
+  const incomeAccountIds = new Set(accounts.filter(a => a.type === 'income').map(a => a.id));
+  const expenseAccountIds = new Set(accounts.filter(a => a.type === 'expense').map(a => a.id));
+
+  const isIncomeLine = (l: any) => incomeAccountIds.has(l.accountId) || l.category?.toLowerCase().includes('income') || l.category?.toLowerCase().includes('revenue');
+  const isExpenseLine = (l: any) => expenseAccountIds.has(l.accountId) || l.category?.toLowerCase().includes('expense') || l.category?.toLowerCase().includes('cogs');
+
+  const summary = useMemo(() => {
+    return IntercompanyEliminationEngine.generateConsolidatedSummary(transactions, isIncomeLine, isExpenseLine);
+  }, [transactions, accounts]);
+
   const [activeTab, setActiveTab] = useState<'matrix' | 'adjustments'>('matrix');
+
+  const formatCurrency = (amountCents: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(amountCents / 100);
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#FAFAFA]">
@@ -11,19 +34,25 @@ export default function Consolidation() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3">
             <Layers className="w-6 h-6 text-purple-400" />
-            Group Consolidation
+            Group Consolidation & Multi-World Ledger
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Multi-currency financial consolidation and eliminating entries.
+            Dynamic coordinate-based sub-ledgers with automatic intercompany transfer elimination.
           </p>
         </div>
-        <button className="h-10 px-4 bg-purple-500 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-purple-400 transition-colors">
-           <Download className="w-4 h-4" /> Export Report
-        </button>
+        <div className="flex gap-3">
+          <div className="bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2 text-xs font-mono text-slate-300">
+            <Globe className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Worlds: {summary.worldStatements.length}</span>
+          </div>
+          <button className="h-10 px-4 bg-purple-500 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-purple-400 transition-colors">
+            <Download className="w-4 h-4" /> Export Report
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
+        <div className="flex p-1 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
           {[
             { id: 'matrix', label: 'Consolidated Matrix', icon: BarChart3 },
             { id: 'adjustments', label: 'Top-Level Adjustments', icon: TrendingUp }
@@ -33,7 +62,7 @@ export default function Consolidation() {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={cn(
                    "px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all",
-                   activeTab === tab.id ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
+                   activeTab === tab.id ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-[var(--ink)]"
                 )}
              >
                 <tab.icon className="w-4 h-4" /> {tab.label}
@@ -42,41 +71,45 @@ export default function Consolidation() {
         </div>
 
         {activeTab === 'matrix' && (
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-12 p-4 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              <div className="col-span-3">Account Group</div>
-              <div className="col-span-2 text-right">US Parent (USD)</div>
-              <div className="col-span-2 text-right">UK Sub (USD Eq)</div>
-              <div className="col-span-2 text-right">EU Sub (USD Eq)</div>
-              <div className="col-span-1 text-right text-rose-500">Eliminations</div>
-              <div className="col-span-2 text-right text-indigo-600">Consolidated</div>
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-4 bg-[var(--ink)] border-b border-[var(--line)] text-xs font-bold text-slate-700 uppercase tracking-wider flex justify-between items-center">
+              <span>Entity / World Sub-Ledgers</span>
+              <span className="text-rose-600 font-mono text-[11px]">Intercompany Eliminations: {formatCurrency(summary.eliminatedTransferCents)}</span>
             </div>
+            
             <div className="divide-y divide-slate-200">
-               {/* Placeholder Rows */}
-               <div className="grid grid-cols-12 p-4 items-center hover:bg-slate-50 transition-colors font-mono text-sm">
-                  <div className="col-span-3 font-bold font-sans text-slate-900">Total Revenue</div>
-                  <div className="col-span-2 text-right">4,500,000</div>
-                  <div className="col-span-2 text-right">1,200,000</div>
-                  <div className="col-span-2 text-right">800,000</div>
-                  <div className="col-span-1 text-right text-rose-500">(150,000)</div>
-                  <div className="col-span-2 text-right font-bold text-indigo-600">6,350,000</div>
-               </div>
-               <div className="grid grid-cols-12 p-4 items-center hover:bg-slate-50 transition-colors font-mono text-sm">
-                  <div className="col-span-3 font-bold font-sans text-slate-900">COGS</div>
-                  <div className="col-span-2 text-right">1,200,000</div>
-                  <div className="col-span-2 text-right">400,000</div>
-                  <div className="col-span-2 text-right">300,000</div>
-                  <div className="col-span-1 text-right text-rose-500">(45,000)</div>
-                  <div className="col-span-2 text-right font-bold text-indigo-600">1,855,000</div>
-               </div>
-               <div className="grid grid-cols-12 p-4 items-center bg-slate-50 font-mono text-sm font-bold border-t-2 border-slate-300">
-                  <div className="col-span-3 font-sans text-slate-900">Gross Margin</div>
-                  <div className="col-span-2 text-right">3,300,000</div>
-                  <div className="col-span-2 text-right">800,000</div>
-                  <div className="col-span-2 text-right">500,000</div>
-                  <div className="col-span-1 text-right text-rose-500">(105,000)</div>
-                  <div className="col-span-2 text-right text-indigo-600">4,495,000</div>
-               </div>
+              <div className="grid grid-cols-12 p-4 bg-slate-100/80 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <div className="col-span-4">World / Sub-Ledger Coordinate</div>
+                <div className="col-span-2 text-right">Transactions</div>
+                <div className="col-span-2 text-right">Total Revenue</div>
+                <div className="col-span-2 text-right">Total Expenses</div>
+                <div className="col-span-2 text-right text-indigo-600">Net Income</div>
+              </div>
+
+              {summary.worldStatements.map(stmt => (
+                <div key={stmt.world} className="grid grid-cols-12 p-4 items-center hover:bg-[var(--ink)] transition-colors font-mono text-sm">
+                  <div className="col-span-4 font-bold font-sans text-[var(--text)] capitalize flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    {stmt.world}
+                  </div>
+                  <div className="col-span-2 text-right text-slate-500">{stmt.transactionCount}</div>
+                  <div className="col-span-2 text-right text-emerald-600">{formatCurrency(stmt.totalRevenueCents)}</div>
+                  <div className="col-span-2 text-right text-slate-700">{formatCurrency(stmt.totalExpenseCents)}</div>
+                  <div className={cn("col-span-2 text-right font-bold", stmt.netIncomeCents >= 0 ? "text-indigo-600" : "text-rose-600")}>
+                    {formatCurrency(stmt.netIncomeCents)}
+                  </div>
+                </div>
+              ))}
+
+              <div className="grid grid-cols-12 p-4 items-center bg-slate-900 text-white font-mono text-sm font-bold">
+                <div className="col-span-4 font-sans uppercase tracking-wider text-xs">Consolidated Group Total</div>
+                <div className="col-span-2 text-right text-slate-400">{transactions.length}</div>
+                <div className="col-span-2 text-right text-emerald-400">{formatCurrency(summary.consolidatedRevenueCents)}</div>
+                <div className="col-span-2 text-right text-slate-300">{formatCurrency(summary.consolidatedExpenseCents)}</div>
+                <div className={cn("col-span-2 text-right font-bold text-base", summary.consolidatedNetIncomeCents >= 0 ? "text-purple-300" : "text-rose-300")}>
+                  {formatCurrency(summary.consolidatedNetIncomeCents)}
+                </div>
+              </div>
             </div>
           </div>
         )}

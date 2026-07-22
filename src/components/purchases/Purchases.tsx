@@ -24,7 +24,6 @@ import { format, differenceInDays, addDays, startOfDay } from 'date-fns';
 
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
-import PurchasePipeline from './PurchasePipeline';
 
 interface PurchasesProps {
   user: User;
@@ -111,51 +110,43 @@ export default function Purchases({
       case 'pending':
         return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'overdue': return 'bg-rose-50 text-rose-700 border-rose-200';
-      default: return 'bg-zinc-50 text-zinc-650 border-zinc-200';
+      default: return 'bg-[var(--ink)] text-zinc-650 border-[var(--line)]';
     }
   };
 
   return (
     <div className="space-y-12 pb-20">
-      {/* Neural Header */}
+      {/* Rule Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate mb-4">
             <TrendingDown size={14} />
             Liability Management System
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter">Outflow Matrix</h2>
-          <p className="text-slate-500 font-medium text-lg mt-2 italic opacity-60">Strategic optimization of accounts payable and vendor liquidity chains.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Bills & Accounts Payable</h2>
+          <p className="text-slate-500 font-medium text-lg mt-2 opacity-70">Manage vendor bills, expenses, and accounts payable (AP).</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-           <div className="flex flex-wrap bg-slate-50 p-1.5 rounded-[32px] border border-slate-200">
-            <button 
-              onClick={() => setActiveSubTab('pipeline')}
-              className={cn(
-                "px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all",
-                activeSubTab === 'pipeline' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-slate-900"
-              )}
-            >
-              Procurement Board
-            </button>
+           <div className="flex flex-wrap bg-[var(--ink)] p-1.5 rounded-[32px] border border-[var(--line)]">
+            
             <button 
               onClick={() => setActiveSubTab('bills')}
               className={cn(
                 "px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all",
-                activeSubTab === 'bills' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-slate-900"
+                activeSubTab === 'bills' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-[var(--text)]"
               )}
             >
-              Liabilities
+              Bills & AP
             </button>
             <button 
               onClick={() => setActiveSubTab('vendors')}
               className={cn(
                 "px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all",
-                activeSubTab === 'vendors' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-slate-900"
+                activeSubTab === 'vendors' ? "bg-indigo-600 text-white shadow-lg shadow-ledger-accent/20" : "text-slate-500 hover:text-[var(--text)]"
               )}
             >
-              Suppliers
+              Vendors & Suppliers
             </button>
           </div>
           <button 
@@ -163,7 +154,7 @@ export default function Purchases({
             className="flex items-center gap-2 px-8 py-3.5 bg-slate-900 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider hover:bg-slate-900/90 transition-all shadow-2xl"
           >
             <Plus size={18} />
-            {activeSubTab === 'bills' ? 'Capture Bill' : 'Onboard Supplier'}
+            {activeSubTab === 'bills' ? 'Add Bill' : 'Add Vendor'}
           </button>
         </div>
       </div>
@@ -173,7 +164,7 @@ export default function Purchases({
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 md:p-8 bg-white rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden group"
+          className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group"
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-4 relative z-10">Critical Overdue</p>
@@ -188,7 +179,7 @@ export default function Purchases({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="p-4 md:p-8 bg-white rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden group"
+          className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group"
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] mb-4 relative z-10">Short-Term (30d)</p>
@@ -203,11 +194,11 @@ export default function Purchases({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="p-4 md:p-8 bg-white rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden group"
+          className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group"
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4 relative z-10">Mid-Term (30-60d)</p>
-          <p className="text-2xl md:text-4xl font-black text-slate-900 font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.due60)}</p>
+          <p className="text-2xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.due60)}</p>
           <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest opacity-40">
              <Clock size={10} />
              Liquidity Forecast Cluster
@@ -222,7 +213,7 @@ export default function Purchases({
         >
           <div className="absolute technical-grid inset-0 opacity-10 pointer-events-none" />
           <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 relative z-10">Total Aggregate Payable</p>
-          <p className="text-2xl md:text-4xl font-black text-indigo-600 font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.current)}</p>
+          <p className="text-2xl md:text-4xl font-black text-indigo-400 font-mono tracking-tighter relative z-10">{formatCurrency(agingBuckets.current)}</p>
           <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-white/20 uppercase tracking-widest">
              <ShieldCheck size={10} />
              Verified System Liability
@@ -235,11 +226,11 @@ export default function Purchases({
         <div className="absolute technical-grid inset-0 opacity-[0.02] pointer-events-none" />
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-slate-900 rounded-[32px] flex items-center justify-center text-indigo-600 border border-white/5 shadow-2xl">
+            <div className="w-14 h-14 bg-slate-900 rounded-[32px] flex items-center justify-center text-indigo-400 border border-white/5 shadow-2xl">
               <Calendar size={28} />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic">Disbursement Horizon</h3>
+              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase italic">Disbursement Horizon</h3>
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-1 opacity-50">30-Day Predictive Cash Outflow Map</p>
             </div>
           </div>
@@ -254,12 +245,12 @@ export default function Purchases({
                 "flex-shrink-0 w-24 flex flex-col items-center gap-3 p-5 rounded-[32px] transition-all relative overflow-hidden",
                 day.amountCents > 0 
                   ? "bg-slate-900 text-white border border-white/10 shadow-2xl" 
-                  : "bg-white border border-slate-200 opacity-60"
+                  : "bg-[var(--surface)] border border-[var(--line)] opacity-60"
               )}
             >
               <span className={cn(
                 "text-[10px] font-medium uppercase tracking-wider",
-                day.amountCents > 0 ? "text-indigo-600" : "text-slate-500"
+                day.amountCents > 0 ? "text-indigo-400" : "text-slate-500"
               )}>{format(day.date, 'EEE')}</span>
               <span className="text-xl font-black italic">{format(day.date, 'dd')}</span>
               {day.amountCents > 0 ? (
@@ -270,7 +261,7 @@ export default function Purchases({
                   </span>
                 </div>
               ) : (
-                <div className="w-full pt-4 mt-2 border-t border-slate-200 flex justify-center">
+                <div className="w-full pt-4 mt-2 border-t border-[var(--line)] flex justify-center">
                    <div className="w-1 h-1 bg-slate-200 rounded-full" />
                 </div>
               )}
@@ -279,7 +270,7 @@ export default function Purchases({
         </div>
       </div>
 
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-4 border-b border-[var(--line)]">
         <div className="relative group max-w-md w-full">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-600 transition-colors" size={20} />
           <input 
@@ -287,15 +278,15 @@ export default function Purchases({
             placeholder="Search bills by vendor, number, tags, or metadata..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:bg-white transition-all text-sm font-bold text-slate-900 placeholder:text-slate-500/40 shadow-sm"
+            className="w-full pl-14 pr-6 py-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:bg-[var(--surface)] transition-all text-sm font-bold text-[var(--text)] placeholder:text-slate-500/40 shadow-sm"
           />
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="p-4 bg-white border border-slate-200 rounded-[32px] text-slate-500 hover:text-slate-900 hover:bg-white transition-all">
+          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all">
             <Filter size={20} />
           </button>
-          <button className="p-4 bg-white border border-slate-200 rounded-[32px] text-slate-500 hover:text-slate-900 hover:bg-white transition-all">
+          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all">
             <Download size={20} />
           </button>
         </div>
@@ -321,18 +312,14 @@ export default function Purchases({
         }}
       />
 
-      {activeSubTab === 'pipeline' && (
-        <div className="pt-4">
-          <PurchasePipeline bills={bills} onUpdateBill={onUpdateBill} />
-        </div>
-      )}
+      
 
       {activeSubTab === 'bills' && (
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="text-left border-b border-slate-200/50">
+                <tr className="text-left border-b border-[var(--line)]/50">
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Liability Node</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Supplier</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Timestamp</th>
@@ -344,21 +331,21 @@ export default function Purchases({
               </thead>
               <tbody className="divide-y divide-ledger-line/30">
                 {filteredBills.map((bill) => (
-                  <tr key={bill.id} className="group hover:bg-slate-50/30 transition-all cursor-pointer">
-                    <td className="p-4 md:p-8 font-mono font-bold text-slate-500 group-hover:text-slate-900 transition-colors">{bill.number}</td>
+                  <tr key={bill.id} className="group hover:bg-[var(--ink)]/30 transition-all cursor-pointer">
+                    <td className="p-4 md:p-8 font-mono font-bold text-slate-500 group-hover:text-[var(--text)] transition-colors">{bill.number}</td>
                     <td className="p-4 md:p-8">
                        <div className="flex flex-col">
-                          <span className="font-black text-slate-900 text-base tracking-tight">{bill.vendorName}</span>
+                          <span className="font-black text-[var(--text)] text-base tracking-tight">{bill.vendorName}</span>
                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 opacity-50">KYB Verified</span>
                        </div>
                     </td>
                     <td className="p-4 md:p-8">
-                       <span className="font-bold text-slate-900">{bill.date ? format(new Date(bill.date), 'MMM dd, yyyy') : 'N/A'}</span>
+                       <span className="font-bold text-[var(--text)]">{bill.date ? format(new Date(bill.date), 'MMM dd, yyyy') : 'N/A'}</span>
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex flex-col">
                         <span className={cn(
-                          "font-bold text-slate-900",
+                          "font-bold text-[var(--text)]",
                           bill.status === 'overdue' && "text-rose-600"
                         )}>
                           {bill.dueDate ? format(new Date(bill.dueDate), 'MMM dd, yyyy') : 'N/A'}
@@ -370,7 +357,7 @@ export default function Purchases({
                         )}
                       </div>
                     </td>
-                    <td className="p-4 md:p-8 text-right font-black font-mono text-slate-900 text-lg tracking-tighter">
+                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-lg tracking-tighter">
                       {formatCurrency(bill.amountCents || 0)}
                     </td>
                     <td className="p-4 md:p-8">
@@ -400,14 +387,14 @@ export default function Purchases({
                             onAddBill(newBill);
                             toast.success('Liability Copied');
                           }}
-                          className="p-3 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
+                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
                           title="Duplicate Instrument"
                         >
                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         </button>
                         <button 
                           onClick={() => onUpdateBill(bill.id, { status: 'void' })} 
-                          className="p-3 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-rose-500 transition-all"
+                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-rose-500 transition-all"
                           title="Void Liability"
                         >
                            <Trash2 size={16} />
@@ -440,7 +427,7 @@ export default function Purchases({
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="text-left border-b border-slate-200/50">
+                <tr className="text-left border-b border-[var(--line)]/50">
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Supplier Profile</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Infrastructure</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap text-right">Net Liability</th>
@@ -449,14 +436,14 @@ export default function Purchases({
               </thead>
               <tbody className="divide-y divide-ledger-line/30">
                 {vendors.map((vend) => (
-                  <tr key={vend.id} className="group hover:bg-slate-50/30 transition-all cursor-pointer">
+                  <tr key={vend.id} className="group hover:bg-[var(--ink)]/30 transition-all cursor-pointer">
                     <td className="p-4 md:p-8">
                        <div className="flex items-center gap-5">
                           <div className="w-14 h-14 bg-slate-900 rounded-[32px] flex items-center justify-center text-white font-black text-xl border border-white/10 shadow-2xl">
                              {(vend.name || 'VE').slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-black text-slate-900 text-lg tracking-tight">{vend.name}</span>
+                            <span className="font-black text-[var(--text)] text-lg tracking-tight">{vend.name}</span>
                             <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1">
                                <ShieldCheck size={10} />
                                Preferred Partner
@@ -467,10 +454,10 @@ export default function Purchases({
                     <td className="p-4 md:p-8">
                        <div className="flex items-center gap-2 group/email">
                           <Users size={16} className="text-slate-500 opacity-40" />
-                          <span className="font-bold text-slate-900 group-hover/email:text-indigo-600 transition-colors">{vend.email}</span>
+                          <span className="font-bold text-[var(--text)] group-hover/email:text-indigo-600 transition-colors">{vend.email}</span>
                        </div>
                     </td>
-                    <td className="p-4 md:p-8 text-right font-black font-mono text-slate-900 text-xl tracking-tighter">
+                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-xl tracking-tighter">
                       {formatCurrency(vend.balanceCents || 0)}
                     </td>
                     <td className="p-4 md:p-8">

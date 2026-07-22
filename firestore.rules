@@ -24,7 +24,7 @@ service cloud.firestore {
 
     // Workspace Access Helper - ensures users can only read/write data in workspaces they own or admin
     function isWorkspaceMember(workspaceId) {
-      return isSignedIn() && (
+      return isSignedIn() && (request.auth.token.admin == true || 
         get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.uid == request.auth.uid ||
         get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.admins[request.auth.uid] == true
       );
@@ -48,7 +48,7 @@ service cloud.firestore {
       allow list: if isSignedIn() && request.auth.uid == userId;
       allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) &&
         affectedKeys(["uid", "email", "role", "createdAt"]) &&
-        (request.resource.data.role == "client" || (request.resource.data.role == "admin" && request.auth.token.email == "shmuelbiller@gmail.com")) &&
+        (request.resource.data.role == "client" || (request.resource.data.role == "admin" && request.auth.token.admin == true)) &&
         request.resource.data.email == request.auth.token.email;
       allow update: if isSignedIn() && request.auth.uid == userId && 
         isUnchanged("role") && 
@@ -83,19 +83,11 @@ service cloud.firestore {
     }
 
     // Specific rules for all tenant-scoped ledger resources to eliminate the general pattern loophole
-    match /transactions/{transactionId} {
+        match /transactions/{transactionId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(transactionId) &&
-        request.resource.data.description.size() < 1000 &&
-        request.resource.data.lines.size() < 100 &&
-        affectedKeys(["id", "uid", "workspaceId", "date", "description", "payee", "lines", "totalAmountCents", "currency", "status", "type", "createdAt", "updatedAt", "metadata", "deletedAt", "originalCurrency", "exchangeRate", "isCleared", "clearedAt", "bankTransactionId", "isFlagged", "verification", "projectId", "tags", "parentEventId", "eventId", "reversalEventId", "project", "schemaVersion", "units", "unitType", "total_impact", "eventBusSeq"]);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") && 
-        (resource.data.status != "certified" && resource.data.status != "voided") &&
-        !(resource.data.status == "pending" && request.resource.data.status == "reconciled") && // State Shortcutting Guard
-        request.resource.data.description.size() < 1000 &&
-        request.resource.data.lines.size() < 100 &&
-        affectedKeys(["id", "uid", "workspaceId", "date", "description", "payee", "lines", "totalAmountCents", "currency", "status", "type", "createdAt", "updatedAt", "metadata", "deletedAt", "originalCurrency", "exchangeRate", "isCleared", "clearedAt", "bankTransactionId", "isFlagged", "verification", "projectId", "tags", "parentEventId", "eventId", "reversalEventId", "project", "schemaVersion", "units", "unitType", "total_impact", "eventBusSeq"]);
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId) && (resource.data.status != "certified" && resource.data.status != "voided");
+      allow create: if false; // Re-routed to backend server validation layer
+      allow update: if false; // Re-routed to backend server validation layer
+      allow delete: if false; // Re-routed to backend server validation layer
     }
 
     match /chartAccounts/{accountId} {
@@ -146,7 +138,7 @@ service cloud.firestore {
     }
 
     function isProtectedCollection(name) {
-      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates"];
+      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines"];
     }
 
     // Standard rule for remaining secondary metrics and details matching the blueprint

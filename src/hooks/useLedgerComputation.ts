@@ -4,10 +4,10 @@ import { LedgerEngine } from '../lib/ledger-engine';
 import { jaroWinklerSimilarity } from '../lib/algorithms';
 import { useScenarioStore } from '../lib/scenarioStore';
 import { useAuthStore } from '../stores/useAuthStore';
-import { TruthEngine } from '../modules/truth/TruthEngine';
+import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { addDays, addWeeks, addMonths, addYears, format } from 'date-fns';
 
-// NEURAL PATTERN ENGINE: Pre-compiled static regex for maximum pipeline throughput
+// RULES PATTERN ENGINE: Pre-compiled static regex for maximum pipeline throughput
 const PATTERNS = {
   OP: /([><=])\s*([\d,]+(\.\d+)?)/,
   TEXT_OP: /(greater than|more than|over|above|less than|under|below|at least|at most|around|about|approx|approximately)\s*([\d,]+(\.\d+)?)/,
@@ -38,7 +38,7 @@ export function useLedgerComputation(
   accounts: ChartAccount[] = [],
   sortConfig?: { key: string, direction: 'asc' | 'desc' } | null
 ) {
-  const { user } = useAuthStore();
+  const user = useAuthStore(s => s.user);
   const scenarios = useScenarioStore(state => state.scenarios);
   const activeScenarioId = useScenarioStore(state => state.activeScenarioId);
   const activeScenario = Array.isArray(scenarios) ? scenarios.find(s => s.id === activeScenarioId) : null;

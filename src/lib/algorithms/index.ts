@@ -1,44 +1,69 @@
-import { DEEP_MATH_ALGORITHMS } from './deep-math';
 import { AlgorithmDefinition } from './types';
-import { multidimensionalMatrix } from './multidimensional-matrix';
+import { MULTIDIMENSIONAL_MATRIX } from './multidimensional-matrix';
 import { heuristicPipeline } from './heuristic-pipeline';
 import { assetAmortizer } from './asset-amortizer';
-import { altmanZScore } from './altman-z-score';
-import { liquidityProjection } from './liquidity-projection';
-import { generateGenericAlgorithms } from './generic-algorithms';
-import { ERP_MODELS } from './erp-models';
-import { ADVANCED_STOCHASTIC_MODELS, SECURITY_ALGORITHMS } from './advanced-stochastic';
+import { ANOMALY_DETECTION_ALGO } from './anomaly-detection';
+import { CATEGORIZATION_CONSISTENCY_ALGO } from './categorization-consistency';
+import { SUBSET_SUM_RECONCILIATION } from './subset-sum';
+import { RECURRENCE_DETECTION } from './recurrence';
+import { TF_IDF_MATCHER } from './tf-idf';
+import { FIND_MY_ERROR_ALGO } from './find-my-error';
+import { RULE_INDUCTION_ALGO } from './rule-induction';
+import { FENWICK_TIME_TRAVEL_ALGO } from './fenwick';
+import { BENFORDS_LAW_ALGO } from './benfords-law';
+import { DUPLICATE_DETECTION_ALGO } from './duplicate-detection';
+
+import { CASH_RUNWAY_ALGO } from './cash-runway';
+import { CAPITAL_BUDGETING_ALGO } from './capital-budgeting';
+import { EXPENSE_POLICY_ALGO } from './expense-policy-violator';
+import { VENDOR_CHURN_ALGO } from './vendor-churn';
+import { EXPENSE_VELOCITY_ALGO } from './expense-velocity';
+import { PARETO_ANALYSIS_ALGO } from './pareto-analysis';
+
+// New Easy-Mode & Moat Algorithms
+import { AUTO_SETUP_ALGO } from './auto-setup';
+import { NL_PARSER_ALGO } from './nl-parser';
+import { TAX_SET_ASIDE_ALGO } from './tax-set-aside';
+import { RECEIPT_CAPTURE_ALGO } from './receipt-capture';
+import { NUMBER_EXPLAINER_ALGO } from './number-explainer';
+import { LOCALIZED_FORENSICS_ALGO } from './localized-forensics';
+import { CONTINUOUS_CLOSE_ALGO } from './continuous-close';
+import { CROSS_DIMENSION_INFERENCE_ALGO } from './cross-dimension-inference';
+import { SHARED_TRANSACTION_IDENTITY_ALGO } from './shared-transaction-identity';
 
 export * from './types';
 
-// ==========================================
-// ALGORITHM REGISTRY - ADD NEW TOOLS HERE
-// ==========================================
-// Import your new algorithm file above, then add it to this dictionary.
-// The ToolCatalog and IntelligenceCenter will automatically pick it up.
-
 export const FINANCIAL_ALGORITHMS: Record<string, AlgorithmDefinition> = {
-  '1': multidimensionalMatrix,
+  '1': MULTIDIMENSIONAL_MATRIX,
   '2': heuristicPipeline,
   '3': assetAmortizer,
-  '22': altmanZScore,
-  '4': liquidityProjection,
-  ...generateGenericAlgorithms(),
-  'dm_0': DEEP_MATH_ALGORITHMS[0],
-  'dm_1': DEEP_MATH_ALGORITHMS[1],
-  'dm_2': DEEP_MATH_ALGORITHMS[2],
-  'dm_3': DEEP_MATH_ALGORITHMS[3],
-  'dm_4': DEEP_MATH_ALGORITHMS[4],
-  'dm_5': DEEP_MATH_ALGORITHMS[5],
-  'erp_0': ERP_MODELS[0],
-  'erp_1': ERP_MODELS[1],
-  'erp_2': ERP_MODELS[2],
-  'erp_3': ERP_MODELS[3],
-  'adv_0': ADVANCED_STOCHASTIC_MODELS[0],
-  'adv_1': ADVANCED_STOCHASTIC_MODELS[1],
-  'adv_2': ADVANCED_STOCHASTIC_MODELS[2],
-  'sec_0': SECURITY_ALGORITHMS[0],
-  'sec_1': SECURITY_ALGORITHMS[1],
-  'sec_2': SECURITY_ALGORITHMS[2],
-  'sec_3': SECURITY_ALGORITHMS[3],
+  'forensics_1': ANOMALY_DETECTION_ALGO,
+  'forensics_2': CATEGORIZATION_CONSISTENCY_ALGO,
+  'recon_1': SUBSET_SUM_RECONCILIATION,
+  'planning_2': RECURRENCE_DETECTION,
+  'ops_2': TF_IDF_MATCHER,
+  'forensics_3': FIND_MY_ERROR_ALGO,
+  'ops_3': RULE_INDUCTION_ALGO,
+  'system_1': FENWICK_TIME_TRAVEL_ALGO,
+  'forensics_4': BENFORDS_LAW_ALGO,
+  'forensics_5': DUPLICATE_DETECTION_ALGO,
+  'forensics_6': EXPENSE_POLICY_ALGO,
+  'planning_3': CASH_RUNWAY_ALGO,
+  'valuation_1': CAPITAL_BUDGETING_ALGO,
+  'ops_4': VENDOR_CHURN_ALGO,
+  'ops_5': EXPENSE_VELOCITY_ALGO,
+  'intelligence_3': PARETO_ANALYSIS_ALGO,
+  
+  // Ease & Simplicity Tools
+  'ease_1': AUTO_SETUP_ALGO,
+  'ease_2': NL_PARSER_ALGO,
+  'ease_3': TAX_SET_ASIDE_ALGO,
+  'ease_4': RECEIPT_CAPTURE_ALGO,
+  'ease_5': NUMBER_EXPLAINER_ALGO,
+
+  // Moat & Localized Intelligence
+  'moat_1': LOCALIZED_FORENSICS_ALGO,
+  'moat_2': CONTINUOUS_CLOSE_ALGO,
+  'moat_3': CROSS_DIMENSION_INFERENCE_ALGO,
+  'moat_4': SHARED_TRANSACTION_IDENTITY_ALGO,
 };

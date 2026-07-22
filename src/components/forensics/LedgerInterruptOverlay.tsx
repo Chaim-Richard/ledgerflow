@@ -9,8 +9,12 @@ import { formatCurrency } from '../../lib/utils';
 export default function LedgerInterruptOverlay() {
   const [activeAlert, setActiveAlert] = useState<any>(null);
   const [isDismissed, setIsDismissed] = useState(false);
-  const { setActiveTab } = useUIStore();
-  const { transactions, accounts, journalEntries, recomputeBalances, runFullAudit } = useLedgerStore();
+  const setActiveTab = useUIStore(s => s.setActiveTab);
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
+  const journalEntries = useLedgerStore(s => s.journalEntries);
+  const recomputeBalances = useLedgerStore(s => s.recomputeBalances);
+  const runFullAudit = useLedgerStore(s => s.runFullAudit);
 
   useEffect(() => {
     // Subscribe to audit exceptions from the global EventBus
@@ -168,7 +172,7 @@ export default function LedgerInterruptOverlay() {
 
                 <button
                   onClick={handleOverride}
-                  className="px-6 py-3 bg-transparent hover:bg-white/5 active:scale-95 text-zinc-400 hover:text-white rounded-[32px] text-[11px] font-medium uppercase tracking-wider transition-all"
+                  className="px-6 py-3 bg-transparent hover:bg-[var(--surface)]/5 active:scale-95 text-zinc-400 hover:text-white rounded-[32px] text-[11px] font-medium uppercase tracking-wider transition-all"
                 >
                   Safe Bypass
                 </button>

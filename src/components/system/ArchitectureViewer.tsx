@@ -27,11 +27,11 @@ export default function ArchitectureViewer() {
   }, [searchQuery]);
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto h-full overflow-y-auto bg-slate-50/50 min-h-screen">
+    <div className="p-8 max-w-[1600px] mx-auto h-full overflow-y-auto bg-[var(--ink)]/50 min-h-screen">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-8 border-b border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-8 border-b border-[var(--line)]">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3 tracking-tight">
+          <h1 className="text-3xl font-black text-[var(--text)] flex items-center gap-3 tracking-tight">
             <Network className="text-indigo-600 w-8 h-8" />
             System Architecture & Developer Hub
           </h1>
@@ -46,7 +46,7 @@ export default function ArchitectureViewer() {
               onClick={() => setActiveTab(tab as any)}
               className={`px-6 py-2.5 rounded-xl text-sm font-bold capitalize transition-all ${
                 activeTab === tab 
-                  ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-900/5' 
+                  ? 'bg-[var(--surface)] text-indigo-700 shadow-sm ring-1 ring-slate-900/5' 
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -61,8 +61,8 @@ export default function ArchitectureViewer() {
         {activeTab === 'topology' && (
           <motion.div key="topology" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-12">
             
-            <div className="bg-white p-10 rounded-[32px] border border-slate-200 shadow-xl shadow-slate-200/20">
-              <h2 className="text-xl font-bold text-slate-900 mb-8 flex items-center gap-3">
+            <div className="bg-[var(--surface)] p-10 rounded-[32px] border border-[var(--line)] shadow-xl shadow-slate-200/20">
+              <h2 className="text-xl font-bold text-[var(--text)] mb-8 flex items-center gap-3">
                 <Waypoints className="text-indigo-500" />
                 The Tripartite Data Flow
               </h2>
@@ -70,11 +70,11 @@ export default function ArchitectureViewer() {
               <div className="relative flex flex-col lg:flex-row items-center justify-between gap-6">
                 
                 {/* Layer 1: Persistence */}
-                <div className="w-full lg:w-1/3 bg-slate-50 border-2 border-slate-200 rounded-[24px] p-6 text-center relative z-10 hover:border-indigo-300 transition-colors">
+                <div className="w-full lg:w-1/3 bg-[var(--ink)] border-2 border-[var(--line)] rounded-[24px] p-6 text-center relative z-10 hover:border-indigo-300 transition-colors">
                   <Database className="w-10 h-10 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-black text-slate-800 mb-2">Layer 1: Data Persistence</h3>
+                  <h3 className="text-lg font-black text-[var(--text)] mb-2">Layer 1: Data Persistence</h3>
                   <p className="text-sm text-slate-500 mb-4">Firebase Firestore & Auth</p>
-                  <div className="inline-block px-4 py-2 bg-white rounded-lg border border-slate-200 text-xs font-mono text-slate-600">
+                  <div className="inline-block px-4 py-2 bg-[var(--surface)] rounded-lg border border-[var(--line)] text-xs font-mono text-slate-600">
                     src/modules/firebase/
                   </div>
                 </div>
@@ -84,7 +84,7 @@ export default function ArchitectureViewer() {
                 {/* Layer 2: State */}
                 <div className="w-full lg:w-1/3 bg-indigo-600 border-2 border-indigo-500 rounded-[24px] p-6 text-center relative z-10 shadow-lg shadow-indigo-600/20">
                   <Activity className="w-10 h-10 text-indigo-200 mx-auto mb-4" />
-                  <h3 className="text-lg font-black text-white mb-2">Layer 2: Local State (Truth)</h3>
+                  <h3 className="text-lg font-black text-white mb-2">Layer 2: Local State (Integrity)</h3>
                   <p className="text-sm text-indigo-100 mb-4">Zustand Store (Transactions, Accounts)</p>
                   <div className="inline-block px-4 py-2 bg-indigo-700/50 rounded-lg border border-indigo-500 text-xs font-mono text-white">
                     src/stores/useLedgerStore.ts
@@ -97,12 +97,12 @@ export default function ArchitectureViewer() {
                 <div className="w-full lg:w-1/3 space-y-4">
                   <div className="bg-emerald-50 border-2 border-emerald-200 rounded-[24px] p-6 text-center hover:border-emerald-400 transition-colors">
                     <Cpu className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
-                    <h3 className="font-bold text-slate-800 mb-1">Pure Algorithms</h3>
+                    <h3 className="font-bold text-[var(--text)] mb-1">Pure Algorithms</h3>
                     <div className="text-xs font-mono text-slate-500">src/lib/algorithms/</div>
                   </div>
                   <div className="bg-amber-50 border-2 border-amber-200 rounded-[24px] p-6 text-center hover:border-amber-400 transition-colors">
                     <Layers className="w-8 h-8 text-amber-500 mx-auto mb-3" />
-                    <h3 className="font-bold text-slate-800 mb-1">UI React Views</h3>
+                    <h3 className="font-bold text-[var(--text)] mb-1">UI React Views</h3>
                     <div className="text-xs font-mono text-slate-500">src/components/</div>
                   </div>
                 </div>
@@ -127,13 +127,13 @@ export default function ArchitectureViewer() {
           <motion.div key="modules" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
             
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3">
+              <h2 className="text-xl font-bold text-[var(--text)] flex items-center gap-3">
                 <Blocks className="text-indigo-500" /> Active System Modules ({APP_TABS.length})
               </h2>
               <input 
                 type="text" 
                 placeholder="Search modules..." 
-                className="px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm w-64"
+                className="px-4 py-2 rounded-xl border border-[var(--line)] focus:ring-2 focus:ring-indigo-500 outline-none text-sm w-64"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -141,17 +141,17 @@ export default function ArchitectureViewer() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {filteredModules.map((tab: any) => (
-                <div key={tab.id} className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group">
+                <div key={tab.id} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--line)] hover:border-indigo-300 hover:shadow-md transition-all group">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-[var(--ink)] flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                       {tab.icon && <tab.icon size={20} />}
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-800">{tab.label.en}</h3>
+                      <h3 className="font-bold text-[var(--text)]">{tab.label.en}</h3>
                       <p className="text-xs text-slate-400 mt-1 font-mono">{tab.id}</p>
                     </div>
                   </div>
-                  <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                  <div className="mt-4 pt-4 border-t border-[var(--line)] flex justify-between items-center">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">{tab.groupId}</span>
                     <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded font-mono">
                       src/components/...
@@ -169,13 +169,13 @@ export default function ArchitectureViewer() {
           <motion.div key="algorithms" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
             
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3">
+              <h2 className="text-xl font-bold text-[var(--text)] flex items-center gap-3">
                 <Cpu className="text-emerald-500" /> Pure Computational Algorithms ({algorithmsList.length})
               </h2>
               <input 
                 type="text" 
                 placeholder="Search algorithms..." 
-                className="px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm w-64"
+                className="px-4 py-2 rounded-xl border border-[var(--line)] focus:ring-2 focus:ring-emerald-500 outline-none text-sm w-64"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -197,17 +197,17 @@ export default function ArchitectureViewer() {
                 const domainAlgos = filteredAlgos.filter((a: any) => (a.domain || 'uncategorized') === domain);
                 if (domainAlgos.length === 0) return null;
                 return (
-                  <div key={domain} className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div key={domain} className="bg-[var(--ink)] p-6 rounded-2xl border border-[var(--line)]">
+                    <h3 className="text-lg font-black text-[var(--text)] uppercase tracking-widest mb-6 flex items-center gap-2">
                       <div className="w-2 h-2 bg-emerald-500 rounded-full" />
                       {domain} ({domainAlgos.length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {domainAlgos.map((algo: any) => (
-                        <div key={algo.id} className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-emerald-400 hover:shadow-lg transition-all flex flex-col h-full group">
+                        <div key={algo.id} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--line)] hover:border-emerald-400 hover:shadow-lg transition-all flex flex-col h-full group">
                           <div className="flex-grow">
                             <div className="flex items-center justify-between mb-2">
-                              <h3 className="font-bold text-slate-800 text-sm group-hover:text-emerald-700 transition-colors">{algo.name}</h3>
+                              <h3 className="font-bold text-[var(--text)] text-sm group-hover:text-emerald-700 transition-colors">{algo.name}</h3>
                               <span className="text-[10px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">ID: {algo.id}</span>
                             </div>
                             <p className="text-xs text-slate-500 mb-4">{algo.description}</p>
@@ -222,7 +222,7 @@ export default function ArchitectureViewer() {
                           </div>
                           
                           {algo.inputs && algo.inputs.length > 0 && (
-                            <div className="mt-auto pt-3 border-t border-slate-100">
+                            <div className="mt-auto pt-3 border-t border-[var(--line)]">
                               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Required Inputs</div>
                               <div className="flex flex-wrap gap-1.5">
                                 {algo.inputs.map((input: any) => (

@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 
 export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: boolean }) {
-  const { transactions } = useLedgerStore();
+  const transactions = useLedgerStore(s => s.transactions);
   const [isRunning, setIsRunning] = useState(false);
 
   const forensicData = useMemo(() => {
@@ -96,7 +96,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `LedgerFlow_Forensic_Report_${new Date().toISOString().slice(0, 10)}.txt`;
+        link.download = `Clearbook_Forensic_Report_${new Date().toISOString().slice(0, 10)}.txt`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -114,8 +114,8 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
 
   return (
     <div className={cn(
-      "bg-white relative overflow-hidden group",
-      isEmbedded ? "p-0" : "p-12 border border-slate-200 rounded-[32px]"
+      "bg-[var(--surface)] relative overflow-hidden group",
+      isEmbedded ? "p-0" : "p-12 border border-[var(--line)] rounded-[32px]"
     )}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_100%,rgba(249,115,22,0.03),transparent_70%)] pointer-events-none" />
       
@@ -126,7 +126,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
               <ShieldAlert size={24} />
             </div>
             <div>
-              <h3 className="text-lg font-bold tracking-tight text-slate-800 leading-none">Forensic Protocol</h3>
+              <h3 className="text-lg font-bold tracking-tight text-[var(--text)] leading-none">Forensic Protocol</h3>
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mt-1.5 block">Logarithmic Digits Divergence Filter (Benford v2.1)</span>
             </div>
           </div>
@@ -144,7 +144,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           <div className="space-y-6">
-            <div className="p-6 bg-slate-50 border border-slate-200/80 rounded-[32px] relative overflow-hidden">
+            <div className="p-6 bg-[var(--ink)] border border-[var(--line)]/80 rounded-[32px] relative overflow-hidden">
                <div className="absolute top-4 right-4 p-4 opacity-[0.03] pointer-events-none">
                   <Fingerprint size={48} />
                </div>
@@ -180,7 +180,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
                     );
                   })}
                </div>
-               <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+               <div className="mt-5 pt-4 border-t border-[var(--line)] flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                      <div className="w-2 h-2 bg-slate-800 rounded-full" />
                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Ledger</span>
@@ -202,23 +202,23 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
 
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-3xs hover:-translate-y-0.5 transition-all">
+                <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-3xs hover:-translate-y-0.5 transition-all">
                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Divergence Index</span>
                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-bold font-mono text-slate-800 leading-none">{forensicData.score.toFixed(2)}</span>
+                      <span className="text-2xl font-bold font-mono text-[var(--text)] leading-none">{forensicData.score.toFixed(2)}</span>
                    </div>
                 </div>
-                <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-3xs hover:-translate-y-0.5 transition-all">
+                <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-3xs hover:-translate-y-0.5 transition-all">
                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Confidence Score</span>
                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-bold font-mono text-slate-800 leading-none">0.05</span>
+                      <span className="text-2xl font-bold font-mono text-[var(--text)] leading-none">0.05</span>
                       <span className="text-[9px] font-mono text-slate-400">p-Val</span>
                    </div>
                 </div>
             </div>
 
-            <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
-               <h4 className="text-[10px] font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+            <div className="p-5 bg-[var(--ink)] border border-[var(--line)] rounded-xl space-y-4">
+               <h4 className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest flex items-center gap-2">
                   <Zap size={12} className="text-indigo-600" />
                   Target Audit Recommendations
                </h4>
@@ -233,7 +233,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
                     "Autonomous scanning loops active"
                   ]).map((rec, i) => (
                     <div key={i} className="flex items-center gap-3">
-                       <div className="w-5 h-5 bg-white border border-slate-250/50 rounded-md flex items-center justify-center text-[10px] font-bold text-slate-700 font-mono">
+                       <div className="w-5 h-5 bg-[var(--surface)] border border-slate-250/50 rounded-md flex items-center justify-center text-[10px] font-bold text-slate-700 font-mono">
                           {i + 1}
                        </div>
                        <span className="text-xs font-semibold text-slate-700">{rec}</span>

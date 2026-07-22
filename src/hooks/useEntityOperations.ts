@@ -13,8 +13,9 @@ import { toast } from 'sonner';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 
 export function useEntityOperations() {
-  const { user, currentWorkspaceId } = useAuthStore();
-  const { analyticalPatternCache } = useLedgerStore();
+  const user = useAuthStore(s => s.user);
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const analyticalPatternCache = useLedgerStore(s => s.analyticalPatternCache);
 
   const recordLearnedPattern = async (description: string, accountId: string, accountName: string) => {
     if (!user || !currentWorkspaceId || !description) return;
@@ -23,7 +24,7 @@ export function useEntityOperations() {
     
     const patternId = cleanDesc.replace(/[^a-z0-9]/g, '_');
     try {
-      const patternRef = doc(db, 'neuralPatterns', `${currentWorkspaceId}_${patternId}`);
+      const patternRef = doc(db, 'rulePatterns', `${currentWorkspaceId}_${patternId}`);
       const existing = analyticalPatternCache[cleanDesc];
       
       await setDoc(patternRef, {

@@ -27,11 +27,22 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { SYSTEM_GLOSSARY } from '../../config/registry';
 import { BookA } from 'lucide-react';
+import { auth, db } from '../../firebase';
+import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
+
+
+
+const fetchWithAuth = async (url: string, options: any = {}) => {
+  const token = await auth.currentUser?.getIdToken();
+  const headers = { ...options.headers, 'Authorization': `Bearer ${token}` };
+  return fetch(url, { ...options, headers });
+};
 
 export default function SystemCommandCenter() {
   const [telemetry, setTelemetry] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { user, userProfile } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const userProfile = useAuthStore(s => s.userProfile);
   const lexiconOverrides = useUIStore(state => state.lexiconOverrides);
   const setLexiconOverride = useUIStore(state => state.setLexiconOverride);
 
@@ -98,7 +109,7 @@ export default function SystemCommandCenter() {
     if (!editingWorkspace) return;
     setSavingWorkspace(true);
     try {
-      const res = await fetch(`/api/v1/admin/workspaces/${editingWorkspace.id}`, {
+      const res = await fetchWithAuth(`/api/v1/admin/workspaces/${editingWorkspace.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -109,13 +120,7 @@ export default function SystemCommandCenter() {
         const data = await res.json();
         if (data.status === 'success') {
           // Re-fetch telemetry immediately to reflect updates cleanly
-          const telRes = await fetch('/api/v1/admin/telemetry');
-          if (telRes.ok) {
-            const telData = await telRes.json();
-            if (telData.status === 'success') {
-              setTelemetry(telData);
-            }
-          }
+          await fetchTelemetry();
           setEditingWorkspace(null);
         } else {
           throw new Error(data.message || 'Failed to update workspace policies');
@@ -157,7 +162,7 @@ export default function SystemCommandCenter() {
           customKeyCentsCharge: Number(globalConfig.customKeyCentsCharge)
         };
 
-        await fetch(`/api/v1/admin/workspaces/${tenant.id}`, {
+        await fetchWithAuth(`/api/v1/admin/workspaces/${tenant.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -169,13 +174,7 @@ export default function SystemCommandCenter() {
       }
 
       setBulkSyncStatusText('Refreshing global configurations...');
-      const telRes = await fetch('/api/v1/admin/telemetry');
-      if (telRes.ok) {
-        const telData = await telRes.json();
-        if (telData.status === 'success') {
-          setTelemetry(telData);
-        }
-      }
+      await fetchTelemetry();
       setShowBulkSuccess(true);
     } catch (error: any) {
       alert(`Bulk Sync Error: ${error.message}`);
@@ -224,29 +223,19 @@ export default function SystemCommandCenter() {
     if (!editingUser) return;
     setSavingUser(true);
     try {
-      const res = await fetch(`/api/v1/admin/users/${editingUser.uid}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(userFormState)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status === 'success') {
-          // Re-fetch users instantly
-          const usersRes = await fetch('/api/v1/admin/users');
-          if (usersRes.ok) {
-            const usersData = await usersRes.json();
-            if (usersData.status === 'success') {
-              setUsersList(usersData.users || []);
-            }
-          }
-          setEditingUser(null);
-        } else {
-          throw new Error(data.message || 'Failed to update user access settings');
-        }
-      }
+      await setDoc(doc(db, "users", editingUser.uid), {
+        role: userFormState.role || "client",
+        customLimit: Number(userFormState.customLimit) || null,
+        computeCreditLimit: Number(userFormState.computeCreditLimit) || null,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      // Re-fetch users instantly
+      const usersSnap = await getDocs(collection(db, "users"));
+      const usersData = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      setUsersList(usersData as any);
+      
+      setEditingUser(null);
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -258,7 +247,7 @@ export default function SystemCommandCenter() {
     e.preventDefault();
     setUpdatingGlobal(true);
     try {
-      const res = await fetch('/api/v1/admin/global-config', {
+      const res = await fetchWithAuth('/api/v1/admin/global-config', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -283,17 +272,48 @@ export default function SystemCommandCenter() {
     }
   };
 
-  useEffect(() => {
     const fetchTelemetry = async () => {
       try {
-        const res = await fetch('/api/v1/admin/telemetry');
-        if (!res.ok) throw new Error('Administrative backend unavailable or restricted');
-        const data = await res.json();
-        if (data.status === 'success') {
-          setTelemetry(data);
-        } else {
-          throw new Error('Non-success telemetry status');
-        }
+        const workspacesSnap = await getDocs(collection(db, "workspaces"));
+        const transactionsSnap = await getDocs(collection(db, "transactions"));
+        const transactions = transactionsSnap.docs.map(doc => doc.data() as any);
+        
+        const tenants: Record<string, any> = {};
+        workspacesSnap.docs.forEach(doc => {
+           const data = doc.data() || {};
+           tenants[doc.id] = {
+               id: doc.id,
+               name: data.name || "Default Workspace",
+               plan: data.plan || "sandbox",
+               concurrentUserLimit: data.concurrentUserLimit || 50,
+               activeUserCount: data.activeUserCount || 0,
+               seatCount: data.seatCount || 1,
+               maxSeats: data.maxSeats || 5,
+               computeCreditBalance: data.computeCreditBalance || 500,
+               apiQuotaTotalCentsUsed: data.apiQuotaTotalCentsUsed || 0,
+               apiQuotaMonthlyLimitCents: data.apiQuotaMonthlyLimitCents || 1000,
+               creditCostMultiplier: 1.0,
+               quotaCentsMultiplier: 1.0,
+               bypassBilling: false,
+               customKeyCreditCharge: 10,
+               customKeyCentsCharge: 0,
+               txCount: 0,
+               requestCount: 0,
+               errorCount: 0
+           };
+        });
+
+        transactions.forEach(tx => {
+            if (tx.workspaceId && tenants[tx.workspaceId]) {
+                tenants[tx.workspaceId].txCount++;
+            }
+        });
+
+        setTelemetry({
+          status: 'success',
+          tenants: Object.values(tenants),
+          liveLogs: []
+        });
       } catch (e) {
         setTelemetry({
           status: 'success',
@@ -308,13 +328,9 @@ export default function SystemCommandCenter() {
     const fetchUsersData = async () => {
       setLoadingUsers(true);
       try {
-        const res = await fetch('/api/v1/admin/users');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status === 'success') {
-            setUsersList(data.users || []);
-          }
-        }
+        const usersSnap = await getDocs(collection(db, "users"));
+        const usersData = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+        setUsersList(usersData as any);
       } catch (e) {
         console.warn('Admin users fetch error', e);
       } finally {
@@ -324,7 +340,7 @@ export default function SystemCommandCenter() {
 
     const fetchGlobalConfig = async () => {
       try {
-        const res = await fetch('/api/v1/admin/global-config');
+        const res = await fetchWithAuth('/api/v1/admin/global-config');
         if (res.ok) {
           const data = await res.json();
           if (data.status === 'success' && data.globalAdminConfig) {
@@ -336,6 +352,7 @@ export default function SystemCommandCenter() {
       }
     };
 
+  useEffect(() => {
     fetchTelemetry();
     fetchGlobalConfig();
     fetchUsersData();
@@ -348,7 +365,7 @@ export default function SystemCommandCenter() {
 
   const allLogsCombined = [...simulatedLogs, ...(telemetry?.liveLogs || [])];
   const totalErrors = allLogsCombined.filter((l: any) => l.statusCode >= 500).length;
-  const liveErrors = allLogsCombined.filter((l: any) => l.statusCode >= 400).slice(0, 50);
+  const liveErrors = allLogsCombined.filter((l: any) => l.statusCode >= 400);
 
   const isSystemAdmin = user?.email?.toLowerCase() === 'shmuelbiller@gmail.com' || userProfile?.role === 'admin';
 
@@ -357,18 +374,18 @@ export default function SystemCommandCenter() {
   return (
     <div className="space-y-12 max-w-[1600px] mx-auto pb-12 px-4">
       {/* Header section matching upgraded architecture */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[var(--line)]">
         <div>
           <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate mb-1">
             <Server size={12} />
             Institutional Telemetry & Control Tower
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter italic">System Center</h2>
+          <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter italic">System Center</h2>
           <p className="text-slate-500 font-medium text-lg mt-2 italic opacity-60">Consolidated platform health, multi-tenant matrices, live billing pipelines, and granular override dials.</p>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="p-4 bg-white border border-slate-200 rounded-[32px] flex items-center gap-3 shadow-3xs">
+          <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] flex items-center gap-3 shadow-3xs">
             <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
             <div>
               <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-none">Diagnostic Socket</p>
@@ -380,25 +397,25 @@ export default function SystemCommandCenter() {
 
       {loading && !telemetry ? (
         <div className="h-96 flex items-center justify-center flex-col gap-3">
-          <Loader2 className="animate-spin text-slate-900 opacity-40" size={32} />
+          <Loader2 className="animate-spin text-[var(--text)] opacity-40" size={32} />
           <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Hooking operational datastream...</span>
         </div>
       ) : !telemetry || !telemetry.tenants ? (
-        <div className="h-96 flex flex-col items-center justify-center gap-4 border border-dashed border-slate-200 rounded-[32px]">
+        <div className="h-96 flex flex-col items-center justify-center gap-4 border border-dashed border-[var(--line)] rounded-[32px]">
           <AlertOctagon size={40} className="text-rose-500 opacity-60" />
           <div className="text-center">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Interface Refused</h3>
+            <h3 className="text-sm font-black text-[var(--text)] uppercase tracking-wider">Interface Refused</h3>
             <p className="text-xs text-slate-500 mt-1">Unable to construct reliable stream channel to backend metrics.</p>
           </div>
         </div>
       ) : (
         <div className="space-y-8">
-          <div className="flex flex-wrap gap-4 border-b border-slate-200 pb-4">
+          <div className="flex flex-wrap gap-4 border-b border-[var(--line)] pb-4">
             <button
               onClick={() => setActiveMainTab('workspaces')}
               className={cn(
                 "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                activeMainTab === 'workspaces' ? "bg-slate-900 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"
+                activeMainTab === 'workspaces' ? "bg-slate-900 text-white shadow-md" : "bg-[var(--surface)] text-slate-500 border border-[var(--line)] hover:bg-[var(--ink)]"
               )}
             >
               <Building className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
@@ -408,7 +425,7 @@ export default function SystemCommandCenter() {
               onClick={() => setActiveMainTab('users')}
               className={cn(
                 "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                activeMainTab === 'users' ? "bg-slate-900 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"
+                activeMainTab === 'users' ? "bg-slate-900 text-white shadow-md" : "bg-[var(--surface)] text-slate-500 border border-[var(--line)] hover:bg-[var(--ink)]"
               )}
             >
               <Users className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
@@ -418,7 +435,7 @@ export default function SystemCommandCenter() {
               onClick={() => setActiveMainTab('lexicon')}
               className={cn(
                 "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                activeMainTab === 'lexicon' ? "bg-slate-900 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"
+                activeMainTab === 'lexicon' ? "bg-slate-900 text-white shadow-md" : "bg-[var(--surface)] text-slate-500 border border-[var(--line)] hover:bg-[var(--ink)]"
               )}
             >
               <BookA className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
@@ -428,11 +445,11 @@ export default function SystemCommandCenter() {
 
           {activeMainTab === 'lexicon' ? (
             <div className="space-y-8">
-              <div className="bg-white border border-slate-200 rounded-[32px] shadow-3xs overflow-hidden">
-                <div className="p-4 md:p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-3xs overflow-hidden">
+                <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]">
                   <div className="flex items-center gap-3">
                     <BookA size={16} className="text-[#0047AB]" />
-                    <h3 className="text-[12px] font-black uppercase tracking-widest text-slate-800">Global Lexicon Override</h3>
+                    <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Global Lexicon Override</h3>
                   </div>
                 </div>
                 <div className="p-6 md:p-8 space-y-6">
@@ -445,13 +462,13 @@ export default function SystemCommandCenter() {
                         const originalVal = SYSTEM_GLOSSARY[key];
                         const currentVal = lexiconOverrides[key]?.en || originalVal.en;
                         return (
-                          <div key={key} className="space-y-2 p-4 bg-slate-50 rounded-[20px] border border-slate-200">
+                          <div key={key} className="space-y-2 p-4 bg-[var(--ink)] rounded-[20px] border border-[var(--line)]">
                             <label className="block text-xs font-bold text-slate-700 tracking-wide break-all">{key}</label>
                             <input 
                               type="text"
                               value={currentVal}
                               onChange={e => setLexiconOverride(key, 'en', e.target.value)}
-                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:border-[#0047AB] focus:ring-2 focus:ring-[#0047AB]/20 transition-all"
+                              className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2 text-sm font-medium focus:border-[#0047AB] focus:ring-2 focus:ring-[#0047AB]/20 transition-all"
                             />
                           </div>
                         );
@@ -463,17 +480,17 @@ export default function SystemCommandCenter() {
           ) : activeMainTab === 'users' ? (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               <div className="xl:col-span-2 space-y-8">
-                <div className="bg-white border border-slate-200 rounded-[32px] shadow-3xs overflow-hidden">
-                  <div className="p-4 md:p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-3xs overflow-hidden">
+                  <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]">
                     <div className="flex items-center gap-3">
                       <Users size={16} className="text-slate-500" />
-                      <h3 className="text-[12px] font-black uppercase tracking-widest text-slate-800">Platform User Ledger</h3>
+                      <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Platform User Ledger</h3>
                     </div>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                       <thead>
-                        <tr className="border-b border-slate-200 bg-white text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                        <tr className="border-b border-[var(--line)] bg-[var(--surface)] text-[9px] font-bold uppercase tracking-wider text-slate-400">
                           <th className="py-4 px-6 font-medium">User Details</th>
                           <th className="py-4 px-6 font-medium">Role</th>
                           <th className="py-4 px-6 font-medium text-right">Custom Limit ($)</th>
@@ -483,17 +500,17 @@ export default function SystemCommandCenter() {
                       </thead>
                       <tbody className="divide-y divide-ledger-line/50">
                         {usersList.map((u: any) => (
-                          <tr key={u.uid} className="hover:bg-slate-50/50 transition-colors group">
+                          <tr key={u.uid} className="hover:bg-[var(--ink)]/50 transition-colors group">
                             <td className="py-4 px-6">
                               <div className="flex flex-col">
-                                <span className="text-xs font-bold text-slate-800">{u.email || 'Unknown Email'}</span>
+                                <span className="text-xs font-bold text-[var(--text)]">{u.email || 'Unknown Email'}</span>
                                 <span className="text-[10px] font-mono text-slate-400">{u.uid}</span>
                               </div>
                             </td>
                             <td className="py-4 px-6">
                               <span className={cn(
                                 "text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full border",
-                                u.role === 'admin' ? "bg-[#0047AB]/10 text-[#0047AB] border-[#0047AB]/20" : "bg-slate-100 text-slate-600 border-slate-200"
+                                u.role === 'admin' ? "bg-[#0047AB]/10 text-[#0047AB] border-[#0047AB]/20" : "bg-slate-100 text-slate-600 border-[var(--line)]"
                               )}>
                                 {u.role || 'client'}
                               </span>
@@ -511,7 +528,7 @@ export default function SystemCommandCenter() {
                             <td className="py-4 px-6 text-center">
                               <button 
                                 onClick={() => startEditingUser(u)}
-                                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all opacity-50 group-hover:opacity-100"
+                                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider border border-[var(--line)] bg-[var(--surface)] text-slate-600 hover:bg-[var(--ink)] transition-all opacity-50 group-hover:opacity-100"
                               >
                                 Modify
                               </button>
@@ -534,15 +551,15 @@ export default function SystemCommandCenter() {
               {/* Edit User Panel */}
               <div className="xl:col-span-1 space-y-6">
                 <div className={cn(
-                  "bg-white border rounded-[32px] p-6 transition-all duration-300 shadow-xl",
-                  editingUser ? "border-[#0047AB] ring-4 ring-[#0047AB]/5" : "border-slate-200 opacity-50 pointer-events-none grayscale"
+                  "bg-[var(--surface)] border rounded-[32px] p-6 transition-all duration-300 shadow-xl",
+                  editingUser ? "border-[#0047AB] ring-4 ring-[#0047AB]/5" : "border-[var(--line)] opacity-50 pointer-events-none grayscale"
                 )}>
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[var(--line)]">
                     <div className="w-8 h-8 rounded-lg bg-[#0047AB]/10 flex items-center justify-center">
                       <Wrench size={14} className="text-[#0047AB]" />
                     </div>
                     <div>
-                      <h3 className="text-[12px] font-black uppercase tracking-widest text-slate-800">Deep Profile Tuning</h3>
+                      <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Deep Profile Tuning</h3>
                       {editingUser && (
                         <div className="flex flex-col mt-1">
                           <span className="text-[11px] font-bold text-slate-700">{editingUser.email || 'Unknown Email'}</span>
@@ -562,7 +579,7 @@ export default function SystemCommandCenter() {
                           <select 
                             value={userFormState.role}
                             onChange={e => setUserFormState(prev => ({ ...prev, role: e.target.value }))}
-                            className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-bold text-slate-800 focus:border-[#0047AB] outline-none transition-all"
+                            className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                           >
                             <option value="client">Client (Standard Access)</option>
                             <option value="admin">Admin (System Access)</option>
@@ -576,7 +593,7 @@ export default function SystemCommandCenter() {
                             type="number"
                             value={userFormState.customLimit}
                             onChange={e => setUserFormState(prev => ({ ...prev, customLimit: Number(e.target.value) }))}
-                            className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-mono font-bold text-slate-800 focus:border-[#0047AB] outline-none transition-all"
+                            className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             placeholder="0 = Use System Default"
                           />
                         </div>
@@ -588,7 +605,7 @@ export default function SystemCommandCenter() {
                             type="number"
                             value={userFormState.computeCreditLimit}
                             onChange={e => setUserFormState(prev => ({ ...prev, computeCreditLimit: Number(e.target.value) }))}
-                            className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-mono font-bold text-slate-800 focus:border-[#0047AB] outline-none transition-all"
+                            className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             placeholder="0 = Use System Default"
                           />
                         </div>
@@ -615,11 +632,11 @@ export default function SystemCommandCenter() {
                         </div>
                       </div>
 
-                      <div className="pt-4 border-t border-slate-100 flex gap-3">
+                      <div className="pt-4 border-t border-[var(--line)] flex gap-3">
                         <button
                           type="button"
                           onClick={() => setEditingUser(null)}
-                          className="flex-1 px-4 py-3 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+                          className="flex-1 px-4 py-3 border border-[var(--line)] rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-[var(--ink)] transition-all"
                         >
                           Cancel
                         </button>
@@ -646,7 +663,7 @@ export default function SystemCommandCenter() {
           <div className="xl:col-span-2 space-y-8">
             {/* Stat Cards Row */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="bg-white border border-slate-200 p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
+              <div className="bg-[var(--surface)] border border-[var(--line)] p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none group-hover:opacity-[0.05] transition-all">
                   <Database size={80} />
                 </div>
@@ -656,11 +673,11 @@ export default function SystemCommandCenter() {
                   </div>
                   <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Tenants</h4>
                 </div>
-                <h3 className="text-2xl md:text-4xl font-black font-mono text-slate-900 tracking-tight">{telemetry.tenants.length}</h3>
+                <h3 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">{telemetry.tenants.length}</h3>
                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-2">Isolated workspaces in sync</p>
               </div>
 
-              <div className="bg-white border border-slate-200 p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
+              <div className="bg-[var(--surface)] border border-[var(--line)] p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none group-hover:opacity-[0.05] transition-all">
                   <Activity size={80} />
                 </div>
@@ -670,13 +687,13 @@ export default function SystemCommandCenter() {
                   </div>
                   <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Global Ledger Rows</h4>
                 </div>
-                <h3 className="text-2xl md:text-4xl font-black font-mono text-slate-900 tracking-tight">
+                <h3 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">
                   {telemetry.tenants.reduce((acc: number, t: any) => acc + t.txCount, 0).toLocaleString()}
                 </h3>
                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-2">Total transactional assertions</p>
               </div>
 
-              <div className="bg-white border border-slate-200 p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
+              <div className="bg-[var(--surface)] border border-[var(--line)] p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none group-hover:opacity-[0.05] transition-all">
                   <AlertOctagon size={80} />
                 </div>
@@ -762,7 +779,7 @@ export default function SystemCommandCenter() {
                     step="0.05"
                     value={globalConfig.creditCostMultiplier}
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, creditCostMultiplier: Number(e.target.value) }))}
-                    className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    className="w-full h-1.5 bg-[var(--surface)]/10 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                   />
                   <div className="flex justify-between text-[8px] text-white/30 font-bold uppercase">
                     <span>Free</span>
@@ -786,7 +803,7 @@ export default function SystemCommandCenter() {
                     step="0.05"
                     value={globalConfig.quotaCentsMultiplier}
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, quotaCentsMultiplier: Number(e.target.value) }))}
-                    className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    className="w-full h-1.5 bg-[var(--surface)]/10 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                   />
                   <div className="flex justify-between text-[8px] text-white/30 font-bold uppercase">
                     <span>Free Spend</span>
@@ -806,7 +823,7 @@ export default function SystemCommandCenter() {
                     max="1000"
                     value={globalConfig.customKeyCreditCharge}
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, customKeyCreditCharge: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
+                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
                   />
                   <p className="text-[9px] text-white/30 uppercase font-black">standard: 10 per call</p>
                 </div>
@@ -822,7 +839,7 @@ export default function SystemCommandCenter() {
                     max="100"
                     value={globalConfig.customKeyCentsCharge}
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, customKeyCentsCharge: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
+                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
                   />
                   <p className="text-[9px] text-white/30 uppercase font-black">standard: 0 cents</p>
                 </div>
@@ -838,7 +855,7 @@ export default function SystemCommandCenter() {
                     max="10000"
                     value={globalConfig.maxRegistrationLimit ?? 100}
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, maxRegistrationLimit: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
+                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
                   />
                   <p className="text-[9px] text-white/30 uppercase font-black">limit total users</p>
                 </div>
@@ -854,7 +871,7 @@ export default function SystemCommandCenter() {
                     max="100000"
                     value={globalConfig.freeWorkspaceTxCap ?? 100}
                     onChange={(e) => setGlobalConfig(prev => ({ ...prev, freeWorkspaceTxCap: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
+                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
                   />
                   <p className="text-[9px] text-white/30 uppercase font-black">cap per free workspace</p>
                 </div>
@@ -889,10 +906,10 @@ export default function SystemCommandCenter() {
             </div>
 
             {/* Interactive Billing & Profit Simulator Modeler */}
-            <div className="bg-white border border-slate-200 rounded-[32px] p-4 md:p-10 shadow-3xs relative overflow-hidden">
+            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] p-4 md:p-10 shadow-3xs relative overflow-hidden">
               <div className="absolute inset-0 technical-grid opacity-[0.01] pointer-events-none" />
               
-              <div className="flex items-center gap-3 pb-6 border-b border-slate-200 mb-6">
+              <div className="flex items-center gap-3 pb-6 border-b border-[var(--line)] mb-6">
                 <div className="w-10 h-10 bg-[#0047AB]/5 text-[#0047AB] rounded-[32px] flex items-center justify-center">
                   <Calculator size={18} />
                 </div>
@@ -950,18 +967,18 @@ export default function SystemCommandCenter() {
               </div>
 
               {/* Calculations Matrix results */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 bg-slate-50 rounded-[32px] border border-slate-200">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 bg-[var(--ink)] rounded-[32px] border border-[var(--line)]">
                 {/* 1 */}
                 <div className="space-y-1">
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Est. Compute Credits Burn rate</span>
-                  <div className="text-xl font-mono font-black text-slate-800">
+                  <div className="text-xl font-mono font-black text-[var(--text)]">
                     {Math.round(simulatedQueries * (customKeyRatio / 100 * (globalConfig.customKeyCreditCharge) + (1 - customKeyRatio / 100) * 100) * (globalConfig.creditCostMultiplier || 1)).toLocaleString()}
                   </div>
                   <span className="text-[9px] font-bold text-slate-500 leading-none">Compute credits allocated monthly</span>
                 </div>
 
                 {/* 2 */}
-                <div className="space-y-1 border-slate-200 sm:border-l sm:pl-6">
+                <div className="space-y-1 border-[var(--line)] sm:border-l sm:pl-6">
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Gross Platform Cent Revenue</span>
                   <div className="text-xl font-mono font-black text-emerald-650">
                     ${((simulatedQueries * (1 - customKeyRatio / 100) * 0.01 * (globalConfig.quotaCentsMultiplier || 1)) + (simulatedQueries * (customKeyRatio / 100) * (globalConfig.customKeyCentsCharge / 100))).toFixed(2)}
@@ -970,7 +987,7 @@ export default function SystemCommandCenter() {
                 </div>
 
                 {/* 3 */}
-                <div className="space-y-1 border-slate-200 sm:border-l sm:pl-6">
+                <div className="space-y-1 border-[var(--line)] sm:border-l sm:pl-6">
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">System Key Royaltiy Yield</span>
                   <div className="text-xl font-mono font-black text-indigo-650">
                     {Math.round(simulatedQueries * (customKeyRatio / 100) * globalConfig.customKeyCreditCharge).toLocaleString()} cr
@@ -981,9 +998,9 @@ export default function SystemCommandCenter() {
             </div>
 
             {/* Tenant Registry */}
-            <div className="bg-white border border-slate-200 rounded-[32px] p-4 md:p-8 shadow-3xs relative overflow-hidden">
+            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] p-4 md:p-8 shadow-3xs relative overflow-hidden">
               <div className="absolute inset-0 technical-grid opacity-[0.01] pointer-events-none" />
-              <div className="flex items-center justify-between pb-6 border-b border-slate-200 mb-6 flex-wrap gap-4">
+              <div className="flex items-center justify-between pb-6 border-b border-[var(--line)] mb-6 flex-wrap gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-2.5 h-6 bg-slate-900 rounded-full" />
                   <div>
@@ -996,7 +1013,7 @@ export default function SystemCommandCenter() {
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-200 text-slate-500 text-[10px] font-medium uppercase tracking-wider bg-slate-50/50">
+                    <tr className="border-b border-[var(--line)] text-slate-500 text-[10px] font-medium uppercase tracking-wider bg-[var(--ink)]/50">
                       <th className="py-4 px-4">Workspace Identity / Name</th>
                       <th className="py-4 px-4 text-center">Plan</th>
                       <th className="py-4 px-4 text-right">Max Seats</th>
@@ -1009,7 +1026,7 @@ export default function SystemCommandCenter() {
                       <th className="py-4 px-4 text-center">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-ledger-line font-medium text-slate-900">
+                  <tbody className="divide-y divide-ledger-line font-medium text-[var(--text)]">
                     {telemetry.tenants.length === 0 ? (
                       <tr>
                         <td colSpan={10} className="py-8 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
@@ -1042,7 +1059,7 @@ export default function SystemCommandCenter() {
                                 "text-[9px] px-2 py-0.5 rounded-md font-medium uppercase tracking-wider border",
                                 tenant.plan === 'enterprise' ? "bg-purple-50 text-purple-700 border-purple-200" :
                                 tenant.plan === 'growth' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                                "bg-slate-50 text-slate-600 border-slate-200"
+                                "bg-[var(--ink)] text-slate-600 border-[var(--line)]"
                               )}>
                                 {tenant.plan || 'sandbox'}
                               </span>
@@ -1101,7 +1118,7 @@ export default function SystemCommandCenter() {
                   initial={{ opacity: 0, scale: 0.95, y: 15 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                  className="bg-white rounded-[32px] border border-slate-200 shadow-2xl p-4 md:p-8 max-w-xl w-full relative z-[210] overflow-hidden flex flex-col max-h-[90dvh] md:max-h-none"
+                  className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-2xl p-4 md:p-8 max-w-xl w-full relative z-[210] overflow-hidden flex flex-col max-h-[90dvh] md:max-h-none"
                 >
                   <div className="absolute top-0 inset-x-0 h-1 bg-[#0047AB]" />
                   
@@ -1110,20 +1127,20 @@ export default function SystemCommandCenter() {
                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
                         Institutional Supervisor Control
                       </span>
-                      <h3 className="text-2xl font-black text-slate-900 tracking-tight mt-1 truncate">Workspace Policy Editor</h3>
+                      <h3 className="text-2xl font-black text-[var(--text)] tracking-tight mt-1 truncate">Workspace Policy Editor</h3>
                       <p className="text-slate-400 font-mono text-[9px] font-bold uppercase mt-0.5 truncate">Workspace Hash: {editingWorkspace.id}</p>
                     </div>
                     <button 
                       type="button"
                       onClick={() => setEditingWorkspace(null)}
-                      className="text-slate-400 hover:text-slate-700 font-bold text-xs px-3 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all"
+                      className="text-slate-400 hover:text-slate-700 font-bold text-xs px-3 py-1.5 bg-[var(--ink)] hover:bg-slate-100 rounded-xl transition-all"
                     >
                       CLOSE (ESC)
                     </button>
                   </div>
 
                   {/* Horizontal Tab Navigation bar inside Modal */}
-                  <div className="flex border-b border-slate-200 mb-5 overflow-x-auto gap-2 py-1 scrollbar-hidden">
+                  <div className="flex border-b border-[var(--line)] mb-5 overflow-x-auto gap-2 py-1 scrollbar-hidden">
                     <button
                       type="button"
                       onClick={() => setActiveFormTab('tier')}
@@ -1131,7 +1148,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'tier' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Sparkles size={12} /> Pricing & Plan
@@ -1143,7 +1160,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'access' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Users size={12} /> Access & Seats
@@ -1155,7 +1172,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'credits' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Gift size={12} /> Grant Free Credits
@@ -1167,7 +1184,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'roadmap' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <DollarSign size={12} /> Monetization
@@ -1179,7 +1196,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'rates' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Cpu size={12} /> Rates & Keys
@@ -1200,7 +1217,7 @@ export default function SystemCommandCenter() {
                           <select
                             value={formState.plan}
                             onChange={(e) => setFormState(prev => ({ ...prev, plan: e.target.value }))}
-                            className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-800 focus:border-[#0047AB] focus:ring-1 focus:ring-[#0047AB] outline-none cursor-pointer transition-all"
+                            className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-3 text-xs font-bold text-[var(--text)] focus:border-[#0047AB] focus:ring-1 focus:ring-[#0047AB] outline-none cursor-pointer transition-all"
                           >
                             <option value="sandbox">Sandbox Tier (Capped default offline development)</option>
                             <option value="growth">Growth Platform Tier (Professional Core Business - Paid)</option>
@@ -1212,10 +1229,10 @@ export default function SystemCommandCenter() {
                         <div className="grid grid-cols-1 gap-3 pt-2">
                           <div className={cn(
                             "p-3 rounded-[32px] border text-left transition-all",
-                            formState.plan === 'sandbox' ? "bg-slate-50 border-slate-300" : "bg-white border-slate-100 opacity-60"
+                            formState.plan === 'sandbox' ? "bg-[var(--ink)] border-slate-300" : "bg-[var(--surface)] border-[var(--line)] opacity-60"
                           )}>
                             <div className="flex justify-between items-center mb-1">
-                              <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Sandbox / Free Tier</span>
+                              <span className="text-xs font-black text-[var(--text)] uppercase tracking-tight">Sandbox / Free Tier</span>
                               <span className="text-[9px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg">$0.00 / mo</span>
                             </div>
                             <p className="text-[10px] text-slate-500 font-medium lowercase first-letter:uppercase">Includes 100k standard compute units, 3 seat limit, normal query rates. Ideal for trial accounts.</p>
@@ -1223,7 +1240,7 @@ export default function SystemCommandCenter() {
 
                           <div className={cn(
                             "p-3 rounded-[32px] border text-left transition-all",
-                            formState.plan === 'growth' ? "bg-emerald-50/40 border-emerald-300 shadow-3xs" : "bg-white border-slate-100 opacity-60"
+                            formState.plan === 'growth' ? "bg-emerald-50/40 border-emerald-300 shadow-3xs" : "bg-[var(--surface)] border-[var(--line)] opacity-60"
                           )}>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-xs font-black text-[#2e7d32] uppercase tracking-tight flex items-center gap-1">
@@ -1236,7 +1253,7 @@ export default function SystemCommandCenter() {
 
                           <div className={cn(
                             "p-3 rounded-[32px] border text-left transition-all",
-                            formState.plan === 'enterprise' ? "bg-purple-50/40 border-purple-300 shadow-3xs" : "bg-white border-slate-100 opacity-60"
+                            formState.plan === 'enterprise' ? "bg-purple-50/40 border-purple-300 shadow-3xs" : "bg-[var(--surface)] border-[var(--line)] opacity-60"
                           )}>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-xs font-black text-purple-700 uppercase tracking-tight flex items-center gap-1">
@@ -1253,10 +1270,10 @@ export default function SystemCommandCenter() {
                     {/* TAB 2: Access & Seats limit controls */}
                     {activeFormTab === 'access' && (
                       <div className="space-y-4">
-                        <div className="p-4 bg-slate-50 rounded-[32px] border border-slate-150 flex items-center gap-3">
+                        <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-slate-150 flex items-center gap-3">
                           <Users size={16} className="text-[#0047AB]" />
                           <div>
-                            <p className="text-xs font-black text-slate-800">Seat Limits & Operations</p>
+                            <p className="text-xs font-black text-[var(--text)]">Seat Limits & Operations</p>
                             <p className="text-[10px] text-slate-500">Determine user access size per tenant. If seats count surpasses maximum limit, further user registration is blocked automatically.</p>
                           </div>
                         </div>
@@ -1272,7 +1289,7 @@ export default function SystemCommandCenter() {
                               min={1}
                               max={500}
                               onChange={(e) => setFormState(prev => ({ ...prev, maxSeats: Number(e.target.value) }))}
-                              className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-mono font-bold text-slate-800 focus:border-[#0047AB] outline-none transition-all"
+                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             />
                             <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Capped at 500 seats/tenant</p>
                           </div>
@@ -1287,7 +1304,7 @@ export default function SystemCommandCenter() {
                               min={5}
                               max={10000}
                               onChange={(e) => setFormState(prev => ({ ...prev, concurrentUserLimit: Number(e.target.value) }))}
-                              className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-mono font-bold text-slate-800 focus:border-[#0047AB] outline-none transition-all"
+                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             />
                             <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Prevents endpoint throttling</p>
                           </div>
@@ -1329,7 +1346,7 @@ export default function SystemCommandCenter() {
                         <div className="p-4 bg-indigo-50/50 rounded-[32px] border border-indigo-150 flex items-center gap-3">
                           <Gift size={16} className="text-indigo-650" />
                           <div>
-                            <p className="text-xs font-black text-slate-800">Assign Free Promotional Allocations</p>
+                            <p className="text-xs font-black text-[var(--text)]">Assign Free Promotional Allocations</p>
                             <p className="text-[10px] text-slate-500">Inject computational balance credits for testing, marketing, or to reward long-term institutional customers with free credit balances.</p>
                           </div>
                         </div>
@@ -1344,9 +1361,9 @@ export default function SystemCommandCenter() {
                             min={0}
                             max={10000000}
                             onChange={(e) => setFormState(prev => ({ ...prev, computeCreditBalance: Number(e.target.value) }))}
-                            className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-mono font-bold text-slate-800 focus:border-[#0047AB] outline-none transition-all"
+                            className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                           />
-                          <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Required dynamically by neural classifying pipeline & algorithms on API routes</p>
+                          <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Required dynamically by rule classifying pipeline & algorithms on API routes</p>
                         </div>
 
                         {/* Quick Inject Grant Credit triggers */}
@@ -1385,7 +1402,7 @@ export default function SystemCommandCenter() {
                         <div className="p-4 bg-[#0047AB]/5 rounded-[32px] border border-[#0047AB]/10 flex items-center gap-3">
                           <DollarSign size={16} className="text-[#0047AB]" />
                           <div>
-                            <p className="text-xs font-black text-slate-800">Monetization & API Limits ($)</p>
+                            <p className="text-xs font-black text-[var(--text)]">Monetization & API Limits ($)</p>
                             <p className="text-[10px] text-slate-500">Establish maximum billing limits per workspace to charge for premium services. Limit over-spending and manage enterprise custom invoicing.</p>
                           </div>
                         </div>
@@ -1400,7 +1417,7 @@ export default function SystemCommandCenter() {
                               step="0.01"
                               value={(formState.apiQuotaMonthlyLimitCents / 100).toFixed(2)}
                               onChange={(e) => setFormState(prev => ({ ...prev, apiQuotaMonthlyLimitCents: Math.round(Number(e.target.value || 0) * 100) }))}
-                              className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-mono font-bold text-slate-800 focus:border-[#0047AB] outline-none transition-all"
+                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             />
                             <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Auto-caps programmatic use</p>
                           </div>
@@ -1409,14 +1426,14 @@ export default function SystemCommandCenter() {
                             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                               Estimated Monthly Bill
                             </label>
-                            <div className="w-full h-11 bg-slate-100 border border-slate-200 rounded-xl px-4 text-xs font-mono font-bold text-slate-600 flex items-center">
+                            <div className="w-full h-11 bg-slate-100 border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-slate-600 flex items-center">
                               ${formState.plan === 'growth' ? '49.00 / mo' : formState.plan === 'enterprise' ? '299.00 / mo' : '0.00 (Free)'}
                             </div>
                             <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Based on designated plan model</p>
                           </div>
                         </div>
 
-                        <div className="p-4 bg-slate-50 rounded-[32px] border border-slate-200">
+                        <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)]">
                           <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1.5">Monetization Deployment Strategy</h4>
                           <p className="text-[10px] text-slate-500 leading-relaxed uppercase tracking-wide">
                             LedgerFlow is fully structured to receive custom payment processors (e.g. Stripe Customer Portal). This admin system already manages and updates plans, quotas, and limits. By connecting a Stripe webhook, you will be able to process subscriptions and charge client cards directly, with this UI serving as your operational control tower.
@@ -1431,15 +1448,15 @@ export default function SystemCommandCenter() {
                         <div className="p-4 bg-emerald-50/50 rounded-[32px] border border-emerald-250/30 flex items-center gap-3">
                           <Cpu size={16} className="text-emerald-505 animate-pulse" />
                           <div>
-                            <p className="text-xs font-black text-slate-800">Dynamic Pricing Multipliers & Private Key Surcharges</p>
+                            <p className="text-xs font-black text-[var(--text)]">Dynamic Pricing Multipliers & Private Key Surcharges</p>
                             <p className="text-[10px] text-slate-500 leading-relaxed">Provide granular overrides for this specific workspace. You can scale charging metrics from zero to premium amounts dynamically.</p>
                           </div>
                         </div>
 
                         {/* Bypass Switch */}
-                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-[32px] flex items-center justify-between">
+                        <div className="p-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] flex items-center justify-between">
                           <div>
-                            <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Bypass All Billing & Caps</p>
+                            <p className="text-xs font-black text-[var(--text)] uppercase tracking-tight">Bypass All Billing & Caps</p>
                             <p className="text-[9px] text-slate-500 uppercase font-black tracking-wider mt-0.5">Gives unmetered free operations, bypassing freeze limits completely</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
@@ -1449,7 +1466,7 @@ export default function SystemCommandCenter() {
                               onChange={(e) => setFormState(prev => ({ ...prev, bypassBilling: e.target.checked }))}
                               className="sr-only peer" 
                             />
-                            <div className="w-11 h-6 bg-slate-250 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0047AB] bg-slate-300"></div>
+                            <div className="w-11 h-6 bg-slate-250 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--surface)] after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0047AB] bg-slate-300"></div>
                           </label>
                         </div>
 
@@ -1466,7 +1483,7 @@ export default function SystemCommandCenter() {
                               max="10"
                               value={formState.creditCostMultiplier}
                               onChange={(e) => setFormState(prev => ({ ...prev, creditCostMultiplier: Number(e.target.value || 0) }))}
-                              className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-mono font-bold text-slate-800 focus:border-[#0047AB] outline-none transition-all"
+                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             />
                             <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">
                               0.00 = Free, 1.0 = Base, 2.0 = Double cost
@@ -1484,7 +1501,7 @@ export default function SystemCommandCenter() {
                               max="10"
                               value={formState.quotaCentsMultiplier}
                               onChange={(e) => setFormState(prev => ({ ...prev, quotaCentsMultiplier: Number(e.target.value || 0) }))}
-                              className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-xs font-mono font-bold text-slate-800 focus:border-[#0047AB] outline-none transition-all"
+                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             />
                             <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">
                               0.00 = Free spend, 1.0 = Base multiplier
@@ -1493,7 +1510,7 @@ export default function SystemCommandCenter() {
                         </div>
 
                         {/* Custom Key Parameters */}
-                        <div className="p-4 bg-slate-50 rounded-[32px] border border-slate-200 space-y-4">
+                        <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] space-y-4">
                           <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Self-Funded API Key Rates</h4>
                           <p className="text-[9px] text-slate-400 leading-normal uppercase tracking-wider font-extrabold">
                             Specify billing charges if this account provides their private Gemini key:
@@ -1509,7 +1526,7 @@ export default function SystemCommandCenter() {
                                 min="0"
                                 value={formState.customKeyCreditCharge}
                                 onChange={(e) => setFormState(prev => ({ ...prev, customKeyCreditCharge: Number(e.target.value || 0) }))}
-                                className="w-full h-10 bg-white border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-850 focus:border-[#0047AB] outline-none transition-all"
+                                className="w-full h-10 bg-[var(--surface)] border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-850 focus:border-[#0047AB] outline-none transition-all"
                               />
                               <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">
                                 Credits (default is 10)
@@ -1525,7 +1542,7 @@ export default function SystemCommandCenter() {
                                 min="0"
                                 value={formState.customKeyCentsCharge}
                                 onChange={(e) => setFormState(prev => ({ ...prev, customKeyCentsCharge: Number(e.target.value || 0) }))}
-                                className="w-full h-10 bg-white border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-855 focus:border-[#0047AB] outline-none transition-all"
+                                className="w-full h-10 bg-[var(--surface)] border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-855 focus:border-[#0047AB] outline-none transition-all"
                               />
                               <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">
                                 Platform cents (default is 0)
@@ -1540,11 +1557,11 @@ export default function SystemCommandCenter() {
 
 
 
-                    <div className="flex gap-3 pt-4 border-t border-slate-200">
+                    <div className="flex gap-3 pt-4 border-t border-[var(--line)]">
                       <button
                         type="button"
                         onClick={() => setEditingWorkspace(null)}
-                        className="flex-1 h-12 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                        className="flex-1 h-12 bg-slate-100 hover:bg-slate-200 text-[var(--text)] rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
                       >
                         Cancel
                       </button>
@@ -1582,7 +1599,7 @@ export default function SystemCommandCenter() {
                 <button
                   type="button"
                   onClick={() => handleTriggerStressEvent('normal_gemini')}
-                  className="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase text-white hover:text-indigo-300 transition-all text-left px-4 flex items-center justify-between"
+                  className="w-full py-2.5 bg-[var(--surface)]/5 hover:bg-[var(--surface)]/10 rounded-xl text-[9px] font-black uppercase text-white hover:text-indigo-300 transition-all text-left px-4 flex items-center justify-between"
                 >
                   <span>1. POST /gemini/summarize (200 OK)</span>
                   <Play size={10} className="text-indigo-400" />
@@ -1607,11 +1624,11 @@ export default function SystemCommandCenter() {
             </div>
 
             {/* Diagnostic Logs Panel */}
-            <div className="bg-white border border-slate-200 rounded-[32px] p-4 md:p-8 shadow-3xs flex flex-col h-[520px]">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-4">
+            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] p-4 md:p-8 shadow-3xs flex flex-col h-[520px]">
+              <div className="flex items-center justify-between pb-4 border-b border-[var(--line)] mb-4">
                 <div className="flex items-center gap-3">
                   <Terminal size={18} className="text-indigo-600 animate-pulse" />
-                  <h3 className="text-base font-black uppercase tracking-tight italic text-slate-800">Event Logging Stream</h3>
+                  <h3 className="text-base font-black uppercase tracking-tight italic text-[var(--text)]">Event Logging Stream</h3>
                 </div>
                 <div className="flex h-2.5 w-2.5 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
@@ -1623,7 +1640,7 @@ export default function SystemCommandCenter() {
               <div className="flex gap-1 mb-4 bg-slate-100 p-1 rounded-xl">
                 <button 
                   type="button"
-                  className="flex-1 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg bg-white text-slate-800 shadow-3xs"
+                  className="flex-1 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg bg-[var(--surface)] text-[var(--text)] shadow-3xs"
                 >
                   Latest Events ({liveErrors.length})
                 </button>
@@ -1656,7 +1673,7 @@ export default function SystemCommandCenter() {
                           "p-4 border rounded-[32px] relative overflow-hidden shadow-3xs transition-all",
                           isError ? "bg-rose-50/50 border-rose-150" : 
                           isWarning ? "bg-amber-50/50 border-amber-150" : 
-                          "bg-slate-50 border-slate-150"
+                          "bg-[var(--ink)] border-slate-150"
                         )}
                       >
                         <div className="flex justify-between items-center mb-2">
@@ -1672,13 +1689,13 @@ export default function SystemCommandCenter() {
                             {new Date(log.timestamp).toLocaleTimeString()}
                           </span>
                         </div>
-                        <div className="mb-2 font-black text-slate-800 break-all leading-tight text-xs">
+                        <div className="mb-2 font-black text-[var(--text)] break-all leading-tight text-xs">
                           <span className={cn(
                             "font-bold mr-1.5",
                             isError ? "text-rose-600" : isWarning ? "text-amber-600" : "text-indigo-600"
                           )}>{log.method}</span> {log.path}
                         </div>
-                        <div className="space-y-0.5 text-[8px] text-slate-500 font-semibold uppercase tracking-wider pt-1.5 border-t border-slate-100">
+                        <div className="space-y-0.5 text-[8px] text-slate-500 font-semibold uppercase tracking-wider pt-1.5 border-t border-[var(--line)]">
                           <div>Source Node: {log.ip}</div>
                           <div className="truncate">Client Ref: {log.apiKeyUsed}</div>
                         </div>
@@ -1712,12 +1729,12 @@ export default function SystemCommandCenter() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-[32px] border border-slate-200 shadow-2xl p-4 md:p-8 max-w-sm w-full text-center relative"
+              className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-2xl p-4 md:p-8 max-w-sm w-full text-center relative"
             >
               <div className="mx-auto w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 size={24} />
               </div>
-              <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Ledger Synchronized</h3>
+              <h3 className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Ledger Synchronized</h3>
               <p className="text-xs text-slate-500 mt-2 uppercase tracking-wide leading-relaxed">
                 Successfully propagated global cost coefficients, spend multipliers, and private api key surcharges to all {telemetry?.tenants?.length || 0} active workspaces securely.
               </p>

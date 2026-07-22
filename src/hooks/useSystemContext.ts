@@ -175,6 +175,7 @@ export function useSystemProps(handleAction: (act: string, data?: any) => void) 
     strategicInsights: ai.strategicInsights,
     isAnalyzingTrends: ai.isAnalyzing,
     user,
+    uid: user?.uid || '',
     workspaceId: currentWorkspaceId,
     workspace: currentWorkspace,
     businessContext: currentWorkspace?.description || '',

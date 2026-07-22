@@ -108,14 +108,14 @@ export default function BillingSettings() {
 
   return (
     <div className="space-y-10">
-      <div className="ledger-card p-12 bg-white border-slate-200 shadow-sm">
+      <div className="ledger-card p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
         <div className="flex flex-col md:flex-row gap-10 md:items-center justify-between mb-10">
           <div className="flex items-center gap-5">
             <div className="w-14 h-14 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center shadow-xl shadow-indigo-600/20">
               <CreditCard size={28} />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase tracking-widest">Subscription & Billing</h3>
+              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase tracking-widest">Subscription & Billing</h3>
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">Manage computational resources</p>
             </div>
           </div>
@@ -127,7 +127,7 @@ export default function BillingSettings() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className={`p-8 border rounded-[32px] space-y-6 transition-colors ${!isPro ? 'border-indigo-600 bg-indigo-50/50 shadow-sm relative overflow-hidden group' : 'border-slate-200 hover:border-indigo-200 bg-slate-50'}`}>
+            <div className={`p-8 border rounded-[32px] space-y-6 transition-colors ${!isPro ? 'border-indigo-600 bg-indigo-50/50 shadow-sm relative overflow-hidden group' : 'border-[var(--line)] hover:border-indigo-200 bg-[var(--ink)]'}`}>
               {!isPro && (
                 <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg">
                   Current Plan
@@ -135,13 +135,13 @@ export default function BillingSettings() {
               )}
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className={`text-sm font-black uppercase tracking-tight ${!isPro ? 'text-indigo-900' : 'text-slate-900'}`}>Free Tier</h4>
+                  <h4 className={`text-sm font-black uppercase tracking-tight ${!isPro ? 'text-indigo-900' : 'text-[var(--text)]'}`}>Free Tier</h4>
                   <p className={`text-[11px] font-medium mt-1 ${!isPro ? 'text-indigo-700/70' : 'text-slate-500'}`}>Local computations</p>
                 </div>
-                <span className={`text-2xl font-black ${!isPro ? 'text-indigo-900' : 'text-slate-800'}`}>$0<span className={`text-sm ${!isPro ? 'text-indigo-600' : 'text-slate-500'}`}>/mo</span></span>
+                <span className={`text-2xl font-black ${!isPro ? 'text-indigo-900' : 'text-[var(--text)]'}`}>$0<span className={`text-sm ${!isPro ? 'text-indigo-600' : 'text-slate-500'}`}>/mo</span></span>
               </div>
               
-              <ul className={`space-y-3 pb-6 border-b text-xs font-medium ${!isPro ? 'border-indigo-200 text-indigo-800' : 'border-slate-200 text-slate-600'}`}>
+              <ul className={`space-y-3 pb-6 border-b text-xs font-medium ${!isPro ? 'border-indigo-200 text-indigo-800' : 'border-[var(--line)] text-slate-600'}`}>
                 <li className="flex items-center gap-2"><Zap size={12} className={!isPro ? 'text-indigo-500' : 'text-slate-400'} /> Basic AI classification</li>
                 <li className="flex items-center gap-2"><Server size={12} className={!isPro ? 'text-indigo-500' : 'text-slate-400'} /> 10,000 API Compute Credits</li>
               </ul>
@@ -151,7 +151,7 @@ export default function BillingSettings() {
               </button>
             </div>
 
-            <div className={`p-8 border rounded-[32px] space-y-6 transition-colors ${isPro ? 'border-indigo-600 bg-indigo-50/50 shadow-sm relative overflow-hidden group' : 'border-slate-200 hover:border-indigo-200 bg-slate-50 relative overflow-hidden group'}`}>
+            <div className={`p-8 border rounded-[32px] space-y-6 transition-colors ${isPro ? 'border-indigo-600 bg-indigo-50/50 shadow-sm relative overflow-hidden group' : 'border-[var(--line)] hover:border-indigo-200 bg-[var(--ink)] relative overflow-hidden group'}`}>
               {isPro ? (
                 <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg">
                   Current Plan
@@ -164,14 +164,14 @@ export default function BillingSettings() {
 
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className={`text-sm font-black uppercase tracking-tight ${isPro ? 'text-indigo-900' : 'text-slate-900'}`}>Pro Network</h4>
+                  <h4 className={`text-sm font-black uppercase tracking-tight ${isPro ? 'text-indigo-900' : 'text-[var(--text)]'}`}>Pro Network</h4>
                   <p className={`text-[11px] font-medium mt-1 ${isPro ? 'text-indigo-700/70' : 'text-slate-500'}`}>Full cloud acceleration</p>
                 </div>
-                <span className={`text-2xl font-black ${isPro ? 'text-indigo-900' : 'text-slate-900'}`}>$5<span className={`text-sm ${isPro ? 'text-indigo-600' : 'text-slate-500'}`}>/mo</span></span>
+                <span className={`text-2xl font-black ${isPro ? 'text-indigo-900' : 'text-[var(--text)]'}`}>$5<span className={`text-sm ${isPro ? 'text-indigo-600' : 'text-slate-500'}`}>/mo</span></span>
               </div>
               
-              <ul className={`space-y-3 pb-6 border-b text-xs font-medium ${isPro ? 'border-indigo-200 text-indigo-800' : 'border-slate-200 text-slate-700'}`}>
-                <li className="flex items-center gap-2"><Zap size={12} className={isPro ? 'text-indigo-500 fill-indigo-500' : 'text-slate-400'} /> Advanced Neural Tracing</li>
+              <ul className={`space-y-3 pb-6 border-b text-xs font-medium ${isPro ? 'border-indigo-200 text-indigo-800' : 'border-[var(--line)] text-slate-700'}`}>
+                <li className="flex items-center gap-2"><Zap size={12} className={isPro ? 'text-indigo-500 fill-indigo-500' : 'text-slate-400'} /> Advanced Rule Tracing</li>
                 <li className="flex items-center gap-2"><Server size={12} className={isPro ? 'text-indigo-500' : 'text-slate-400'} /> Dynamic Resource Allocation</li>
                 <li className="flex items-center gap-2"><CreditCard size={12} className={isPro ? 'text-indigo-500' : 'text-slate-400'} /> Pay-as-you-go Usage ($10 overage)</li>
               </ul>
