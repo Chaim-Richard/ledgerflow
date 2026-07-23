@@ -18,6 +18,10 @@ export function enforceDoubleEntrySafety(req: Request, res: Response, next: Next
   if (!transaction || !Array.isArray(transaction.lines) || transaction.lines.length === 0) {
     return res.status(400).json({ error: "Invalid transaction structure." });
   }
+  
+  if (transaction.currency && !/^[A-Z]{3}$/.test(transaction.currency)) {
+    return res.status(400).json({ error: "Currency must be a valid ISO 4217 3-letter code." });
+  }
 
   try {
     const netSum = transaction.lines.reduce((acc: any, line: any) => {

@@ -1,4 +1,6 @@
 import { transactionRouter } from "./src/server/routes/transactionRoutes";
+import { revenueRouter } from "./src/server/routes/revenueRoutes";
+import { consolidationRouter } from "./src/server/routes/consolidationRoutes";
 import express from "express";
 import cors from "cors";
 import Stripe from "stripe";
@@ -3972,6 +3974,8 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
   // Mount kernel routes
   app.use("/api/v1/transactions", apiAuthenticate, transactionRouter);
+  app.use("/api/v1/revenue", apiAuthenticate, revenueRouter);
+  app.use("/api/v1/consolidation", apiAuthenticate, consolidationRouter);
 
   const http = await import('http');
   const httpServer = http.createServer(app);

@@ -25,6 +25,8 @@ import {
 
 import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator';
 export interface LedgerState {
+  _version: number;
+  _lastSync: number;
   transactions: Transaction[];
   accounts: ChartAccount[];
   journalEntries: JournalEntry[];
@@ -333,6 +335,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   },
 
   setTransactions: (transactions) => {
+    const currentVersion = get()._version;
+    set({ _version: currentVersion + 1, _lastSync: Date.now() });
     if (!Array.isArray(transactions)) {
       throw new Error("Validation Failed: Transactions payload must be an array.");
     }
