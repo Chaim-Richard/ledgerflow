@@ -77,7 +77,8 @@ export default function Consolidation() {
               <span className="text-rose-600 font-mono text-[11px]">Intercompany Eliminations: {formatCurrency(summary.eliminatedTransferCents)}</span>
             </div>
             
-            <div className="divide-y divide-slate-200">
+            <div className="overflow-x-auto">
+            <div className="divide-y divide-slate-200 min-w-[700px]">
               <div className="grid grid-cols-12 p-4 bg-slate-100/80 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                 <div className="col-span-4">World / Sub-Ledger Coordinate</div>
                 <div className="col-span-2 text-right">Transactions</div>
@@ -110,6 +111,7 @@ export default function Consolidation() {
                   {formatCurrency(summary.consolidatedNetIncomeCents)}
                 </div>
               </div>
+            </div>
             </div>
           </div>
         )}

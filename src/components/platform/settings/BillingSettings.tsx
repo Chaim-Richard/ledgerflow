@@ -108,7 +108,7 @@ export default function BillingSettings() {
 
   return (
     <div className="space-y-10">
-      <div className="ledger-card p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
+      <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
         <div className="flex flex-col md:flex-row gap-10 md:items-center justify-between mb-10">
           <div className="flex items-center gap-5">
             <div className="w-14 h-14 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center shadow-xl shadow-indigo-600/20">
@@ -122,7 +122,7 @@ export default function BillingSettings() {
         </div>
 
         {isVerifying ? (
-          <div className="p-12 text-center text-slate-500 font-medium animate-pulse">
+          <div className="p-6 md:p-12 text-center text-slate-500 font-medium animate-pulse">
             Verifying secure payment session...
           </div>
         ) : (

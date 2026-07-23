@@ -242,7 +242,8 @@ export default function TaxManager({
 
           <div className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] overflow-hidden shadow-sm relative group">
             <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
-            <table className="w-full text-left relative z-10">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left relative z-10 min-w-[700px]">
               <thead>
                 <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
                   <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Protocol Domain</th>
@@ -299,6 +300,7 @@ export default function TaxManager({
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       </div>

@@ -25,7 +25,7 @@ import {
   Coins
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '../../lib/utils';
+import { cn, getLocalDateISO } from '../../lib/utils';
 import { db, getIdToken } from '../../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -86,7 +86,7 @@ export default function ApiHub() {
   // Dynamic fields
   const [fieldDesc, setFieldDesc] = useState('AWS EC2 Cloud Compute Virtual Machine Node billing');
   const [fieldAmountCents, setFieldAmountCents] = useState(15000); // $150.00
-  const [fieldDate, setFieldDate] = useState(new Date().toISOString().substring(0, 10));
+  const [fieldDate, setFieldDate] = useState(getLocalDateISO());
   const [fieldDryRun, setFieldDryRun] = useState(false);
   const [fieldIdempotencyKey, setFieldIdempotencyKey] = useState("lf_idem_" + crypto.randomUUID());
   const [fieldCOAName, setFieldCOAName] = useState('Procurement Cost Subaccount');
@@ -546,7 +546,7 @@ export default function ApiHub() {
       case 'POST_v1_transactions':
         return {
           workspaceId: wsId,
-          date: fieldDate || new Date().toISOString().substring(0, 10),
+          date: fieldDate || getLocalDateISO(),
           description: fieldDesc || "AWS Hosting Tier Upgrade",
           amountCents: Number(fieldAmountCents) || 185000,
           dryRun: fieldDryRun,
@@ -557,13 +557,13 @@ export default function ApiHub() {
           workspaceId: wsId,
           transactions: [
             {
-              date: fieldDate || new Date().toISOString().substring(0, 10),
+              date: fieldDate || getLocalDateISO(),
               description: fieldDesc || "Copier Machine Lease Monthly",
               amountCents: Number(fieldAmountCents) || 22000,
               idempotencyKey: "bulk_idem_1a2b3c"
             },
             {
-              date: fieldDate || new Date().toISOString().substring(0, 10),
+              date: fieldDate || getLocalDateISO(),
               description: "Delta Air Lines Business Inbound Flight #98218-CA",
               amountCents: 45000,
               idempotencyKey: "bulk_idem_4d5e6f"
@@ -715,13 +715,13 @@ export default function ApiHub() {
             workspaceId: currentWorkspace.id,
             transactions: [
               {
-                date: fieldDate || new Date().toISOString().substring(0, 10),
+                date: fieldDate || getLocalDateISO(),
                 description: fieldDesc || "Copier Machine Lease Monthly",
                 amountCents: Number(fieldAmountCents) || 22000,
                 idempotencyKey: "bulk_idem_" + crypto.randomUUID()
               },
               {
-                date: fieldDate || new Date().toISOString().substring(0, 10),
+                date: fieldDate || getLocalDateISO(),
                 description: "Delta Air Lines Business Inbound Flight #98218-CA",
                 amountCents: 45000,
                 idempotencyKey: "bulk_idem_" + crypto.randomUUID()

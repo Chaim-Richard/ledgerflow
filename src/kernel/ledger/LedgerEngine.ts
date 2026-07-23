@@ -28,16 +28,39 @@ export class LedgerEngine {
         if (tx.status === 'void' || tx.status === 'failed') return;
         
         if (Array.isArray(tx.lines)) {
-          tx.lines.forEach(line => {
+          const convertedLines = tx.lines.map(line => {
+            if (!line || typeof line !== 'object') return { line, amount: 0, rawAmount: 0, rate: 1 };
+            const rawAmount = typeof line.amountCents === 'number' && Number.isSafeInteger(line.amountCents) ? line.amountCents : 0;
+            const rate = (typeof (line as any).exchangeRate === 'number' && (line as any).exchangeRate > 0)
+              ? (line as any).exchangeRate
+              : ((typeof tx.exchangeRate === 'number' && tx.exchangeRate > 0) ? tx.exchangeRate : 1);
+            return { line, amount: Math.round(rawAmount * rate), rawAmount, rate };
+          });
+
+          // Fix rounding errors for balanced transactions
+          const sumRaw = convertedLines.reduce((acc, curr) => acc + curr.rawAmount, 0);
+          if (sumRaw === 0 && convertedLines.length > 0) {
+            const sumConverted = convertedLines.reduce((acc, curr) => acc + curr.amount, 0);
+            if (sumConverted !== 0) {
+              // Find the leg with the largest absolute converted amount to absorb the difference
+              let largestIdx = 0;
+              let maxAbs = -1;
+              convertedLines.forEach((item, idx) => {
+                const absAmt = Math.abs(item.amount);
+                if (absAmt > maxAbs) {
+                  maxAbs = absAmt;
+                  largestIdx = idx;
+                }
+              });
+              convertedLines[largestIdx].amount -= sumConverted;
+            }
+          }
+
+          convertedLines.forEach(({ line, amount }) => {
             if (!line || typeof line !== 'object') return;
             const accId = typeof line.accountId === 'string' ? line.accountId : '';
             const accData = balances.get(accId);
             if (accData) {
-              const rawAmount = typeof line.amountCents === 'number' && Number.isSafeInteger(line.amountCents) ? line.amountCents : 0;
-              const rate = (typeof (line as any).exchangeRate === 'number' && (line as any).exchangeRate > 0)
-                ? (line as any).exchangeRate
-                : ((typeof tx.exchangeRate === 'number' && tx.exchangeRate > 0) ? tx.exchangeRate : 1);
-              const amount = Math.round(rawAmount * rate);
               accData.total += amount;
               
               if (line.splitAllocations && Array.isArray(line.splitAllocations) && line.splitAllocations.length > 0) {

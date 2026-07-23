@@ -141,7 +141,7 @@ export default function AISettings() {
 
   return (
     <div className="space-y-10">
-      <div className="ledger-card p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm relative overflow-hidden group">
+      <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm relative overflow-hidden group">
         <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none transition-opacity group-hover:opacity-[0.05]">
           <Key size={140} />
         </div>
@@ -189,7 +189,7 @@ export default function AISettings() {
             </div>
           </div>
 
-          <div className="p-6 bg-slate-900 rounded-[32px] border border-slate-800 flex gap-5">
+          <div className="p-6 bg-slate-900 rounded-[32px] border border-slate-800 flex flex-col sm:flex-row gap-5">
             <div className="w-10 h-10 bg-[var(--surface)]/5 rounded-[32px] flex items-center justify-center shrink-0 border border-white/10">
               <AlertCircle className="text-amber-400" size={20} />
             </div>
@@ -204,9 +204,9 @@ export default function AISettings() {
       </div>
 
       {/* Advanced Bayesian Self-Learning Rigor Configurations */}
-      <div className="ledger-card p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
-        <div className="flex items-center gap-5 mb-10">
-          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-[32px] flex items-center justify-center border border-indigo-100">
+      <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-5 mb-10">
+          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-[32px] flex items-center justify-center shrink-0 border border-indigo-100">
             <Sliders size={22} />
           </div>
           <div>
@@ -242,13 +242,13 @@ export default function AISettings() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-8 pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
             {/* Soft-Learning Rate Adjuster */}
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] block">
                 Unsupervised Learning Memory Weight
               </label>
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 {[
                   { value: 1.0, label: 'Standard / Fluid (1.0x)' },
                   { value: 2.0, label: 'Fast / Calibrated (2.0x)' },
@@ -296,8 +296,8 @@ export default function AISettings() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-8">
-        <div className="ledger-card p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
           <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
             <CpuIcon size={14} className="text-indigo-500" />
             Vivid Logic Routing Precision
@@ -327,7 +327,7 @@ export default function AISettings() {
           </div>
         </div>
 
-        <div className="ledger-card p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm flex flex-col justify-between">
+        <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm flex flex-col justify-between">
           <div>
             <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
               <Activity size={14} className="text-emerald-500" />
@@ -378,7 +378,7 @@ export default function AISettings() {
         <button
           onClick={handleSave}
           disabled={isUpdating}
-          className="btn-primary !px-10 !py-5 flex items-center justify-center gap-3 disabled:bg-zinc-300 shadow-2xl shadow-ledger-accent/20 min-w-[240px] whitespace-nowrap active:scale-95 transition-all text-xs font-medium uppercase tracking-wider text-white leading-none inline-flex items-center"
+          className="btn-primary !px-10 !py-5 flex items-center justify-center gap-3 disabled:bg-zinc-300 shadow-2xl shadow-ledger-accent/20 w-full sm:w-auto sm:min-w-[240px] whitespace-nowrap active:scale-95 transition-all text-xs font-medium uppercase tracking-wider text-white leading-none inline-flex items-center"
         >
           {isUpdating ? <RefreshCw className="animate-spin" size={16} /> : <Database size={16} />}
           <span>{isUpdating ? 'SYNCHRONIZING...' : 'COMMIT RULES PLATFORM'}</span>

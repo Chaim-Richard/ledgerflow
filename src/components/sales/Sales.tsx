@@ -218,7 +218,7 @@ export default function Sales({
       {activeSubTab === 'invoices' && (
         <div className="bg-[var(--panel)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse min-w-[700px]">
               <thead>
                 <tr className="text-left border-b border-[var(--line)]/50">
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Node ID</th>
@@ -328,7 +328,7 @@ export default function Sales({
       {activeSubTab === 'customers' && (
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse min-w-[700px]">
               <thead>
                 <tr className="text-left border-b border-[var(--line)]/50">
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Custodian Identity</th>

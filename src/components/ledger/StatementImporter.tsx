@@ -342,7 +342,7 @@ export default function StatementImporter({
                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Data Preview (First 5 Rows)</p>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full text-left text-xs min-w-[600px]">
                       <thead>
                         <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
                           {csvData[0]?.map((col, idx) => (

@@ -520,7 +520,7 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
                   <X size={20} className="text-zinc-400" />
                 </button>
               </div>
-              <form onSubmit={editingItem ? handleUpdate : handleAdd} className="p-4 md:p-8 grid grid-cols-2 gap-6">
+              <form onSubmit={editingItem ? handleUpdate : handleAdd} className="p-4 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="col-span-2 space-y-2">
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Item Name</label>
                   <input 

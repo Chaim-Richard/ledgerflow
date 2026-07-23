@@ -71,7 +71,7 @@ export default function ToolsCatalog() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Query capabilities..." 
-                  className="w-80 h-11 pl-12 pr-6 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] outline-none focus:border-[var(--brass-line)] transition-all shadow-sm"
+                  className="w-full sm:w-80 h-11 pl-12 pr-6 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] outline-none focus:border-[var(--brass-line)] transition-all shadow-sm"
                 />
              </div>
           </div>

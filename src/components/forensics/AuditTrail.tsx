@@ -117,7 +117,7 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
               placeholder="Search feed..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-80 h-14 pl-14 pr-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-xs font-bold text-[var(--text)] focus:outline-none focus:border-indigo-600 transition-all shadow-sm"
+              className="w-full sm:w-80 h-14 pl-14 pr-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-xs font-bold text-[var(--text)] focus:outline-none focus:border-indigo-600 transition-all shadow-sm"
             />
           </div>
           <button 

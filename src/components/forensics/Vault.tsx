@@ -70,23 +70,36 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Simulate upload (in a real app, this would go to Firebase Storage or S3)
+    if (file.size > 750000) {
+      toast.error('File too large. Maximum size is 750KB for the current database schema.');
+      return;
+    }
+
     const toastId = toast.loading('Uploading document...');
     
     try {
-      const newDoc: Omit<CloudDocument, 'id'> = {
-        uid,
-        workspaceId,
-        name: file.name,
-        fileUrl: URL.createObjectURL(file), // Local Blob URL
-        mimeType: file.type,
-        sizeBytes: file.size,
-        tags: ['General'],
-        createdAt: new Date().toISOString()
-      };
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64DataUri = reader.result as string;
+        
+        const newDoc: Omit<CloudDocument, 'id'> = {
+          uid,
+          workspaceId,
+          name: file.name,
+          fileUrl: base64DataUri, // Persistent Data URI
+          mimeType: file.type,
+          sizeBytes: file.size,
+          tags: ['General'],
+          createdAt: new Date().toISOString()
+        };
 
-      await addDoc(collection(db, 'documents'), newDoc);
-      toast.success('Document uploaded to Vault', { id: toastId });
+        await addDoc(collection(db, 'documents'), newDoc);
+        toast.success('Document uploaded to Vault', { id: toastId });
+      };
+      reader.onerror = () => {
+        toast.error('Failed to read file', { id: toastId });
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
       toast.error('Failed to upload document', { id: toastId });
     }
