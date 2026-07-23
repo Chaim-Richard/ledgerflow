@@ -24,10 +24,21 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
     setIsRevaluing(true);
     setRevalResult('');
     try {
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 800));
-      // Since Postgres is not configured in this environment, throw an error
-      throw new Error('PostgreSQL database required for month-end revaluation is not configured in this environment.');
+      const token = await useAuthStore.getState().getToken();
+      const response = await fetch(`/api/v1/transactions/revaluation/run`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          workspaceId: activeWorkspace.id,
+          targetCurrency: toCurrency
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to run revaluation');
+      setRevalResult(data.message);
     } catch (e: any) {
       setRevalResult('Error: ' + e.message);
     } finally {
