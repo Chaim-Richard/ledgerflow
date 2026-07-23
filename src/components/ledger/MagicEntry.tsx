@@ -4,6 +4,7 @@ import { Check, Wand2, Receipt, Camera, X } from 'lucide-react';
 import { parseReceiptOCR } from '../../lib/algorithms/receipt-capture';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { toast } from 'sonner';
+import { getLocalDateISO } from '../../lib/utils';
 
 export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
   const [text, setText] = useState('');
@@ -41,7 +42,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
       amount: result.totalCents,
       description: result.merchant,
       method: 'Card',
-      dateStr: result.dateStr || new Date().toISOString().split('T')[0]
+      dateStr: result.dateStr || getLocalDateISO()
     });
     setReceiptMode(true);
     setText('Snapped: Home Depot receipt');
@@ -60,7 +61,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
        await handleQuickAdd({
          description: parsed.description || 'Natural Language Entry',
          totalAmountCents: parsed.amount,
-         date: parsed.dateStr || new Date().toISOString().split('T')[0],
+         date: parsed.dateStr || getLocalDateISO(),
          type: parsed.action || 'expense',
          lines: [{
            accountId: 'uncategorized',

@@ -55,6 +55,16 @@ export function maskPII(text: string | undefined | null): string {
   return text;
 }
 
+/**
+ * Returns YYYY-MM-DD string in local user timezone to prevent UTC shift off-by-one errors
+ */
+export function getLocalDateISO(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

@@ -214,10 +214,34 @@ export function useSystemProps(handleAction: (act: string, data?: any) => void) 
     onDeleteProject: (id: string) => deleteEntity('projects', id),
     onUpdateWorkspace: (updates: any) => updateEntity('workspaces', currentWorkspaceId!, updates),
     onResetSystem: txActions.handleResetWorkspace,
-    onAddInvoice: (data: any) => addEntity('invoices', data),
-    onAddCustomer: (data: any) => addEntity('customers', data),
-    onAddBill: (data: any) => addEntity('bills', data),
-    onAddVendor: (data: any) => addEntity('vendors', data),
+    onAddInvoice: (data: any) => {
+      if (data.id) {
+        const { id, ...updates } = data;
+        return updateEntity('invoices', id, updates);
+      }
+      return addEntity('invoices', data);
+    },
+    onAddCustomer: (data: any) => {
+      if (data.id) {
+        const { id, ...updates } = data;
+        return updateEntity('customers', id, updates);
+      }
+      return addEntity('customers', data);
+    },
+    onAddBill: (data: any) => {
+      if (data.id) {
+        const { id, ...updates } = data;
+        return updateEntity('bills', id, updates);
+      }
+      return addEntity('bills', data);
+    },
+    onAddVendor: (data: any) => {
+      if (data.id) {
+        const { id, ...updates } = data;
+        return updateEntity('vendors', id, updates);
+      }
+      return addEntity('vendors', data);
+    },
     onUpdateBill: (id: string, updates: any) => updateEntity('bills', id, updates),
     onUpdateBudget: (id: string, data: any) => updateEntity('budgets', id, data),
     onProcessPayRun: (data: any) => addEntity('payRuns', data),

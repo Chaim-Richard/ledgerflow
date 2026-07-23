@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Budget, Transaction, ChartAccount } from '../../types';
-import { cn, formatCurrency } from '../../lib/utils';
+import { cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { addDoc, collection, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { toast } from 'sonner';
@@ -35,7 +35,7 @@ export default function BudgetManager({ budgets = [], transactions = [], account
     targetType: 'account' as const,
     amountCents: 0,
     period: 'monthly',
-    startDate: new Date().toISOString().split('T')[0]
+    startDate: getLocalDateISO()
   });
 
   const handleAddBudget = async (e: React.FormEvent) => {

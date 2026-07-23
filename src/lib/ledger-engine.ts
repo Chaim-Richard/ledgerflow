@@ -132,7 +132,11 @@ export class LedgerEngine {
       }
 
       for (const line of lines) {
-        processLine(line.accountId, line.amountCents, line.project);
+        const rate = (typeof (line as any).exchangeRate === 'number' && (line as any).exchangeRate > 0)
+          ? (line as any).exchangeRate
+          : ((typeof tx.exchangeRate === 'number' && tx.exchangeRate > 0) ? tx.exchangeRate : 1);
+        const convertedCents = Math.round((line.amountCents || 0) * rate);
+        processLine(line.accountId, convertedCents, line.project);
       }
     }
 

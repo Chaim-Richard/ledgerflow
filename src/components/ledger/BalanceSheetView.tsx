@@ -11,7 +11,7 @@ import {
   FileSpreadsheet, 
   SplitSquareHorizontal
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, getLocalDateISO } from '../../lib/utils';
 import { motion } from 'motion/react';
 import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -26,12 +26,10 @@ interface BalanceSheetViewProps {
 export default function BalanceSheetView({ accounts = [], journalEntries = [], formatCurrency }: BalanceSheetViewProps) {
   const transactions = useLedgerStore(state => state.transactions || []);
   
-  const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [asOfDate, setAsOfDate] = useState<string>(getLocalDateISO());
   const [isComparative, setIsComparative] = useState<boolean>(false);
   const [priorDate, setPriorDate] = useState<string>(
-    new Date(new Date().getFullYear() - 1, new Date().getMonth(), new Date().getDate())
-      .toISOString()
-      .split('T')[0]
+    getLocalDateISO(new Date(new Date().getFullYear() - 1, new Date().getMonth(), new Date().getDate()))
   );
 
   const workspaces = useAuthStore(s => s.workspaces);

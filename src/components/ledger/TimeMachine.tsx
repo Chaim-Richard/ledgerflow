@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useScenarioStore } from '../../lib/scenarioStore';
 import { GitMerge, GitCommit, GitPullRequest, GitBranch, RotateCcw, Clock, ArrowRight, Save, Trash2, Zap, CheckCircle2, AlertCircle, Plus, FileText, Activity } from 'lucide-react';
-import { formatCurrency, cn } from '../../lib/utils';
+import { formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function TimeMachine() {
@@ -52,7 +52,7 @@ export default function TimeMachine() {
     addGhost(scenarioId, {
       description: ghostForm.description,
       amountCents: Math.round(parseFloat(ghostForm.amount) * 100),
-      date: new Date().toISOString().split('T')[0],
+      date: getLocalDateISO(),
       frequency: 'once',
       type: ghostForm.type
     });

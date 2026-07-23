@@ -102,6 +102,7 @@ export interface Transaction {
   
   // Total absolute value (for display convenience, though derived from lines)
   totalAmountCents: number; 
+  taxAmountCents?: number;
   currency: string;
   originalCurrency?: string;
   exchangeRate?: number;

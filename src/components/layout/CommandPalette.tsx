@@ -9,6 +9,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { parseNaturalLanguageEntry, ParsedCommandIntent } from '../../lib/algorithms/nl-parser';
 import { useShallow } from 'zustand/react/shallow';
 import { Transaction, Project } from '../../types';
+import { getLocalDateISO } from '../../lib/utils';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -55,7 +56,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
         id: newTxId,
         uid: 'user-default',
         workspaceId: 'ws-default',
-        date: parsedIntent.dateStr || new Date().toISOString().split('T')[0],
+        date: parsedIntent.dateStr || getLocalDateISO(),
         description: parsedIntent.description || 'Natural Language Entry',
         payee: parsedIntent.payee || undefined,
         status: 'completed',

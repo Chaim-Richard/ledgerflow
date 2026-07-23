@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Transaction } from '../../types';
 import { aiService } from '../../services/aiService';
 import { IntentResolver } from '../../lib/intentResolver';
-import { cn } from '../../lib/utils';
+import { cn, getLocalDateISO } from '../../lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -89,7 +89,7 @@ export default function StatementImporter({
         const result = await aiService.parseReceipt(file, undefined, patternCache, labels);
         if (result) {
           results = [{
-            date: result.date || new Date().toISOString().split('T')[0],
+            date: result.date || getLocalDateISO(),
             description: result.vendorName,
             amountCents: result.totalAmountCents,
             categorySuggestion: result.categorySuggestion,

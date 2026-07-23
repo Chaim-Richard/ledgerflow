@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Lock, Unlock } from 'lucide-react';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { toast } from 'sonner';
+import { getLocalDateISO } from '../../../lib/utils';
 
 export default function BookClosureTab() {
   const { lockDate, setLockDate } = useLedgerStore(state => ({
@@ -10,7 +11,7 @@ export default function BookClosureTab() {
     setLockDate: state.setLockDate
   }));
 
-  const [dateInput, setDateInput] = useState(lockDate ? lockDate.split('T')[0] : new Date().toISOString().split('T')[0]);
+  const [dateInput, setDateInput] = useState(lockDate ? lockDate.split('T')[0] : getLocalDateISO());
   const [password, setPassword] = useState('');
   const [isLocking, setIsLocking] = useState(false);
 

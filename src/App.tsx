@@ -87,9 +87,6 @@ export default function App() {
 
   // Language & Direction Control & Sizing Core
   useEffect(() => {
-    document.documentElement.dir = 'ltr';
-    document.documentElement.lang = 'en';
-
     // Fetch dynamic limits & usage caps from public registration-status API
     useBillingStore.getState().fetchSystemCaps();
     const capsInterval = setInterval(() => {

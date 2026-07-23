@@ -33,12 +33,33 @@ export class LedgerEngine {
             const accId = typeof line.accountId === 'string' ? line.accountId : '';
             const accData = balances.get(accId);
             if (accData) {
-              const amount = typeof line.amountCents === 'number' && Number.isSafeInteger(line.amountCents) ? line.amountCents : 0;
+              const rawAmount = typeof line.amountCents === 'number' && Number.isSafeInteger(line.amountCents) ? line.amountCents : 0;
+              const rate = (typeof (line as any).exchangeRate === 'number' && (line as any).exchangeRate > 0)
+                ? (line as any).exchangeRate
+                : ((typeof tx.exchangeRate === 'number' && tx.exchangeRate > 0) ? tx.exchangeRate : 1);
+              const amount = Math.round(rawAmount * rate);
               accData.total += amount;
               
-              const proj = (typeof line.project === 'string' && line.project) || (typeof tx.projectId === 'string' && tx.projectId);
-              if (proj) {
-                accData.projects.set(proj, (accData.projects.get(proj) || 0) + amount);
+              if (line.splitAllocations && Array.isArray(line.splitAllocations) && line.splitAllocations.length > 0) {
+                let allocatedSum = 0;
+                line.splitAllocations.forEach((alloc, idx) => {
+                  const proj = alloc.dimensions?.project || alloc.dimensions?.projectId;
+                  if (proj) {
+                    let allocAmount = 0;
+                    if (idx === line.splitAllocations!.length - 1) {
+                      allocAmount = amount - allocatedSum;
+                    } else {
+                      allocAmount = Math.round(amount * (alloc.weight || 0));
+                      allocatedSum += allocAmount;
+                    }
+                    accData.projects.set(proj, (accData.projects.get(proj) || 0) + allocAmount);
+                  }
+                });
+              } else {
+                const proj = (typeof line.project === 'string' && line.project) || (typeof tx.projectId === 'string' && tx.projectId);
+                if (proj) {
+                  accData.projects.set(proj, (accData.projects.get(proj) || 0) + amount);
+                }
               }
             }
           });
@@ -50,6 +71,7 @@ export class LedgerEngine {
       journalEntries.forEach(je => {
         if (!je || typeof je !== 'object') return;
         if (je.deletedAt) return; // Journal entries only have deletedAt, not status
+        if ((je as any).transactionId || (je as any).parentEventId) return; // Skip journal entries originating from transactions to prevent double-counting
         if (Array.isArray(je.lines)) {
           je.lines.forEach(line => {
             if (!line || typeof line !== 'object') return;

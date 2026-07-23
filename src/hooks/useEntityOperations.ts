@@ -11,6 +11,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { toast } from 'sonner';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
+import { LedgerPostService } from '../services/LedgerPostService';
 
 export function useEntityOperations() {
   const user = useAuthStore(s => s.user);
@@ -66,6 +67,14 @@ export function useEntityOperations() {
       }
 
       if (successMsg) toast.success(successMsg);
+
+      // Post to ledger if it's an invoice or a bill
+      if (path === 'invoices') {
+        await LedgerPostService.postInvoiceLedger(docRef.id, data, currentWorkspaceId, user.uid);
+      } else if (path === 'bills') {
+        await LedgerPostService.postBillLedger(docRef.id, data, currentWorkspaceId, user.uid);
+      }
+
       return docRef;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, path);
@@ -78,6 +87,18 @@ export function useEntityOperations() {
         ...updates,
         updatedAt: new Date().toISOString()
       });
+
+      // Post to ledger if it's an invoice or a bill
+      if (path === 'invoices' && user && currentWorkspaceId) {
+        const existingInvoice = useLedgerStore.getState().invoices.find(i => i.id === id) || {};
+        const mergedData = { ...existingInvoice, ...updates };
+        await LedgerPostService.postInvoiceLedger(id, mergedData, currentWorkspaceId, user.uid);
+      } else if (path === 'bills' && user && currentWorkspaceId) {
+        const existingBill = useLedgerStore.getState().bills.find(b => b.id === id) || {};
+        const mergedData = { ...existingBill, ...updates };
+        await LedgerPostService.postBillLedger(id, mergedData, currentWorkspaceId, user.uid);
+      }
+
       if (successMsg) toast.success(successMsg);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${path}/${id}`);
@@ -87,6 +108,13 @@ export function useEntityOperations() {
   const deleteEntity = async (path: string, id: string, successMsg?: string) => {
     try {
       await deleteDoc(doc(db, path, id));
+
+      if (path === 'invoices' && currentWorkspaceId) {
+        await LedgerPostService.deletePostings(id, 'invoiceId', currentWorkspaceId);
+      } else if (path === 'bills' && currentWorkspaceId) {
+        await LedgerPostService.deletePostings(id, 'billId', currentWorkspaceId);
+      }
+
       if (successMsg) toast.success(successMsg);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `${path}/${id}`);

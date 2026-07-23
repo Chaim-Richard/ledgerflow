@@ -12,7 +12,7 @@ import {
   Type as TypeIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '../../lib/utils';
+import { cn, getLocalDateISO } from '../../lib/utils';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 import { db, getIdToken } from '../../firebase';
 import { toast } from 'sonner';
@@ -45,7 +45,7 @@ interface JournalEntryModalProps {
 
 export default function JournalEntryModal({ isOpen, onClose, user, accounts, workspaceId }: JournalEntryModalProps) {
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getLocalDateISO());
   const [reference, setReference] = useState('');
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [showDimensions, setShowDimensions] = useState(false);

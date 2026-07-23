@@ -26,7 +26,7 @@ import {
   doc,
   updateDoc
 } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { db, auth } from '../../firebase';
 import { CloudDocument, Transaction } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -128,24 +128,33 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
     const toastId = toast.loading('Injecting into ledger...');
 
     try {
+      const amountCents = Math.abs(extractedData.amountCents || 0);
       const newTx: Partial<Transaction> = {
         uid,
         workspaceId,
         date: extractedData.date || format(new Date(), 'yyyy-MM-dd'),
         description: extractedData.merchant || extractedData.description || 'Receipt Auto-sync',
-        totalAmountCents: extractedData.amountCents || 0,
+        totalAmountCents: amountCents,
         currency: 'USD',
         status: 'completed',
         type: 'actual',
         createdAt: new Date().toISOString(),
-        fileUrls: [selectedDoc.fileUrl],
+        fileUrls: selectedDoc.fileUrl ? [selectedDoc.fileUrl] : [],
         lines: [
           {
-            accountId: "auto-sync",
-            accountName: "Vault Auto-Sync",
-            amountCents: extractedData.amountCents || 0,
+            accountId: extractedData.categoryId || "uncategorized",
+            accountName: extractedData.category || "General Expense",
+            amountCents: amountCents, // Debit expense
             description: "Auto-synced from vault",
             category: extractedData.category || "General",
+            isAutoTagged: true,
+          },
+          {
+            accountId: "1010",
+            accountName: "Operating Cash",
+            amountCents: -amountCents, // Credit cash
+            description: "Vault auto-sync offset",
+            category: "Cash",
             isAutoTagged: true,
           }
         ],
@@ -155,10 +164,29 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
         }
       };
 
-      const docRef = await addDoc(collection(db, 'transactions'), newTx);
-      await updateDoc(doc(db, 'documents', selectedDoc.id), {
-        linkedTransactionId: docRef.id
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/v1/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ transaction: newTx })
       });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to inject into ledger');
+      }
+
+      const resData = await res.json();
+      const createdTxId = resData.transaction?.id || resData.id;
+
+      if (createdTxId) {
+        await updateDoc(doc(db, 'documents', selectedDoc.id), {
+          linkedTransactionId: createdTxId
+        });
+      }
 
       toast.success('Ledger injected and cryptographically linked!', { id: toastId });
       setExtractedData(null);

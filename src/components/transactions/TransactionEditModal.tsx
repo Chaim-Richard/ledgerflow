@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { auth } from '../../firebase';
+import { getLocalDateISO } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import TagInput from './TagInput';
@@ -371,7 +372,7 @@ export default function TransactionEditModal({
                           if (!token) return;
                           
                           // Use the transaction date or today
-                          const date = transaction.date || new Date().toISOString().split('T')[0];
+                          const date = transaction.date || getLocalDateISO();
                           const res = await fetch(`/api/v1/currency/historical?date=${date}&source=USD&currencies=${originalCurrency}`, {
                              headers: { 'Authorization': `Bearer ${token}` }
                           });

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal } from 'lucide-react';
 import { motion } from 'motion/react';
-import { cn } from '../../lib/utils';
+import { cn, getLocalDateISO } from '../../lib/utils';
 import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -21,8 +21,8 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
+    start: getLocalDateISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+    end: getLocalDateISO()
   });
   const [isComparative, setIsComparative] = useState(false);
 
@@ -86,8 +86,8 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
     const MathDiffDays = Math.round(msDiff / 86400000);
     const prevS = new Date(prevE.getTime() - (MathDiffDays * 86400000));
     return {
-      start: prevS.toISOString().split('T')[0],
-      end: prevE.toISOString().split('T')[0]
+      start: getLocalDateISO(prevS),
+      end: getLocalDateISO(prevE)
     }
   };
 

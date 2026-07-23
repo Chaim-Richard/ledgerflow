@@ -1,5 +1,6 @@
 import { Employee, TemporalValidity } from '../types';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
+import { getLocalDateISO } from './utils';
 
 export interface PayPeriodBreakdown {
   grossPayCents: number;
@@ -144,7 +145,7 @@ export const REGIONAL_TAX_LOOKUPS: Record<string, TemporalRegionalTaxRates> = {
   'OH': { stateCode: 'OH', stateName: 'Ohio', stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.035 }], cityCode: 'CLE', cityName: 'Cleveland', cityRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.02 }], countyCode: 'CC', countyName: 'Cuyahoga County', countyRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.0075 }] },
 };
 
-export function getRegionalTaxConfig(stateCode: string = 'NY', targetDateStr: string = new Date().toISOString().split('T')[0]): RegionalTaxRates {
+export function getRegionalTaxConfig(stateCode: string = 'NY', targetDateStr: string = getLocalDateISO()): RegionalTaxRates {
   const code = (stateCode || 'NY').toUpperCase();
   const config = REGIONAL_TAX_LOOKUPS[code];
   

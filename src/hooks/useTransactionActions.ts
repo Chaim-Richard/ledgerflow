@@ -30,7 +30,7 @@ import {
   MinHash,
   jaroWinklerSimilarity
 } from '../lib/algorithms';
-import { safeAsync, safeConfirm } from '../lib/utils';
+import { safeAsync, safeConfirm, getLocalDateISO } from '../lib/utils';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { useBillingStore } from '../modules/billing/BillingService';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
@@ -494,7 +494,7 @@ export function useTransactionActions() {
       description: 'New Transaction',
       totalAmountCents: 0,
       currency: 'USD',
-      date: new Date().toISOString().split('T')[0],
+      date: getLocalDateISO(),
       ...balancedData,
       lines: balancedData.lines || []
     };
@@ -677,13 +677,13 @@ export function useTransactionActions() {
       
       setIsSyncing(true);
       if (transactionId) {
-        await updateDoc(doc(db, 'transactions', transactionId), {
-          'description': data.vendorName,
-          'totalAmountCents': data.totalAmountCents,
-          'taxAmountCents': data.taxAmountCents || 0,
-          'isCleared': true,
-          'clearedAt': new Date().toISOString(),
-          'lines': data.lines.map((l: any) => ({
+        await handleUpdateTransaction(transactionId, {
+          description: data.vendorName,
+          totalAmountCents: data.totalAmountCents,
+          taxAmountCents: data.taxAmountCents || 0,
+          isCleared: true,
+          clearedAt: new Date().toISOString(),
+          lines: data.lines.map((l: any) => ({
             accountId: l.category ? (accounts.find(a => a.name === l.category)?.id || 'uncategorized') : 'uncategorized',
             accountName: l.category || 'Uncategorized',
             amountCents: l.amountCents,
@@ -719,7 +719,7 @@ export function useTransactionActions() {
         await handleQuickAdd({ 
           description: data.vendorName,
           totalAmountCents: data.totalAmountCents,
-          date: data.date || new Date().toISOString().split('T')[0],
+          date: data.date || getLocalDateISO(),
           lines: finalLines
         });
         toast.success(`${file.name} processed with ${finalLines.length} line items`, { id: loader });
@@ -868,7 +868,7 @@ export function useTransactionActions() {
     await handleQuickAdd({ 
       ...txData,
       description: `${txData.description} (Copy)`,
-      date: new Date().toISOString().split('T')[0]
+      date: getLocalDateISO()
     });
     toast.success('Transaction duplicated');
   };
@@ -992,71 +992,58 @@ export function useTransactionActions() {
     const txs = useLedgerStore.getState().transactions;
     const linkedTxs = txs.filter(t => t.lines?.some(l => l.accountId === id));
     const hasTransactions = linkedTxs.length > 0;
-    
-    if (hasTransactions && !force) {
-      const confirmed = safeConfirm(`Security violation: This account node has ${linkedTxs.length} active topological links (transactions). Deleting it will also delete all related transactions and journals to maintain ledger integrity. Proceed with destructive purge?`);
-      if (!confirmed) return;
-    } else if (!force) {
-      const confirm = safeConfirm("Are you sure you want to decommission this architectural node? This action is irreversible.");
-      if (!confirm) return;
-    }
 
     setIsSyncing(true);
     try {
-      // Fetch transaction and other linked details outside of runTransaction query constraints
-      const refsToDelete: any[] = [];
-      const collectionsToCheck = [
-        { name: 'transactions', field: 'lines', match: (lines: any, _docData: any) => lines?.some((l: any) => l.accountId === id) },
-        { name: 'journalEntries', field: 'lines', match: (lines: any, _docData: any) => lines?.some((l: any) => l.accountId === id) },
-        { name: 'budgets', field: 'targetId', match: (targetId: any, docData: any) => targetId === id || (docData.targetType === 'account' && docData.targetId === id) },
-        { name: 'bills', field: 'splits', match: (splits: any, _docData: any) => splits?.some((s: any) => s.accountId === id) },
-        { name: 'invoices', field: 'splits', match: (splits: any, _docData: any) => splits?.some((s: any) => s.accountId === id) },
-        { name: 'recurring', field: 'template', match: (template: any, _docData: any) => template?.lines?.some((l: any) => l.accountId === id) },
-        { name: 'recurringTransactions', field: 'template', match: (template: any, _docData: any) => template?.lines?.some((l: any) => l.accountId === id) },
-        { name: 'autoRules', field: 'action', match: (action: any, _docData: any) => action?.targetNodeId === id }
-      ];
-
-      for (const coll of collectionsToCheck) {
-        try {
-          const q = query(
-            collection(db, coll.name),
-            where('workspaceId', '==', currentWorkspaceId),
-            where('uid', '==', user.uid)
-          );
-          const snap = await getDocs(q);
-          snap.forEach(d => {
-            const data = d.data();
-            const fieldValue = data[coll.field];
-            if (coll.match(fieldValue, data)) {
-              refsToDelete.push(d.ref);
-            }
-          });
-        } catch (err) {
-          console.warn(`Non-blocking check skipped for collection ${coll.name}:`, err);
+      if (hasTransactions) {
+        if (!force) {
+          const confirmed = safeConfirm(`This account has ${linkedTxs.length} historical transactions. Deactivating it will preserve all transaction history and balance history while hiding it from active selection. Proceed with deactivation?`);
+          if (!confirmed) {
+            setIsSyncing(false);
+            return;
+          }
         }
-      }
 
-      await runTransaction(db, async (transaction) => {
-        // Delete linked transactions and sub-entities first
-        refsToDelete.forEach(ref => {
-          transaction.delete(ref);
+        // Safely archive account to preserve accounting integrity and prevent security rule violations
+        await updateDoc(doc(db, 'chartAccounts', id), {
+          isActive: false,
+          status: 'archived',
+          updatedAt: new Date().toISOString()
         });
-        
-        transaction.delete(doc(db, 'chartAccounts', id));
-        
-        const auditRef = doc(collection(db, 'auditLogs'));
-        transaction.set(auditRef, {
+
+        await addDoc(collection(db, 'auditLogs'), {
           uid: user.uid,
           email: user.email,
-          action: 'DELETE_ACCOUNT_PURGE',
+          action: 'DEACTIVATE_ACCOUNT',
           entityType: 'account',
           entityId: id,
-          details: { purgedTransactionsCount: refsToDelete.length },
+          details: { linkedTransactionsCount: linkedTxs.length },
           timestamp: new Date().toISOString()
         });
-      });
-      
-      toast.success('Account node and all linked data decommissioned');
+
+        toast.success('Account deactivated and archived (transaction history preserved)');
+      } else {
+        if (!force) {
+          const confirm = safeConfirm("Are you sure you want to delete this account? This action is irreversible.");
+          if (!confirm) {
+            setIsSyncing(false);
+            return;
+          }
+        }
+
+        await deleteDoc(doc(db, 'chartAccounts', id));
+
+        await addDoc(collection(db, 'auditLogs'), {
+          uid: user.uid,
+          email: user.email,
+          action: 'DELETE_EMPTY_ACCOUNT',
+          entityType: 'account',
+          entityId: id,
+          timestamp: new Date().toISOString()
+        });
+
+        toast.success('Account node decommissioned');
+      }
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `chartAccounts/${id}`);
       toast.error('Decommissioning sequence failed');

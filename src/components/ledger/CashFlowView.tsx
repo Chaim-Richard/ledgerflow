@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { formatCurrency, cn } from '../../lib/utils';
+import { formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
 import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -9,8 +9,8 @@ export default function CashFlowView() {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
+    start: getLocalDateISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+    end: getLocalDateISO()
   });
   const [isComparative, setIsComparative] = useState(false);
 
@@ -70,8 +70,8 @@ export default function CashFlowView() {
     const MathDiffDays = Math.round(msDiff / 86400000);
     const prevS = new Date(prevE.getTime() - (MathDiffDays * 86400000));
     return {
-      start: prevS.toISOString().split('T')[0],
-      end: prevE.toISOString().split('T')[0]
+      start: getLocalDateISO(prevS),
+      end: getLocalDateISO(prevE)
     }
   };
 
