@@ -234,7 +234,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       const doc = await t.get(txRef);
       if (!doc.exists) throw new Error('Not found');
       if (doc.data()?.workspaceId !== transaction.workspaceId) throw new Error('Workspace mismatch');
-      if (doc.data()?.status === 'certified' || doc.data()?.status === 'voided') throw new Error('Cannot modify certified or voided transactions');
+      if (doc.data()?.status === 'certified' || doc.data()?.status === 'voided' || doc.data()?.isCleared === true) throw new Error('Cannot modify certified, cleared, or voided transactions');
 
       t.update(txRef, { ...transaction, updatedAt: FieldValue.serverTimestamp() });
     });

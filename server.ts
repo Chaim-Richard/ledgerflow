@@ -1,6 +1,8 @@
 import { transactionRouter } from "./src/server/routes/transactionRoutes";
 import { revenueRouter } from "./src/server/routes/revenueRoutes";
 import { consolidationRouter } from "./src/server/routes/consolidationRoutes";
+import { leaseRouter } from "./src/server/routes/leaseRoutes";
+import { inventoryRouter } from "./src/server/routes/inventoryRoutes";
 import express from "express";
 import cors from "cors";
 import Stripe from "stripe";
@@ -3976,6 +3978,8 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.use("/api/v1/transactions", apiAuthenticate, transactionRouter);
   app.use("/api/v1/revenue", apiAuthenticate, revenueRouter);
   app.use("/api/v1/consolidation", apiAuthenticate, consolidationRouter);
+  app.use("/api/v1/lease", apiAuthenticate, leaseRouter);
+  app.use("/api/v1/inventory", apiAuthenticate, inventoryRouter);
 
   const http = await import('http');
   const httpServer = http.createServer(app);
