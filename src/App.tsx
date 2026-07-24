@@ -437,7 +437,11 @@ const shortcutMap = useMemo(() => {
       };
       await setDoc(workspaceRef, newWorkspace);
       useAuthStore.getState().setCurrentWorkspaceId(workspaceRef.id);
-      toast.success('Workspace created');
+      
+      // Automatically open template selector for the new workspace
+      useUIStore.getState().setTemplateSelectorOpen(true);
+      
+      toast.success(`Workspace '${name}' created! Please choose an architectural template.`);
     } catch (e) {
       console.error(e);
       toast.error('Failed to create workspace');

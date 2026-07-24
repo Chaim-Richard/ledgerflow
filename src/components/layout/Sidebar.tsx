@@ -8,7 +8,9 @@ import {
   BarChart3,
   Settings,
   ShieldAlert,
-  Compass
+  Compass,
+  ChevronDown,
+  Plus
 } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
 import { AppTab } from '../../types';
@@ -54,6 +56,12 @@ const Sidebar = React.memo(({
   setActiveTab, 
   onLogout, 
   onLoginPrompt,
+  projects,
+  onNewProject,
+  workspaces,
+  currentWorkspaceId,
+  onSelectWorkspace,
+  onNewWorkspace,
   onAction 
 }: SidebarProps) => {
   const uiStore = useUIStore();
@@ -105,21 +113,55 @@ const Sidebar = React.memo(({
         uiStore.language === 'he' && "rtl"
       )}
     >
-      {/* Brand */}
-      <div className="h-16 flex items-center justify-between px-4 shrink-0 border-b border-[var(--line)]">
-        <div className="flex items-center gap-3 overflow-hidden">
-           <div className="w-8 h-8 rounded-lg bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] shrink-0 shadow-sm">
+      {/* Brand & Workspace Switcher */}
+      <div className="h-16 flex items-center px-4 shrink-0 border-b border-[var(--line)]">
+        {uiStore.isSidebarOpen ? (
+          <div className="w-full relative group/workspace cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] shrink-0 shadow-sm">
+                 <Compass size={18} className="animate-spin-slow" />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                 <div className="flex items-center justify-between">
+                   <h1 className="text-[14px] font-bold text-[var(--text)] tracking-tight leading-none truncate">
+                     {workspaces.find(w => w.id === currentWorkspaceId)?.name || 'LedgerFlow'}
+                   </h1>
+                   <ChevronDown size={14} className="text-[var(--faint)] group-hover/workspace:text-[var(--text)] transition-colors" />
+                 </div>
+                 <p className="text-[10px] font-mono text-[var(--faint)] mt-1 truncate uppercase tracking-wider">Workspace</p>
+              </div>
+            </div>
+            {/* Workspace Dropdown */}
+            <div className="absolute top-full left-0 mt-1 w-full bg-[var(--surface)] border border-[var(--line)] rounded-lg shadow-xl opacity-0 invisible group-hover/workspace:opacity-100 group-hover/workspace:visible transition-all z-50 py-1">
+              {workspaces.map(w => (
+                <button
+                  key={w.id}
+                  onClick={() => onSelectWorkspace(w.id)}
+                  className={cn(
+                    "w-full text-left px-3 py-2 text-[13px] hover:bg-[var(--elevated)] transition-colors truncate",
+                    currentWorkspaceId === w.id ? "text-[var(--brass)] font-semibold" : "text-[var(--text)]"
+                  )}
+                >
+                  {w.name}
+                </button>
+              ))}
+              <div className="h-px bg-[var(--line)] my-1" />
+              <button
+                onClick={onNewWorkspace}
+                className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] transition-colors"
+              >
+                <Plus size={14} />
+                <span>New Workspace</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center w-full">
+            <div className="w-8 h-8 rounded-lg bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] shrink-0 shadow-sm" title={workspaces.find(w => w.id === currentWorkspaceId)?.name || 'LedgerFlow'}>
               <Compass size={18} className="animate-spin-slow" />
-           </div>
-           {uiStore.isSidebarOpen && (
-             <div className="overflow-hidden">
-                <h1 className="text-[15px] font-bold text-[var(--text)] tracking-tight leading-none truncate">
-                  LedgerFlow
-                </h1>
-                <p className="text-[10px] font-mono text-[var(--faint)] mt-1 truncate uppercase tracking-wider">Financial Intelligence Ledger</p>
-             </div>
-           )}
-        </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Navigation Groups */}

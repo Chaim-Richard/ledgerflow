@@ -3,6 +3,7 @@ import { User as FirebaseUser } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Workspace, User as UserProfile } from '../types';
+import { useLedgerStore } from './useLedgerStore';
 
 interface AuthState {
   user: FirebaseUser | null;
@@ -39,6 +40,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } else {
       localStorage.removeItem('clearbook_current_workspace');
     }
+    
+    // Clear ledger store data immediately to prevent ghosting between workspaces
+    if (get().currentWorkspaceId !== currentWorkspaceId) {
+      useLedgerStore.getState().resetStore();
+    }
+    
     set({ currentWorkspaceId });
   },
   setCurrentProjectId: (currentProjectId) => set({ currentProjectId }),

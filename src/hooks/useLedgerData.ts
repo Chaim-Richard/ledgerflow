@@ -135,6 +135,32 @@ export function useLedgerData() {
   useEffect(() => {
     if (!user || !currentWorkspaceId) return;
 
+    // Clear data immediately to prevent ghosting between workspaces
+    useLedgerStore.setState({
+      transactions: [],
+      accounts: [],
+      journalEntries: [],
+      projects: [],
+      budgets: [],
+      vendors: [],
+      customers: [],
+      invoices: [],
+      bills: [],
+      inventory: [],
+      assets: [],
+      recurring: [],
+      employees: [],
+      payRuns: [],
+      taxRates: [],
+      runningBalances: {
+        totalIncome: 0,
+        totalExpense: 0,
+        totalBalance: 0,
+        projectMetrics: {},
+        categoryMetrics: {}
+      }
+    });
+
     
     // DATA BRIDGE: Fetch snapshot for immediate "big math" rendering on new devices
     fetchSnapshotBridge(currentWorkspaceId).then((data: any) => {

@@ -10,6 +10,8 @@ import { parseNaturalLanguageEntry, ParsedCommandIntent } from '../../lib/algori
 import { useShallow } from 'zustand/react/shallow';
 import { Transaction, Project } from '../../types';
 import { getLocalDateISO } from '../../lib/utils';
+import { useTransactionActions } from '../../hooks/useTransactionActions';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -30,6 +32,8 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
     vendors: state.vendors,
     accounts: state.accounts
   })));
+  const { handleQuickAdd } = useTransactionActions();
+  const { addEntity } = useEntityOperations();
 
   // Parse natural language intent live from search query
   const parsedIntent: ParsedCommandIntent = useMemo(() => {
@@ -37,33 +41,20 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
   }, [query]);
 
   // Execute Natural Language Intent
-  const handleExecuteIntent = () => {
+  // Execute Natural Language Intent
+  const handleExecuteIntent = async () => {
     if (!parsedIntent || parsedIntent.type === 'unknown') return;
-
     if (parsedIntent.type === 'transaction') {
-      const { setTransactions, deleteTransaction } = useLedgerStore.getState();
       const amountCents = parsedIntent.amountCents || 0;
       const isExpense = parsedIntent.action === 'expense';
-      const newTxId = `tx-nl-${Date.now()}`;
-
-      // Default double-entry lines
       const cashAccountId = ledger.accounts.find(a => a.type === 'asset')?.id || 'acc-cash';
       const categoryAccountId = isExpense 
         ? (ledger.accounts.find(a => a.type === 'expense')?.id || 'acc-exp')
         : (ledger.accounts.find(a => a.type === 'income')?.id || 'acc-inc');
-
-      const newTx: Transaction = {
-        id: newTxId,
-        uid: 'user-default',
-        workspaceId: 'ws-default',
+      await handleQuickAdd({
         date: parsedIntent.dateStr || getLocalDateISO(),
         description: parsedIntent.description || 'Natural Language Entry',
-        payee: parsedIntent.payee || undefined,
-        status: 'completed',
-        type: 'actual',
         totalAmountCents: amountCents,
-        currency: 'USD',
-        createdAt: new Date().toISOString(),
         lines: [
           {
             accountId: categoryAccountId,
@@ -78,38 +69,18 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
             description: 'Payment settlement'
           }
         ]
-      };
-
-      setTransactions([newTx, ...ledger.transactions]);
-      toast.success(`⚡ Posted: ${parsedIntent.displaySummary}`, {
-        action: {
-          label: 'Undo',
-          onClick: () => {
-            deleteTransaction(newTxId);
-            toast.info('Transaction undone');
-          }
-        }
       });
       setQuery('');
       onClose();
     } else if (parsedIntent.type === 'project' && parsedIntent.projectName) {
-      const { setProjects } = useLedgerStore.getState();
-      const newProjId = `proj-${Date.now()}`;
-      const newProject: Project = {
-        id: newProjId,
-        uid: 'user-default',
-        workspaceId: 'ws-default',
+      await addEntity('projects', {
         name: parsedIntent.projectName,
         status: 'active',
         type: 'general',
         budgetCents: 0,
         dimensions: ['project'],
-        description: 'Created via Omnibox Command',
-        createdAt: new Date().toISOString()
-      };
-
-      setProjects([newProject, ...ledger.projects]);
-      toast.success(`✨ Created project "${parsedIntent.projectName}"`);
+        description: 'Created via Omnibox Command'
+      }, `✨ Created project "${parsedIntent.projectName}"`);
       setQuery('');
       onClose();
     }

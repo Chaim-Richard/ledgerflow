@@ -117,6 +117,7 @@ export interface LedgerState {
   setActivityFeed: (data: any[]) => void;
   runFullAudit: () => void;
   recomputeBalances: () => void;
+  resetStore: () => void;
 }
 
 export const useLedgerStore = create<LedgerState>((set, get) => ({
@@ -471,5 +472,37 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         severity: !auditResult.isBalanced || !auditResult.hashChainValid ? 'critical' : 'warning'
       });
     }
+  },
+  resetStore: () => {
+    set({
+      transactions: [],
+      accounts: [],
+      journalEntries: [],
+      projects: [],
+      budgets: [],
+      vendors: [],
+      customers: [],
+      invoices: [],
+      bills: [],
+      inventory: [],
+      assets: [],
+      recurring: [],
+      employees: [],
+      payRuns: [],
+      taxRates: [],
+      classes: [],
+      locations: [],
+      customFields: [],
+      bankLines: [],
+      auditLogs: [],
+      computedAccounts: [],
+      runningBalances: {
+        totalIncome: 0,
+        totalExpense: 0,
+        totalBalance: 0,
+        projectMetrics: {},
+        categoryMetrics: {}
+      }
+    });
   }
 }));
