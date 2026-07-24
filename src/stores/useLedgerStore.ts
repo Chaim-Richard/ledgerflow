@@ -120,6 +120,8 @@ export interface LedgerState {
 }
 
 export const useLedgerStore = create<LedgerState>((set, get) => ({
+  _version: 0,
+  _lastSync: Date.now(),
   transactions: [],
   optimisticIds: new Set(),
   accounts: [],

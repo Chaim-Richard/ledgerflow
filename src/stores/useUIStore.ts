@@ -275,4 +275,11 @@ if (typeof window !== 'undefined') {
       useUIStore.setState({ activeTab: hash });
     }
   });
+
+  window.addEventListener('online', () => {
+    useUIStore.getState().setIsOnline(true);
+  });
+  window.addEventListener('offline', () => {
+    useUIStore.getState().setIsOnline(false);
+  });
 }

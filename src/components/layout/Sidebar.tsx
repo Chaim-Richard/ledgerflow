@@ -15,6 +15,8 @@ import { AppTab } from '../../types';
 import { useUIStore } from '../../stores/useUIStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
+import { Download } from 'lucide-react';
 import { NAV_GROUPS, APP_TABS } from '../../config/registry';
 
 interface SidebarProps {
@@ -54,6 +56,7 @@ const Sidebar = React.memo(({
   onAction 
 }: SidebarProps) => {
   const uiStore = useUIStore();
+  const { isInstallable, promptInstall } = usePWAInstall();
   const user = useAuthStore(s => s.user);
   const userProfile = useAuthStore(s => s.userProfile);
   const realProjects = useLedgerStore(s => s.projects);
@@ -197,9 +200,22 @@ const Sidebar = React.memo(({
            {uiStore.isSidebarOpen && <span className="text-[10px] font-mono text-[var(--faint)] border border-[var(--line)] rounded px-1">⌘K</span>}
          </button>
          
+         {isInstallable && (
+           <button
+             onClick={promptInstall}
+             className={cn(
+               "flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-medium text-[var(--muted)] hover:text-[var(--text)] rounded-lg hover:bg-[var(--surface-hover)] transition-all w-full group mb-1",
+               !uiStore.isSidebarOpen && "justify-center"
+             )}
+             title={uiStore.isSidebarOpen ? undefined : "Install App"}
+           >
+             <Download size={16} className="shrink-0 text-[var(--faint)] group-hover:text-[var(--text)] transition-colors" />
+             {uiStore.isSidebarOpen && <span>Install App</span>}
+           </button>
+         )}
          {user && (
            <button
-              onClick={onLogout}
+             onClick={onLogout}
              className={cn(
                "flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-medium text-[var(--muted)] hover:text-red-400 rounded-lg hover:bg-rose-500/10 transition-all w-full group",
                !uiStore.isSidebarOpen && "justify-center"

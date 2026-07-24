@@ -14,14 +14,17 @@ export default defineConfig({
   },
   plugins: [react(), tailwindcss(), VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["**/*"],
+      includeAssets: ["favicon.ico", "robots.txt", "apple-touch-icon.png", "**/*.svg"],
       manifest: {
-        name: "Ledger",
-        short_name: "Ledger",
-        description: "Advanced Financial Ledger",
+        id: "com.ledgerflow.app",
+        name: "LedgerFlow",
+        short_name: "LedgerFlow",
+        description: "Professional cloud financial management and smart double-entry auditing.",
         theme_color: "#0f172a",
         background_color: "#0f172a",
         display: "standalone",
+        orientation: "portrait-primary",
+        categories: ["finance", "business", "productivity"],
         icons: [
           {
             src: "/pwa-192x192.svg",
@@ -31,7 +34,43 @@ export default defineConfig({
           {
             src: "/pwa-512x512.svg",
             sizes: "512x512",
-            type: "image/svg+xml"
+            type: "image/svg+xml",
+            purpose: "any maskable"
+          }
+        ],
+        shortcuts: [
+          {
+            name: "New Journal Entry",
+            short_name: "New Entry",
+            description: "Create a new journal entry",
+            url: "/?action=new-journal",
+            icons: [{ src: "/pwa-192x192.svg", sizes: "192x192" }]
+          },
+          {
+            name: "Dashboard",
+            short_name: "Dashboard",
+            description: "View financial dashboard",
+            url: "/",
+            icons: [{ src: "/pwa-192x192.svg", sizes: "192x192" }]
+          }
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
           }
         ]
       }

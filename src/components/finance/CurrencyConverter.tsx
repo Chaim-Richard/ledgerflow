@@ -24,7 +24,8 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
     setIsRevaluing(true);
     setRevalResult('');
     try {
-      const token = await useAuthStore.getState().getToken();
+      const user = useAuthStore.getState().user;
+      const token = user ? await user.getIdToken() : '';
       const response = await fetch(`/api/v1/transactions/revaluation/run`, {
         method: 'POST',
         headers: {
