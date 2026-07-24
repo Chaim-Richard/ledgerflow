@@ -174,6 +174,7 @@ const shortcutMap = useMemo(() => {
   const handleGuest = () => {
     localStorage.setItem('isGuest', 'true');
     setIsGuest(true);
+    toast.info('Entered Guest Mode');
   };
 
   const handleLoginPrompt = () => {
@@ -233,6 +234,8 @@ const shortcutMap = useMemo(() => {
   };
 
   const handleLogout = () => {
+    localStorage.setItem('isGuest', 'false');
+    setIsGuest(false);
     localStorage.removeItem('clearbook_use_sandbox_mode');
     localStorage.removeItem('clearbook_identity_email');
     localStorage.removeItem('clearbook_identity_name');
@@ -247,7 +250,7 @@ const shortcutMap = useMemo(() => {
     });
     
     signOut(auth).catch(() => {});
-    toast.success('Secure session terminated');
+    toast.success('Returned to login screen');
   };
 
   const handleApplyAITemplate = useCallback(async (customBlueprint: any) => {

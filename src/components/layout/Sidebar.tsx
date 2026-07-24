@@ -53,6 +53,7 @@ const Sidebar = React.memo(({
   activeTab, 
   setActiveTab, 
   onLogout, 
+  onLoginPrompt,
   onAction 
 }: SidebarProps) => {
   const uiStore = useUIStore();
@@ -221,7 +222,7 @@ const Sidebar = React.memo(({
            </button>
          )}
          <button
-           onClick={onLogout}
+           onClick={user ? onLogout : (onLoginPrompt || onLogout)}
            className={cn(
              "flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-medium text-[var(--muted)] hover:text-red-400 rounded-lg hover:bg-rose-500/10 transition-all w-full group",
              !uiStore.isSidebarOpen && "justify-center"
