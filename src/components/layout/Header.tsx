@@ -4,7 +4,11 @@ import QuickCreateMenu from './QuickCreateMenu';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 
-const Header = React.memo(function Header() {
+interface HeaderProps {
+  onLogout?: () => void;
+}
+
+const Header = React.memo(function Header({ onLogout }: HeaderProps) {
   const user = useAuthStore(state => state.user);
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
   const workspaces = useAuthStore(state => state.workspaces);
@@ -75,8 +79,23 @@ const Header = React.memo(function Header() {
 
         <QuickCreateMenu />
 
-        <div className="h-8 w-8 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] text-[11px] font-mono font-bold cursor-pointer hover:bg-[var(--brass)] hover:text-black transition-colors">
-          {user?.email?.[0]?.toUpperCase() || 'M'}
+        {!user && (
+          <button
+            onClick={onLogout}
+            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-medium text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-md hover:bg-amber-500/20 transition-all"
+            title="Currently in Guest Mode. Click to sign in."
+          >
+            <span>Guest</span>
+            <span className="text-[10px] text-amber-300 underline font-semibold">Sign In</span>
+          </button>
+        )}
+
+        <div 
+          onClick={onLogout}
+          title={user ? `Logged in as ${user.email} (Click to Log Out)` : 'Guest Mode (Click to Sign In)'}
+          className="h-8 w-8 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] text-[11px] font-mono font-bold cursor-pointer hover:bg-[var(--brass)] hover:text-black transition-colors"
+        >
+          {user?.email?.[0]?.toUpperCase() || 'G'}
         </div>
       </div>
     </header>

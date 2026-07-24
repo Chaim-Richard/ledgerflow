@@ -98,7 +98,7 @@ const Sidebar = React.memo(({
   return (
     <div 
       className={cn(
-        "h-[100dvh] bg-[var(--surface)] text-[var(--text)] flex flex-col z-[100] border-r border-[var(--line)] shrink-0 transition-all duration-300",
+        "h-[100dvh] lg:h-full bg-[var(--surface)] text-[var(--text)] flex flex-col z-[100] border-r border-[var(--line)] shrink-0 transition-all duration-300",
         "fixed lg:sticky top-0 left-0",
         uiStore.isSidebarOpen ? "w-[240px] translate-x-0 opacity-100" : "w-0 -translate-x-full opacity-0 pointer-events-none border-r-0 lg:w-[70px] lg:translate-x-0 lg:opacity-100",
         uiStore.language === 'he' && "rtl"
@@ -184,7 +184,7 @@ const Sidebar = React.memo(({
       </div>
 
       {/* Bottom Actions */}
-      <div className="p-3 border-t border-[var(--line)] shrink-0 space-y-1 bg-[var(--surface)]">
+      <div className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-3 border-t border-[var(--line)] shrink-0 space-y-1 bg-[var(--surface)]">
          <button
             onClick={() => onAction('open-command-palette')}
            className={cn(
@@ -204,28 +204,33 @@ const Sidebar = React.memo(({
            <button
              onClick={promptInstall}
              className={cn(
-               "flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-medium text-[var(--muted)] hover:text-[var(--text)] rounded-lg hover:bg-[var(--surface-hover)] transition-all w-full group mb-1",
-               !uiStore.isSidebarOpen && "justify-center"
+               "flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-semibold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 rounded-lg transition-all w-full group mb-1 shadow-sm",
+               uiStore.isSidebarOpen ? "justify-between" : "justify-center"
              )}
              title={uiStore.isSidebarOpen ? undefined : "Install App"}
            >
-             <Download size={16} className="shrink-0 text-[var(--faint)] group-hover:text-[var(--text)] transition-colors" />
-             {uiStore.isSidebarOpen && <span>Install App</span>}
-           </button>
-         )}
-         {user && (
-           <button
-             onClick={onLogout}
-             className={cn(
-               "flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-medium text-[var(--muted)] hover:text-red-400 rounded-lg hover:bg-rose-500/10 transition-all w-full group",
-               !uiStore.isSidebarOpen && "justify-center"
+             <div className="flex items-center gap-2.5">
+               <Download size={16} className="shrink-0 text-emerald-400 group-hover:scale-110 transition-transform" />
+               {uiStore.isSidebarOpen && <span>Install App</span>}
+             </div>
+             {uiStore.isSidebarOpen && (
+               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-medium">
+                 App
+               </span>
              )}
-             title={uiStore.isSidebarOpen ? undefined : "Log Out"}
-           >
-             <LogOut size={16} className="shrink-0 text-[var(--faint)] group-hover:text-red-400 transition-colors" />
-             {uiStore.isSidebarOpen && <span>Log Out</span>}
            </button>
          )}
+         <button
+           onClick={onLogout}
+           className={cn(
+             "flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-medium text-[var(--muted)] hover:text-red-400 rounded-lg hover:bg-rose-500/10 transition-all w-full group",
+             !uiStore.isSidebarOpen && "justify-center"
+           )}
+           title={uiStore.isSidebarOpen ? undefined : (user ? "Log Out" : "Exit Guest / Sign In")}
+         >
+           <LogOut size={16} className="shrink-0 text-[var(--faint)] group-hover:text-red-400 transition-colors" />
+           {uiStore.isSidebarOpen && <span>{user ? "Log Out" : "Exit Guest / Sign In"}</span>}
+         </button>
       </div>
     </div>
   );
