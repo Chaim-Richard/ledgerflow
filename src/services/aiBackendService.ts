@@ -408,8 +408,8 @@ Return ONLY a valid JSON string. No markdown formatting blocks or surrounding ba
     // Heuristic 5: Child Tax credit ($2,000 per dependent count)
     const childTaxCreditAmountCents = dependentsCount * 2000 * 100;
 
-    let stdDec = filingStatus === 'Married Filing Jointly' ? '$30,000' : (filingStatus === 'Head of Household' ? '$22,500' : '$15,000');
-    let explanation = `Auto-Learned: Mapped to ${filingStatus} based on profile traits. A standard deduction of ${stdDec} and an eligible Child Tax Credit of $${(childTaxCreditAmountCents/100).toLocaleString()} will be automatically staged.`;
+    const stdDec = filingStatus === 'Married Filing Jointly' ? '$30,000' : (filingStatus === 'Head of Household' ? '$22,500' : '$15,000');
+    const explanation = `Auto-Learned: Mapped to ${filingStatus} based on profile traits. A standard deduction of ${stdDec} and an eligible Child Tax Credit of $${(childTaxCreditAmountCents/100).toLocaleString()} will be automatically staged.`;
 
     return {
       filingStatus,

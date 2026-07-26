@@ -237,8 +237,8 @@ export function useLedgerData() {
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'rulePatterns')),
     ];
 
-    let isCurrent = { active: true };
-    let allUnsubs = [...criticalListeners];
+    const isCurrent = { active: true };
+    const allUnsubs = [...criticalListeners];
 
     // Defer non-critical listeners to prioritize initial paint and dashboard readiness
     const secondaryTimer = setTimeout(() => {

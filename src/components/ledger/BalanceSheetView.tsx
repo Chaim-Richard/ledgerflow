@@ -99,8 +99,8 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
       if (acc.type === 'asset') assets[acc.id] = initVal;
       else if (acc.type === 'liability') liabilities[acc.id] = initVal;
       else if (acc.type === 'equity') equity[acc.id] = initVal;
-      else if (acc.type === 'income') income[acc.id] = initVal;
-      else if (acc.type === 'expense') expense[acc.id] = initVal;
+      else if ((acc.type === 'income' || acc.type === 'revenue') || acc.type === 'revenue') income[acc.id] = initVal;
+      else if ((acc.type === 'expense' || acc.type === 'cost_of_goods') || acc.type === 'cost_of_goods') expense[acc.id] = initVal;
     });
 
     // Sum transactions before or on cutoff date
@@ -111,14 +111,14 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
         const acc = accounts.find(a => a.id === id);
         if (!acc) return;
         
-        const isDebitNature = acc.type === 'asset' || acc.type === 'expense';
+        const isDebitNature = acc.type === 'asset' || (acc.type === 'expense' || acc.type === 'cost_of_goods') || acc.type === 'cost_of_goods';
         const delta = isDebitNature ? line.amountCents : -line.amountCents;
 
         if (acc.type === 'asset') assets[id] = (assets[id] || 0) + delta;
         else if (acc.type === 'liability') liabilities[id] = (liabilities[id] || 0) + delta;
         else if (acc.type === 'equity') equity[id] = (equity[id] || 0) + delta;
-        else if (acc.type === 'income') income[id] = (income[id] || 0) + delta;
-        else if (acc.type === 'expense') expense[id] = (expense[id] || 0) + delta;
+        else if ((acc.type === 'income' || acc.type === 'revenue') || acc.type === 'revenue') income[id] = (income[id] || 0) + delta;
+        else if ((acc.type === 'expense' || acc.type === 'cost_of_goods') || acc.type === 'cost_of_goods') expense[id] = (expense[id] || 0) + delta;
       });
     });
 
@@ -131,14 +131,14 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
         if (!acc) return;
 
         const netAmount = line.debit - line.credit;
-        const isDebitNature = acc.type === 'asset' || acc.type === 'expense';
+        const isDebitNature = acc.type === 'asset' || (acc.type === 'expense' || acc.type === 'cost_of_goods') || acc.type === 'cost_of_goods';
         const delta = isDebitNature ? netAmount : -netAmount;
 
         if (acc.type === 'asset') assets[id] = (assets[id] || 0) + delta;
         else if (acc.type === 'liability') liabilities[id] = (liabilities[id] || 0) + delta;
         else if (acc.type === 'equity') equity[id] = (equity[id] || 0) + delta;
-        else if (acc.type === 'income') income[id] = (income[id] || 0) + delta;
-        else if (acc.type === 'expense') expense[id] = (expense[id] || 0) + delta;
+        else if ((acc.type === 'income' || acc.type === 'revenue')) income[id] = (income[id] || 0) + delta;
+        else if ((acc.type === 'expense' || acc.type === 'cost_of_goods')) expense[id] = (expense[id] || 0) + delta;
       });
     });
 

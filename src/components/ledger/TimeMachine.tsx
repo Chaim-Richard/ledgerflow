@@ -31,7 +31,7 @@ export default function TimeMachine() {
     const commits = transactions.reduce((acc, tx) => {
       const date = tx.date;
       if (!acc[date]) {
-        acc[date] = { date, id: tx.id, hash: tx.verification?.hash || Math.random().toString(36).substring(7), txs: [] };
+        acc[date] = { date, id: tx.id, hash: tx.verification?.hash || crypto.randomUUID(), txs: [] };
       }
       acc[date].txs.push(tx);
       return acc;
@@ -128,7 +128,7 @@ export default function TimeMachine() {
                 {!isMain && (
                   <div className="mb-6 space-y-2">
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex justify-between items-center">
-                      Simulated Entries
+                      Scenario Projection Entries
                       <button 
                         onClick={() => setShowNewGhostModal(scenario.id)}
                         className="text-[#0047AB] hover:underline flex items-center gap-1"

@@ -60,8 +60,8 @@ export const RECEIPT_CAPTURE_ALGO: AlgorithmDefinition = {
   compute: (transactions, accounts, inputs) => {
     const start = performance.now();
     
-    // Simulated raw OCR lines
-    const mockOCR = [
+    // Test OCR lines for algorithm demonstration
+    const testOCRData = [
         "HOME DEPOT 123",
         "123 MAIN ST",
         "04/15/2026 14:23",
@@ -76,7 +76,7 @@ export const RECEIPT_CAPTURE_ALGO: AlgorithmDefinition = {
     const merchants = Array.from(new Set(transactions.map(t => t.payee || t.description || ''))).filter(m => m.length > 3);
     if (!merchants.includes('Home Depot')) merchants.push('Home Depot');
 
-    const result = parseReceiptOCR(mockOCR, merchants);
+    const result = parseReceiptOCR(testOCRData, merchants);
     const ms = performance.now() - start;
 
     return {

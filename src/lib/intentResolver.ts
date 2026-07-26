@@ -145,7 +145,7 @@ export class IntentResolver {
     for (const line of lines) {
         const lowerInput = line.toLowerCase().trim();
         let learnedCategory: string | null = null;
-        let learnedAccount: string | null = null;
+        const learnedAccount: string | null = null;
         let isRuleConfirmed = false;
 
         // 0. High-Confidence Rule Mapping (Hardened User Rules)
@@ -178,7 +178,7 @@ export class IntentResolver {
             const totalAmtStr = splitMatch[2];
             const itemsStr = splitMatch[3];
             
-            let cleanedAmtStr = totalAmtStr.replace(/[km]/i, '');
+            const cleanedAmtStr = totalAmtStr.replace(/[km]/i, '');
             let totalAmt = TruthEngine.parseAmountToCents(cleanedAmtStr) / 100;
             if (totalAmtStr.endsWith('k')) totalAmt *= 1000;
             if (totalAmtStr.endsWith('m')) totalAmt *= 1000000;
@@ -187,7 +187,7 @@ export class IntentResolver {
             const splitLines = itemsStr.split(',').map(item => {
                 const itemMatch = item.trim().match(/\$?([\d,]+(?:\.\d+)?[km]?)\s*([a-zA-Z\s]+)/i);
                 if (itemMatch) {
-                    let cleanedItemAmtStr = itemMatch[1].replace(/[km]/i, '');
+                    const cleanedItemAmtStr = itemMatch[1].replace(/[km]/i, '');
                     let itemAmt = TruthEngine.parseAmountToCents(cleanedItemAmtStr) / 100;
                     if (itemMatch[1].endsWith('k')) itemAmt *= 1000;
                     if (itemMatch[1].endsWith('m')) itemAmt *= 1000000;
@@ -225,7 +225,7 @@ export class IntentResolver {
         let match = lowerInput.match(amountRegex);
         let desc = '';
         let amtStr = '';
-        let isIncome = lowerInput.includes('received') || lowerInput.includes('deposited') || lowerInput.includes('income') || lowerInput.includes('sale') || lowerInput.includes('plus') || lowerInput.includes('+');
+        const isIncome = lowerInput.includes('received') || lowerInput.includes('deposited') || lowerInput.includes('income') || lowerInput.includes('sale') || lowerInput.includes('plus') || lowerInput.includes('+');
 
         if (match) {
             amtStr = match[1];
@@ -239,7 +239,7 @@ export class IntentResolver {
         }
 
         if (amtStr && desc) {
-            let cleanedAmtStr = amtStr.replace(/[km]/i, '');
+            const cleanedAmtStr = amtStr.replace(/[km]/i, '');
             let amt = TruthEngine.parseAmountToCents(cleanedAmtStr) / 100;
             if (amtStr.endsWith('k')) amt *= 1000;
             if (amtStr.endsWith('m')) amt *= 1000000;

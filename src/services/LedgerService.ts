@@ -17,7 +17,7 @@ export class LedgerService {
     // 3. Append to Event Ledger
     tx.lines.forEach(line => {
       const event: LedgerEvent = {
-        id: `evt_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         accountId: line.accountId,
         amountCents: line.amountCents,

@@ -77,14 +77,14 @@ export function computeLocalizedForensics(transactions: Transaction[]): Localize
     const roundNumDensity = node.roundCount / node.amounts.length;
 
     // Composite Anomaly Score (0 - 100)
-    let score = Math.min(100, Math.round(
+    const score = Math.min(100, Math.round(
       (benfordChiSquare > 15 ? 40 : benfordChiSquare * 2) +
       (zScoreSpike > 2.5 ? 35 : zScoreSpike * 10) +
       (roundNumDensity > 0.5 ? 25 : roundNumDensity * 30)
     ));
 
     if (score >= 25) {
-      let reasons: string[] = [];
+      const reasons: string[] = [];
       if (benfordChiSquare > 12) reasons.push(`First digits fail Benford (χ²=${benfordChiSquare.toFixed(1)})`);
       if (zScoreSpike > 2.0) reasons.push(`Reimbursements/spend spiked ${zScoreSpike.toFixed(1)}σ above mean`);
       if (roundNumDensity > 0.4) reasons.push(`${Math.round(roundNumDensity * 100)}% round-number invoices`);

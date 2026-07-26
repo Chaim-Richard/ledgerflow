@@ -46,7 +46,7 @@ export const useScenarioStore = create<ScenarioState>()(
 
       addScenario: (name, description) => set((state) => ({
         scenarios: [...state.scenarios, {
-          id: Math.random().toString(36).substring(7),
+          id: crypto.randomUUID(),
           name,
           description,
           ghosts: [],
@@ -67,7 +67,7 @@ export const useScenarioStore = create<ScenarioState>()(
       addGhost: (scenarioId, ghost) => set((state) => ({
         scenarios: state.scenarios.map(s => s.id === scenarioId ? {
           ...s,
-          ghosts: [...s.ghosts, { ...ghost, id: Math.random().toString(36).substring(7), isActive: true }]
+          ghosts: [...s.ghosts, { ...ghost, id: crypto.randomUUID(), isActive: true }]
         } : s)
       })),
 

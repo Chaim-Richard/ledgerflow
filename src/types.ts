@@ -283,7 +283,7 @@ export interface CustomTemplate {
   accounts: Array<{
     code: string;
     name: string;
-    type: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
+    type: 'asset' | 'liability' | 'equity' | 'income' | 'expense' | 'cost_of_goods' | 'revenue';
     category?: string;
   }>;
   createdAt: string;
@@ -335,7 +335,7 @@ export interface ChartAccount {
   workspaceId: string;
   code: string;
   name: string;
-  type: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
+  type: 'asset' | 'liability' | 'equity' | 'income' | 'expense' | 'cost_of_goods' | 'revenue';
   category?: string; // e.g. "Cash", "Inventory", "Sales"
   subtype?: string;  // e.g. "Credit Card", "Checking"
   taxCategory?: string; // e.g. "Schedule C: Office Expenses"

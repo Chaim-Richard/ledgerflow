@@ -154,13 +154,13 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
           const acc = accountMap.get(line.accountId);
           if (!acc) continue;
 
-          const isDebitNature = acc.type === 'asset' || acc.type === 'expense';
+          const isDebitNature = acc.type === 'asset' || (acc.type === 'expense' || acc.type === 'cost_of_goods');
           const normalizedAmt = isDebitNature ? cents : -cents;
 
-          if (acc.type === 'income') {
+          if ((acc.type === 'income' || acc.type === 'revenue')) {
             if (isCurrentPeriod) metrics.kpis.revenue += normalizedAmt;
             else if (isPrevPeriod) metrics.kpis.prevRevenue += normalizedAmt;
-          } else if (acc.type === 'expense') {
+          } else if ((acc.type === 'expense' || acc.type === 'cost_of_goods')) {
             if (isCurrentPeriod) metrics.kpis.expenses += normalizedAmt;
             else if (isPrevPeriod) metrics.kpis.prevExpenses += normalizedAmt;
             

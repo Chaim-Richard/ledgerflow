@@ -652,7 +652,7 @@ export function useTransactionActions() {
       return;
     }
 
-    const parsingId = `parse-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const parsingId = crypto.randomUUID();
     
     addParsingItem({
       id: parsingId,
@@ -744,52 +744,17 @@ export function useTransactionActions() {
     if (!confirm) return;
 
     const loader = toast.loading('Initiating deep system reset...');
-    const collections = [
-      'transactions', 'chartAccounts', 'journalEntries', 'projects', 
-      'budgets', 'vendors', 'customers', 'invoices', 'bills', 
-      'inventory', 'assets', 'recurring', 'employees', 'payRuns', 
-      'taxRates', 'auditLogs', 'partners', 'autoRules', 'bankLines'
-    ];
-
     try {
       setIsSyncing(true);
-      for (const coll of collections) {
-        // We use a safe paged delete to stay within batch limits
-        let hasMore = true;
-        while (hasMore) {
-          const q = query(
-            collection(db, coll), 
-            where('workspaceId', '==', currentWorkspaceId),
-            where('uid', '==', user.uid)
-          );
-          const snap = await getDocs(q);
-          
-          if (snap.empty) {
-            hasMore = false;
-            break;
-          }
+      
+      const response = await fetch('/api/v1/transactions/reset', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user.getIdToken()}` },
+         body: JSON.stringify({ workspaceId: currentWorkspaceId })
+      });
 
-          const batch = writeBatch(db);
-          snap.docs.forEach(d => batch.delete(d.ref));
-          await batch.commit();
-          
-          // If we got exactly 0-500, we might have more. 
-          // Firestore getDocs default limit is high, but we should be safe.
-          if (snap.size < 500) hasMore = false;
-        }
-
-        // Also catch orphaned data (pre-workspace)
-        const qOrphan = query(
-          collection(db, coll),
-          where('workspaceId', '==', null),
-          where('uid', '==', user.uid)
-        );
-        const orphanSnap = await getDocs(qOrphan);
-        if (!orphanSnap.empty) {
-          const batch = writeBatch(db);
-          orphanSnap.docs.forEach(d => batch.delete(d.ref));
-          await batch.commit();
-        }
+      if (!response.ok) {
+        throw new Error('Failed to reset workspace data on server.');
       }
       
       // Also clear the store immediately to reflect the void state
@@ -990,14 +955,16 @@ export function useTransactionActions() {
     
     // Check if account has transactions
     const txs = useLedgerStore.getState().transactions;
+    const jes = useLedgerStore.getState().journalEntries;
     const linkedTxs = txs.filter(t => t.lines?.some(l => l.accountId === id));
-    const hasTransactions = linkedTxs.length > 0;
+    const linkedJes = jes.filter(j => j.lines?.some(l => l.accountId === id));
+    const hasTransactions = linkedTxs.length > 0 || linkedJes.length > 0;
 
     setIsSyncing(true);
     try {
       if (hasTransactions) {
         if (!force) {
-          const confirmed = safeConfirm(`This account has ${linkedTxs.length} historical transactions. Deactivating it will preserve all transaction history and balance history while hiding it from active selection. Proceed with deactivation?`);
+          const confirmed = safeConfirm(`This account has ${linkedTxs.length + linkedJes.length} historical records. Deactivating it will preserve all transaction history and balance history while hiding it from active selection. Proceed with deactivation?`);
           if (!confirmed) {
             setIsSyncing(false);
             return;
@@ -1337,18 +1304,17 @@ export function useTransactionActions() {
     
     try {
       const batch = writeBatch(db);
+      const batchRepair: any[] = [];
       repairedTxs.forEach(tx => {
-        if (!(globalThis as any)._bulkRepair) (globalThis as any)._bulkRepair = [];
-        (globalThis as any)._bulkRepair.push({ id: tx.id, data: { verification: tx.verification } });
+        batchRepair.push({ id: tx.id, data: { verification: tx.verification } });
       });
       await batch.commit();
-      if ((globalThis as any)._bulkRepair) {
+      if (batchRepair.length > 0) {
          await fetch('/api/v1/transactions/batch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
-            body: JSON.stringify({ workspaceId: currentWorkspaceId, updates: (globalThis as any)._bulkRepair })
+            body: JSON.stringify({ workspaceId: currentWorkspaceId, updates: batchRepair })
          });
-         (globalThis as any)._bulkRepair = null;
       }
       toast.success('Ledger chain cryptographically certified.', { id: loader });
     } catch (error) {
@@ -1438,26 +1404,25 @@ export function useTransactionActions() {
         const targetIds = Array.from(relevantTargets);
         
         const optimalMatches = findGlobalOptimalMatch(sourceItems, targetIds);
+        const batchReconcile: any[] = [];
 
         // 3. Apply Matches in Transaction
         optimalMatches.forEach((txId, blId) => {
-          if (!(globalThis as any)._autoReconcile) (globalThis as any)._autoReconcile = [];
-          (globalThis as any)._autoReconcile.push(
+          batchReconcile.push(
             { type: 'updateBankLine', id: blId, data: { status: 'matched', matchedTransactionId: txId } },
             { type: 'updateTransaction', id: txId, data: { status: 'reconciled' } }
           );
           matchCount++;
         });
 
-        return matchCount;
-      }).then(async (matchCount) => {
-        if ((globalThis as any)._autoReconcile) {
+        return { matchCount, batchReconcile };
+      }).then(async ({ matchCount, batchReconcile }) => {
+        if (batchReconcile.length > 0) {
            await fetch('/api/v1/transactions/reconcile', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
-              body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: (globalThis as any)._autoReconcile })
+              body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: batchReconcile })
            });
-           (globalThis as any)._autoReconcile = null;
         }
         if (matchCount && matchCount > 0) {
           toast.success(`Optimal alignment complete. ${matchCount} nodes synchronized.`, { id: loader });

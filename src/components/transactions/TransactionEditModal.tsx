@@ -37,51 +37,24 @@ export default function TransactionEditModal({
   onClose,
   onUpdate
 }: TransactionEditModalProps) {
-  const [date, setDate] = useState(transaction.date || '');
-  const [description, setDescription] = useState(transaction.description || '');
-  const [payee, setPayee] = useState(transaction.payee || '');
+  const [date, setDate] = useState(() => transaction?.date || '');
+  const [description, setDescription] = useState(() => transaction?.description || '');
+  const [payee, setPayee] = useState(() => transaction?.payee || '');
   const [type, setType] = useState<Transaction['type']>(transaction.type || 'actual');
   const [status, setStatus] = useState<Transaction['status']>(transaction.status || 'completed');
-  const [project, setProject] = useState(transaction.project || '');
-  const [isCleared, setIsCleared] = useState(transaction.isCleared || false);
-  const [isFlagged, setIsFlagged] = useState(transaction.isFlagged || false);
-  const [fileUrls, setFileUrls] = useState<string[]>(transaction.fileUrls || []);
-  const [originalCurrency, setOriginalCurrency] = useState(transaction.originalCurrency || 'USD');
-  const [exchangeRate, setExchangeRate] = useState<number>(transaction.exchangeRate || 1.0);
+  const [project, setProject] = useState(() => transaction?.project || '');
+  const [isCleared, setIsCleared] = useState(() => transaction?.isCleared || false);
+  const [isFlagged, setIsFlagged] = useState(() => transaction?.isFlagged || false);
+  const [fileUrls, setFileUrls] = useState<string[]>(() => transaction?.fileUrls || []);
+  const [originalCurrency, setOriginalCurrency] = useState(() => transaction?.originalCurrency || 'USD');
+  const [exchangeRate, setExchangeRate] = useState<number>(() => transaction?.exchangeRate || 1.0);
   const [isFetchingRate, setIsFetchingRate] = useState(false);
   const classes = useLedgerStore(s => s.classes);
   const locations = useLedgerStore(s => s.locations);
   const projects = useLedgerStore(s => s.projects);
   
   // Manage lines for splitting and multiple assignments
-  const [lines, setLines] = useState<TransactionLine[]>([]);
-
-  useEffect(() => {
-    if (transaction) {
-      setDate(transaction.date || '');
-      setDescription(transaction.description || '');
-      setPayee(transaction.payee || '');
-      setType(transaction.type || 'actual');
-      setStatus(transaction.status || 'completed');
-      setProject(transaction.project || '');
-      setIsCleared(transaction.isCleared || false);
-      setIsFlagged(transaction.isFlagged || false);
-      setFileUrls(transaction.fileUrls || []);
-      setOriginalCurrency(transaction.originalCurrency || 'USD');
-      setExchangeRate(transaction.exchangeRate || 1.0);
-      
-      // Deep clone transaction lines
-      if (transaction.lines && transaction.lines.length > 0) {
-        setLines(transaction.lines.map(l => ({ ...l })));
-      } else {
-        setLines([{
-          accountId: 'uncategorized',
-          accountName: 'Uncategorized',
-          amountCents: transaction.totalAmountCents || 0
-        }]);
-      }
-    }
-  }, [transaction]);
+  const [lines, setLines] = useState<TransactionLine[]>(() => transaction?.lines ? transaction.lines.map(l => ({ ...l })) : []);
 
   const isLocked = !!(lockDate && date <= lockDate);
 

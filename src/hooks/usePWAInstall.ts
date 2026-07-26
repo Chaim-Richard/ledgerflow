@@ -12,15 +12,14 @@ interface BeforeInstallPromptEvent extends Event {
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
-
-  useEffect(() => {
-    // Check if running as standalone PWA
-    const isStandalone = typeof window !== 'undefined' && (
+  const [isInstalled, setIsInstalled] = useState(() => {
+    return typeof window !== 'undefined' && (
       window.matchMedia('(display-mode: standalone)').matches || 
       (navigator as any).standalone === true
     );
-    setIsInstalled(isStandalone);
+  });
+
+  useEffect(() => {
 
     const handleBeforeInstallPrompt = (e: Event) => {
       // Prevent the mini-infobar from appearing on mobile

@@ -95,7 +95,7 @@ export class LedgerEngine {
     }
 
     // Optimize account lookup by creating a map
-    const accountTypeMap = new Map<string, 'asset' | 'liability' | 'equity' | 'income' | 'expense'>();
+    const accountTypeMap = new Map<string, 'asset' | 'liability' | 'equity' | 'income' | 'expense' | 'cost_of_goods' | 'revenue'>();
     accounts.forEach(a => accountTypeMap.set(a.id, a.type));
 
     const processLine = (accountId: string, amountCents: number, projectName?: string | null) => {
@@ -107,7 +107,7 @@ export class LedgerEngine {
 
       // Ensure we are working with integers to prevent IEEE 754 drift
       const cleanAmount = Math.round(amountCents);
-      const isDebitNature = type === 'asset' || type === 'expense';
+      const isDebitNature = type === 'asset' || type === 'expense' || type === 'cost_of_goods';
       const delta = isDebitNature ? cleanAmount : -cleanAmount;
 
       accData.total += delta;

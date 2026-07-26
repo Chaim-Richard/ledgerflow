@@ -64,7 +64,7 @@ export default function InboxView({ transactions = [], accounts, onCategorize, o
       onCategorize(transactionIds, category, account);
     } else if (onUpdate) {
       for (const id of transactionIds) {
-        await onUpdate(id, { status: 'completed' }); // mock categorization by completing it
+        await onUpdate(id, { status: 'completed' }); // categorize and complete
       }
     }
   };

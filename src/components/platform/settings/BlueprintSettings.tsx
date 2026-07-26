@@ -60,15 +60,9 @@ export default function BlueprintSettings() {
 
   // Sync mappings with workspace document
   React.useEffect(() => {
-    if (currentWorkspace && !hasInitializedMappings) {
+    if (currentWorkspace) {
       setMappings(currentWorkspace.defaultAccountMappings || {});
-      setHasInitializedMappings(true);
     }
-  }, [currentWorkspace, hasInitializedMappings]);
-
-  // If current workspace ID shifts, trigger re-initialization
-  React.useEffect(() => {
-    setHasInitializedMappings(false);
   }, [currentWorkspaceId]);
 
   const handleUpdateMappingField = (key: string, value: string) => {

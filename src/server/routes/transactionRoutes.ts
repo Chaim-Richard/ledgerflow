@@ -455,3 +455,45 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+transactionRouter.post('/reset', async (req, res) => {
+  try {
+    const { workspaceId } = req.body;
+    const user = (req as any).user;
+    const db = getFirestore();
+    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+
+    const collections = [
+      'transactions', 'chartAccounts', 'journalEntries', 'projects', 'budgets', 
+      'vendors', 'customers', 'invoices', 'bills', 
+      'inventory', 'assets', 'recurring', 'employees', 'payRuns', 
+      'taxRates', 'auditLogs', 'partners', 'autoRules', 'bankLines'
+    ];
+
+    for (const coll of collections) {
+      let hasMore = true;
+      while (hasMore) {
+        const snapshot = await db.collection(coll)
+          .where('workspaceId', '==', workspaceId)
+          .limit(500)
+          .get();
+
+        if (snapshot.empty) {
+          hasMore = false;
+          break;
+        }
+
+        const batch = db.batch();
+        snapshot.docs.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+    }
+
+    res.json({ status: 'ok' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});

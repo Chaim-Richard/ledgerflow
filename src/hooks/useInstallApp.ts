@@ -3,13 +3,11 @@ import { useState, useEffect } from "react";
 export function useInstallApp() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(() => {
+    return typeof window !== 'undefined' && (window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone);
+  });
 
   useEffect(() => {
-    // Check if already installed
-    if (window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone) {
-      setIsInstalled(true);
-    }
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();

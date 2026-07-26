@@ -121,14 +121,14 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
           const acc = accountMap.get(l.accountId);
           if (!acc) continue;
 
-          if (acc.type === 'income') {
+          if (acc.type === 'income' || acc.type === 'revenue') {
             const amount = -(l.amountCents || 0);
             pl.income.total += amount;
             if (!pl.income.accounts[acc.id]) {
               pl.income.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0 };
             }
             pl.income.accounts[acc.id].balance += amount;
-          } else if (acc.type === 'expense') {
+          } else if (acc.type === 'expense' || acc.type === 'cost_of_goods') {
             const amount = (l.amountCents || 0);
             pl.expense.total += amount;
             if (!pl.expense.accounts[acc.id]) {

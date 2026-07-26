@@ -19,14 +19,14 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const safeCustomers = Array.isArray(customers) ? customers : [];
   const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'income') : [];
 
-  const [invoice, setInvoice] = useState<Partial<Invoice>>({
+  const [invoice, setInvoice] = useState<Partial<Invoice>>(() => ({
     number: `INV-${Date.now().toString().slice(-6)}`,
     date: format(new Date(), 'yyyy-MM-dd'),
     dueDate: format(new Date(), 'yyyy-MM-dd'),
     status: 'pending',
     amountCents: 0,
     totalCents: 0
-  });
+  }));
 
   const [items, setItems] = useState<Array<{ description: string, quantity: number, rateCents: number, amountCents: number, accountId: string }>>([
     { description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }

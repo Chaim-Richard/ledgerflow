@@ -101,8 +101,8 @@ export function useFinancialReporting() {
           const acc = accounts.find(a => a.id === line.accountId);
           if (!acc) return;
 
-          if (acc.type === 'income') cashFlow.operating.total -= line.amountCents;
-          if (acc.type === 'expense') cashFlow.operating.total -= line.amountCents;
+          if ((acc.type === 'income' || acc.type === 'revenue')) cashFlow.operating.total -= line.amountCents;
+          if ((acc.type === 'expense' || acc.type === 'cost_of_goods')) cashFlow.operating.total -= line.amountCents;
 
           if (acc.type === 'asset' && acc.category === 'Receivable') cashFlow.operating.total -= line.amountCents;
           if (acc.type === 'liability' && acc.category === 'Payable') cashFlow.operating.total += line.amountCents;

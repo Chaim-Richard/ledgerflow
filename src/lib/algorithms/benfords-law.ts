@@ -27,7 +27,7 @@ export const BENFORDS_LAW_ALGO: AlgorithmDefinition = {
     let totalCount = 0;
     
     validTransactions.forEach(tx => {
-      let amountStr = String(Math.abs(tx.totalAmountCents)).replace(/^0+/, '');
+      const amountStr = String(Math.abs(tx.totalAmountCents)).replace(/^0+/, '');
       let leadingDigit = 0;
       
       const match = amountStr.match(/^[1-9]/);

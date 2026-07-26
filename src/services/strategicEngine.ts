@@ -374,7 +374,7 @@ export class StrategicEngine {
         
         // Check lags from 0 to 14 days
         for (let lag = 0; lag <= 14; lag += 7) {
-          let score = this.calculateLaggedPearson(dailySpend, dates, catA, catB, lag);
+          const score = this.calculateLaggedPearson(dailySpend, dates, catA, catB, lag);
           if (score > 0.6) {
              results.push({ a: catA, b: catB, score, lag });
           }

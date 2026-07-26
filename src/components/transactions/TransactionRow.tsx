@@ -130,7 +130,7 @@ const TransactionRow = React.memo(({
           isCompactMode && "px-1 text-[9px]",
           isFocused && focusedField === 'date' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
         )}>
-          {format(new Date(displayTx.date), 'dd MMM yyyy')}
+          {displayTx.date ? format(new Date(displayTx.date), 'dd MMM yyyy') : 'N/A'}
         </div>
         <div className={cn(
           "px-4 font-bold text-[var(--text)] transition-colors text-xs h-full flex flex-col justify-center relative border-r border-[var(--line)]/50 group-hover/active:text-white", 

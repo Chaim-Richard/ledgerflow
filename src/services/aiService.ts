@@ -158,6 +158,15 @@ class AIService {
     }
   }
 
+  async parseMagicEntry(input: string, categories: string[] = [], accounts: any[] = [], projects: string[] = [], patternContext: string = "") {
+    try {
+      return await this.callBackend('parse-magic-entry', { input, categories, accounts, projects, patternContext });
+    } catch (e) {
+      console.error("Magic Entry AI failed", e);
+      return null;
+    }
+  }
+
   async parseReceipt(file: File, userApiKey?: string, heuristicCache?: Record<string, any>, labels: string[] = []) {
     const base64Data = await new Promise<string>((resolve) => {
       const reader = new FileReader();

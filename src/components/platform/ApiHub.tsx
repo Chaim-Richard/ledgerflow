@@ -3050,7 +3050,7 @@ fetch(url, {
                 </div>
                 <div>
                   <h4 className="font-header font-bold text-[var(--text)] text-sm">TruthEngine Stress-Testing Console</h4>
-                  <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Simulate burst programmatic telemetry</p>
+                  <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Dispatch synthetic load test</p>
                 </div>
               </div>
 

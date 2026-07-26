@@ -165,9 +165,9 @@ export function predictHoltWinters(
     const betas = [0.05, 0.1, 0.2, 0.3];
     const gammas = [0.1, 0.3, 0.5, 0.7, 0.9];
 
-    for (let a of alphas) {
-      for (let b of betas) {
-        for (let g of gammas) {
+    for (const a of alphas) {
+      for (const b of betas) {
+        for (const g of gammas) {
           const err = evaluateHoltWintersMSE(data, period, a, b, g);
           if (err < bestError) {
             bestError = err;
@@ -800,9 +800,9 @@ export function kMeans(data: { x: number, y: number, id: string }[], k: number, 
   centroids.push({ x: data[Math.floor(defaultRandom() * data.length)].x, y: data[Math.floor(defaultRandom() * data.length)].y });
 
   for (let i = 1; i < k; i++) {
-    let distances = data.map(d => {
+    const distances = data.map(d => {
       let minDist = Infinity;
-      for (let c of centroids) {
+      for (const c of centroids) {
         const dist = (d.x - c.x)**2 + (d.y - c.y)**2;
         if (dist < minDist) minDist = dist;
       }
@@ -822,7 +822,7 @@ export function kMeans(data: { x: number, y: number, id: string }[], k: number, 
     centroids.push({ x: data[index].x, y: data[index].y });
   }
 
-  let assignments = new Array(data.length).fill(-1);
+  const assignments = new Array(data.length).fill(-1);
 
   for (let iter = 0; iter < iterations; iter++) {
     let changed = false;
@@ -891,7 +891,7 @@ export function sha256Sync(ascii: string): string {
   
   const asciiLength = ascii.length;
   const words: number[] = [];
-  let asciiBitLength = asciiLength * 8;
+  const asciiBitLength = asciiLength * 8;
   
   words[asciiBitLength >>> 5] |= 0x80 << (24 - (asciiBitLength & 31));
   words[(((asciiBitLength + 64) >>> 9) << 4) + 15] = asciiBitLength;

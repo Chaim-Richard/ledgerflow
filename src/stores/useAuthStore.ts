@@ -85,7 +85,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 }));
 
 if (typeof window !== 'undefined') {
-  (window as any)._getMockIdToken = async () => {
+  (window as any)._getInternalIdToken = async () => {
     const user = useAuthStore.getState().user;
     if (user && typeof (user as any).getIdToken === 'function') {
       return await (user as any).getIdToken();

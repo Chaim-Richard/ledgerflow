@@ -9,7 +9,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { IntentResolver } from '../../lib/intentResolver';
+import { aiService } from '../../services/aiService';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
@@ -40,11 +40,13 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
     setIsProcessing(true);
     try {
       const { accounts, transactions } = useLedgerStore.getState();
-      const criteria = IntentResolver.resolve(
+      const resolved = await aiService.parseQuery(
         query, 
+        businessContext, 
         accounts.map(a => a.name), 
         transactions.map(t => t.project).filter((v, i, a) => v && a.indexOf(v) === i) as string[]
       );
+      const criteria = resolved || {};
       
       const filter: any = {};
       if (criteria.category) filter.category = criteria.category;

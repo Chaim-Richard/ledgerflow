@@ -192,11 +192,11 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   setPrivacyMode: (active) => set({ isPrivacyMode: active }),
 
   recomputeBalances: () => {
-    if ((window as any)._recomputeTimer) {
-      clearTimeout((window as any)._recomputeTimer);
-    }
-    
-    (window as any)._recomputeTimer = setTimeout(() => {
+    if (typeof window !== 'undefined') {
+      if ((window as any)._recomputeTimer) {
+        clearTimeout((window as any)._recomputeTimer);
+      }
+      (window as any)._recomputeTimer = setTimeout(() => {
       const { accounts, transactions, journalEntries, computedAccounts: currentComputed } = get();
       if (!accounts.length) return;
 
@@ -207,7 +207,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       const nextComputedAccounts = accounts.map((acc, idx) => {
         const data = balances.get(acc.id);
         const signedBalance = data?.total || 0;
-        const isDebit = acc.type === 'asset' || acc.type === 'expense';
+        const isDebit = acc.type === 'asset' || acc.type === 'expense' || acc.type === 'cost_of_goods';
         const balance = isDebit ? signedBalance : -signedBalance;
         
         if (isDebit) totalBal += balance;
@@ -237,7 +237,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           totalLedgerBalance: totalBal
         });
       }
-    }, 10);
+      }, 10);
+    }
   },
 
   commitTransaction: (tx) => { 
@@ -314,7 +315,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       const formattedDelta = `$${(drift / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       const { auditLogs } = get();
       const driftLog = {
-        id: `drift_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        id: crypto.randomUUID(),
         action: `PHYSICAL_INTEGRITY_DRIFT: Balance Delta is ${formattedDelta} [Shadow: $${(integrity.totalBalance / 100).toFixed(2)} · Incremental: $${(runningBalances.totalBalance / 100).toFixed(2)}]`,
         entityType: 'system',
         entityId: 'SHADOW_RECONCILER',

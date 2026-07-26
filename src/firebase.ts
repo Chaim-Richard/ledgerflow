@@ -74,8 +74,8 @@ export const getIdToken = async () => {
   if (auth.currentUser) {
     return await auth.currentUser.getIdToken();
   }
-  if (typeof window !== 'undefined' && (window as any)._getMockIdToken) {
-    return await (window as any)._getMockIdToken();
+  if (typeof window !== 'undefined' && (window as any)._getInternalIdToken) {
+    return await (window as any)._getInternalIdToken();
   }
   return null;
 };

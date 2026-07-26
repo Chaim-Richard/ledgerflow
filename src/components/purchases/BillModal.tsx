@@ -19,13 +19,13 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   const safeVendors = Array.isArray(vendors) ? vendors : [];
   const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'expense') : [];
 
-  const [bill, setBill] = useState<Partial<Bill>>({
+  const [bill, setBill] = useState<Partial<Bill>>(() => ({
     number: `BILL-${Date.now().toString().slice(-6)}`,
     date: format(new Date(), 'yyyy-MM-dd'),
     dueDate: format(new Date(), 'yyyy-MM-dd'),
     status: 'pending',
     amountCents: 0
-  });
+  }));
 
   const [splits, setSplits] = useState<Array<{ amountCents: number, accountId: string, description: string }>>([
     { amountCents: 0, accountId: '', description: '' }

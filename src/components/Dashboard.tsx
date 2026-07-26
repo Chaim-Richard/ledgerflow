@@ -66,9 +66,9 @@ export default function Dashboard() {
         }
       } else if (acc.type === 'liability') {
         totalLiabilities += bal;
-      } else if (acc.type === 'income') {
+      } else if ((acc.type === 'income' || acc.type === 'revenue')) {
         totalRevenue += Math.abs(bal);
-      } else if (acc.type === 'expense') {
+      } else if ((acc.type === 'expense' || acc.type === 'cost_of_goods')) {
         totalExpenses += Math.abs(bal);
       }
     });

@@ -178,7 +178,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       }
 
       // Step C: Process remaining using fast mathematical model fallback (Bypassing LLMs for speed and strict deterministic mapping)
-      let aiMapped: any[] = [];
+      const aiMapped: any[] = [];
       if (outstandingForAI.length > 0) {
         outstandingForAI.forEach(t => {
           const dbg = localEngine.debugResolveCategory(t.description);

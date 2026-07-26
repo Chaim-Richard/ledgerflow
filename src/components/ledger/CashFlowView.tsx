@@ -108,7 +108,7 @@ export default function CashFlowView() {
           const isCashInflow = line.amountCents < 0; 
           const moneyFlow = isCashInflow ? absoluteAmount : -absoluteAmount;
 
-          if (acc.type === 'income' || acc.type === 'expense') {
+          if ((acc.type === 'income' || acc.type === 'revenue') || (acc.type === 'expense' || acc.type === 'cost_of_goods')) {
             data.operating.total += moneyFlow;
             isCashInflow ? data.operating.inflow += absoluteAmount : data.operating.outflow += absoluteAmount;
           } else if (acc.type === 'asset') {

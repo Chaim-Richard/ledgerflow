@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { aiService } from '../../services/aiService';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import { parseNaturalLanguageEntry } from '../../lib/algorithms/nl-parser';
-import { Check, Wand2, Receipt, Camera, X } from 'lucide-react';
+import { Check, Wand2, Receipt, Camera, X, Loader2 } from 'lucide-react';
 import { parseReceiptOCR } from '../../lib/algorithms/receipt-capture';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { toast } from 'sonner';
 import { getLocalDateISO } from '../../lib/utils';
 
 export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
+  const [isAiParsing, setIsAiParsing] = useState(false);
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<any>(null);
   const [receiptMode, setReceiptMode] = useState(false);
-  const { handleQuickAdd } = useTransactionActions();
+  const { handleQuickAdd, handleParseReceipt } = useTransactionActions();
 
   // If isOpen is provided and is false, don't render. If undefined, render full page.
   if (isOpen === false) return null;
@@ -18,34 +21,51 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
 
   const handleParse = (val: string) => {
     setText(val);
-    if (val.length > 5) {
-      const result = parseNaturalLanguageEntry(val);
-      setParsed(result);
-    } else {
+    if (val.length < 5) {
       setParsed(null);
     }
   };
 
-  const handleSimulateReceipt = () => {
-    const mockOCR = [
-        "HOME DEPOT 123",
-        "04/15/2026 14:23",
-        "HAMMER      12.99",
-        "SUBTOTAL    12.99",
-        "TAX          1.52",
-        "TOTAL      $14.51",
-        "VISA **** 1234"
-    ];
-    const result = parseReceiptOCR(mockOCR, ['Home Depot', 'Staples']);
-    setParsed({
-      action: 'expense',
-      amount: result.totalCents,
-      description: result.merchant,
-      method: 'Card',
-      dateStr: result.dateStr || getLocalDateISO()
-    });
-    setReceiptMode(true);
-    setText('Snapped: Home Depot receipt');
+  useEffect(() => {
+    if (text.length < 5) return;
+    const timer = setTimeout(async () => {
+      setIsAiParsing(true);
+      try {
+        const { accounts, projects } = useLedgerStore.getState();
+        const catNames = accounts.map(a => a.name);
+        const projNames = projects.map(p => p.name) || [];
+        const resultArr = await aiService.parseMagicEntry(text, catNames, accounts, projNames);
+        if (resultArr && resultArr.length > 0) {
+          const r = resultArr[0];
+          setParsed({
+            action: r.amountCents < 0 ? 'expense' : 'revenue',
+            amount: Math.abs(r.amountCents),
+            description: r.description,
+            method: r.dimensions?.account || 'Default',
+            dateStr: r.date
+          });
+        } else {
+          const fallback = parseNaturalLanguageEntry(text);
+          setParsed(fallback);
+        }
+      } catch (e) {
+        const fallback = parseNaturalLanguageEntry(text);
+        setParsed(fallback);
+      } finally {
+        setIsAiParsing(false);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [text]);
+
+  const handleUploadReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Call it normally as a hook if we can, but since this is inside a component, we can destructure it at the top level.
+    if (handleParseReceipt) {
+      await handleParseReceipt(file);
+      if (onClose) onClose();
+    }
   };
 
   const handleSave = async () => {
@@ -87,13 +107,11 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
           value={text}
           onChange={(e) => handleParse(e.target.value)}
         />
-        <Wand2 className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--brass)] w-5 h-5" />
-        <button 
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] px-3 py-2 rounded-lg font-medium text-sm flex items-center transition-colors"
-          onClick={handleSimulateReceipt}
-        >
+        {isAiParsing ? <Loader2 className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--brass)] w-5 h-5 animate-spin" /> : <Wand2 className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--brass)] w-5 h-5" />}
+        <label className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] px-3 py-2 rounded-lg font-medium text-sm flex items-center transition-colors cursor-pointer">
           <Camera className="w-4 h-4 mr-2" /> Snap Receipt
-        </button>
+          <input type="file" accept="image/*" className="hidden" onChange={handleUploadReceipt} />
+        </label>
       </div>
 
       {parsed && (

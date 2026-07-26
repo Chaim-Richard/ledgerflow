@@ -9,8 +9,9 @@ export class BenfordsLawEngine {
 
     for (const num of numbers) {
       const absNum = Math.abs(num);
-      if (absNum >= 1) {
-        const firstDigit = parseInt(absNum.toString().charAt(0), 10);
+      let strNum = absNum.toString().replace(/[^1-9]/g, '');
+      if (strNum.length > 0) {
+        const firstDigit = parseInt(strNum.charAt(0), 10);
         if (firstDigit >= 1 && firstDigit <= 9) {
           counts[firstDigit]++;
           totalValid++;

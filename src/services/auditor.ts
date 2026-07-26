@@ -48,7 +48,7 @@ export const DoubleEntryAuditor = {
     // O(N log N) mapped sort (Schwartzian transform) to prevent millions of native Date parses on 50,000+ inputs
     const chronosTxs = transactions
       .map(t => ({ t, time: t.createdAt ? new Date(t.createdAt).getTime() : (t.date ? new Date(t.date).getTime() : 0) }))
-      .sort((a, b) => a.time - b.time)
+      .sort((a, b) => { if (a.time !== b.time) return a.time - b.time; return (a.t && b.t && a.t.id && b.t.id) ? a.t.id.localeCompare(b.t.id) : 0; })
       .map(item => item.t);
 
     // Optimized Duplicate Detection using Bucketing
@@ -142,8 +142,8 @@ export const DoubleEntryAuditor = {
         imbalances.push({ id: entry.id, type: 'journal', diff });
       }
 
-      totalDebits += entryDebit;
-      totalCredits += entryCredit;
+      totalDebits += Math.round(entryDebit * 100);
+      totalCredits += Math.round(entryCredit * 100);
     });
 
     // 3. Construct Merkle Root of Trust
@@ -189,7 +189,7 @@ export const DoubleEntryAuditor = {
   repairChain: (transactions: Transaction[]): Transaction[] => {
     const sorted = transactions
       .map(tx => ({ tx, time: tx.createdAt ? new Date(tx.createdAt).getTime() : (tx.date ? new Date(tx.date).getTime() : 0) }))
-      .sort((a, b) => a.time - b.time)
+      .sort((a, b) => { if (a.time !== b.time) return a.time - b.time; return (a.tx && b.tx && a.tx.id && b.tx.id) ? a.tx.id.localeCompare(b.tx.id) : 0; })
       .map(item => item.tx);
     let lastHash = 'genesis';
     

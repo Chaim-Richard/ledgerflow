@@ -926,7 +926,7 @@ export default function SystemCommandCenter() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Simulated Queries per Month</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Load-Test Queries per Month</span>
                     <span className="text-xs font-mono font-black text-[#0047AB]">{simulatedQueries.toLocaleString()} / mo</span>
                   </div>
                   <input
@@ -1594,7 +1594,7 @@ export default function SystemCommandCenter() {
                 <h3 className="text-sm font-black uppercase tracking-wider text-pink-400">Stress Test Injector</h3>
               </div>
               <p className="text-[10px] text-white/50 uppercase font-black mb-4 leading-relaxed">
-                Manually dispatch simulated requests to visualize real-time error piping, quota exception handling, and diagnostic reporting on the dashboard.
+                Manually dispatch synthetic test requests to visualize real-time error piping, quota exception handling, and diagnostic reporting on the dashboard.
               </p>
               <div className="flex flex-col gap-2">
                 <button

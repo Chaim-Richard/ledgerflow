@@ -14,7 +14,7 @@ export class LedgerEngine {
     
     // Initialize map
     accounts.forEach(acc => {
-      const isDebit = acc.type === 'asset' || acc.type === 'expense';
+      const isDebit = acc.type === 'asset' || acc.type === 'expense' || acc.type === 'cost_of_goods';
       const opening = acc.openingBalanceCents || 0;
       balances.set(acc.id, { total: isDebit ? opening : -opening, projects: new Map() });
     });
@@ -101,8 +101,8 @@ export class LedgerEngine {
             const accId = typeof line.accountId === 'string' ? line.accountId : '';
             const accData = balances.get(accId);
             if (accData) {
-              const debit = typeof line.debit === 'number' && Number.isSafeInteger(line.debit) ? line.debit : 0;
-              const credit = typeof line.credit === 'number' && Number.isSafeInteger(line.credit) ? line.credit : 0;
+              const debit = typeof line.debit === 'number' ? Math.round(line.debit * 100) : 0;
+              const credit = typeof line.credit === 'number' ? Math.round(line.credit * 100) : 0;
               accData.total += debit - credit;
             }
           });

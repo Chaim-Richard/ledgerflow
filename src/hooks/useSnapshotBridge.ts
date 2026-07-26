@@ -20,7 +20,7 @@ export function useSnapshotBridge() {
         totalIncome: balances.totalIncome.toString(),
         totalExpense: balances.totalExpense.toString(),
         totalBalance: balances.totalBalance.toString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(), uid: user.uid, workspaceId: currentWorkspaceId
       }, currentWorkspaceId).catch(console.error);
     }, 10000); // 10 second debounce to minimize writes
 
