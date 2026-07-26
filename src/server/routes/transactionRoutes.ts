@@ -251,6 +251,91 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
   }
 });
 
+transactionRouter.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const workspaceId = (req.query.workspaceId as string) || (req.body?.workspaceId as string);
+    const user = (req as any).user;
+    const db = getFirestore();
+    const txRef = db.collection('transactions').doc(id);
+    const doc = await txRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+    const data = doc.data();
+    const wsId = workspaceId || data?.workspaceId;
+    const wsDoc = await db.collection('workspaces').doc(wsId).get();
+    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+    await txRef.delete();
+    res.json({ status: 'ok' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// A bulk creation endpoint for atomic multiple postings
+transactionRouter.post('/bulk', async (req, res) => {
+  try {
+    const { transactions, workspaceId } = req.body;
+    const user = (req as any).user;
+    const db = getFirestore();
+    const wsId = workspaceId || transactions?.[0]?.workspaceId;
+    if (!wsId) return res.status(400).json({ error: 'Missing workspaceId' });
+
+    const wsDoc = await db.collection('workspaces').doc(wsId).get();
+    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+
+    if (!Array.isArray(transactions) || transactions.length === 0) {
+      return res.json({ status: 'ok', count: 0 });
+    }
+
+    // Validate double entry for each transaction
+    for (const tx of transactions) {
+      tx.uid = user.uid;
+      tx.workspaceId = wsId;
+      DoubleEntryValidator.validateJournalEntry(tx);
+    }
+
+    await db.runTransaction(async (t: any) => {
+      for (const tx of transactions) {
+        if (!tx.id) tx.id = db.collection('transactions').doc().id;
+        if (!tx.totalAmountCents) {
+          const debitSum = (tx.lines || [])
+            .filter((l: any) => (l.amountCents || 0) > 0)
+            .reduce((sum: number, l: any) => sum + (l.amountCents || 0), 0);
+          tx.totalAmountCents = debitSum || Math.abs(tx.lines?.[0]?.amountCents || 0);
+        }
+
+        const txRef = db.collection('transactions').doc(tx.id);
+        t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+
+        (tx.lines || []).forEach((line: any, index: number) => {
+          const eventRef = db.collection('journalEntries').doc(`${tx.id}-line-${index}`);
+          t.set(eventRef, {
+            id: eventRef.id,
+            timestamp: new Date().toISOString(),
+            accountId: line.accountId,
+            amountCents: line.amountCents,
+            eventType: 'ACTUAL',
+            transactionId: tx.id,
+            workspaceId: wsId,
+            description: line.description || tx.description
+          });
+        });
+      }
+    });
+
+    res.json({ status: 'ok', count: transactions.length });
+  } catch (e: any) {
+    console.error('[BULK TRANSACTIONS ERROR]', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
 // A batch endpoint for mass updates
 transactionRouter.post('/batch', async (req, res) => {
    try {

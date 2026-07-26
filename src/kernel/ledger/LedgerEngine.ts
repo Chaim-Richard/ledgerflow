@@ -64,17 +64,25 @@ export class LedgerEngine {
               accData.total += amount;
               
               if (line.splitAllocations && Array.isArray(line.splitAllocations) && line.splitAllocations.length > 0) {
+                const allocs = line.splitAllocations;
                 let allocatedSum = 0;
-                line.splitAllocations.forEach((alloc, idx) => {
-                  const proj = alloc.dimensions?.project || alloc.dimensions?.projectId;
+                const calculatedAmounts: number[] = [];
+
+                allocs.forEach((alloc, idx) => {
+                  let allocAmount = 0;
+                  if (idx === allocs.length - 1) {
+                    allocAmount = amount - allocatedSum;
+                  } else {
+                    allocAmount = Math.round(amount * (alloc.weight || 0));
+                    allocatedSum += allocAmount;
+                  }
+                  calculatedAmounts.push(allocAmount);
+                });
+
+                allocs.forEach((alloc, idx) => {
+                  const allocAmount = calculatedAmounts[idx];
+                  const proj = alloc.dimensions?.project || alloc.dimensions?.projectId || alloc.dimensions?.property || alloc.dimensions?.world || alloc.dimensions?.classId;
                   if (proj) {
-                    let allocAmount = 0;
-                    if (idx === line.splitAllocations!.length - 1) {
-                      allocAmount = amount - allocatedSum;
-                    } else {
-                      allocAmount = Math.round(amount * (alloc.weight || 0));
-                      allocatedSum += allocAmount;
-                    }
                     accData.projects.set(proj, (accData.projects.get(proj) || 0) + allocAmount);
                   }
                 });

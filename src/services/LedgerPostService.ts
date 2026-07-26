@@ -1,74 +1,151 @@
-import { 
-  collection, 
-  getDocs, 
-  query, 
-  where, 
-  addDoc, 
-  deleteDoc, 
-  doc, 
-  updateDoc 
-} from 'firebase/firestore';
-import { db } from '../firebase';
-import { getLocalDateISO } from '../lib/utils';
+import { getIdToken } from '../firebase';
+import { getLocalDateISO, financialRound } from '../lib/utils';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { useAuthStore } from '../stores/useAuthStore';
+import { ChartAccount } from '../types';
 
 export class LedgerPostService {
   /**
-   * Post standard double-entry journal entries for an invoice to keep GL and A/R in sync.
+   * Period Lock Guard
+   */
+  private static verifyLockDate(dateStr: string) {
+    if (!dateStr) return;
+    const lockDate = useLedgerStore.getState().lockDate;
+    if (lockDate && dateStr <= lockDate) {
+      throw new Error(`Period is locked on or before ${lockDate}. Cannot post or modify transaction on ${dateStr}.`);
+    }
+  }
+
+  /**
+   * Resolve specific accounts using workspace mappings first, then CHART fallbacks, or throw loudly.
+   */
+  private static resolveAccount(
+    accounts: ChartAccount[],
+    workspaceMappings: Record<string, string>,
+    keys: string[],
+    predicate: (a: ChartAccount) => boolean,
+    errorName: string
+  ): { id: string; name: string } {
+    // 1. Workspace default mappings check
+    for (const key of keys) {
+      const mappedId = workspaceMappings[key.toLowerCase()];
+      if (mappedId) {
+        const acc = accounts.find(a => a.id === mappedId);
+        if (acc) return { id: acc.id, name: acc.name };
+      }
+    }
+
+    // 2. Search chart of accounts predicate
+    const found = accounts.find(predicate);
+    if (found) return { id: found.id, name: found.name };
+
+    // 3. Fail loudly instead of using fake fallback IDs
+    throw new Error(`Missing ${errorName} account. Please set up a ${errorName} account in Chart of Accounts or Workspace Settings.`);
+  }
+
+  /**
+   * Post standard double-entry journal entries for an invoice.
+   * Reverses prior postings instead of deleting them.
    */
   static async postInvoiceLedger(invoiceId: string, invoiceData: any, workspaceId: string, uid: string) {
     if (!workspaceId || !invoiceId) return;
 
-    // 1. Fetch current accounts to find standard AR, Revenue, Cash accounts
+    const invoiceDate = invoiceData.date || getLocalDateISO();
+    this.verifyLockDate(invoiceDate);
+
     const accounts = useLedgerStore.getState().accounts;
-    
-    const arAccount = accounts.find(a => a.type === 'asset' && (a.category === 'Receivables' || a.name.toLowerCase().includes('receivable'))) || {
-      id: 'ar_fallback',
-      name: 'Accounts Receivable'
-    };
+    const workspaces = useAuthStore.getState().workspaces;
+    const currentWs = workspaces.find(w => w.id === workspaceId);
+    const mappings = currentWs?.defaultAccountMappings || {};
 
-    const revenueAccount = accounts.find(a => a.type === 'income') || {
-      id: 'revenue_fallback',
-      name: 'Sales Revenue'
-    };
-
-    const cashAccount = accounts.find(a => a.type === 'asset' && (a.category === 'Cash' || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('checking'))) || {
-      id: 'cash_fallback',
-      name: 'Cash & Cash Equivalents'
-    };
-
-    // 2. Clear existing ledger transactions for this invoice to prevent duplication
-    const q = query(
-      collection(db, 'transactions'),
-      where('workspaceId', '==', workspaceId),
-      where('metadata.invoiceId', '==', invoiceId)
+    const arAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['ar', 'accounts receivable', 'receivables', 'receivable'],
+      a => a.type === 'asset' && (a.category === 'Receivables' || a.name.toLowerCase().includes('receivable') || a.code === '1100'),
+      'Accounts Receivable (A/R)'
     );
-    const snap = await getDocs(q);
-    for (const d of snap.docs) {
-      await deleteDoc(doc(db, 'transactions', d.id));
+
+    const revenueAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['revenue', 'sales', 'income'],
+      a => a.type === 'income' || a.category === 'Revenue' || a.category === 'Sales',
+      'Sales Revenue'
+    );
+
+    const cashAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['cash', 'bank', 'checking'],
+      a => a.type === 'asset' && (a.category === 'Cash' || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('checking') || a.code === '1000'),
+      'Cash & Cash Equivalents'
+    );
+
+    // Find prior active non-reversal postings for this invoice to generate reversing entries
+    const existingTxs = useLedgerStore.getState().transactions.filter(t => 
+      t.metadata?.invoiceId === invoiceId && 
+      t.status !== 'void' && 
+      !t.metadata?.isReversal
+    );
+
+    const txsToPost: any[] = [];
+    const today = getLocalDateISO();
+
+    // 1. Reversing entries for existing postings
+    for (const prevTx of existingTxs) {
+      txsToPost.push({
+        uid,
+        workspaceId,
+        date: today,
+        description: `Reversal of prior invoice posting (Invoice ${invoiceData.number || invoiceId})`,
+        totalAmountCents: prevTx.totalAmountCents,
+        currency: prevTx.currency || 'USD',
+        exchangeRate: prevTx.exchangeRate || 1,
+        status: 'completed',
+        type: 'actual',
+        createdAt: new Date().toISOString(),
+        metadata: {
+          invoiceId,
+          type: 'invoice-reversal',
+          reversesTxId: prevTx.id,
+          isReversal: true
+        },
+        lines: (prevTx.lines || []).map((l: any) => ({
+          ...l,
+          amountCents: -l.amountCents,
+          description: `Reversal: ${l.description || prevTx.description}`,
+          exchangeRate: l.exchangeRate || prevTx.exchangeRate || 1
+        }))
+      });
     }
 
     const status = invoiceData.status || 'pending';
     if (status === 'draft' || status === 'rejected') {
-      // Drafts/rejected invoices do not post to the general ledger
+      // If setting to draft or rejected, reversing prior postings (if any) is sufficient
+      if (txsToPost.length > 0) {
+        await this.postTxsServerApi(txsToPost, workspaceId);
+      }
       return;
     }
 
-    const amount = invoiceData.totalCents || invoiceData.amountCents || 0;
+    const rawAmount = invoiceData.totalCents || invoiceData.amountCents || 0;
+    const amount = financialRound(rawAmount);
     if (amount <= 0) return;
 
-    const date = invoiceData.date || getLocalDateISO();
+    const rate = invoiceData.exchangeRate || 1;
     const invoiceNum = invoiceData.number || invoiceId;
     const customer = invoiceData.customerName || 'Customer';
 
-    // Transaction 1: Accrual Posting (DR A/R, CR Revenue)
+    // 2. Transaction 1: Accrual Posting (DR A/R, CR Revenue)
     const accrualTx = {
       uid,
       workspaceId,
-      date,
+      date: invoiceDate,
       description: `Invoice ${invoiceNum} - ${customer}`,
       totalAmountCents: amount,
       currency: invoiceData.currency || 'USD',
+      exchangeRate: rate,
       status: 'completed',
       type: 'actual',
       createdAt: new Date().toISOString(),
@@ -81,61 +158,72 @@ export class LedgerPostService {
           accountId: arAccount.id,
           accountName: arAccount.name,
           amountCents: amount, // Debit (positive)
-          description: `Accounts Receivable posting for Invoice ${invoiceNum}`
+          description: `Accounts Receivable posting for Invoice ${invoiceNum}`,
+          exchangeRate: rate
         },
         {
           accountId: revenueAccount.id,
           accountName: revenueAccount.name,
           amountCents: -amount, // Credit (negative)
-          description: `Revenue posting for Invoice ${invoiceNum}`
+          description: `Revenue posting for Invoice ${invoiceNum}`,
+          exchangeRate: rate
         }
       ]
     };
-    await addDoc(collection(db, 'transactions'), accrualTx);
+    txsToPost.push(accrualTx);
 
-    // Transaction 2: Payment Posting (DR Cash, CR A/R)
-    if (status === 'paid') {
-      const paymentTx = {
-        uid,
-        workspaceId,
-        date: getLocalDateISO(),
-        description: `Payment Received for Invoice ${invoiceNum} - ${customer}`,
-        totalAmountCents: amount,
-        currency: invoiceData.currency || 'USD',
-        status: 'completed',
-        type: 'actual',
-        createdAt: new Date().toISOString(),
-        metadata: {
-          invoiceId,
-          type: 'invoice-payment'
-        },
-        lines: [
-          {
-            accountId: cashAccount.id,
-            accountName: cashAccount.name,
-            amountCents: amount, // Debit (positive)
-            description: `Cash collection for Invoice ${invoiceNum}`
+    // 3. Transaction 2: Payment Posting (DR Cash, CR A/R)
+    if (status === 'paid' || status === 'partially_paid') {
+      const paidAmtCents = financialRound(invoiceData.amountPaidCents || invoiceData.paidAmountCents || (status === 'paid' ? amount : 0));
+      if (paidAmtCents > 0) {
+        const paymentDate = invoiceData.paymentDate || invoiceData.paidAt || today;
+        const paymentTx = {
+          uid,
+          workspaceId,
+          date: paymentDate,
+          description: `Payment Received for Invoice ${invoiceNum} - ${customer}`,
+          totalAmountCents: paidAmtCents,
+          currency: invoiceData.currency || 'USD',
+          exchangeRate: rate,
+          status: 'completed',
+          type: 'actual',
+          createdAt: new Date().toISOString(),
+          metadata: {
+            invoiceId,
+            type: 'invoice-payment'
           },
-          {
-            accountId: arAccount.id,
-            accountName: arAccount.name,
-            amountCents: -amount, // Credit (negative)
-            description: `A/R clearance for Invoice ${invoiceNum}`
-          }
-        ]
-      };
-      await addDoc(collection(db, 'transactions'), paymentTx);
+          lines: [
+            {
+              accountId: cashAccount.id,
+              accountName: cashAccount.name,
+              amountCents: paidAmtCents, // Debit
+              description: `Cash collection for Invoice ${invoiceNum}`,
+              exchangeRate: rate
+            },
+            {
+              accountId: arAccount.id,
+              accountName: arAccount.name,
+              amountCents: -paidAmtCents, // Credit
+              description: `A/R clearance for Invoice ${invoiceNum}`,
+              exchangeRate: rate
+            }
+          ]
+        };
+        txsToPost.push(paymentTx);
+      }
     }
 
-    // Transaction 3: Reversing Entry if Voided (DR Revenue, CR A/R)
+    // 4. Transaction 3: Reversing Entry if Voided (DR Revenue, CR A/R)
     if (status === 'void') {
+      const voidDate = invoiceData.voidDate || invoiceData.voidedAt || today;
       const voidTx = {
         uid,
         workspaceId,
-        date: getLocalDateISO(),
+        date: voidDate,
         description: `Void Reversing Entry - Invoice ${invoiceNum}`,
         totalAmountCents: amount,
         currency: invoiceData.currency || 'USD',
+        exchangeRate: rate,
         status: 'completed',
         type: 'actual',
         createdAt: new Date().toISOString(),
@@ -147,76 +235,128 @@ export class LedgerPostService {
           {
             accountId: revenueAccount.id,
             accountName: revenueAccount.name,
-            amountCents: amount, // Debit (positive to reverse revenue)
-            description: `Revenue cancellation for voided Invoice ${invoiceNum}`
+            amountCents: amount, // Debit (reverses revenue)
+            description: `Revenue cancellation for voided Invoice ${invoiceNum}`,
+            exchangeRate: rate
           },
           {
             accountId: arAccount.id,
             accountName: arAccount.name,
-            amountCents: -amount, // Credit (negative to reverse A/R)
-            description: `A/R write-off for voided Invoice ${invoiceNum}`
+            amountCents: -amount, // Credit (reverses A/R)
+            description: `A/R write-off for voided Invoice ${invoiceNum}`,
+            exchangeRate: rate
           }
         ]
       };
-      await addDoc(collection(db, 'transactions'), voidTx);
+      txsToPost.push(voidTx);
     }
+
+    // Atomic post via Server API
+    await this.postTxsServerApi(txsToPost, workspaceId);
   }
 
   /**
-   * Post standard double-entry journal entries for a bill to keep GL and A/P in sync.
+   * Post standard double-entry journal entries for a bill.
+   * Reverses prior postings instead of deleting them.
    */
   static async postBillLedger(billId: string, billData: any, workspaceId: string, uid: string) {
     if (!workspaceId || !billId) return;
 
-    // 1. Fetch current accounts to find standard AP, Expense, Cash accounts
+    const billDate = billData.date || getLocalDateISO();
+    this.verifyLockDate(billDate);
+
     const accounts = useLedgerStore.getState().accounts;
+    const workspaces = useAuthStore.getState().workspaces;
+    const currentWs = workspaces.find(w => w.id === workspaceId);
+    const mappings = currentWs?.defaultAccountMappings || {};
 
-    const apAccount = accounts.find(a => a.type === 'liability' && (a.category === 'Payables' || a.name.toLowerCase().includes('payable'))) || {
-      id: 'ap_fallback',
-      name: 'Accounts Payable'
-    };
-
-    const expenseAccount = accounts.find(a => a.type === 'expense') || {
-      id: 'expense_fallback',
-      name: 'Operating Expense'
-    };
-
-    const cashAccount = accounts.find(a => a.type === 'asset' && (a.category === 'Cash' || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('checking'))) || {
-      id: 'cash_fallback',
-      name: 'Cash & Cash Equivalents'
-    };
-
-    // 2. Clear existing ledger transactions for this bill to prevent duplication
-    const q = query(
-      collection(db, 'transactions'),
-      where('workspaceId', '==', workspaceId),
-      where('metadata.billId', '==', billId)
+    const apAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['ap', 'accounts payable', 'payables', 'payable'],
+      a => a.type === 'liability' && (a.category === 'Payables' || a.name.toLowerCase().includes('payable') || a.code === '2000'),
+      'Accounts Payable (A/P)'
     );
-    const snap = await getDocs(q);
-    for (const d of snap.docs) {
-      await deleteDoc(doc(db, 'transactions', d.id));
+
+    const expenseAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['expense', 'operating expense'],
+      a => a.type === 'expense' || a.category === 'Expense',
+      'Operating Expense'
+    );
+
+    const cashAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['cash', 'bank', 'checking'],
+      a => a.type === 'asset' && (a.category === 'Cash' || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('checking') || a.code === '1000'),
+      'Cash & Cash Equivalents'
+    );
+
+    // Find prior active non-reversal postings for this bill
+    const existingTxs = useLedgerStore.getState().transactions.filter(t => 
+      t.metadata?.billId === billId && 
+      t.status !== 'void' && 
+      !t.metadata?.isReversal
+    );
+
+    const txsToPost: any[] = [];
+    const today = getLocalDateISO();
+
+    // 1. Reversing entries for existing postings
+    for (const prevTx of existingTxs) {
+      txsToPost.push({
+        uid,
+        workspaceId,
+        date: today,
+        description: `Reversal of prior bill posting (Bill ${billData.number || billId})`,
+        totalAmountCents: prevTx.totalAmountCents,
+        currency: prevTx.currency || 'USD',
+        exchangeRate: prevTx.exchangeRate || 1,
+        status: 'completed',
+        type: 'actual',
+        createdAt: new Date().toISOString(),
+        metadata: {
+          billId,
+          type: 'bill-reversal',
+          reversesTxId: prevTx.id,
+          isReversal: true
+        },
+        lines: (prevTx.lines || []).map((l: any) => ({
+          ...l,
+          amountCents: -l.amountCents,
+          description: `Reversal: ${l.description || prevTx.description}`,
+          exchangeRate: l.exchangeRate || prevTx.exchangeRate || 1
+        }))
+      });
     }
 
     const status = billData.status || 'pending';
     if (status === 'draft' || status === 'rejected') {
+      if (txsToPost.length > 0) {
+        await this.postTxsServerApi(txsToPost, workspaceId);
+      }
       return;
     }
 
-    const amount = billData.amountCents || 0;
+    const rawAmount = billData.amountCents || billData.totalCents || 0;
+    const amount = financialRound(rawAmount);
     if (amount <= 0) return;
 
-    const date = billData.date || getLocalDateISO();
+    const rate = billData.exchangeRate || 1;
     const billNum = billData.number || billId;
     const vendor = billData.vendorName || 'Vendor';
 
-    // Transaction 1: Accrual Posting (DR Expense, CR A/P)
+    // 2. Transaction 1: Accrual Posting (DR Expense, CR A/P)
     const accrualTx = {
       uid,
       workspaceId,
-      date,
+      date: billDate,
       description: `Bill ${billNum} - ${vendor}`,
       totalAmountCents: amount,
       currency: billData.currency || 'USD',
+      exchangeRate: rate,
       status: 'completed',
       type: 'actual',
       createdAt: new Date().toISOString(),
@@ -229,61 +369,72 @@ export class LedgerPostService {
           accountId: expenseAccount.id,
           accountName: expenseAccount.name,
           amountCents: amount, // Debit (positive)
-          description: `Expense posting for Bill ${billNum}`
+          description: `Expense posting for Bill ${billNum}`,
+          exchangeRate: rate
         },
         {
           accountId: apAccount.id,
           accountName: apAccount.name,
           amountCents: -amount, // Credit (negative)
-          description: `Accounts Payable posting for Bill ${billNum}`
+          description: `Accounts Payable posting for Bill ${billNum}`,
+          exchangeRate: rate
         }
       ]
     };
-    await addDoc(collection(db, 'transactions'), accrualTx);
+    txsToPost.push(accrualTx);
 
-    // Transaction 2: Payment Posting (DR A/P, CR Cash)
-    if (status === 'paid') {
-      const paymentTx = {
-        uid,
-        workspaceId,
-        date: getLocalDateISO(),
-        description: `Payment Sent for Bill ${billNum} - ${vendor}`,
-        totalAmountCents: amount,
-        currency: billData.currency || 'USD',
-        status: 'completed',
-        type: 'actual',
-        createdAt: new Date().toISOString(),
-        metadata: {
-          billId,
-          type: 'bill-payment'
-        },
-        lines: [
-          {
-            accountId: apAccount.id,
-            accountName: apAccount.name,
-            amountCents: amount, // Debit (positive)
-            description: `Accounts Payable clearance for Bill ${billNum}`
+    // 3. Transaction 2: Payment Posting (DR A/P, CR Cash)
+    if (status === 'paid' || status === 'partially_paid') {
+      const paidAmtCents = financialRound(billData.amountPaidCents || billData.paidAmountCents || (status === 'paid' ? amount : 0));
+      if (paidAmtCents > 0) {
+        const paymentDate = billData.paymentDate || billData.paidAt || today;
+        const paymentTx = {
+          uid,
+          workspaceId,
+          date: paymentDate,
+          description: `Payment Sent for Bill ${billNum} - ${vendor}`,
+          totalAmountCents: paidAmtCents,
+          currency: billData.currency || 'USD',
+          exchangeRate: rate,
+          status: 'completed',
+          type: 'actual',
+          createdAt: new Date().toISOString(),
+          metadata: {
+            billId,
+            type: 'bill-payment'
           },
-          {
-            accountId: cashAccount.id,
-            accountName: cashAccount.name,
-            amountCents: -amount, // Credit (negative)
-            description: `Cash payment for Bill ${billNum}`
-          }
-        ]
-      };
-      await addDoc(collection(db, 'transactions'), paymentTx);
+          lines: [
+            {
+              accountId: apAccount.id,
+              accountName: apAccount.name,
+              amountCents: paidAmtCents, // Debit
+              description: `Accounts Payable clearance for Bill ${billNum}`,
+              exchangeRate: rate
+            },
+            {
+              accountId: cashAccount.id,
+              accountName: cashAccount.name,
+              amountCents: -paidAmtCents, // Credit
+              description: `Cash payment for Bill ${billNum}`,
+              exchangeRate: rate
+            }
+          ]
+        };
+        txsToPost.push(paymentTx);
+      }
     }
 
-    // Transaction 3: Reversing Entry if Voided (DR A/P, CR Expense)
+    // 4. Transaction 3: Reversing Entry if Voided (DR A/P, CR Expense)
     if (status === 'void' || status === 'cancelled') {
+      const voidDate = billData.voidDate || billData.voidedAt || today;
       const voidTx = {
         uid,
         workspaceId,
-        date: getLocalDateISO(),
+        date: voidDate,
         description: `Void Reversing Entry - Bill ${billNum}`,
         totalAmountCents: amount,
         currency: billData.currency || 'USD',
+        exchangeRate: rate,
         status: 'completed',
         type: 'actual',
         createdAt: new Date().toISOString(),
@@ -295,34 +446,97 @@ export class LedgerPostService {
           {
             accountId: apAccount.id,
             accountName: apAccount.name,
-            amountCents: amount, // Debit (positive to reverse A/P)
-            description: `A/P reversal for voided Bill ${billNum}`
+            amountCents: amount, // Debit (reverses A/P)
+            description: `A/P reversal for voided Bill ${billNum}`,
+            exchangeRate: rate
           },
           {
             accountId: expenseAccount.id,
             accountName: expenseAccount.name,
-            amountCents: -amount, // Credit (negative to reverse Expense)
-            description: `Expense reversal for voided Bill ${billNum}`
+            amountCents: -amount, // Credit (reverses Expense)
+            description: `Expense reversal for voided Bill ${billNum}`,
+            exchangeRate: rate
           }
         ]
       };
-      await addDoc(collection(db, 'transactions'), voidTx);
+      txsToPost.push(voidTx);
     }
+
+    // Atomic post via Server API
+    await this.postTxsServerApi(txsToPost, workspaceId);
   }
 
   /**
-   * Clean up all postings when invoice or bill is deleted.
+   * Reverse all postings when an invoice or bill is deleted.
    */
   static async deletePostings(id: string, keyName: 'invoiceId' | 'billId', workspaceId: string) {
     if (!workspaceId || !id) return;
-    const q = query(
-      collection(db, 'transactions'),
-      where('workspaceId', '==', workspaceId),
-      where(`metadata.${keyName}`, '==', id)
+
+    const existingTxs = useLedgerStore.getState().transactions.filter(t => 
+      t.metadata?.[keyName] === id && 
+      t.status !== 'void' && 
+      !t.metadata?.isReversal
     );
-    const snap = await getDocs(q);
-    for (const d of snap.docs) {
-      await deleteDoc(doc(db, 'transactions', d.id));
+
+    if (existingTxs.length === 0) return;
+
+    const today = getLocalDateISO();
+    const uid = useAuthStore.getState().user?.uid || 'system';
+
+    const reversals = existingTxs.map(prevTx => {
+      this.verifyLockDate(prevTx.date);
+      return {
+        uid,
+        workspaceId,
+        date: today,
+        description: `Reversal: ${prevTx.description}`,
+        totalAmountCents: prevTx.totalAmountCents,
+        currency: prevTx.currency || 'USD',
+        exchangeRate: prevTx.exchangeRate || 1,
+        status: 'completed',
+        type: 'actual',
+        createdAt: new Date().toISOString(),
+        metadata: {
+          [keyName]: id,
+          type: `${keyName}-deletion-reversal`,
+          reversesTxId: prevTx.id,
+          isReversal: true
+        },
+        lines: (prevTx.lines || []).map((l: any) => ({
+          ...l,
+          amountCents: -l.amountCents,
+          description: `Reversal: ${l.description || prevTx.description}`,
+          exchangeRate: l.exchangeRate || prevTx.exchangeRate || 1
+        }))
+      };
+    });
+
+    await this.postTxsServerApi(reversals, workspaceId);
+  }
+
+  /**
+   * Send transactions array to Server API endpoint (/api/v1/transactions/bulk) atomically.
+   */
+  private static async postTxsServerApi(txs: any[], workspaceId: string) {
+    if (!txs || txs.length === 0) return;
+
+    const token = await getIdToken();
+    const response = await fetch('/api/v1/transactions/bulk', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ transactions: txs, workspaceId })
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Server rejected transaction posting');
     }
+
+    // Immediately update client Zustand store state
+    const currentTxs = useLedgerStore.getState().transactions;
+    useLedgerStore.getState().setTransactions([...txs, ...currentTxs]);
   }
 }

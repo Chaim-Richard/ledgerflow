@@ -136,7 +136,24 @@ export class LedgerEngine {
           ? (line as any).exchangeRate
           : ((typeof tx.exchangeRate === 'number' && tx.exchangeRate > 0) ? tx.exchangeRate : 1);
         const convertedCents = Math.round((line.amountCents || 0) * rate);
-        processLine(line.accountId, convertedCents, line.project);
+        
+        if (line.splitAllocations && Array.isArray(line.splitAllocations) && line.splitAllocations.length > 0) {
+          const allocs = line.splitAllocations;
+          let allocatedSum = 0;
+          allocs.forEach((alloc, idx) => {
+            let allocCents = 0;
+            if (idx === allocs.length - 1) {
+              allocCents = convertedCents - allocatedSum;
+            } else {
+              allocCents = Math.round(convertedCents * (alloc.weight || 0));
+              allocatedSum += allocCents;
+            }
+            const proj = alloc.dimensions?.project || alloc.dimensions?.projectId || alloc.dimensions?.property || alloc.dimensions?.world || alloc.dimensions?.classId || line.project;
+            processLine(line.accountId, allocCents, proj);
+          });
+        } else {
+          processLine(line.accountId, convertedCents, line.project);
+        }
       }
     }
 
