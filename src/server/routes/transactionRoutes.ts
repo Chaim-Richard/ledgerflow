@@ -278,7 +278,7 @@ transactionRouter.delete('/:id', async (req, res) => {
 // A bulk creation endpoint for atomic multiple postings
 transactionRouter.post('/bulk', async (req, res) => {
   try {
-    const { transactions, workspaceId } = req.body;
+    const { transactions, workspaceId, entityMutation } = req.body;
     const user = (req as any).user;
     const db = getFirestore();
     const wsId = workspaceId || transactions?.[0]?.workspaceId;
@@ -289,19 +289,27 @@ transactionRouter.post('/bulk', async (req, res) => {
       return res.status(403).json({ error: 'Not a member' });
     }
 
-    if (!Array.isArray(transactions) || transactions.length === 0) {
+    if ((!Array.isArray(transactions) || transactions.length === 0) && !entityMutation) {
       return res.json({ status: 'ok', count: 0 });
     }
 
     // Validate double entry for each transaction
-    for (const tx of transactions) {
+    for (const tx of (transactions || [])) {
       tx.uid = user.uid;
       tx.workspaceId = wsId;
       DoubleEntryValidator.validateJournalEntry(tx);
     }
 
     await db.runTransaction(async (t: any) => {
-      for (const tx of transactions) {
+      if (entityMutation) {
+        const ref = db.collection(entityMutation.collection).doc(entityMutation.docId);
+        if (entityMutation.action === "create" || entityMutation.action === "update") {
+          t.set(ref, { ...entityMutation.data, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        } else if (entityMutation.action === "delete") {
+          t.delete(ref);
+        }
+      }
+      for (const tx of (transactions || [])) {
         if (!tx.id) tx.id = db.collection('transactions').doc().id;
         if (!tx.totalAmountCents) {
           const debitSum = (tx.lines || [])

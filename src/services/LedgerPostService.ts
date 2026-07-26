@@ -8,7 +8,7 @@ export class LedgerPostService {
   /**
    * Period Lock Guard
    */
-  private static verifyLockDate(dateStr: string) {
+  public static verifyLockDate(dateStr: string) {
     if (!dateStr) return;
     const lockDate = useLedgerStore.getState().lockDate;
     if (lockDate && dateStr <= lockDate) {
@@ -47,7 +47,7 @@ export class LedgerPostService {
    * Post standard double-entry journal entries for an invoice.
    * Reverses prior postings instead of deleting them.
    */
-  static async postInvoiceLedger(invoiceId: string, invoiceData: any, workspaceId: string, uid: string) {
+  static async postInvoiceLedger(invoiceId: string, invoiceData: any, workspaceId: string, uid: string, entityMutation?: any) {
     if (!workspaceId || !invoiceId) return;
 
     const invoiceDate = invoiceData.date || getLocalDateISO();
@@ -123,15 +123,15 @@ export class LedgerPostService {
     const status = invoiceData.status || 'pending';
     if (status === 'draft' || status === 'rejected') {
       // If setting to draft or rejected, reversing prior postings (if any) is sufficient
-      if (txsToPost.length > 0) {
-        await this.postTxsServerApi(txsToPost, workspaceId);
+      if (true) {
+        await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
       }
       return;
     }
 
     const rawAmount = invoiceData.totalCents || invoiceData.amountCents || 0;
     const amount = financialRound(rawAmount);
-    if (amount <= 0) return;
+    if (amount <= 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation); } return; }
 
     const rate = invoiceData.exchangeRate || 1;
     const invoiceNum = invoiceData.number || invoiceId;
@@ -252,14 +252,14 @@ export class LedgerPostService {
     }
 
     // Atomic post via Server API
-    await this.postTxsServerApi(txsToPost, workspaceId);
+    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
   }
 
   /**
    * Post standard double-entry journal entries for a bill.
    * Reverses prior postings instead of deleting them.
    */
-  static async postBillLedger(billId: string, billData: any, workspaceId: string, uid: string) {
+  static async postBillLedger(billId: string, billData: any, workspaceId: string, uid: string, entityMutation?: any) {
     if (!workspaceId || !billId) return;
 
     const billDate = billData.date || getLocalDateISO();
@@ -334,15 +334,15 @@ export class LedgerPostService {
 
     const status = billData.status || 'pending';
     if (status === 'draft' || status === 'rejected') {
-      if (txsToPost.length > 0) {
-        await this.postTxsServerApi(txsToPost, workspaceId);
+      if (true) {
+        await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
       }
       return;
     }
 
     const rawAmount = billData.amountCents || billData.totalCents || 0;
     const amount = financialRound(rawAmount);
-    if (amount <= 0) return;
+    if (amount <= 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation); } return; }
 
     const rate = billData.exchangeRate || 1;
     const billNum = billData.number || billId;
@@ -463,13 +463,13 @@ export class LedgerPostService {
     }
 
     // Atomic post via Server API
-    await this.postTxsServerApi(txsToPost, workspaceId);
+    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
   }
 
   /**
    * Reverse all postings when an invoice or bill is deleted.
    */
-  static async deletePostings(id: string, keyName: 'invoiceId' | 'billId', workspaceId: string) {
+  static async deletePostings(id: string, keyName: 'invoiceId' | 'billId', workspaceId: string, entityMutation?: any) {
     if (!workspaceId || !id) return;
 
     const existingTxs = useLedgerStore.getState().transactions.filter(t => 
@@ -478,7 +478,7 @@ export class LedgerPostService {
       !t.metadata?.isReversal
     );
 
-    if (existingTxs.length === 0) return;
+    if (existingTxs.length === 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation); } return; }
 
     const today = getLocalDateISO();
     const uid = useAuthStore.getState().user?.uid || 'system';
@@ -511,14 +511,14 @@ export class LedgerPostService {
       };
     });
 
-    await this.postTxsServerApi(reversals, workspaceId);
+    await this.postTxsServerApi(reversals, workspaceId, entityMutation);
   }
 
   /**
    * Send transactions array to Server API endpoint (/api/v1/transactions/bulk) atomically.
    */
-  private static async postTxsServerApi(txs: any[], workspaceId: string) {
-    if (!txs || txs.length === 0) return;
+  private static async postTxsServerApi(txs: any[], workspaceId: string, entityMutation?: any) {
+    if ((!txs || txs.length === 0) && !entityMutation) return;
 
     const token = await getIdToken();
     const response = await fetch('/api/v1/transactions/bulk', {
@@ -527,7 +527,7 @@ export class LedgerPostService {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ transactions: txs, workspaceId })
+      body: JSON.stringify({ transactions: txs, workspaceId, entityMutation })
     });
 
     if (!response.ok) {

@@ -45,12 +45,22 @@ export function useEntityOperations() {
   const addEntity = async (path: string, data: any, successMsg?: string) => {
     if (!user || !currentWorkspaceId) return;
     try {
-      const docRef = await addDoc(collection(db, path), {
+      const docId = doc(collection(db, path)).id;
+      const finalData = {
         ...data,
+        id: docId,
         uid: user.uid,
         workspaceId: currentWorkspaceId,
         createdAt: new Date().toISOString()
-      });
+      };
+
+      if (path === 'invoices') {
+        await LedgerPostService.postInvoiceLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
+      } else if (path === 'bills') {
+        await LedgerPostService.postBillLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
+      } else {
+        await setDoc(doc(db, path, docId), finalData);
+      }
 
       // LEARNING: If we added something with a description and a category, learn it.
       if (data.description || data.vendorName || data.customerName) {
@@ -68,14 +78,7 @@ export function useEntityOperations() {
 
       if (successMsg) toast.success(successMsg);
 
-      // Post to ledger if it's an invoice or a bill
-      if (path === 'invoices') {
-        await LedgerPostService.postInvoiceLedger(docRef.id, data, currentWorkspaceId, user.uid);
-      } else if (path === 'bills') {
-        await LedgerPostService.postBillLedger(docRef.id, data, currentWorkspaceId, user.uid);
-      }
-
-      return docRef;
+      return doc(db, path, docId);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, path);
     }
@@ -83,20 +86,22 @@ export function useEntityOperations() {
 
   const updateEntity = async (path: string, id: string, updates: any, successMsg?: string) => {
     try {
-      await updateDoc(doc(db, path, id), {
+      const finalData = {
         ...updates,
         updatedAt: new Date().toISOString()
-      });
+      };
 
       // Post to ledger if it's an invoice or a bill
       if (path === 'invoices' && user && currentWorkspaceId) {
         const existingInvoice = useLedgerStore.getState().invoices.find(i => i.id === id) || {};
-        const mergedData = { ...existingInvoice, ...updates };
-        await LedgerPostService.postInvoiceLedger(id, mergedData, currentWorkspaceId, user.uid);
+        const mergedData = { ...existingInvoice, ...finalData };
+        await LedgerPostService.postInvoiceLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
       } else if (path === 'bills' && user && currentWorkspaceId) {
         const existingBill = useLedgerStore.getState().bills.find(b => b.id === id) || {};
-        const mergedData = { ...existingBill, ...updates };
-        await LedgerPostService.postBillLedger(id, mergedData, currentWorkspaceId, user.uid);
+        const mergedData = { ...existingBill, ...finalData };
+        await LedgerPostService.postBillLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
+      } else {
+        await updateDoc(doc(db, path, id), finalData);
       }
 
       if (successMsg) toast.success(successMsg);
@@ -107,12 +112,12 @@ export function useEntityOperations() {
 
   const deleteEntity = async (path: string, id: string, successMsg?: string) => {
     try {
-      await deleteDoc(doc(db, path, id));
-
       if (path === 'invoices' && currentWorkspaceId) {
-        await LedgerPostService.deletePostings(id, 'invoiceId', currentWorkspaceId);
+        await LedgerPostService.deletePostings(id, 'invoiceId', currentWorkspaceId, { collection: path, docId: id, action: 'delete' });
       } else if (path === 'bills' && currentWorkspaceId) {
-        await LedgerPostService.deletePostings(id, 'billId', currentWorkspaceId);
+        await LedgerPostService.deletePostings(id, 'billId', currentWorkspaceId, { collection: path, docId: id, action: 'delete' });
+      } else {
+        await deleteDoc(doc(db, path, id));
       }
 
       if (successMsg) toast.success(successMsg);
