@@ -78,7 +78,7 @@ interface LedgerProps {
   onDeleteAccount: (id: string) => Promise<void>;
 }
 
-type SubTab = 'coa' | 'journal' | 'trial' | 'balance' | 'pnl' | 'cashflow' | 'aging' | 'fractional' | 'reconciliation' | 'periods' | 'projects' | 'audit' | 'tax' | 'inbox' | 'budgets';
+type SubTab = 'coa' | 'journal' | 'trial';
 type ModalType = 'account' | 'journal' | 'recon' | 'period' | 'bank_import' | null;
 
 interface LedgerSubTabConfig {
@@ -89,18 +89,9 @@ interface LedgerSubTabConfig {
 }
 
 const LEDGER_SUB_TABS: LedgerSubTabConfig[] = [
-  { id: 'inbox', label: 'Transaction Inbox', icon: Inbox, cardKey: 'ledger.tab.inbox' },
   { id: 'coa', label: 'Chart of Accounts', icon: BookOpen, cardKey: 'ledger.tab.coa' },
   { id: 'journal', label: 'General Journal', icon: ArrowRightLeft, cardKey: 'ledger.tab.journal' },
-  { id: 'trial', label: 'Trial Balance', icon: Scale, cardKey: 'ledger.tab.trial' },
-  { id: 'pnl', label: 'Profit & Loss', icon: BarChart3, cardKey: 'ledger.tab.pnl' },
-  { id: 'balance', label: 'Balance Sheet', icon: ShieldCheck, cardKey: 'ledger.tab.balance' },
-  { id: 'cashflow', label: 'Cash Flow', icon: Activity, cardKey: 'ledger.tab.cashflow' },
-  { id: 'aging', label: 'AP/AR Aging', icon: Clock, cardKey: 'ledger.tab.aging' },
-  { id: 'reconciliation', label: 'Reconciliation', icon: RefreshCw, cardKey: 'ledger.tab.reconciliation' },
-  { id: 'budgets', label: 'Budgets', icon: Target, cardKey: 'ledger.tab.budgets' },
-  { id: 'tax', label: 'Tax Estimator', icon: Scale, cardKey: 'ledger.tab.tax' },
-  { id: 'audit', label: 'Audit Trail', icon: History, cardKey: 'ledger.tab.audit' },
+  { id: 'trial', label: 'Trial Balance', icon: Scale, cardKey: 'ledger.tab.trial' }
 ];
 
 const TabButton = ({ id, label, icon: Icon, active, onClick, cardKey }: { id: SubTab, label: string, icon: any, active: boolean, onClick: () => void, cardKey?: string }) => (
@@ -147,7 +138,7 @@ const Ledger = React.memo(({
 }: LedgerProps) => {
   usePerformanceTrace("Ledger");
 
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('inbox');
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>('coa');
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -377,15 +368,7 @@ const Ledger = React.memo(({
             <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Synchronizing real-time ledger layers...</p>
           </div>
         }>
-          {activeSubTab === 'inbox' && (
-            <InboxView 
-              transactions={transactions}
-              accounts={accounts} 
-              onCategorize={onBulkCategorize}
-              formatCurrency={formatCurrency}
-              onParseReceipt={onParseReceipt}
-            />
-          )}
+          
           {activeSubTab === 'coa' && (
             <ChartOfAccountsView 
               accounts={accounts} 
@@ -404,69 +387,6 @@ const Ledger = React.memo(({
               formatCurrency={formatCurrency} 
               onDrillDown={(id) => onAction('drill-down', { account: accounts.find(a => a.id === id)?.name })}
             />
-          )}
-          {activeSubTab === 'balance' && (
-            <BalanceSheetView 
-              accounts={accounts} 
-              journalEntries={journalEntries || []} 
-              formatCurrency={formatCurrency} 
-            />
-          )}
-          {activeSubTab === 'pnl' && (
-            <ProfitAndLossView workspaceId={workspaceId} />
-          )}
-          {activeSubTab === 'cashflow' && (
-            <CashFlowView />
-          )}
-          
-          {activeSubTab === 'reconciliation' && (
-            <div className="space-y-8">
-              <div className="flex justify-end gap-3">
-                <button 
-                  onClick={() => setActiveModal('bank_import')}
-                  className="flex items-center gap-3 px-8 py-4 bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] rounded-[32px] text-sm font-medium uppercase tracking-wider hover:bg-[var(--ink)] transition-all shadow-sm"
-                >
-                  <ArrowDownRight size={18} />
-                  Import CSV
-                </button>
-                <button 
-                  onClick={() => setActiveModal('recon')}
-                  className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-[32px] text-sm font-medium uppercase tracking-wider hover:bg-slate-900/90 transition-all shadow-2xl"
-                >
-                  <RefreshCw size={18} />
-                  Initiate Sync
-                </button>
-              </div>
-              
-              <Reconciliation
-                user={user}
-                workspaceId={workspaceId}
-                bankLines={bankLines}
-                accounts={accounts}
-                onMatch={onMatch || (async () => {})}
-                onUndoMatch={onUndoMatch || (async () => {})}
-                onIgnore={onIgnore || (async () => {})}
-                onAddFromBank={onAddFromBank || (async () => {})}
-                onAutoReconcile={onAutoReconcile || (async () => {})}
-              />
-            </div>
-          )}
-          {activeSubTab === 'audit' && (
-            <AuditTrailView auditLogs={auditLogs} />
-          )}
-          {activeSubTab === 'tax' && (
-            <TaxManager 
-              user={user} 
-              workspaceId={workspaceId} 
-              accounts={accounts} 
-              taxRates={taxRates}
-              onAddTaxRate={onAddTaxRate}
-              onUpdateTaxRate={onUpdateTaxRate}
-              onDeleteTaxRate={onDeleteTaxRate}
-            />
-          )}
-          {activeSubTab === 'budgets' && (
-            <BudgetManager budgets={budgets} accounts={accounts} user={user} />
           )}
         </React.Suspense>
       </motion.div>
