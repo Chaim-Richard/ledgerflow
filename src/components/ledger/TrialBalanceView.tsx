@@ -11,6 +11,7 @@ interface TrialBalanceViewProps {
   onDrillDown: (accountId: string) => void;
 }
 
+import { Download } from "lucide-react";
 export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown }: TrialBalanceViewProps) {
   const trialBalance = React.useMemo(() => {
     let totalDebits = 0;
@@ -36,6 +37,28 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
 
     return { lines, totalDebits, totalCredits, isBalanced: Math.abs(totalDebits - totalCredits) < 0.01 };
   }, [accounts]);
+
+  
+  const handleExportCSV = () => {
+    const headers = ['Account Code', 'Account Name', 'Type', 'Debit', 'Credit'];
+    const rows = trialBalance.lines.map(line => [
+      line.id,
+      line.name,
+      line.type,
+      (line.debit / 100).toFixed(2),
+      (line.credit / 100).toFixed(2)
+    ]);
+    rows.push(['TOTAL', '', '', (trialBalance.totalDebits / 100).toFixed(2), (trialBalance.totalCredits / 100).toFixed(2)]);
+    
+    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `trial_balance_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative group">
@@ -116,6 +139,9 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             <tr className="bg-[var(--ink)]/50 whitespace-nowrap">
               <td className="px-5 py-3.5">
                  <div className="flex items-center gap-2">
+            <button onClick={handleExportCSV} className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] rounded-lg text-[9px] font-bold uppercase tracking-wider hover:text-[var(--text)] transition-all cursor-pointer">
+              <Download size={12} /> Export CSV
+            </button>
                    <Activity size={14} className="text-slate-500 shrink-0" />
                    <span className="text-sm font-bold text-[var(--text)] uppercase">Total</span>
                  </div>

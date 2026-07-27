@@ -21,7 +21,7 @@ export interface AlgoResult {
 export type AlgoFn = (transactions: Transaction[], accounts: ChartAccount[], inputs: Record<string, number>) => AlgoResult;
 
 export interface AlgorithmDefinition {
-  domain?: 'finance' | 'operations' | 'forensics' | 'planning' | 'treasury' | 'system';
+  domain?: 'finance' | 'operations' | 'forensics' | 'planning' | 'treasury' | 'system' | 'valuation';
   tags?: string[];
   id: string;
   name: string;

@@ -18,7 +18,8 @@ export default function CashFlowPredictor() {
       const m = t.date.substring(0, 7);
       if (!monthlyMap[m]) monthlyMap[m] = 0;
       t.lines.forEach(l => {
-        if (l.accountId === 'cash') {
+        const acc = useLedgerStore.getState().accounts.find(a => a.id === l.accountId);
+        if (acc && (acc.type === 'asset' && acc.category?.toLowerCase().includes('cash'))) {
           monthlyMap[m] += l.amountCents / 100;
         }
       });

@@ -32,6 +32,7 @@ import CustomerModal from './CustomerModal';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { printInvoice } from '../../lib/printInvoice';
 
 export default function Sales() {
   const user = useAuthStore(s => s.user);
@@ -286,7 +287,7 @@ export default function Sales() {
                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5C2 7 4 5 6.5 5H18c2.2 0 4 1.8 4 4v8Z"></path><polyline points="15,9 18,9 18,11"></polyline><path d="M5.5 15h.01"></path><path d="M12 15h.01"></path></svg>
                          </button>
                          <button 
-                           onClick={(e) => { e.stopPropagation(); setTimeout(()=>window.print(), 200); }}
+                           onClick={(e) => { e.stopPropagation(); const cust = customers.find(c => c.id === inv.customerId); printInvoice(inv, cust); }}
                            className="w-8 h-8 rounded-lg bg-[var(--ink)]0/10 text-zinc-600 hover:bg-[var(--ink)]0/20 flex items-center justify-center transition-all"
                            title="Print / PDF Invoice"
                          >

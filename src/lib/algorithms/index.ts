@@ -32,6 +32,16 @@ import { CROSS_DIMENSION_INFERENCE_ALGO } from './cross-dimension-inference';
 import { SHARED_TRANSACTION_IDENTITY_ALGO } from './shared-transaction-identity';
 import { MONTE_CARLO_ALGO } from './monte-carlo';
 import { ALTMAN_Z_SCORE_ALGO } from './altman-z-score';
+import { CURRENCY_EXPOSURE_ALGO } from './currency-exposure';
+import { VENDOR_CONCENTRATION_ALGO } from './vendor-concentration';
+import { LIQUIDITY_STRESS_ALGO } from './liquidity-stress';
+import { DUPONT_ANALYSIS_ALGO } from './dupont-analysis';
+import { CASH_CONVERSION_CYCLE_ALGO } from './cash-conversion-cycle';
+import { SAAS_UNIT_ECONOMICS_ALGO } from './saas-unit-economics';
+import { PROFITABILITY_HEATMAP_ALGO } from './profitability-heatmap';
+import { INTEREST_RATE_SENSITIVITY_ALGO } from './interest-rate-sensitivity';
+import { CUSTOMER_CHURN_ALGO } from './customer-churn';
+import { WORKING_CAPITAL_AGING_ALGO } from './working-capital-aging';
 
 export * from './types';
 
@@ -54,6 +64,16 @@ export const FINANCIAL_ALGORITHMS: Record<string, AlgorithmDefinition> = {
   'planning_4': MONTE_CARLO_ALGO,
   'valuation_1': CAPITAL_BUDGETING_ALGO,
   'valuation_2': ALTMAN_Z_SCORE_ALGO,
+  'treasury_1': CURRENCY_EXPOSURE_ALGO,
+  'intelligence_4': VENDOR_CONCENTRATION_ALGO,
+  'planning_5': LIQUIDITY_STRESS_ALGO,
+  'valuation_3': DUPONT_ANALYSIS_ALGO,
+  'ops_1': CASH_CONVERSION_CYCLE_ALGO,
+  'planning_6': SAAS_UNIT_ECONOMICS_ALGO,
+  'intelligence_5': PROFITABILITY_HEATMAP_ALGO,
+  'treasury_2': INTEREST_RATE_SENSITIVITY_ALGO,
+  'intelligence_6': CUSTOMER_CHURN_ALGO,
+  'ops_6': WORKING_CAPITAL_AGING_ALGO,
   'ops_4': VENDOR_CHURN_ALGO,
   'ops_5': EXPENSE_VELOCITY_ALGO,
   'intelligence_3': PARETO_ANALYSIS_ALGO,
