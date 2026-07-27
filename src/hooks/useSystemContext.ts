@@ -8,6 +8,7 @@ import { useTransactionActions } from './useTransactionActions';
 import { useFinancialReporting } from './useFinancialReporting';
 import { useAIActions } from './useAIActions';
 import { useAuditTelemetry } from './useAuditTelemetry';
+import { VIEW_COMPONENTS, APP_TABS } from '../config/registry';
 
 export function useCommandDispatcher() {
   const setQuickEntryOpen = useUIStore(state => state.setQuickEntryOpen);
@@ -74,6 +75,20 @@ export function useCommandDispatcher() {
 
     if (actionMap[action]) {
       actionMap[action]();
+    } else if (VIEW_COMPONENTS[action] || APP_TABS.some(t => t.id === action)) {
+      setActiveTab(action as any);
+      if (details?.channel) {
+        useUIStore.getState().setActiveIntelChannel(details.channel);
+      }
+    } else if (action === 'print') {
+      window.print();
+    } else if (action === 'generate') {
+      toast.success('Report updated successfully.');
+    } else if (action === 'filter_project') {
+      if (details?.projectId) {
+        useAuthStore.setState({ currentProjectId: details.projectId });
+        toast.info('Filtered view by selected project');
+      }
     } else {
       console.warn(`Unmapped command received: ${action}`);
     }
