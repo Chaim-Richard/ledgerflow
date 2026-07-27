@@ -1,3 +1,5 @@
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useMemo } from 'react';
 import { 
@@ -20,14 +22,13 @@ import { addDoc, collection, deleteDoc, doc, updateDoc } from 'firebase/firestor
 import { db } from '../../firebase';
 import { toast } from 'sonner';
 
-interface BudgetManagerProps {
-  budgets?: Budget[];
-  transactions?: Transaction[];
-  accounts?: ChartAccount[];
-  user?: any;
-}
 
-export default function BudgetManager({ budgets = [], transactions = [], accounts = [], user }: BudgetManagerProps = {}) {
+
+export default function BudgetManager() {
+  const user = useAuthStore((s: any) => s.user);
+  const budgets = useLedgerStore((s: any) => s.budgets);
+  const transactions = useLedgerStore((s: any) => s.transactions);
+  const accounts = useLedgerStore((s: any) => s.accounts);
   const [isAdding, setIsAdding] = useState(false);
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
   const [newBudget, setNewBudget] = useState({
@@ -64,10 +65,10 @@ export default function BudgetManager({ budgets = [], transactions = [], account
   };
 
   const budgetAnalysis = useMemo(() => {
-    return budgets.map(budget => {
-      const actualCents = transactions.reduce((sum, t) => {
-        const lines = t.lines?.filter(l => l.accountId === budget.targetId || l.accountName === budget.targetId) || [];
-        return sum + lines.reduce((s, l) => s + Math.abs(l.amountCents), 0);
+    return budgets.map((budget: any) => {
+      const actualCents = transactions.reduce((sum: number, t: any) => {
+        const lines = t.lines?.filter((l: any) => l.accountId === budget.targetId || l.accountName === budget.targetId) || [];
+        return sum + lines.reduce((s: number, l: any) => s + Math.abs(l.amountCents), 0);
       }, 0);
       
       const variance = budget.amountCents - actualCents;
@@ -105,7 +106,7 @@ export default function BudgetManager({ budgets = [], transactions = [], account
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {budgetAnalysis.map((b) => {
+        {budgetAnalysis.map((b: any) => {
           const isOver = b.percentUsed > 100;
           const isWarning = b.percentUsed > 85 && b.percentUsed <= 100;
 
@@ -281,7 +282,7 @@ export default function BudgetManager({ budgets = [], transactions = [], account
                       className="w-full px-8 py-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-[var(--text)] uppercase tracking-widest"
                     />
                     <datalist id="budget-account-list">
-                      {accounts.map(acc => (
+                      {accounts.map((acc: any) => (
                         <option key={acc.id} value={acc.name}>{acc.code}</option>
                       ))}
                     </datalist>

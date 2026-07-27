@@ -20,18 +20,19 @@ import { useUIStore } from '../../stores/useUIStore';
 const ShortcutOverlay = React.lazy(() => import('../../components/layout/ShortcutOverlay'));
 const DiagnosticConsole = React.lazy(() => import('../../components/intelligence/DiagnosticConsole'));
 
-export function RootLayout({ 
-  handleAction, 
-  handleLogout, 
-  handleLoginPrompt,
-  isPending, 
-  txActions,
-  ai,
-  handleSelectTemplate,
-  handleSaveCurrentTemplate,
-  handleApplyAITemplate,
-  handleCreateWorkspace
-}: any) {
+import { useCommandDispatcher } from '../../hooks/useSystemContext';
+import { useTransactionActions } from '../../hooks/useTransactionActions';
+import { useAIActions } from '../../hooks/useAIActions';
+
+import { useSystemActions } from '../../hooks/useSystemActions';
+
+export function RootLayout() {
+  const { handleAction } = useCommandDispatcher();
+  const txActions = useTransactionActions();
+  const ai = useAIActions();
+  const { handleLogout, handleApplyAITemplate, handleSelectTemplate, handleSaveCurrentTemplate, handleCreateWorkspace } = useSystemActions();
+  const handleLoginPrompt = () => handleAction('open-login');
+  const isPending = false;
   const activeTab = useUIStore(state => state.activeTab);
   const setActiveTab = useUIStore(state => state.setActiveTab);
   
@@ -83,6 +84,21 @@ export function RootLayout({
     closeArchitecture: () => useUIStore.getState().setArchitectureOpen(false),
     handleAction,
     txActions,
+    handleQuickAdd: txActions?.handleQuickAdd,
+    handleImportTransactions: txActions?.handleImportTransactions,
+    handleOpenAIBlueprint: () => {
+      useUIStore.getState().setTemplateSelectorOpen(false);
+      useUIStore.getState().setAIBlueprintOpen(true);
+    },
+    handleAIQuery: async (q: string) => {
+      if (ai?.handleAIQuery) return await ai.handleAIQuery(q);
+      return { response: `Analyzed query: ${q}` };
+    },
+    handleFilter: (filter: any) => {
+      useUIStore.getState().setFilterCriteria(filter);
+      useUIStore.getState().setActiveTab('transactions' as any);
+      useUIStore.getState().setCommandCenterOpen(false);
+    },
     handleSelectTemplate,
     handleSaveCurrentTemplate,
     handleApplyAITemplate

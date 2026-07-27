@@ -16,7 +16,7 @@ import { useAIActions } from './hooks/useAIActions';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTransactionActions } from './hooks/useTransactionActions';
 import { ChartAccount } from './types';
-import { useCommandDispatcher, useSystemProps } from './hooks/useSystemContext';
+import { useCommandDispatcher } from './hooks/useSystemContext';
 import { useBillingStore } from './modules/billing/BillingService';
 
 // Core Architectural Imports
@@ -83,8 +83,7 @@ export default function App() {
   const ai = useAIActions();
   
   const { handleAction } = useCommandDispatcher();
-  const coreSystemProps = useSystemProps(handleAction);
-
+  
   // Language & Direction Control & Sizing Core
   useEffect(() => {
     // Fetch dynamic limits & usage caps from public registration-status API
@@ -233,220 +232,15 @@ const shortcutMap = useMemo(() => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.setItem('isGuest', 'false');
-    setIsGuest(false);
-    localStorage.removeItem('clearbook_use_sandbox_mode');
-    localStorage.removeItem('clearbook_identity_email');
-    localStorage.removeItem('clearbook_identity_name');
-    
-    setUser(null);
-    useLedgerStore.setState({ 
-      transactions: [], 
-      accounts: [], 
-      journalEntries: [],
-      computedAccounts: [],
-      totalLedgerBalance: 0
-    });
-    
-    signOut(auth).catch(() => {});
-    toast.success('Returned to login screen');
-  };
+  
 
-  const handleApplyAITemplate = useCallback(async (customBlueprint: any) => {
-    if (!user || !currentWorkspaceId || !customBlueprint) return;
-    
-    const loader = toast.loading(`Initiating AI ledger structural transformation...`);
-    try {
-      const batch = writeBatch(db);
-      
-      // Update workspace with the AI schema
-      batch.update(doc(db, 'workspaces', currentWorkspaceId), {
-        businessType: customBlueprint.id || 'ai_custom',
-        analyticalTopology: customBlueprint.dashboardSchema || customBlueprint.topology
-      });
+  
 
-      const hasTransactions = useLedgerStore.getState().transactions.length > 0;
-      
-      if (!hasTransactions) {
-        const currentAccounts = useLedgerStore.getState().accounts;
-        if (currentAccounts.length > 0) {
-          currentAccounts.forEach(acc => {
-            if (acc.id) {
-              batch.delete(doc(db, 'chartAccounts', acc.id));
-            }
-          });
-        }
-        
-        const accountsToMap = customBlueprint.chartOfAccounts || customBlueprint.accounts || [];
-        accountsToMap.forEach((acc: any) => {
-          const accRef = doc(collection(db, 'chartAccounts'));
-          batch.set(accRef, {
-            ...acc,
-            uid: user.uid,
-            workspaceId: currentWorkspaceId,
-            balanceCents: 0,
-            isArchived: false,
-            createdAt: new Date().toISOString()
-          });
-        });
-      } else {
-        const accountsToMap = customBlueprint.chartOfAccounts || customBlueprint.accounts || [];
-        accountsToMap.forEach((acc: any) => {
-          const exists = useLedgerStore.getState().accounts.some((a: any) => a.name.toLowerCase() === acc.name.toLowerCase());
-          if (!exists) {
-            const accRef = doc(collection(db, 'chartAccounts'));
-            batch.set(accRef, {
-              ...acc,
-              uid: user.uid,
-              workspaceId: currentWorkspaceId,
-              balanceCents: 0,
-              isArchived: false,
-              createdAt: new Date().toISOString()
-            });
-          }
-        });
-      }
+  
 
-      await batch.commit();
-      toast.success('AI Ledger Template synchronized and applied successfully.', { id: loader });
-      useUIStore.getState().setAIBlueprintOpen(false);
-      useUIStore.getState().setTemplateSelectorOpen(false);
-      useUIStore.getState().setActiveTab('intelligence');
-    } catch (error: any) {
-      toast.error(`Transformation Failed: ${error.message}`, { id: loader });
-    }
-  }, [user, currentWorkspaceId]);
+  
 
-  const handleSelectTemplate = useCallback(async (templateId: string) => {
-    if (!user || !currentWorkspaceId) return;
-    const template = BUSINESS_TEMPLATES[templateId];
-    if (!template) return;
-
-    const loader = toast.loading(`Initiating ledger structural transformation...`);
-    try {
-      const batch = writeBatch(db);
-      
-      batch.update(doc(db, 'workspaces', currentWorkspaceId), {
-        businessType: templateId,
-        analyticalTopology: template.topology
-      });
-
-      // Implement correct "Code Physics" of double-entry ledger alignment:
-      // If there are no transactions recorded in this workspace, we cleanly purge existing placeholder 
-      // accounts and write the template's exact configuration.
-      // If transactions do exist, we execute a non-destructive "Smart Blend" (adding missing template accounts).
-      const hasTransactions = useLedgerStore.getState().transactions.length > 0;
-      
-      if (!hasTransactions) {
-        // Clean Reset Strategy
-        const currentAccounts = useLedgerStore.getState().accounts;
-        if (currentAccounts.length > 0) {
-          currentAccounts.forEach(acc => {
-            if (acc.id) {
-              batch.delete(doc(db, 'chartAccounts', acc.id));
-            }
-          });
-        }
-        
-        template.accounts.forEach((acc: Partial<ChartAccount>) => {
-          const accRef = doc(collection(db, 'chartAccounts'));
-          batch.set(accRef, {
-            ...acc,
-            uid: user.uid,
-            workspaceId: currentWorkspaceId,
-            balanceCents: 0,
-            createdAt: new Date().toISOString()
-          });
-        });
-      } else {
-        // Smart Blend Strategy
-        const currentAccounts = useLedgerStore.getState().accounts;
-        const existingCodes = new Set(currentAccounts.map(a => a.code));
-        const existingNames = new Set(currentAccounts.map(a => (a.name || '').toLowerCase().trim()));
-
-        template.accounts.forEach((acc: Partial<ChartAccount>) => {
-          if (!acc.code) return;
-          const isCodeDuplicate = existingCodes.has(acc.code);
-          const isNameDuplicate = acc.name ? existingNames.has(acc.name.toLowerCase().trim()) : false;
-
-          if (!isCodeDuplicate && !isNameDuplicate) {
-            const accRef = doc(collection(db, 'chartAccounts'));
-            batch.set(accRef, {
-              ...acc,
-              uid: user.uid,
-              workspaceId: currentWorkspaceId,
-              balanceCents: 0,
-              createdAt: new Date().toISOString()
-            });
-          }
-        });
-      }
-
-      await batch.commit();
-
-      setTemplateSelectorOpen(false);
-      
-      setActiveTab('ledger'); // Navigate to the Ledger/Chart of Accounts (the "Integrity")
-      
-      toast.success(`STRUCTURE TRANSGRESSED TO ${(template.name || 'UNKNOWN').toUpperCase()}`, { id: loader });
-    } catch (e) {
-      console.error("Template transformation aborted:", e);
-      toast.error('SETUP FAILED', { id: loader });
-    }
-  }, [user, currentWorkspaceId, setTemplateSelectorOpen, setActiveTab]);
-
-  const handleSaveCurrentTemplate = useCallback(async () => {
-    if (!user || !currentWorkspaceId || !currentWorkspace) return;
-    
-    const name = window.prompt("Enter template name:", `${currentWorkspace.name} Clone`);
-    if (!name) return;
-
-    try {
-      await addDoc(collection(db, 'customTemplates'), {
-        name,
-        industry: currentWorkspace.businessType || 'generic',
-        accounts: useLedgerStore.getState().accounts.map(a => ({ code: a.code, name: a.name, type: a.type, category: a.category })),
-        analyticalTopology: currentWorkspace.analyticalTopology || {},
-        uid: user.uid,
-        createdAt: new Date().toISOString()
-      });
-      toast.success('TEMPLATE SAVED');
-    } catch (e) {
-      toast.error('SNAPSHOT FAILED');
-    }
-  }, [user, currentWorkspaceId, currentWorkspace]);
-
-  const handleCreateWorkspace = useCallback(async () => {
-    if (!user) return;
-    
-    const name = window.prompt("Enter new workspace name:", "New Workspace");
-    if (!name) return;
-
-    try {
-      const workspaceRef = doc(collection(db, 'workspaces'));
-      const newWorkspace = {
-        id: workspaceRef.id,
-        uid: user.uid,
-        name: name,
-        type: 'business',
-        currency: 'USD',
-        businessType: 'generic',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      await setDoc(workspaceRef, newWorkspace);
-      useAuthStore.getState().setCurrentWorkspaceId(workspaceRef.id);
-      
-      // Automatically open template selector for the new workspace
-      useUIStore.getState().setTemplateSelectorOpen(true);
-      
-      toast.success(`Workspace '${name}' created! Please choose an architectural template.`);
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to create workspace');
-    }
-  }, [user]);
+  
 
 
 
@@ -474,19 +268,7 @@ const shortcutMap = useMemo(() => {
           </div>
         )}
         <Suspense fallback={null}><LedgerAutoAuditor /></Suspense>
-        <RootLayout 
-          handleAction={handleAction} 
-          coreSystemProps={coreSystemProps} 
-          handleLogout={handleLogout} 
-          handleLoginPrompt={handleLoginPrompt}
-          isPending={isPending} 
-          txActions={txActions}
-          ai={ai}
-          handleSelectTemplate={handleSelectTemplate}
-          handleSaveCurrentTemplate={handleSaveCurrentTemplate}
-          handleApplyAITemplate={handleApplyAITemplate}
-          handleCreateWorkspace={handleCreateWorkspace}
-        />
+        <RootLayout />
       </div>
     </ErrorBoundary>
   );

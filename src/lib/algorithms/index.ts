@@ -30,6 +30,8 @@ import { LOCALIZED_FORENSICS_ALGO } from './localized-forensics';
 import { CONTINUOUS_CLOSE_ALGO } from './continuous-close';
 import { CROSS_DIMENSION_INFERENCE_ALGO } from './cross-dimension-inference';
 import { SHARED_TRANSACTION_IDENTITY_ALGO } from './shared-transaction-identity';
+import { MONTE_CARLO_ALGO } from './monte-carlo';
+import { ALTMAN_Z_SCORE_ALGO } from './altman-z-score';
 
 export * from './types';
 
@@ -49,7 +51,9 @@ export const FINANCIAL_ALGORITHMS: Record<string, AlgorithmDefinition> = {
   'forensics_5': DUPLICATE_DETECTION_ALGO,
   'forensics_6': EXPENSE_POLICY_ALGO,
   'planning_3': CASH_RUNWAY_ALGO,
+  'planning_4': MONTE_CARLO_ALGO,
   'valuation_1': CAPITAL_BUDGETING_ALGO,
+  'valuation_2': ALTMAN_Z_SCORE_ALGO,
   'ops_4': VENDOR_CHURN_ALGO,
   'ops_5': EXPENSE_VELOCITY_ALGO,
   'intelligence_3': PARETO_ANALYSIS_ALGO,

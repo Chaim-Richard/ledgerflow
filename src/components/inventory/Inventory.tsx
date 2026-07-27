@@ -1,3 +1,7 @@
+import { useAuthStore } from '../../stores/useAuthStore';
+import { formatCurrency } from '../../lib/utils';
+import { toast } from 'sonner';
+import { StrategicEngine } from '../../services/strategicEngine';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -33,16 +37,10 @@ import {
 import { db } from '../../firebase';
 import { InventoryItem, Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { toast } from 'sonner';
-import { StrategicEngine } from '../../services/strategicEngine';
 
-interface InventoryProps {
-  workspaceId: string;
-  uid: string;
-  formatCurrency: (cents: number) => string;
-}
-
-export default function Inventory({ workspaceId, uid, formatCurrency }: InventoryProps) {
+export default function Inventory() {
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const uid = useAuthStore(s => s.user?.uid);
   const storeTransactions = useLedgerStore(s => s.transactions);
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -126,8 +124,8 @@ export default function Inventory({ workspaceId, uid, formatCurrency }: Inventor
     const formData = new FormData(e.currentTarget);
     
     const newItem: Omit<InventoryItem, 'id'> = {
-      uid,
-      workspaceId,
+      uid: uid || "",
+      workspaceId: workspaceId || "",
       name: formData.get('name') as string,
       sku: formData.get('sku') as string,
       description: formData.get('description') as string,

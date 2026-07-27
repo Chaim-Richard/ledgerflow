@@ -12,6 +12,7 @@ import { useAuditTelemetry } from '../../hooks/useAuditTelemetry';
 import * as d3 from 'd3';
 import { Transaction, ChartAccount, Project, Bill, Invoice } from '../../types';
 import { useUIStore } from '../../stores/useUIStore';
+import { useCommandDispatcher } from '../../hooks/useSystemContext';
 import ForensicAuditor from '../reporting/ForensicAuditor';
 import PivotSheet from '../ledger/PivotSheet';
 import BudgetManager from '../planning/BudgetManager';
@@ -266,16 +267,7 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
   );
 };
 
-interface AnalyticalCenterProps {
-  transactions: Transaction[];
-  accounts: ChartAccount[];
-  projects?: Project[];
-  bills?: Bill[];
-  invoices?: Invoice[];
-  filterCriteria: any;
-  onAction: (action: string, details?: any) => void;
-  metrics?: any;
-}
+
 
 // -------------------------------------------------------------
 // Core Redesigned Analytical Channels
@@ -325,16 +317,16 @@ const CHANNELS = [
   }
 ];
 
-export default function AnalyticalCenter({ 
-  transactions, 
-  accounts, 
-  projects = [], 
-  bills = [], 
-  invoices = [], 
-  filterCriteria, 
-  onAction, 
-  metrics: passedMetrics 
-}: AnalyticalCenterProps) {
+export default function AnalyticalCenter() {
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
+  const projects = useLedgerStore(s => s.projects);
+  const bills = useLedgerStore(s => s.bills);
+  const invoices = useLedgerStore(s => s.invoices);
+  const filterCriteria = useUIStore(s => s.filterCriteria);
+  const { handleAction: onAction } = useCommandDispatcher();
+  const computedAccounts = useLedgerStore(s => s.computedAccounts);
+  const passedMetrics = useAuditTelemetry(transactions, computedAccounts);
   
   const activeChannel = useUIStore(state => state.activeIntelChannel);
   const setActiveChannel = useUIStore(state => state.setActiveIntelChannel);

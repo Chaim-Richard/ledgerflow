@@ -27,23 +27,20 @@ import { format } from 'date-fns';
 import InvoiceModal from './InvoiceModal';
 import CustomerModal from './CustomerModal';
 
-interface SalesProps {
-  user: User;
-  invoices: Invoice[];
-  customers: Customer[];
-  accounts: ChartAccount[];
-  onAddInvoice: (invoice: Partial<Invoice>) => void;
-  onAddCustomer: (customer: Partial<Customer>) => void;
-}
 
-export default function Sales({ 
-  user, 
-  invoices = [], 
-  customers = [], 
-  accounts = [], 
-  onAddInvoice, 
-  onAddCustomer 
-}: SalesProps) {
+
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
+
+export default function Sales() {
+  const user = useAuthStore(s => s.user);
+  const invoices = useLedgerStore(s => s.invoices);
+  const customers = useLedgerStore(s => s.customers);
+  const accounts = useLedgerStore(s => s.accounts);
+  const { addEntity, updateEntity } = useEntityOperations();
+  const onAddInvoice = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('invoices', id, updates); } return addEntity('invoices', data); };
+  const onAddCustomer = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('customers', id, updates); } return addEntity('customers', data); };
   const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'customers' | 'pipeline'>('pipeline');
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);

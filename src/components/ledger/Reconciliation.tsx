@@ -1,3 +1,6 @@
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useTransactionActions } from '../../hooks/useTransactionActions';
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ArrowLeftRight, 
@@ -28,31 +31,20 @@ import {
 } from '../../lib/algorithms';
 import { toast } from 'sonner';
 
-interface ReconciliationProps {
-  user: User | null;
-  workspaceId: string;
-  transactions?: Transaction[];
-  bankLines: BankStatementLine[];
-  accounts: ChartAccount[];
-  onMatch: (bankLineId: string, transactionId: string) => Promise<void>;
-  onIgnore: (bankLineId: string) => Promise<void>;
-  onAddFromBank: (bankLine: BankStatementLine) => Promise<void>;
-  onAutoReconcile: () => Promise<void>;
-  onUndoMatch?: (bankLineId: string, transactionId?: string) => Promise<void>;
-}
 
-export default function Reconciliation({ 
-  user, 
-  workspaceId, 
-  transactions = [], 
-  bankLines = [], 
-  accounts = [],
-  onMatch, 
-  onIgnore,
-  onAddFromBank,
-  onAutoReconcile,
-  onUndoMatch
-}: ReconciliationProps) {
+
+export default function Reconciliation() {
+  const user = useAuthStore((s: any) => s.user);
+  const workspaceId = useAuthStore((s: any) => s.currentWorkspaceId);
+  const transactions = useLedgerStore((s: any) => s.transactions);
+  const bankLines = useLedgerStore((s: any) => s.bankLines || []);
+  const accounts = useLedgerStore((s: any) => s.accounts);
+  const txActions = useTransactionActions();
+  const onMatch = txActions.handleReconcileMatch;
+  const onIgnore = txActions.handleReconcileIgnore;
+  const onAddFromBank = txActions.handleReconcileCreate;
+  const onAutoReconcile = txActions.handleAutoReconcile;
+  const onUndoMatch = txActions.handleReconcileUndo;
   const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
   const [selectedLedgerId, setSelectedLedgerId] = useState<string | null>(null);
   const [showAutoConfirm, setShowAutoConfirm] = useState(false);

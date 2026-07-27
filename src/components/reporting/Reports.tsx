@@ -13,15 +13,17 @@ const DrillDownModal = React.lazy(() => import('../layout/DrillDownModal'));
 import { REPORT_TABS_REGISTRY, REPORT_COMPONENTS } from '../../config/registry';
 import { useUIStore } from '../../stores/useUIStore';
 
-interface ReportsProps {
-  transactions: Transaction[];
-  accounts: ChartAccount[];
-  projects: Project[];
-  budgets: Budget[];
-  onAction: (action: string) => void;
-}
 
-const Reports = React.memo(({ transactions = [], accounts = [], projects = [], budgets = [], onAction }: ReportsProps) => {
+
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useCommandDispatcher } from '../../hooks/useSystemContext';
+
+const Reports = React.memo(() => {
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
+  const projects = useLedgerStore(s => s.projects);
+  const budgets = useLedgerStore(s => s.budgets);
+  const { handleAction: onAction } = useCommandDispatcher();
   usePerformanceTrace("Reports");
   const activeTab = useUIStore(state => state.activeReportTab || 'pnl');
     const setActiveTab = useUIStore(state => state.setActiveReportTab);

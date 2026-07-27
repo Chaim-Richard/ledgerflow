@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { VIEW_COMPONENTS } from '../../config/registry';
 import { LexiconText } from '../../hooks/useLexicon';
-import { useSystemProps, useCommandDispatcher } from '../../hooks/useSystemContext';
+import { useCommandDispatcher } from '../../hooks/useSystemContext';
 
 class ModuleErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
   state = { hasError: false, error: null };
@@ -36,8 +36,7 @@ interface MainViewSwitcherProps {
 const MainViewSwitcher = React.memo(({ activeTab }: MainViewSwitcherProps) => {
   const Component = VIEW_COMPONENTS[activeTab];
   const { handleAction } = useCommandDispatcher();
-  const props = useSystemProps(handleAction);
-
+  
   return (
     <div className="relative flex-1 flex flex-col w-full min-h-full">
       <ModuleErrorBoundary>
@@ -57,7 +56,7 @@ const MainViewSwitcher = React.memo(({ activeTab }: MainViewSwitcherProps) => {
             transition={{ duration: 0.2 }}
             className="flex-1 flex flex-col w-full min-h-full"
           >
-            {Component ? <Component {...props} /> : (
+            {Component ? <Component /> : (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
                   <div className="text-4xl mb-4">🚧</div>

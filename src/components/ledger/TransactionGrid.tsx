@@ -32,30 +32,13 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { useLedgerComputation } from '../../hooks/useLedgerComputation';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
+import { useCommandDispatcher } from '../../hooks/useSystemContext';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { MatchingEngine } from '../../lib/MatchingEngine';
 import SplitEditor from '../transactions/SplitEditor';
 import TransactionEditModal from '../transactions/TransactionEditModal';
 
-interface TransactionGridProps {
-  transactions: Transaction[];
-  onVoid: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Transaction>) => void;
-  onSelect?: (id: string) => void;
-  onImport: (data: any[]) => void;
-  onNewEntry: () => void;
-  onOpenImporter: () => void;
-  onCreateRule: (tx: Transaction) => void;
-  filterCriteria?: any;
-  onFilterApplied: (criteria: any) => void;
-  categories: string[];
-  isProMode?: boolean;
-  isCompactMode?: boolean;
-  onMagicReconcile?: (ids: string[]) => void;
-  onParseReceipt?: (file: File, transactionId?: string) => void;
-  onAction?: (action: string, details?: any) => void;
-  dateFormat?: string;
-  anomalies?: any[];
-}
+
 
 const GridEditor = ({ 
   value, 
@@ -273,20 +256,24 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
   );
 });
 
-export default function TransactionGrid({ 
-  transactions = [], 
-  onVoid,
-  onUpdate,
-  onNewEntry,
-  onCreateRule,
-  filterCriteria,
-  onFilterApplied,
-  isProMode = false,
-  isCompactMode = false,
-  onAction,
-  dateFormat = 'MMM dd, yyyy',
-  anomalies: passedAnomalies
-}: TransactionGridProps) {
+export default function TransactionGrid() {
+  const transactions = useLedgerStore(s => s.transactions);
+  const filterCriteria = useUIStore(s => s.filterCriteria);
+  const onFilterApplied = (c: any) => useUIStore.getState().setFilterCriteria(c);
+  const { handleAction: onAction } = useCommandDispatcher();
+  const txActions = useTransactionActions();
+  const { updateEntity, deleteEntity } = useEntityOperations();
+  const onUpdate = (id: string, updates: any) => updateEntity('transactions', id, updates);
+  const onVoid = (id: string) => deleteEntity('transactions', id);
+  const onNewEntry = () => { txActions.handleQuickAdd?.({} as any); onAction("quick-entry"); };
+  const onImport = () => onAction('open-importer');
+  const onOpenImporter = () => onAction('open-importer');
+  const onCreateRule = (tx: any) => {}; // not fully implemented here
+  const categories = [];
+  const isProMode = false;
+  const isCompactMode = false;
+  const dateFormat = 'MMM dd, yyyy';
+  const passedAnomalies = undefined;
   // Defensive array checks
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
   

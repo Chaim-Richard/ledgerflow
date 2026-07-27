@@ -32,13 +32,15 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { aiService } from '../../services/aiService';
 
-interface VaultProps {
-  workspaceId: string;
-  uid: string;
-  transactions: Transaction[];
-}
 
-export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
+
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+
+export default function Vault() {
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const uid = useAuthStore(s => s.user?.uid);
+  const transactions = useLedgerStore(s => s.transactions);
   const [documents, setDocuments] = useState<CloudDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,8 +85,8 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
         const base64DataUri = reader.result as string;
         
         const newDoc: Omit<CloudDocument, 'id'> = {
-          uid,
-          workspaceId,
+          uid: uid || "",
+          workspaceId: workspaceId || "",
           name: file.name,
           fileUrl: base64DataUri, // Persistent Data URI
           mimeType: file.type,
@@ -143,8 +145,8 @@ export default function Vault({ workspaceId, uid, transactions }: VaultProps) {
     try {
       const amountCents = Math.abs(extractedData.amountCents || 0);
       const newTx: Partial<Transaction> = {
-        uid,
-        workspaceId,
+        uid: uid || "",
+        workspaceId: workspaceId || "",
         date: extractedData.date || format(new Date(), 'yyyy-MM-dd'),
         description: extractedData.merchant || extractedData.description || 'Receipt Auto-sync',
         totalAmountCents: amountCents,

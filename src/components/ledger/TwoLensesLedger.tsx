@@ -3,7 +3,7 @@ import Ledger from './Ledger';
 import OwnerLens from './OwnerLens';
 import { Briefcase, Calculator } from 'lucide-react';
 
-export default function TwoLensesLedger(props: any) {
+export default function TwoLensesLedger() {
   const [lens, setLens] = useState<'owner' | 'accountant'>('owner');
 
   return (
@@ -29,7 +29,7 @@ export default function TwoLensesLedger(props: any) {
         </div>
       </div>
 
-      {lens === 'owner' ? <OwnerLens /> : <Ledger {...props} />}
+      {lens === 'owner' ? <OwnerLens /> : <Ledger />}
     </div>
   );
 }

@@ -58,7 +58,7 @@ export function TaxReserveWidget() {
 
   // 2. Math: Tax Reserve
   const taxReserveResult = useMemo(() => {
-    return calculateSafeToSpend(transactions, accounts, taxRate / 100);
+    return calculateSafeToSpend(transactions, accounts);
   }, [transactions, accounts, taxRate]);
 
   // 3. Math: Upcoming Bills before next payday
@@ -90,8 +90,8 @@ export function TaxReserveWidget() {
 
   // 5. Safe-to-Spend calculations
   const bufferCents = safetyBuffer * 100;
-  const rawCash = taxReserveResult.rawCash;
-  const estimatedTax = taxReserveResult.estimatedTax;
+  const rawCash = taxReserveResult.rawCashCents;
+  const estimatedTax = taxReserveResult.estimatedTaxCents;
 
   // Real autopilot formula
   const autopilotSafeToSpendCents = liquidCash - estimatedTax - totalCommittedBillsCents - totalIrregularReservesCents - bufferCents;

@@ -22,29 +22,24 @@ import { cn, safeConfirm } from '../../lib/utils';
 import { toast } from 'sonner';
 import ProjectPipeline from './ProjectPipeline';
 
-interface ProjectsProps {
-  user: User;
-  projects: Project[];
-  transactions: Transaction[];
-  budgets: Budget[];
-  vendors: Vendor[];
-  onAction: (action: string) => void;
-  onAdd?: (data: any) => Promise<void>;
-  onUpdate?: (id: string, data: any) => Promise<void>;
-  onDelete?: (id: string) => Promise<void>;
-}
 
-export default function Projects({ 
-  user, 
-  projects = [], 
-  transactions = [], 
-  budgets = [], 
-  vendors = [], 
-  onAction,
-  onAdd,
-  onUpdate,
-  onDelete
-}: ProjectsProps) {
+
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useCommandDispatcher } from '../../hooks/useSystemContext';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
+
+export default function Projects() {
+  const user = useAuthStore(s => s.user);
+  const projects = useLedgerStore(s => s.projects);
+  const transactions = useLedgerStore(s => s.transactions);
+  const budgets = useLedgerStore(s => s.budgets);
+  const vendors = useLedgerStore(s => s.vendors);
+  const { handleAction: onAction } = useCommandDispatcher();
+  const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
+  const onAdd = (data: any) => addEntity('projects', data);
+  const onUpdate = (id: string, data: any) => updateEntity('projects', id, data);
+  const onDelete = (id: string) => deleteEntity('projects', id);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'pipeline' | 'list'>('pipeline');
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
@@ -66,7 +61,7 @@ export default function Projects({
     try {
       await onAdd({
         ...newProject,
-        uid: user.uid,
+        uid: user?.uid || "",
         createdAt: new Date().toISOString()
       });
       setIsNewProjectModalOpen(false);

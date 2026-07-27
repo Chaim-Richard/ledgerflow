@@ -50,33 +50,7 @@ const ReconciliationWizard = React.lazy(() => import('./ReconciliationWizard'));
 const BankFeedImport = React.lazy(() => import('./BankFeedImport'));
 const InboxView = React.lazy(() => import('./InboxView'));
 
-interface LedgerProps {
-  transactions: Transaction[];
-  accounts: ChartAccount[];
-  journalEntries: JournalEntry[];
-  reconciliations: any[];
-  bankLines?: any[];
-  partners: any[];
-  auditLogs: any[];
-  budgets: Budget[];
-  user: any;
-  workspaceId: string;
-  onAction: (action: string, details?: any) => void;
-  onStartReconciliation: (data: any) => void;
-  onCompleteReconciliation: (data: any) => void;
-  onMatch?: (bankLineId: string, transactionId: string) => Promise<void>;
-  onIgnore?: (bankLineId: string) => Promise<void>;
-  onAddFromBank?: (bankLine: any) => Promise<void>;
-  onUndoMatch?: (bankLineId: string, transactionId?: string) => Promise<void>;
-  onAutoReconcile?: () => Promise<void>;
-  onBulkCategorize: (ids: string[], category: string, account: string) => void;
-  onParseReceipt: (file: File, transactionId?: string) => void;
-  taxRates: TaxRate[];
-  onAddTaxRate: (data: Partial<TaxRate>) => Promise<void>;
-  onUpdateTaxRate: (id: string, data: Partial<TaxRate>) => Promise<void>;
-  onDeleteTaxRate: (id: string) => Promise<void>;
-  onDeleteAccount: (id: string) => Promise<void>;
-}
+
 
 type SubTab = 'coa' | 'journal' | 'trial';
 type ModalType = 'account' | 'journal' | 'recon' | 'period' | 'bank_import' | null;
@@ -109,33 +83,41 @@ const TabButton = ({ id, label, icon: Icon, active, onClick, cardKey }: { id: Su
   </button>
 );
 
-const Ledger = React.memo(({ 
-  transactions = [], 
-  accounts = [], 
-  journalEntries = [], 
-  reconciliations = [], 
-  bankLines = [],
-  partners = [], 
-  auditLogs = [], 
-  budgets = [],
-  user, 
-  workspaceId = 'TEMP_WS',
-  onAction, 
-  onStartReconciliation,
-  onCompleteReconciliation,
-  onMatch,
-  onUndoMatch,
-  onIgnore,
-  onAddFromBank,
-  onAutoReconcile,
-  onBulkCategorize,
-  onParseReceipt,
-  taxRates = [],
-  onAddTaxRate,
-  onUpdateTaxRate,
-  onDeleteTaxRate,
-  onDeleteAccount
-}: LedgerProps) => {
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useTransactionActions } from '../../hooks/useTransactionActions';
+import { useCommandDispatcher } from '../../hooks/useSystemContext';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
+
+const Ledger = React.memo(() => {
+  const user = useAuthStore(s => s.user) || ({} as any);
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
+  const journalEntries = useLedgerStore(s => s.journalEntries);
+  const reconciliations = useLedgerStore(s => s.reconciliations);
+  const bankLines = useLedgerStore(s => s.bankLines || []);
+  const partners = useLedgerStore(s => s.partners);
+  const auditLogs = useLedgerStore(s => s.auditLogs || []);
+  const budgets = useLedgerStore(s => s.budgets);
+  const taxRates = useLedgerStore(s => s.taxRates);
+  const { handleAction: onAction } = useCommandDispatcher();
+  const txActions = useTransactionActions();
+  const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
+
+  const onStartReconciliation = (data: any) => {};
+  const onCompleteReconciliation = (data: any) => {};
+  const onMatch = txActions.handleReconcileMatch;
+  const onUndoMatch = txActions.handleReconcileUndo;
+  const onIgnore = txActions.handleReconcileIgnore;
+  const onAddFromBank = txActions.handleReconcileCreate;
+  const onAutoReconcile = txActions.handleAutoReconcile;
+  const onBulkCategorize = (ids: string[], category: string, account: string) => {};
+  const onParseReceipt = txActions.handleParseReceipt;
+  const onAddTaxRate = (data: any) => addEntity('taxRates', data);
+  const onUpdateTaxRate = (id: string, data: any) => updateEntity('taxRates', id, data);
+  const onDeleteTaxRate = (id: string) => deleteEntity('taxRates', id);
+  const onDeleteAccount = txActions.handleDeleteAccount;
   usePerformanceTrace("Ledger");
 
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('coa');
@@ -165,7 +147,7 @@ const Ledger = React.memo(({
     try {
       await addDoc(collection(db, 'chartAccounts'), {
         ...newAccount,
-        uid: user.uid,
+        uid: user?.uid || "",
         balanceCents: Number(newAccount.openingBalanceCents), // Initial balance is opening balance
         createdAt: new Date().toISOString()
       });
@@ -200,7 +182,7 @@ const Ledger = React.memo(({
 
     try {
       await addDoc(collection(db, 'partners'), {
-        uid: user.uid,
+        uid: user?.uid || "",
         name,
         share,
         initialCapitalCents: initialCapital,
@@ -304,7 +286,7 @@ const Ledger = React.memo(({
             <div className="w-8 h-8 rounded-lg bg-[var(--brass-soft)] flex items-center justify-center border border-[var(--brass-line)]/60 shrink-0 shadow-xs">
                <Cpu size={16} className="text-[var(--brass)]" />
             </div>
-            <p className="text-xs font-mono font-bold text-[var(--brass)] tracking-wider truncate">CB-0x{(workspaceId || 'TEMP_WS').slice(0, 6).toUpperCase()}</p>
+            <p className="text-xs font-mono font-bold text-[var(--brass)] tracking-wider truncate">CB-0x{(workspaceId || "TEMP_WS").slice(0, 6).toUpperCase()}</p>
           </div>
           <div className="mt-3 flex items-center gap-1 text-[10px] font-mono text-[var(--muted)]">
              <ShieldCheck size={12} className="shrink-0 text-[var(--brass)]" />
@@ -385,7 +367,7 @@ const Ledger = React.memo(({
             <TrialBalanceView 
               accounts={accounts} 
               formatCurrency={formatCurrency} 
-              onDrillDown={(id) => onAction('drill-down', { account: accounts.find(a => a.id === id)?.name })}
+              onDrillDown={(id) => onAction('drill-down', { account: accounts.find(a => a.id === id)?.name || "" || "" })}
             />
           )}
         </React.Suspense>
@@ -395,7 +377,7 @@ const Ledger = React.memo(({
       <AnimatePresence>
         {activeModal === 'bank_import' && (
           <BankFeedImport 
-            workspaceId={workspaceId}
+            workspaceId={workspaceId || ""}
             onClose={() => setActiveModal(null)}
             onImport={(data: any) => {
               onAction('import_bank_csv', data);
@@ -644,9 +626,9 @@ const Ledger = React.memo(({
       <JournalEntryModal 
         isOpen={activeModal === 'journal'}
         onClose={() => setActiveModal(null)}
-        user={user}
+        user={user as any}
         accounts={accounts}
-        workspaceId={workspaceId}
+        workspaceId={workspaceId || ""}
       />
     </div>
   );

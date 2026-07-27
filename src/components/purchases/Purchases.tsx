@@ -25,25 +25,21 @@ import { format, differenceInDays, addDays, startOfDay } from 'date-fns';
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
 
-interface PurchasesProps {
-  user: User;
-  bills: Bill[];
-  vendors: Vendor[];
-  accounts: ChartAccount[];
-  onUpdateBill: (id: string, updates: Partial<Bill>) => void;
-  onAddBill: (bill: Partial<Bill>) => void;
-  onAddVendor: (vendor: Partial<Vendor>) => void;
-}
 
-export default function Purchases({ 
-  user, 
-  bills = [], 
-  vendors = [], 
-  accounts = [], 
-  onUpdateBill, 
-  onAddBill, 
-  onAddVendor 
-}: PurchasesProps) {
+
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
+
+export default function Purchases() {
+  const user = useAuthStore(s => s.user);
+  const bills = useLedgerStore(s => s.bills);
+  const vendors = useLedgerStore(s => s.vendors);
+  const accounts = useLedgerStore(s => s.accounts);
+  const { addEntity, updateEntity } = useEntityOperations();
+  const onAddBill = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('bills', id, updates); } return addEntity('bills', data); };
+  const onUpdateBill = (id: string, updates: any) => updateEntity('bills', id, updates);
+  const onAddVendor = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('vendors', id, updates); } return addEntity('vendors', data); };
   const [activeSubTab, setActiveSubTab] = useState<'bills' | 'vendors' | 'pipeline'>('pipeline');
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
