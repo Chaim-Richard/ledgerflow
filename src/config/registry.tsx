@@ -304,6 +304,7 @@ export const SETTINGS_TABS_REGISTRY = [
   { id: 'security', label: { en: 'Security', he: 'אבטחה' }, componentName: 'SecurityView', icon: ShieldCheck },
   { id: 'rule', label: { en: 'AI & Rules', he: 'בינה מלאכותית' }, componentName: 'AISettingsView', icon: CpuIcon },
   { id: 'developer', label: { en: 'Developer', he: 'מפתחים' }, componentName: 'DeveloperView', icon: TerminalIcon },
+  { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ];
 
@@ -313,6 +314,7 @@ export const SETTINGS_COMPONENTS: Record<string, any> = {
   'SecurityView': lazy(() => import('../components/platform/settings/SecuritySettings')),
   'AISettingsView': lazy(() => import('../components/platform/settings/AISettings')),
   'DeveloperView': lazy(() => import('../components/platform/settings/DeveloperSettings')),
+  'ExportView': lazy(() => import('../components/platform/settings/BackupExportSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };
 
