@@ -58,7 +58,7 @@ export class AIBackendService {
     if (lower.includes('lite') || lower.includes('3.1-flash-lite')) {
       return 'gemini-3.1-flash-lite';
     }
-    return 'gemini-3.5-flash';
+    return 'gemini-3.0-flash';
   }
 
   /**
