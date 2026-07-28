@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Download, Database, FileSpreadsheet, Archive, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Download, Database, FileSpreadsheet, Archive, AlertCircle } from 'lucide-react';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
-import { formatCurrency } from '../../../lib/utils';
 import { toast } from 'sonner';
 
 export default function BackupExportSettings() {
