@@ -55,6 +55,35 @@ export function useEntityOperations() {
       };
 
       if (path === 'invoices') {
+        
+      if (path === 'invoices' && finalData.status === 'sent') {
+        fetch(`/api/v1/invoices/${docId || docId}/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspaceId: currentWorkspaceId,
+            toEmail: finalData.metadata?.sentTo || 'customer@example.com',
+            subject: finalData.metadata?.emailSubject || `Invoice ${finalData.number}`,
+            body: finalData.metadata?.emailBody || 'Please find your invoice attached.'
+          })
+        }).then(res => res.json()).then(data => {
+          if (data.success) {
+            toast.success('Invoice email sent successfully.');
+            // Copy to clipboard for easy testing
+            if (data.invoiceUrl) {
+              navigator.clipboard.writeText(data.invoiceUrl);
+              toast.info('Payment link copied to clipboard: ' + data.invoiceUrl);
+            }
+          } else {
+            toast.error(data.error || 'Failed to send invoice email.');
+          }
+        }).catch(err => {
+          console.error('Failed to send invoice email:', err);
+          toast.error('Failed to send invoice email.');
+        });
+      }
+
+
         await LedgerPostService.postInvoiceLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
       } else if (path === 'bills') {
         await LedgerPostService.postBillLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
@@ -92,6 +121,35 @@ export function useEntityOperations() {
       };
 
       // Post to ledger if it's an invoice or a bill
+        
+      if (path === 'invoices' && finalData.status === 'sent') {
+        fetch(`/api/v1/invoices/${id}/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspaceId: currentWorkspaceId,
+            toEmail: finalData.metadata?.sentTo || 'customer@example.com',
+            subject: finalData.metadata?.emailSubject || `Invoice ${finalData.number}`,
+            body: finalData.metadata?.emailBody || 'Please find your invoice attached.'
+          })
+        }).then(res => res.json()).then(data => {
+          if (data.success) {
+            toast.success('Invoice email sent successfully.');
+            // Copy to clipboard for easy testing
+            if (data.invoiceUrl) {
+              navigator.clipboard.writeText(data.invoiceUrl);
+              toast.info('Payment link copied to clipboard: ' + data.invoiceUrl);
+            }
+          } else {
+            toast.error(data.error || 'Failed to send invoice email.');
+          }
+        }).catch(err => {
+          console.error('Failed to send invoice email:', err);
+          toast.error('Failed to send invoice email.');
+        });
+      }
+
+
       if (path === 'invoices' && user && currentWorkspaceId) {
         const existingInvoice = useLedgerStore.getState().invoices.find(i => i.id === id) || {};
         const mergedData = { ...existingInvoice, ...finalData };

@@ -9,6 +9,7 @@ interface UIState {
   isQuickEntryOpen: boolean;
   isCommandPaletteOpen: boolean;
   isImporterOpen: boolean;
+  isQBOMigrationOpen: boolean;
   isTemplateSelectorOpen: boolean;
   isAIBlueprintOpen: boolean;
   isCommandCenterOpen: boolean;
@@ -88,6 +89,7 @@ export const useUIStore = create<UIState>((set) => ({
   isQuickEntryOpen: false,
   isCommandPaletteOpen: false,
   isImporterOpen: false,
+  isQBOMigrationOpen: false,
   isTemplateSelectorOpen: false,
   isAIBlueprintOpen: false,
   isCommandCenterOpen: false,
@@ -195,6 +197,7 @@ export const useUIStore = create<UIState>((set) => ({
   setQuickEntryOpen: (isQuickEntryOpen) => set({ isQuickEntryOpen }),
   setCommandPaletteOpen: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
   setImporterOpen: (isImporterOpen) => set({ isImporterOpen }),
+  setQBOMigrationOpen: (isQBOMigrationOpen: boolean) => set({ isQBOMigrationOpen }),
   setTemplateSelectorOpen: (isTemplateSelectorOpen) => set({ isTemplateSelectorOpen }),
   setAIBlueprintOpen: (isAIBlueprintOpen) => set({ isAIBlueprintOpen }),
   setCommandCenterOpen: (isCommandCenterOpen) => set({ isCommandCenterOpen }),

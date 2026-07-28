@@ -1,3 +1,5 @@
+import { invoiceEmailRouter } from "./src/server/routes/invoiceEmailRoutes";
+import { publicInvoiceRouter } from "./src/server/routes/publicInvoiceRoutes";
 import { transactionRouter } from "./src/server/routes/transactionRoutes";
 import { revenueRouter } from "./src/server/routes/revenueRoutes";
 import { consolidationRouter } from "./src/server/routes/consolidationRoutes";
@@ -154,7 +156,7 @@ async function syncGlobalAdminConfig() {
       };
       console.debug("🌀 [Global Billing Config Sync] Loaded from database:", globalAdminConfig);
     }
-  } catch (err) {
+  } catch (err: any) {
     console.debug("🌀 [Global Billing Config Sync] Bypassed (Using default settings)");
   }
 }
@@ -431,6 +433,104 @@ async function startServer() {
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   }));
   app.use(morgan("tiny"));
+  
+  // Stripe Webhook needs raw body
+  app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+    try {
+      const stripe = getStripe();
+      const sig = req.headers['stripe-signature'];
+      let event;
+
+      try {
+        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+        if (webhookSecret && sig) {
+          event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+        } else {
+          event = JSON.parse(req.body.toString());
+        }
+      } catch (err: any) {
+        console.error('Webhook signature verification failed.', err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        
+        if (session.metadata?.invoiceId) {
+          const invoiceId = session.metadata.invoiceId;
+          const workspaceId = session.metadata.workspaceId;
+          const amountTotal = session.amount_total;
+          
+          const db = getFirestore();
+          const invoiceRef = db.collection('workspaces').doc(workspaceId).collection('invoices').doc(invoiceId);
+          
+          await db.runTransaction(async (t) => {
+            const doc = await t.get(invoiceRef);
+            if (!doc.exists) return;
+            
+            const inv = doc.data() as any;
+            if (inv && inv.status !== "paid") {
+              t.update(invoiceRef, {
+                status: 'paid',
+                amountPaidCents: amountTotal,
+                paidAt: new Date().toISOString()
+              });
+              
+              const accountsSnap = await t.get(db.collection('workspaces').doc(workspaceId).collection('accounts'));
+              const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+              
+              let cashAccount: any = accounts.find((a: any) => a.subtype === "cash" || (a.name || '').toLowerCase().includes('cash') || (a.name || '').toLowerCase().includes('bank') || (a.name || '').toLowerCase().includes('stripe'));
+              let arAccount: any = accounts.find((a: any) => a.subtype === "accounts_receivable" || (a.name || '').toLowerCase().includes('receivable'));
+              
+              if (!cashAccount) cashAccount = { id: "unknown_cash", name: "Stripe Clearing" } as any;
+              if (!arAccount) arAccount = { id: "unknown_ar", name: "Accounts Receivable" } as any;
+              
+              const txRef = db.collection('workspaces').doc(workspaceId).collection('transactions').doc();
+              t.set(txRef, {
+                uid: 'system',
+                workspaceId,
+                date: new Date().toLocaleDateString('en-CA'),
+                description: `Invoice ${inv?.number || "Unknown"} Payment via Stripe`,
+                totalAmountCents: amountTotal,
+                currency: inv?.currency || 'USD',
+                exchangeRate: 1,
+                status: 'completed',
+                type: 'actual',
+                createdAt: new Date().toISOString(),
+                metadata: {
+                  invoiceId,
+                  stripeSessionId: session.id,
+                  type: 'invoice-payment'
+                },
+                lines: [
+                  {
+                    accountId: cashAccount.id,
+                    accountName: cashAccount.name,
+                    amountCents: amountTotal, // Debit Cash
+                    description: `Stripe Payment for Invoice ${inv?.number || "Unknown"}`,
+                    exchangeRate: 1
+                  },
+                  {
+                    accountId: arAccount.id,
+                    accountName: arAccount.name,
+                    amountCents: -amountTotal, // Credit AR
+                    description: `A/R Clearance for Invoice ${inv?.number || "Unknown"}`,
+                    exchangeRate: 1
+                  }
+                ]
+              });
+            }
+          });
+        }
+      }
+
+      res.json({received: true});
+    } catch (err: any) {
+      console.error(err);
+      res.status(500).send('Internal Server Error');
+    }
+  });
+
   app.use(express.json({ limit: "50mb" })); // Increased limit to securely support ~100,000 transaction bulk imports
 
   // Rate Limiting - Increased for production SPA load
@@ -3776,7 +3876,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
           if (!wsSnap.empty) {
             finalWorkspaceId = wsSnap.docs[0].id;
           }
-        } catch (err) {
+        } catch (err: any) {
           // Sandbox context fallback safely
         }
       }
@@ -3802,7 +3902,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
           accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
           rules = rulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn("[Labeler API] Direct DB configuration fetch bypassed safely: ", (err as Error).message || err);
       }
 

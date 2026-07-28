@@ -154,6 +154,7 @@ export interface Transaction {
   isFlagged?: boolean;
   isLocked?: boolean;
   lockedAt?: string;
+  paymentToken?: string;
 }
 
 export interface Project {
@@ -226,6 +227,7 @@ export interface Bill {
   reversalEventId?: string;
   isLocked?: boolean;
   lockedAt?: string;
+  paymentToken?: string;
 }
 
 export interface Invoice {
@@ -255,6 +257,7 @@ export interface Invoice {
   milestone?: string;
   isLocked?: boolean;
   lockedAt?: string;
+  paymentToken?: string;
 }
 
 export interface Customer {

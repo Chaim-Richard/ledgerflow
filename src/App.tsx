@@ -27,6 +27,8 @@ import { lazy, Suspense } from 'react';
 const LedgerAutoAuditor = lazy(() => import('./components/forensics/LedgerAutoAuditor').then(m => ({ default: m.LedgerAutoAuditor })));
 
 import { ErrorBoundary } from './components/ErrorBoundary';
+import PublicInvoicePage from './components/sales/PublicInvoicePage';
+
 
 export default function App() {
   const [isPending, startTransition] = useTransition();
@@ -243,6 +245,12 @@ const shortcutMap = useMemo(() => {
   
 
 
+
+  
+  const isPublicInvoice = window.location.pathname.startsWith('/i/');
+  if (isPublicInvoice) {
+    return <PublicInvoicePage />;
+  }
 
   if (isInitializing) {
     return <InitializationScreen language={language} />;

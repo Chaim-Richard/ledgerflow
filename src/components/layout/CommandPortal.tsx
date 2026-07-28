@@ -6,6 +6,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 // Highly Optimized Lazy Loading of heavy overlay system modals
 const CommandPalette = lazy(() => import('./CommandPalette'));
 const MagicEntry = lazy(() => import('../ledger/MagicEntry'));
+const QBOMigrationWizard = lazy(() => import('../migration/QBOMigrationWizard'));
 const StatementImporter = lazy(() => import('../ledger/StatementImporter'));
 const TemplateSelector = lazy(() => import('./TemplateSelector'));
 const AICustomBlueprint = lazy(() => import('../intelligence/AICustomBlueprint'));
@@ -19,6 +20,7 @@ interface CommandPortalProps {
     commandPalette: boolean;
     quickEntry: boolean;
     importer: boolean;
+    qboMigration: boolean;
     template: boolean;
     aiBlueprint: boolean;
     commandCenter: boolean;
@@ -31,6 +33,7 @@ interface CommandPortalProps {
     closeCommandPalette: () => void;
     closeQuickEntry: () => void;
     closeImporter: () => void;
+    closeQBOMigration: () => void;
     closeTemplate: () => void;
     closeAIBlueprint: () => void;
     closeCommandCenter: () => void;
@@ -88,6 +91,12 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
           projects={projects.map((p: any) => p.name)}
           autoRules={autoRules}
           patternCache={patternCache}
+        />
+      )}
+      {modals.qboMigration && (
+        <QBOMigrationWizard 
+          isOpen={modals.qboMigration}
+          onClose={handlers.closeQBOMigration}
         />
       )}
       {modals.importer && (
