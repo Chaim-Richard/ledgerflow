@@ -72,7 +72,7 @@ export const useBillingStore = create<BillingState>()(
       }
     }),
     {
-      name: 'clearbook-billing-storage'
+      name: 'ledgerflow-billing-storage'
     }
   )
 );
@@ -81,7 +81,7 @@ export const BillingAPI = {
   // External API wrapper for Stripe/payment processing
   async chargeUser(amountCents: number, currency: string = 'USD') {
     // Integrate Stripe or equivalent here to process real logic
-    console.log(`Processing charge of ${amountCents} ${currency} for usage.`);
+    console.debug(`Processing charge of ${amountCents} ${currency} for usage.`);
     return true; 
   }
 };

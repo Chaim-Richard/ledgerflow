@@ -15,7 +15,7 @@ export default function StatusBar() {
             )} 
           />
           <span className="font-semibold uppercase tracking-wider leading-none text-[var(--muted)]">
-            {isOnline ? "MERIDIAN ONLINE" : "OFFLINE MODE"}
+            {isOnline ? "ledgerflow ONLINE" : "OFFLINE MODE"}
           </span>
         </div>
         <span className="text-[var(--brass)]">·</span>

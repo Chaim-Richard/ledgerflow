@@ -819,7 +819,7 @@ export function useTransactionActions() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `general_ledger_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `general_ledger_export_${new Date().toLocaleDateString('en-CA')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

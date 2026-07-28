@@ -23,7 +23,7 @@ revenueRouter.post('/recognize', async (req, res) => {
       id: db.collection("transactions").doc().id,
       workspaceId,
       uid: user.uid,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('en-CA'),
       description: `ASC 606 Revenue Recognition for Contract ${contractId || 'Unknown'} (Period ${periodId || 'N/A'})`,
       totalAmountCents: amountCents,
       type: 'journal',

@@ -25,7 +25,7 @@ consolidationRouter.post('/eliminate', async (req, res) => {
       id: db.collection("transactions").doc().id,
       workspaceId: parentWorkspaceId,
       uid: user.uid,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('en-CA'),
       description: `Intercompany Elimination for ${targetPeriod || 'Current Period'}`,
       totalAmountCents: 500000,
       type: 'journal',

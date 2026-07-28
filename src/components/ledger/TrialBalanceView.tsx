@@ -54,7 +54,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `trial_balance_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `trial_balance_export_${new Date().toLocaleDateString('en-CA')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

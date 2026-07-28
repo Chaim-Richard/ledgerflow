@@ -16,9 +16,9 @@ export function useSystemActions() {
 
   const handleLogout = useCallback(() => {
     localStorage.setItem('isGuest', 'false');
-    localStorage.removeItem('clearbook_use_sandbox_mode');
-    localStorage.removeItem('clearbook_identity_email');
-    localStorage.removeItem('clearbook_identity_name');
+    localStorage.removeItem('ledgerflow_use_sandbox_mode');
+    localStorage.removeItem('ledgerflow_identity_email');
+    localStorage.removeItem('ledgerflow_identity_name');
     
     useAuthStore.getState().setUser(null);
     useLedgerStore.setState({ 

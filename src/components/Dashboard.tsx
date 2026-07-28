@@ -120,8 +120,8 @@ export default function Dashboard() {
     return [...rawTransactions, ...materializedGhosts];
   }, [rawTransactions, scenarios, activeScenarioId]);
 
-  // Real Account Categories/Facet roll-up
-  const accountFacets = useMemo(() => {
+  // Real Account Categories/ledgerflow roll-up
+  const accountledgerflows = useMemo(() => {
     const typeTotals: Record<string, number> = {
       Asset: 0,
       Liability: 0,
@@ -303,7 +303,7 @@ export default function Dashboard() {
       {/* Tax Reserve Widget embedded */}
       <TaxReserveWidget />
 
-      {/* Two Column Layout: Real Transactions + Facets Panel */}
+      {/* Two Column Layout: Real Transactions + ledgerflows Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Ledger Column */}
         <div className="lg:col-span-2 bg-[var(--panel)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
@@ -389,11 +389,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Real Accounts Roll-up Facet Panel */}
+        {/* Real Accounts Roll-up ledgerflow Panel */}
         <div className="bg-[var(--panel)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm flex flex-col">
           <div className="flex items-center justify-between p-4 border-b border-[var(--line)] bg-[var(--surface)]">
             <div>
-              <h3 className="font-bold text-sm text-[var(--text)] font-sans">Account Facets</h3>
+              <h3 className="font-bold text-sm text-[var(--text)] font-sans">Account ledgerflows</h3>
               <div className="font-mono text-[11px] text-[var(--faint)]">roll-up by type</div>
             </div>
             <button 
@@ -405,19 +405,19 @@ export default function Dashboard() {
           </div>
 
           <div className="divide-y divide-[var(--line)] flex-1">
-            {accountFacets.map(facet => (
-              <div key={facet.name} className="p-4 space-y-2">
+            {accountledgerflows.map(ledgerflow => (
+              <div key={ledgerflow.name} className="p-4 space-y-2">
                 <div className="flex items-center justify-between text-xs font-medium">
                   <span className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: facet.color }} />
-                    {facet.name}s
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ledgerflow.color }} />
+                    {ledgerflow.name}s
                   </span>
-                  <span className="font-mono text-[var(--muted)]">{formatCurrency(facet.total)}</span>
+                  <span className="font-mono text-[var(--muted)]">{formatCurrency(ledgerflow.total)}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-[var(--surface)] overflow-hidden">
                   <div 
                     className="h-full rounded-full transition-all duration-500" 
-                    style={{ backgroundColor: facet.color, width: `${Math.max(5, facet.percentage)}%` }} 
+                    style={{ backgroundColor: ledgerflow.color, width: `${Math.max(5, ledgerflow.percentage)}%` }} 
                   />
                 </div>
               </div>

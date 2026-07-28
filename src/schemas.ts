@@ -4,6 +4,7 @@ export const TransactionLineSchema = z.object({
   accountId: z.string().min(1),
   accountName: z.string().optional(),
   amountCents: z.number().int(),
+  exchangeRate: z.number().optional(),
   description: z.string().max(500).optional(),
 });
 
@@ -56,6 +57,7 @@ export const BankMappingRequestSchema = z.object({
     id: z.string(),
     description: z.string(),
     amountCents: z.number().int(),
+  exchangeRate: z.number().optional(),
   })),
   workspaceId: z.string(),
   context: z.string().optional(),
@@ -102,6 +104,7 @@ export const ValuationRequestSchema = z.object({
 export const TemporalMathRequestSchema = z.object({
   type: z.enum(['tax', 'currency']),
   amountCents: z.number().int(),
+  exchangeRate: z.number().optional(),
   targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   timeSeries: z.array(z.object({
     validFrom: z.string(),

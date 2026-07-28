@@ -319,8 +319,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         action: `PHYSICAL_INTEGRITY_DRIFT: Balance Delta is ${formattedDelta} [Shadow: $${(integrity.totalBalance / 100).toFixed(2)} · Incremental: $${(runningBalances.totalBalance / 100).toFixed(2)}]`,
         entityType: 'system',
         entityId: 'SHADOW_RECONCILER',
-        email: 'SYSTEM_AUTOPILOT@clearbook.security',
-        userEmail: 'SYSTEM_AUTOPILOT@clearbook.security',
+        email: 'SYSTEM_AUTOPILOT@ledgerflow.security',
+        userEmail: 'SYSTEM_AUTOPILOT@ledgerflow.security',
         targetId: 'LEDGER_INTEGRITY_VIOLATION',
         details: {
           driftCents: drift,

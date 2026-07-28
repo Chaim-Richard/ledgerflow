@@ -183,9 +183,9 @@ const shortcutMap = useMemo(() => {
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
-    localStorage.removeItem('clearbook_use_sandbox_mode');
-    localStorage.removeItem('clearbook_identity_email');
-    localStorage.removeItem('clearbook_identity_name');
+    localStorage.removeItem('ledgerflow_use_sandbox_mode');
+    localStorage.removeItem('ledgerflow_identity_email');
+    localStorage.removeItem('ledgerflow_identity_name');
     
     try {
       await signInWithPopup(auth, provider);
@@ -199,9 +199,9 @@ const shortcutMap = useMemo(() => {
   };
 
   const handleEmailLogin = async (email: string, pass: string) => {
-    localStorage.removeItem('clearbook_use_sandbox_mode');
-    localStorage.removeItem('clearbook_identity_email');
-    localStorage.removeItem('clearbook_identity_name');
+    localStorage.removeItem('ledgerflow_use_sandbox_mode');
+    localStorage.removeItem('ledgerflow_identity_email');
+    localStorage.removeItem('ledgerflow_identity_name');
     
     try {
       await signInWithEmailAndPassword(auth, email, pass);
@@ -216,9 +216,9 @@ const shortcutMap = useMemo(() => {
   };
 
   const handleEmailSignup = async (email: string, pass: string) => {
-    localStorage.removeItem('clearbook_use_sandbox_mode');
-    localStorage.removeItem('clearbook_identity_email');
-    localStorage.removeItem('clearbook_identity_name');
+    localStorage.removeItem('ledgerflow_use_sandbox_mode');
+    localStorage.removeItem('ledgerflow_identity_email');
+    localStorage.removeItem('ledgerflow_identity_name');
     
     try {
       await createUserWithEmailAndPassword(auth, email, pass);

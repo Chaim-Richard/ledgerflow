@@ -50,7 +50,7 @@ export function aggregateLedgerToDailySeries(
   for (let i = 0; i < days; i++) {
     const d = new Date(start);
     d.setUTCDate(start.getUTCDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = d.toLocaleDateString('en-CA');
     datesList.push(dateStr);
     seriesMap[dateStr] = 0;
   }

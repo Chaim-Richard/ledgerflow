@@ -21,7 +21,7 @@ const isIframe = () => {
 
 const getCacheConfig = () => {
   if (isIframe()) {
-    console.log("Firestore: running in iframe workspace preview. Enabling memory cache to prevent sandboxed IndexedDB blockages.");
+    console.debug("Firestore: running in iframe workspace preview. Enabling memory cache to prevent sandboxed IndexedDB blockages.");
     return { localCache: memoryLocalCache() };
   }
   
@@ -52,7 +52,7 @@ export const auth = getAuth(app);
 export const goOffline = async () => {
   try {
     await disableNetwork(db);
-    console.log("Firestore working in offline sandbox mode");
+    console.debug("Firestore working in offline sandbox mode");
   } catch (error) {
     console.error("Failed to disable Firestore network:", error);
   }
@@ -61,7 +61,7 @@ export const goOffline = async () => {
 export const goOnline = async () => {
   try {
     await enableNetwork(db);
-    console.log("Firestore connected to live network");
+    console.debug("Firestore connected to live network");
   } catch (error) {
     console.error("Failed to enable Firestore network:", error);
   }

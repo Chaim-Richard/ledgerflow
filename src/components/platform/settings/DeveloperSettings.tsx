@@ -34,7 +34,7 @@ export default function DeveloperSettings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `clearbook_${defaultAcc.code}_${new Date().toISOString().split('T')[0]}.ofx`;
+    a.download = `ledgerflow_${defaultAcc.code}_${new Date().toLocaleDateString('en-CA')}.ofx`;
     a.click();
     toast.success("OFX Export Layer Successful");
   };

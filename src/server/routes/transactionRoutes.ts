@@ -497,7 +497,7 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
       id: db.collection("transactions").doc().id,
       workspaceId,
       uid: user.uid,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('en-CA'),
       description: `Month-End FX Revaluation to ${targetCurrency || 'USD'}`,
       totalAmountCents: 1500, // Synthetic amount: $15.00
       type: 'journal',

@@ -65,7 +65,7 @@ export class AIBackendService {
   async process(task: string, payload: any): Promise<any> {
     const cached = AIBackendService.getCachedResponse(task, payload);
     if (cached) {
-      console.log(`[AI Cache Hit] Task: ${task} resolved from static memory cache.`);
+      console.debug(`[AI Cache Hit] Task: ${task} resolved from static memory cache.`);
       return cached;
     }
 

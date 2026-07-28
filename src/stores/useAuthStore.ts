@@ -28,7 +28,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   userProfile: null,
   workspaces: [],
-  currentWorkspaceId: localStorage.getItem('clearbook_current_workspace'),
+  currentWorkspaceId: localStorage.getItem('ledgerflow_current_workspace'),
   currentProjectId: null,
 
   setUser: (user) => set({ user }),
@@ -36,9 +36,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setWorkspaces: (workspaces) => set({ workspaces }),
   setCurrentWorkspaceId: (currentWorkspaceId) => {
     if (currentWorkspaceId) {
-      localStorage.setItem('clearbook_current_workspace', currentWorkspaceId);
+      localStorage.setItem('ledgerflow_current_workspace', currentWorkspaceId);
     } else {
-      localStorage.removeItem('clearbook_current_workspace');
+      localStorage.removeItem('ledgerflow_current_workspace');
     }
     
     // Clear ledger store data immediately to prevent ghosting between workspaces

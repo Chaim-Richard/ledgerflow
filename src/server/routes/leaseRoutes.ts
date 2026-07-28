@@ -23,7 +23,7 @@ leaseRouter.post('/capitalize', async (req, res) => {
       id: db.collection("transactions").doc().id,
       workspaceId,
       uid: user.uid,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('en-CA'),
       description: `ASC 842 Initial Recognition: ${leaseName || 'Operating Lease'}`,
       totalAmountCents: pvAmountCents,
       type: 'journal',

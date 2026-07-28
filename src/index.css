@@ -14,19 +14,19 @@
   --color-ledger-warning: #f59e0b;
 
   /* LedgerFlow Theme */
-  --color-meridian-ink: var(--ink);
-  --color-meridian-surface: var(--surface);
-  --color-meridian-panel: var(--panel);
-  --color-meridian-elevated: var(--elevated);
-  --color-meridian-line: var(--line);
-  --color-meridian-text: var(--text);
-  --color-meridian-muted: var(--muted);
-  --color-meridian-faint: var(--faint);
-  --color-meridian-brass: var(--brass);
-  --color-meridian-brass-soft: var(--brass-soft);
-  --color-meridian-brass-line: var(--brass-line);
-  --color-meridian-pos: var(--pos);
-  --color-meridian-neg: var(--neg);
+  --color-ledgerflow-ink: var(--ink);
+  --color-ledgerflow-surface: var(--surface);
+  --color-ledgerflow-panel: var(--panel);
+  --color-ledgerflow-elevated: var(--elevated);
+  --color-ledgerflow-line: var(--line);
+  --color-ledgerflow-text: var(--text);
+  --color-ledgerflow-muted: var(--muted);
+  --color-ledgerflow-faint: var(--faint);
+  --color-ledgerflow-brass: var(--brass);
+  --color-ledgerflow-brass-soft: var(--brass-soft);
+  --color-ledgerflow-brass-line: var(--brass-line);
+  --color-ledgerflow-pos: var(--pos);
+  --color-ledgerflow-neg: var(--neg);
   --color-w-personal: var(--w-personal);
   --color-w-charity: var(--w-charity);
   --color-w-book: var(--w-book);

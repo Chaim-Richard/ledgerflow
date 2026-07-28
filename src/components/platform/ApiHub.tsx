@@ -1335,18 +1335,18 @@ export default function ApiHub() {
                  
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.ledgerflow.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 headers = {"Authorization": "Bearer <YOUR_API_KEY>"}
 
 response = requests.get(url, headers=headers)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-const url = "https://api.clearbook.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}";
+const url = "https://api.ledgerflow.io/api/v1/status?workspaceId=${currentWorkspace?.id || 'ws_123'}";
 const options = {
   method: 'GET',
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
@@ -1354,7 +1354,7 @@ const options = {
 
 fetch(url, options)
   .then(res => res.json())
-  .then(json => console.log(json));`}
+  .then(json => console.debug(json));`}
 </pre>
                  </div>
                  
@@ -1391,7 +1391,7 @@ fetch(url, options)
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/transactions" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/transactions" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Idempotency-Key: req_123456789" \\
   -H "Content-Type: application/json" \\
@@ -1405,7 +1405,7 @@ fetch(url, options)
  docLang === 'python' ? `import requests
 import uuid
 
-url = "https://api.clearbook.io/api/v1/transactions"
+url = "https://api.ledgerflow.io/api/v1/transactions"
 headers = {
     "Authorization": "Bearer <YOUR_API_KEY>",
     "Idempotency-Key": str(uuid.uuid4()),
@@ -1423,7 +1423,7 @@ print(response.json())` :
 `const fetch = require('node-fetch');
 const crypto = require('crypto');
 
-const url = "https://api.clearbook.io/api/v1/transactions";
+const url = "https://api.ledgerflow.io/api/v1/transactions";
 const payload = {
   workspaceId: "${currentWorkspace?.id || 'ws_123'}",
   date: "2026-05-28",
@@ -1464,7 +1464,7 @@ fetch(url, {
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/brain/analyze" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/brain/analyze" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1473,7 +1473,7 @@ fetch(url, {
   }'` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/brain/analyze"
+url = "https://api.ledgerflow.io/api/v1/brain/analyze"
 headers = {"Authorization": "Bearer <YOUR_API_KEY>"}
 payload = {
     "workspaceId": "${currentWorkspace?.id || 'ws_123'}",
@@ -1484,7 +1484,7 @@ res = requests.post(url, headers=headers, json=payload)
 print(res.json().get('analysis'))` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/brain/analyze", {
+fetch("https://api.ledgerflow.io/api/v1/brain/analyze", {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer <YOUR_API_KEY>',
@@ -1514,7 +1514,7 @@ fetch("https://api.clearbook.io/api/v1/brain/analyze", {
  
                   <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/brain/classify" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/brain/classify" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1527,7 +1527,7 @@ fetch("https://api.clearbook.io/api/v1/brain/analyze", {
   }'` : 
  docLang === 'python' ? `import requests
  
-url = "https://api.clearbook.io/api/v1/brain/classify"
+url = "https://api.ledgerflow.io/api/v1/brain/classify"
 headers = {
     "Authorization": "Bearer <YOUR_API_KEY>",
     "Content-Type": "application/json"
@@ -1542,7 +1542,7 @@ res = requests.post(url, headers=headers, json=payload)
 print(res.json())` : 
 `const fetch = require("node-fetch");
  
-fetch("https://api.clearbook.io/api/v1/brain/classify", {
+fetch("https://api.ledgerflow.io/api/v1/brain/classify", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <YOUR_API_KEY>",
@@ -1581,16 +1581,16 @@ fetch("https://api.clearbook.io/api/v1/brain/classify", {
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.ledgerflow.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.ledgerflow.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -1606,7 +1606,7 @@ fetch("https://api.clearbook.io/api/v1/ledger?workspaceId=${currentWorkspace?.id
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/ledger" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/ledger" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1617,7 +1617,7 @@ fetch("https://api.clearbook.io/api/v1/ledger?workspaceId=${currentWorkspace?.id
   }'` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/ledger"
+url = "https://api.ledgerflow.io/api/v1/ledger"
 payload = {
     "workspaceId": "${currentWorkspace?.id || 'ws_123'}",
     "name": "Fleet Vehicles",
@@ -1628,7 +1628,7 @@ response = requests.post(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"}
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/ledger", {
+fetch("https://api.ledgerflow.io/api/v1/ledger", {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer <YOUR_API_KEY>',
@@ -1654,16 +1654,16 @@ fetch("https://api.clearbook.io/api/v1/ledger", {
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.ledgerflow.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.ledgerflow.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -1682,16 +1682,16 @@ fetch("https://api.clearbook.io/api/v1/transactions?workspaceId=${currentWorkspa
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X DELETE "https://api.clearbook.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X DELETE "https://api.ledgerflow.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.ledgerflow.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.delete(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.ledgerflow.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   method: 'DELETE',
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
@@ -1708,16 +1708,16 @@ fetch("https://api.clearbook.io/api/v1/transactions/api-1701234567-abcd?workspac
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.ledgerflow.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.ledgerflow.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -1733,16 +1733,16 @@ fetch("https://api.clearbook.io/api/v1/logs?workspaceId=${currentWorkspace?.id |
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.ledgerflow.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.ledgerflow.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -1775,16 +1775,16 @@ fetch("https://api.clearbook.io/api/v1/metrics/summary?workspaceId=${currentWork
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.ledgerflow.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.ledgerflow.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -1828,7 +1828,7 @@ fetch("https://api.clearbook.io/api/v1/metrics?workspaceId=${currentWorkspace?.i
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/audit/deep" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/audit/deep" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1836,7 +1836,7 @@ fetch("https://api.clearbook.io/api/v1/metrics?workspaceId=${currentWorkspace?.i
   }'` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/audit/deep"
+url = "https://api.ledgerflow.io/api/v1/audit/deep"
 headers = {
     "Authorization": "Bearer <YOUR_API_KEY>",
     "Content-Type": "application/json"
@@ -1848,7 +1848,7 @@ response = requests.post(url, headers=headers, json=payload)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/audit/deep", {
+fetch("https://api.ledgerflow.io/api/v1/audit/deep", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <YOUR_API_KEY>",
@@ -1879,16 +1879,16 @@ fetch("https://api.clearbook.io/api/v1/audit/deep", {
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.ledgerflow.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 response = requests.get(url, headers={"Authorization": "Bearer <YOUR_API_KEY>"})
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.ledgerflow.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -1942,7 +1942,7 @@ fetch("https://api.clearbook.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceI
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X PUT "https://api.clearbook.io/api/v1/transactions/<TRANSACTION_ID>" \\
+{docLang === 'curl' ? `curl -X PUT "https://api.ledgerflow.io/api/v1/transactions/<TRANSACTION_ID>" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1952,7 +1952,7 @@ fetch("https://api.clearbook.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceI
   }'` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/transactions/<TRANSACTION_ID>"
+url = "https://api.ledgerflow.io/api/v1/transactions/<TRANSACTION_ID>"
 headers = {
     "Authorization": "Bearer <YOUR_API_KEY>",
     "Content-Type": "application/json"
@@ -1967,7 +1967,7 @@ response = requests.put(url, headers=headers, json=payload)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-const url = "https://api.clearbook.io/api/v1/transactions/<TRANSACTION_ID>";
+const url = "https://api.ledgerflow.io/api/v1/transactions/<TRANSACTION_ID>";
 const payload = {
   workspaceId: "${currentWorkspace?.id || 'ws_123'}",
   description: "AWS Hosting Tier Upgrade",
@@ -1998,7 +1998,7 @@ fetch(url, {
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/depreciation" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/depreciation" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "type": "double_declining_balance",
@@ -2007,7 +2007,7 @@ fetch(url, {
     "usefulLifePeriods": 60,
     "multiplier": 2
   }'` : 
-`const response = await fetch("https://api.clearbook.io/api/v1/math/depreciation", {
+`const response = await fetch("https://api.ledgerflow.io/api/v1/math/depreciation", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2039,7 +2039,7 @@ const { depreciationPerPeriodCents } = await response.json();`}
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/inventory/wac" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/inventory/wac" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "currentQty": 100,
@@ -2047,7 +2047,7 @@ const { depreciationPerPeriodCents } = await response.json();`}
     "incomingQty": 50,
     "incomingValueCents": 300000
   }'` : 
-`const response = await fetch("https://api.clearbook.io/api/v1/math/inventory/wac", {
+`const response = await fetch("https://api.ledgerflow.io/api/v1/math/inventory/wac", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2078,7 +2078,7 @@ const { newAverageCostCents } = await response.json();`}
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/amortization" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/amortization" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "principalCents": 10000000,
@@ -2086,7 +2086,7 @@ const { newAverageCostCents } = await response.json();`}
     "totalPeriods": 360,
     "paymentsPerYear": 12
   }'` : 
-`const response = await fetch("https://api.clearbook.io/api/v1/math/amortization", {
+`const response = await fetch("https://api.ledgerflow.io/api/v1/math/amortization", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2117,14 +2117,14 @@ const { periodicPaymentCents } = await response.json();`}
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/inventory/eoq" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/inventory/eoq" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "annualDemand": 10000,
     "costPerOrderCents": 50000,
     "holdingCostPerUnitCents": 200
   }'` : 
-`const response = await fetch("https://api.clearbook.io/api/v1/math/inventory/eoq", {
+`const response = await fetch("https://api.ledgerflow.io/api/v1/math/inventory/eoq", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2154,7 +2154,7 @@ const { eoq } = await response.json();`}
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/kpi" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/kpi" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "netProfitCents": 1500000,
@@ -2162,7 +2162,7 @@ const { eoq } = await response.json();`}
     "currentAssetsCents": 5000000,
     "currentLiabilitiesCents": 2000000
   }'` : 
-`const response = await fetch("https://api.clearbook.io/api/v1/math/kpi", {
+`const response = await fetch("https://api.ledgerflow.io/api/v1/math/kpi", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2196,7 +2196,7 @@ const kpiResults = await response.json();
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/math/temporal" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/temporal" \\
   -H "Authorization: Bearer <token>" \\
   -d '{
     "type": "tax",
@@ -2207,7 +2207,7 @@ const kpiResults = await response.json();
       { "validFrom": "2024-01-01", "validTo": "9999-12-31", "value": 0.095 }
     ]
   }'` : 
-`const response = await fetch("https://api.clearbook.io/api/v1/math/temporal", {
+`const response = await fetch("https://api.ledgerflow.io/api/v1/math/temporal", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -2245,18 +2245,18 @@ const { effectiveValue, calculatedAmountCents } = await response.json();
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/workspaces" \\
+{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/workspaces" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/workspaces"
+url = "https://api.ledgerflow.io/api/v1/workspaces"
 headers = {"Authorization": "Bearer <YOUR_API_KEY>"}
 
 response = requests.get(url, headers=headers)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/workspaces", {
+fetch("https://api.ledgerflow.io/api/v1/workspaces", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -2278,18 +2278,18 @@ fetch("https://api.clearbook.io/api/v1/workspaces", {
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X GET "https://api.clearbook.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
+{docLang === 'curl' ? `curl -X GET "https://api.ledgerflow.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}" \\
   -H "Authorization: Bearer <YOUR_API_KEY>"` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}"
+url = "https://api.ledgerflow.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}"
 headers = {"Authorization": "Bearer <YOUR_API_KEY>"}
 
 response = requests.get(url, headers=headers)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-fetch("https://api.clearbook.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
+fetch("https://api.ledgerflow.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
 }).then(res => res.json()).then(console.log);`}
 </pre>
@@ -2311,7 +2311,7 @@ fetch("https://api.clearbook.io/api/v1/projects?workspaceId=${currentWorkspace?.
 
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
 <pre className="font-mono text-[13px] leading-relaxed">
-{docLang === 'curl' ? `curl -X POST "https://api.clearbook.io/api/v1/projects" \\
+{docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/projects" \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -2322,7 +2322,7 @@ fetch("https://api.clearbook.io/api/v1/projects?workspaceId=${currentWorkspace?.
   }'` : 
  docLang === 'python' ? `import requests
 
-url = "https://api.clearbook.io/api/v1/projects"
+url = "https://api.ledgerflow.io/api/v1/projects"
 headers = {
     "Authorization": "Bearer <YOUR_API_KEY>",
     "Content-Type": "application/json"
@@ -2337,7 +2337,7 @@ response = requests.post(url, headers=headers, json=payload)
 print(response.json())` : 
 `const fetch = require('node-fetch');
 
-const url = "https://api.clearbook.io/api/v1/projects";
+const url = "https://api.ledgerflow.io/api/v1/projects";
 const payload = {
   workspaceId: "${currentWorkspace?.id || 'ws_123'}",
   name: "Integration Project",

@@ -68,6 +68,7 @@ export interface TransactionLine {
   accountId: string;
   accountName: string;
   amountCents: number; // Positive for Debit, Negative for Credit
+  exchangeRate?: number;
   description?: string;
   category?: string;    // Category for price intel / account category
   total_impact?: number; // Risk/Impact factor
@@ -206,6 +207,7 @@ export interface Bill {
   vendorName?: string;
   number?: string;
   amountCents: number;
+  exchangeRate?: number;
   taxAmountCents?: number;
   taxRate?: number;
   receiptUrl?: string;
@@ -213,6 +215,7 @@ export interface Bill {
   metadata?: Record<string, any>;
   splits?: Array<{
     amountCents: number;
+  exchangeRate?: number;
     accountId: string;
     taxRate?: number;
     description?: string;
@@ -233,6 +236,7 @@ export interface Invoice {
   customerName?: string;
   number?: string;
   amountCents: number;
+  exchangeRate?: number;
   totalCents?: number;
   date?: string;
   dueDate: string;
@@ -248,7 +252,6 @@ export interface Invoice {
   taxRate?: number;
   taxInclusive?: boolean;
   currency?: string;
-  exchangeRate?: number;
   milestone?: string;
   isLocked?: boolean;
   lockedAt?: string;
@@ -378,6 +381,7 @@ export interface Budget {
   targetType: 'category' | 'project' | 'account';
   period: string; // e.g. "2026-03" or "2026"
   amountCents: number;
+  exchangeRate?: number;
   createdAt: string;
 }
 
@@ -511,6 +515,7 @@ export interface RecurringTransaction {
   workspaceId: string;
   description: string;
   amountCents: number;
+  exchangeRate?: number;
   frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
   nextOccurrence: string;
   isActive: boolean;
@@ -525,6 +530,7 @@ export interface BankStatementLine {
   date: string;
   description: string;
   amountCents: number;
+  exchangeRate?: number;
   matchedTransactionId?: string;
   status: 'pending' | 'matched' | 'ignored';
 }
@@ -705,6 +711,7 @@ export interface ExpenseClaim {
   date: string;
   description: string;
   amountCents: number;
+  exchangeRate?: number;
   category: string;
   status: 'pending' | 'approved' | 'rejected';
   receiptUrl?: string;

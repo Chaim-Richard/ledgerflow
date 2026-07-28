@@ -554,7 +554,7 @@ export default function TransactionGrid() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `ledger_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `ledger_export_${new Date().toLocaleDateString('en-CA')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -990,7 +990,7 @@ export default function TransactionGrid() {
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.setAttribute('download', `ledgerflow_matrix_${new Date().toISOString().split('T')[0]}.csv`);
+                link.setAttribute('download', `ledgerflow_matrix_${new Date().toLocaleDateString('en-CA')}.csv`);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);

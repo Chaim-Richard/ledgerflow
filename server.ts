@@ -102,7 +102,7 @@ if (admin.apps.length === 0) {
   admin.initializeApp({
     projectId: projectId,
   });
-  console.log(`[Firebase Admin] Initialized for project: ${projectId}`);
+  console.debug(`[Firebase Admin] Initialized for project: ${projectId}`);
 }
 
 const upload = multer({ 
@@ -152,10 +152,10 @@ async function syncGlobalAdminConfig() {
         maxRegistrationLimit: data.maxRegistrationLimit !== undefined ? Number(data.maxRegistrationLimit) : 100,
         freeWorkspaceTxCap: data.freeWorkspaceTxCap !== undefined ? Number(data.freeWorkspaceTxCap) : 100,
       };
-      console.log("🌀 [Global Billing Config Sync] Loaded from database:", globalAdminConfig);
+      console.debug("🌀 [Global Billing Config Sync] Loaded from database:", globalAdminConfig);
     }
   } catch (err) {
-    console.log("🌀 [Global Billing Config Sync] Bypassed (Using default settings)");
+    console.debug("🌀 [Global Billing Config Sync] Bypassed (Using default settings)");
   }
 }
 
@@ -259,7 +259,7 @@ function handleApiError(res: express.Response, err: any) {
  * Authorization & Context Helper
  */
 async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string) {
-  console.log("[DEBUG] authorizeWorkspace - workspaceId:", workspaceId);
+  console.debug("[DEBUG] authorizeWorkspace - workspaceId:", workspaceId);
   const db = getDb();
   
   // Validate basic workspaceId structure (e.g., must be a non-empty string)
@@ -621,7 +621,7 @@ async function startServer() {
               id: traceId,
               workspaceId,
               uid: (req as AuthenticatedRequest).user.uid,
-              userEmail: (req as AuthenticatedRequest).user.email || 'developer@clearbook.io',
+              userEmail: (req as AuthenticatedRequest).user.email || 'developer@ledgerflow.io',
               algorithmName: `AI_${task.toUpperCase().replace(/-/g, '_')}`,
               complexityFormat: 'O(Tokens)',
               weightScore,
@@ -835,7 +835,7 @@ async function startServer() {
         // Set request user details for request pipeline context
         (req as AuthenticatedRequest).user = {
           uid: docData?.uid || "unknown_developer_uid",
-          email: "developer@clearbook.io",
+          email: "developer@ledgerflow.io",
           email_verified: true,
           displayName: "Developer Key Client",
           developerWorkspaceId: workspaceIdPattern,
@@ -1557,7 +1557,7 @@ async function startServer() {
             id: traceId,
             workspaceId,
             uid: (req as AuthenticatedRequest).user.uid || "api_user",
-            userEmail: (req as AuthenticatedRequest).user.email || 'developer@clearbook.io',
+            userEmail: (req as AuthenticatedRequest).user.email || 'developer@ledgerflow.io',
             algorithmName: 'ALGO_CLASSIFIER_BAYESIAN_BATCH',
             complexityFormat: `O(${descriptions.length} * V * C)`,
             weightScore,
@@ -2073,7 +2073,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         id: `trace-${Date.now()}`,
         workspaceId,
         uid,
-        userEmail: "api-client@clearbook.io",
+        userEmail: "api-client@ledgerflow.io",
         algorithmName: "STRATEGIC_DEEP_AUDIT_JOB",
         complexityFormat: "O(V * E)",
         weightScore: 1200,
@@ -2185,7 +2185,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         workspaceId,
         timestamp: new Date().toISOString(),
         userId: authReq.user.uid,
-        userEmail: authReq.user.email || "developer@clearbook.io",
+        userEmail: authReq.user.email || "developer@ledgerflow.io",
         action: "TRANSACTION_DELETED_API",
         details: `Deleted transaction ref [${txId}] via deep API interface.`
       });
@@ -2311,7 +2311,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         workspaceId,
         timestamp: new Date().toISOString(),
         userId: authReq.user.uid,
-        userEmail: authReq.user.email || "developer@clearbook.io",
+        userEmail: authReq.user.email || "developer@ledgerflow.io",
         action: "TRANSACTION_UPDATED_API",
         details: `Updated transaction ref [${txId}] via deep API interface.`
       });
@@ -2454,7 +2454,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
             id: traceId,
             workspaceId,
             uid: (req as AuthenticatedRequest).user.uid || "api_user",
-            userEmail: (req as AuthenticatedRequest).user.email || 'developer@clearbook.io',
+            userEmail: (req as AuthenticatedRequest).user.email || 'developer@ledgerflow.io',
             algorithmName: 'AI_BRAIN_ANALYZE_QUERY',
             complexityFormat: 'O(Tokens)',
             weightScore,
@@ -2536,7 +2536,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
             id: traceId,
             workspaceId,
             uid: (req as AuthenticatedRequest).user.uid || "api_user",
-            userEmail: (req as AuthenticatedRequest).user.email || 'developer@clearbook.io',
+            userEmail: (req as AuthenticatedRequest).user.email || 'developer@ledgerflow.io',
             algorithmName: 'ALGO_CLASSIFIER_BAYESIAN_SINGLE',
             complexityFormat: 'O(V*C)',
             weightScore,
@@ -3315,12 +3315,12 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     if (snap.exists) {
       const data = snap.data();
       if (Date.now() - (data?.timestamp || 0) < ttlMs) {
-        console.log(`[Cache Hit] Serving from cache: ${cacheKey}`);
+        console.debug(`[Cache Hit] Serving from cache: ${cacheKey}`);
         return data?.payload;
       }
     }
     
-    console.log(`[Cache Miss] Fetching from API: ${cacheKey}`);
+    console.debug(`[Cache Miss] Fetching from API: ${cacheKey}`);
     const response = await fetch(url, { method: "GET", headers });
     
     if (!response.ok) {
@@ -4006,7 +4006,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
   httpServer.on('error', (e: any) => {
     if (e.code === 'EADDRINUSE') {
-      console.log(`💥 Port ${PORT} is in use, retrying...`);
+      console.debug(`💥 Port ${PORT} is in use, retrying...`);
       setTimeout(() => {
         httpServer.close();
         httpServer.listen(PORT, "0.0.0.0");
@@ -4015,12 +4015,12 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 
   httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 [Server] Production Ready: http://localhost:${PORT}`);
-    console.log(`📂 [Server] Serving static assets from: ${process.env.NODE_ENV === "production" ? "dist" : "Vite Dev Server"}`);
+    console.debug(`🚀 [Server] Production Ready: http://localhost:${PORT}`);
+    console.debug(`📂 [Server] Serving static assets from: ${process.env.NODE_ENV === "production" ? "dist" : "Vite Dev Server"}`);
   });
 }
 
-console.log("🌀 [Server] Booting LedgerFlow Backend...");
+console.debug("🌀 [Server] Booting LedgerFlow Backend...");
 startServer().catch(err => {
   console.error("💥 [Server] Critical Startup Failure:", err);
   process.exit(1);

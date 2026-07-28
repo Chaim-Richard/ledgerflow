@@ -28,7 +28,7 @@ inventoryRouter.post('/cogs', async (req, res) => {
       id: db.collection("transactions").doc().id,
       workspaceId,
       uid: user.uid,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('en-CA'),
       description: `Inventory COGS (FIFO Valuation) - Item: ${itemId} (Qty: ${quantitySold})`,
       totalAmountCents: totalCogsCents,
       type: 'journal',
