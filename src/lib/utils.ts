@@ -6,8 +6,8 @@ import { useLedgerStore } from '../stores/useLedgerStore';
 /**
  * Specialized financial rounding to prevent decimal loss in tax calculations
  */
-export function financialRound(cents: number): number {
-  return Math.round((cents + Number.EPSILON) * 1) / 1;
+export function roundCents(cents: number): number {
+  return Math.round(cents);
 }
 
 /**
@@ -25,10 +25,18 @@ export function formatCurrency(cents: number | undefined | null, currency?: stri
     }
   }
 
-  return new Intl.NumberFormat('en-US', {
+  let divisor = 100;
+  try {
+    const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: targetCurrency });
+    if (formatter.resolvedOptions().maximumFractionDigits === 0) {
+      divisor = 1;
+    }
+  } catch (e) {}
+
+  return new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: targetCurrency,
-  }).format(cents / 100);
+  }).format(cents / divisor);
 }
 
 /**
@@ -45,12 +53,17 @@ export function formatDollars(dollars: number | undefined | null, currency?: str
 export function maskPII(text: string | undefined | null): string {
   if (!text) return "";
   if (text.includes('@')) {
-    const [user, domain] = text.split('@');
-    return `${user.slice(0, 2)}***@${domain}`;
+    const parts = text.split('@');
+    if (parts.length >= 2) {
+      const user = parts[0];
+      const domain = parts.slice(1).join('@');
+      return `${user.slice(0, 2)}***@${domain}`;
+    }
   }
   // Mask potential account numbers
-  if (/^\d{8,20}$/.test(text)) {
-    return `****${text.slice(-4)}`;
+  const digitsOnly = text.replace(/[\s-]/g, '');
+  if (/^\d{8,20}$/.test(digitsOnly)) {
+    return `****${digitsOnly.slice(-4)}`;
   }
   return text;
 }
@@ -75,6 +88,7 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function sanitizeCsvCell(value: any): string {
   if (value === null || value === undefined) return '""';
+  if (typeof value === 'number' || /^-?\d+(\.\d+)?$/.test(String(value))) return String(value);
   let str = String(value);
   // If string starts with formula trigger characters, prefix with single quote
   if (/^[=\+\-@\t\r]/.test(str)) {

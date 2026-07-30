@@ -31,21 +31,26 @@ export function levenshteinDistance(a: string, b: string): number {
 }
 
 export function stringSimilarity(a: string, b: string): number {
-  const aLower = a.toLowerCase().trim();
-  const bLower = b.toLowerCase().trim();
+  const aLower = a.toLowerCase().trim().slice(0, 64);
+  const bLower = b.toLowerCase().trim().slice(0, 64);
   if (aLower === bLower) return 1.0;
   
-  const distance = levenshteinDistance(aLower, bLower);
   const maxLength = Math.max(aLower.length, bLower.length);
   if (maxLength === 0) return 1.0;
+
+  // Optimization: If length difference is too large, the distance will be large
+  const minDistance = Math.abs(aLower.length - bLower.length);
+  if ((1.0 - minDistance / maxLength) < 0.2) return 0.0;
+  
+  const distance = levenshteinDistance(aLower, bLower);
   
   return 1.0 - distance / maxLength;
 }
 
 // Jaccard similarity for sets of tokens
 export function jaccardSimilarity(a: string, b: string): number {
-  const setA = new Set(a.toLowerCase().split(/\s+/));
-  const setB = new Set(b.toLowerCase().split(/\s+/));
+  const setA = new Set(a.toLowerCase().split(/\s+/).filter(Boolean));
+  const setB = new Set(b.toLowerCase().split(/\s+/).filter(Boolean));
   
   const intersection = new Set([...setA].filter(x => setB.has(x)));
   const union = new Set([...setA, ...setB]);

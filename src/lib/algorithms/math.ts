@@ -78,7 +78,7 @@ export function calculateNPV(rate: number, initialInvestment: number, cashFlows:
 }
 
 // Internal Rate of Return (Approximate via Newton-Raphson)
-export function calculateIRR(initialInvestment: number, cashFlows: number[], maxIterations = 1000): number {
+export function calculateIRR(initialInvestment: number, cashFlows: number[], maxIterations = 50): number {
   let rate = 0.1; // Initial guess 10%
   for (let iter = 0; iter < maxIterations; iter++) {
     let npv = -initialInvestment;
@@ -95,11 +95,17 @@ export function calculateIRR(initialInvestment: number, cashFlows: number[], max
       return rate;
     }
     
-    const newRate = rate - npv / derivative;
+    if (Math.abs(derivative) < 1e-10) {
+      return NaN;
+    }
+
+    let newRate = rate - npv / derivative;
+    newRate = Math.max(newRate, -0.9999);
+    
     if (Math.abs(newRate - rate) < 0.00001) {
       return newRate;
     }
     rate = newRate;
   }
-  return rate; // Return best guess if not converged fully
+  return NaN; // Return NaN if not converged fully
 }

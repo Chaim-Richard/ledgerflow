@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-import { financialRound, formatCurrency, formatDollars, getLocalDateISO } from '../lib/utils.js';
+import { roundCents, formatCurrency, formatDollars, getLocalDateISO } from '../lib/utils.js';
 import { DerivedBalanceEngine } from '../kernel/reporting/DerivedBalanceEngine.js';
 
 describe('Financial Accounting Golden-Path Test Suite', () => {
@@ -33,8 +33,8 @@ describe('Financial Accounting Golden-Path Test Suite', () => {
 
   test('Financial rounding prevents sub-cent rounding errors', () => {
     const rawCents = 12500.4;
-    assert.equal(financialRound(rawCents), 12500);
-    assert.equal(financialRound(12500.6), 12501);
+    assert.equal(roundCents(rawCents), 12500);
+    assert.equal(roundCents(12500.6), 12501);
   });
 
   test('Double-Entry Ledger Balancing: Debits must equal Credits', () => {
