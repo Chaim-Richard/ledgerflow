@@ -11,7 +11,7 @@ export interface StrategicDirectives {
 class AIService {
   private async callBackend(task: string, payload: any): Promise<any> {
     const idToken = await getIdToken();
-    if (!idToken) throw new Error("Authentication required for AI operations");
+    if (!idToken) throw new Error("Authentication required for AI operations - falling back to local heuristic");
     
     const selectedModel = typeof window !== 'undefined' ? (localStorage.getItem('lf_selected_ai_model') || 'Gemini 1.5 Flash (Default)') : 'Gemini 1.5 Flash (Default)';
     const response = await fetch("/api/ai/process", {
@@ -162,7 +162,6 @@ class AIService {
     try {
       return await this.callBackend('parse-magic-entry', { input, categories, accounts, projects, patternContext });
     } catch (e) {
-      console.error("Magic Entry AI failed", e);
       return null;
     }
   }
