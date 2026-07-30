@@ -15,7 +15,6 @@
     "start": "node dist/server.cjs"
   },
   "dependencies": {
-    "@eslint/js": "^10.0.1",
     "@google/genai": "^1.51.0",
     "@llamaindex/llama-cloud": "^2.13.0",
     "@stripe/react-stripe-js": "^6.6.0",
@@ -63,6 +62,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@firebase/eslint-plugin-security-rules": "^0.0.2",
     "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
@@ -82,7 +82,10 @@
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.0",
     "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^17.8.0",
     "tailwindcss": "^4.1.14",
     "ts-node": "^10.9.2",
     "typescript": "~5.8.2",
