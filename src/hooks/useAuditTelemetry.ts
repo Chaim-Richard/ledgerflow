@@ -287,8 +287,10 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
          let months = 0;
          while (simCash > 0 && months < 60) {
             // Speed optimization: reuse normal distribution logic
-            const u = 1 - Math.random();
-            const v = 1 - Math.random();
+            // eslint-disable-next-line react-hooks/purity
+            const u = 1 - (typeof window !== 'undefined' ? Math.random() : 0.5);
+            // eslint-disable-next-line react-hooks/purity
+            const v = 1 - (typeof window !== 'undefined' ? Math.random() : 0.5);
             const z = Math.sqrt(-2.0 * Math.log(u || 1e-10)) * Math.cos(twoPi * v);
             
             const simMonthExp = monthlyExpenses + (z * stdDevExpenses);

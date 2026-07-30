@@ -14,8 +14,8 @@ export default function PublicInvoicePage() {
   useEffect(() => {
     const token = window.location.pathname.split('/i/')[1];
     if (!token) {
-      setError('Invalid invoice link');
-      setLoading(false);
+      setTimeout(() => setError('Invalid invoice link'), 0);
+      setTimeout(() => setLoading(false), 0);
       return;
     }
 

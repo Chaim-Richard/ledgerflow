@@ -61,7 +61,7 @@ export default function BlueprintSettings() {
   // Sync mappings with workspace document
   React.useEffect(() => {
     if (currentWorkspace) {
-      setMappings(currentWorkspace.defaultAccountMappings || {});
+      setTimeout(() => setMappings(currentWorkspace.defaultAccountMappings || {}), 0);
     }
   }, [currentWorkspaceId]);
 

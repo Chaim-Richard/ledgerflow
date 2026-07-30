@@ -87,7 +87,7 @@ export const MONTE_CARLO_ALGO: AlgorithmDefinition = {
     const sigmaCents = standardDeviation(historicalDailyFlows);
 
     let exhaustionCount = 0;
-    let endBalances: number[] = [];
+    const endBalances: number[] = [];
     const chartPercentiles: { day: number; p10: number; p50: number; p90: number }[] = [];
 
     // Pre-allocate matrix for charting

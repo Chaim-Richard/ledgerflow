@@ -5,8 +5,9 @@ import { VIEW_COMPONENTS } from '../../config/registry';
 import { LexiconText } from '../../hooks/useLexicon';
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
 
-class ModuleErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
+class ModuleFallbackBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
   state = { hasError: false, error: null };
+  componentDidCatch(error: Error, info: any) { fetch("/api/health", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ error: error.message, stack: error.stack, type: "module-error" }) }).catch(()=>{}); }
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
@@ -39,7 +40,7 @@ const MainViewSwitcher = React.memo(({ activeTab }: MainViewSwitcherProps) => {
   
   return (
     <div className="relative flex-1 flex flex-col w-full min-h-full">
-      <ModuleErrorBoundary>
+      <ModuleFallbackBoundary>
         <Suspense fallback={
           <div className="min-h-full flex flex-col items-center justify-center space-y-6 flex-1">
             <Loader2 className="animate-spin text-slate-300" size={32} />
@@ -67,7 +68,7 @@ const MainViewSwitcher = React.memo(({ activeTab }: MainViewSwitcherProps) => {
             )}
           </motion.div>
         </Suspense>
-      </ModuleErrorBoundary>
+      </ModuleFallbackBoundary>
     </div>
   );
 });

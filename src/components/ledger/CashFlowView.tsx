@@ -89,7 +89,7 @@ export default function CashFlowView() {
       const cashAccounts = accounts.filter(a => resolveAccountRole(a) === 'cash' || (a.type === 'asset' && a.code?.startsWith('10')));
 
       periodTxs.forEach(tx => {
-        let isCashTx = tx.lines?.some(l => cashAccounts.find(ca => ca.id === l.accountId));
+        const isCashTx = tx.lines?.some(l => cashAccounts.find(ca => ca.id === l.accountId));
         if (!isCashTx) return;
 
         // Simplify: all income/expense into Operating. Equity/Loans into Financing. Assets into Investing

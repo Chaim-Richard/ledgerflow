@@ -1201,7 +1201,7 @@ export function useTransactionActions() {
           
           // First, use string matching
           const results = acSearch ? acSearch.search(tx.description) : [];
-          let candidateRuleIds = results;
+          const candidateRuleIds = results;
 
           // Also check all active rules to see if they pass purely via numeric/date match without text
           activeRules.forEach(r => {

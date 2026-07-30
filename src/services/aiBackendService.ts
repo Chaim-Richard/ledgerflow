@@ -224,7 +224,7 @@ export class AIBackendService {
 
   private async parseReceipt(data: any) {
     const { base64Data, mimeType, context } = data;
-    let source: any = { inlineData: { data: base64Data, mimeType } };
+    const source: any = { inlineData: { data: base64Data, mimeType } };
     const prompt = `Extract receipt data. Context: ${context}. Return vendorName, date, totalAmountCents, taxAmountCents, categorySuggestion, and an array of 'lines' with {description, amountCents, category, quantity, unitPriceCents}.`;
     const result = await this.generateContent({
       model: this.getModel(data),

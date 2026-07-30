@@ -28,7 +28,7 @@ export class DoubleEntryValidator {
         throw new Error(`Validation Failed: Invalid line object at index ${i}.`);
       }
       
-      let amountCents = line.amountCents;
+      const amountCents = line.amountCents;
       if (typeof amountCents !== 'number' || !Number.isFinite(amountCents) || !Number.isSafeInteger(amountCents)) {
         throw new Error(`Validation Failed: Line ${i + 1} amount must be a valid finite integer in cents.`);
       }

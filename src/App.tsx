@@ -26,7 +26,7 @@ import { RootLayout } from './core/layout/RootLayout';
 import { lazy, Suspense } from 'react';
 const LedgerAutoAuditor = lazy(() => import('./components/forensics/LedgerAutoAuditor').then(m => ({ default: m.LedgerAutoAuditor })));
 
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { FallbackBoundary } from './components/FallbackBoundary';
 import PublicInvoicePage from './components/sales/PublicInvoicePage';
 
 
@@ -261,7 +261,7 @@ const shortcutMap = useMemo(() => {
   }
 
   return (
-    <ErrorBoundary>
+    <FallbackBoundary>
       <div dir={language === 'he' ? 'rtl' : 'ltr'} className="h-[100dvh] w-full bg-[var(--ink)] overflow-hidden flex flex-col font-sans text-[var(--text)]">
         <Toaster theme="light" position="top-right" expand={false} richColors closeButton className={isQuietMode ? 'opacity-0 pointer-events-none' : ''} />
         {/* Google-grade Progress Line */}
@@ -278,6 +278,6 @@ const shortcutMap = useMemo(() => {
         <Suspense fallback={null}><LedgerAutoAuditor /></Suspense>
         <RootLayout />
       </div>
-    </ErrorBoundary>
+    </FallbackBoundary>
   );
 }

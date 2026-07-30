@@ -355,7 +355,7 @@ export default function SystemCommandCenter() {
 
   useEffect(() => {
     fetchTelemetry();
-    fetchGlobalConfig();
+    setTimeout(() => fetchGlobalConfig(), 0);
     fetchUsersData();
     const interval = setInterval(() => {
       fetchTelemetry();

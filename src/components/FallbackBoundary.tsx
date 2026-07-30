@@ -10,7 +10,7 @@ interface State {
   error: Error | null;
 }
 
-export class ErrorBoundary extends React.Component<Props, State> {
+export class FallbackBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null
