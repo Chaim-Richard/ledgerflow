@@ -176,7 +176,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{project.type}</p>
                         <h4 className="font-black text-[var(--text)] leading-tight">{project.name}</h4>
                       </div>
-                      <GripVertical size={14} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <GripVertical size={14} className="text-slate-300 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
                     </div>
 
                     <div className="pt-4 border-t border-[var(--line)] space-y-3">

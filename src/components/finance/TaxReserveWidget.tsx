@@ -1,3 +1,4 @@
+import { parseLocalDate } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo } from 'react';
 import { calculateSafeToSpend } from '../../lib/algorithms/tax-set-aside';
@@ -111,7 +112,7 @@ export function TaxReserveWidget() {
 
   // Daily message selection
   const dailyMessage = useMemo(() => {
-    const daysToPayday = Math.max(1, Math.round((new Date(nextPayday).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
+    const daysToPayday = Math.max(1, Math.round((parseLocalDate(nextPayday).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
     const safeDailyDollars = Math.max(0, autopilotSafeToSpendCents / 100 / daysToPayday);
 
     if (autopilotSafeToSpendCents <= 0) {

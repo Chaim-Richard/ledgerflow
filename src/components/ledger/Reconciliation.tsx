@@ -22,7 +22,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, formatCurrency } from '../../lib/utils';
+import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
 import { Transaction, BankStatementLine, ChartAccount, User } from '../../types';
 import { format } from 'date-fns';
 import { 
@@ -100,8 +100,8 @@ export default function Reconciliation() {
         score += descSimilarity * 65;
 
         // Date Proximity
-        const bDate = new Date(btx.date).getTime();
-        const lDate = new Date(ltx.date).getTime();
+        const bDate = parseLocalDate(btx.date).getTime();
+        const lDate = parseLocalDate(ltx.date).getTime();
         if (!isNaN(bDate) && !isNaN(lDate)) {
           const dayDiff = Math.abs(bDate - lDate) / (1000 * 60 * 60 * 24);
           if (dayDiff === 0) score += 30;
@@ -230,8 +230,8 @@ export default function Reconciliation() {
     const textScore = Math.round(jaroWinklerSimilarity(selectedBankLine.description, selectedLedgerTx.description, user?.uid) * 100);
     
     // Date Difference
-    const bDate = new Date(selectedBankLine.date).getTime();
-    const lDate = new Date(selectedLedgerTx.date).getTime();
+    const bDate = parseLocalDate(selectedBankLine.date).getTime();
+    const lDate = parseLocalDate(selectedLedgerTx.date).getTime();
     let dateDiff = 99;
     if (!isNaN(bDate) && !isNaN(lDate)) {
       dateDiff = Math.abs(bDate - lDate) / (1000 * 60 * 60 * 24);
@@ -411,7 +411,7 @@ export default function Reconciliation() {
 
                       <div className="flex flex-col gap-1 overflow-hidden pl-1">
                         <span className={cn("text-[8px] font-bold uppercase tracking-wider font-mono", isSelected ? "text-[var(--brass)]" : "text-[var(--muted)]")}>
-                          {format(new Date(btx.date), 'MMMM dd, yyyy')}
+                          {format(parseLocalDate(btx.date), 'MMMM dd, yyyy')}
                         </span>
                         <span className="text-sm font-bold tracking-tight truncate max-w-[220px] md:max-w-xs">{btx.description}</span>
                         {matchedLedgerId && !isSelected && (
@@ -425,7 +425,7 @@ export default function Reconciliation() {
                          <span className="text-md font-mono font-bold tabular-nums tracking-tight">
                           {formatCurrency(btx.amountCents)}
                         </span>
-                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1 mt-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                            <button 
                              onClick={(e) => { e.stopPropagation(); onIgnore(btx.id); }} 
                              className="p-1 px-2 text-[9px] font-bold text-[var(--muted)] hover:text-rose-500 bg-[var(--surface)] border border-[var(--line)] rounded cursor-pointer uppercase tracking-wider"
@@ -480,7 +480,7 @@ export default function Reconciliation() {
                       <div className="flex flex-col gap-1 overflow-hidden pl-1">
                         <div className="flex items-center gap-2">
                           <span className={cn("text-[8px] font-semibold uppercase tracking-wider font-mono", isSelected ? "text-emerald-200" : "text-slate-400")}>
-                            {format(new Date(ltx.date), 'MMM dd')} • {ltx.lines?.[0]?.accountName || 'No Category'}
+                            {format(parseLocalDate(ltx.date), 'MMM dd')} • {ltx.lines?.[0]?.accountName || 'No Category'}
                           </span>
                           {isPossibleMatch && !isSelected && <Zap size={10} className="text-emerald-500 animate-pulse" />}
                         </div>
@@ -536,7 +536,7 @@ export default function Reconciliation() {
 
                       return (
                         <div key={line.id} className="hover:bg-[var(--ink)] transition-all">
-                          <div 
+                          <div role="button" tabIndex={0} 
                              onClick={() => setSelectedBankId(isSelected ? null : line.id)}
                              className="flex flex-col lg:flex-row items-start lg:items-center justify-between p-5 gap-4 cursor-pointer"
                           >
@@ -775,7 +775,7 @@ export default function Reconciliation() {
       <AnimatePresence>
          {showAutoConfirm && Array.from(optimizedMatches.values()).length > 0 && (
              <>
-               <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-[150]" onClick={() => setShowAutoConfirm(false)} />
+               <div role="button" tabIndex={0} className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-[150]" onClick={() => setShowAutoConfirm(false)} />
                <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -823,7 +823,7 @@ export default function Reconciliation() {
                         const isChecked = !!selectedBatchIds[btx.id];
 
                         return (
-                           <div 
+                           <div role="button" tabIndex={0} 
                              key={btx.id} 
                              onClick={() => setSelectedBatchIds(prev => ({ ...prev, [btx.id]: !prev[btx.id] }))}
                              className={cn(

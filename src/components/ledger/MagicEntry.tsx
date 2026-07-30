@@ -158,7 +158,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
   if (isModal) {
     return (
       <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+        <div role="button" tabIndex={0} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
         <div className="relative w-full max-w-2xl bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--line)] overflow-hidden">
           <div className="flex items-center justify-between p-6 border-b border-[var(--line)]">
             <div>
@@ -166,9 +166,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
               <p className="text-slate-500">Just type what happened. No debit/credit knowledge required.</p>
             </div>
             {onClose && (
-              <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
-                <X className="w-5 h-5" />
-              </button>
+              <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500"><X className="w-5 h-5" /></button>
             )}
           </div>
           {content}

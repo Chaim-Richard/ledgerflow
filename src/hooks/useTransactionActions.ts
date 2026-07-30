@@ -21,7 +21,7 @@ import { useUIStore } from '../stores/useUIStore';
 import { MatchingEngine } from '../lib/MatchingEngine';
 import { Transaction, BankStatementLine, AutoRule, TransactionLine } from '../types';
 import { toast } from 'sonner';
-import { sanitizeCsvCell } from '../lib/utils';
+import { formatDecimal, parseLocalDate, sanitizeCsvCell } from '../lib/utils';
 import { aiService } from '../services/aiService';
 import { DoubleEntryAuditor } from '../services/auditor';
 import { 
@@ -789,8 +789,8 @@ export function useTransactionActions() {
     const rows: string[][] = [];
     transactions.forEach(t => {
       t.lines.forEach(l => {
-        const debit = l.amountCents > 0 ? (l.amountCents / 100).toFixed(2) : '0.00';
-        const credit = l.amountCents < 0 ? (Math.abs(l.amountCents) / 100).toFixed(2) : '0.00';
+        const debit = l.amountCents > 0 ? formatDecimal(l.amountCents) : '0.00';
+        const credit = l.amountCents < 0 ? formatDecimal(Math.abs(l.amountCents)) : '0.00';
         rows.push([
           sanitizeCsvCell(t.date),
           sanitizeCsvCell(t.id),
@@ -1233,9 +1233,9 @@ export function useTransactionActions() {
             
             // Date logic
             if (rule.condition.dateRange) {
-              const d = new Date(tx.date);
-              const start = new Date(rule.condition.dateRange.start);
-              const end = new Date(rule.condition.dateRange.end);
+              const d = parseLocalDate(tx.date);
+              const start = parseLocalDate(rule.condition.dateRange.start);
+              const end = parseLocalDate(rule.condition.dateRange.end);
               if (d < start || d > end) isMatch = false;
             }
 
@@ -1376,8 +1376,8 @@ export function useTransactionActions() {
             }
 
             // Date Proximity
-            const bDate = new Date(bl.date).getTime();
-            const tDate = new Date(tx.date).getTime();
+            const bDate = parseLocalDate(bl.date).getTime();
+            const tDate = parseLocalDate(tx.date).getTime();
             const dayDiff = Math.abs(bDate - tDate) / (1000 * 60 * 60 * 24);
             if (dayDiff <= 7) score += (7 - dayDiff) * 3;
 
@@ -1502,12 +1502,12 @@ export function useTransactionActions() {
         }, 0);
         
         const minTime = txs.reduce((min, t) => {
-          const time = new Date(t.date).getTime();
+          const time = parseLocalDate(t.date).getTime();
           return time < min ? time : min;
         }, Infinity);
         
         const maxTime = txs.reduce((max, t) => {
-          const time = new Date(t.date).getTime();
+          const time = parseLocalDate(t.date).getTime();
           return time > max ? time : max;
         }, 0);
         
@@ -1516,7 +1516,7 @@ export function useTransactionActions() {
         const clusterData = uncategorized.map(t => ({
           id: t.id,
           x: Math.abs(t.totalAmountCents) / (maxAmount || 1),
-          y: (new Date(t.date).getTime() - minTime) / timeRange
+          y: (parseLocalDate(t.date).getTime() - minTime) / timeRange
         }));
 
         const k = Math.min(5, Math.ceil(uncategorized.length / 10));

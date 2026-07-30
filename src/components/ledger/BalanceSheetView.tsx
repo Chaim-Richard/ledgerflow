@@ -11,7 +11,7 @@ import {
   FileSpreadsheet, 
   SplitSquareHorizontal
 } from 'lucide-react';
-import { cn, getLocalDateISO } from '../../lib/utils';
+import { formatDecimal, cn, getLocalDateISO } from '../../lib/utils';
 import { motion } from 'motion/react';
 import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -190,14 +190,14 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
       rows.push([
         acc.name,
         acc.code,
-        (curBal / 100).toFixed(2),
-        isComparative ? (prvBal / 100).toFixed(2) : '',
-        isComparative ? (variance / 100).toFixed(2) : '',
+        formatDecimal(curBal),
+        isComparative ? formatDecimal(prvBal) : '',
+        isComparative ? formatDecimal(variance) : '',
         isComparative && prvBal !== 0 ? variancePct.toFixed(1) + '%' : ''
       ]);
     });
 
-    rows.push([`Total ${labels.assetsLabel}`, '', (currentData.totalAssets / 100).toFixed(2), isComparative ? (prevData.totalAssets / 100).toFixed(2) : '', '', '']);
+    rows.push([`Total ${labels.assetsLabel}`, '', formatDecimal(currentData.totalAssets), isComparative ? formatDecimal(prevData.totalAssets) : '', '', '']);
     rows.push([]);
 
     rows.push([labels.liabilitiesLabel.toUpperCase()]);
@@ -211,14 +211,14 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
       rows.push([
         acc.name,
         acc.code,
-        (curBal / 100).toFixed(2),
-        isComparative ? (prvBal / 100).toFixed(2) : '',
-        isComparative ? (variance / 100).toFixed(2) : '',
+        formatDecimal(curBal),
+        isComparative ? formatDecimal(prvBal) : '',
+        isComparative ? formatDecimal(variance) : '',
         isComparative && prvBal !== 0 ? variancePct.toFixed(1) + '%' : ''
       ]);
     });
 
-    rows.push([`Total ${labels.liabilitiesLabel}`, '', (currentData.totalLiabilities / 100).toFixed(2), isComparative ? (prevData.totalLiabilities / 100).toFixed(2) : '', '', '']);
+    rows.push([`Total ${labels.liabilitiesLabel}`, '', formatDecimal(currentData.totalLiabilities), isComparative ? formatDecimal(prevData.totalLiabilities) : '', '', '']);
     rows.push([]);
 
     rows.push([labels.equityLabel.toUpperCase()]);
@@ -232,9 +232,9 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
       rows.push([
         acc.name,
         acc.code,
-        (curBal / 100).toFixed(2),
-        isComparative ? (prvBal / 100).toFixed(2) : '',
-        isComparative ? (variance / 100).toFixed(2) : '',
+        formatDecimal(curBal),
+        isComparative ? formatDecimal(prvBal) : '',
+        isComparative ? formatDecimal(variance) : '',
         isComparative && prvBal !== 0 ? variancePct.toFixed(1) + '%' : ''
       ]);
     });
@@ -247,15 +247,15 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
     rows.push([
       labels.retainedEarningsLabel,
       'INC',
-      (curRetEarn / 100).toFixed(2),
-      isComparative ? (prvRetEarn / 100).toFixed(2) : '',
-      isComparative ? (reVariance / 100).toFixed(2) : '',
+      formatDecimal(curRetEarn),
+      isComparative ? formatDecimal(prvRetEarn) : '',
+      isComparative ? formatDecimal(reVariance) : '',
       isComparative && prvRetEarn !== 0 ? reVariancePct.toFixed(1) + '%' : ''
     ]);
 
     rows.push([`Total ${labels.equityLabel}`, '', ((currentData.totalEquity + currentData.netIncome) / 100).toFixed(2), isComparative ? ((prevData.totalEquity + prevData.netIncome) / 100).toFixed(2) : '', '', '']);
     rows.push([]);
-    rows.push([labels.totalClaimsLabel, '', (currentData.totalClaims / 100).toFixed(2), isComparative ? (prevData.totalClaims / 100).toFixed(2) : '', '', '']);
+    rows.push([labels.totalClaimsLabel, '', formatDecimal(currentData.totalClaims), isComparative ? formatDecimal(prevData.totalClaims) : '', '', '']);
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
     const wb = XLSX.utils.book_new();

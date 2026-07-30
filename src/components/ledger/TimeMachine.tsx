@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useScenarioStore } from '../../lib/scenarioStore';
 import { GitMerge, GitCommit, GitPullRequest, GitBranch, RotateCcw, Clock, ArrowRight, Save, Trash2, Zap, CheckCircle2, AlertCircle, Plus, FileText, Activity } from 'lucide-react';
-import { formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
+import { parseLocalDate, formatCurrency, cn, getLocalDateISO, safeConfirm } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function TimeMachine() {
@@ -36,7 +36,7 @@ export default function TimeMachine() {
       acc[date].txs.push(tx);
       return acc;
     }, {} as Record<string, any>);
-    return Object.values(commits).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return Object.values(commits).sort((a: any, b: any) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
   }, [transactions]);
 
   const handleCreateBranch = () => {
@@ -149,7 +149,7 @@ export default function TimeMachine() {
                             <span className={cn("font-mono font-bold text-sm", ghost.type === 'expense' ? "text-red-600" : "text-green-600")}>
                               {ghost.type === 'expense' ? '-' : '+'}{formatCurrency(ghost.amountCents)}
                             </span>
-                            <button onClick={() => deleteGhost(scenario.id, ghost.id)} className="text-slate-400 hover:text-red-500"><Trash2 size={14}/></button>
+                            <button onClick={async () => { if (await safeConfirm('Delete ghost transaction?')) deleteGhost(scenario.id, ghost.id); }} className="text-slate-400 hover:text-red-500"><Trash2 size={14}/></button>
                           </div>
                         </div>
                       ))
@@ -207,7 +207,7 @@ export default function TimeMachine() {
                     </button>
                   )}
                   {!isMain && (
-                    <button onClick={() => deleteScenario(scenario.id)} className="p-2 bg-[var(--ink)] hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors">
+                    <button onClick={async () => { if (await safeConfirm('Delete scenario?')) deleteScenario(scenario.id); }} className="p-2 bg-[var(--ink)] hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors">
                       <Trash2 size={16} />
                     </button>
                   )}
@@ -238,7 +238,7 @@ export default function TimeMachine() {
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <div className="flex items-center gap-3">
-                        <span className="font-black text-[var(--text)] text-lg">{new Date(commit.date).toLocaleDateString()}</span>
+                        <span className="font-black text-[var(--text)] text-lg">{parseLocalDate(commit.date).toLocaleDateString()}</span>
                         <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{commit.hash.substring(0, 7)}</span>
                       </div>
                       <div className="text-sm text-slate-500 mt-1 flex items-center gap-2">

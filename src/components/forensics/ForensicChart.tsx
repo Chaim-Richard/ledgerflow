@@ -15,7 +15,7 @@ import { format, subDays } from 'date-fns';
 import { Transaction } from '../../types';
 import { AlertCircle, ArrowRight, X, BarChart as BarChart3, TrendingUp, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '../../lib/utils';
+import { parseLocalDate, cn } from '../../lib/utils';
 
 interface ForensicChartProps {
   transactions: Transaction[];
@@ -88,7 +88,7 @@ const ForensicChart = React.memo(({ transactions, isCompactMode, periodicity = [
     // SINGLE PASS THROUGH ALL TRANSACTIONS
     for (const t of transactions) {
       if (t.deletedAt) continue;
-      const tDate = new Date(t.date);
+      const tDate = parseLocalDate(t.date);
       const isBeforeWindow = tDate <= thirtyDaysAgo;
       
       let bankDelta = 0;

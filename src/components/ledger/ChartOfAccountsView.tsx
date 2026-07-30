@@ -101,7 +101,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
             <AnimatePresence>
               {showOptionsId === account.id && (
                 <>
-                  <div className="fixed inset-0 z-[100]" onClick={() => setShowOptionsId(null)} />
+                  <div role="button" tabIndex={0} className="fixed inset-0 z-[100]" onClick={() => setShowOptionsId(null)} />
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95, y: -5 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}

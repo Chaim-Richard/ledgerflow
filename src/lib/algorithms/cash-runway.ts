@@ -18,7 +18,7 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
     }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const burnWindowMonths = inputs['burnWindowMonths'] || 3;
+    const burnWindowMonths = inputs['burnWindowMonths'] ?? 3;
     
     // 1. Calculate current cash position (sum of all Cash/Bank accounts)
     const cashAccounts = accounts.filter(a => resolveAccountRole(a) === 'cash');

@@ -1,6 +1,7 @@
 import { Transaction, ChartAccount, JournalEntry } from '../types';
 import { MerkleTree, MinHash, sha256Sync } from '../lib/algorithms';
 import { PerformanceTelemetry } from '../lib/telemetry';
+import { parseLocalDate } from '../lib/utils';
 
 export interface AuditResult {
   isBalanced: boolean;
@@ -47,7 +48,7 @@ export const DoubleEntryAuditor = {
     // Sort transactions by chronological creation to verify the causal chain
     // O(N log N) mapped sort (Schwartzian transform) to prevent millions of native Date parses on 50,000+ inputs
     const chronosTxs = transactions
-      .map(t => ({ t, time: t.createdAt ? new Date(t.createdAt).getTime() : (t.date ? new Date(t.date).getTime() : 0) }))
+      .map(t => ({ t, time: t.createdAt ? new Date(t.createdAt).getTime() : (t.date ? parseLocalDate(t.date).getTime() : 0) }))
       .sort((a, b) => { if (a.time !== b.time) return a.time - b.time; return (a.t && b.t && a.t.id && b.t.id) ? a.t.id.localeCompare(b.t.id) : 0; })
       .map(item => item.t);
 
@@ -188,7 +189,7 @@ export const DoubleEntryAuditor = {
    */
   repairChain: (transactions: Transaction[]): Transaction[] => {
     const sorted = transactions
-      .map(tx => ({ tx, time: tx.createdAt ? new Date(tx.createdAt).getTime() : (tx.date ? new Date(tx.date).getTime() : 0) }))
+      .map(tx => ({ tx, time: tx.createdAt ? new Date(tx.createdAt).getTime() : (tx.date ? parseLocalDate(tx.date).getTime() : 0) }))
       .sort((a, b) => { if (a.time !== b.time) return a.time - b.time; return (a.tx && b.tx && a.tx.id && b.tx.id) ? a.tx.id.localeCompare(b.tx.id) : 0; })
       .map(item => item.tx);
     let lastHash = 'genesis';

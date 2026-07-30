@@ -27,8 +27,8 @@ export const MONTE_CARLO_ALGO: AlgorithmDefinition = {
     }
   ],
   compute: (transactions, accounts, inputs) => {
-    const horizon = inputs.simulationDays || 90;
-    const runs = (inputs.iterations || 50) * 100;
+    const horizon = inputs.simulationDays ?? 90;
+    const runs = (inputs.iterations ?? 50) * 100;
     
     // Group historical transactions by day
     const dailyNet: Record<string, number> = {};

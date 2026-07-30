@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
-import { cn, sanitizeCsvCell } from '../../lib/utils';
+import { formatDecimal, cn, sanitizeCsvCell } from '../../lib/utils';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import TransactionRow from '../transactions/TransactionRow';
@@ -164,7 +164,7 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
   const isFocused = data.focusedCell?.id === tx.id;
 
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       style={style} 
       className="relative"
       onClick={() => data.setFocusedCell({ id: tx.id, field: 'description', index })}
@@ -545,7 +545,7 @@ export default function TransactionGrid() {
       sanitizeCsvCell(t.description),
       sanitizeCsvCell(t.lines?.[0]?.accountName || 'Uncategorized'),
       sanitizeCsvCell(t.project || 'General'),
-      sanitizeCsvCell(((t.totalAmountCents || 0) / 100).toFixed(2)),
+      sanitizeCsvCell(formatDecimal(t.totalAmountCents || 0)),
       sanitizeCsvCell(t.status)
     ]);
     
@@ -975,7 +975,7 @@ export default function TransactionGrid() {
                 const rows = transactionsWithBalance.map(t => [
                   sanitizeCsvCell(t.date),
                   sanitizeCsvCell(t.description),
-                  sanitizeCsvCell((t.totalAmountCents / 100).toFixed(2)),
+                  sanitizeCsvCell(formatDecimal(t.totalAmountCents)),
                   sanitizeCsvCell(t.currency || 'USD'),
                   sanitizeCsvCell(t.lines?.[0]?.accountName || ''),
                   sanitizeCsvCell(t.project || ''),
@@ -1054,19 +1054,19 @@ export default function TransactionGrid() {
               <div className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-center">
                 <input type="checkbox" checked={selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0} onChange={(e) => setSelectedIds(e.target.checked ? new Set(transactionsWithBalance.map(t => t.id)) : new Set())} className="w-4 h-4 rounded border-white/20 bg-transparent accent-emerald-500" />
               </div>
-              <div 
+              <div role="button" tabIndex={0} 
                 onClick={() => handleSort('date')}
                 className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
               >
                 Date {sortConfig?.key === 'date' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                 <button 
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'date' ? null : 'date'); }}
-                  className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 rounded transition-all", (filterCriteria?.startDate || filterCriteria?.endDate) && "opacity-100 text-indigo-600")}
+                  className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-slate-200 rounded transition-all", (filterCriteria?.startDate || filterCriteria?.endDate) && "opacity-100 text-indigo-600")}
                 >
                   <Filter size={10} />
                 </button>
                 {activeFilterColumn === 'date' && (
-                  <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
+                  <div role="button" tabIndex={0} className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Date Selection</p>
                     <div className="space-y-4">
                        <button 
@@ -1106,19 +1106,19 @@ export default function TransactionGrid() {
                   </div>
                 )}
               </div>
-              <div 
+              <div role="button" tabIndex={0} 
                 onClick={() => handleSort('description')}
                 className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
               >
                 Description {sortConfig?.key === 'description' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                 <button 
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'description' ? null : 'description'); }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all"
+                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all"
                 >
                   <Filter size={10} />
                 </button>
                 {activeFilterColumn === 'description' && (
-                  <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
+                  <div role="button" tabIndex={0} className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Text Filters</p>
                     <div className="space-y-1">
                        <button onClick={() => { setSearchTerm('starts with '); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-sm">Starts with...</button>
@@ -1129,19 +1129,19 @@ export default function TransactionGrid() {
                 )}
               </div>
               {!isMobileGrid && (
-                <div 
+                <div role="button" tabIndex={0} 
                   onClick={() => handleSort('category')}
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
                 >
                   Category {sortConfig?.key === 'category' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'category' ? null : 'category'); }}
-                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedCategories?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedCategories?.length > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter size={10} />
                   </button>
                   {activeFilterColumn === 'category' && (
-                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
+                    <div role="button" tabIndex={0} className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter Category</p>
                       <div className="mb-3 relative group/lsearch">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover/lsearch:text-indigo-600 transition-colors" size={12} />
@@ -1187,19 +1187,19 @@ export default function TransactionGrid() {
                 </div>
               )}
               {!isMobileGrid && !isTabletGrid && (
-                <div 
+                <div role="button" tabIndex={0} 
                   onClick={() => handleSort('project')}
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
                 >
                   Project {sortConfig?.key === 'project' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'project' ? null : 'project'); }}
-                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedProjects?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedProjects?.length > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter size={10} />
                   </button>
                   {activeFilterColumn === 'project' && (
-                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
+                    <div role="button" tabIndex={0} className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter Projects</p>
                       <div className="mb-3 relative group/psearch">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover/psearch:text-indigo-600 transition-colors" size={12} />
@@ -1231,19 +1231,19 @@ export default function TransactionGrid() {
                 </div>
               )}
               {!isMobileGrid && !isTabletGrid && (
-                <div 
+                <div role="button" tabIndex={0} 
                   onClick={() => handleSort('class')}
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
                   <div className="flex items-center gap-2">Class {sortConfig?.key === 'class' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}</div>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'class' ? null : 'class'); }}
-                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedClasses?.length || 0) > 0 && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedClasses?.length || 0) > 0 && "opacity-100 text-emerald-500")}
                   >
                     <Filter size={10} />
                   </button>
                   {activeFilterColumn === 'class' && (
-                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
+                    <div role="button" tabIndex={0} className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter by Class</p>
                       <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar">
                         {useLedgerStore.getState().classes?.map(val => (
@@ -1263,19 +1263,19 @@ export default function TransactionGrid() {
                 </div>
               )}
               {!isMobileGrid && !isTabletGrid && (
-                <div 
+                <div role="button" tabIndex={0} 
                   onClick={() => handleSort('location')}
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
                   <div className="flex items-center gap-2">Location {sortConfig?.key === 'location' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}</div>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'location' ? null : 'location'); }}
-                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedLocations?.length || 0) > 0 && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedLocations?.length || 0) > 0 && "opacity-100 text-emerald-500")}
                   >
                     <Filter size={10} />
                   </button>
                   {activeFilterColumn === 'location' && (
-                    <div className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
+                    <div role="button" tabIndex={0} className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Filter by Location</p>
                       <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar">
                         {useLedgerStore.getState().locations?.map(val => (
@@ -1295,19 +1295,19 @@ export default function TransactionGrid() {
                 </div>
               )}
               {((isProMode || isCompactMode) && !isMobileGrid && !isTabletGrid) ? (<><div className="p-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-right">Debit</div><div className="p-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-right">Credit</div></>) : (
-              <div 
+              <div role="button" tabIndex={0} 
                 onClick={() => handleSort('amount')}
                 className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-right flex items-center justify-end gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
               >
                 Amount {sortConfig?.key === 'amount' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                 <button 
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'amount' ? null : 'amount'); }}
-                  className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.minAmount !== undefined || filterCriteria?.maxAmount !== undefined) && "opacity-100 text-emerald-500")}
+                  className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.minAmount !== undefined || filterCriteria?.maxAmount !== undefined) && "opacity-100 text-emerald-500")}
                 >
                   <Filter size={10} />
                 </button>
                 {activeFilterColumn === 'amount' && (
-                  <div className="absolute top-full right-0 z-[100] mt-1 w-72 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-5 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
+                  <div role="button" tabIndex={0} className="absolute top-full right-0 z-[100] mt-1 w-72 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-5 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Amount Range Logic</p>
                     <div className="space-y-5">
                        <div className="grid grid-cols-2 gap-4">
@@ -1344,15 +1344,15 @@ export default function TransactionGrid() {
                           <div className="grid grid-cols-1 gap-1">
                              <button onClick={() => { setSearchTerm('above average'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Above Average
-                                <TrendingUp size={12} className="opacity-0 group-hover:opacity-100 text-emerald-500" />
+                                <TrendingUp size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-emerald-500" />
                              </button>
                              <button onClick={() => { setSearchTerm('top 10 %'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Top 10% (High Value)
-                                <Sparkles size={12} className="opacity-0 group-hover:opacity-100 text-amber-500" />
+                                <Sparkles size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-amber-500" />
                              </button>
                              <button onClick={() => { setSearchTerm('below average'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Below Average
-                                <TrendingDown size={12} className="opacity-0 group-hover:opacity-100 text-rose-500" />
+                                <TrendingDown size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-rose-500" />
                              </button>
                           </div>
                        </div>
@@ -1380,14 +1380,14 @@ export default function TransactionGrid() {
                 <div className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-right">Running.Sum</div>
               )}
               {!isMobileGrid && (
-                <div 
+                <div role="button" tabIndex={0} 
                   onClick={() => handleSort('status')}
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-center flex items-center justify-center gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
                   System Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'status' ? null : 'status'); }}
-                    className={cn("opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedStatuses?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedStatuses?.length > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter size={10} />
                   </button>
@@ -1515,9 +1515,6 @@ export default function TransactionGrid() {
             selectedCount={selectedIds.size}
             totalAmount={selectedTransactions.reduce((sum, t) => sum + t.totalAmountCents, 0)}
             avgAmount={selectedIds.size > 0 ? selectedTransactions.reduce((sum, t) => sum + t.totalAmountCents, 0) / selectedIds.size : 0}
-            onBundle={() => {
-              toast.success(`Bundled ${selectedIds.size} items into a virtual matrix node`);
-            }}
             onCopy={() => {
               if (selectedIds.size > 0) {
                 const copyText = selectedTransactions.map(t => `${t.date} | ${t.description} | ${formatCurrency(t.totalAmountCents)}`).join('\n');

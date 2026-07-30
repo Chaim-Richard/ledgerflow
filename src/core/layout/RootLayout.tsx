@@ -111,7 +111,7 @@ export function RootLayout() {
       <div className="flex-1 flex overflow-hidden relative">
         {/* Mobile/Tablet Backdrop Dimmer */}
         {isSidebarOpen && !isFocusMode && (
-          <div 
+          <div role="button" tabIndex={0} 
             className="lg:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-[95] transition-opacity duration-300 animate-fade-in"
             onClick={toggleSidebar}
           />

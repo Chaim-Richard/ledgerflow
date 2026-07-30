@@ -274,9 +274,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                   <p className="text-xs md:text-sm text-[var(--muted)] font-medium">Record manual adjustments to the ledger</p>
                 </div>
               </div>
-              <button onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors shrink-0 cursor-pointer">
-                <X size={20} className="text-[var(--muted)]" />
-              </button>
+              <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors shrink-0 cursor-pointer"><X size={20} className="text-[var(--muted)]" /></button>
             </div>
 
             {/* Form Content */}

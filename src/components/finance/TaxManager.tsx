@@ -16,7 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, formatCurrency } from '../../lib/utils';
+import { parseLocalDate, cn, formatCurrency, safeConfirm } from '../../lib/utils';
 
 interface TaxManagerProps {
   user?: User | null;
@@ -46,7 +46,7 @@ export default function TaxManager({
   const [includeSE, setIncludeSE] = useState(false);
   
   const taxMetrics = useMemo(() => {
-    const yearTransactions = (transactions || []).filter(tx => new Date(tx.date).getFullYear() === selectedYear);
+    const yearTransactions = (transactions || []).filter(tx => parseLocalDate(tx.date).getFullYear() === selectedYear);
     
     const grossIncome = yearTransactions
       .reduce((acc, tx) => {
@@ -65,7 +65,7 @@ export default function TaxManager({
     
     const incomeTaxConfig = taxRates.find(r => r.type === 'Income');
     
-    let effectiveTaxRate = incomeTaxConfig?.rate || 0.21;
+    let effectiveTaxRate = incomeTaxConfig?.rate ?? 0.21;
     if (incomeTaxConfig?.timeSeries && incomeTaxConfig.timeSeries.length > 0) {
       try {
         // Evaluate the tax rate specifically for the end of the selected fiscal year
@@ -226,7 +226,7 @@ export default function TaxManager({
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-black font-mono text-[var(--text)] tracking-tighter">{(rate.rate * 100).toFixed(1)}%</p>
-                    <div className="flex items-center justify-end gap-3 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-3 mt-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <button onClick={() => { setEditingRate(rate); setIsModalOpen(true); }} className="text-slate-400 hover:text-[var(--text)] transition-colors"><Edit2 size={14} /></button>
                       <button onClick={() => onDeleteTaxRate?.(rate.id)} className="text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
                     </div>
@@ -272,7 +272,7 @@ export default function TaxManager({
                     <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50">
-                    {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * (taxRates.find(r => r.type === 'Income')?.rate || 0.21) : 0)}
+                    {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * (taxRates.find(r => r.type === 'Income')?.rate ?? 0.21) : 0)}
                   </td>
                 </tr>
                 {includeSE && (
@@ -370,7 +370,7 @@ export default function TaxManager({
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Scalar Intensity (%)</label>
-                    <input name="rate" type="number" step="0.1" required defaultValue={(editingRate?.rate || 0) * 100} className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-mono font-black text-[var(--text)] text-right text-lg" />
+                    <input name="rate" type="number" step="0.1" required defaultValue={(editingRate?.rate ?? 0) * 100} className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-mono font-black text-[var(--text)] text-right text-lg" />
                   </div>
                   <div className="space-y-2">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Mapping Type</label>

@@ -175,9 +175,7 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
                 <Terminal size={16} className="text-indigo-400" />
                 <span className="text-[11px] font-medium text-slate-100 uppercase tracking-wider">System Terminal :: LedgerFlow</span>
               </div>
-              <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
-                <X size={18} />
-              </button>
+              <button aria-label="Close" onClick={onClose} className="text-slate-400 hover:text-white transition-colors"><X size={18} /></button>
             </div>
 
             <div 

@@ -383,7 +383,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                           <p className="text-xs font-medium text-gray-500 truncate">{item.category}</p>
                         </div>
                       </div>
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center shrink-0">
+                      <div className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center shrink-0">
                          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 mr-2 hidden sm:inline">Jump</span>
                          <ArrowRight size={16} className="text-indigo-600 inline-block -translate-x-2 group-hover:translate-x-0 transition-all shrink-0" />
                       </div>

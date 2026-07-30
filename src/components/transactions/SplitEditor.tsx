@@ -71,9 +71,7 @@ export default function SplitEditor({
             </h3>
             <p className="text-[10px] text-slate-500 mt-1 font-black uppercase tracking-[0.2em]">{transaction.description} • {new Intl.NumberFormat('en-US', { style: 'currency', currency: transaction.currency }).format(transaction.totalAmountCents / 100)}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors text-slate-500 hover:text-white">
-            <X size={20} />
-          </button>
+          <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors text-slate-500 hover:text-white"><X size={20} /></button>
         </div>
 
         <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 custom-scrollbar bg-[var(--ink)]">
@@ -168,7 +166,7 @@ export default function SplitEditor({
                     </button>
                     <button 
                       onClick={() => removeLine(idx)}
-                      className="text-slate-500 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-all p-2 flex items-center justify-center hover:bg-rose-50/10 rounded-lg"
+                      className="text-slate-500 hover:text-rose-600 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all p-2 flex items-center justify-center hover:bg-rose-50/10 rounded-lg"
                     >
                       <Trash2 size={16} />
                     </button>

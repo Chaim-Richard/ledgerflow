@@ -37,9 +37,9 @@ export const assetAmortizer: AlgorithmDefinition = {
 
     const assetBase = assetBaseCents / 100;
     
-    const life = inputs.life || 5;
-    const salvageValuePct = (inputs.salvageValuePct || 10) / 100;
-    const taxRate = (inputs.taxRate || 25) / 100;
+    const life = inputs.life ?? 5;
+    const salvageValuePct = (inputs.salvageValuePct ?? 10) / 100;
+    const taxRate = (inputs.taxRate ?? 25) / 100;
     
     const salvageValue = assetBase * salvageValuePct;
     const depreciableBase = assetBase - salvageValue;

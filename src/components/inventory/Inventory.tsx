@@ -1,5 +1,6 @@
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency } from '../../lib/utils';
+import { ConfirmButton } from '../ui/ConfirmButton';
 import { toast } from 'sonner';
 import { StrategicEngine } from '../../services/strategicEngine';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
@@ -458,19 +459,20 @@ export default function Inventory() {
                   )}
                 </td>
                 <td className="px-8 py-5 text-right">
-                  <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={() => setEditingItem(item)}
                       className="p-2 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
                     >
                       <Edit2 size={14} className="text-zinc-400" />
                     </button>
-                    <button 
-                      onClick={() => handleDelete(item.id)}
-                      className="p-2 hover:bg-rose-50 rounded-xl border border-transparent hover:border-rose-100 transition-all"
+                    <ConfirmButton 
+                      onConfirm={async () => handleDelete(item.id)}
+                      confirmMessage="Are you sure you want to delete this inventory item?"
+                      className="p-2 hover:bg-rose-50 rounded-xl border border-transparent hover:border-rose-100 transition-all text-rose-400"
                     >
-                      <Trash2 size={14} className="text-rose-400" />
-                    </button>
+                      <Trash2 size={14} />
+                    </ConfirmButton>
                   </div>
                 </td>
               </tr>

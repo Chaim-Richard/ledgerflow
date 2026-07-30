@@ -58,9 +58,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                 </p>
              </div>
           </div>
-          <button onClick={onClose} className="p-3 bg-neutral-100 dark:bg-neutral-800 text-slate-500 rounded-xl transition-all cursor-pointer hover:bg-neutral-200">
-            <X size={16} />
-          </button>
+          <button aria-label="Close" onClick={onClose} className="p-3 bg-neutral-100 dark:bg-neutral-800 text-slate-500 rounded-xl transition-all cursor-pointer hover:bg-neutral-200"><X size={16} /></button>
         </div>
 
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">

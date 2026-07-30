@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, safeConfirm } from '../../lib/utils';
+import { AsyncButton } from '../ui/AsyncButton';
 import { toast } from 'sonner';
 import ProjectPipeline from './ProjectPipeline';
 
@@ -290,9 +291,8 @@ export default function Projects() {
                         >
                           <Pencil size={12} />
                         </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
+                        <AsyncButton 
+                          onClickAction={async () => {
                             handleDeleteProject(project.id);
                           }}
                           className={cn(
@@ -301,7 +301,7 @@ export default function Projects() {
                           )}
                         >
                           <Trash2 size={12} />
-                        </button>
+                        </AsyncButton>
                       </div>
                       <div className="text-right">
                         <p className={cn("text-[9px] font-bold uppercase tracking-wider mb-0.5", selectedProjectId === project.id ? "text-white/60" : "text-slate-400")}>Net Impact</p>

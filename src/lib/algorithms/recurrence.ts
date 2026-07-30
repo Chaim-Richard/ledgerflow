@@ -1,5 +1,6 @@
 import { Transaction, ChartAccount } from '../../types';
 import { AlgorithmDefinition } from './types';
+import { parseLocalDate } from '../../lib/utils';
 
 export function detectRecurrences(transactions: Transaction[]) {
     // 1. Group by entity/vendor (using description or simple hash)
@@ -18,13 +19,13 @@ export function detectRecurrences(transactions: Transaction[]) {
         if (txs.length < 3) continue; // Need at least 3 occurrences to establish a pattern
         
         // Sort by date
-        txs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        txs.sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
         
         // Calculate intervals in days
         const intervals = [];
         const amounts = [];
         for (let i = 1; i < txs.length; i++) {
-            const diffTime = Math.abs(new Date(txs[i].date).getTime() - new Date(txs[i-1].date).getTime());
+            const diffTime = Math.abs(parseLocalDate(txs[i].date).getTime() - parseLocalDate(txs[i-1].date).getTime());
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             intervals.push(diffDays);
             amounts.push(Math.abs(txs[i].totalAmountCents));

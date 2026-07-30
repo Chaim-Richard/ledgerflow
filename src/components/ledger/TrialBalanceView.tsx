@@ -2,7 +2,7 @@ import React from 'react';
 import { ChartAccount } from '../../types';
 import { format } from 'date-fns';
 import { Scale, CheckCircle2, AlertCircle, Activity } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { formatDecimal, cn } from '../../lib/utils';
 import { motion } from 'motion/react';
 
 interface TrialBalanceViewProps {
@@ -45,10 +45,10 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       line.id,
       line.name,
       line.type,
-      (line.debit / 100).toFixed(2),
-      (line.credit / 100).toFixed(2)
+      formatDecimal(line.debit),
+      formatDecimal(line.credit)
     ]);
-    rows.push(['TOTAL', '', '', (trialBalance.totalDebits / 100).toFixed(2), (trialBalance.totalCredits / 100).toFixed(2)]);
+    rows.push(['TOTAL', '', '', formatDecimal(trialBalance.totalDebits), formatDecimal(trialBalance.totalCredits)]);
     
     const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.join(",")).join("\n");
     const encodedUri = encodeURI(csvContent);

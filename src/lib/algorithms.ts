@@ -1,3 +1,4 @@
+import { parseLocalDate } from './utils';
 import { PerformanceTelemetry } from "./telemetry";
 
 const globalSeed = 42;
@@ -40,7 +41,7 @@ export function aggregateLedgerToDailySeries(
   const end = options.endDateStr ? new Date(options.endDateStr) : new Date();
   end.setUTCHours(12, 0, 0, 0); // Use mid-day to completely eliminate timezone rollover variances
 
-  const start = new Date(end);
+  const start = new Date(end.getTime());
   start.setUTCDate(end.getUTCDate() - days + 1);
 
   // Pre-seed the calendar series
@@ -48,7 +49,7 @@ export function aggregateLedgerToDailySeries(
   const datesList: string[] = [];
 
   for (let i = 0; i < days; i++) {
-    const d = new Date(start);
+    const d = new Date(start.getTime());
     d.setUTCDate(start.getUTCDate() + i);
     const dateStr = d.toLocaleDateString('en-CA');
     datesList.push(dateStr);

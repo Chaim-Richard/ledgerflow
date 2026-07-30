@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Table, Search } from 'lucide-react';
 import { Transaction } from '../../types';
 import { format } from 'date-fns';
-import { cn } from '../../lib/utils';
+import { parseLocalDate, cn } from '../../lib/utils';
 
 interface DrillDownModalProps {
   isOpen: boolean;
@@ -42,12 +42,10 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                   <p className="micro-label">Transaction Drill-Down • {transactions.length} matched events</p>
                 </div>
               </div>
-              <button 
+              <button aria-label="Close" 
                 onClick={onClose}
                 className="p-3 hover:bg-[var(--surface)] rounded-[32px] transition-all shadow-sm border border-transparent hover:border-[var(--line)]"
-              >
-                <X size={24} />
-              </button>
+              ><X size={24} /></button>
             </div>
 
             <div className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar">
@@ -67,7 +65,7 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                     return (
                       <tr key={tx.id} className="group hover:bg-[var(--ink)] transition-all rounded-[32px] overflow-hidden">
                         <td className="py-4 pl-4 text-xs font-black text-slate-500 font-mono rounded-l-2xl border-y border-l border-[var(--line)] group-hover:border-slate-300">
-                          {format(new Date(tx.date), 'MMM dd, yyyy')}
+                          {format(parseLocalDate(tx.date), 'MMM dd, yyyy')}
                         </td>
                         <td className="py-4 text-sm font-bold text-[var(--text)] border-y border-[var(--line)] group-hover:border-slate-300">
                            {tx.description}

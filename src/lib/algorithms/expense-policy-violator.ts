@@ -1,4 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { parseLocalDate } from '../../lib/utils';
 
 export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
   id: 'forensics_policy',
@@ -17,7 +18,7 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
     }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const minRoundAmount = (inputs['minRoundAmount'] || 100) * 100; // in cents
+    const minRoundAmount = (inputs['minRoundAmount'] ?? 100) * 100; // in cents
     
     let weekendCount = 0;
     let roundNumberCount = 0;
@@ -36,7 +37,7 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
       if (absAmount < 500) return; // Skip tiny transactions
       
       let isRisk = false;
-      const dateObj = new Date(tx.date);
+      const dateObj = parseLocalDate(tx.date);
       const dayName = daysOfWeek[dateObj.getUTCDay()];
       
       // Check Weekend

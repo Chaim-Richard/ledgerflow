@@ -131,10 +131,10 @@ export class LedgerPostService {
     }
 
     const rawAmount = invoiceData.totalCents || invoiceData.amountCents || 0;
-    const amount = roundCents(rawAmount);
+    const rate = invoiceData.exchangeRate || 1;
+    const amount = roundCents(rawAmount * rate);
     if (amount <= 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation); } return; }
 
-    const rate = invoiceData.exchangeRate || 1;
     const invoiceNum = invoiceData.number || invoiceId;
     const customer = invoiceData.customerName || 'Customer';
 
@@ -175,7 +175,7 @@ export class LedgerPostService {
 
     // 3. Transaction 2: Payment Posting (DR Cash, CR A/R)
     if (status === 'paid' || status === 'partially_paid') {
-      const paidAmtCents = roundCents(invoiceData.amountPaidCents || invoiceData.paidAmountCents || (status === 'paid' ? amount : 0));
+      const paidAmtCents = roundCents((invoiceData.amountPaidCents || invoiceData.paidAmountCents || (status === 'paid' ? rawAmount : 0)) * rate);
       if (paidAmtCents > 0) {
         const paymentDate = invoiceData.paymentDate || invoiceData.paidAt || today;
         const paymentTx = {
@@ -342,10 +342,10 @@ export class LedgerPostService {
     }
 
     const rawAmount = billData.amountCents || billData.totalCents || 0;
-    const amount = roundCents(rawAmount);
+    const rate = billData.exchangeRate || 1;
+    const amount = roundCents(rawAmount * rate);
     if (amount <= 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation); } return; }
 
-    const rate = billData.exchangeRate || 1;
     const billNum = billData.number || billId;
     const vendor = billData.vendorName || 'Vendor';
 
@@ -386,7 +386,7 @@ export class LedgerPostService {
 
     // 3. Transaction 2: Payment Posting (DR A/P, CR Cash)
     if (status === 'paid' || status === 'partially_paid') {
-      const paidAmtCents = roundCents(billData.amountPaidCents || billData.paidAmountCents || (status === 'paid' ? amount : 0));
+      const paidAmtCents = roundCents((billData.amountPaidCents || billData.paidAmountCents || (status === 'paid' ? rawAmount : 0)) * rate);
       if (paidAmtCents > 0) {
         const paymentDate = billData.paymentDate || billData.paidAt || today;
         const paymentTx = {

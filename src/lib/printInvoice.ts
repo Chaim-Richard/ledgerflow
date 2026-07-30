@@ -74,7 +74,7 @@ export function printInvoice(invoice: Invoice, customer?: Customer, workspaceNam
             <tr>
               <td>${item.description || 'Item'}</td>
               <td class="right">${item.quantity || 1}</td>
-              <td class="right">${formatCurrency(item.rateCents || item.amountCents || 0)}</td>
+              <td class="right">${formatCurrency(item.rateCents ?? item.amountCents ?? 0)}</td>
               <td class="right">${formatCurrency(item.amountCents)}</td>
             </tr>
           `).join('')}

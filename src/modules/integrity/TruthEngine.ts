@@ -1,3 +1,4 @@
+import { parseLocalDate } from '../../lib/utils';
 // Architecture: Core Integrity Engine
 // Enforces that numbers, facts, and validations are strictly correct. No false info.
 import { TemporalValidity } from '../../types';
@@ -5,16 +6,16 @@ import Decimal from 'decimal.js';
 
 export class TruthEngine {
   static resolveEffectiveValue(timeSeries: TemporalValidity[], targetDateStr: string): number {
-    const targetTime = new Date(targetDateStr).getTime();
+    const targetTime = parseLocalDate(targetDateStr).getTime();
     if (isNaN(targetTime)) {
       throw new Error(`Integrity Violation: Invalid target date format -> ${targetDateStr}`);
     }
 
-    const sortedSeries = [...timeSeries].sort((a, b) => new Date(b.validFrom).getTime() - new Date(a.validFrom).getTime());
+    const sortedSeries = [...timeSeries].sort((a, b) => parseLocalDate(b.validFrom).getTime() - parseLocalDate(a.validFrom).getTime());
 
     for (const record of sortedSeries) {
-      const fromTime = new Date(record.validFrom).getTime();
-      const toTime = record.validTo ? new Date(record.validTo).getTime() : Infinity;
+      const fromTime = parseLocalDate(record.validFrom).getTime();
+      const toTime = record.validTo ? parseLocalDate(record.validTo).getTime() : Infinity;
 
       if (targetTime >= fromTime && targetTime <= toTime) {
         return record.value;

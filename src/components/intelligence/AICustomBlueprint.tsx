@@ -149,9 +149,7 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
               <p className="text-sm text-zinc-500">Describe your business model, and we'll architect the system structure.</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-3 hover:bg-zinc-100 rounded-full transition-colors">
-            <X size={24} className="text-zinc-400" />
-          </button>
+          <button aria-label="Close" onClick={onClose} className="p-3 hover:bg-zinc-100 rounded-full transition-colors"><X size={24} className="text-zinc-400" /></button>
         </div>
 
         <div className="flex-1 overflow-auto p-4 md:p-10">

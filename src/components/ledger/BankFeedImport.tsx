@@ -315,7 +315,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                   <p className="text-lg font-black text-[var(--text)] uppercase italic tracking-tighter">Deploy Ledger Source</p>
                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-2 opacity-40 mb-8">Drop CSV or click to browse system</p>
                   
-                  <div className="flex gap-4 items-center mt-4" onClick={(e) => e.stopPropagation()}>
+                  <div role="button" tabIndex={0} className="flex gap-4 items-center mt-4" onClick={(e) => e.stopPropagation()}>
                     <PlaidConnectButton />
                     <button 
                       onClick={(e) => { e.stopPropagation(); fetchFromPlaid(); }}

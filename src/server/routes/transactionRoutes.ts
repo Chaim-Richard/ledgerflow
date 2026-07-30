@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import express from 'express';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
+import { parseLocalDate } from '../../lib/utils';
 
 export const transactionRouter = express.Router();
 
@@ -93,7 +94,7 @@ transactionRouter.get('/', async (req, res) => {
       transactions = transactions.filter((t: any) => t.lines?.some((l: any) => l.accountId === accountId));
     }
 
-    transactions.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    transactions.sort((a: any, b: any) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
 
     res.json({
       status: "success",

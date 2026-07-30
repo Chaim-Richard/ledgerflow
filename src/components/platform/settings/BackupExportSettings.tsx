@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Download, Database, FileSpreadsheet, Archive, AlertCircle } from 'lucide-react';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { toast } from 'sonner';
+import { formatDecimal } from '../../../lib/utils';
 
 export default function BackupExportSettings() {
   const [isExporting, setIsExporting] = useState(false);
@@ -61,7 +62,7 @@ export default function BackupExportSettings() {
       
       transactions.forEach(t => {
         const categoryName = t.lines && t.lines.length > 0 ? t.lines[0].accountName || 'Split' : 'Uncategorized';
-        const amountStr = ((t.totalAmountCents || 0) / 100).toFixed(2);
+        const amountStr = formatDecimal(t.totalAmountCents || 0);
         
         const row = [
           t.date,

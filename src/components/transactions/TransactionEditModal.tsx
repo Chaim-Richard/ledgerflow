@@ -15,7 +15,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { auth } from '../../firebase';
-import { getLocalDateISO } from '../../lib/utils';
+import { formatDecimal, getLocalDateISO } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import TagInput from './TagInput';
@@ -192,12 +192,10 @@ export default function TransactionEditModal({
               </div>
             </div>
 
-            <button 
+            <button aria-label="Close" 
               onClick={onClose} 
               className="p-2 hover:bg-zinc-100 rounded-full transition-all text-zinc-400 hover:text-[var(--text)]"
-            >
-              <X size={18} />
-            </button>
+            ><X size={18} /></button>
           </div>
 
           {/* Form Content body */}
@@ -465,7 +463,7 @@ export default function TransactionEditModal({
                           step="0.01"
                           placeholder="0.00"
                           disabled={isLocked}
-                          value={line.amountCents === 0 ? '' : (line.amountCents / 100).toFixed(2)}
+                          value={line.amountCents === 0 ? '' : formatDecimal(line.amountCents)}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value || '0');
                             handleLineChange(idx, { amountCents: Math.round(val * 100) });
@@ -602,7 +600,7 @@ export default function TransactionEditModal({
                 </div>
                 {sumLines !== 0 && (
                   <p className="text-[10px] text-amber-600 font-medium">
-                    Trial balance variance offset: ${(sumLines / 100).toFixed(2)}
+                    Trial balance variance offset: ${formatDecimal(sumLines)}
                   </p>
                 )}
               </div>
@@ -658,7 +656,7 @@ export default function TransactionEditModal({
                       {!isLocked && (
                         <button 
                           onClick={() => setFileUrls(prev => prev.filter((_, index) => index !== i))}
-                          className="absolute top-1 right-1 p-1 bg-red-500/80 hover:bg-red-500 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1 right-1 p-1 bg-red-500/80 hover:bg-red-500 text-white rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                         >
                           <Trash2 size={12} />
                         </button>

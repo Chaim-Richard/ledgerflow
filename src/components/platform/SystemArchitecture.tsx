@@ -40,9 +40,7 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
                     <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">High-Level Deterministic Data Flow</p>
                   </div>
                </div>
-               <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-all">
-                  <X size={20} />
-               </button>
+               <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-all"><X size={20} /></button>
             </div>
 
             <ArchitectureMonitor layerStatus={telemetry.layerStatus} />

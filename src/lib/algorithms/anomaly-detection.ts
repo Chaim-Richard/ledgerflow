@@ -1,3 +1,4 @@
+import { parseLocalDate } from '../utils';
 import { Transaction, ChartAccount } from '../../types';
 import { AlgorithmDefinition, buildHelper } from './types';
 
@@ -38,7 +39,7 @@ function normalizeDescription(description: string): string {
 }
 
 function daysBetween(a: string, b: string): number {
-  return Math.abs(new Date(a).getTime() - new Date(b).getTime()) / 86_400_000;
+  return Math.abs(parseLocalDate(a).getTime() - parseLocalDate(b).getTime()) / 86_400_000;
 }
 
 function findDuplicates(transactions: Transaction[], windowDays = 3) {

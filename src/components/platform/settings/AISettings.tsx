@@ -304,7 +304,7 @@ export default function AISettings() {
           </h4>
           <div className="space-y-4">
             {MODEL_OPTIONS.map((m) => (
-              <div 
+              <div role="button" tabIndex={0} 
                 key={m.name} 
                 onClick={() => handleSelectModel(m.name)}
                 className={cn(

@@ -127,8 +127,8 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
               </button>
               <div className="h-10 w-px bg-[var(--surface)]/10 mx-4" />
               <div className="flex items-center gap-6">
-                 <button className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Compare Period</button>
-                 <button className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Anomaly Sweep</button>
+                 <button type="button" className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Compare Period</button>
+                 <button type="button" className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Anomaly Sweep</button>
               </div>
             </div>
           </form>

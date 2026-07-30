@@ -7,7 +7,7 @@ import { useLedgerStore } from '../stores/useLedgerStore';
  * Specialized financial rounding to prevent decimal loss in tax calculations
  */
 export function roundCents(cents: number): number {
-  return Math.round(cents);
+  return Math.sign(cents) * Math.round(Math.abs(cents));
 }
 
 /**
@@ -69,6 +69,19 @@ export function maskPII(text: string | undefined | null): string {
 }
 
 /**
+ * Accurately formats a cents value into a string representing decimal dollars without binary float issues.
+ * Used for CSV exports. Example: 1005 -> "10.05"
+ */
+export function formatDecimal(cents: number): string {
+  if (cents === null || cents === undefined || isNaN(cents)) return "0.00";
+  const isNegative = cents < 0;
+  const absCents = Math.abs(Math.round(cents));
+  const dollars = Math.floor(absCents / 100);
+  const remainder = absCents % 100;
+  return `${isNegative && absCents > 0 ? '-' : ''}${dollars}.${remainder.toString().padStart(2, '0')}`;
+}
+
+/**
  * Returns YYYY-MM-DD string in local user timezone to prevent UTC shift off-by-one errors
  */
 export function getLocalDateISO(d: Date = new Date()): string {
@@ -76,6 +89,21 @@ export function getLocalDateISO(d: Date = new Date()): string {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Parses a YYYY-MM-DD string into a local midnight Date object
+ * Prevents UTC off-by-one errors from standard new Date('YYYY-MM-DD')
+ */
+export function parseLocalDate(s: string): Date {
+  if (!s) return new Date();
+  if (s.includes('T')) return new Date(s); // Handle full ISO strings if they somehow appear
+  const parts = s.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts.map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(s);
 }
 
 export function cn(...inputs: ClassValue[]) {
@@ -88,13 +116,17 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function sanitizeCsvCell(value: any): string {
   if (value === null || value === undefined) return '""';
-  if (typeof value === 'number' || /^-?\d+(\.\d+)?$/.test(String(value))) return String(value);
+  if (typeof value === 'number') return String(value);
+  
   let str = String(value);
-  // If string starts with formula trigger characters, prefix with single quote
-  if (/^[=\+\-@\t\r]/.test(str)) {
+  
+  // Purely formatted numbers (like -1,000.00 or -$50.00) are safe from formula injection
+  const isSafeNumber = /^-?\$?\s*\d{1,3}(,?\d{3})*(\.\d+)?$/.test(str);
+  
+  if (!isSafeNumber && /^[=\+\-@\t\r]/.test(str)) {
     str = "'" + str;
   }
-  // Escape double quotes and enclose in quotes
+  
   return `"${str.replace(/"/g, '""')}"`;
 }
 

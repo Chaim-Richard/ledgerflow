@@ -1,7 +1,7 @@
 import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
+import { parseLocalDate, formatDecimal, formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
 import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -64,8 +64,8 @@ export default function CashFlowView() {
   }, [businessType]);
 
   const getPrevPeriod = (start: string, end: string) => {
-    const s = new Date(start);
-    const e = new Date(end);
+    const s = parseLocalDate(start);
+    const e = parseLocalDate(end);
     const msDiff = e.getTime() - s.getTime();
     const prevE = new Date(s.getTime() - 86400000); 
     const MathDiffDays = Math.round(msDiff / 86400000);
@@ -141,11 +141,11 @@ export default function CashFlowView() {
       [labels.title, '', ''],
       [`Period: ${dateRange.start} to ${dateRange.end}`, isComp ? 'Prior Period' : '', isComp ? 'Variance %' : ''],
       ['', '', '', ''],
-      [`CASH FLOWS FROM ${labels.operating.toUpperCase()}`, (currentData.operating.total / 100).toFixed(2), isComp ? (prevData.operating.total / 100).toFixed(2) : '', ''],
-      [`CASH FLOWS FROM ${labels.investing.toUpperCase()}`, (currentData.investing.total / 100).toFixed(2), isComp ? (prevData.investing.total / 100).toFixed(2) : '', ''],
-      [`CASH FLOWS FROM ${labels.financing.toUpperCase()}`, (currentData.financing.total / 100).toFixed(2), isComp ? (prevData.financing.total / 100).toFixed(2) : '', ''],
+      [`CASH FLOWS FROM ${labels.operating.toUpperCase()}`, formatDecimal(currentData.operating.total), isComp ? formatDecimal(prevData.operating.total) : '', ''],
+      [`CASH FLOWS FROM ${labels.investing.toUpperCase()}`, formatDecimal(currentData.investing.total), isComp ? formatDecimal(prevData.investing.total) : '', ''],
+      [`CASH FLOWS FROM ${labels.financing.toUpperCase()}`, formatDecimal(currentData.financing.total), isComp ? formatDecimal(prevData.financing.total) : '', ''],
       ['', '', '', ''],
-      [labels.netChange.toUpperCase(), (currentData.netChange / 100).toFixed(2), isComp ? (prevData.netChange / 100).toFixed(2) : '', '']
+      [labels.netChange.toUpperCase(), formatDecimal(currentData.netChange), isComp ? formatDecimal(prevData.netChange) : '', '']
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -256,7 +256,7 @@ export default function CashFlowView() {
                            <span className="text-[var(--text)] text-sm">{labels.netSectionLabel(section.label)}</span>
                            <div className="flex items-center gap-4">
                              {isComparative && section.prev.total !== 0 && (
-                                <span className={cn("text-[10px] opacity-0 group-hover:opacity-100 transition-opacity", section.data.total >= section.prev.total ? "text-emerald-500" : "text-rose-500")}>
+                                <span className={cn("text-[10px] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity", section.data.total >= section.prev.total ? "text-emerald-500" : "text-rose-500")}>
                                    {(((section.data.total - section.prev.total) / Math.abs(section.prev.total)) * 100).toFixed(1)}% vs Prior
                                 </span>
                              )}

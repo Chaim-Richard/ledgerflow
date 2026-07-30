@@ -1035,7 +1035,7 @@ export default function SystemCommandCenter() {
                         </td>
                       </tr>
                     ) : (
-                      telemetry.tenants.sort((a: any, b: any) => b.requestCount - a.requestCount).map((tenant: any) => {
+                      [...telemetry.tenants].sort((a: any, b: any) => b.requestCount - a.requestCount).map((tenant: any) => {
                         const isSpiking = tenant.requestCount > 500;
                         const usedDollars = ((tenant.apiQuotaTotalCentsUsed || 0) / 100).toFixed(2);
                         const activeUsers = tenant.activeUserCount || 1;

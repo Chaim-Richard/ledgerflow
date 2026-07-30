@@ -1,4 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { parseLocalDate } from '../../lib/utils';
 
 export const VENDOR_CHURN_ALGO: AlgorithmDefinition = {
   id: 'ops_vendor_churn',
@@ -17,7 +18,7 @@ export const VENDOR_CHURN_ALGO: AlgorithmDefinition = {
     }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const inactivityDays = inputs['inactivityDays'] || 90;
+    const inactivityDays = inputs['inactivityDays'] ?? 90;
     const inactivityMs = inactivityDays * 24 * 60 * 60 * 1000;
     const now = new Date().getTime();
     
@@ -30,7 +31,7 @@ export const VENDOR_CHURN_ALGO: AlgorithmDefinition = {
       const name = (tx.payee || tx.description || 'Unknown').trim();
       if (!name || name.toLowerCase() === 'unknown') return;
       
-      const txTime = new Date(tx.date).getTime();
+      const txTime = parseLocalDate(tx.date).getTime();
       
       if (!vendorHistory[name]) {
         vendorHistory[name] = [];

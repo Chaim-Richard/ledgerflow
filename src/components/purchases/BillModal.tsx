@@ -95,9 +95,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Purchases & Payables</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400">
-            <X size={24} />
-          </button>
+          <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400"><X size={24} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">

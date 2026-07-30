@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Transaction } from '../../types';
 import { aiService } from '../../services/aiService';
 import { IntentResolver } from '../../lib/intentResolver';
-import { cn, getLocalDateISO } from '../../lib/utils';
+import { parseLocalDate, cn, getLocalDateISO } from '../../lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -262,9 +262,7 @@ export default function StatementImporter({
               <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider">Rule Parsing & Causal Deduplication</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-all text-[var(--muted)] cursor-pointer">
-            <X size={24} />
-          </button>
+          <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-all text-[var(--muted)] cursor-pointer"><X size={24} /></button>
         </div>
 
         {/* Content */}
@@ -403,7 +401,7 @@ export default function StatementImporter({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div 
+                          <div role="button" tabIndex={0} 
                             onClick={(e) => { e.stopPropagation(); toggleSelect(idx); }}
                             className={cn(
                               "w-6 h-6 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
@@ -414,7 +412,7 @@ export default function StatementImporter({
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-0.5">
-                              <p className="text-[10px] font-mono text-[var(--muted)]">{format(new Date(tx.date), 'MMM dd, yyyy')}</p>
+                              <p className="text-[10px] font-mono text-[var(--muted)]">{format(parseLocalDate(tx.date), 'MMM dd, yyyy')}</p>
                               {tx.hasResolvedEntity && (
                                 <span className={cn(
                                   "flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-tighter",

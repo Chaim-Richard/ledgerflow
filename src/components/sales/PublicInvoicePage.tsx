@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Invoice } from '../../types';
-import { formatCurrency } from '../../lib/utils';
+import { parseLocalDate, formatCurrency } from '../../lib/utils';
 import { CheckCircle2, AlertCircle, Building2, Download } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
@@ -88,7 +88,7 @@ export default function PublicInvoicePage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Invoice {invoice.number}</h1>
-              <p className="text-sm text-gray-500">Issued on {new Date(invoice.date || '').toLocaleDateString()}</p>
+              <p className="text-sm text-gray-500">Issued on {parseLocalDate(invoice.date || '').toLocaleDateString()}</p>
             </div>
           </div>
           
@@ -122,7 +122,7 @@ export default function PublicInvoicePage() {
                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Total Amount</h3>
                 <p className="text-4xl font-bold text-gray-900">{formatCurrency(invoice.totalCents || invoice.amountCents)}</p>
                 {!isPaid && (
-                  <p className="text-sm text-gray-500 mt-1">Due by {new Date(invoice.dueDate).toLocaleDateString()}</p>
+                  <p className="text-sm text-gray-500 mt-1">Due by {parseLocalDate(invoice.dueDate || '').toLocaleDateString()}</p>
                 )}
               </div>
             </div>

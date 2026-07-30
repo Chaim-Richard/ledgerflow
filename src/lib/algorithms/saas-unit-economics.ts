@@ -11,8 +11,8 @@ export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
     { key: 'newCustomers', label: 'New Customers Acquired (Count)', min: 1, max: 1000, step: 10, defaultValue: 50 }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const churnRate = (inputs.assumedChurnPct || 3) / 100;
-    const newCustomers = inputs.newCustomers || 50;
+    const churnRate = (inputs.assumedChurnPct ?? 3) / 100;
+    const newCustomers = inputs.newCustomers ?? 50;
 
     let totalMarketingSpend = 0;
     let mrr = 0; // Approx MRR based on recent revenue

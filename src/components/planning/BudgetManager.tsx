@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Budget, Transaction, ChartAccount } from '../../types';
-import { cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { cn, formatCurrency, getLocalDateISO, safeConfirm } from '../../lib/utils';
 import { addDoc, collection, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { toast } from 'sonner';
@@ -151,13 +151,13 @@ export default function BudgetManager() {
                       setEditingBudget(b.id);
                       setIsAdding(true);
                     }}
-                    className="p-2 text-slate-500 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-2 text-slate-500 hover:text-indigo-600 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                   >
                     <Edit2 size={16} />
                   </button>
                   <button 
-                    onClick={() => deleteDoc(doc(db, 'budgets', b.id))}
-                    className="p-2 text-slate-500 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                    onClick={async () => { if (await safeConfirm('Delete budget?')) { await deleteDoc(doc(db, 'budgets', b.id)); toast.success('Budget deleted'); } }}
+                    className="p-2 text-slate-500 hover:text-rose-500 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                   >
                     <Trash2 size={16} />
                   </button>

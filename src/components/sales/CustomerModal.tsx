@@ -49,9 +49,7 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
               <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">CRM & Relationships</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400">
-            <X size={24} />
-          </button>
+          <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400"><X size={24} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 md:p-8 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">

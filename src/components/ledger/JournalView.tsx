@@ -4,6 +4,7 @@ import { FileSearch, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
+import { parseLocalDate } from '../../lib/utils';
 
 interface JournalViewProps {
   journalEntries: JournalEntry[];
@@ -12,7 +13,7 @@ interface JournalViewProps {
 
 export default function JournalView({ journalEntries = [], formatCurrency }: JournalViewProps) {
   const sortedEntries = useMemo(() => {
-    return [...journalEntries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return [...journalEntries].sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
   }, [journalEntries]);
 
   const Row = ({ index, style }: { index: number, style: React.CSSProperties }) => {
@@ -26,7 +27,7 @@ export default function JournalView({ journalEntries = [], formatCurrency }: Jou
          <div className="grid grid-cols-[80px_1fr_120px_150px] w-full items-center gap-4 py-3 px-2">
             <div className="flex flex-col">
                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Date</span>
-               <span className="font-mono text-xs text-slate-600 font-semibold">{format(new Date(entry.date), 'dd.MM.yy')}</span>
+               <span className="font-mono text-xs text-slate-600 font-semibold">{format(parseLocalDate(entry.date), 'dd.MM.yy')}</span>
             </div>
             
             <div className="flex flex-col">

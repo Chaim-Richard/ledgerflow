@@ -15,7 +15,7 @@ import {
   CheckSquare,
   Sparkles
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { parseLocalDate, cn } from '../../lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -143,9 +143,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1 opacity-40">Step {step} of 2 // {step === 1 ? 'Statement Target Definition' : 'Rule Transaction Alignment'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-12 h-12 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-slate-500 transition-all">
-            <X size={24} />
-          </button>
+          <button aria-label="Close" onClick={onClose} className="w-12 h-12 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-slate-500 transition-all"><X size={24} /></button>
         </div>
 
         <div className="flex-1 overflow-auto p-4 md:p-10 bg-[var(--ink)]">
@@ -260,7 +258,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                   </div>
                   <div className="divide-y divide-ledger-line/50 max-h-[400px] overflow-auto scrollbar-thin scrollbar-thumb-ledger-line">
                     {filteredTransactions.map(t => (
-                      <div 
+                      <div role="button" tabIndex={0} 
                         key={t.id}
                         onClick={() => handleToggle(t.id)}
                         className={cn(
@@ -277,7 +275,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                           </div>
                           <div>
                             <p className="text-xs font-black text-[var(--text)] uppercase italic tracking-tight">{t.description}</p>
-                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1 opacity-50">{format(new Date(t.date), 'MMM dd, yyyy')} // NODE_ID: {t.id.substring(0,8)}</p>
+                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1 opacity-50">{format(parseLocalDate(t.date), 'MMM dd, yyyy')} // NODE_ID: {t.id.substring(0,8)}</p>
                           </div>
                         </div>
                         <p className="text-sm font-black font-mono text-[var(--text)] italic tracking-tight">

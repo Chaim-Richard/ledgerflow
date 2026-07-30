@@ -1,5 +1,6 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction } from '../../types';
+import { parseLocalDate } from '../../lib/utils';
 
 export const DUPLICATE_DETECTION_ALGO: AlgorithmDefinition = {
   id: 'forensics_duplicates',
@@ -18,7 +19,7 @@ export const DUPLICATE_DETECTION_ALGO: AlgorithmDefinition = {
     }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const timeWindowDays = inputs['timeWindowDays'] || 3;
+    const timeWindowDays = inputs['timeWindowDays'] ?? 3;
     const windowMs = timeWindowDays * 24 * 60 * 60 * 1000;
     
     // 1. Group by exact amount to limit search space
@@ -42,15 +43,15 @@ export const DUPLICATE_DETECTION_ALGO: AlgorithmDefinition = {
       if (group.length < 2) return;
       
       // Sort by date to make temporal proximity check easier
-      group.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      group.sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
       
       for (let i = 0; i < group.length - 1; i++) {
         for (let j = i + 1; j < group.length; j++) {
           const t1 = group[i];
           const t2 = group[j];
           
-          const t1Date = new Date(t1.date).getTime();
-          const t2Date = new Date(t2.date).getTime();
+          const t1Date = parseLocalDate(t1.date).getTime();
+          const t2Date = parseLocalDate(t2.date).getTime();
           
           // Since it's sorted, if time difference is > window, break inner loop
           if (t2Date - t1Date > windowMs) break;

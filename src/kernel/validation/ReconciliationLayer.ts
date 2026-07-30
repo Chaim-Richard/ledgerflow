@@ -1,3 +1,4 @@
+import { parseLocalDate } from "../../lib/utils";
 export interface ReconciliationState {
   accountId: string;
   bookBalanceCents: number;
@@ -54,7 +55,7 @@ export class ReconciliationLayer {
         if (bankTx.amountCents === bookTx.amountCents) {
           confidence += 0.6;
           
-          const daysDiff = Math.abs((new Date(bankTx.date).getTime() - new Date(bookTx.date).getTime()) / (1000 * 3600 * 24));
+          const daysDiff = Math.abs((parseLocalDate(bankTx.date).getTime() - parseLocalDate(bookTx.date).getTime()) / (1000 * 3600 * 24));
           
           if (daysDiff === 0) confidence += 0.4;
           else if (daysDiff <= 3) confidence += 0.2;

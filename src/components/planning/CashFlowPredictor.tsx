@@ -118,7 +118,7 @@ export default function CashFlowPredictor() {
                    return (
                       <div key={idx} className="flex-1 flex flex-col justify-end items-center gap-2 group relative">
                          <div className="w-full bg-slate-200 rounded-t-sm hover:bg-slate-300 transition-colors relative" style={{ height: `${height}%` }}>
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap pointer-events-none z-10">
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap pointer-events-none z-10">
                                ${val.toLocaleString()}
                             </div>
                          </div>

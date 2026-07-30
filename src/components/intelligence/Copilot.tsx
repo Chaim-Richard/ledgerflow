@@ -148,7 +148,7 @@ export default function Copilot() {
                   className="text-left flex items-center justify-between font-bold text-xs uppercase tracking-wider border border-[var(--line)] bg-[var(--surface)] px-5 py-4 rounded-[32px] text-slate-500 hover:border-slate-900 hover:text-[var(--text)] hover:shadow-sm transition-all group active:scale-95"
                 >
                   <span className="text-xs">{s}</span>
-                  <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ChevronRight size={16} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
                 </button>
               ))}
             </div>
@@ -160,7 +160,7 @@ export default function Copilot() {
               value={input}
               onChange={(e) => setInput(e.target.value)} 
             />
-            <button 
+            <button type="button" 
               className="absolute right-3 p-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-[32px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md active:scale-95" 
               disabled={loading || !input.trim()} 
             >

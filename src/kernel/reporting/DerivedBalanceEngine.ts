@@ -1,4 +1,5 @@
 import { LedgerEvent } from '../ledger/EventLedger';
+import { parseLocalDate } from '../../lib/utils';
 
 export interface BalanceSnapshot {
   workspaceId?: string;
@@ -27,7 +28,7 @@ export class DerivedBalanceEngine {
 
     const workspaceSnapshots = this.snapshotsByWorkspace.get(workspaceId) || [];
     workspaceSnapshots.push({ workspaceId, date, balancesByAccount: balances });
-    workspaceSnapshots.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    workspaceSnapshots.sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
     this.snapshotsByWorkspace.set(workspaceId, workspaceSnapshots);
   }
 
@@ -52,8 +53,8 @@ export class DerivedBalanceEngine {
   }
 
   static getAverageBalance(accountId: string, startDate: string, endDate: string, allEvents: LedgerEvent[], workspaceId: string = 'default'): number {
-    const start = new Date(startDate).getTime();
-    const end = new Date(endDate).getTime();
+    const start = parseLocalDate(startDate).getTime();
+    const end = parseLocalDate(endDate).getTime();
     const days = (end - start) / (1000 * 3600 * 24) || 1;
     
     let totalBalanceSum = 0;

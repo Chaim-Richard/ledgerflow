@@ -163,12 +163,10 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
           className="relative w-full max-w-xl bg-[var(--surface)] dark:bg-slate-900 rounded-2xl shadow-xl border border-[var(--line)] dark:border-slate-800 overflow-hidden"
         >
           {onClose && (
-            <button 
+            <button aria-label="Close" 
               onClick={onClose}
               className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors z-10"
-            >
-              <X size={20} />
-            </button>
+            ><X size={20} /></button>
           )}
           {innerContent}
         </motion.div>

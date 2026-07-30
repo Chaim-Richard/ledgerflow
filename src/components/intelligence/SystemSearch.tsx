@@ -119,7 +119,7 @@ export const SystemSearch = ({ isOpen, onClose, transactions, onNavigate }: Syst
                         </div>
                         <span className="text-xl font-black text-[var(--text)] uppercase tracking-tight">{cmd.label}</span>
                      </div>
-                     <ArrowRight size={20} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                     <ArrowRight size={20} className="text-slate-400 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
                    </button>
                  ))}
 

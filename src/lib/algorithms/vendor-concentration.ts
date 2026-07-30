@@ -11,7 +11,7 @@ export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
     { key: 'topN', label: 'Top N Vendors to Analyze', min: 3, max: 20, step: 1, defaultValue: 5 }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const topN = inputs.topN || 5;
+    const topN = inputs.topN ?? 5;
     const vendorSpend: Record<string, number> = {};
     let totalSpend = 0;
 

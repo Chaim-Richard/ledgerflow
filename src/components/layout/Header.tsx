@@ -91,7 +91,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           </button>
         )}
 
-        <div 
+        <div role="button" tabIndex={0} 
           onClick={user ? onLogout : (onLoginPrompt || onLogout)}
           title={user ? `Logged in as ${user.email} (Click to Log Out)` : 'Guest Mode (Click to Sign In)'}
           className="h-8 w-8 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] text-[11px] font-mono font-bold cursor-pointer hover:bg-[var(--brass)] hover:text-black transition-colors"

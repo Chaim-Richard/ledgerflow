@@ -11,7 +11,7 @@ import {
   Lock,
   Edit3
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { parseLocalDate, cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 
 const HighlightMatch = ({ text, match }: { text: string; match?: string }) => {
@@ -96,7 +96,7 @@ const TransactionRow = React.memo(({
 
   return (
     <div className="flex flex-col w-full h-full relative group/row">
-      <div 
+      <div role="button" tabIndex={0} 
         onClick={() => onSelect?.(tx.id)}
         className={cn(
           "grid w-full h-full items-center transition-all border-b border-[var(--line)] cursor-pointer relative",
@@ -130,7 +130,7 @@ const TransactionRow = React.memo(({
           isCompactMode && "px-1 text-[9px]",
           isFocused && focusedField === 'date' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
         )}>
-          {displayTx.date ? format(new Date(displayTx.date), 'dd MMM yyyy') : 'N/A'}
+          {displayTx.date ? format(parseLocalDate(displayTx.date), 'dd MMM yyyy') : 'N/A'}
         </div>
         <div className={cn(
           "px-4 font-bold text-[var(--text)] transition-colors text-xs h-full flex flex-col justify-center relative border-r border-[var(--line)]/50 group-hover/active:text-white", 
@@ -297,7 +297,7 @@ const TransactionRow = React.memo(({
               </div>
             ) : (
               <div className={cn(
-                "flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity", 
+                "flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity", 
                 (isProMode || isCompactMode) && "opacity-100"
               )}>
                 <button 

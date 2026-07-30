@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal } from 'lucide-react';
 import { motion } from 'motion/react';
-import { cn, getLocalDateISO } from '../../lib/utils';
+import { parseLocalDate, cn, getLocalDateISO } from '../../lib/utils';
 import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -79,8 +79,8 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
 
   // Helper to subtract months
   const getPrevPeriod = (start: string, end: string) => {
-    const s = new Date(start);
-    const e = new Date(end);
+    const s = parseLocalDate(start);
+    const e = parseLocalDate(end);
     const msDiff = e.getTime() - s.getTime();
     const prevE = new Date(s.getTime() - 86400000); 
     const MathDiffDays = Math.round(msDiff / 86400000);

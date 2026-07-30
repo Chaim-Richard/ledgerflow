@@ -27,7 +27,7 @@ export default function Collaborators() {
               {(c.name?.[0] || '?').toUpperCase()}
             </div>
             
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-slate-900 text-white text-[9px] font-black rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl border border-white/10 italic">
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-slate-900 text-white text-[9px] font-black rounded-lg whitespace-nowrap opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl border border-white/10 italic">
               {c.name}
             </div>
             

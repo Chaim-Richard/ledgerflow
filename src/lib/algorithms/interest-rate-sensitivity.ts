@@ -11,7 +11,7 @@ export const INTEREST_RATE_SENSITIVITY_ALGO: AlgorithmDefinition = {
     { key: 'rateShockBps', label: 'Rate Shock (Basis Points)', min: -500, max: 500, step: 25, defaultValue: 100 }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const rateShock = (inputs.rateShockBps || 100) / 10000;
+    const rateShock = (inputs.rateShockBps ?? 100) / 10000;
 
     // For this simple simulation, we look for accounts that might be rate-sensitive
     let rsa = 0; // Rate Sensitive Assets

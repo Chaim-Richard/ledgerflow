@@ -15,10 +15,10 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     { key: 'equityDebtRatio', label: 'Equity Weight (%)', min: 0, max: 100, step: 5, defaultValue: 70 }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const ke = (inputs['costOfEquityPct'] || 10) / 100;
-    const kd = (inputs['costOfDebtPct'] || 5) / 100;
-    const tax = (inputs['taxRatePct'] || 21) / 100;
-    const equityPct = (inputs['equityDebtRatio'] || 70) / 100;
+    const ke = (inputs['costOfEquityPct'] ?? 10) / 100;
+    const kd = (inputs['costOfDebtPct'] ?? 5) / 100;
+    const tax = (inputs['taxRatePct'] ?? 21) / 100;
+    const equityPct = (inputs['equityDebtRatio'] ?? 70) / 100;
     const debtPct = 1 - equityPct;
     
     // WACC = (E/V * Ke) + (D/V * Kd * (1 - Tax))

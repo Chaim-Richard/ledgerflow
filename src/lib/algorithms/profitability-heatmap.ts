@@ -10,7 +10,7 @@ export const PROFITABILITY_HEATMAP_ALGO: AlgorithmDefinition = {
     { key: 'minMarginThreshold', label: 'Warning Margin Threshold (%)', min: 0, max: 50, step: 1, defaultValue: 15 }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const warningThreshold = (inputs.minMarginThreshold || 15) / 100;
+    const warningThreshold = (inputs.minMarginThreshold ?? 15) / 100;
 
     const projectData: Record<string, { revenue: number, costs: number }> = {};
     let totalRevenue = 0;

@@ -16,6 +16,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { cn, safeConfirm } from '../../lib/utils';
+import { AsyncButton } from '../ui/AsyncButton';
 import { 
   collection, 
   query, 
@@ -320,13 +321,13 @@ export default function Vault() {
                 ))}
               </div>
 
-              <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
-                 <button 
-                  onClick={(e) => { e.stopPropagation(); handleDelete(docItem.id); }}
+              <div className="absolute top-6 right-6 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-2">
+                 <AsyncButton 
+                  onClickAction={async () => { handleDelete(docItem.id); }}
                   className="w-10 h-10 flex items-center justify-center bg-rose-50 text-rose-500 rounded-[32px] hover:bg-rose-500 hover:text-white transition-all shadow-sm border border-rose-100"
                 >
                   <Trash2 size={18} />
-                </button>
+                </AsyncButton>
               </div>
             </motion.div>
           ))}
@@ -439,7 +440,7 @@ export default function Vault() {
                    <div className="space-y-3">
                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-40 px-1">Linked Transaction Association</p>
                      <div className="p-6 bg-slate-900 text-white rounded-[32px] flex items-center justify-between border border-white/5 shadow-xl group cursor-pointer overflow-hidden relative">
-                        <div className="absolute inset-0 bg-[var(--surface)]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 bg-[var(--surface)]/5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
                         <div className="relative z-10">
                           <p className="text-sm font-bold tracking-tight">
                             {transactions.find(t => t.id === selectedDoc.linkedTransactionId)?.description || 'Unknown Transaction'}
@@ -511,12 +512,12 @@ export default function Vault() {
                       <ExternalLink size={18} />
                       Raw
                     </a>
-                    <button 
-                      onClick={() => handleDelete(selectedDoc.id)}
+                    <AsyncButton 
+                      onClickAction={async () => handleDelete(selectedDoc.id)}
                       className="w-14 h-14 flex items-center justify-center bg-rose-50 text-rose-500 rounded-[32px] hover:bg-rose-500 hover:text-white transition-all shadow-sm border border-rose-100"
                     >
                       <Trash2 size={24} />
-                    </button>
+                    </AsyncButton>
                  </div>
               </div>
             </motion.div>

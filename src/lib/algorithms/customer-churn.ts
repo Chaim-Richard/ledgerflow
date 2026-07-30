@@ -1,4 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { parseLocalDate } from '../../lib/utils';
 
 export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
   id: 'intelligence_6',
@@ -10,7 +11,7 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
     { key: 'churnThresholdDays', label: 'Churn Threshold (Days)', min: 30, max: 365, step: 30, defaultValue: 90 }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const thresholdDays = inputs.churnThresholdDays || 90;
+    const thresholdDays = inputs.churnThresholdDays ?? 90;
     
     // Simplistic identification of customers from transaction data based on income/revenue
     const customerLastSeen: Record<string, number> = {};
@@ -31,7 +32,7 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
 
        if (isRevenue && txAmount > 0) {
           const payee = (tx.payee || tx.description || 'Unknown Customer').toUpperCase().trim();
-          const txDate = new Date(tx.date).getTime();
+          const txDate = parseLocalDate(tx.date).getTime();
           
           if (!customerLastSeen[payee] || txDate > customerLastSeen[payee]) {
              customerLastSeen[payee] = txDate;

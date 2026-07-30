@@ -4,6 +4,7 @@ import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { format, addMonths } from "date-fns";
 
 import { predictHoltWinters } from "../lib/algorithms";
+import { parseLocalDate } from '../lib/utils';
 
 export interface Insight {
   type: string;
@@ -487,7 +488,7 @@ export class StrategicEngine {
       const desc = (t.description || '').toLowerCase();
       const vendor = (t.payee || "Market Source").toUpperCase();
       const amount = Math.abs(t.totalAmountCents);
-      const tDate = new Date(t.date).getTime();
+      const tDate = parseLocalDate(t.date).getTime();
       
       // Learning Weight: Decays over time (Recency Bias)
       const ageInDays = (now - tDate) / (1000 * 60 * 60 * 24);
@@ -547,7 +548,7 @@ export class StrategicEngine {
       // Calculate Velocity: Days since first transaction vs total sales
       const firstTx = itemTransactions.length > 0 
         ? itemTransactions.reduce((min, t) => {
-            const time = new Date(t.date).getTime();
+            const time = parseLocalDate(t.date).getTime();
             return time < min ? time : min;
           }, Infinity) 
         : now;

@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
-import { cn, formatCurrency } from '../../lib/utils';
+import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
 import { format, differenceInDays, addDays, startOfDay } from 'date-fns';
 
 import BillModal from './BillModal';
@@ -58,7 +58,7 @@ export default function Purchases() {
     bills.forEach(bill => {
       if (bill.status === 'paid') return;
       
-      const dueDate = new Date(bill.dueDate);
+      const dueDate = parseLocalDate(bill.dueDate);
       const daysDiff = differenceInDays(dueDate, today);
 
       if (daysDiff < 0) buckets.overdue += bill.amountCents;
@@ -79,7 +79,7 @@ export default function Purchases() {
     return days.map(day => {
       const dayBills = bills.filter(b => 
         b.status !== 'paid' && 
-        format(new Date(b.dueDate), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
+        format(parseLocalDate(b.dueDate), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
       );
       return {
         date: day,
@@ -96,7 +96,7 @@ export default function Purchases() {
       const vendor = vendors?.find(v => v.id === b.vendorId);
       const searchStr = `${b.vendorName || ''} ${b.number || ''} ${b.tags?.join(' ') || ''} ${b.metadata ? JSON.stringify(b.metadata) : ''} ${vendor?.tags?.join(' ') || ''} ${vendor?.metadata ? JSON.stringify(vendor.metadata) : ''}`.toLowerCase();
       return searchStr.includes(term);
-    }).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+    }).sort((a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime());
   }, [bills, vendors, searchTerm]);
 
   const getStatusColor = (status: Bill['status']) => {
@@ -341,7 +341,7 @@ export default function Purchases() {
                        </div>
                     </td>
                     <td className="p-4 md:p-8">
-                       <span className="font-bold text-[var(--text)]">{bill.date ? format(new Date(bill.date), 'MMM dd, yyyy') : 'N/A'}</span>
+                       <span className="font-bold text-[var(--text)]">{bill.date ? format(parseLocalDate(bill.date), 'MMM dd, yyyy') : 'N/A'}</span>
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex flex-col">
@@ -349,11 +349,11 @@ export default function Purchases() {
                           "font-bold text-[var(--text)]",
                           bill.status === 'overdue' && "text-rose-600"
                         )}>
-                          {bill.dueDate ? format(new Date(bill.dueDate), 'MMM dd, yyyy') : 'N/A'}
+                          {bill.dueDate ? format(parseLocalDate(bill.dueDate), 'MMM dd, yyyy') : 'N/A'}
                         </span>
                         {bill.status === 'unpaid' && (
                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 opacity-50">
-                            {differenceInDays(new Date(bill.dueDate), new Date())} T-Days Left
+                            {differenceInDays(parseLocalDate(bill.dueDate), new Date())} T-Days Left
                           </span>
                         )}
                       </div>
@@ -463,9 +463,9 @@ export default function Purchases() {
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all justify-end">
-                        <button onClick={(e)=>{e.stopPropagation(); toast.success(`Payment batch queued for ${vend.name}`)}} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded" title="Make Payment"><Zap size={14}/></button>
+                        
                         <button onClick={(e)=>{e.stopPropagation(); onAddBill({ vendorId: vend.id }); toast.info(`Opening bill creation for ${vend.name}`)}} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Bill"><Plus size={14}/></button>
-                        <button onClick={(e)=>{e.stopPropagation(); toast.success(`Vendor ${vend.name} status updated`)}} className="p-2 text-rose-500 hover:bg-rose-50 rounded" title="Block/Deactivate"><Trash2 size={14}/></button>
+                        
                       </div>
                     </td>
                   </tr>

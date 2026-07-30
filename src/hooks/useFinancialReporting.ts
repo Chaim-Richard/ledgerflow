@@ -1,3 +1,4 @@
+import { parseLocalDate } from '../lib/utils';
 import { useState, useMemo, useCallback } from 'react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -61,7 +62,7 @@ export function useFinancialReporting() {
       };
 
       items.forEach((item: any) => {
-        const dueDate = new Date(item.dueDate);
+        const dueDate = parseLocalDate(item.dueDate);
         const diffDays = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
         const amount = item.amountCents || item.totalCents || 0;
 

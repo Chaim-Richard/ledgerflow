@@ -19,7 +19,7 @@ import {
   BrainCircuit,
   MessageSquare
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { parseLocalDate, cn } from '../../lib/utils';
 import { format } from 'date-fns';
 
 interface InboxViewProps {
@@ -179,7 +179,7 @@ export default function InboxView({ transactions = [], accounts, onCategorize, o
                     <div className="w-2 h-2 rounded-full bg-[#0047AB]"></div>
                     <div>
                       <p className="font-bold text-[var(--text)] text-sm">{t.description}</p>
-                      <p className="text-xs text-slate-500">{new Date(t.date).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-500">{parseLocalDate(t.date).toLocaleDateString()}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-6">

@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Lock, Unlock } from 'lucide-react';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { toast } from 'sonner';
-import { getLocalDateISO } from '../../../lib/utils';
+import { parseLocalDate, getLocalDateISO } from '../../../lib/utils';
 
 export default function BookClosureTab() {
   const { lockDate, setLockDate } = useLedgerStore(state => ({
@@ -23,7 +23,7 @@ export default function BookClosureTab() {
     // In a real system, you'd verify password against auth layer. Here we simulate it securely.
     setIsLocking(true);
     setTimeout(() => {
-      setLockDate(new Date(dateInput).toISOString());
+      setLockDate(parseLocalDate(dateInput).toISOString());
       setIsLocking(false);
       toast.success(`Books successfully closed through ${dateInput}. Prior entries are now immutable.`);
       setPassword('');

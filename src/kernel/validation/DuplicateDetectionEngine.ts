@@ -1,4 +1,5 @@
 import { Transaction, Invoice } from '../../types';
+import { parseLocalDate } from '../../lib/utils';
 
 export class DuplicateDetectionEngine {
   /**
@@ -7,13 +8,13 @@ export class DuplicateDetectionEngine {
    */
   static detectDuplicates(newTx: Transaction, existingTxs: Transaction[]): Transaction[] {
     const timeWindowMs = 7 * 24 * 60 * 60 * 1000; // 7 days window for safety
-    const newTxDate = new Date(newTx.date).getTime();
+    const newTxDate = parseLocalDate(newTx.date).getTime();
 
     return existingTxs.filter(tx => {
       // Must not be the same exact transaction record
       if (tx.id === newTx.id) return false;
 
-      const txDate = new Date(tx.date).getTime();
+      const txDate = parseLocalDate(tx.date).getTime();
       const isSameDateWindow = Math.abs(txDate - newTxDate) <= timeWindowMs;
       
       const isSameAmount = tx.totalAmountCents === newTx.totalAmountCents;

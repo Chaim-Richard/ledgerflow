@@ -10,7 +10,7 @@ export const heuristicPipeline: AlgorithmDefinition = {
     { key: 'automation', label: 'Confidence Threshold (%)', min: 10, max: 100, step: 5, defaultValue: 85 }
   ],
   compute: (txs, accounts, inputs): AlgoResult => {
-    const threshold = inputs.automation || 85;
+    const threshold = inputs.automation ?? 85;
 
     let highConfidenceMatches = 0;
     let roundNumberAnomalies = 0;

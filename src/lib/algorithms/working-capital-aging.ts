@@ -1,3 +1,4 @@
+import { parseLocalDate } from '../../lib/utils';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { resolveAccountRole } from '../accountUtils';
 
@@ -15,7 +16,7 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
     let apPending = 0;
     let arOverdue = 0;
     let apOverdue = 0;
-    const thresholdDays = inputs.lateThresholdDays || 30;
+    const thresholdDays = inputs.lateThresholdDays ?? 30;
     const now = new Date().getTime();
     const chartData = [
        { Bucket: 'Current', AR: 0, AP: 0 },
@@ -32,7 +33,7 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
         if (inv.status === 'paid' || inv.status === 'void' || inv.status === 'draft') return;
         hasProcessedData = true;
         const dueDateStr = inv.dueDate || inv.date;
-        const dueDate = dueDateStr ? new Date(dueDateStr).getTime() : now;
+        const dueDate = dueDateStr ? parseLocalDate(dueDateStr).getTime() : now;
         const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
         const amount = Math.abs(inv.amountCents || inv.totalCents || 0);
 
@@ -52,7 +53,7 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
         if (bill.status === 'paid' || bill.status === 'void' || bill.status === 'draft') return;
         hasProcessedData = true;
         const dueDateStr = bill.dueDate || bill.date;
-        const dueDate = dueDateStr ? new Date(dueDateStr).getTime() : now;
+        const dueDate = dueDateStr ? parseLocalDate(dueDateStr).getTime() : now;
         const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
         const amount = Math.abs(bill.amountCents || 0);
 
@@ -68,49 +69,85 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
 
     // 3. Fallback: If no explicit invoices or bills in context, analyze transactions array
     if (!hasProcessedData && transactions && transactions.length > 0) {
+      const arIncreases: { amount: number, dueDate: number }[] = [];
+      const apIncreases: { amount: number, dueDate: number }[] = [];
+      let arDecreases = 0;
+      let apDecreases = 0;
+
       transactions.forEach(tx => {
         if (tx.status === 'void' || tx.status === 'reconciled') return;
 
-        let isAR = false;
-        let isAP = false;
-        let amount = 0;
+        const dueDateStr = tx.metadata?.dueDate || tx.date;
+        const dueDate = dueDateStr ? parseLocalDate(dueDateStr).getTime() : now;
 
         tx.lines?.forEach(l => {
           const acc = accounts.find(a => a.id === l.accountId);
           if (acc) {
             const role = resolveAccountRole(acc);
             if (role === 'ar') {
-              isAR = true;
-              amount += Math.abs(l.amountCents);
+              if (l.amountCents > 0) {
+                arIncreases.push({ amount: l.amountCents, dueDate });
+              } else {
+                arDecreases += Math.abs(l.amountCents);
+              }
             } else if (role === 'ap') {
-              isAP = true;
-              amount += Math.abs(l.amountCents);
+              if (l.amountCents < 0) {
+                apIncreases.push({ amount: Math.abs(l.amountCents), dueDate });
+              } else {
+                apDecreases += Math.abs(l.amountCents);
+              }
             }
           }
         });
+      });
 
-        if (!isAR && !isAP) return;
+      // Sort oldest first
+      arIncreases.sort((a, b) => a.dueDate - b.dueDate);
+      apIncreases.sort((a, b) => a.dueDate - b.dueDate);
 
-        const dueDateStr = tx.dueDate || tx.date;
-        const dueDate = dueDateStr ? new Date(dueDateStr).getTime() : now;
-        const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+      // FIFO AR
+      arIncreases.forEach(inv => {
+        let remaining = inv.amount;
+        if (arDecreases >= remaining) {
+          arDecreases -= remaining;
+          remaining = 0;
+        } else if (arDecreases > 0) {
+          remaining -= arDecreases;
+          arDecreases = 0;
+        }
 
-        if (isAR) {
-          arPending += amount;
-          if (daysOverdue > thresholdDays) arOverdue += amount;
+        if (remaining > 0) {
+          const daysOverdue = Math.floor((now - inv.dueDate) / (1000 * 60 * 60 * 24));
+          arPending += remaining;
+          if (daysOverdue > thresholdDays) arOverdue += remaining;
 
-          if (daysOverdue <= 0) chartData[0].AR += (amount / 100);
-          else if (daysOverdue <= 30) chartData[1].AR += (amount / 100);
-          else if (daysOverdue <= 60) chartData[2].AR += (amount / 100);
-          else chartData[3].AR += (amount / 100);
-        } else if (isAP) {
-          apPending += amount;
-          if (daysOverdue > thresholdDays) apOverdue += amount;
+          if (daysOverdue <= 0) chartData[0].AR += (remaining / 100);
+          else if (daysOverdue <= 30) chartData[1].AR += (remaining / 100);
+          else if (daysOverdue <= 60) chartData[2].AR += (remaining / 100);
+          else chartData[3].AR += (remaining / 100);
+        }
+      });
 
-          if (daysOverdue <= 0) chartData[0].AP += (amount / 100);
-          else if (daysOverdue <= 30) chartData[1].AP += (amount / 100);
-          else if (daysOverdue <= 60) chartData[2].AP += (amount / 100);
-          else chartData[3].AP += (amount / 100);
+      // FIFO AP
+      apIncreases.forEach(bill => {
+        let remaining = bill.amount;
+        if (apDecreases >= remaining) {
+          apDecreases -= remaining;
+          remaining = 0;
+        } else if (apDecreases > 0) {
+          remaining -= apDecreases;
+          apDecreases = 0;
+        }
+
+        if (remaining > 0) {
+          const daysOverdue = Math.floor((now - bill.dueDate) / (1000 * 60 * 60 * 24));
+          apPending += remaining;
+          if (daysOverdue > thresholdDays) apOverdue += remaining;
+
+          if (daysOverdue <= 0) chartData[0].AP += (remaining / 100);
+          else if (daysOverdue <= 30) chartData[1].AP += (remaining / 100);
+          else if (daysOverdue <= 60) chartData[2].AP += (remaining / 100);
+          else chartData[3].AP += (remaining / 100);
         }
       });
     }

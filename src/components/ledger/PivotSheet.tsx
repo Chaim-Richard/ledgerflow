@@ -11,7 +11,7 @@ import {
   ListCollapse,
   Plus
 } from 'lucide-react';
-import { cn, formatCurrency, sanitizeCsvCell } from '../../lib/utils';
+import { formatDecimal, cn, formatCurrency, sanitizeCsvCell } from '../../lib/utils';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
 
@@ -210,7 +210,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                    `"${t.description.replace(/"/g, '""')}"`,
                    `"${(t.payee || '').replace(/"/g, '""')}"`,
                    `"${(t.lines[0]?.accountName || 'Uncategorized').replace(/"/g, '""')}"`,
-                   (t.totalAmountCents / 100).toFixed(2)
+                   formatDecimal(t.totalAmountCents)
                  ]);
                  const csvString = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
                  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });

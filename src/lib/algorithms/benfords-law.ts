@@ -18,7 +18,7 @@ export const BENFORDS_LAW_ALGO: AlgorithmDefinition = {
     }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const minAmount = inputs['minAmount'] || 10;
+    const minAmount = inputs['minAmount'] ?? 10;
     
     // 1. Filter and Extract Leading Digits
     const validTransactions = transactions.filter(t => Math.abs(t.totalAmountCents / 100) >= minAmount);

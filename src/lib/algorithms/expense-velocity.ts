@@ -25,8 +25,8 @@ export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
     }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const threshold = (inputs['spikeThresholdPct'] || 50) / 100;
-    const windowDays = inputs['movingAverageDays'] || 7;
+    const threshold = (inputs['spikeThresholdPct'] ?? 50) / 100;
+    const windowDays = inputs['movingAverageDays'] ?? 7;
     
     // 1. Group daily outgoing cash
     const dailyExpenses: Record<string, number> = {};
@@ -94,9 +94,9 @@ export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
     const insights = [];
     insights.push(`Analyzed daily expense velocity across ${sortedDates.length} days of history.`);
     if (recentSpikes > 0) {
-      insights.push(`Detected ${recentSpikes} instances where daily volume spiked more than ${inputs['spikeThresholdPct'] || 50}% above the trailing ${windowDays}-day average.`);
+      insights.push(`Detected ${recentSpikes} instances where daily volume spiked more than ${inputs['spikeThresholdPct'] ?? 50}% above the trailing ${windowDays}-day average.`);
     } else {
-      insights.push(`Expense velocity is stable. No anomalous spikes detected above the ${inputs['spikeThresholdPct'] || 50}% threshold.`);
+      insights.push(`Expense velocity is stable. No anomalous spikes detected above the ${inputs['spikeThresholdPct'] ?? 50}% threshold.`);
     }
 
     return {

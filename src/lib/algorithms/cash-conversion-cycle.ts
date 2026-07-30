@@ -11,7 +11,7 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
     { key: 'annualizationDays', label: 'Annualization Factor (Days)', min: 30, max: 365, step: 1, defaultValue: 365 }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const periodDays = inputs.annualizationDays || 365;
+    const periodDays = inputs.annualizationDays ?? 365;
 
     let inventory = 0;
     let ar = 0;

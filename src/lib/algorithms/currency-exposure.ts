@@ -11,7 +11,7 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
     { key: 'shockPct', label: 'Simulated FX Shock (%)', min: 1, max: 25, step: 1, defaultValue: 10 }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const shockPct = (inputs.shockPct || 10) / 100;
+    const shockPct = (inputs.shockPct ?? 10) / 100;
     
     // Attempt to identify FX transactions. 
     // In our simplified ledger, we can check for lines with custom exchange rates or accounts with a specific currency tag.

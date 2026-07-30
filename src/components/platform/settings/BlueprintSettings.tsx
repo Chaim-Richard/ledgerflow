@@ -457,7 +457,7 @@ export default function BlueprintSettings() {
           {APP_TABS.map(tab => {
             const isHidden = hiddenTabs.includes(tab.id);
             return (
-              <div 
+              <div role="button" tabIndex={0} 
                 key={tab.id}
                 onClick={() => toggleTabVisibility(tab.id)}
                 className={`p-5 rounded-[32px] border transition-all flex items-center justify-between cursor-pointer group ${

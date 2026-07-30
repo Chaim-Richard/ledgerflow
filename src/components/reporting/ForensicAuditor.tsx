@@ -4,7 +4,7 @@ import { ShieldAlert, Fingerprint, Zap, AlertTriangle, CheckCircle2, Loader2, Fi
 import { Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { AnomalyDetector } from '../../lib/algorithms';
-import { cn } from '../../lib/utils';
+import { formatDecimal, cn } from '../../lib/utils';
 import { toast } from 'sonner';
 
 
@@ -84,7 +84,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
         
         logContent += "3. CHRONOLOGICAL DATA DRAIN LINE ITEMS:\n";
         transactions.slice(-50).forEach((t, i) => {
-           const amount = (t.totalAmountCents / 100).toFixed(2);
+           const amount = formatDecimal(t.totalAmountCents);
            logContent += ` - [T-${transactions.length - i}] Date: ${t.date} | Payee: ${t.payee || t.description || 'N/A'} | Amount: $${amount}\n`;
         });
         

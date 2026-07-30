@@ -1,5 +1,6 @@
 import { resolveAccountRole } from '../accountUtils';
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { parseLocalDate } from '../../lib/utils';
 
 export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
   id: 'planning_5',
@@ -12,8 +13,8 @@ export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
     { key: 'outflowShockPct', label: 'Unplanned Outflow Shock (%)', min: 0, max: 50, step: 5, defaultValue: 15 }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
-    const haircut = (inputs.haircutPct || 30) / 100;
-    const shock = (inputs.outflowShockPct || 15) / 100;
+    const haircut = (inputs.haircutPct ?? 30) / 100;
+    const shock = (inputs.outflowShockPct ?? 15) / 100;
 
     let cash = 0;
     let receivables = 0;
@@ -41,7 +42,7 @@ export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
 
     transactions.forEach(t => {
        if (t.status === 'void' || t.status === 'pending') return;
-       const d = new Date(t.date);
+       const d = parseLocalDate(t.date);
        if (d < minDate) minDate = d;
        if (d > maxDate) maxDate = d;
 

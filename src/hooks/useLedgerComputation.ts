@@ -6,6 +6,7 @@ import { useScenarioStore } from '../lib/scenarioStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { addDays, addWeeks, addMonths, addYears, format } from 'date-fns';
+import { parseLocalDate } from '../lib/utils';
 
 // RULES PATTERN ENGINE: Pre-compiled static regex for maximum pipeline throughput
 const PATTERNS = {
@@ -55,7 +56,7 @@ export function useLedgerComputation(
     const cachedCashAcc = accounts.find(a => a.type === 'asset' || a.category?.toLowerCase() === 'cash') || { id: 'ghost-asset-offset', name: 'Simulated Cash Offset' };
 
     activeScenario.ghosts.filter(g => g.isActive).forEach(ghost => {
-      let currentDate = new Date(ghost.date);
+      let currentDate = parseLocalDate(ghost.date);
       
       const createGhost = (date: Date) => {
         const mainLineAmount = ghost.type === 'income' ? -ghost.amountCents : ghost.amountCents; // Neg for Credit (Income source), Pos for Debit (Expense dest)
@@ -433,12 +434,12 @@ export function useLedgerComputation(
              const tYear = parseInt(tDateStr.substring(0, 4), 10);
              if (tYear !== parsedNowYear - 1) isMatch = false;
           } else if (parsedRelativeRel === 'last 30 days') {
-             const tTime = new Date(tDateStr).getTime();
+             const tTime = parseLocalDate(tDateStr).getTime();
              const diffDays = Math.floor((parsedNowTime - tTime) / (1000 * 60 * 60 * 24));
              if (diffDays < 0 || diffDays > 30) isMatch = false;
           } else if (parsedRelativeRel === 'ytd') {
              const tYear = parseInt(tDateStr.substring(0, 4), 10);
-             const tDateObj = new Date(tDateStr);
+             const tDateObj = parseLocalDate(tDateStr);
              if (tYear !== parsedNowYear || tDateObj > parsedNow) isMatch = false;
           } else if (parsedRelativeRel === 'today') {
              if (tDateStr !== parsedTodayStr) isMatch = false;

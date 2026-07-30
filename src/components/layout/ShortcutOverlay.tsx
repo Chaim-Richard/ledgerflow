@@ -65,12 +65,10 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
                   <h2 className="text-3xl font-black text-[var(--text)] tracking-tighter">Command Directives</h2>
                   <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Accelerated Keyboard Navigation</p>
                 </div>
-                <button 
+                <button aria-label="Close" 
                   onClick={onClose}
                   className="w-12 h-12 rounded-full bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-slate-500 hover:text-[var(--text)] hover:border-slate-800 transition-all shadow-sm"
-                >
-                  <X size={20} />
-                </button>
+                ><X size={20} /></button>
               </div>
             </div>
             
