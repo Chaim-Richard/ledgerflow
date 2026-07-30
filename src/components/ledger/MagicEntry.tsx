@@ -46,11 +46,23 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
           });
         } else {
           const fallback = parseNaturalLanguageEntry(text);
-          setParsed(fallback);
+          setParsed({
+            action: fallback.action,
+            amount: fallback.amountCents || 0,
+            description: fallback.description,
+            method: fallback.method,
+            dateStr: fallback.dateStr
+          });
         }
       } catch (e) {
         const fallback = parseNaturalLanguageEntry(text);
-        setParsed(fallback);
+        setParsed({
+            action: fallback.action,
+            amount: fallback.amountCents || 0,
+            description: fallback.description,
+            method: fallback.method,
+            dateStr: fallback.dateStr
+        });
       } finally {
         setIsAiParsing(false);
       }

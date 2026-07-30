@@ -42,7 +42,8 @@ export default function AISettings() {
   useEffect(() => {
     if (currentWorkspace) {
       if (typeof currentWorkspace.matchingThreshold === 'number') {
-        setTimeout(() => setThreshold(currentWorkspace.matchingThreshold), 0);
+        const t = currentWorkspace.matchingThreshold;
+        setTimeout(() => setThreshold(t), 0);
       }
       if (currentWorkspace.aiModel) {
         setSelectedModel(currentWorkspace.aiModel);
