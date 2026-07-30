@@ -1,3 +1,4 @@
+import { resolveAccountRole } from '../lib/accountUtils';
 import { 
   collection, 
   addDoc, 
@@ -397,11 +398,7 @@ export function useTransactionActions() {
     if (finalLines.length === 0 && fallbackAmountCents !== 0) {
       // Find default asset account
       const assetAccounts = accounts.filter(a => a.type === 'asset');
-      const defaultAsset = assetAccounts.find(a => 
-        (a.name || '').toLowerCase().includes('cash') || 
-        (a.name || '').toLowerCase().includes('bank') || 
-        (a.name || '').toLowerCase().includes('operating')
-      ) || assetAccounts[0] || accounts[0];
+      const defaultAsset = assetAccounts.find(a => resolveAccountRole(a) === 'cash') || assetAccounts[0] || accounts[0];
 
       // Find primary category / expense/income account if any
       const defaultCategory = accounts.find(a => a.type === 'expense' || a.type === 'income') || accounts[0];
@@ -427,11 +424,7 @@ export function useTransactionActions() {
       const sum = finalLines.reduce((acc, l) => acc + (l.amountCents || 0), 0);
       if (sum !== 0) {
         const assetAccounts = accounts.filter(a => a.type === 'asset');
-        const defaultAsset = assetAccounts.find(a => 
-          (a.name || '').toLowerCase().includes('cash') || 
-          (a.name || '').toLowerCase().includes('bank') || 
-          (a.name || '').toLowerCase().includes('operating')
-        ) || assetAccounts[0] || accounts[0];
+        const defaultAsset = assetAccounts.find(a => resolveAccountRole(a) === 'cash') || assetAccounts[0] || accounts[0];
 
         if (defaultAsset) {
           finalLines.push({

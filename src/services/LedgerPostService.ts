@@ -1,3 +1,4 @@
+import { resolveAccountRole } from '../lib/accountUtils';
 import { getIdToken } from '../firebase';
 import { getLocalDateISO, financialRound } from '../lib/utils';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -78,7 +79,7 @@ export class LedgerPostService {
       accounts,
       mappings,
       ['cash', 'bank', 'checking'],
-      a => a.type === 'asset' && (a.category === 'Cash' || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('checking') || a.code === '1000'),
+      a => resolveAccountRole(a) === 'cash',
       'Cash & Cash Equivalents'
     );
 
@@ -290,7 +291,7 @@ export class LedgerPostService {
       accounts,
       mappings,
       ['cash', 'bank', 'checking'],
-      a => a.type === 'asset' && (a.category === 'Cash' || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('checking') || a.code === '1000'),
+      a => resolveAccountRole(a) === 'cash',
       'Cash & Cash Equivalents'
     );
 

@@ -84,14 +84,11 @@ export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
       
       currentVelocity = targetVolume;
       
-      // We only want to plot the last 30 days for clarity
-      if (i >= sortedDates.length - 30) {
-        chartData.push({
-          Date: targetDate.substring(5), // MM-DD
-          'Daily Volume': parseFloat((targetVolume / 100).toFixed(2)),
-          '7-Day Avg': parseFloat((movingAvg / 100).toFixed(2))
-        });
-      }
+      chartData.push({
+        Date: targetDate.substring(5), // MM-DD
+        'Daily Volume': parseFloat((targetVolume / 100).toFixed(2)),
+        'Avg': parseFloat((movingAvg / 100).toFixed(2))
+      });
     }
     
     const insights = [];
@@ -114,7 +111,7 @@ export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
             xKey: 'Date',
             yKeys: [
               { key: 'Daily Volume', name: 'Actual Daily Volume ($)', color: '#94a3b8', type: 'bar' },
-              { key: '7-Day Avg', name: `${windowDays}-Day Moving Avg ($)`, color: '#6366f1', type: 'line' }
+              { key: 'Avg', name: `${windowDays}-Day Moving Avg ($)`, color: '#6366f1', type: 'line' }
             ]
           },
           data: chartData

@@ -14,6 +14,8 @@ interface ToolSandboxProps {
 export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxProps) {
   const transactions = useLedgerStore(state => state.transactions || []);
   const accounts = useLedgerStore(state => state.accounts || []);
+  const invoices = useLedgerStore(state => state.invoices || []);
+  const bills = useLedgerStore(state => state.bills || []);
   
   const algorithm = FINANCIAL_ALGORITHMS[toolId] || FINANCIAL_ALGORITHMS['1'];
   
@@ -26,7 +28,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
 
   // Re-run anytime params change, using REAL user dataset
   const results = useMemo(() => {
-    return algorithm.compute(transactions, accounts, params);
+    return algorithm.compute(transactions, accounts, params, { invoices, bills });
   }, [algorithm, transactions, accounts, params]);
 
   return (

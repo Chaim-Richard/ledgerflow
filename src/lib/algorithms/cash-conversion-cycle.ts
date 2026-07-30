@@ -1,3 +1,4 @@
+import { resolveAccountRole } from '../accountUtils';
 import { AlgorithmDefinition, AlgoResult } from './types';
 
 export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
@@ -22,13 +23,12 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
 
     // Use accounts for balances
     accounts.forEach(acc => {
-      const type = (acc.type || '').toLowerCase();
-      const name = (acc.name || '').toLowerCase();
+      const role = resolveAccountRole(acc);
       const bal = acc.balanceCents || 0;
 
-      if (type.includes('inventory') || name.includes('inventory')) inventory += bal;
-      else if (type.includes('receivable') || name.includes('ar') || name.includes('accounts receivable')) ar += bal;
-      else if (type.includes('payable') || name.includes('ap') || name.includes('accounts payable')) ap += Math.abs(bal);
+      if (role === 'inventory') inventory += bal;
+      else if (role === 'ar') ar += bal;
+      else if (role === 'ap') ap += Math.abs(bal);
     });
 
     transactions.forEach(tx => {
@@ -36,10 +36,9 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
        tx.lines.forEach(l => {
           const acc = accounts.find(a => a.id === l.accountId);
           if (acc) {
-             const type = (acc.type || '').toLowerCase();
-             const cat = (acc.category || '').toLowerCase();
-             if (type === 'cost_of_goods' || cat === 'cogs') cogs += Math.abs(l.amountCents);
-             if (type === 'income' || type === 'revenue') revenue += Math.abs(l.amountCents);
+             const role = resolveAccountRole(acc);
+             if (role === 'cogs') cogs += Math.abs(l.amountCents);
+             if (role === 'revenue') revenue += Math.abs(l.amountCents);
           }
        });
     });

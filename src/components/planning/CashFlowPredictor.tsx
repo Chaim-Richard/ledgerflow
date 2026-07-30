@@ -1,3 +1,4 @@
+import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState } from 'react';
 import { TrendingUp, Activity, BarChart, Zap, Calendar, ArrowUpRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -19,7 +20,7 @@ export default function CashFlowPredictor() {
       if (!monthlyMap[m]) monthlyMap[m] = 0;
       t.lines.forEach(l => {
         const acc = useLedgerStore.getState().accounts.find(a => a.id === l.accountId);
-        if (acc && (acc.type === 'asset' && acc.category?.toLowerCase().includes('cash'))) {
+        if (acc && resolveAccountRole(acc) === 'cash') {
           monthlyMap[m] += l.amountCents / 100;
         }
       });

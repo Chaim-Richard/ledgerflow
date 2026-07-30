@@ -19,21 +19,22 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
     accounts.forEach(acc => {
       const type = acc.type?.toLowerCase() || '';
       const cat = acc.category?.toLowerCase() || '';
+      const name = acc.name?.toLowerCase() || '';
       const bal = acc.balanceCents || 0;
 
-      if (cat === 'asset') {
+      if (type === 'asset') {
         totalAssets += bal;
-        if (type.includes('current') || type.includes('bank') || type.includes('cash') || type.includes('receivable')) {
+        if (cat.includes('current') || name.includes('current') || cat.includes('bank') || name.includes('bank') || cat.includes('cash') || name.includes('cash') || cat.includes('receivable') || name.includes('receivable')) {
           currentAssets += bal;
         }
-      } else if (cat === 'liability') {
+      } else if (type === 'liability') {
         totalLiabilities += Math.abs(bal); // liabilities usually negative in credit-normal, but let's take absolute
-        if (type.includes('current') || type.includes('payable') || type.includes('short')) {
+        if (cat.includes('current') || name.includes('current') || cat.includes('payable') || name.includes('payable') || cat.includes('short') || name.includes('short')) {
           currentLiabilities += Math.abs(bal);
         }
-      } else if (cat === 'equity') {
+      } else if (type === 'equity') {
         equity += Math.abs(bal);
-        if (type.includes('retained')) {
+        if (cat.includes('retained') || name.includes('retained')) {
           retainedEarnings += Math.abs(bal);
         }
       }

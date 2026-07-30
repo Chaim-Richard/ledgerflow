@@ -1,3 +1,4 @@
+import { resolveAccountRole } from '../accountUtils';
 import { AlgorithmDefinition, AlgoResult } from './types';
 
 export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
@@ -21,21 +22,15 @@ export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
 
     // Accounts
     accounts.forEach(acc => {
-       const cat = (acc.category || '').toLowerCase();
-       const type = (acc.type || '').toLowerCase();
-       const name = (acc.name || '').toLowerCase();
+       const role = resolveAccountRole(acc);
        const bal = acc.balanceCents || 0;
 
-       if (cat === 'asset') {
-          if (type.includes('bank') || type.includes('cash') || name.includes('checking')) {
-             cash += bal;
-          } else if (type.includes('receivable') || name.includes('ar')) {
-             receivables += bal;
-          }
-       } else if (cat === 'liability') {
-          if (type.includes('current') || type.includes('payable') || name.includes('ap') || type.includes('short')) {
-             currentLiabilities += Math.abs(bal);
-          }
+       if (role === 'cash') {
+          cash += bal;
+       } else if (role === 'ar') {
+          receivables += bal;
+       } else if (role === 'ap' || (acc.type === 'liability' && ((acc.category || '').toLowerCase().includes('current') || (acc.name || '').toLowerCase().includes('current') || (acc.category || '').toLowerCase().includes('short')))) {
+          currentLiabilities += Math.abs(bal);
        }
     });
 

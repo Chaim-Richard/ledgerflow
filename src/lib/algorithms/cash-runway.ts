@@ -1,4 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { resolveAccountRole } from '../accountUtils';
 
 export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
   id: 'planning_runway',
@@ -20,12 +21,12 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
     const burnWindowMonths = inputs['burnWindowMonths'] || 3;
     
     // 1. Calculate current cash position (sum of all Cash/Bank accounts)
-    const cashAccounts = accounts.filter(a => ['asset', 'bank', 'cash'].includes(a.type.toLowerCase()));
+    const cashAccounts = accounts.filter(a => resolveAccountRole(a) === 'cash');
     const cashAccountIds = new Set(cashAccounts.map(a => a.id));
     
-    let currentCashCents = 0;
+    const initialAccountBalanceCents = cashAccounts.reduce((sum, a) => sum + (a.balanceCents || 0), 0);
+    let netTxCashFlow = 0;
     
-    // Also track monthly burn
     // Group transactions by YYYY-MM
     const monthlyNet: Record<string, number> = {};
     
@@ -38,21 +39,17 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
           }
         });
       }
-      currentCashCents += netCashImpact;
+      netTxCashFlow += netCashImpact;
       
-      // Track monthly flow for non-transfer operating expenses
-      // A true burn rate calculation should isolate operating expenses vs revenue.
-      // For simplicity in this algo, we look at the net cash flow per month.
       const monthKey = tx.date.substring(0, 7); // YYYY-MM
       if (!monthlyNet[monthKey]) monthlyNet[monthKey] = 0;
       monthlyNet[monthKey] += netCashImpact;
     });
+
+    const currentCashCents = initialAccountBalanceCents !== 0 ? initialAccountBalanceCents : netTxCashFlow;
     
-    // 2. Calculate average burn over the requested window
-    // Sort months chronologically
+    // 2. Calculate average burn over the requested window across all months in the window
     const sortedMonths = Object.keys(monthlyNet).sort();
-    // Take the last N months, excluding the current incomplete month if desired, 
-    // but for simplicity we'll just take the last N available months.
     const recentMonths = sortedMonths.slice(-burnWindowMonths);
     
     let totalBurn = 0;
@@ -60,13 +57,11 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
     
     recentMonths.forEach(m => {
       const netFlow = monthlyNet[m];
-      if (netFlow < 0) { // Only count months where we LOST cash towards burn rate
-        totalBurn += Math.abs(netFlow);
-        burnMonthsCount++;
-      }
+      totalBurn -= netFlow;
+      burnMonthsCount++;
     });
     
-    const avgMonthlyBurnCents = burnMonthsCount > 0 ? (totalBurn / burnMonthsCount) : 0;
+    const avgMonthlyBurnCents = (burnMonthsCount > 0 && totalBurn > 0) ? (totalBurn / burnMonthsCount) : 0;
     
     // 3. Compute Runway
     let runwayMonths = -1; // -1 means infinite/profitable
@@ -94,9 +89,13 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
     const insights = [];
     insights.push(`Current liquid cash position is ${cashFormatted} across ${cashAccounts.length} cash accounts.`);
     if (burnMonthsCount > 0) {
-      insights.push(`Based on the last ${burnWindowMonths} months of data, the average monthly burn rate is ${burnFormatted}.`);
+      if (avgMonthlyBurnCents > 0) {
+        insights.push(`Based on the last ${burnMonthsCount} month(s) in the evaluation window, the average net monthly burn rate is ${burnFormatted}.`);
+      } else {
+        insights.push(`The company has generated net positive cash flow overall across the last ${burnMonthsCount} month(s). No active net burn rate.`);
+      }
     } else {
-      insights.push(`The company has generated positive net cash flow over the last ${burnWindowMonths} months. No active burn rate.`);
+      insights.push(`No transaction history found in the evaluation window.`);
     }
     
     if (runwayMonths > 0 && runwayMonths < 3) {
@@ -120,7 +119,7 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
           config: {
             xKey: 'Month',
             yKeys: [
-              { key: 'Net Flow', name: 'Net Cash Flow', color: '#6366f1', type: 'bar' }
+              { key: 'Net Flow', name: 'Net Cash Flow ($)', color: '#6366f1', type: 'bar' }
             ]
           },
           data: chartData

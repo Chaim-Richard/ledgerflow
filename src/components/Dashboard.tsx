@@ -1,3 +1,4 @@
+import { resolveAccountRole } from '../lib/accountUtils';
 import { useState, useMemo } from 'react';
 import { 
   Plus,
@@ -61,7 +62,7 @@ export default function Dashboard() {
       const bal = acc.balanceCents || 0;
       if (acc.type === 'asset') {
         totalAssets += bal;
-        if (acc.subtype === 'cash' || acc.name.toLowerCase().includes('cash') || acc.name.toLowerCase().includes('checking') || acc.name.toLowerCase().includes('bank')) {
+        if (resolveAccountRole(acc) === 'cash') {
           liquidCash += bal;
         }
       } else if (acc.type === 'liability') {

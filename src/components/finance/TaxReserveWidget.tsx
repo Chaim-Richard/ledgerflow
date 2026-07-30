@@ -1,3 +1,4 @@
+import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo } from 'react';
 import { calculateSafeToSpend } from '../../lib/algorithms/tax-set-aside';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -43,7 +44,7 @@ export function TaxReserveWidget() {
     let cash = 0;
     accounts.forEach(acc => {
       const bal = acc.balanceCents || 0;
-      if (acc.type === 'asset' && (acc.subtype === 'cash' || acc.name.toLowerCase().includes('cash') || acc.name.toLowerCase().includes('checking') || acc.name.toLowerCase().includes('bank'))) {
+      if (resolveAccountRole(acc) === 'cash') {
         cash += bal;
       }
     });

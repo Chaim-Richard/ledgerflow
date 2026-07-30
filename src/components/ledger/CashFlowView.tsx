@@ -1,3 +1,4 @@
+import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
@@ -85,14 +86,7 @@ export default function CashFlowView() {
       };
 
       const periodTxs = transactions.filter(t => t.date >= start && t.date <= end);
-      const cashAccounts = accounts.filter(a => {
-        const nameLower = a.name.toLowerCase();
-        const catLower = (a.category || '').toLowerCase();
-        const isCashCategory = catLower.includes('cash') || catLower.includes('bank') || catLower.includes('checking') || catLower.includes('liquidity') || catLower.includes('savings');
-        const isCashName = nameLower.includes('cash') || nameLower.includes('bank') || nameLower.includes('checking') || nameLower.includes('savings') || nameLower.includes('escrow') || nameLower.includes('deposits') || nameLower.includes('wallet') || nameLower.includes('current account') || nameLower.includes('operating account');
-        const isCashCode = a.code?.startsWith('10'); // Standard assets category prefix for cash/liquidity
-        return isCashCategory || isCashName || (a.type === 'asset' && isCashCode);
-      });
+      const cashAccounts = accounts.filter(a => resolveAccountRole(a) === 'cash' || (a.type === 'asset' && a.code?.startsWith('10')));
 
       periodTxs.forEach(tx => {
         let isCashTx = tx.lines?.some(l => cashAccounts.find(ca => ca.id === l.accountId));

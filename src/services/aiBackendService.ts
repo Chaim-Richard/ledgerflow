@@ -1,6 +1,4 @@
-//@ts-ignore
-import pdfParse from 'pdf-parse';
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 import { sha256Sync } from "../lib/algorithms";
 
 export class AIBackendService {
@@ -227,15 +225,6 @@ export class AIBackendService {
   private async parseReceipt(data: any) {
     const { base64Data, mimeType, context } = data;
     let source: any = { inlineData: { data: base64Data, mimeType } };
-    if (mimeType === 'application/pdf') {
-      try {
-        const buffer = Buffer.from(base64Data, 'base64');
-        const pdfData = await pdfParse(buffer);
-        if (pdfData.text && pdfData.text.trim().length > 50) {
-          source = { text: "[PDF TEXT]: " + pdfData.text.substring(0, 30000) };
-        }
-      } catch (e) { console.error('PDF parse failed, falling back to image', e); }
-    }
     const prompt = `Extract receipt data. Context: ${context}. Return vendorName, date, totalAmountCents, taxAmountCents, categorySuggestion, and an array of 'lines' with {description, amountCents, category, quantity, unitPriceCents}.`;
     const result = await this.generateContent({
       model: this.getModel(data),
@@ -246,7 +235,10 @@ export class AIBackendService {
           source
         ]
       }],
-      config: { responseMimeType: "application/json" }
+      config: { 
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
+      }
     });
     return this.safeJsonParse(result.text, {});
   }
@@ -258,15 +250,6 @@ export class AIBackendService {
       source = { text: content };
     } else {
       source = { inlineData: { data: content, mimeType } };
-    if (mimeType === 'application/pdf') {
-      try {
-        const buffer = Buffer.from(content, 'base64');
-        const pdfData = await pdfParse(buffer);
-        if (pdfData.text && pdfData.text.trim().length > 50) {
-          source = { text: "[PDF TEXT]: " + pdfData.text.substring(0, 30000) };
-        }
-      } catch (e) { console.error('PDF parse failed, falling back to image', e); }
-    }
     }
     const prompt = `Extract all transactions from this bank statement. Context: ${context}. Return a JSON object with a 'transactions' array, each having {date, description, amountCents, categorySuggestion}.`;
     const result = await this.generateContent({
@@ -278,7 +261,10 @@ export class AIBackendService {
           source
         ]
       }],
-      config: { responseMimeType: "application/json" }
+      config: { 
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
+      }
     });
     return this.safeJsonParse(result.text, {});
   }

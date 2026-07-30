@@ -1,3 +1,4 @@
+import { resolveAccountRole } from '../accountUtils';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { standardDeviation, mean } from './math';
 
@@ -35,7 +36,7 @@ export const MONTE_CARLO_ALGO: AlgorithmDefinition = {
 
     // We assume asset/bank accounts indicate current cash
     accounts.forEach(acc => {
-      if (acc.category?.toLowerCase() === 'asset' || acc.type?.toLowerCase().includes('bank')) {
+      if (resolveAccountRole(acc) === 'cash') {
         currentCashCents += acc.balanceCents || 0;
       }
     });
@@ -55,7 +56,7 @@ export const MONTE_CARLO_ALGO: AlgorithmDefinition = {
       let netImpact = 0;
       t.lines.forEach(l => {
         const acc = accounts.find(a => a.id === l.accountId);
-        if (acc && (acc.category?.toLowerCase() === 'asset' || acc.type?.toLowerCase().includes('bank'))) {
+        if (acc && resolveAccountRole(acc) === 'cash') {
            netImpact += l.amountCents;
         }
       });

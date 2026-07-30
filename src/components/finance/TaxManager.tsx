@@ -43,6 +43,7 @@ export default function TaxManager({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRate, setEditingRate] = useState<TaxRate | null>(null);
   const [activeTab, setActiveTab] = useState<'rates' | 'contractors' | 'reporting'>('rates');
+  const [includeSE, setIncludeSE] = useState(false);
   
   const taxMetrics = useMemo(() => {
     const yearTransactions = (transactions || []).filter(tx => new Date(tx.date).getFullYear() === selectedYear);
@@ -74,7 +75,7 @@ export default function TaxManager({
       }
     }
 
-    const estimatedTax = netProfit > 0 ? netProfit * (effectiveTaxRate + 0.05) : 0; 
+    const estimatedTax = netProfit > 0 ? (netProfit * effectiveTaxRate) + (includeSE ? netProfit * 0.153 : 0) : 0; 
 
     const salesTaxCollected = yearTransactions
       .flatMap(tx => tx.lines)
@@ -88,7 +89,7 @@ export default function TaxManager({
       estimatedTax,
       salesTaxCollected
     };
-  }, [selectedYear, accounts, taxRates]);
+  }, [selectedYear, accounts, taxRates, includeSE]);
 
   return (
     <div className="space-y-12 p-4 md:p-6 lg:p-10 w-full max-w-[1550px] mx-auto pb-20 animate-in fade-in duration-500">
@@ -99,8 +100,8 @@ export default function TaxManager({
             <Receipt size={24} className="text-slate-600" />
             Fiscal Compliance Protocol
           </div>
-          <h2 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase font-display">Tax Management</h2>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">High-fidelity liability projection and jurisdictional audit readiness.</p>
+          <h2 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase font-display">Tax Reserve Estimator</h2>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Rough tax reserve estimate — not tax advice. Confirm with your accountant.</p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -143,7 +144,13 @@ export default function TaxManager({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="p-6 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-[0.02] pointer-events-none" />
-          <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-4 relative z-10">Estimated Liability</p>
+          <div className="flex justify-between items-start relative z-10 mb-4">
+            <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Estimated Liability</p>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={includeSE} onChange={e => setIncludeSE(e.target.checked)} className="accent-[var(--brass)] w-3 h-3 cursor-pointer" />
+              <span className="text-[9px] font-black text-[var(--text)] uppercase tracking-widest">Incl. SE Tax</span>
+            </label>
+          </div>
           <p className="text-3xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10">
             {formatCurrency(taxMetrics.estimatedTax)}
           </p>
@@ -265,13 +272,14 @@ export default function TaxManager({
                     <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50">
-                    {formatCurrency(taxMetrics.netProfit * (taxRates.find(r => r.type === 'Income')?.rate || 0.21))}
+                    {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * (taxRates.find(r => r.type === 'Income')?.rate || 0.21) : 0)}
                   </td>
                 </tr>
+                {includeSE && (
                 <tr className="hover:bg-[var(--ink)]/50 transition-all group/row">
                   <td className="px-6 py-6">
-                    <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">State Statutory Matrix</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-mono">BASE REGIONAL QUOTA (5.0%)</p>
+                    <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">Self-Employment Tax</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-mono">SECA PROVISION (15.3%)</p>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)]">
                     {formatCurrency(taxMetrics.netProfit)}
@@ -280,9 +288,10 @@ export default function TaxManager({
                     <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50">
-                    {formatCurrency(taxMetrics.netProfit * 0.05)}
+                    {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * 0.153 : 0)}
                   </td>
                 </tr>
+                )}
                 <tr className="hover:bg-[var(--ink)]/50 transition-all group/row">
                   <td className="px-6 py-6">
                     <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">Indirect Consumption Flow</p>

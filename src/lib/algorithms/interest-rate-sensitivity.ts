@@ -1,3 +1,4 @@
+import { resolveAccountRole } from '../accountUtils';
 import { AlgorithmDefinition, AlgoResult } from './types';
 
 export const INTEREST_RATE_SENSITIVITY_ALGO: AlgorithmDefinition = {
@@ -22,7 +23,8 @@ export const INTEREST_RATE_SENSITIVITY_ALGO: AlgorithmDefinition = {
       const bal = acc.balanceCents || 0;
 
       // Simplistic identification of variable rate items
-      if (type === 'asset' && (name.includes('cash') || name.includes('market') || name.includes('variable'))) {
+      const role = resolveAccountRole(acc);
+      if (type === 'asset' && (role === 'cash' || name.includes('market') || name.includes('variable'))) {
          rsa += bal;
       } else if (type === 'liability' && (name.includes('variable') || name.includes('line of credit') || name.includes('revolver'))) {
          rsl += Math.abs(bal);

@@ -1,3 +1,4 @@
+import { resolveAccountRole } from '../accountUtils';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { calculateNPV, calculateIRR } from './math';
 
@@ -39,7 +40,8 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
       let netImpact = 0;
       tx.lines.forEach(l => {
          const acc = accounts.find(a => a.id === l.accountId);
-         if (acc && (acc.category === 'revenue' || acc.category === 'asset' || acc.type.includes('bank'))) {
+         const role = resolveAccountRole(acc);
+         if (acc && (role === 'revenue' || role === 'cash')) {
              netImpact += l.amountCents; // very rough approximation for positive flows
          } else if (acc && (acc.category === 'expense' || acc.category === 'liability')) {
              netImpact -= l.amountCents;

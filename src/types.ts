@@ -95,6 +95,7 @@ export interface Transaction {
   uid: string;
   workspaceId: string;
   date: string;
+  dueDate?: string;
   description: string;
   payee?: string;
   
