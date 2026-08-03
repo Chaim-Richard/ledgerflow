@@ -179,10 +179,7 @@ const shortcutMap = useMemo(() => {
     toast.info('Entered Guest Mode');
   };
 
-  const handleLoginPrompt = () => {
-    localStorage.setItem('isGuest', 'false');
-    setIsGuest(false);
-  };
+
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();

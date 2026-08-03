@@ -14,23 +14,33 @@ export function useSystemActions() {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const currentWorkspace = useAuthStore(s => s.workspaces.find(w => w.id === s.currentWorkspaceId));
 
+  const handleLoginPrompt = useCallback(() => {
+    console.log("handleLoginPrompt CALLED!");
+    useAuthStore.getState().setIsGuest(false);
+    if (typeof window !== "undefined") window.location.reload();
+  }, []);
+
   const handleLogout = useCallback(() => {
+    console.log("handleLogout CALLED!");
     useAuthStore.getState().setIsGuest(false);
     localStorage.removeItem('ledgerflow_use_sandbox_mode');
     localStorage.removeItem('ledgerflow_identity_email');
     localStorage.removeItem('ledgerflow_identity_name');
     
     useAuthStore.getState().setUser(null);
-    useLedgerStore.setState({ 
-      transactions: [], 
-      accounts: [], 
-      journalEntries: [],
-      computedAccounts: [],
-      totalLedgerBalance: 0
-    });
+    if (typeof useLedgerStore.getState().resetStore === 'function') {
+      useLedgerStore.getState().resetStore();
+    } else {
+      useLedgerStore.setState({ 
+        transactions: [], 
+        accounts: [], 
+        journalEntries: []
+      });
+    }
     
     signOut(auth).catch(() => {});
     toast.success('Returned to login screen');
+    if (typeof window !== "undefined") window.location.reload();
   }, []);
 
   const handleApplyAITemplate = useCallback(async (customBlueprint: any) => {
@@ -194,6 +204,7 @@ export function useSystemActions() {
   }, [user]);
 
   return {
+    handleLoginPrompt,
     handleLogout,
     handleApplyAITemplate,
     handleSelectTemplate,

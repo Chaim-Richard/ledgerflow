@@ -1,12 +1,22 @@
 const fs = require('fs');
-let c = fs.readFileSync('src/components/platform/settings/AISettings.tsx', 'utf8');
+
+let c = fs.readFileSync('src/hooks/useSystemActions.ts', 'utf8');
+
 c = c.replace(
-  `      if (typeof currentWorkspace.matchingThreshold === 'number') {
-        setTimeout(() => setThreshold(currentWorkspace.matchingThreshold), 0);
-      }`,
-  `      if (typeof currentWorkspace.matchingThreshold === 'number') {
-        const t = currentWorkspace.matchingThreshold;
-        setTimeout(() => setThreshold(t), 0);
-      }`
+  `useLedgerStore.getState().resetStore?.() || useLedgerStore.setState({ 
+      transactions: [], 
+      accounts: [], 
+      journalEntries: []
+    });`,
+  `if (typeof useLedgerStore.getState().resetStore === 'function') {
+      useLedgerStore.getState().resetStore();
+    } else {
+      useLedgerStore.setState({ 
+        transactions: [], 
+        accounts: [], 
+        journalEntries: []
+      });
+    }`
 );
-fs.writeFileSync('src/components/platform/settings/AISettings.tsx', c);
+
+fs.writeFileSync('src/hooks/useSystemActions.ts', c);

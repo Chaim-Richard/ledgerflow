@@ -30,8 +30,7 @@ export function RootLayout() {
   const { handleAction } = useCommandDispatcher();
   const txActions = useTransactionActions();
   const ai = useAIActions();
-  const { handleLogout, handleApplyAITemplate, handleSelectTemplate, handleSaveCurrentTemplate, handleCreateWorkspace } = useSystemActions();
-  const handleLoginPrompt = () => handleAction('open-login');
+  const { handleLoginPrompt, handleLogout, handleApplyAITemplate, handleSelectTemplate, handleSaveCurrentTemplate, handleCreateWorkspace } = useSystemActions();
   const isPending = false;
   const activeTab = useUIStore(state => state.activeTab);
   const setActiveTab = useUIStore(state => state.setActiveTab);
