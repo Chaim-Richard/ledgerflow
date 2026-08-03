@@ -15,7 +15,7 @@ export function useSystemActions() {
   const currentWorkspace = useAuthStore(s => s.workspaces.find(w => w.id === s.currentWorkspaceId));
 
   const handleLogout = useCallback(() => {
-    localStorage.setItem('isGuest', 'false');
+    useAuthStore.getState().setIsGuest(false);
     localStorage.removeItem('ledgerflow_use_sandbox_mode');
     localStorage.removeItem('ledgerflow_identity_email');
     localStorage.removeItem('ledgerflow_identity_name');

@@ -170,7 +170,8 @@ const shortcutMap = useMemo(() => {
   }, []);
 
 
-  const [isGuest, setIsGuest] = useState(() => localStorage.getItem('isGuest') === 'true');
+  const isGuest = useAuthStore(state => state.isGuest);
+  const setIsGuest = useAuthStore(state => state.setIsGuest);
 
   const handleGuest = () => {
     localStorage.setItem('isGuest', 'true');

@@ -7,6 +7,7 @@ import { useLedgerStore } from './useLedgerStore';
 
 interface AuthState {
   user: FirebaseUser | null;
+  isGuest: boolean;
   userProfile: UserProfile | null;
   workspaces: Workspace[];
   currentWorkspaceId: string | null;
@@ -14,6 +15,7 @@ interface AuthState {
   
   // Actions
   setUser: (user: FirebaseUser | null) => void;
+  setIsGuest: (val: boolean) => void;
   setUserProfile: (profile: UserProfile | null) => void;
   setWorkspaces: (workspaces: Workspace[]) => void;
   setCurrentWorkspaceId: (id: string | null) => void;
@@ -26,12 +28,19 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
+  isGuest: typeof localStorage !== "undefined" ? localStorage.getItem("isGuest") === "true" : false,
   userProfile: null,
   workspaces: [],
   currentWorkspaceId: localStorage.getItem('ledgerflow_current_workspace'),
   currentProjectId: null,
 
   setUser: (user) => set({ user }),
+  setIsGuest: (isGuest) => {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("isGuest", isGuest ? "true" : "false");
+    }
+    set({ isGuest });
+  },
   setUserProfile: (userProfile) => set({ userProfile }),
   setWorkspaces: (workspaces) => set({ workspaces }),
   setCurrentWorkspaceId: (currentWorkspaceId) => {
