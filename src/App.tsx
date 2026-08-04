@@ -174,7 +174,6 @@ const shortcutMap = useMemo(() => {
   const setIsGuest = useAuthStore(state => state.setIsGuest);
 
   const handleGuest = () => {
-    localStorage.setItem('isGuest', 'true');
     setIsGuest(true);
     toast.info('Entered Guest Mode');
   };
@@ -190,7 +189,6 @@ const shortcutMap = useMemo(() => {
     try {
       await signInWithPopup(auth, provider);
       setIsGuest(false);
-      localStorage.setItem('isGuest', 'false');
       toast.success('SUCCESSFULLY LOGGED IN WITH GOOGLE');
     } catch (e) {
       console.error("Google Sign-In failed:", e);
@@ -206,7 +204,6 @@ const shortcutMap = useMemo(() => {
     try {
       await signInWithEmailAndPassword(auth, email, pass);
       setIsGuest(false);
-      localStorage.setItem('isGuest', 'false');
       toast.success('SUCCESSFULLY LOGGED IN');
     } catch (e: any) {
       console.error("Login failed:", e);
@@ -223,7 +220,6 @@ const shortcutMap = useMemo(() => {
     try {
       await createUserWithEmailAndPassword(auth, email, pass);
       setIsGuest(false);
-      localStorage.setItem('isGuest', 'false');
       toast.success('ACCOUNT CREATED SUCCESSFULLY');
     } catch (e: any) {
       console.error("Signup failed:", e);

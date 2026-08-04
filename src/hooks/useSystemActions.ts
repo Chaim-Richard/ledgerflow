@@ -15,13 +15,10 @@ export function useSystemActions() {
   const currentWorkspace = useAuthStore(s => s.workspaces.find(w => w.id === s.currentWorkspaceId));
 
   const handleLoginPrompt = useCallback(() => {
-    console.log("handleLoginPrompt CALLED!");
     useAuthStore.getState().setIsGuest(false);
-    if (typeof window !== "undefined") window.location.reload();
   }, []);
 
   const handleLogout = useCallback(() => {
-    console.log("handleLogout CALLED!");
     useAuthStore.getState().setIsGuest(false);
     localStorage.removeItem('ledgerflow_use_sandbox_mode');
     localStorage.removeItem('ledgerflow_identity_email');
@@ -40,7 +37,6 @@ export function useSystemActions() {
     
     signOut(auth).catch(() => {});
     toast.success('Returned to login screen');
-    if (typeof window !== "undefined") window.location.reload();
   }, []);
 
   const handleApplyAITemplate = useCallback(async (customBlueprint: any) => {
