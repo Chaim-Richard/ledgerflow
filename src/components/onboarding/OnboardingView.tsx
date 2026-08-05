@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Building2, UploadCloud, PieChart, Sparkles, Plus, ArrowRight, Play, ServerCog } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -8,22 +8,6 @@ export default function OnboardingView() {
   const setQuickEntryOpen = useUIStore(s => s.setQuickEntryOpen);
   const setActiveTab = useUIStore(s => s.setActiveTab);
   
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
-
-  const loadDemoData = () => {
-    setIsDemoLoading(true);
-    // In a real app, this would call a server function or set up local store
-    toast.promise(new Promise(resolve => setTimeout(resolve, 2500)), {
-      loading: 'Synthesizing demo data matrix...',
-      success: 'Demo environment fully populated.',
-      error: 'Failed to load demo.'
-    });
-    setTimeout(() => {
-      setIsDemoLoading(false);
-      setActiveTab('dashboard'); // forces reload or state change in real app
-    }, 2500);
-  };
-
   return (
     <div className="flex-1 bg-[var(--surface)] text-[var(--text)] flex flex-col items-center justify-center p-6 min-h-[100dvh]">
       <div className="max-w-2xl w-full text-center space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -37,7 +21,7 @@ export default function OnboardingView() {
             Your Ledger is Ready.
           </h1>
           <p className="text-base text-[var(--muted)] max-w-lg mx-auto">
-            The mathematical engine is online, but your ledger is empty. Complete these steps to initiate your financial command center, or explore our interactive demo.
+            The mathematical engine is online, but your ledger is empty. Complete these steps to initiate your financial command center.
           </p>
         </div>
 

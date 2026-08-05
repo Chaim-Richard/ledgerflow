@@ -20,14 +20,9 @@ export default function BookClosureTab() {
       toast.error('Closing password is required to secure the books.');
       return;
     }
-    // In a real system, you'd verify password against auth layer. Here we simulate it securely.
-    setIsLocking(true);
-    setTimeout(() => {
-      setLockDate(parseLocalDate(dateInput).toISOString());
-      setIsLocking(false);
-      toast.success(`Books successfully closed through ${dateInput}. Prior entries are now immutable.`);
-      setPassword('');
-    }, 600);
+    setLockDate(parseLocalDate(dateInput).toISOString());
+    toast.success(`Books successfully closed through ${dateInput}. Prior entries are now immutable.`);
+    setPassword('');
   };
 
   const handleUnlockBooks = () => {
@@ -35,13 +30,9 @@ export default function BookClosureTab() {
       toast.error('Administrator password is required to unlock the books.');
       return;
     }
-    setIsLocking(true);
-    setTimeout(() => {
-      setLockDate(null);
-      setIsLocking(false);
-      toast.success('Books unlocked. Historical ledgers are editable again.');
-      setPassword('');
-    }, 600);
+    setLockDate(null);
+    toast.success('Books unlocked. Historical ledgers are editable again.');
+    setPassword('');
   };
 
   return (

@@ -3076,22 +3076,7 @@ fetch(url, {
                 </div>
 
                 <button
-                  onClick={async () => {
-                    setIsSimulatingBurst(true);
-                    toast.promise(
-                      new Promise((resolve) => setTimeout(resolve, 1500)),
-                      {
-                        loading: `Simulating ${simRequestsCount} burst operations to TruthEngine...`,
-                        success: () => {
-                          setIsSimulatingBurst(false);
-                          fetchLogs();
-                          loadBillingStatus();
-                          return `Processed ${simRequestsCount} requests safely under 100 req/min limits!`;
-                        },
-                        error: 'Simulation failed'
-                      }
-                    );
-                  }}
+                  onClick={handleTriggerStressTest}
                   disabled={isSimulatingBurst}
                   className="w-full py-3 bg-[#8A2BE2] disabled:bg-slate-350 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs hover:scale-[1.01]"
                 >

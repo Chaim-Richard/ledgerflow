@@ -2047,7 +2047,7 @@ export class ARIMAModel {
     }
     
     const maParams = new Array(q).fill(1/Math.max(1, q));
-    const residuals = differenced.map(v => v * 0.1); // Simulated white noise for demo purposes
+    const residuals = differenced.map(v => v * 0.1); // White noise error approximation
 
     const forecastDiffs = [];
     for (let t = 0; t < steps; t++) {

@@ -72,7 +72,6 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'magic': lazy(() => import('../components/ledger/MagicEntry')),
   'vault': lazy(() => import('../components/forensics/Vault')),
   'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
-  'system-command-center': lazy(() => import('../components/platform/SystemCommandCenter')),
   'consolidation': lazy(() => import('../components/finance/Consolidation')),
   'taxes': lazy(() => import('../components/finance/TaxManager')),
 };
@@ -104,8 +103,7 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'vault', label: { en: 'Documents', he: 'כספת מסמכים' }, icon: ShieldCheck, groupId: 'system' },
   { id: 'settings', label: { en: 'Settings', he: 'הגדרות' }, icon: Settings, groupId: 'system' },
   { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת מתקדם' }, icon: Search, groupId: 'system', isAdvanced: true },
-  { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'system', isAdvanced: true },
-  { id: 'system-command-center', label: { en: 'Admin Panel', he: 'Admin Panel' }, icon: Building, groupId: 'admin', requiresOwner: true }
+  { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'system', isAdvanced: true }
 ];
 
 export const NAV_GROUPS: Record<string, Record<string, string>> = {
@@ -113,8 +111,7 @@ export const NAV_GROUPS: Record<string, Record<string, string>> = {
   finance: { en: 'Accounting', he: 'הנהלת חשבונות' },
   operations: { en: 'Business Ops', he: 'תפעול עסקי' },
   planning: { en: 'Reports & Intel', he: 'דוחות ובינה' },
-  system: { en: 'Settings & Tools', he: 'הגדרות וכלים' },
-  admin: { en: 'Admin Panel', he: 'Admin Panel' }
+  system: { en: 'Settings & Tools', he: 'הגדרות וכלים' }
 };
 
 export const getVisibleTabs = (lang: string, isOwner: boolean, hiddenTabs?: string[]) => {

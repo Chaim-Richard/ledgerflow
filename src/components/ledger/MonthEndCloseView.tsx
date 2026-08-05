@@ -17,6 +17,9 @@ export default function MonthEndCloseView() {
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
   const currency = currentWorkspace?.currency || 'USD';
 
+  const lockDate = useLedgerStore(s => s.lockDate);
+  const setLockDate = useLedgerStore(s => s.setLockDate);
+
   // State
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date();
@@ -25,7 +28,6 @@ export default function MonthEndCloseView() {
   });
 
   const [isClosing, setIsClosing] = useState(false);
-  const [closedPeriods, setClosedPeriods] = useState<string[]>([]); // In reality, fetch from backend
 
   const stats = useMemo(() => {
     const periodStart = new Date(`${selectedMonth}-01T00:00:00`);
@@ -122,10 +124,18 @@ export default function MonthEndCloseView() {
   const isReady = completedSteps === totalSteps;
 
   const handleClosePeriod = () => {
-    setClosedPeriods([...closedPeriods, selectedMonth]);
+    const periodStart = new Date(`${selectedMonth}-01T00:00:00`);
+    const periodEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0, 23, 59, 59);
+    setLockDate(periodEnd.toISOString());
+    toast.success('Period closed and locked.');
   };
 
-  const isClosed = closedPeriods.includes(selectedMonth);
+  const isClosed = useMemo(() => {
+    if (!lockDate) return false;
+    const lDate = new Date(lockDate);
+    const periodStart = new Date(`${selectedMonth}-01T00:00:00`);
+    return lDate >= periodStart;
+  }, [lockDate, selectedMonth]);
 
   return (
     <div className="h-full flex flex-col bg-[var(--color-ledger-bg)]">

@@ -10,13 +10,11 @@ interface UIState {
   isHealthCheckOpen: boolean;
   isCommandPaletteOpen: boolean;
   isImporterOpen: boolean;
-  isQBOMigrationOpen: boolean;
   isTemplateSelectorOpen: boolean;
   isAIBlueprintOpen: boolean;
   isCommandCenterOpen: boolean;
   isConverterOpen: boolean;
   isIntegrityOpen: boolean;
-  isEntanglementOpen: boolean;
   isDiagnosticConsoleOpen: boolean;
   isGuideOpen: boolean;
   isArchitectureOpen: boolean;
@@ -58,7 +56,6 @@ interface UIState {
   setCommandCenterOpen: (val: boolean) => void;
   setConverterOpen: (val: boolean) => void;
   setIntegrityOpen: (val: boolean) => void;
-  setEntanglementOpen: (val: boolean) => void;
   setDiagnosticConsoleOpen: (val: boolean) => void;
   setGuideOpen: (val: boolean) => void;
   setArchitectureOpen: (val: boolean) => void;
@@ -92,13 +89,11 @@ export const useUIStore = create<UIState>((set) => ({
   isHealthCheckOpen: false,
   isCommandPaletteOpen: false,
   isImporterOpen: false,
-  isQBOMigrationOpen: false,
   isTemplateSelectorOpen: false,
   isAIBlueprintOpen: false,
   isCommandCenterOpen: false,
   isConverterOpen: false,
   isIntegrityOpen: false,
-  isEntanglementOpen: false,
   isDiagnosticConsoleOpen: false,
   isGuideOpen: false,
   isArchitectureOpen: false,
@@ -201,13 +196,11 @@ export const useUIStore = create<UIState>((set) => ({
   setHealthCheckOpen: (isHealthCheckOpen) => set({ isHealthCheckOpen }),
   setCommandPaletteOpen: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
   setImporterOpen: (isImporterOpen) => set({ isImporterOpen }),
-  setQBOMigrationOpen: (isQBOMigrationOpen: boolean) => set({ isQBOMigrationOpen }),
   setTemplateSelectorOpen: (isTemplateSelectorOpen) => set({ isTemplateSelectorOpen }),
   setAIBlueprintOpen: (isAIBlueprintOpen) => set({ isAIBlueprintOpen }),
   setCommandCenterOpen: (isCommandCenterOpen) => set({ isCommandCenterOpen }),
   setConverterOpen: (isConverterOpen) => set({ isConverterOpen }),
   setIntegrityOpen: (isIntegrityOpen) => set({ isIntegrityOpen }),
-  setEntanglementOpen: (isEntanglementOpen) => set({ isEntanglementOpen }),
   setDiagnosticConsoleOpen: (isDiagnosticConsoleOpen) => set({ isDiagnosticConsoleOpen }),
   setGuideOpen: (isGuideOpen) => set({ isGuideOpen }),
   setArchitectureOpen: (isArchitectureOpen) => set({ isArchitectureOpen }),

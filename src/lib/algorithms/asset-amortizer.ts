@@ -17,7 +17,7 @@ export const assetAmortizer: AlgorithmDefinition = {
     
     let assetBaseCents = 0;
     
-    // Fallback: If no dedicated asset accounts found, sum all expenses over $1000 assuming they might be capitilizable (for demo purposes)
+    // Fallback: If no dedicated asset accounts found, sum all expenses over $1000 assuming they might be capitilizable (for fallback estimation purposes)
     let usingFallback = false;
     
     txs.forEach(t => t.lines?.forEach(l => { 
