@@ -12,13 +12,12 @@ import { RULE_INDUCTION_ALGO } from './rule-induction';
 import { FENWICK_TIME_TRAVEL_ALGO } from './fenwick';
 import { BENFORDS_LAW_ALGO } from './benfords-law';
 import { DUPLICATE_DETECTION_ALGO } from './duplicate-detection';
-
 import { CASH_RUNWAY_ALGO } from './cash-runway';
-import { CAPITAL_BUDGETING_ALGO } from './capital-budgeting';
 import { EXPENSE_POLICY_ALGO } from './expense-policy-violator';
-import { VENDOR_CHURN_ALGO } from './vendor-churn';
 import { EXPENSE_VELOCITY_ALGO } from './expense-velocity';
 import { PARETO_ANALYSIS_ALGO } from './pareto-analysis';
+import { PROFITABILITY_HEATMAP_ALGO } from './profitability-heatmap';
+import { WORKING_CAPITAL_AGING_ALGO } from './working-capital-aging';
 
 // New Easy-Mode & Moat Algorithms
 import { AUTO_SETUP_ALGO } from './auto-setup';
@@ -30,18 +29,25 @@ import { LOCALIZED_FORENSICS_ALGO } from './localized-forensics';
 import { CONTINUOUS_CLOSE_ALGO } from './continuous-close';
 import { CROSS_DIMENSION_INFERENCE_ALGO } from './cross-dimension-inference';
 import { SHARED_TRANSACTION_IDENTITY_ALGO } from './shared-transaction-identity';
-import { MONTE_CARLO_ALGO } from './monte-carlo';
-import { ALTMAN_Z_SCORE_ALGO } from './altman-z-score';
-import { CURRENCY_EXPOSURE_ALGO } from './currency-exposure';
-import { VENDOR_CONCENTRATION_ALGO } from './vendor-concentration';
-import { LIQUIDITY_STRESS_ALGO } from './liquidity-stress';
-import { DUPONT_ANALYSIS_ALGO } from './dupont-analysis';
-import { CASH_CONVERSION_CYCLE_ALGO } from './cash-conversion-cycle';
-import { SAAS_UNIT_ECONOMICS_ALGO } from './saas-unit-economics';
-import { PROFITABILITY_HEATMAP_ALGO } from './profitability-heatmap';
-import { INTEREST_RATE_SENSITIVITY_ALGO } from './interest-rate-sensitivity';
-import { CUSTOMER_CHURN_ALGO } from './customer-churn';
-import { WORKING_CAPITAL_AGING_ALGO } from './working-capital-aging';
+
+// Niche practical tools
+import { 
+  LOAN_AMORTIZATION_ALGO, 
+  PROPERTY_PNL_ALGO, 
+  RENT_ROLL_ALGO, 
+  RESTRICTED_FUND_ALGO, 
+  PROJECT_PROFITABILITY_ALGO,
+  SUBSCRIPTION_AUDIT_ALGO,
+  MISSING_TRANSACTION_ALGO,
+  DEDUCTION_FINDER_ALGO,
+  BILL_TIMING_ALGO,
+  RENT_INCREASE_ALGO
+} from './niche-tools';
+
+// Unused/Corporate tools removed to simplify interface:
+// MONTE_CARLO_ALGO, ALTMAN_Z_SCORE_ALGO, CURRENCY_EXPOSURE_ALGO, VENDOR_CONCENTRATION_ALGO
+// LIQUIDITY_STRESS_ALGO, DUPONT_ANALYSIS_ALGO, CASH_CONVERSION_CYCLE_ALGO, SAAS_UNIT_ECONOMICS_ALGO
+// INTEREST_RATE_SENSITIVITY_ALGO, CUSTOMER_CHURN_ALGO, VENDOR_CHURN_ALGO, CAPITAL_BUDGETING_ALGO
 
 export * from './types';
 
@@ -61,20 +67,8 @@ export const FINANCIAL_ALGORITHMS: Record<string, AlgorithmDefinition> = {
   'forensics_5': DUPLICATE_DETECTION_ALGO,
   'forensics_6': EXPENSE_POLICY_ALGO,
   'planning_3': CASH_RUNWAY_ALGO,
-  'planning_4': MONTE_CARLO_ALGO,
-  'valuation_1': CAPITAL_BUDGETING_ALGO,
-  'valuation_2': ALTMAN_Z_SCORE_ALGO,
-  'treasury_1': CURRENCY_EXPOSURE_ALGO,
-  'intelligence_4': VENDOR_CONCENTRATION_ALGO,
-  'planning_5': LIQUIDITY_STRESS_ALGO,
-  'valuation_3': DUPONT_ANALYSIS_ALGO,
-  'ops_1': CASH_CONVERSION_CYCLE_ALGO,
-  'planning_6': SAAS_UNIT_ECONOMICS_ALGO,
   'intelligence_5': PROFITABILITY_HEATMAP_ALGO,
-  'treasury_2': INTEREST_RATE_SENSITIVITY_ALGO,
-  'intelligence_6': CUSTOMER_CHURN_ALGO,
   'ops_6': WORKING_CAPITAL_AGING_ALGO,
-  'ops_4': VENDOR_CHURN_ALGO,
   'ops_5': EXPENSE_VELOCITY_ALGO,
   'intelligence_3': PARETO_ANALYSIS_ALGO,
   
@@ -90,4 +84,16 @@ export const FINANCIAL_ALGORITHMS: Record<string, AlgorithmDefinition> = {
   'moat_2': CONTINUOUS_CLOSE_ALGO,
   'moat_3': CROSS_DIMENSION_INFERENCE_ALGO,
   'moat_4': SHARED_TRANSACTION_IDENTITY_ALGO,
+
+  // Niche practical tools
+  'niche_1': LOAN_AMORTIZATION_ALGO,
+  'niche_2': PROPERTY_PNL_ALGO,
+  'niche_3': RENT_ROLL_ALGO,
+  'niche_4': RESTRICTED_FUND_ALGO,
+  'niche_5': PROJECT_PROFITABILITY_ALGO,
+  'niche_6': SUBSCRIPTION_AUDIT_ALGO,
+  'niche_7': MISSING_TRANSACTION_ALGO,
+  'niche_8': DEDUCTION_FINDER_ALGO,
+  'niche_9': BILL_TIMING_ALGO,
+  'niche_10': RENT_INCREASE_ALGO
 };
