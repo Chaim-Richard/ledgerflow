@@ -76,14 +76,6 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
   
   return (
     <Suspense fallback={null}>
-      {modals.commandPalette && (
-        <CommandPalette 
-          isOpen={modals.commandPalette}
-          onClose={handlers.closeCommandPalette}
-          onQuery={handlers.handleAIQuery}
-          recentQueries={[]}
-        />
-      )}
       {modals.quickEntry && (
         <MagicEntry 
           isOpen={modals.quickEntry} 

@@ -254,11 +254,11 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
     // 6. Invoices
     ledger.invoices?.forEach(i => {
-      if (match(i.invoiceNumber) || match(i.customerName) || match(i.status)) {
+      if (match(i.number) || match(i.customerName) || match(i.status)) {
         results.push({
           id: `inv-${i.id}`,
           type: 'data',
-          label: `Invoice ${i.invoiceNumber} - ${i.customerName}`,
+          label: `Invoice ${i.number} - ${i.customerName}`,
           category: `Invoice • ${i.status}`,
           actionId: 'switch-tab',
           payload: { tab: 'sales', id: i.id },
@@ -269,11 +269,11 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
     // 7. Bills
     ledger.bills?.forEach(b => {
-      if (match(b.billNumber) || match(b.vendorName) || match(b.status)) {
+      if (match(b.number) || match(b.vendorName) || match(b.status)) {
         results.push({
           id: `bill-${b.id}`,
           type: 'data',
-          label: `Bill ${b.billNumber} - ${b.vendorName}`,
+          label: `Bill ${b.number} - ${b.vendorName}`,
           category: `Bill • ${b.status}`,
           actionId: 'switch-tab',
           payload: { tab: 'purchases', id: b.id },

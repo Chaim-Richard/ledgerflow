@@ -80,24 +80,10 @@ export default function OnboardingView() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12 pt-8 border-t border-[var(--line)] max-w-2xl mx-auto">
           <button 
             onClick={() => setQuickEntryOpen(true)}
-            className="w-full sm:w-auto px-6 py-3 bg-[var(--brass)] text-black font-semibold rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            className="w-full px-6 py-3 bg-[var(--brass)] text-black font-semibold rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Record First Entry Manually
-          </button>
-          
-          <span className="text-[var(--faint)] font-mono text-xs uppercase tracking-widest hidden sm:inline-block">or</span>
-          
-          <button 
-            onClick={loadDemoData}
-            disabled={isDemoLoading}
-            className="w-full sm:w-auto px-6 py-3 bg-[var(--elevated)] border border-[var(--line)] text-[var(--text)] font-medium rounded-xl hover:bg-[var(--line)] transition-colors flex items-center justify-center gap-2"
-          >
-            {isDemoLoading ? (
-              <span className="flex items-center gap-2"><Sparkles className="w-4 h-4 animate-pulse text-[var(--brass)]" /> Loading Matrix...</span>
-            ) : (
-              <><Play className="w-4 h-4 text-emerald-500" /> Explore with Sample Data</>
-            )}
           </button>
         </div>
 

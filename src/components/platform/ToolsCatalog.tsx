@@ -30,8 +30,8 @@ const getCategoryForAlgo = (algo: any): string => {
   return 'Finance';
 };
 
-const TOOLS = Object.values(FINANCIAL_ALGORITHMS).map((algo: any) => ({
-  id: algo.id,
+const TOOLS = Object.entries(FINANCIAL_ALGORITHMS).map(([key, algo]: [string, any]) => ({
+  id: key,
   name: algo.name,
   desc: algo.description,
   cat: getCategoryForAlgo(algo),

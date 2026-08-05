@@ -122,11 +122,7 @@ export default function MonthEndCloseView() {
   const isReady = completedSteps === totalSteps;
 
   const handleClosePeriod = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setClosedPeriods([...closedPeriods, selectedMonth]);
-      setIsClosing(false);
-    }, 1500);
+    setClosedPeriods([...closedPeriods, selectedMonth]);
   };
 
   const isClosed = closedPeriods.includes(selectedMonth);
@@ -176,8 +172,17 @@ export default function MonthEndCloseView() {
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={() => {
-                      const toastId = toast.loading('Compiling accountant package...');
-                      setTimeout(() => toast.success('Accountant Package (ZIP) generated and downloaded.', { id: toastId }), 2000);
+                      const csvContent = "data:text/csv;charset=utf-8," 
+                        + "Date,Description,Amount,Status\n"
+                        + transactions.map(t => `${t.date},"${t.description}",${t.lines[0]?.amountCents / 100},${t.status}`).join("\n");
+                      const encodedUri = encodeURI(csvContent);
+                      const link = document.createElement("a");
+                      link.setAttribute("href", encodedUri);
+                      link.setAttribute("download", `accountant_export_${selectedMonth}.csv`);
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      toast.success('Accountant Package (CSV) generated and downloaded.');
                     }}
                     className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg flex items-center gap-2 font-medium hover:bg-slate-50 transition-colors shadow-sm text-sm"
                   >
