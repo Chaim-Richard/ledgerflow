@@ -7,6 +7,7 @@ interface UIState {
   isCompactMode: boolean;
   isProMode: boolean;
   isQuickEntryOpen: boolean;
+  isHealthCheckOpen: boolean;
   isCommandPaletteOpen: boolean;
   isImporterOpen: boolean;
   isQBOMigrationOpen: boolean;
@@ -49,6 +50,7 @@ interface UIState {
   setCompactMode: (val: boolean) => void;
   setProMode: (val: boolean) => void;
   setQuickEntryOpen: (val: boolean) => void;
+  setHealthCheckOpen: (val: boolean) => void;
   setCommandPaletteOpen: (val: boolean) => void;
   setImporterOpen: (val: boolean) => void;
   setTemplateSelectorOpen: (val: boolean) => void;
@@ -87,6 +89,7 @@ export const useUIStore = create<UIState>((set) => ({
   isCompactMode: false,
   isProMode: false,
   isQuickEntryOpen: false,
+  isHealthCheckOpen: false,
   isCommandPaletteOpen: false,
   isImporterOpen: false,
   isQBOMigrationOpen: false,
@@ -195,6 +198,7 @@ export const useUIStore = create<UIState>((set) => ({
   setCompactMode: (isCompactMode) => set({ isCompactMode }),
   setProMode: (isProMode) => set({ isProMode }),
   setQuickEntryOpen: (isQuickEntryOpen) => set({ isQuickEntryOpen }),
+  setHealthCheckOpen: (isHealthCheckOpen) => set({ isHealthCheckOpen }),
   setCommandPaletteOpen: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
   setImporterOpen: (isImporterOpen) => set({ isImporterOpen }),
   setQBOMigrationOpen: (isQBOMigrationOpen: boolean) => set({ isQBOMigrationOpen }),

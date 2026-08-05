@@ -18,7 +18,7 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox } from 'lucide-react';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
 const pluginModules = import.meta.glob('../plugins/*.tsx');
@@ -50,76 +50,63 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'inventory': lazy(() => import('../components/inventory/Inventory')),
   ...dynamicComponents,
   'dashboard': lazy(() => import('../components/Dashboard')),
-
-
   'architecture': lazy(() => import('../components/system/ArchitectureViewer')),
   'intelligence': lazy(() => import('../components/intelligence/IntelligenceCenter')),
   'copilot': lazy(() => import('../components/intelligence/Copilot')),
   'audit': lazy(() => import('../components/forensics/ForensicAudit')),
-  'transactions': lazy(() => import('../components/ledger/TransactionGrid')),  'projects': lazy(() => import('../components/projects/Projects')),
+  'transactions': lazy(() => import('../components/ledger/TransactionGrid')),
+  'projects': lazy(() => import('../components/projects/Projects')),
   'reports': lazy(() => import('../components/reporting/Reports')),
   'ledger': lazy(() => import('../components/ledger/TwoLensesLedger')),
   'sales': lazy(() => import('../components/sales/Sales')),
   'purchases': lazy(() => import('../components/purchases/Purchases')),
   'settings': lazy(() => import('../components/platform/Settings')),
   'api-hub': lazy(() => import('../components/platform/ApiHub')),
-
-  'reconciliation': lazy(() => import('../components/ledger/Reconciliation')),  'forecaster': lazy(() => import('../components/planning/CashFlowPredictor')),
+  'reconciliation': lazy(() => import('../components/ledger/Reconciliation')),
+  'banking': lazy(() => import('../components/banking/Banking')),
+  'forecaster': lazy(() => import('../components/planning/CashFlowPredictor')),
   'budgets': lazy(() => import('../components/planning/BudgetManager')),
   'time-machine': lazy(() => import('../components/ledger/TimeMachine')),
   'inbox': lazy(() => import('../components/ledger/InboxView')),
+  'month-end-close': lazy(() => import('../components/ledger/MonthEndCloseView')),
   'ask': lazy(() => import('../components/ledger/AskLoop')),
   'magic': lazy(() => import('../components/ledger/MagicEntry')),
-
-  'vault': lazy(() => import('../components/forensics/Vault')),  'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
+  'vault': lazy(() => import('../components/forensics/Vault')),
+  'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
   'system-command-center': lazy(() => import('../components/platform/SystemCommandCenter')),
   'consolidation': lazy(() => import('../components/finance/Consolidation')),
   'taxes': lazy(() => import('../components/finance/TaxManager')),
-
-  
-  
-
-
-
-
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
 };
 
-// 2. Types
 export interface AppTabDefinition {
   id: string;
   label: Record<string, string>;
   icon: any;
   groupId?: string;
   requiresOwner?: boolean;
+  isAdvanced?: boolean;
 }
 
 export const APP_TABS: AppTabDefinition[] = [
-  { id: 'dashboard', label: { en: 'Command Center', he: 'לוח בקרה' }, icon: Home, groupId: 'pulse' },
+  { id: 'dashboard', label: { en: 'Dashboard', he: 'לוח בקרה' }, icon: Home, groupId: 'pulse' },
+  { id: 'inbox', label: { en: 'Inbox (Triage)', he: 'דואר נכנס' }, icon: Inbox, groupId: 'pulse' },
+  { id: 'month-end-close', label: { en: 'Month-End Close', he: 'סגירת חודש' }, icon: ClipboardCheck, groupId: 'pulse' },
   { id: 'copilot', label: { en: 'AI Co-pilot', he: 'טייס משנה אינטליגנטי' }, icon: Sparkles, groupId: 'pulse' },
   { id: 'transactions', label: { en: 'Transactions', he: 'תנועות' }, icon: Layers, groupId: 'finance' },
-  { id: 'ledger', label: { en: 'Ledger & Journal', he: 'ספר ראשי ויומן' }, icon: Database, groupId: 'finance' },
-  { id: 'reconciliation', label: { en: 'Smart Matching', he: 'התאמות חכמות' }, icon: RefreshCw, groupId: 'finance' },
-  { id: 'sales', label: { en: 'Invoicing & AR', he: 'כסף נכנס' }, icon: ArrowUpRight, groupId: 'operations' },
-  { id: 'purchases', label: { en: 'Bills & AP', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'operations' },
-  { id: 'projects', label: { en: 'Project Tracking', he: 'פרויקטים' }, icon: FolderKanban, groupId: 'operations' },
-  { id: 'inventory', label: { en: 'Inventory', he: 'מלאי' }, icon: FolderKanban, groupId: 'operations' },
+  { id: 'ledger', label: { en: 'Ledger & Journal', he: 'ספר ראשי ויומן' }, icon: Database, groupId: 'finance', isAdvanced: true },
+  { id: 'reconciliation', label: { en: 'Reconcile', he: 'התאמות חכמות' }, icon: RefreshCw, groupId: 'finance' },
+  { id: 'banking', label: { en: 'Bank Connections', he: 'חיבורי בנק' }, icon: Building, groupId: 'finance' },
+  { id: 'sales', label: { en: 'Money In', he: 'כסף נכנס' }, icon: ArrowUpRight, groupId: 'operations' },
+  { id: 'purchases', label: { en: 'Money Out', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'operations' },
+  { id: 'projects', label: { en: 'Project Tracking', he: 'פרויקטים' }, icon: FolderKanban, groupId: 'operations', isAdvanced: true },
+  { id: 'inventory', label: { en: 'Inventory', he: 'מלאי' }, icon: FolderKanban, groupId: 'operations', isAdvanced: true },
   { id: 'reports', label: { en: 'Financial Reports', he: 'דוחות' }, icon: FileText, groupId: 'planning' },
-  { id: 'forecaster', label: { en: 'Cash Forecasting', he: 'תחזית תזרים' }, icon: TrendingUp, groupId: 'planning' },
-  { id: 'intelligence', label: { en: 'Advanced Intel', he: 'מודיעין מתקדם' }, icon: BarChart3, groupId: 'planning' },
+  { id: 'forecaster', label: { en: 'Cash Forecasting', he: 'תחזית תזרים' }, icon: TrendingUp, groupId: 'planning', isAdvanced: true },
+  { id: 'intelligence', label: { en: 'Analysis', he: 'מודיעין מתקדם' }, icon: BarChart3, groupId: 'planning', isAdvanced: true },
   { id: 'vault', label: { en: 'Documents', he: 'כספת מסמכים' }, icon: ShieldCheck, groupId: 'system' },
   { id: 'settings', label: { en: 'Settings', he: 'הגדרות' }, icon: Settings, groupId: 'system' },
-  { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת מתקדם' }, icon: Search, groupId: 'system' },
-  { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'system' },
+  { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת מתקדם' }, icon: Search, groupId: 'system', isAdvanced: true },
+  { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'system', isAdvanced: true },
   { id: 'system-command-center', label: { en: 'Admin Panel', he: 'Admin Panel' }, icon: Building, groupId: 'admin', requiresOwner: true }
 ];
 
@@ -217,8 +204,13 @@ export const SYSTEM_COMMANDS: CommandDefinition[] = [
   { id: 'quick-entry', label: { en: 'Add New Entry', he: 'הוספת תנועה חדשה' }, category: 'Operations', actionId: 'quick-entry' },
   { id: 'switch-tab-ledger', label: { en: 'Go to General Ledger', he: 'מעבר לספר ראשי' }, category: 'Navigation', actionId: 'switch-tab', payload: { tab: 'ledger' } },
   { id: 'switch-tab-reports', label: { en: 'Go to Financial Reports', he: 'מעבר לדוחות' }, category: 'Navigation', actionId: 'switch-tab', payload: { tab: 'reports' } },
+  { id: 'health-check', label: { en: 'Ledger Health Check', he: 'בדיקת בריאות' }, category: 'System', actionId: 'open-health-check' },
   { id: 'run-audit', label: { en: 'Ledger Integrity Auditor', he: 'ביקורת תקינות ספר ראשי' }, category: 'System', actionId: 'open-integrity' },
   { id: 'system-center', label: { en: 'Admin Panel', he: 'פתיחת מרכז ניהול מערכת' }, category: 'System', actionId: 'open-command-center' },
+  { id: 'settings-currency', label: { en: 'Change Currency (Settings)', he: 'שינוי מטבע (הגדרות)' }, category: 'Settings', actionId: 'switch-tab', payload: { tab: 'settings', subTab: 'localization' } },
+  { id: 'settings-taxes', label: { en: 'Tax Settings', he: 'הגדרות מס' }, category: 'Settings', actionId: 'switch-tab', payload: { tab: 'settings', subTab: 'taxes' } },
+  { id: 'settings-team', label: { en: 'Team & Roles', he: 'צוות והרשאות' }, category: 'Settings', actionId: 'switch-tab', payload: { tab: 'settings', subTab: 'team' } },
+  { id: 'settings-profile', label: { en: 'User Profile', he: 'פרופיל משתמש' }, category: 'Settings', actionId: 'switch-tab', payload: { tab: 'settings', subTab: 'profile' } }
 ];
 
 export interface DashboardKpiDefinition {

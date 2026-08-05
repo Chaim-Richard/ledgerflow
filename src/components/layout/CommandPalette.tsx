@@ -30,7 +30,9 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
     projects: state.projects,
     customers: state.customers,
     vendors: state.vendors,
-    accounts: state.accounts
+    accounts: state.accounts,
+    invoices: state.invoices,
+    bills: state.bills
   })));
   const { handleQuickAdd } = useTransactionActions();
   const { addEntity } = useEntityOperations();
@@ -250,8 +252,38 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       }
     });
 
+    // 6. Invoices
+    ledger.invoices?.forEach(i => {
+      if (match(i.invoiceNumber) || match(i.customerName) || match(i.status)) {
+        results.push({
+          id: `inv-${i.id}`,
+          type: 'data',
+          label: `Invoice ${i.invoiceNumber} - ${i.customerName}`,
+          category: `Invoice • ${i.status}`,
+          actionId: 'switch-tab',
+          payload: { tab: 'sales', id: i.id },
+          icon: <FileText size={16} className="text-emerald-500 shrink-0" />
+        });
+      }
+    });
+
+    // 7. Bills
+    ledger.bills?.forEach(b => {
+      if (match(b.billNumber) || match(b.vendorName) || match(b.status)) {
+        results.push({
+          id: `bill-${b.id}`,
+          type: 'data',
+          label: `Bill ${b.billNumber} - ${b.vendorName}`,
+          category: `Bill • ${b.status}`,
+          actionId: 'switch-tab',
+          payload: { tab: 'purchases', id: b.id },
+          icon: <FileText size={16} className="text-rose-500 shrink-0" />
+        });
+      }
+    });
+
     return results.slice(0, 50); // Limit to top 50 results
-  }, [query, ledger.transactions, ledger.projects, ledger.customers, ledger.vendors, ledger.accounts]);
+  }, [query, ledger.transactions, ledger.projects, ledger.customers, ledger.vendors, ledger.accounts, ledger.invoices, ledger.bills]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {

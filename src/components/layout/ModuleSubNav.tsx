@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { APP_TABS } from '../../config/registry';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useUIStore } from '../../stores/useUIStore';
 
 interface ModuleSubNavProps {
   activeTab: string;
@@ -12,6 +13,7 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
   const scrollRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore(s => s.user);
   const userProfile = useAuthStore(s => s.userProfile);
+  const isProMode = useUIStore(s => s.isProMode);
   
   useEffect(() => {
     if (scrollRef.current) {
@@ -26,7 +28,7 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
   if (!currentTabDef || !currentTabDef.groupId) return null;
   
   const isOwner = userProfile?.role === 'admin';
-  const groupTabs = APP_TABS.filter(t => t.groupId === currentTabDef.groupId && (!t.requiresOwner || isOwner));
+  const groupTabs = APP_TABS.filter(t => t.groupId === currentTabDef.groupId && (!t.requiresOwner || isOwner) && (!t.isAdvanced || isProMode));
   
   if (groupTabs.length <= 1) return null;
 

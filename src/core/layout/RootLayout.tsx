@@ -67,6 +67,7 @@ export function RootLayout() {
     commandCenter: useUIStore(state => state.isCommandCenterOpen),
     converter: useUIStore(state => state.isConverterOpen),
     integrity: useUIStore(state => state.isIntegrityOpen),
+    healthCheck: useUIStore(state => state.isHealthCheckOpen),
     entanglement: useUIStore(state => state.isEntanglementOpen),
     architecture: useUIStore(state => state.isArchitectureOpen)
   };
@@ -81,6 +82,7 @@ export function RootLayout() {
     closeCommandCenter: () => useUIStore.getState().setCommandCenterOpen(false),
     closeConverter: () => useUIStore.getState().setConverterOpen(false),
     closeIntegrity: () => useUIStore.getState().setIntegrityOpen(false),
+    closeHealthCheck: () => useUIStore.getState().setHealthCheckOpen(false),
     closeEntanglement: () => useUIStore.getState().setEntanglementOpen(false),
     closeArchitecture: () => useUIStore.getState().setArchitectureOpen(false),
     handleAction,

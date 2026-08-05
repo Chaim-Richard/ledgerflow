@@ -14,6 +14,7 @@ const AICommandCenter = lazy(() => import('../intelligence/AICommandCenter'));
 const CurrencyConverter = lazy(() => import('../finance/CurrencyConverter'));
 const DocumentEntanglement = lazy(() => import('../forensics/DocumentEntanglement'));
 const SystemArchitecture = lazy(() => import('../platform/SystemArchitecture'));
+const HealthCheckModal = lazy(() => import('../system/HealthCheckModal'));
 
 interface CommandPortalProps {
   modals: {
@@ -26,6 +27,7 @@ interface CommandPortalProps {
     commandCenter: boolean;
     converter: boolean;
     integrity: boolean;
+    healthCheck: boolean;
     entanglement: boolean;
     architecture: boolean;
   };
@@ -39,6 +41,7 @@ interface CommandPortalProps {
     closeCommandCenter: () => void;
     closeConverter: () => void;
     closeIntegrity: () => void;
+    closeHealthCheck: () => void;
     closeEntanglement: () => void;
     closeArchitecture: () => void;
     handleAIQuery: (q: string) => Promise<any>;
@@ -142,6 +145,12 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
           isOpen={modals.converter}
           onClose={handlers.closeConverter}
           baseCurrency={baseCurrency}
+        />
+      )}
+      {modals.healthCheck && (
+        <HealthCheckModal 
+          isOpen={modals.healthCheck} 
+          onClose={handlers.closeHealthCheck} 
         />
       )}
       {modals.entanglement && (

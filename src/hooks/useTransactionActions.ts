@@ -585,7 +585,12 @@ export function useTransactionActions() {
     }
     if (!err) {
       incrementTransaction();
-      toast.success('Transaction added and certified');
+      toast.success('Transaction added and certified', {
+        action: {
+          label: 'Undo',
+          onClick: () => handleVoidTransaction(optimisticTx.id)
+        }
+      });
     } else {
       // Handled by true sync errors
       toast.error('Failed to add transaction. Protocol interrupted.');

@@ -176,7 +176,7 @@ const Sidebar = React.memo(({
 
                  const Icon = GROUP_ICONS[groupId] || LayoutGrid;
                  const isActive = activeGroupId === groupId;
-                 const firstTabInGroup = APP_TABS.find(t => t.groupId === groupId);
+                 const firstTabInGroup = APP_TABS.find(t => t.groupId === groupId && (!t.isAdvanced || uiStore.isProMode));
 
                  return (
                    <button

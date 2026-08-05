@@ -9,7 +9,8 @@ import {
   Sparkles,
   Copy,
   Lock,
-  Edit3
+  Edit3,
+  BrainCircuit
 } from 'lucide-react';
 import { parseLocalDate, cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -349,6 +350,35 @@ const TransactionRow = React.memo(({
           </div>
         )}
       </div>
+      
+      {/* Anomaly Resolution Panel */}
+      {anomaly && (
+        <div className="bg-indigo-50/50 border-b border-[var(--line)] px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <BrainCircuit className="text-indigo-600" size={16} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-indigo-900">Anomaly Detected</h4>
+              <p className="text-xs text-indigo-700/80 mt-0.5">{anomaly.reason}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={(e) => { e.stopPropagation(); onUpdate?.(tx.id, { isFlagged: false }); /* mark reviewed */ }}
+              className="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-50 transition-colors shadow-sm"
+            >
+              Mark Reviewed
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onUpdate?.(tx.id, { isFlagged: false }); /* dismiss */ }}
+              className="px-3 py-1.5 bg-white border border-indigo-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

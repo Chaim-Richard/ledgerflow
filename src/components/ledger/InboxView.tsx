@@ -19,19 +19,16 @@ import {
   BrainCircuit,
   MessageSquare
 } from 'lucide-react';
-import { parseLocalDate, cn } from '../../lib/utils';
+import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
 import { format } from 'date-fns';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
 
-interface InboxViewProps {
-  transactions?: Transaction[];
-  accounts: ChartAccount[];
-  onUpdate?: (id: string, updates: any) => Promise<void>;
-  onCategorize?: (transactionIds: string[], category: string, account: string) => void;
-  formatCurrency: (val: number) => string;
-  onParseReceipt?: (file: File, transactionId?: string) => void;
-}
+export default function InboxView() {
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
+  const { updateEntity } = useEntityOperations();
 
-export default function InboxView({ transactions = [], accounts, onCategorize, onUpdate, formatCurrency }: InboxViewProps) {
   const [showAllHighConfidence, setShowAllHighConfidence] = useState(false);
   const pendingTransactions = useMemo(() => 
     transactions.filter(t => t.status === 'pending' || t.status === 'draft')
@@ -60,12 +57,8 @@ export default function InboxView({ transactions = [], accounts, onCategorize, o
   const lowConfidence = pendingTransactions.filter(t => t.uiConfidence < 60);
 
   const _handleCategorize = async (transactionIds: string[], category: string, account: string) => {
-    if (onCategorize) {
-      onCategorize(transactionIds, category, account);
-    } else if (onUpdate) {
-      for (const id of transactionIds) {
-        await onUpdate(id, { status: 'completed' }); // categorize and complete
-      }
+    for (const id of transactionIds) {
+      await updateEntity('transactions', id, { status: 'completed' }); // categorize and complete
     }
   };
 

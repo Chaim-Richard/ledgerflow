@@ -31,6 +31,7 @@ export function useCommandDispatcher() {
     const actionMap: Record<string, () => void> = {
       'open-converter': () => setConverterOpen(true),
       'open-integrity': () => setIntegrityOpen(true),
+      'open-health-check': () => useUIStore.getState().setHealthCheckOpen(true),
       'open-guide': () => setGuideOpen(true),
       'open-command-palette': () => setCommandPaletteOpen(true),
       'quick-entry': () => setQuickEntryOpen(true),
@@ -53,6 +54,9 @@ export function useCommandDispatcher() {
         setActiveTab(details?.tab);
         if (details?.channel) {
            useUIStore.getState().setActiveIntelChannel(details.channel);
+        }
+        if (details?.subTab) {
+           useUIStore.getState().setActiveSettingsTab(details.subTab);
         }
       },
       'drill-down': () => {

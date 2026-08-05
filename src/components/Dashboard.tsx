@@ -13,6 +13,8 @@ import { useLedgerStore } from '../stores/useLedgerStore';
 import { useScenarioStore } from '../lib/scenarioStore';
 import { useUIStore } from '../stores/useUIStore';
 import { TaxReserveWidget } from './finance/TaxReserveWidget';
+import OnboardingView from './onboarding/OnboardingView';
+import OnboardingView from './onboarding/OnboardingView';
 import { formatCurrency, cn } from '../lib/utils';
 
 import { useShallow } from 'zustand/react/shallow';
@@ -48,6 +50,9 @@ export default function Dashboard() {
     setActiveFilters(prev => prev.filter(f => f !== filter));
   };
 
+  if (rawTransactions.length === 0) {
+    return <OnboardingView />;
+  }
   const activeAccounts = computedAccounts.length > 0 ? computedAccounts : accounts;
 
   // Real Calculated Financial Metrics
