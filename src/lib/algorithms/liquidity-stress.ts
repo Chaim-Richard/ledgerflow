@@ -7,7 +7,7 @@ export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
   name: 'Basel III Liquidity Stress Test',
   domain: 'planning',
   tags: ['Liquidity', 'Stress Test', 'Treasury', 'Solvency'],
-  description: 'Simulates a 30-day severe market liquidity shock to calculate the Liquidity Coverage Ratio (LCR) and Net Stable Funding Ratio (NSFR).',
+  description: 'Models a 30-day severe market liquidity shock to calculate the Liquidity Coverage Ratio (LCR) and Net Stable Funding Ratio (NSFR).',
   inputs: [
     { key: 'haircutPct', label: 'Receivables Haircut (%)', min: 0, max: 100, step: 5, defaultValue: 30 },
     { key: 'outflowShockPct', label: 'Unplanned Outflow Shock (%)', min: 0, max: 50, step: 5, defaultValue: 15 }

@@ -12,7 +12,6 @@ export interface Workspace {
   analyticalTopology?: DashboardSchema;
   currency?: string;
   defaultAccountMappings?: Record<string, string>;
-  isDemoLoaded?: boolean;
   dateFormat?: string;
   aiModel?: string;
   matchingThreshold?: number;

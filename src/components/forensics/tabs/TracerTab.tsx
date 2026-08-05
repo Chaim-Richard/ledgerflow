@@ -124,7 +124,7 @@ export default function TracerTab({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px]">
-                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-2">Simulated evaluation value</span>
+                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-2">Evaluated formula value</span>
                     <span className="text-xl font-black font-mono text-[var(--text)]">{formatCurrency(auditTrace.value)}</span>
                   </div>
                   <div className="p-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px]">

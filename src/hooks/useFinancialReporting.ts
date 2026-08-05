@@ -43,8 +43,6 @@ export function useFinancialReporting() {
   const fetchAging = useCallback(async (type: 'ar' | 'ap') => {
     if (!currentWorkspaceId) return;
     setLoading(true);
-    // Emulate microtask delay for consistent UX load transition
-    await new Promise(resolve => setTimeout(resolve, 150));
 
     try {
       const allowedStatuses = ["unpaid", "pending", "overdue", "sent"];
@@ -86,8 +84,6 @@ export function useFinancialReporting() {
   const fetchCashFlow = useCallback(async () => {
     if (!currentWorkspaceId) return;
     setLoading(true);
-    // Emulate microtask delay for consistent UX load transition
-    await new Promise(resolve => setTimeout(resolve, 150));
 
     try {
       const cashFlow = {

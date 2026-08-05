@@ -518,7 +518,7 @@ export const BILL_TIMING_ALGO: AlgorithmDefinition = {
 export const RENT_INCREASE_ALGO: AlgorithmDefinition = {
   id: 'rent_increase',
   name: 'Price/Rent Increase Simulator',
-  description: 'Simulates the effect of a percentage rent/price increase across all units.',
+  description: 'Models the effect of a percentage rent/price increase across all units.',
   domain: 'planning',
   tags: ['Real Estate', 'Simulator'],
   inputs: [

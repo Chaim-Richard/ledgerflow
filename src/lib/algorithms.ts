@@ -1246,7 +1246,7 @@ export class RootOptimizer {
     const horizonWeeks = 26; // ~180 days
     
     for (let i = 0; i < trials; i++) {
-      let simulatedCash = totalCash;
+      let projectedCash = totalCash;
       let survived = true;
       
       // Simulate week-by-week for performance
@@ -1254,14 +1254,14 @@ export class RootOptimizer {
         // Weekly burn with volatility
         const weeklyBurnBase = monthlyBurn / 4;
         const volatility = (defaultRandom() - 0.5) * 0.4; // +/- 20%
-        simulatedCash -= weeklyBurnBase * (1 + volatility);
+        projectedCash -= weeklyBurnBase * (1 + volatility);
         
         // Sudden 10% liquidity shock probability (7% weekly chance = ~30% per month)
         if (defaultRandom() < 0.07) {
-          simulatedCash *= 0.9;
+          projectedCash *= 0.9;
         }
 
-        if (simulatedCash <= 0) {
+        if (projectedCash <= 0) {
           survived = false;
           break;
         }
@@ -1747,7 +1747,7 @@ export class AuditEngine {
 
   /**
    * Probabilistic Forecast Simulation.
-   * Simulates potential fiscal futures using Monte Carlo state transitions.
+   * Models potential fiscal futures using Monte Carlo state transitions.
    */
   static simulateFiscalFutures(currentBalance: number, historicalDiffs: number[], iterations: number = 5000) {
     const results = [];
@@ -1948,8 +1948,8 @@ export class OptionsEngine {
 
     for (let i = 0; i < iterations; i++) {
        const z = generateZ();
-       const simulatedPrice = spotPrice * Math.exp(drift + volStr * z);
-       const payoff = Math.max(0, isCall ? simulatedPrice - strikePrice : strikePrice - simulatedPrice);
+       const projectedPrice = spotPrice * Math.exp(drift + volStr * z);
+       const payoff = Math.max(0, isCall ? projectedPrice - strikePrice : strikePrice - projectedPrice);
        sumPayoffs += payoff;
     }
     

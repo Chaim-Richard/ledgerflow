@@ -306,7 +306,6 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
-      setIsExecuting(false);
     }
   }, [isOpen]);
 
@@ -319,15 +318,12 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
   const combinedResults = [...dataResults, ...filteredCommands];
 
   const handleSelect = async (item: any) => {
-    setIsExecuting(true);
-    await new Promise(r => setTimeout(r, 400));
     
     // Core Application Action Mappings
     if (onAction && item.actionId) {
       onAction(item.actionId, item.payload);
     }
     toast.success(`${item.label} opened`);
-    setIsExecuting(false);
     onClose();
   };
 
