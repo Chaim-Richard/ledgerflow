@@ -137,7 +137,7 @@ export default function TimeMachine() {
                       </button>
                     </h4>
                     {scenario.ghosts.length === 0 ? (
-                      <p className="text-xs text-slate-400 italic">No hypothetical entries yet.</p>
+                      <p className="text-xs text-slate-400 italic">No simulated entries yet.</p>
                     ) : (
                       scenario.ghosts.map(ghost => (
                         <div key={ghost.id} className="flex items-center justify-between bg-blue-50/50 p-2 rounded-lg border border-blue-100">

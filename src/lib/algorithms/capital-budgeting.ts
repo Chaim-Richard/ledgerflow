@@ -25,7 +25,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     const wacc = (equityPct * ke) + (debtPct * kd * (1 - tax));
     const waccPct = (wacc * 100).toFixed(2);
     
-    // Group transaction cash flows by year to model project horizons
+    // Group transaction cash flows by year to simulate project horizons
     const yearlyFlows: Record<string, number> = {};
     let hasTransactions = false;
 
@@ -62,7 +62,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
       cashFlowArray = [30000, 45000, 60000, 50000, 40000];
     }
     
-    // Determine Initial Investment (Capex) - assume the largest negative outflow or a hypothetical baseline
+    // Determine Initial Investment (Capex) - assume the largest negative outflow or a simulated baseline
     let initialInvestment = 0;
     if (cashFlowArray[0] < 0) {
        initialInvestment = Math.abs(cashFlowArray[0]);

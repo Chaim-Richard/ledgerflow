@@ -19,7 +19,7 @@ consolidationRouter.post('/eliminate', async (req, res) => {
     }
 
     // In a real system we'd fetch all transactions from child workspaces.
-    // Calculate dynamic elimination entry based on child workspace transactions.
+    // We'll simulate the elimination entry here.
     
     const tx = {
       id: db.collection("transactions").doc().id,

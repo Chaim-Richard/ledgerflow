@@ -63,6 +63,7 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'settings': lazy(() => import('../components/platform/Settings')),
   'api-hub': lazy(() => import('../components/platform/ApiHub')),
   'reconciliation': lazy(() => import('../components/ledger/Reconciliation')),
+  'banking': lazy(() => import('../components/banking/Banking')),
   'forecaster': lazy(() => import('../components/planning/CashFlowPredictor')),
   'budgets': lazy(() => import('../components/planning/BudgetManager')),
   'time-machine': lazy(() => import('../components/ledger/TimeMachine')),
@@ -72,6 +73,7 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'magic': lazy(() => import('../components/ledger/MagicEntry')),
   'vault': lazy(() => import('../components/forensics/Vault')),
   'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
+  'system-command-center': lazy(() => import('../components/platform/SystemCommandCenter')),
   'consolidation': lazy(() => import('../components/finance/Consolidation')),
   'taxes': lazy(() => import('../components/finance/TaxManager')),
 };
@@ -93,6 +95,7 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'transactions', label: { en: 'Transactions', he: 'תנועות' }, icon: Layers, groupId: 'finance' },
   { id: 'ledger', label: { en: 'Ledger & Journal', he: 'ספר ראשי ויומן' }, icon: Database, groupId: 'finance', isAdvanced: true },
   { id: 'reconciliation', label: { en: 'Reconcile', he: 'התאמות חכמות' }, icon: RefreshCw, groupId: 'finance' },
+  { id: 'banking', label: { en: 'Bank Connections', he: 'חיבורי בנק' }, icon: Building, groupId: 'finance' },
   { id: 'sales', label: { en: 'Money In', he: 'כסף נכנס' }, icon: ArrowUpRight, groupId: 'operations' },
   { id: 'purchases', label: { en: 'Money Out', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'operations' },
   { id: 'projects', label: { en: 'Project Tracking', he: 'פרויקטים' }, icon: FolderKanban, groupId: 'operations', isAdvanced: true },
@@ -103,7 +106,8 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'vault', label: { en: 'Documents', he: 'כספת מסמכים' }, icon: ShieldCheck, groupId: 'system' },
   { id: 'settings', label: { en: 'Settings', he: 'הגדרות' }, icon: Settings, groupId: 'system' },
   { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת מתקדם' }, icon: Search, groupId: 'system', isAdvanced: true },
-  { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'system', isAdvanced: true }
+  { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'system', isAdvanced: true },
+  { id: 'system-command-center', label: { en: 'Admin Panel', he: 'Admin Panel' }, icon: Building, groupId: 'admin', requiresOwner: true }
 ];
 
 export const NAV_GROUPS: Record<string, Record<string, string>> = {
@@ -111,7 +115,8 @@ export const NAV_GROUPS: Record<string, Record<string, string>> = {
   finance: { en: 'Accounting', he: 'הנהלת חשבונות' },
   operations: { en: 'Business Ops', he: 'תפעול עסקי' },
   planning: { en: 'Reports & Intel', he: 'דוחות ובינה' },
-  system: { en: 'Settings & Tools', he: 'הגדרות וכלים' }
+  system: { en: 'Settings & Tools', he: 'הגדרות וכלים' },
+  admin: { en: 'Admin Panel', he: 'Admin Panel' }
 };
 
 export const getVisibleTabs = (lang: string, isOwner: boolean, hiddenTabs?: string[]) => {

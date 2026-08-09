@@ -37,7 +37,7 @@ export function calculateSafeToSpend(transactions: Transaction[], accounts: Char
     const netProfitCents = Math.max(0, revenue - expenses);
     const netProfit = netProfitCents / 100;
 
-    // Apply 2026 US Corporate Marginal Tax Brackets (simplified)
+    // Simulate 2026 US Corporate Marginal Tax Brackets (simplified)
     // 15% on 0-50k, 25% on 50k-75k, 34% on 75k-100k, 39% on 100k-335k, 34% above
     let estimatedTax = 0;
     if (netProfit <= 50000) {
@@ -56,7 +56,7 @@ export function calculateSafeToSpend(transactions: Transaction[], accounts: Char
     const effectiveTaxRate = netProfit > 0 ? (estimatedTax / netProfit) * 100 : 0;
     
     // Operating Reserve Policy (e.g. 2 months of average expenses)
-    const activeMonths = 3; // estimated average window
+    const activeMonths = 3; // simulated average window
     const averageMonthlyExpenseCents = expenses / activeMonths;
     const recommendedReserveCents = averageMonthlyExpenseCents * 2; // 2 months runway
 

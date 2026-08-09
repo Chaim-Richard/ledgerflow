@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Building2, UploadCloud, PieChart, Sparkles, Plus, ArrowRight, Play, ServerCog } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -8,6 +8,22 @@ export default function OnboardingView() {
   const setQuickEntryOpen = useUIStore(s => s.setQuickEntryOpen);
   const setActiveTab = useUIStore(s => s.setActiveTab);
   
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
+
+  const loadDemoData = () => {
+    setIsDemoLoading(true);
+    // In a real app, this would call a server function or set up local store
+    toast.promise(new Promise(resolve => setTimeout(resolve, 2500)), {
+      loading: 'Synthesizing demo data matrix...',
+      success: 'Demo environment fully populated.',
+      error: 'Failed to load demo.'
+    });
+    setTimeout(() => {
+      setIsDemoLoading(false);
+      setActiveTab('dashboard'); // forces reload or state change in real app
+    }, 2500);
+  };
+
   return (
     <div className="flex-1 bg-[var(--surface)] text-[var(--text)] flex flex-col items-center justify-center p-6 min-h-[100dvh]">
       <div className="max-w-2xl w-full text-center space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -21,7 +37,7 @@ export default function OnboardingView() {
             Your Ledger is Ready.
           </h1>
           <p className="text-base text-[var(--muted)] max-w-lg mx-auto">
-            The mathematical engine is online, but your ledger is empty. Complete these steps to initiate your financial command center.
+            The mathematical engine is online, but your ledger is empty. Complete these steps to initiate your financial command center, or explore our interactive demo.
           </p>
         </div>
 
@@ -64,10 +80,24 @@ export default function OnboardingView() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12 pt-8 border-t border-[var(--line)] max-w-2xl mx-auto">
           <button 
             onClick={() => setQuickEntryOpen(true)}
-            className="w-full px-6 py-3 bg-[var(--brass)] text-black font-semibold rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-6 py-3 bg-[var(--brass)] text-black font-semibold rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Record First Entry Manually
+          </button>
+          
+          <span className="text-[var(--faint)] font-mono text-xs uppercase tracking-widest hidden sm:inline-block">or</span>
+          
+          <button 
+            onClick={loadDemoData}
+            disabled={isDemoLoading}
+            className="w-full sm:w-auto px-6 py-3 bg-[var(--elevated)] border border-[var(--line)] text-[var(--text)] font-medium rounded-xl hover:bg-[var(--line)] transition-colors flex items-center justify-center gap-2"
+          >
+            {isDemoLoading ? (
+              <span className="flex items-center gap-2"><Sparkles className="w-4 h-4 animate-pulse text-[var(--brass)]" /> Loading Matrix...</span>
+            ) : (
+              <><Play className="w-4 h-4 text-emerald-500" /> Explore with Sample Data</>
+            )}
           </button>
         </div>
 

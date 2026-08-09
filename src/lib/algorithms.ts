@@ -1246,7 +1246,7 @@ export class RootOptimizer {
     const horizonWeeks = 26; // ~180 days
     
     for (let i = 0; i < trials; i++) {
-      let projectedCash = totalCash;
+      let simulatedCash = totalCash;
       let survived = true;
       
       // Simulate week-by-week for performance
@@ -1254,14 +1254,14 @@ export class RootOptimizer {
         // Weekly burn with volatility
         const weeklyBurnBase = monthlyBurn / 4;
         const volatility = (defaultRandom() - 0.5) * 0.4; // +/- 20%
-        projectedCash -= weeklyBurnBase * (1 + volatility);
+        simulatedCash -= weeklyBurnBase * (1 + volatility);
         
         // Sudden 10% liquidity shock probability (7% weekly chance = ~30% per month)
         if (defaultRandom() < 0.07) {
-          projectedCash *= 0.9;
+          simulatedCash *= 0.9;
         }
 
-        if (projectedCash <= 0) {
+        if (simulatedCash <= 0) {
           survived = false;
           break;
         }
@@ -1747,7 +1747,7 @@ export class AuditEngine {
 
   /**
    * Probabilistic Forecast Simulation.
-   * Models potential fiscal futures using Monte Carlo state transitions.
+   * Simulates potential fiscal futures using Monte Carlo state transitions.
    */
   static simulateFiscalFutures(currentBalance: number, historicalDiffs: number[], iterations: number = 5000) {
     const results = [];
@@ -1948,8 +1948,8 @@ export class OptionsEngine {
 
     for (let i = 0; i < iterations; i++) {
        const z = generateZ();
-       const projectedPrice = spotPrice * Math.exp(drift + volStr * z);
-       const payoff = Math.max(0, isCall ? projectedPrice - strikePrice : strikePrice - projectedPrice);
+       const simulatedPrice = spotPrice * Math.exp(drift + volStr * z);
+       const payoff = Math.max(0, isCall ? simulatedPrice - strikePrice : strikePrice - simulatedPrice);
        sumPayoffs += payoff;
     }
     
@@ -2047,7 +2047,7 @@ export class ARIMAModel {
     }
     
     const maParams = new Array(q).fill(1/Math.max(1, q));
-    const residuals = differenced.map(v => v * 0.1); // White noise error approximation
+    const residuals = differenced.map(v => v * 0.1); // Simulated white noise for demo purposes
 
     const forecastDiffs = [];
     for (let t = 0; t < steps; t++) {

@@ -256,7 +256,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     
     set({ integrityStatus: { ...get().integrityStatus, isVerifying: true } });
 
-    // Verifying ledger integrity
+    // Simulate slight delay for "Shadow Verification" feel
     const integrity = {
       totalIncome: 0,
       totalExpense: 0,

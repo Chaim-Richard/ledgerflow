@@ -8,7 +8,7 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
   tags: ['FX', 'Currency', 'Risk', 'Treasury'],
   description: 'Calculates net exposure to foreign currencies by identifying transactions or accounts holding non-base currency balances, highlighting FX risk.',
   inputs: [
-    { key: 'shockPct', label: 'Hypothetical FX Shock (%)', min: 1, max: 25, step: 1, defaultValue: 10 }
+    { key: 'shockPct', label: 'Simulated FX Shock (%)', min: 1, max: 25, step: 1, defaultValue: 10 }
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
     const shockPct = (inputs.shockPct ?? 10) / 100;

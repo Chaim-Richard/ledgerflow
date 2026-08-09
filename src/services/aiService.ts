@@ -70,7 +70,7 @@ class AIService {
             "R&D Alignment: Channel capital toward active project pipelines to maximize future tax credits."
           ],
           scenarios: [
-            "Model High-Growth: Projected increase of 30% revenue with 12% rise in operational expense clusters.",
+            "Model High-Growth: Simulated increase of 30% revenue with 12% rise in operational expense clusters.",
             "Venture Runway Target: Optimize cash burn to maintain 18+ months of comfortable operation."
           ],
           confidence: 92
@@ -82,7 +82,7 @@ class AIService {
             "Inventory Consolidation: Halt non-essential procurement to preserve cash reserves."
           ],
           scenarios: [
-            "Model High-Stress: Projected 30% revenue shock with immediate vendor consolidation.",
+            "Model High-Stress: Simulated 30% revenue shock with immediate vendor consolidation.",
             "Cash Reserves Focus: Target a positive unit-economic equilibrium with zero debt accumulation."
           ],
           confidence: 95
@@ -94,7 +94,7 @@ class AIService {
             "Depreciation Acceleration: Claim Section 179 depreciation on all newly capitalised fixed assets."
           ],
           scenarios: [
-            "Accelerated Deductions: Projected 8% reduction in overall federal and state tax liability.",
+            "Accelerated Deductions: Simulated 8% reduction in overall federal and state tax liability.",
             "Nexus Calibration: Ensure compliance across all online operating channels."
           ],
           confidence: 90

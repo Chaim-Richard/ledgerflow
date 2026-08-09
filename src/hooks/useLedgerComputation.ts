@@ -52,8 +52,8 @@ export function useLedgerComputation(
     if (!activeScenario || !activeScenario.ghosts.length) return transactions;
 
     const materializedGhosts: Transaction[] = [];
-    const horizonEndDate = addDays(new Date(), 365); // Project up to 1 year ahead
-    const cachedCashAcc = accounts.find(a => a.type === 'asset' || a.category?.toLowerCase() === 'cash') || { id: 'ghost-asset-offset', name: 'Hypothetical Cash Offset' };
+    const horizonEndDate = addDays(new Date(), 365); // Simulate up to 1 year ahead
+    const cachedCashAcc = accounts.find(a => a.type === 'asset' || a.category?.toLowerCase() === 'cash') || { id: 'ghost-asset-offset', name: 'Simulated Cash Offset' };
 
     activeScenario.ghosts.filter(g => g.isActive).forEach(ghost => {
       let currentDate = parseLocalDate(ghost.date);
@@ -77,7 +77,7 @@ export function useLedgerComputation(
           lines: [
             {
               accountId: 'ghost-acc',
-              accountName: ghost.type === 'income' ? 'Hypothetical Income' : 'Hypothetical Expense',
+              accountName: ghost.type === 'income' ? 'Simulated Income' : 'Simulated Expense',
               amountCents: mainLineAmount,
             },
             {

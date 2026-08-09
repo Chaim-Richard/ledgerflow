@@ -51,10 +51,10 @@ invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
 
     // Here we would normally use Resend or Postmark.
     // e.g. await resend.emails.send({ ... })
-    console.log(`[Local Delivery Log] Sending invoice ${invoice.number} to ${toEmail}`);
-    console.log(`[Local Delivery Log] Subject: ${subject}`);
-    console.log(`[Local Delivery Log] Payment Link: ${invoiceUrl}`);
-    console.log(`[Local Delivery Log] Body: ${body}`);
+    console.log(`[Email Service Mock] Sending invoice ${invoice.number} to ${toEmail}`);
+    console.log(`[Email Service Mock] Subject: ${subject}`);
+    console.log(`[Email Service Mock] Payment Link: ${invoiceUrl}`);
+    console.log(`[Email Service Mock] Body: ${body}`);
 
     res.json({ success: true, paymentToken, invoiceUrl });
   } catch (err) {

@@ -85,19 +85,19 @@ export const SUBSET_SUM_RECONCILIATION: AlgorithmDefinition = {
       }
     }
 
-    const evalTarget = target;
+    const demoTarget = target;
     const start = performance.now();
-    const result = findReconciliationSubset(candidates, evalTarget, 290, 30);
+    const result = findReconciliationSubset(candidates, demoTarget, 290, 30);
     const ms = performance.now() - start;
     
     const foundSubsetSum = result ? candidates.filter(c => result.find(r => r.id === c.id)).reduce((a,b) => a + b.amountCents, 0) : 0;
-    const inferredFee = foundSubsetSum - evalTarget;
+    const inferredFee = foundSubsetSum - demoTarget;
     
     return {
       metrics: [
         { label: 'Execution Time', value: `${ms.toFixed(2)} ms` },
         { label: 'Candidates Checked', value: candidates.length },
-        { label: 'Target Deposit', value: `$${(evalTarget/100).toFixed(2)}` },
+        { label: 'Target Deposit', value: `$${(demoTarget/100).toFixed(2)}` },
         { label: 'Match Found', value: result ? 'Yes' : 'No', color: result ? 'text-emerald-400' : 'text-red-400' }
       ],
       charts: [

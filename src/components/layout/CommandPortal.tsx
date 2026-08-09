@@ -6,11 +6,13 @@ import { useAuthStore } from '../../stores/useAuthStore';
 // Highly Optimized Lazy Loading of heavy overlay system modals
 const CommandPalette = lazy(() => import('./CommandPalette'));
 const MagicEntry = lazy(() => import('../ledger/MagicEntry'));
+const QBOMigrationWizard = lazy(() => import('../migration/QBOMigrationWizard'));
 const StatementImporter = lazy(() => import('../ledger/StatementImporter'));
 const TemplateSelector = lazy(() => import('./TemplateSelector'));
 const AICustomBlueprint = lazy(() => import('../intelligence/AICustomBlueprint'));
 const AICommandCenter = lazy(() => import('../intelligence/AICommandCenter'));
 const CurrencyConverter = lazy(() => import('../finance/CurrencyConverter'));
+const DocumentEntanglement = lazy(() => import('../forensics/DocumentEntanglement'));
 const SystemArchitecture = lazy(() => import('../platform/SystemArchitecture'));
 const HealthCheckModal = lazy(() => import('../system/HealthCheckModal'));
 
@@ -19,24 +21,28 @@ interface CommandPortalProps {
     commandPalette: boolean;
     quickEntry: boolean;
     importer: boolean;
+    qboMigration: boolean;
     template: boolean;
     aiBlueprint: boolean;
     commandCenter: boolean;
     converter: boolean;
     integrity: boolean;
     healthCheck: boolean;
+    entanglement: boolean;
     architecture: boolean;
   };
   handlers: {
     closeCommandPalette: () => void;
     closeQuickEntry: () => void;
     closeImporter: () => void;
+    closeQBOMigration: () => void;
     closeTemplate: () => void;
     closeAIBlueprint: () => void;
     closeCommandCenter: () => void;
     closeConverter: () => void;
     closeIntegrity: () => void;
     closeHealthCheck: () => void;
+    closeEntanglement: () => void;
     closeArchitecture: () => void;
     handleAIQuery: (q: string) => Promise<any>;
     handleFilter: (f: any) => void;
@@ -70,6 +76,14 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
   
   return (
     <Suspense fallback={null}>
+      {modals.commandPalette && (
+        <CommandPalette 
+          isOpen={modals.commandPalette}
+          onClose={handlers.closeCommandPalette}
+          onQuery={handlers.handleAIQuery}
+          recentQueries={[]}
+        />
+      )}
       {modals.quickEntry && (
         <MagicEntry 
           isOpen={modals.quickEntry} 
@@ -80,6 +94,12 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
           projects={projects.map((p: any) => p.name)}
           autoRules={autoRules}
           patternCache={patternCache}
+        />
+      )}
+      {modals.qboMigration && (
+        <QBOMigrationWizard 
+          isOpen={modals.qboMigration}
+          onClose={handlers.closeQBOMigration}
         />
       )}
       {modals.importer && (
@@ -131,6 +151,16 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
         <HealthCheckModal 
           isOpen={modals.healthCheck} 
           onClose={handlers.closeHealthCheck} 
+        />
+      )}
+      {modals.entanglement && (
+        <DocumentEntanglement 
+          isOpen={modals.entanglement}
+          onClose={handlers.closeEntanglement}
+          onVerify={() => {
+            toast.success("Document structure verified and entangled with ledger.");
+            handlers.closeEntanglement();
+          }}
         />
       )}
       {modals.architecture && (

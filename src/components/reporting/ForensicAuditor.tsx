@@ -56,58 +56,60 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
   const handleGenerateAuditReport = () => {
     setIsRunning(true);
     
-    try {
-      const separator = "========================================================\n";
-      let logContent = "";
-      logContent += separator;
-      logContent += "               LEDGERFLOW REGISTRATION AUDIT PROTOCOL   \n";
-      logContent += `               Timestamp: ${new Date().toISOString()}\n`;
-      logContent += separator + "\n";
-      
-      logContent += `Total Transaction Scans: ${transactions.length}\n`;
-      logContent += `Benford Pattern Match Distance: ${(forensicData.score * 100).toFixed(1)}%\n`;
-      logContent += `Divergence Risk Classification: ${riskLevel}\n\n`;
-      
-      logContent += "1. COMPLIANCE METRICS OVERVIEW:\n";
-      complianceStats.forEach(item => {
-        logContent += ` - [${(item.status || 'UNKNOWN').toUpperCase()}] ${item.label}: ${item.count}\n`;
-      });
-      logContent += "\n";
-      
-      logContent += "2. BENFORD LOGARITHMIC FREQUENCY SCALE DISTRIBUTIONS:\n";
-      expectedDist.forEach((exp, idx) => {
-        const act = (forensicData.distribution[idx] * 100).toFixed(1);
-        logContent += ` Digit ${idx + 1}: Expected ${exp.toFixed(1)}% | Actual Active: ${act}%\n`;
-      });
-      logContent += "\n";
-      
-      logContent += "3. CHRONOLOGICAL DATA DRAIN LINE ITEMS:\n";
-      transactions.slice(-50).forEach((t, i) => { 
-         const amount = formatDecimal(t.totalAmountCents);
-         logContent += ` - [T-${transactions.length - i}] Date: ${t.date} | Payee: ${t.payee || t.description || 'N/A'} | Amount: $${amount}\n`;
-      });
-      
-      logContent += "\n" + separator;
-      logContent += "               END OF SECURE AUDIT LEDGER TRAIL         \n";
-      logContent += separator;
-      
-      const blob = new Blob([logContent], { type: "text/plain;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `LedgerFlow_Forensic_Report_${new Date().toISOString().slice(0, 10)}.txt`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success("Audit Log Downloaded!", {
-        description: "Your full transactional integrity audit trail has been generated and exported."
-      });
-    } catch (err: any) {
-      toast.error("Audit generation failed", { description: err.message });
-    } finally {
-      setIsRunning(false);
-    }
+    setTimeout(() => {
+      try {
+        const separator = "========================================================\n";
+        let logContent = "";
+        logContent += separator;
+        logContent += "               LEDGERFLOW REGISTRATION AUDIT PROTOCOL   \n";
+        logContent += `               Timestamp: ${new Date().toISOString()}\n`;
+        logContent += separator + "\n";
+        
+        logContent += `Total Transaction Scans: ${transactions.length}\n`;
+        logContent += `Benford Pattern Match Distance: ${(forensicData.score * 100).toFixed(1)}%\n`;
+        logContent += `Divergence Risk Classification: ${riskLevel}\n\n`;
+        
+        logContent += "1. COMPLIANCE METRICS OVERVIEW:\n";
+        complianceStats.forEach(item => {
+          logContent += ` - [${(item.status || 'UNKNOWN').toUpperCase()}] ${item.label}: ${item.count}\n`;
+        });
+        logContent += "\n";
+        
+        logContent += "2. BENFORD LOGARITHMIC FREQUENCY SCALE DISTRIBUTIONS:\n";
+        expectedDist.forEach((exp, idx) => {
+          const act = (forensicData.distribution[idx] * 100).toFixed(1);
+          logContent += ` Digit ${idx + 1}: Expected ${exp.toFixed(1)}% | Actual Active: ${act}%\n`;
+        });
+        logContent += "\n";
+        
+        logContent += "3. CHRONOLOGICAL DATA DRAIN LINE ITEMS:\n";
+        transactions.slice(-50).forEach((t, i) => {
+           const amount = formatDecimal(t.totalAmountCents);
+           logContent += ` - [T-${transactions.length - i}] Date: ${t.date} | Payee: ${t.payee || t.description || 'N/A'} | Amount: $${amount}\n`;
+        });
+        
+        logContent += "\n" + separator;
+        logContent += "               END OF SECURE AUDIT LEDGER TRAIL         \n";
+        logContent += separator;
+        
+        const blob = new Blob([logContent], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `LedgerFlow_Forensic_Report_${new Date().toISOString().slice(0, 10)}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success("Audit Log Downloaded!", {
+          description: "Your full transactional integrity audit trail has been generated and exported."
+        });
+      } catch (err: any) {
+        toast.error("Audit generation failed", { description: err.message });
+      } finally {
+        setIsRunning(false);
+      }
+    }, 1200);
   };
 
   return (

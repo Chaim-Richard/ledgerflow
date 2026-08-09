@@ -14,6 +14,7 @@ import { useScenarioStore } from '../lib/scenarioStore';
 import { useUIStore } from '../stores/useUIStore';
 import { TaxReserveWidget } from './finance/TaxReserveWidget';
 import OnboardingView from './onboarding/OnboardingView';
+import OnboardingView from './onboarding/OnboardingView';
 import { formatCurrency, cn } from '../lib/utils';
 
 import { useShallow } from 'zustand/react/shallow';

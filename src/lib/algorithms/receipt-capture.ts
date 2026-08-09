@@ -60,7 +60,7 @@ export const RECEIPT_CAPTURE_ALGO: AlgorithmDefinition = {
   compute: (transactions, accounts, inputs) => {
     const start = performance.now();
     
-    // Test OCR lines for algorithm evaluation
+    // Test OCR lines for algorithm demonstration
     const testOCRData = [
         "HOME DEPOT 123",
         "123 MAIN ST",

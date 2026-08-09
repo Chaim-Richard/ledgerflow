@@ -448,7 +448,7 @@ export function useTransactionActions() {
       if (data.lines) {
         TruthEngine.validateAccountingIntegrity(data.lines.map((l: TransactionLine) => ({
           amount: l.amountCents,
-          type: l.amountCents > 0 ? 'debit' : 'credit' // Simple mapping for validation
+          type: l.amountCents > 0 ? 'debit' : 'credit' // Simple mapping for validation demo
         })));
       }
     } catch (e: any) {
@@ -771,7 +771,9 @@ export function useTransactionActions() {
           }
       });
 
-      await updateDoc(doc(db, "workspaces", currentWorkspaceId), { updatedAt: new Date().toISOString() 
+      // Clear the isDemoLoaded flag
+      await updateDoc(doc(db, 'workspaces', currentWorkspaceId), {
+        isDemoLoaded: false
       });
 
       toast.success('System purged. All topological nodes and records cleared.', { id: loader });

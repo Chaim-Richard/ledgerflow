@@ -5,7 +5,7 @@ export const heuristicPipeline: AlgorithmDefinition = {
   name: 'Multi-Factor Heuristic Automation Engine',
   domain: 'operations',
   tags: ['Automation', 'Machine Learning', 'Categorization'],
-  description: 'Executes a probabilistic model analyzing transaction entropy (amounts, payee lexical tokens, and frequencies) to auto-categorize and suggest heuristic mapping rules.',
+  description: 'Simulates a probabilistic model analyzing transaction entropy (amounts, payee lexical tokens, and frequencies) to auto-categorize and suggest heuristic mapping rules.',
   inputs: [
     { key: 'automation', label: 'Confidence Threshold (%)', min: 10, max: 100, step: 5, defaultValue: 85 }
   ],
