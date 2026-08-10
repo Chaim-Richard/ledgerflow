@@ -42,7 +42,9 @@ export default function Purchases() {
   const onAddVendor = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('vendors', id, updates); } return addEntity('vendors', data); };
   const [activeSubTab, setActiveSubTab] = useState<'bills' | 'vendors' | 'pipeline'>('pipeline');
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+  const [editingBill, setEditingBill] = useState<Bill | null>(null);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const agingBuckets = useMemo(() => {
@@ -151,7 +153,15 @@ export default function Purchases() {
               </button>
             </div>
             <button 
-              onClick={() => activeSubTab === 'bills' ? setIsBillModalOpen(true) : setIsVendorModalOpen(true)}
+              onClick={() => {
+                if (activeSubTab === 'bills') {
+                  setEditingBill(null);
+                  setIsBillModalOpen(true);
+                } else {
+                  setEditingVendor(null);
+                  setIsVendorModalOpen(true);
+                }
+              }}
               className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black rounded-xl text-xs font-bold hover:opacity-95 transition-all shadow-md hover:shadow-lg cursor-pointer active:scale-95"
             >
               <Plus size={15} />
@@ -300,7 +310,9 @@ export default function Purchases() {
         onSave={(bill) => {
           onAddBill(bill);
           setIsBillModalOpen(false);
+          toast.success('Bill Saved');
         }}
+        initialData={editingBill || undefined}
         vendors={vendors}
         accounts={accounts}
       />
@@ -310,7 +322,9 @@ export default function Purchases() {
         onSave={(vend) => {
           onAddVendor(vend);
           setIsVendorModalOpen(false);
+          toast.success('Vendor Saved');
         }}
+        initialData={editingVendor || undefined}
       />
 
       
@@ -382,6 +396,17 @@ export default function Purchases() {
                             <Zap size={16} />
                           </button>
                         )}
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingBill(bill);
+                            setIsBillModalOpen(true);
+                          }}
+                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-blue-600 transition-all"
+                          title="Edit Bill"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
                         <button 
                           onClick={() => {
                             const newBill = { ...bill, id: `bill-${Date.now()}`, number: `${bill.number}-COPY`, status: 'unpaid' as any };
@@ -463,9 +488,8 @@ export default function Purchases() {
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all justify-end">
-                        
-                        <button onClick={(e)=>{e.stopPropagation(); onAddBill({ vendorId: vend.id }); toast.info(`Opening bill creation for ${vend.name}`)}} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Bill"><Plus size={14}/></button>
-                        
+                        <button onClick={(e)=>{e.stopPropagation(); setEditingVendor(vend); setIsVendorModalOpen(true);}} className="p-2 text-blue-500 hover:bg-blue-50 rounded" title="Edit Vendor"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                        <button onClick={(e)=>{e.stopPropagation(); setEditingBill(null); onAddBill({ vendorId: vend.id }); toast.info(`Opening bill creation for ${vend.name}`)}} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Bill"><Plus size={14}/></button>
                       </div>
                     </td>
                   </tr>

@@ -11,10 +11,11 @@ interface VendorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (vendor: Partial<Vendor>) => void;
+  initialData?: Partial<Vendor>;
 }
 
-export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProps) {
-  const [vendor, setVendor] = useState<Partial<Vendor>>({
+export default function VendorModal({ isOpen, onClose, onSave, initialData }: VendorModalProps) {
+  const [vendor, setVendor] = useState<Partial<Vendor>>(() => initialData || {
     name: '',
     email: '',
     category: '',
@@ -68,7 +69,9 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
               <Users size={24} />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Add Vendor</h3>
+              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">
+                {initialData ? 'Edit Vendor' : 'Add Vendor'}
+              </h3>
               <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Supply Chain & Payables</p>
             </div>
           </div>

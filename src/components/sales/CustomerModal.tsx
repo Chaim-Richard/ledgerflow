@@ -7,10 +7,11 @@ interface CustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (customer: Partial<Customer>) => void;
+  initialData?: Partial<Customer>;
 }
 
-export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModalProps) {
-  const [customer, setCustomer] = useState<Partial<Customer>>({
+export default function CustomerModal({ isOpen, onClose, onSave, initialData }: CustomerModalProps) {
+  const [customer, setCustomer] = useState<Partial<Customer>>(() => initialData || {
     name: '',
     email: '',
     balanceCents: 0
@@ -45,7 +46,9 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
               <User size={24} />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Add Customer</h3>
+              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">
+                {initialData ? 'Edit Customer' : 'Add Customer'}
+              </h3>
               <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">CRM & Relationships</p>
             </div>
           </div>

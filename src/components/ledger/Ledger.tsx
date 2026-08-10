@@ -122,6 +122,7 @@ const Ledger = React.memo(() => {
 
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('coa');
   const [activeModal, setActiveModal] = useState<ModalType>(null);
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
   const [newAccount, setNewAccount] = useState({
@@ -145,14 +146,19 @@ const Ledger = React.memo(() => {
   const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'chartAccounts'), {
+      const data = {
         ...newAccount,
-        uid: user?.uid || "",
-        balanceCents: Number(newAccount.openingBalanceCents), // Initial balance is opening balance
-        createdAt: new Date().toISOString()
-      });
-      toast.success('System Node Established');
+        balanceCents: Number(newAccount.openingBalanceCents),
+      };
+      
+      if (editingAccountId) {
+        await updateEntity('chartAccounts', editingAccountId, data, 'Account Updated');
+      } else {
+        await addEntity('chartAccounts', data, 'System Node Established');
+      }
+      
       setActiveModal(null);
+      setEditingAccountId(null);
       setNewAccount({ 
         code: '', 
         name: '', 
@@ -164,7 +170,8 @@ const Ledger = React.memo(() => {
         asOfDate: format(new Date(), 'yyyy-MM-dd')
       });
     } catch (error) {
-      reportError(error, OperationType.CREATE, 'chartAccounts', { account: newAccount });
+      console.error(error);
+      toast.error('Operation Failed');
     }
   };
 
@@ -358,6 +365,20 @@ const Ledger = React.memo(() => {
               formatCurrency={formatCurrency}
               onDrillDown={(name) => onAction('drill-down', { account: name })}
               onDeleteAccount={onDeleteAccount}
+              onEditAccount={(acc) => {
+                setEditingAccountId(acc.id);
+                setNewAccount({
+                  code: acc.code || '',
+                  name: acc.name || '',
+                  type: acc.type || 'asset',
+                  category: acc.category || '',
+                  description: acc.description || '',
+                  parentId: acc.parentId || '',
+                  openingBalanceCents: acc.openingBalanceCents || 0,
+                  asOfDate: acc.asOfDate || format(new Date(), 'yyyy-MM-dd')
+                });
+                setActiveModal('account');
+              }}
             />
           )}
           {activeSubTab === 'journal' && (
@@ -406,8 +427,8 @@ const Ledger = React.memo(() => {
               className="relative w-full max-w-lg bg-[var(--ink)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden p-4 md:p-10"
             >
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase italic">Add New Account</h2>
-                <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors">
+                <h2 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase italic">{editingAccountId ? 'Edit Account' : 'Add New Account'}</h2>
+                <button onClick={() => { setActiveModal(null); setEditingAccountId(null); }} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors">
                   <Plus className="rotate-45 text-slate-500" size={24} />
                 </button>
               </div>
@@ -524,7 +545,7 @@ const Ledger = React.memo(() => {
                 <div className="pt-4 flex gap-4">
                   <button 
                     type="button"
-                    onClick={() => setActiveModal(null)}
+                    onClick={() => { setActiveModal(null); setEditingAccountId(null); }}
                     className="flex-1 py-4 bg-[var(--ink)] text-slate-500 rounded-[32px] font-black hover:text-[var(--text)] transition-all uppercase tracking-widest text-[10px]"
                   >
                     Cancel
@@ -533,7 +554,7 @@ const Ledger = React.memo(() => {
                     type="submit"
                     className="flex-1 py-4 bg-indigo-600 text-white rounded-[32px] font-black hover:opacity-90 transition-all shadow-xl shadow-ledger-accent/20 uppercase tracking-widest text-[10px]"
                   >
-                    Establish Node
+                    {editingAccountId ? 'Save Changes' : 'Establish Node'}
                   </button>
                 </div>
               </form>

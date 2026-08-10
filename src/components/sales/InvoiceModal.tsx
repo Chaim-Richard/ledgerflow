@@ -10,32 +10,37 @@ interface InvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (invoice: Partial<Invoice>) => void;
+  initialData?: Partial<Invoice>;
   customers: Customer[];
   accounts: ChartAccount[];
 }
 
-export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], accounts = [] }: InvoiceModalProps) {
+export default function InvoiceModal({ isOpen, onClose, onSave, initialData, customers = [], accounts = [] }: InvoiceModalProps) {
   // Ensure we have arrays even if props were passed as null
   const safeCustomers = Array.isArray(customers) ? customers : [];
   const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'income') : [];
 
-  const [invoice, setInvoice] = useState<Partial<Invoice>>(() => ({
+  const [invoice, setInvoice] = useState<Partial<Invoice>>(() => initialData || {
     number: `INV-${Date.now().toString().slice(-6)}`,
     date: format(new Date(), 'yyyy-MM-dd'),
     dueDate: format(new Date(), 'yyyy-MM-dd'),
     status: 'pending',
+    type: 'standard',
     amountCents: 0,
     totalCents: 0
-  }));
+  });
 
-  const [items, setItems] = useState<Array<{ description: string, quantity: number, rateCents: number, amountCents: number, accountId: string }>>([
-    { description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }
-  ]);
+  const [items, setItems] = useState<Array<{ description: string, quantity: number, rateCents: number, amountCents: number, accountId: string }>>(() => {
+    if (initialData?.metadata?.items && Array.isArray(initialData.metadata.items)) {
+      return initialData.metadata.items;
+    }
+    return [{ description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }];
+  });
 
-  const [memo, setMemo] = useState('');
-  const [terms, setTerms] = useState('');
-  const [emailSubject, setEmailSubject] = useState('');
-  const [emailBody, setEmailBody] = useState('');
+  const [memo, setMemo] = useState(() => initialData?.metadata?.memo || '');
+  const [terms, setTerms] = useState(() => initialData?.metadata?.terms || '');
+  const [emailSubject, setEmailSubject] = useState(() => initialData?.metadata?.emailSubject || '');
+  const [emailBody, setEmailBody] = useState(() => initialData?.metadata?.emailBody || '');
   const [attachments, setAttachments] = useState<File[]>([]);
 
   const total = items.reduce((sum, item) => sum + item.amountCents, 0);
@@ -58,11 +63,13 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       totalCents: total,
       amountCents: total,
       metadata: {
+        ...invoice.metadata,
         memo,
         terms,
         emailSubject,
         emailBody,
-        hasAttachments: attachments.length > 0
+        hasAttachments: attachments.length > 0,
+        items
       }
     });
   };
@@ -95,7 +102,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       >
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
           <div>
-            <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Create New Invoice</h3>
+            <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">
+              {invoice.type === 'estimate' ? 'Estimate' : (initialData ? 'Edit Invoice' : 'Create New Invoice')}
+            </h3>
             <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Sales & Receivables</p>
           </div>
           <div className="flex items-center gap-2">
@@ -154,13 +163,14 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
-              <label className="micro-label">Invoice Type</label>
+              <label className="micro-label">Record Type</label>
               <select 
                 value={invoice.type || 'standard'}
                 onChange={(e) => setInvoice({ ...invoice, type: e.target.value as any })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
-                <option value="standard">Standard</option>
+                <option value="standard">Standard Invoice</option>
+                <option value="estimate">Estimate / Quote</option>
                 <option value="recurring">Recurring</option>
                 <option value="progress">Progress</option>
               </select>
@@ -477,7 +487,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               onClick={(e) => handleAction(e, 'sent')}
               className="px-6 py-3.5 bg-slate-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
             >
-              Send Invoice
+              Send {invoice.type === 'estimate' ? 'Estimate' : 'Invoice'}
             </button>
           </div>
         </div>
