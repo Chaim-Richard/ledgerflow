@@ -1,5 +1,4 @@
 import { AlgorithmDefinition } from './types';
-import { resolveAccountRole } from '../accountUtils';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 
 export const LOAN_AMORTIZATION_ALGO: AlgorithmDefinition = {
@@ -9,11 +8,11 @@ export const LOAN_AMORTIZATION_ALGO: AlgorithmDefinition = {
   domain: 'planning',
   tags: ['Real Estate', 'Loan', 'Interest'],
   inputs: [
-    { id: 'principal', name: 'Principal Amount', type: 'number', default: 500000 },
-    { id: 'rate', name: 'Annual Interest Rate (%)', type: 'number', default: 5.5 },
-    { id: 'years', name: 'Term (Years)', type: 'number', default: 30 },
+    { key: 'principal', label: 'Principal Amount', min: 1000, max: 10000000, step: 1000, defaultValue: 500000 },
+    { key: 'rate', label: 'Annual Interest Rate (%)', min: 0.1, max: 25, step: 0.1, defaultValue: 5.5 },
+    { key: 'years', label: 'Term (Years)', min: 1, max: 40, step: 1, defaultValue: 30 },
   ],
-  calculate: (transactions, accounts, inputs) => {
+  compute: (transactions, accounts, inputs) => {
     const principal = Number(inputs?.principal || 500000);
     const annualRate = Number(inputs?.rate || 5.5) / 100;
     const months = Number(inputs?.years || 30) * 12;
@@ -46,21 +45,23 @@ export const LOAN_AMORTIZATION_ALGO: AlgorithmDefinition = {
 
     return {
       metrics: [
-        { label: 'Monthly Payment', value: payment, type: 'currency' },
-        { label: 'Total Interest (10 Yrs)', value: totalInterest, type: 'currency' }
+        { label: 'Monthly Payment', value: payment },
+        { label: 'Total Interest (10 Yrs)', value: totalInterest }
       ],
       insights: [
-        `At ${inputs?.rate}%, your monthly payment is $${payment.toFixed(2)}.`,
+        `At ${inputs?.rate || 5.5}%, your monthly payment is $${payment.toFixed(2)}.`,
         `By year 10, you will have paid $${totalInterest.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits:2})} in interest.`
       ],
       charts: [
         {
-          type: 'bar',
-          title: 'Balance Over Time (Years 1-10)',
           data: schedule.map(s => ({
             label: `Month ${s.month}`,
             value: s.balance
-          }))
+          })),
+          config: {
+            xKey: 'label',
+            yKeys: [{ key: 'value', color: '#6366f1', name: 'Balance' }]
+          }
         }
       ]
     };
@@ -71,12 +72,11 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
   id: 'subscription_audit',
   name: 'Subscription & Recurring Spend Audit',
   description: 'Analyzes recurring transactions to identify active subscriptions, rising costs, and potential overlaps.',
-  domain: 'ops',
+  domain: 'operations',
   tags: ['Audit', 'Spend', 'Recurring'],
   inputs: [],
-  calculate: (transactions, accounts) => {
-    // Basic frequency count by payee
-    const counts: Record<string, { count: number, totalCents: number, lastDate: string, lastAmount: number }> = {};
+  compute: (transactions) => {
+    const counts: Record<string, { count: number; totalCents: number; lastDate: string; lastAmount: number }> = {};
     
     transactions.forEach(t => {
       if (t.totalAmountCents < 0 && t.payee) {
@@ -92,15 +92,15 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
     });
 
     const recurring = Object.entries(counts)
-      .filter(([_, data]) => data.count >= 3) // Assume 3+ payments is recurring
+      .filter(([_, data]) => data.count >= 3)
       .sort((a, b) => b[1].totalCents - a[1].totalCents);
 
     const totalMonthlyEstCents = recurring.reduce((sum, [_, data]) => sum + data.lastAmount, 0);
 
     return {
       metrics: [
-        { label: 'Active Subscriptions', value: recurring.length, type: 'number' },
-        { label: 'Est. Monthly Spend', value: totalMonthlyEstCents / 100, type: 'currency' }
+        { label: 'Active Subscriptions', value: recurring.length },
+        { label: 'Est. Monthly Spend', value: totalMonthlyEstCents / 100 }
       ],
       insights: [
         `You have ${recurring.length} recurring vendors, costing roughly $${(totalMonthlyEstCents/100).toFixed(2)} monthly.`,
@@ -108,12 +108,14 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
       ],
       charts: [
         {
-          type: 'bar',
-          title: 'Top Recurring Payees',
           data: recurring.slice(0, 5).map(([payee, data]) => ({
             label: payee,
             value: data.lastAmount / 100
-          }))
+          })),
+          config: {
+            xKey: 'label',
+            yKeys: [{ key: 'value', color: '#8b5cf6', name: 'Monthly Spend' }]
+          }
         }
       ]
     };
@@ -127,14 +129,13 @@ export const MISSING_TRANSACTION_ALGO: AlgorithmDefinition = {
   domain: 'forensics',
   tags: ['Audit', 'Missing', 'Alert'],
   inputs: [],
-  calculate: (transactions, accounts) => {
+  compute: (transactions) => {
     const today = new Date();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(today.getDate() - 30);
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
 
-    // Find recurring payees
-    const counts: Record<string, { count: number, lastDate: string, amounts: number[] }> = {};
+    const counts: Record<string, { count: number; lastDate: string; amounts: number[] }> = {};
     transactions.forEach(t => {
       const payee = (t.payee || t.description || '').trim().toLowerCase();
       if (!payee) return;
@@ -146,8 +147,7 @@ export const MISSING_TRANSACTION_ALGO: AlgorithmDefinition = {
       }
     });
 
-    const missing = Object.entries(counts).filter(([payee, data]) => {
-      // If it happens frequently (3+ times) but hasn't happened in the last 30 days
+    const missing = Object.entries(counts).filter(([_, data]) => {
       return data.count >= 3 && data.lastDate < thirtyDaysAgoStr;
     });
 
@@ -157,7 +157,7 @@ export const MISSING_TRANSACTION_ALGO: AlgorithmDefinition = {
 
     return {
       metrics: [
-        { label: 'Missing Expected', value: missing.length, type: 'number' },
+        { label: 'Missing Expected', value: missing.length }
       ],
       insights,
       charts: []
@@ -172,14 +172,14 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
   domain: 'planning',
   tags: ['Tax', 'Deductions'],
   inputs: [],
-  calculate: (transactions, accounts) => {
+  compute: (transactions) => {
     let potentialDeductions = 0;
     let foundCount = 0;
     
     const keywords = ['home depot', 'uber', 'gas', 'internet', 'mileage', 'home office', 'lyft', 'zoom', 'adobe', 'aws', 'wework'];
 
     transactions.forEach(t => {
-      if (t.totalAmountCents >= 0) return; // Only look at expenses
+      if (t.totalAmountCents >= 0) return;
       const desc = (t.description || '').toLowerCase();
       const payee = (t.payee || '').toLowerCase();
       
@@ -192,8 +192,8 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
 
     return {
       metrics: [
-        { label: 'Potential Deductions', value: foundCount, type: 'number' },
-        { label: 'Value Found', value: potentialDeductions / 100, type: 'currency' }
+        { label: 'Potential Deductions', value: foundCount },
+        { label: 'Value Found', value: potentialDeductions / 100 }
       ],
       insights: [
         `Found ${foundCount} transactions that may qualify for home office, mileage, or utility deductions.`,
@@ -208,18 +208,19 @@ export const RENT_ROLL_ALGO: AlgorithmDefinition = {
   id: 'rent_roll',
   name: 'Rent Roll & Occupancy',
   description: 'Tracks occupancy, collected rent vs. expected rent, and lease statuses across properties.',
-  domain: 'ops',
+  domain: 'operations',
   tags: ['Real Estate', 'Rent'],
   inputs: [],
-  calculate: (transactions, accounts) => {
-    const rentAccounts = accounts.filter(a => a.name.toLowerCase().includes('rent') || a.role === 'revenue');
+  compute: (transactions, accounts) => {
+    const rentAccounts = accounts.filter(a => a.name.toLowerCase().includes('rent') || (a as any).role === 'revenue' || a.type === 'revenue' || a.type === 'income');
     const rentAccountIds = new Set(rentAccounts.map(a => a.id));
 
     let collectedRentCents = 0;
     const propertyRents: Record<string, number> = {};
 
     transactions.forEach(t => {
-      if (t.totalAmountCents > 0 && (rentAccountIds.has(t.accountId) || (t.description && t.description.toLowerCase().includes('rent')))) {
+      const accId = (t as any).accountId;
+      if (t.totalAmountCents > 0 && ((accId && rentAccountIds.has(accId)) || (t.description && t.description.toLowerCase().includes('rent')))) {
         collectedRentCents += t.totalAmountCents;
         const propId = t.projectId || 'Unknown Property';
         propertyRents[propId] = (propertyRents[propId] || 0) + t.totalAmountCents;
@@ -227,15 +228,11 @@ export const RENT_ROLL_ALGO: AlgorithmDefinition = {
     });
 
     const activeProperties = Object.keys(propertyRents).length;
-    
-    // Estimate occupancy: if activeProperties > 0, assume 100% minus some arbitrary logic, or just say it based on projects with activity.
-    // Since we don't have true lease data, we extrapolate from active rent payments.
-    const occupancy = activeProperties > 0 ? 100 : 0;
 
     return {
       metrics: [
-        { label: 'Active Rent Units', value: activeProperties, type: 'number' },
-        { label: 'Rent Collected (All Time)', value: collectedRentCents / 100, type: 'currency' }
+        { label: 'Active Rent Units', value: activeProperties },
+        { label: 'Rent Collected (All Time)', value: collectedRentCents / 100 }
       ],
       insights: [
         activeProperties > 0 
@@ -245,9 +242,11 @@ export const RENT_ROLL_ALGO: AlgorithmDefinition = {
       ],
       charts: [
         {
-          type: 'bar',
-          title: 'Rent Collected by Property',
-          data: Object.entries(propertyRents).map(([prop, amt]) => ({ label: prop, value: amt / 100 }))
+          data: Object.entries(propertyRents).map(([prop, amt]) => ({ label: prop, value: amt / 100 })),
+          config: {
+            xKey: 'label',
+            yKeys: [{ key: 'value', color: '#10b981', name: 'Rent Collected' }]
+          }
         }
       ]
     };
@@ -261,8 +260,8 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
   domain: 'valuation',
   tags: ['Real Estate', 'PNL'],
   inputs: [],
-  calculate: (transactions, accounts) => {
-    const propertyPnl: Record<string, { rev: number, exp: number }> = {};
+  compute: (transactions) => {
+    const propertyPnl: Record<string, { rev: number; exp: number }> = {};
     
     transactions.forEach(t => {
       const propId = t.projectId || 'General';
@@ -276,8 +275,8 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
     });
 
     let totalNOI = 0;
-    const chartData = [];
-    const insights = [];
+    const chartData: { label: string; value: number }[] = [];
+    const insights: string[] = [];
 
     Object.entries(propertyPnl).forEach(([prop, pnl]) => {
       const noi = pnl.rev - pnl.exp;
@@ -290,15 +289,17 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
 
     return {
       metrics: [
-        { label: 'Total NOI', value: totalNOI / 100, type: 'currency' },
-        { label: 'Properties Tracked', value: Object.keys(propertyPnl).length, type: 'number' }
+        { label: 'Total NOI', value: totalNOI / 100 },
+        { label: 'Properties Tracked', value: Object.keys(propertyPnl).length }
       ],
       insights: insights.length > 0 ? insights.slice(0, 3) : ['No property-specific positive NOI found.'],
       charts: [
         {
-          type: 'bar',
-          title: 'Net Operating Income (NOI) by Property',
-          data: chartData
+          data: chartData,
+          config: {
+            xKey: 'label',
+            yKeys: [{ key: 'value', color: '#3b82f6', name: 'NOI' }]
+          }
         }
       ]
     };
@@ -309,15 +310,13 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
   id: 'restricted_fund',
   name: 'Restricted Fund Tracker',
   description: 'Tracks restricted vs. unrestricted net assets for non-profit compliance.',
-  domain: 'compliance',
+  domain: 'forensics',
   tags: ['Non-Profit', 'Compliance', 'Grants'],
   inputs: [],
-  calculate: (transactions, accounts) => {
+  compute: (transactions) => {
     let restrictedCents = 0;
     let unrestrictedCents = 0;
     
-    // We assume any transaction with a classId containing "restrict" or "grant" is restricted.
-    // Otherwise unrestricted.
     transactions.forEach(t => {
       const isRestricted = (t.classId || '').toLowerCase().includes('restrict') || (t.classId || '').toLowerCase().includes('grant');
       if (isRestricted) {
@@ -329,8 +328,8 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
 
     return {
       metrics: [
-        { label: 'Unrestricted Funds Net', value: unrestrictedCents / 100, type: 'currency' },
-        { label: 'Restricted Funds Net', value: restrictedCents / 100, type: 'currency' }
+        { label: 'Unrestricted Funds Net', value: unrestrictedCents / 100 },
+        { label: 'Restricted Funds Net', value: restrictedCents / 100 }
       ],
       insights: [
         `You have a net $${(restrictedCents/100).toFixed(2)} in restricted funds/grants.`,
@@ -338,12 +337,14 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
       ],
       charts: [
         {
-          type: 'bar',
-          title: 'Fund Balances',
           data: [
             { label: 'Unrestricted', value: unrestrictedCents / 100 },
             { label: 'Restricted', value: restrictedCents / 100 }
-          ]
+          ],
+          config: {
+            xKey: 'label',
+            yKeys: [{ key: 'value', color: '#f59e0b', name: 'Fund Balance' }]
+          }
         }
       ]
     };
@@ -357,13 +358,13 @@ export const BILL_TIMING_ALGO: AlgorithmDefinition = {
   domain: 'planning',
   tags: ['Cash Flow', 'Bills', 'Optimizer'],
   inputs: [
-    { id: 'cashFloor', name: 'Desired Cash Floor ($)', type: 'number', default: 2000 }
+    { key: 'cashFloor', label: 'Desired Cash Floor ($)', min: 100, max: 100000, step: 100, defaultValue: 2000 }
   ],
-  calculate: (transactions, accounts, inputs) => {
+  compute: (transactions, accounts, inputs) => {
     return {
       metrics: [
-        { label: 'Bills Deferred', value: 4, type: 'number' },
-        { label: 'Cash Floor Maintained', value: (inputs?.cashFloor || 2000), type: 'currency' }
+        { label: 'Bills Deferred', value: 4 },
+        { label: 'Cash Floor Maintained', value: (inputs?.cashFloor || 2000) }
       ],
       insights: [
         'Pay 4 upcoming bills on the 12th (after expected income) instead of now.',
@@ -381,32 +382,29 @@ export const RENT_INCREASE_ALGO: AlgorithmDefinition = {
   domain: 'planning',
   tags: ['Real Estate', 'Simulator'],
   inputs: [
-    { id: 'increasePct', name: 'Increase (%)', type: 'number', default: 5 }
+    { key: 'increasePct', label: 'Increase (%)', min: 1, max: 50, step: 1, defaultValue: 5 }
   ],
-  calculate: (transactions, accounts, inputs) => {
-    const rentAccounts = accounts.filter(a => a.name.toLowerCase().includes('rent') || a.role === 'revenue');
+  compute: (transactions, accounts, inputs) => {
+    const rentAccounts = accounts.filter(a => a.name.toLowerCase().includes('rent') || (a as any).role === 'revenue' || a.type === 'revenue' || a.type === 'income');
     const rentAccountIds = new Set(rentAccounts.map(a => a.id));
 
     let currentAnnualRentCents = 0;
     
-    // Roughly estimate annual rent by looking at last 30 days and multiplying by 12, or just taking total and annualizing.
-    // For simplicity, just take total revenue and assume it's annual, or assume we're just modeling off the raw sum.
     transactions.forEach(t => {
-      if (t.totalAmountCents > 0 && (rentAccountIds.has(t.accountId) || (t.description && t.description.toLowerCase().includes('rent')))) {
+      const accId = (t as any).accountId;
+      if (t.totalAmountCents > 0 && ((accId && rentAccountIds.has(accId)) || (t.description && t.description.toLowerCase().includes('rent')))) {
         currentAnnualRentCents += t.totalAmountCents;
       }
     });
 
-    // Let's just treat the total observed as the base (which might be YTD). 
-    // To make it simple, we simulate the increase on the observed base.
     const pct = (inputs?.increasePct || 5) / 100;
     const addedValue = currentAnnualRentCents * pct;
     const newTotal = currentAnnualRentCents + addedValue;
 
     return {
       metrics: [
-        { label: 'Current Base', value: currentAnnualRentCents / 100, type: 'currency' },
-        { label: 'Projected Increase', value: addedValue / 100, type: 'currency' }
+        { label: 'Current Base', value: currentAnnualRentCents / 100 },
+        { label: 'Projected Increase', value: addedValue / 100 }
       ],
       insights: [
         `A ${inputs?.increasePct || 5}% increase generates an additional $${(addedValue/100).toFixed(2)}.`,
@@ -414,31 +412,32 @@ export const RENT_INCREASE_ALGO: AlgorithmDefinition = {
       ],
       charts: [
         {
-          type: 'bar',
-          title: 'Impact of Increase',
           data: [
             { label: 'Current', value: currentAnnualRentCents / 100 },
             { label: 'With Increase', value: newTotal / 100 }
-          ]
+          ],
+          config: {
+            xKey: 'label',
+            yKeys: [{ key: 'value', color: '#10b981', name: 'Revenue' }]
+          }
         }
       ]
     };
   }
 };
 
-
 export const PROJECT_PROFITABILITY_ALGO: AlgorithmDefinition = {
   id: 'job_profitability',
   name: 'Job Profitability Ranking',
   description: 'Ranks projects/jobs by profitability to identify which activities actually make money.',
-  domain: 'ops',
+  domain: 'operations',
   tags: ['Projects', 'Profitability'],
   inputs: [],
-  calculate: (transactions, accounts) => {
-    const jobPnl: Record<string, { rev: number, exp: number }> = {};
+  compute: (transactions) => {
+    const jobPnl: Record<string, { rev: number; exp: number }> = {};
     
     transactions.forEach(t => {
-      if (!t.projectId) return; // Only look at tagged jobs
+      if (!t.projectId) return;
       const jobId = t.projectId;
       if (!jobPnl[jobId]) jobPnl[jobId] = { rev: 0, exp: 0 };
       
@@ -467,15 +466,17 @@ export const PROJECT_PROFITABILITY_ALGO: AlgorithmDefinition = {
 
     return {
       metrics: [
-        { label: 'Profitable Jobs', value: profitable, type: 'number' },
-        { label: 'Loss-Making Jobs', value: lossMaking, type: 'number' }
+        { label: 'Profitable Jobs', value: profitable },
+        { label: 'Loss-Making Jobs', value: lossMaking }
       ],
       insights,
       charts: [
         {
-          type: 'bar',
-          title: 'Top 5 Jobs by Profit',
-          data: profits.slice(0, 5).map(p => ({ label: p.job, value: p.profit / 100 }))
+          data: profits.slice(0, 5).map(p => ({ label: p.job, value: p.profit / 100 })),
+          config: {
+            xKey: 'label',
+            yKeys: [{ key: 'value', color: '#6366f1', name: 'Profit' }]
+          }
         }
       ]
     };

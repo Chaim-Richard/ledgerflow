@@ -123,12 +123,22 @@ const Ledger = React.memo(() => {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('coa');
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const [newAccount, setNewAccount] = useState({
+  const [newAccount, setNewAccount] = useState<{
+    code: string;
+    name: string;
+    type: ChartAccount['type'];
+    category: string;
+    description: string;
+    parentId: string;
+    openingBalanceCents: number;
+    asOfDate: string;
+  }>({
     code: '',
     name: '',
-    type: 'asset' as const,
+    type: 'asset',
     category: '',
     description: '',
     parentId: '',
@@ -379,10 +389,31 @@ const Ledger = React.memo(() => {
                 });
                 setActiveModal('account');
               }}
+              onDuplicateAccount={(acc) => {
+                setEditingAccountId(null);
+                setNewAccount({
+                  code: `${acc.code || ''}-COPY`,
+                  name: `${acc.name || ''} (Copy)`,
+                  type: acc.type || 'asset',
+                  category: acc.category || '',
+                  description: acc.description || '',
+                  parentId: acc.parentId || '',
+                  openingBalanceCents: 0,
+                  asOfDate: format(new Date(), 'yyyy-MM-dd')
+                });
+                setActiveModal('account');
+              }}
             />
           )}
           {activeSubTab === 'journal' && (
-            <JournalView journalEntries={journalEntries} formatCurrency={formatCurrency} />
+            <JournalView 
+              journalEntries={journalEntries} 
+              formatCurrency={formatCurrency} 
+              onDuplicate={(tx) => {
+                setEditingTransaction(tx);
+                setActiveModal('journal');
+              }}
+            />
           )}
           {activeSubTab === 'trial' && (
             <TrialBalanceView 
@@ -646,10 +677,11 @@ const Ledger = React.memo(() => {
       {/* Journal Entry Modal */}
       <JournalEntryModal 
         isOpen={activeModal === 'journal'}
-        onClose={() => setActiveModal(null)}
+        onClose={() => { setActiveModal(null); setEditingTransaction(null); }}
         user={user as any}
         accounts={accounts}
         workspaceId={workspaceId || ""}
+        initialData={editingTransaction || undefined}
       />
     </div>
   );

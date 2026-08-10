@@ -1,17 +1,18 @@
 import React, { useMemo } from 'react';
-import { JournalEntry } from '../../types';
-import { FileSearch, Activity } from 'lucide-react';
+import { Transaction } from '../../types';
+import { FileSearch, Activity, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { parseLocalDate } from '../../lib/utils';
 
 interface JournalViewProps {
-  journalEntries: JournalEntry[];
+  journalEntries: any[];
   formatCurrency: (val: number) => string;
+  onDuplicate?: (tx: any) => void;
 }
 
-export default function JournalView({ journalEntries = [], formatCurrency }: JournalViewProps) {
+export default function JournalView({ journalEntries = [], formatCurrency, onDuplicate }: JournalViewProps) {
   const sortedEntries = useMemo(() => {
     return [...journalEntries].sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
   }, [journalEntries]);
@@ -20,11 +21,11 @@ export default function JournalView({ journalEntries = [], formatCurrency }: Jou
     const entry = sortedEntries[index];
     if (!entry) return null;
 
-    const totalDebits = entry.lines.reduce((sum, l) => sum + (l.debit || 0), 0);
+    const totalDebits = (entry.lines || []).reduce((sum: number, l: any) => sum + (l.debit || 0), 0);
 
     return (
       <div style={style} className="px-5 flex items-center border-b border-[var(--line)] hover:bg-[var(--ink)] transition-all cursor-pointer group">
-         <div className="grid grid-cols-[80px_1fr_120px_150px] w-full items-center gap-4 py-3 px-2">
+         <div className="grid grid-cols-[80px_1fr_120px_100px_40px] w-full items-center gap-4 py-3 px-2">
             <div className="flex flex-col">
                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Date</span>
                <span className="font-mono text-xs text-slate-600 font-semibold">{format(parseLocalDate(entry.date), 'dd.MM.yy')}</span>
@@ -49,6 +50,21 @@ export default function JournalView({ journalEntries = [], formatCurrency }: Jou
                <span className="font-mono text-xs font-bold text-[var(--text)]">
                  {formatCurrency(totalDebits)}
                </span>
+            </div>
+
+            <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+              {onDuplicate && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDuplicate(entry);
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                  title="Duplicate Entry"
+                >
+                  <Copy size={14} />
+                </button>
+              )}
             </div>
          </div>
       </div>

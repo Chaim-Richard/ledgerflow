@@ -254,11 +254,13 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
     // 6. Invoices
     ledger.invoices?.forEach(i => {
-      if (match(i.invoiceNumber) || match(i.customerName) || match(i.status)) {
+      const num = i.number || (i as any).invoiceNumber || '';
+      const cust = (i as any).customerName || '';
+      if (match(num) || match(cust) || match(i.status)) {
         results.push({
           id: `inv-${i.id}`,
           type: 'data',
-          label: `Invoice ${i.invoiceNumber} - ${i.customerName}`,
+          label: `Invoice ${num} - ${cust}`,
           category: `Invoice • ${i.status}`,
           actionId: 'switch-tab',
           payload: { tab: 'sales', id: i.id },
@@ -269,11 +271,13 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
     // 7. Bills
     ledger.bills?.forEach(b => {
-      if (match(b.billNumber) || match(b.vendorName) || match(b.status)) {
+      const num = b.number || (b as any).billNumber || '';
+      const vend = (b as any).vendorName || '';
+      if (match(num) || match(vend) || match(b.status)) {
         results.push({
           id: `bill-${b.id}`,
           type: 'data',
-          label: `Bill ${b.billNumber} - ${b.vendorName}`,
+          label: `Bill ${num} - ${vend}`,
           category: `Bill • ${b.status}`,
           actionId: 'switch-tab',
           payload: { tab: 'purchases', id: b.id },

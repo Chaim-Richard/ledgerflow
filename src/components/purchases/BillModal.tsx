@@ -30,7 +30,11 @@ export default function BillModal({ isOpen, onClose, onSave, initialData, vendor
 
   const [splits, setSplits] = useState<Array<{ amountCents: number, accountId: string, description: string }>>(() => {
     if (initialData?.splits && Array.isArray(initialData.splits)) {
-      return initialData.splits;
+      return initialData.splits.map(s => ({
+        amountCents: s.amountCents || 0,
+        accountId: s.accountId || '',
+        description: s.description || ''
+      }));
     }
     return [{ amountCents: 0, accountId: '', description: '' }];
   });

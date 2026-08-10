@@ -1,7 +1,7 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
-import { ChartAccount, JournalLine } from '../../types';
+import { ChartAccount, JournalLine, Transaction } from '../../types';
 import { 
   Plus, 
   Trash2, 
@@ -41,12 +41,18 @@ interface JournalEntryModalProps {
   user: User;
   accounts: ChartAccount[];
   workspaceId: string;
+  initialData?: Partial<Transaction>;
 }
 
-export default function JournalEntryModal({ isOpen, onClose, user, accounts, workspaceId }: JournalEntryModalProps) {
-  const [description, setDescription] = useState('');
-  const [date, setDate] = useState(getLocalDateISO());
-  const [reference, setReference] = useState('');
+export default function JournalEntryModal({ isOpen, onClose, user, accounts, workspaceId, initialData }: JournalEntryModalProps) {
+  const [description, setDescription] = useState(() => initialData?.description || '');
+  const [date, setDate] = useState(() => initialData?.date || getLocalDateISO());
+  const [reference, setReference] = useState(() => {
+    // If it's a copy, append -COPY
+    const ref = (initialData as any)?.reference;
+    if (ref) return `${ref}-COPY`;
+    return '';
+  });
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [showDimensions, setShowDimensions] = useState(false);
   
@@ -60,10 +66,19 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   
   const isLocked = !!(lockDate && date <= lockDate);
 
-  const [lines, setLines] = useState<JournalLine[]>([
-    { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
-    { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
-  ]);
+  const [lines, setLines] = useState<JournalLine[]>(() => {
+    if (initialData?.lines && Array.isArray(initialData.lines) && initialData.lines.length > 0) {
+      // Remove ids to treat them as new lines
+      return initialData.lines.map((line: any) => {
+        const { id, ...rest } = line;
+        return rest;
+      });
+    }
+    return [
+      { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
+      { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
+    ];
+  });
 
   const handleDimensionChange = (index: number, dimensionId: string, value: string) => {
     const newLines = [...lines];
