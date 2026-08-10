@@ -1,0 +1,389 @@
+import { create } from 'zustand';
+import { Transaction, ChartAccount } from '../types';
+import { useUIStore } from './useUIStore';
+
+export interface SavedViewFilter {
+  searchTerm?: string;
+  startDate?: string;
+  endDate?: string;
+  minAmountCents?: number;
+  maxAmountCents?: number;
+  accountIds?: string[];
+  accountTypes?: string[]; // 'asset' | 'liability' | 'equity' | 'revenue' | 'expense' | 'income'
+  status?: string; // 'posted' | 'pending' | 'draft' | 'void' | 'all'
+  type?: string; // 'income' | 'expense' | 'transfer' | 'journal' | 'all'
+  projectId?: string;
+  customerId?: string;
+  vendorId?: string;
+  tags?: string[];
+  payee?: string;
+  isTaxDeductibleOnly?: boolean;
+  hasAttachmentOnly?: boolean;
+}
+
+export interface SavedView {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string; // e.g. 'Wallet', 'TrendingUp', 'TrendingDown', 'Tag', 'Clock', 'ShieldAlert', 'Building', 'FolderKanban', 'DollarSign', 'Sparkles', 'Filter'
+  color?: string; // e.g. '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4'
+  isDefault?: boolean; // Can have MULTIPLE default views!
+  isPinned?: boolean; // Pinned to the top view bar
+  targetTab?: 'transactions' | 'ledger' | 'sales' | 'purchases' | 'reports' | 'all';
+  filter: SavedViewFilter;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ViewMetrics {
+  totalMoneyCents: number;
+  moneyInCents: number;
+  moneyOutCents: number;
+  netBalanceCents: number;
+  matchingCount: number;
+  averageAmountCents: number;
+}
+
+const DEFAULT_PRESET_VIEWS: SavedView[] = [
+  {
+    id: 'view-liquid-cash',
+    name: 'Liquid Cash & Bank Funds',
+    description: 'Real-time liquidity across cash and liquid bank asset accounts',
+    icon: 'Wallet',
+    color: '#10b981',
+    isDefault: true,
+    isPinned: true,
+    targetTab: 'transactions',
+    filter: {
+      accountTypes: ['asset'],
+      searchTerm: 'cash bank checking operating savings',
+      status: 'all'
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'view-high-revenue',
+    name: 'High-Value Revenue (> $1,000)',
+    description: 'Major sales, customer receipts, and high-value income streams',
+    icon: 'TrendingUp',
+    color: '#3b82f6',
+    isDefault: true,
+    isPinned: true,
+    targetTab: 'sales',
+    filter: {
+      minAmountCents: 100000,
+      type: 'income'
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'view-major-expenses',
+    name: 'Major Outflows & Vendor Expenses',
+    description: 'Substantial company expenses and recurring operational costs',
+    icon: 'TrendingDown',
+    color: '#ef4444',
+    isDefault: true,
+    isPinned: true,
+    targetTab: 'purchases',
+    filter: {
+      minAmountCents: 50000,
+      type: 'expense'
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'view-tax-deductible',
+    name: 'Tax Deductible Expenses',
+    description: 'Schedule C / Business tax deductible purchases for audit prep',
+    icon: 'Tag',
+    color: '#8b5cf6',
+    isDefault: true,
+    isPinned: true,
+    targetTab: 'transactions',
+    filter: {
+      isTaxDeductibleOnly: true,
+      type: 'expense'
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'view-pending-audit',
+    name: 'Pending & Uncleared Items',
+    description: 'Unreconciled, pending, or review-required transactions',
+    icon: 'Clock',
+    color: '#f59e0b',
+    isDefault: false,
+    isPinned: true,
+    targetTab: 'ledger',
+    filter: {
+      status: 'pending'
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'view-large-outflows',
+    name: 'Critical Outflows (> $5,000)',
+    description: 'High capital commitments requiring executive review',
+    icon: 'ShieldAlert',
+    color: '#dc2626',
+    isDefault: false,
+    isPinned: false,
+    targetTab: 'transactions',
+    filter: {
+      minAmountCents: 500000,
+      type: 'expense'
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+interface SavedViewsState {
+  views: SavedView[];
+  activeViewId: string | null;
+  
+  addSavedView: (view: Omit<SavedView, 'id' | 'createdAt' | 'updatedAt'>) => SavedView;
+  updateSavedView: (id: string, updates: Partial<SavedView>) => void;
+  deleteSavedView: (id: string) => void;
+  toggleDefaultView: (id: string) => void;
+  togglePinView: (id: string) => void;
+  setActiveView: (id: string | null) => void;
+  resetToDefaultViews: () => void;
+  applySavedView: (view: SavedView) => void;
+}
+
+export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
+  views: (() => {
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('lf_saved_views_v2') : null;
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error loading saved views:', e);
+    }
+    return DEFAULT_PRESET_VIEWS;
+  })(),
+  
+  activeViewId: 'view-liquid-cash',
+
+  addSavedView: (newViewData) => {
+    const id = `view-custom-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const now = new Date().toISOString();
+    const newView: SavedView = {
+      ...newViewData,
+      id,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    set((state) => {
+      const nextViews = [newView, ...state.views];
+      try {
+        localStorage.setItem('lf_saved_views_v2', JSON.stringify(nextViews));
+      } catch (e) {}
+      return { views: nextViews, activeViewId: id };
+    });
+
+    get().applySavedView(newView);
+    return newView;
+  },
+
+  updateSavedView: (id, updates) => {
+    set((state) => {
+      const nextViews = state.views.map((v) =>
+        v.id === id
+          ? {
+              ...v,
+              ...updates,
+              updatedAt: new Date().toISOString(),
+            }
+          : v
+      );
+      try {
+        localStorage.setItem('lf_saved_views_v2', JSON.stringify(nextViews));
+      } catch (e) {}
+      return { views: nextViews };
+    });
+  },
+
+  deleteSavedView: (id) => {
+    set((state) => {
+      const nextViews = state.views.filter((v) => v.id !== id);
+      try {
+        localStorage.setItem('lf_saved_views_v2', JSON.stringify(nextViews));
+      } catch (e) {}
+      const nextActive = state.activeViewId === id ? (nextViews[0]?.id || null) : state.activeViewId;
+      return { views: nextViews, activeViewId: nextActive };
+    });
+  },
+
+  toggleDefaultView: (id) => {
+    set((state) => {
+      // Multiple default views are explicitly supported! We toggle isDefault on this target view
+      const nextViews = state.views.map((v) => (v.id === id ? { ...v, isDefault: !v.isDefault } : v));
+      try {
+        localStorage.setItem('lf_saved_views_v2', JSON.stringify(nextViews));
+      } catch (e) {}
+      return { views: nextViews };
+    });
+  },
+
+  togglePinView: (id) => {
+    set((state) => {
+      const nextViews = state.views.map((v) => (v.id === id ? { ...v, isPinned: !v.isPinned } : v));
+      try {
+        localStorage.setItem('lf_saved_views_v2', JSON.stringify(nextViews));
+      } catch (e) {}
+      return { views: nextViews };
+    });
+  },
+
+  setActiveView: (id) => {
+    set({ activeViewId: id });
+    if (id) {
+      const view = get().views.find((v) => v.id === id);
+      if (view) {
+        get().applySavedView(view);
+      }
+    }
+  },
+
+  resetToDefaultViews: () => {
+    try {
+      localStorage.removeItem('lf_saved_views_v2');
+    } catch (e) {}
+    set({ views: DEFAULT_PRESET_VIEWS, activeViewId: 'view-liquid-cash' });
+  },
+
+  applySavedView: (view) => {
+    // Set UI store filter criteria
+    useUIStore.getState().setFilterCriteria({
+      searchTerm: view.filter.searchTerm || '',
+      startDate: view.filter.startDate,
+      endDate: view.filter.endDate,
+      minAmountCents: view.filter.minAmountCents,
+      maxAmountCents: view.filter.maxAmountCents,
+      accountIds: view.filter.accountIds,
+      accountTypes: view.filter.accountTypes,
+      status: view.filter.status,
+      type: view.filter.type,
+      projectId: view.filter.projectId,
+      customerId: view.filter.customerId,
+      vendorId: view.filter.vendorId,
+      tags: view.filter.tags,
+      payee: view.filter.payee,
+      isTaxDeductibleOnly: view.filter.isTaxDeductibleOnly,
+      hasAttachmentOnly: view.filter.hasAttachmentOnly,
+      viewId: view.id,
+      viewName: view.name,
+    });
+
+    if (view.targetTab && view.targetTab !== 'all') {
+      useUIStore.getState().setActiveTab(view.targetTab as any);
+    }
+  },
+}));
+
+/**
+ * Computes exact monetary aggregate metrics for any saved view dynamically against ledger state
+ */
+export function computeSavedViewMetrics(
+  view: SavedView,
+  transactions: Transaction[] = [],
+  accounts: ChartAccount[] = [],
+  invoices: any[] = [],
+  bills: any[] = []
+): ViewMetrics {
+  const filter = view.filter || {};
+  const searchLower = (filter.searchTerm || '').toLowerCase();
+
+  // Create account lookup map
+  const accountMap = new Map<string, ChartAccount>();
+  accounts.forEach((a) => accountMap.set(a.id, a));
+
+  let moneyInCents = 0;
+  let moneyOutCents = 0;
+  let totalSumCents = 0;
+  let matchingCount = 0;
+
+  transactions.forEach((tx) => {
+    if (!tx) return;
+
+    // 1. Amount range check
+    const absAmt = Math.abs(tx.totalAmountCents || 0);
+    if (filter.minAmountCents !== undefined && absAmt < filter.minAmountCents) return;
+    if (filter.maxAmountCents !== undefined && absAmt > filter.maxAmountCents) return;
+
+    // 2. Date range check
+    if (filter.startDate && tx.date < filter.startDate) return;
+    if (filter.endDate && tx.date > filter.endDate) return;
+
+    // 3. Type check
+    if (filter.type && filter.type !== 'all') {
+      if (filter.type === 'income' && tx.totalAmountCents < 0) return;
+      if (filter.type === 'expense' && tx.totalAmountCents > 0) return;
+    }
+
+    // 4. Status check
+    if (filter.status && filter.status !== 'all') {
+      if (tx.status !== filter.status) return;
+    }
+
+    // 5. Account type check
+    if (filter.accountTypes && filter.accountTypes.length > 0) {
+      const mainLineAcc = tx.lines?.[0]?.accountId;
+      const acc = mainLineAcc ? accountMap.get(mainLineAcc) : null;
+      if (acc && !filter.accountTypes.includes(acc.type)) return;
+    }
+
+    // 6. Tax deductible check
+    if (filter.isTaxDeductibleOnly) {
+      const isTaxTag = tx.lines?.some((l) => l.tags?.some((t) => t.toLowerCase().includes('tax')));
+      const isTaxDesc = (tx.description || '').toLowerCase().includes('tax');
+      if (!isTaxTag && !isTaxDesc && !(tx as any).isReconciled) return;
+    }
+
+    // 7. Project check
+    if (filter.projectId && tx.projectId !== filter.projectId) return;
+
+    // 8. Text search check
+    if (searchLower) {
+      const matchDesc = (tx.description || '').toLowerCase().includes(searchLower);
+      const matchPayee = (tx.payee || '').toLowerCase().includes(searchLower);
+      const matchProject = (tx.project || '').toLowerCase().includes(searchLower);
+      const matchLines = tx.lines?.some(
+        (l) => (l.description || '').toLowerCase().includes(searchLower) || (l.accountName || '').toLowerCase().includes(searchLower)
+      );
+      if (!matchDesc && !matchPayee && !matchProject && !matchLines) return;
+    }
+
+    // Calculation logic
+    matchingCount++;
+    const amt = tx.totalAmountCents || 0;
+    if (amt > 0) {
+      moneyInCents += amt;
+    } else {
+      moneyOutCents += Math.abs(amt);
+    }
+    totalSumCents += amt;
+  });
+
+  const netBalanceCents = moneyInCents - moneyOutCents;
+  const averageAmountCents = matchingCount > 0 ? Math.round(totalSumCents / matchingCount) : 0;
+
+  return {
+    totalMoneyCents: Math.abs(totalSumCents),
+    moneyInCents,
+    moneyOutCents,
+    netBalanceCents,
+    matchingCount,
+    averageAmountCents,
+  };
+}
