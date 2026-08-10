@@ -320,7 +320,8 @@ export default function Sales() {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            const newBill = { ...inv, id: `inv-${Date.now()}`, number: `${inv.number}-COPY`, status: 'pending' as any, paymentToken: undefined };
+                            const { id, paymentToken, ...rest } = inv;
+                            const newBill = { ...rest, number: `${inv.number}-COPY`, status: 'pending' as any };
                             onAddInvoice(newBill);
                             toast.success('Copied successfully');
                           }}

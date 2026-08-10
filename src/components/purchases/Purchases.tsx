@@ -408,8 +408,10 @@ export default function Purchases() {
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
                         <button 
-                          onClick={() => {
-                            const newBill = { ...bill, id: `bill-${Date.now()}`, number: `${bill.number}-COPY`, status: 'unpaid' as any };
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const { id, ...rest } = bill;
+                            const newBill = { ...rest, number: `${bill.number}-COPY`, status: 'unpaid' as any };
                             onAddBill(newBill);
                             toast.success('Liability Copied');
                           }}
