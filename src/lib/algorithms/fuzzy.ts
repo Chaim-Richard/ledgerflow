@@ -49,8 +49,22 @@ export function stringSimilarity(a: string, b: string): number {
 
 // Jaccard similarity for sets of tokens
 export function jaccardSimilarity(a: string, b: string): number {
-  const setA = new Set(a.toLowerCase().split(/\s+/).filter(Boolean));
-  const setB = new Set(b.toLowerCase().split(/\s+/).filter(Boolean));
+  if (!a || !b) return 0.0;
+  const tokenize = (s: string) => 
+    s.toLowerCase()
+     .replace(/[^\w\s]/g, '')
+     .trim()
+     .split(/\s+/)
+     .filter(t => t.length > 0);
+
+  const tokensA = tokenize(a);
+  const tokensB = tokenize(b);
+
+  if (tokensA.length === 0 && tokensB.length === 0) return 1.0;
+  if (tokensA.length === 0 || tokensB.length === 0) return 0.0;
+
+  const setA = new Set(tokensA);
+  const setB = new Set(tokensB);
   
   const intersection = new Set([...setA].filter(x => setB.has(x)));
   const union = new Set([...setA, ...setB]);
