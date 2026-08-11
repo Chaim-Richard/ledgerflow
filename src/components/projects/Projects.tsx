@@ -15,8 +15,7 @@ import {
   BarChart3,
   Calendar,
   LayoutDashboard,
-  List,
-  Copy
+  List
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, safeConfirm } from '../../lib/utils';
@@ -280,21 +279,6 @@ export default function Projects() {
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1 bg-[var(--surface)]/5 p-0.5 rounded-lg border border-slate-250/10">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const { id, ...rest } = project;
-                            const newProject = { ...rest, name: `${project.name} (Copy)` };
-                            if (onAdd) onAdd(newProject);
-                          }}
-                          className={cn(
-                            "p-1.5 rounded-md transition-all",
-                            selectedProjectId === project.id ? "text-white/80 hover:text-white hover:bg-[var(--surface)]/10" : "text-slate-400 hover:text-[var(--text)] hover:bg-[var(--ink)]"
-                          )}
-                          title="Duplicate Project"
-                        >
-                          <Copy size={12} />
-                        </button>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();

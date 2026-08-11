@@ -67,7 +67,7 @@ export default function PublicInvoicePage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Unable to Load Document</h2>
+          <h2 className="text-2xl font-bold mb-2">Unable to Load Invoice</h2>
           <p className="text-gray-600 mb-6">{error}</p>
         </div>
       </div>
@@ -87,9 +87,7 @@ export default function PublicInvoicePage() {
               <Building2 size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">
-                {invoice.type === 'estimate' ? 'Estimate' : (invoice.type === 'quote' ? 'Quote' : 'Invoice')} {invoice.number}
-              </h1>
+              <h1 className="text-xl font-bold text-gray-900">Invoice {invoice.number}</h1>
               <p className="text-sm text-gray-500">Issued on {parseLocalDate(invoice.date || '').toLocaleDateString()}</p>
             </div>
           </div>
@@ -100,7 +98,7 @@ export default function PublicInvoicePage() {
                 <CheckCircle2 size={18} />
                 Paid
               </div>
-            ) : invoice.type !== 'estimate' ? (
+            ) : (
               <button
                 onClick={handlePay}
                 disabled={isPaying}
@@ -108,10 +106,6 @@ export default function PublicInvoicePage() {
               >
                 {isPaying ? 'Processing...' : `Pay ${formatCurrency(invoice.totalCents || invoice.amountCents)}`}
               </button>
-            ) : (
-              <div className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold flex items-center gap-2">
-                Estimate
-              </div>
             )}
           </div>
         </div>

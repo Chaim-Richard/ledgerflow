@@ -278,17 +278,7 @@ export const REPORT_COMPONENTS: Record<string, any> = {
 
 export const ANALYTICAL_LENSES_REGISTRY = [
   { id: 'forensics_1', label: { en: 'Forensic Anomaly Detection', he: 'זיהוי חריגות פיננסיות' }, componentName: 'ToolSandbox' },
-  { id: 'forensics_2', label: { en: 'Categorization Consistency Checker', he: 'בדיקת עקביות סיווגים' }, componentName: 'ToolSandbox' },
-  { id: 'niche_1', label: { en: 'Amortization Schedule', he: 'לוח סילוקין' }, componentName: 'ToolSandbox' },
-  { id: 'niche_2', label: { en: 'Property P&L Comparison', he: 'דו״ח רווח והפסד נכסים' }, componentName: 'ToolSandbox' },
-  { id: 'niche_3', label: { en: 'Rent Roll & Occupancy', he: 'רשימת שכירות ותפוסה' }, componentName: 'ToolSandbox' },
-  { id: 'niche_4', label: { en: 'Restricted Fund Tracker', he: 'מעקב כספים מוגבלים' }, componentName: 'ToolSandbox' },
-  { id: 'niche_5', label: { en: 'Job Profitability Ranking', he: 'דירוג רווחיות פרויקטים' }, componentName: 'ToolSandbox' },
-  { id: 'niche_6', label: { en: 'Subscription Audit', he: 'ביקורת מנויים' }, componentName: 'ToolSandbox' },
-  { id: 'niche_7', label: { en: 'Missing Transactions', he: 'עסקאות חסרות' }, componentName: 'ToolSandbox' },
-  { id: 'niche_8', label: { en: 'Deduction Finder', he: 'מאתר ניכויים' }, componentName: 'ToolSandbox' },
-  { id: 'niche_9', label: { en: 'Bill Payment Optimizer', he: 'אופטימיזציית תשלומים' }, componentName: 'ToolSandbox' },
-  { id: 'niche_10', label: { en: 'Rent Increase Simulator', he: 'סימולטור העלאת שכירות' }, componentName: 'ToolSandbox' }
+  { id: 'forensics_2', label: { en: 'Categorization Consistency Checker', he: 'בדיקת עקביות סיווגים' }, componentName: 'ToolSandbox' }
 ];
 
 export const LENS_COMPONENTS: Record<string, any> = {

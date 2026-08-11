@@ -10,36 +10,28 @@ interface BillModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (bill: Partial<Bill>) => void;
-  initialData?: Partial<Bill>;
   vendors: Vendor[];
   accounts: ChartAccount[];
 }
 
-export default function BillModal({ isOpen, onClose, onSave, initialData, vendors = [], accounts = [] }: BillModalProps) {
+export default function BillModal({ isOpen, onClose, onSave, vendors = [], accounts = [] }: BillModalProps) {
   // Ensure we have arrays even if props were passed as null
   const safeVendors = Array.isArray(vendors) ? vendors : [];
   const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'expense') : [];
 
-  const [bill, setBill] = useState<Partial<Bill>>(() => initialData || {
+  const [bill, setBill] = useState<Partial<Bill>>(() => ({
     number: `BILL-${Date.now().toString().slice(-6)}`,
     date: format(new Date(), 'yyyy-MM-dd'),
     dueDate: format(new Date(), 'yyyy-MM-dd'),
     status: 'pending',
     amountCents: 0
-  });
+  }));
 
-  const [splits, setSplits] = useState<Array<{ amountCents: number, accountId: string, description: string }>>(() => {
-    if (initialData?.splits && Array.isArray(initialData.splits)) {
-      return initialData.splits.map(s => ({
-        amountCents: s.amountCents || 0,
-        accountId: s.accountId || '',
-        description: s.description || ''
-      }));
-    }
-    return [{ amountCents: 0, accountId: '', description: '' }];
-  });
+  const [splits, setSplits] = useState<Array<{ amountCents: number, accountId: string, description: string }>>([
+    { amountCents: 0, accountId: '', description: '' }
+  ]);
 
-  const [memo, setMemo] = useState(() => initialData?.metadata?.memo || '');
+  const [memo, setMemo] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
 
   const total = splits.reduce((sum, split) => sum + split.amountCents, 0);
@@ -99,9 +91,7 @@ export default function BillModal({ isOpen, onClose, onSave, initialData, vendor
               <CreditCard size={24} />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">
-                {initialData ? 'Edit Bill' : 'Record New Bill'}
-              </h3>
+              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Record New Bill</h3>
               <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Purchases & Payables</p>
             </div>
           </div>

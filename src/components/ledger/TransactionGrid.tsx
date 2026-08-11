@@ -37,8 +37,6 @@ import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { MatchingEngine } from '../../lib/MatchingEngine';
 import SplitEditor from '../transactions/SplitEditor';
 import TransactionEditModal from '../transactions/TransactionEditModal';
-import SavedViewsBar from '../ui/SavedViewsBar';
-import DeepSearchBar from '../ui/DeepSearchBar';
 
 
 
@@ -830,9 +828,7 @@ export default function TransactionGrid() {
                 <span>{selectedIds.size > 0 ? `${selectedIds.size} Selected` : 'Select All'}</span>
               </button>
             
-            <div className="flex flex-col gap-3 flex-1">
-              <SavedViewsBar currentSearchTerm={searchTerm} />
-
+            <div className="flex flex-col gap-2 flex-1">
               {selectedIds.size > 0 && (
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
@@ -866,27 +862,51 @@ export default function TransactionGrid() {
                 </motion.div>
               )}
 
-              <div className="relative flex flex-wrap lg:flex-nowrap items-center gap-2">
-                <DeepSearchBar
+              <div className="relative group/search flex-1 flex flex-col lg:block">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover/search:text-slate-600 transition-colors" size={16} />
+                <input 
+                  ref={searchInputRef}
+                  type="text" 
+                  placeholder='Search anything: amounts (">500"), tags, names, dates ("oct"), "mismatches", classes, or locations...'
                   value={searchTerm}
-                  onChange={setSearchTerm}
-                  className="flex-1 min-w-[280px]"
+                  dir="auto"
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full h-10 pl-11 pr-4 lg:pr-[230px] bg-[var(--ink)]/50 hover:bg-[var(--ink)] border border-[var(--line)] rounded-xl text-sm focus:outline-none focus:border-slate-950 focus:bg-[var(--surface)] transition-all placeholder:text-slate-400 font-medium font-sans"
                 />
-
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="absolute right-[210px] top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-2">
+                   {searchTerm.length > 0 && (
+                      <motion.div 
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 rounded-full border border-[var(--line)]"
+                      >
+                         <div className="flex gap-0.5">
+                            {[1,2,3].map(i => (
+                              <motion.div 
+                                key={i} 
+                                animate={{ scale: [1, 1.4, 1], opacity: [0.3, 1, 0.3] }}
+                                transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.2 }}
+                                className="w-1 h-1 bg-slate-800 rounded-full" 
+                              />
+                            ))}
+                         </div>
+                         <span className="text-[8px] font-bold text-[var(--text)] uppercase tracking-wider leading-none">Scoping...</span>
+                      </motion.div>
+                   )}
+                </div>
+                <div className="relative lg:absolute lg:right-2 lg:top-1/2 lg:-translate-y-1/2 flex flex-wrap lg:flex-nowrap items-center gap-1.5 mt-2 lg:mt-0 justify-end w-full lg:w-auto">
                   <button 
                     onClick={() => setActiveFilterColumn(activeFilterColumn === 'visibility' ? null : 'visibility')}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border shrink-0 cursor-pointer h-[38px]",
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border shrink-0 cursor-pointer",
                       activeFilterColumn === 'visibility' ? "bg-[var(--brass)] text-black border-[var(--brass-line)] font-bold" : "bg-[var(--surface)] text-[var(--muted)] border-[var(--line)] hover:text-[var(--text)] shadow-3xs"
                     )}
                   >
-                    <Layers size={13} className="shrink-0" />
-                    <span>Columns</span>
+                    <Layers size={12} className="shrink-0" />
+                    Columns
                   </button>
-
                   {activeFilterColumn === 'visibility' && (
-                    <div className="absolute top-12 right-0 z-[150] w-56 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg p-3 normal-case font-medium text-[var(--text)]">
+                    <div className="absolute top-10 right-0 z-[150] w-56 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg p-3 normal-case font-medium text-[var(--text)]">
                       <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest mb-2">Visible Columns</p>
                       <div className="space-y-1">
                         {['date', 'description', 'category', 'project', 'amount', 'status'].map(col => (
@@ -903,18 +923,16 @@ export default function TransactionGrid() {
                       </div>
                     </div>
                   )}
-
                   <button 
                     onClick={handleExportCSV}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] rounded-xl text-[9px] font-bold uppercase tracking-wider hover:text-[var(--text)] transition-all shrink-0 shadow-3xs cursor-pointer h-[38px]"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] rounded-lg text-[9px] font-bold uppercase tracking-wider hover:text-[var(--text)] transition-all shrink-0 shadow-3xs cursor-pointer"
                   >
                     <ArrowDownRight size={12} className="rotate-90 shrink-0" />
                     Export
                   </button>
-
                   <button 
                     onClick={() => onAction?.('open-command-center')}
-                    className="w-[38px] h-[38px] bg-[var(--brass)] text-black rounded-xl flex items-center justify-center hover:opacity-90 transition-all shadow-sm shrink-0 cursor-pointer"
+                    className="w-8 h-8 bg-[var(--brass)] text-black rounded-lg flex items-center justify-center hover:opacity-90 transition-all shadow-sm shrink-0 cursor-pointer"
                     title="Open Command Center"
                   >
                     <Sparkles size={14} className="shrink-0 text-black" />

@@ -14,7 +14,7 @@ import { useScenarioStore } from '../lib/scenarioStore';
 import { useUIStore } from '../stores/useUIStore';
 import { TaxReserveWidget } from './finance/TaxReserveWidget';
 import OnboardingView from './onboarding/OnboardingView';
-import SavedViewsBar from './ui/SavedViewsBar';
+import OnboardingView from './onboarding/OnboardingView';
 import { formatCurrency, cn } from '../lib/utils';
 
 import { useShallow } from 'zustand/react/shallow';
@@ -220,9 +220,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-
-      {/* Saved Views & Default Lenses Bar */}
-      <SavedViewsBar />
 
       {/* Filter Chips if any */}
       {activeFilters.length > 0 && (
