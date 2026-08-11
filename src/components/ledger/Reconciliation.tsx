@@ -22,7 +22,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
+import { parseLocalDate, cn, formatCurrency, resolveAccountName } from '../../lib/utils';
 import { Transaction, BankStatementLine, ChartAccount, User } from '../../types';
 import { format } from 'date-fns';
 import { 
@@ -480,7 +480,7 @@ export default function Reconciliation() {
                       <div className="flex flex-col gap-1 overflow-hidden pl-1">
                         <div className="flex items-center gap-2">
                           <span className={cn("text-[8px] font-semibold uppercase tracking-wider font-mono", isSelected ? "text-emerald-200" : "text-slate-400")}>
-                            {format(parseLocalDate(ltx.date), 'MMM dd')} • {ltx.lines?.[0]?.accountName || 'No Category'}
+                            {format(parseLocalDate(ltx.date), 'MMM dd')} • {resolveAccountName(accounts, ltx.lines?.[0]?.accountId, ltx.lines?.[0]?.accountName)}
                           </span>
                           {isPossibleMatch && !isSelected && <Zap size={10} className="text-emerald-500 animate-pulse" />}
                         </div>

@@ -6,7 +6,7 @@ import { useScenarioStore } from '../lib/scenarioStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { addDays, addWeeks, addMonths, addYears, format } from 'date-fns';
-import { parseLocalDate } from '../lib/utils';
+import { parseLocalDate, resolveAccountName } from '../lib/utils';
 
 // RULES PATTERN ENGINE: Pre-compiled static regex for maximum pipeline throughput
 const PATTERNS = {
@@ -335,7 +335,7 @@ export function useLedgerComputation(
       // Filter Criteria (UI Overrides) - Optimized Procedural Filtering
       if (filterCriteria) {
         if ((filterCriteria.selectedCategories?.length ?? 0) > 0) {
-          const account = t.lines?.[0]?.accountName;
+          const account = resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName);
           if (!filterCriteria.selectedCategories?.includes(account || '')) return false;
         }
         if ((filterCriteria.selectedProjects?.length ?? 0) > 0) {
@@ -352,7 +352,8 @@ export function useLedgerComputation(
           if (!filterCriteria.selectedTypes?.includes(t.type || '')) return false;
         }
 
-        if (filterCriteria.category && filterCriteria.category !== 'All' && t.lines?.[0]?.accountName !== filterCriteria.category) return false;
+        const categoryName = resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName);
+        if (filterCriteria.category && filterCriteria.category !== 'All' && categoryName !== filterCriteria.category) return false;
         if (filterCriteria.project && filterCriteria.project !== 'All' && t.project !== filterCriteria.project) return false;
         if (filterCriteria.type && filterCriteria.type !== 'All' && t.type !== filterCriteria.type) return false;
         
@@ -481,7 +482,8 @@ export function useLedgerComputation(
 
         // E. Entity & Audit Logic
         if (isMatch && categoryMatch) {
-          if (!(t.lines?.[0]?.accountName || '').toLowerCase().includes(queryCategory)) isMatch = false;
+          const catName = resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName);
+          if (!catName.toLowerCase().includes(queryCategory)) isMatch = false;
         }
         if (isMatch && projectMatch) {
           if (!(t.project || '').toLowerCase().includes(queryProject)) isMatch = false;

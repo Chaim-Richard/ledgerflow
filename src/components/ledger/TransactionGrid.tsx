@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
-import { formatDecimal, cn, sanitizeCsvCell } from '../../lib/utils';
+import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName } from '../../lib/utils';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import TransactionRow from '../transactions/TransactionRow';
@@ -230,7 +230,7 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
           {data.editingCell.field === 'category' && !data.isMobileGrid && (
             <div style={{ left: data.isTabletGrid ? 'auto' : '55%', right: data.isTabletGrid ? 220 : 'auto', width: 160 }} className="absolute inset-y-0 z-[70] pointer-events-auto">
               <GridEditor 
-                value={tx.lines?.[0]?.accountName || ''}
+                value={resolveAccountName(accounts, tx.lines?.[0]?.accountId, tx.lines?.[0]?.accountName)}
                 type="category"
                 onSave={(v) => {
                   data.onUpdate?.(tx.id, { lines: [{ accountId: tx.lines?.[0]?.accountId || 'unassigned', accountName: v, amountCents: tx.totalAmountCents }] });
@@ -374,7 +374,7 @@ export default function TransactionGrid() {
     const len = safeTransactions.length;
     for (let i = 0; i < len; i++) {
       const t = safeTransactions[i];
-      categoriesSet.add(t.lines?.[0]?.accountName || 'Uncategorized');
+      categoriesSet.add(resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName));
       projectsSet.add(t.project || 'Global');
       statusesSet.add(t.status || 'Active');
     }
@@ -505,7 +505,7 @@ export default function TransactionGrid() {
   const pivotData = useMemo(() => {
     const groups: Record<string, { total: number, count: number }> = {};
     smartFilteredTransactions.forEach(t => {
-      const key = t.lines?.[0]?.accountName || 'Unassigned';
+      const key = resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName);
       if (!groups[key]) groups[key] = { total: 0, count: 0 };
       groups[key].total += t.totalAmountCents;
       groups[key].count += 1;
@@ -545,7 +545,7 @@ export default function TransactionGrid() {
     const rows = transactionsWithBalance.map(t => [
       sanitizeCsvCell(t.date),
       sanitizeCsvCell(t.description),
-      sanitizeCsvCell(t.lines?.[0]?.accountName || 'Uncategorized'),
+      sanitizeCsvCell(resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName)),
       sanitizeCsvCell(t.project || 'General'),
       sanitizeCsvCell(formatDecimal(t.totalAmountCents || 0)),
       sanitizeCsvCell(t.status)
@@ -961,7 +961,7 @@ export default function TransactionGrid() {
                   sanitizeCsvCell(t.description),
                   sanitizeCsvCell(formatDecimal(t.totalAmountCents)),
                   sanitizeCsvCell(t.currency || 'USD'),
-                  sanitizeCsvCell(t.lines?.[0]?.accountName || ''),
+                  sanitizeCsvCell(resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName)),
                   sanitizeCsvCell(t.project || ''),
                   sanitizeCsvCell(t.notes || '')
                 ]);
