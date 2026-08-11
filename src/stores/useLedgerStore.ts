@@ -402,7 +402,35 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   
 
   setAccounts: (accounts) => {
-    set({ accounts });
+    const state = get();
+    const accountMap = new Map<string, string>();
+    accounts.forEach(a => accountMap.set(a.id, a.name));
+
+    // Propagate updated account names to transactions & journal entries
+    let txsChanged = false;
+    const nextTxs = state.transactions.map(tx => {
+      let lineChanged = false;
+      const nextLines = tx.lines.map(line => {
+        if (line.accountId && accountMap.has(line.accountId)) {
+          const freshName = accountMap.get(line.accountId)!;
+          if (line.accountName !== freshName) {
+            lineChanged = true;
+            return { ...line, accountName: freshName };
+          }
+        }
+        return line;
+      });
+      if (lineChanged) {
+        txsChanged = true;
+        return { ...tx, lines: nextLines };
+      }
+      return tx;
+    });
+
+    set({ 
+      accounts, 
+      ...(txsChanged ? { transactions: nextTxs } : {}) 
+    });
     get().recomputeBalances();
   },
   
@@ -412,8 +440,52 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   },
   setProjects: (projects) => set({ projects }),
   setBudgets: (budgets) => set({ budgets }),
-  setVendors: (vendors) => set({ vendors }),
-  setCustomers: (customers) => set({ customers }),
+  setVendors: (vendors) => {
+    const state = get();
+    const vendorMap = new Map<string, string>();
+    vendors.forEach(v => vendorMap.set(v.id, v.name));
+
+    // Propagate updated vendor names to bills
+    let billsChanged = false;
+    const nextBills = state.bills.map(b => {
+      if (b.vendorId && vendorMap.has(b.vendorId)) {
+        const freshName = vendorMap.get(b.vendorId)!;
+        if (b.vendorName !== freshName) {
+          billsChanged = true;
+          return { ...b, vendorName: freshName };
+        }
+      }
+      return b;
+    });
+
+    set({ 
+      vendors, 
+      ...(billsChanged ? { bills: nextBills } : {}) 
+    });
+  },
+  setCustomers: (customers) => {
+    const state = get();
+    const custMap = new Map<string, string>();
+    customers.forEach(c => custMap.set(c.id, c.name));
+
+    // Propagate updated customer names to invoices
+    let invsChanged = false;
+    const nextInvoices = state.invoices.map(inv => {
+      if (inv.customerId && custMap.has(inv.customerId)) {
+        const freshName = custMap.get(inv.customerId)!;
+        if (inv.customerName !== freshName) {
+          invsChanged = true;
+          return { ...inv, customerName: freshName };
+        }
+      }
+      return inv;
+    });
+
+    set({ 
+      customers, 
+      ...(invsChanged ? { invoices: nextInvoices } : {}) 
+    });
+  },
   setInvoices: (invoices) => set({ invoices }),
   setBills: (bills) => set({ bills }),
   setInventory: (inventory) => set({ inventory }),

@@ -43,6 +43,16 @@ import { INTEREST_RATE_SENSITIVITY_ALGO } from './interest-rate-sensitivity';
 import { CUSTOMER_CHURN_ALGO } from './customer-churn';
 import { WORKING_CAPITAL_AGING_ALGO } from './working-capital-aging';
 
+// Niche Daily Tools
+import { 
+  LOAN_AMORTIZATION_ALGO, 
+  SUBSCRIPTION_AUDIT_ALGO, 
+  DEDUCTION_FINDER_ALGO, 
+  PROPERTY_PNL_ALGO, 
+  RESTRICTED_FUND_ALGO, 
+  PROJECT_PROFITABILITY_ALGO 
+} from './niche-tools';
+
 export * from './types';
 
 export const FINANCIAL_ALGORITHMS: Record<string, AlgorithmDefinition> = {
@@ -90,4 +100,12 @@ export const FINANCIAL_ALGORITHMS: Record<string, AlgorithmDefinition> = {
   'moat_2': CONTINUOUS_CLOSE_ALGO,
   'moat_3': CROSS_DIMENSION_INFERENCE_ALGO,
   'moat_4': SHARED_TRANSACTION_IDENTITY_ALGO,
+
+  // Niche Daily Tools
+  'niche_1': LOAN_AMORTIZATION_ALGO,
+  'niche_2': SUBSCRIPTION_AUDIT_ALGO,
+  'niche_3': DEDUCTION_FINDER_ALGO,
+  'niche_4': PROPERTY_PNL_ALGO,
+  'niche_5': RESTRICTED_FUND_ALGO,
+  'niche_6': PROJECT_PROFITABILITY_ALGO,
 };
