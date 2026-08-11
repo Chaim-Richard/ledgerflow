@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Transaction, TransactionLine, ChartAccount, Project } from '../../types';
 import { Plus, Trash2, Save, X, AlertCircle, Layers } from 'lucide-react';
 import { motion } from 'motion/react';
-import { cn } from '../../lib/utils';
+import { resolveAccountName, cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 
 interface SplitEditorProps {
@@ -95,7 +95,7 @@ export default function SplitEditor({
                     <div className="relative">
                       <input 
                         list={`split-account-${idx}`}
-                        value={line.accountName || line.accountId}
+                        value={resolveAccountName(accounts, line.accountId, line.accountName)}
                         onChange={(e) => {
                           const acc = accounts.find(a => a.name === e.target.value || a.id === e.target.value);
                           updateLine(idx, { accountId: acc ? acc.id : 'unassigned', accountName: acc ? acc.name : e.target.value });

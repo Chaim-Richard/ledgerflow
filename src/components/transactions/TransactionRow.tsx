@@ -12,7 +12,7 @@ import {
   Edit3,
   BrainCircuit
 } from 'lucide-react';
-import { parseLocalDate, cn } from '../../lib/utils';
+import { parseLocalDate, resolveAccountName, cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 
 const HighlightMatch = ({ text, match }: { text: string; match?: string }) => {
@@ -91,6 +91,7 @@ const TransactionRow = React.memo(({
   searchTerm
 }: TransactionRowProps) => {
   const isPrivacyMode = useLedgerStore(state => state.isPrivacyMode);
+  const accounts = useLedgerStore(state => state.accounts);
   const lockDate = useLedgerStore(state => state.lockDate);
   const isLocked = !!(lockDate && tx.date <= lockDate) || !!tx.isLocked;
   const displayTx = tx;
@@ -171,12 +172,12 @@ const TransactionRow = React.memo(({
                     line.amountCents > 0 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover/active:text-white group-hover/active:border-white/20" : "bg-[var(--ink)] text-slate-500 border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-white/80 group-hover/active:border-white/20",
                   )}
                 >
-                  <HighlightMatch text={line.accountName} match={searchTerm} />
+                  <HighlightMatch text={resolveAccountName(accounts, line.accountId, line.accountName)} match={searchTerm} />
                   {line.isAnalyticalTagged && (
                     <div className="absolute -top-2 -right-2 z-20 group/spark">
                       <Sparkles size={10} className="text-amber-500 animate-[pulse_2s_infinite]" />
                       <div className="absolute top-4 left-0 w-48 p-3 bg-slate-900 text-white rounded-xl text-[8px] font-medium leading-relaxed opacity-0 group-hover/spark:opacity-100 transition-opacity pointer-events-none shadow-2xl border border-white/10 italic">
-                        Analytical pattern matched: This transaction corresponds to a recurring {line.accountName.toLowerCase()} vector based on historical consistency.
+                        Analytical pattern matched: This transaction corresponds to a recurring {resolveAccountName(accounts, line.accountId, line.accountName).toLowerCase()} vector based on historical consistency.
                       </div>
                     </div>
                   )}

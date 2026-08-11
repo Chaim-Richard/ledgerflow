@@ -11,9 +11,10 @@ import {
   ListCollapse,
   Plus
 } from 'lucide-react';
-import { formatDecimal, cn, formatCurrency, sanitizeCsvCell } from '../../lib/utils';
+import { formatDecimal, cn, formatCurrency, sanitizeCsvCell, resolveAccountName } from '../../lib/utils';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 
 interface PivotSheetProps {
   transactions: Transaction[];
@@ -25,6 +26,7 @@ type PivotMode = 'flat' | 'matrix';
 
 export default function PivotSheet({ transactions, isEmbedded = false }: PivotSheetProps) {
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
+  const accounts = useLedgerStore(s => s.accounts);
   const activeDimensions = useMemo(() => {
     const custom = currentWorkspace?.dimensions || DEFAULT_WORKSPACE_DIMENSIONS;
     const baseIds = custom.map(d => ({ id: d.id, name: d.name }));
@@ -209,7 +211,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                    t.date,
                    `"${t.description.replace(/"/g, '""')}"`,
                    `"${(t.payee || '').replace(/"/g, '""')}"`,
-                   `"${(t.lines[0]?.accountName || 'Uncategorized').replace(/"/g, '""')}"`,
+                   `"${resolveAccountName(accounts, t.lines[0]?.accountId, t.lines[0]?.accountName).replace(/"/g, '""')}"`,
                    formatDecimal(t.totalAmountCents)
                  ]);
                  const csvString = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -378,7 +380,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                           <td className="px-4 py-2.5" />
                           <td className="px-4 py-2.5">
                              <span className="px-2 py-0.5 bg-[var(--surface)] border border-[var(--line)] rounded text-[8.5px] font-bold uppercase text-slate-500">
-                                {t.lines[0]?.accountName || 'Uncategorized'}
+                                {resolveAccountName(accounts, t.lines[0]?.accountId, t.lines[0]?.accountName)}
                              </span>
                           </td>
                           <td className="px-6 py-2.5 text-right font-mono text-[11px] font-medium">

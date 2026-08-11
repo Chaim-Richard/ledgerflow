@@ -9,7 +9,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { parseNaturalLanguageEntry, ParsedCommandIntent } from '../../lib/algorithms/nl-parser';
 import { useShallow } from 'zustand/react/shallow';
 import { Transaction, Project } from '../../types';
-import { getLocalDateISO } from '../../lib/utils';
+import { getLocalDateISO, resolveAccountName } from '../../lib/utils';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 
@@ -160,12 +160,13 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       } else {
         // Search inside lines
         for (const line of t.lines) {
+          const accName = resolveAccountName(accounts, line.accountId, line.accountName);
           const lineHasMatchedDim = line.dimensions && matchedDimensionNodes.length > 0 && Object.values(line.dimensions).some(val => matchedDimensionNodes.includes(val as string));
-          if (match(line.description) || match(line.accountName) || matchArray(line.tags) || match(line.project) || match(line.class) || match(line.location) || lineHasMatchedDim) {
+          if (match(line.description) || match(accName) || matchArray(line.tags) || match(line.project) || match(line.class) || match(line.location) || lineHasMatchedDim) {
             results.push({
               id: `tx-line-${t.id}-${line.accountId}`,
               type: 'data',
-              label: `${line.description || t.description} (in ${line.accountName})`,
+              label: `${line.description || t.description} (in ${accName})`,
               category: `Transaction Line • ${(line.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: t.currency || 'USD' })} ${line.tags ? '• ' + line.tags.join(', ') : ''}`,
               actionId: 'switch-tab',
               payload: { tab: 'transactions', id: t.id },

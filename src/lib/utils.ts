@@ -212,3 +212,17 @@ export function safeConfirm(message: string): boolean {
     return true;
   }
 }
+
+/**
+ * Resolves account name dynamically from chart of accounts using accountId first,
+ * falling back to line.accountName or line.accountId if deleted/archived.
+ */
+export function resolveAccountName(accounts: any[], accountId?: string, fallbackName?: string): string {
+  if (!accountId && !fallbackName) return 'Uncategorized';
+  if (accountId && Array.isArray(accounts)) {
+    const matched = accounts.find(a => a.id === accountId);
+    if (matched?.name) return matched.name;
+  }
+  return fallbackName || accountId || 'Uncategorized';
+}
+

@@ -15,7 +15,7 @@ import { useUIStore } from '../stores/useUIStore';
 import { TaxReserveWidget } from './finance/TaxReserveWidget';
 import OnboardingView from './onboarding/OnboardingView';
 import SavedViewsBar from './ui/SavedViewsBar';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, resolveAccountName, cn } from '../lib/utils';
 
 import { useShallow } from 'zustand/react/shallow';
 
@@ -364,7 +364,7 @@ export default function Dashboard() {
                           tx.lines.slice(0, 2).map((l, idx) => (
                             <span key={idx} className="inline-flex items-center gap-1.5 font-mono text-[10.5px] bg-[var(--surface)] border border-[var(--line)] rounded-md px-2 py-0.5 text-[var(--muted)]">
                               <span className="w-1.5 h-1.5 rounded-full bg-[var(--brass)]" />
-                              {l.accountName || l.accountId}
+                              {resolveAccountName(accounts, l.accountId, l.accountName)}
                             </span>
                           ))
                         ) : (
