@@ -5,7 +5,7 @@ import { Building, Plus, AlertTriangle, CheckCircle2, Clock, RefreshCw } from 'l
 import { toast } from 'sonner';
 
 export default function Banking() {
-  const accounts = useLedgerStore(s => s.accounts).filter(a => a.type === 'asset' && a.subType === 'bank');
+  const accounts = useLedgerStore(s => s.accounts).filter(a => a.type === 'asset' && a.subtype === 'bank');
   
   const [isConnecting, setIsConnecting] = useState(false);
 

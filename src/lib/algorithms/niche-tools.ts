@@ -81,7 +81,7 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'lookbackMonths', label: 'Lookback Window (Months)', min: 1, max: 12, step: 1, defaultValue: 6 }
   ],
-  compute: (transactions) => {
+  compute: (transactions, accounts, inputs: any = {}) => {
     const payeeMap = new Map<string, { count: number; totalCents: number; avgCents: number; lastDate: string }>();
 
     transactions.forEach(t => {
@@ -145,7 +145,7 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'taxRate', label: 'Estimated Tax Rate (%)', min: 10, max: 50, step: 1, defaultValue: 25 }
   ],
-  compute: (transactions) => {
+  compute: (transactions, accounts, inputs: any = {}) => {
     let deductibleCents = 0;
     let categoryBreakdown: Record<string, number> = {};
     let deductibleCount = 0;
@@ -212,7 +212,7 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'targetCapRate', label: 'Target Cap Rate (%)', min: 3, max: 12, step: 0.5, defaultValue: 6.5 }
   ],
-  compute: (transactions) => {
+  compute: (transactions, accounts, inputs: any = {}) => {
     const propertyMap = new Map<string, { revCents: number; expCents: number }>();
 
     transactions.forEach(t => {
@@ -289,7 +289,7 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'warningThreshold', label: 'Warning Burn %', min: 50, max: 95, step: 5, defaultValue: 80 }
   ],
-  compute: (transactions) => {
+  compute: (transactions, accounts, inputs: any = {}) => {
     const grantMap = new Map<string, { receivedCents: number; spentCents: number }>();
 
     transactions.forEach(t => {
@@ -364,7 +364,7 @@ export const PROJECT_PROFITABILITY_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'minMargin', label: 'Minimum Target Margin (%)', min: 10, max: 70, step: 5, defaultValue: 30 }
   ],
-  compute: (transactions) => {
+  compute: (transactions, accounts, inputs: any = {}) => {
     const projMap = new Map<string, { revCents: number; expCents: number }>();
 
     transactions.forEach(t => {

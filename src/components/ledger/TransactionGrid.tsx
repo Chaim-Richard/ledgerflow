@@ -161,6 +161,8 @@ interface VirtualRowProps extends ListChildComponentProps {
 const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
   const tx = data.transactions[index];
   if (!tx) return <div style={style} />;
+  
+  const accounts = useLedgerStore.getState().accounts;
 
   const isEditing = data.editingCell?.id === tx.id;
   const isFocused = data.focusedCell?.id === tx.id;

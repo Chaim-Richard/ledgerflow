@@ -137,6 +137,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
     const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
     const dimensionNodes = currentWorkspace?.dimensionNodes || [];
+    const accounts = useLedgerStore.getState().accounts;
     
     // Check if the query matches a DimensionNode
     const matchedDimensionNodes = dimensionNodes.filter(n => 
@@ -255,12 +256,12 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
     // 6. Invoices
     ledger.invoices?.forEach(i => {
-      if (match(i.invoiceNumber) || match(i.customerName) || match(i.status)) {
+      if (match(i.number) || match(i.customerName) || match(i.status)) {
         results.push({
           id: `inv-${i.id}`,
           type: 'data',
-          label: `Invoice ${i.invoiceNumber} - ${i.customerName}`,
-          category: `Invoice • ${i.status}`,
+          label: `Invoice ${i.number || 'Draft'} - ${(i.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`,
+          category: `Invoice • ${i.customerName} • ${i.number}`,
           actionId: 'switch-tab',
           payload: { tab: 'sales', id: i.id },
           icon: <FileText size={16} className="text-emerald-500 shrink-0" />
@@ -270,12 +271,12 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
     // 7. Bills
     ledger.bills?.forEach(b => {
-      if (match(b.billNumber) || match(b.vendorName) || match(b.status)) {
+      if (match(b.number) || match(b.vendorName) || match(b.status)) {
         results.push({
           id: `bill-${b.id}`,
           type: 'data',
-          label: `Bill ${b.billNumber} - ${b.vendorName}`,
-          category: `Bill • ${b.status}`,
+          label: `Bill ${b.number || 'Draft'} - ${(b.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`,
+          category: `Bill • ${b.vendorName} • ${b.number}`,
           actionId: 'switch-tab',
           payload: { tab: 'purchases', id: b.id },
           icon: <FileText size={16} className="text-rose-500 shrink-0" />
