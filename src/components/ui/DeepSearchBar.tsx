@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { Search, X, Filter, DollarSign, Tag, Shield, Building, FolderKanban, HelpCircle, Sparkles } from 'lucide-react';
+import { Search, X, Filter, DollarSign, Tag, Shield, Building, FolderKanban, HelpCircle, Sparkles, Clock } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { cn } from '../../lib/utils';
@@ -7,59 +7,32 @@ import { cn } from '../../lib/utils';
 interface DeepSearchBarProps {
   value: string;
   onChange: (val: string) => void;
+  metrics?: { count: number; totalExposure: number };
   placeholder?: string;
   className?: string;
   onSaveAsView?: () => void;
 }
 
 const SEARCH_OPERATORS = [
-  { prefix: 'amount:', description: 'Amount operator e.g. amount:>500 or amount:100..500', icon: DollarSign },
-  { prefix: 'payee:', description: 'Vendor or payee name e.g. payee:Apple', icon: Building },
-  { prefix: 'type:', description: 'Transaction type e.g. type:expense or type:income', icon: Filter },
-  { prefix: 'account:', description: 'Account name or code e.g. account:Checking', icon: Building },
-  { prefix: 'tag:', description: 'Tag or tax flag e.g. tag:tax', icon: Tag },
-  { prefix: 'status:', description: 'Status e.g. status:posted or status:pending', icon: Shield },
-  { prefix: 'project:', description: 'Project code or name e.g. project:Alpha', icon: FolderKanban },
+  { prefix: '> 500', description: 'Amount greater than 500', icon: DollarSign },
+  { prefix: 'between 100 and 500', description: 'Amount range filter', icon: DollarSign },
+  { prefix: 'this month', description: 'Current calendar month', icon: Clock },
+  { prefix: 'last 30 days', description: 'Rolling 30-day window', icon: Clock },
+  { prefix: 'q1', description: 'First quarter transactions', icon: Clock },
+  { prefix: 'category: Meals', description: 'Filter by line category', icon: Tag },
+  { prefix: 'account: Checking', description: 'Filter by account name/code', icon: Tag },
+  { prefix: 'project: Alpha', description: 'Filter by project', icon: FolderKanban },
+  { prefix: 'is:pending', description: 'Pending status entries', icon: Filter },
+  { prefix: 'is:unbalanced', description: 'Audit unbalanced entries', icon: Shield },
+  { prefix: 'starts with Apple', description: 'Prefix match', icon: Building },
+  { prefix: 'top 10%', description: 'Top 10% highest transactions', icon: Sparkles },
+  { prefix: '-tax', description: 'Exclude negative keyword', icon: X },
 ];
 
-export default function DeepSearchBar({ value, onChange, placeholder = "Deep search ledger... (e.g. amount:>500 payee:Apple type:expense)", className }: DeepSearchBarProps) {
+export default function DeepSearchBar({ value, onChange, metrics, placeholder = "Deep search ledger... (e.g. > 500, this month, category: Meals)", className }: DeepSearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [showHelper, setShowHelper] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const transactions = useLedgerStore(s => s.transactions);
-
-  const searchLower = value.trim().toLowerCase();
-  const searchMetrics = useMemo(() => {
-    if (!searchLower) return { count: transactions.length, totalMoneyCents: 0 };
-
-    let count = 0;
-    let totalCents = 0;
-
-    transactions.forEach(t => {
-      if (!t) return;
-      const desc = (t.description || '').toLowerCase();
-      const payee = (t.payee || '').toLowerCase();
-      const proj = (t.project || '').toLowerCase();
-      const amtStr = (t.totalAmountCents / 100).toString();
-
-      if (searchLower.includes('amount:>')) {
-        const val = parseFloat(searchLower.split('amount:>')[1]);
-        if (!isNaN(val) && Math.abs(t.totalAmountCents / 100) <= val) return;
-      }
-      if (searchLower.includes('type:expense') && t.totalAmountCents > 0) return;
-      if (searchLower.includes('type:income') && t.totalAmountCents < 0) return;
-
-      const matchesText = desc.includes(searchLower) || payee.includes(searchLower) || proj.includes(searchLower) || amtStr.includes(searchLower);
-      
-      if (matchesText || searchLower.includes('amount:>') || searchLower.includes('type:')) {
-        count++;
-        totalCents += Math.abs(t.totalAmountCents || 0);
-      }
-    });
-
-    return { count, totalMoneyCents: totalCents };
-  }, [value, transactions]);
 
   const handleAppendOperator = (prefix: string) => {
     const nextVal = value ? `${value.trim()} ${prefix}` : prefix;
@@ -101,13 +74,13 @@ export default function DeepSearchBar({ value, onChange, placeholder = "Deep sea
           </button>
         )}
 
-        {value.trim() && (
+        {value.trim() && metrics && (
           <div className="flex items-center gap-2 pl-2 border-l border-[var(--line)] shrink-0">
             <span className="text-[11px] font-bold text-[var(--brass)] bg-[var(--brass)]/15 px-2 py-0.5 rounded-md">
-              ${formatCurrency(searchMetrics.totalMoneyCents / 100)}
+              ${formatCurrency(metrics.totalExposure / 100)}
             </span>
             <span className="text-[10px] text-[var(--muted)] font-mono">
-              ({searchMetrics.count} found)
+              ({metrics.count} found)
             </span>
           </div>
         )}
@@ -171,24 +144,24 @@ export default function DeepSearchBar({ value, onChange, placeholder = "Deep sea
             <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Presets:</span>
             
             <button
-              onClick={() => onChange('amount:>1000 type:expense')}
+              onClick={() => onChange('> 5000 this month')}
               className="text-[10px] px-2.5 py-1 bg-[var(--bg)] border border-[var(--line)] hover:border-[var(--brass)] rounded-lg font-mono text-[var(--text-secondary)] cursor-pointer"
             >
-              amount:&gt;1000 type:expense
+              &gt; 5000 this month
             </button>
 
             <button
-              onClick={() => onChange('tag:tax type:expense')}
+              onClick={() => onChange('top 10%')}
               className="text-[10px] px-2.5 py-1 bg-[var(--bg)] border border-[var(--line)] hover:border-[var(--brass)] rounded-lg font-mono text-[var(--text-secondary)] cursor-pointer"
             >
-              tag:tax type:expense
+              top 10%
             </button>
 
             <button
-              onClick={() => onChange('account:Checking status:pending')}
-              className="text-[10px] px-2.5 py-1 bg-[var(--bg)] border border-[var(--line)] hover:border-[var(--brass)] rounded-lg font-mono text-[var(--text-secondary)] cursor-pointer"
+              onClick={() => onChange('error')}
+              className="text-[10px] px-2.5 py-1 bg-[var(--bg)] border border-[var(--line)] hover:border-[var(--brass)] rounded-lg font-mono text-[var(--text-secondary)] cursor-pointer text-rose-500 hover:text-rose-400"
             >
-              account:Checking status:pending
+              error
             </button>
           </div>
         </div>

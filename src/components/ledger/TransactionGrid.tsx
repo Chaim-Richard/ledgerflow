@@ -39,6 +39,7 @@ import SplitEditor from '../transactions/SplitEditor';
 import TransactionEditModal from '../transactions/TransactionEditModal';
 import SavedViewsBar from '../ui/SavedViewsBar';
 import DeepSearchBar from '../ui/DeepSearchBar';
+import { useSavedViewsStore } from '../../stores/useSavedViewsStore';
 
 
 
@@ -318,6 +319,10 @@ export default function TransactionGrid() {
   const splittingTransaction = useMemo(() => 
     splittingTxId ? safeTransactions.find(t => t.id === splittingTxId) : null
   , [splittingTxId, safeTransactions]);
+  
+  const activeViewId = useSavedViewsStore(s => s.activeViewId);
+  const views = useSavedViewsStore(s => s.views);
+  const activeView = views.find(v => v.id === activeViewId);
   
   // High-performance computation offloading
   const { smartFilteredTransactions, transactionsWithBalance, stats, conflicts: deterministicConflicts } = useLedgerComputation(safeTransactions, filterCriteria, searchTerm, accounts, sortConfig);
@@ -874,6 +879,8 @@ export default function TransactionGrid() {
                   <DeepSearchBar 
                     value={searchTerm} 
                     onChange={setSearchTerm} 
+                    metrics={stats}
+                    placeholder={activeView?.filter?.searchTerm ? `Search within view... (default: ${activeView.filter.searchTerm})` : "Deep search ledger... (e.g. > 500, this month, tag:tax)"}
                   />
                 </div>
 
