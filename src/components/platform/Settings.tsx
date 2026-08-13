@@ -7,7 +7,7 @@ import { useUIStore } from '../../stores/useUIStore';
 
 export default function Settings() {
   const language = useUIStore(state => state.language);
-  const activeSubTab = useUIStore(state => state.activeSettingsTab || 'billing');
+  const activeSubTab = useUIStore(state => state.activeSettingsTab || 'appearance');
   const setActiveSubTab = useUIStore(state => state.setActiveSettingsTab);
 
   const activeTabDef = SETTINGS_TABS_REGISTRY.find(t => t.id === activeSubTab);

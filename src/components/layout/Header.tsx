@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Search, Sun, Moon, Plus, Compass } from 'lucide-react';
+import { Menu, Search, Sun, Moon, Plus, Compass, ShieldCheck } from 'lucide-react';
 import QuickCreateMenu from './QuickCreateMenu';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
@@ -80,7 +80,23 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
 
         <QuickCreateMenu />
 
-        {!user && (
+        {user ? (
+          <div className="flex items-center gap-2">
+            <span className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono font-bold text-[var(--brass)] bg-[var(--brass-soft)] border border-[var(--brass-line)] rounded-md">
+              <ShieldCheck size={12} />
+              <span>OWNER / ADMIN</span>
+            </span>
+            <div 
+              role="button" 
+              tabIndex={0} 
+              onClick={onLogout}
+              title={`Logged in as ${user.email} (System Owner). Click to Log Out.`}
+              className="h-8 w-8 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] text-[11px] font-mono font-bold cursor-pointer hover:bg-[var(--brass)] hover:text-black transition-colors"
+            >
+              {user.email?.[0]?.toUpperCase() || 'S'}
+            </div>
+          </div>
+        ) : (
           <button
             onClick={onLoginPrompt || onLogout}
             className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-medium text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-md hover:bg-amber-500/20 transition-all"
@@ -90,14 +106,6 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
             <span className="text-[10px] text-amber-300 underline font-semibold">Sign In</span>
           </button>
         )}
-
-        <div role="button" tabIndex={0} 
-          onClick={user ? onLogout : (onLoginPrompt || onLogout)}
-          title={user ? `Logged in as ${user.email} (Click to Log Out)` : 'Guest Mode (Click to Sign In)'}
-          className="h-8 w-8 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] text-[11px] font-mono font-bold cursor-pointer hover:bg-[var(--brass)] hover:text-black transition-colors"
-        >
-          {user?.email?.[0]?.toUpperCase() || 'G'}
-        </div>
       </div>
     </header>
   );

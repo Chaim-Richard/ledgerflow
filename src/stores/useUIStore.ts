@@ -35,6 +35,30 @@ interface UIState {
   activeIntelChannel: string;
   lexiconOverrides: Record<string, { en: string; he: string }>;
   
+  // Customization & Accessibility Preferences
+  fontSizeScale: number; // 80 - 150 (%)
+  fontSizePreset: 'small' | 'normal' | 'medium' | 'large' | 'xlarge';
+  fontFamily: 'system' | 'inter' | 'jakarta' | 'serif' | 'mono';
+  rowDensity: 'compact' | 'normal' | 'comfortable';
+  accentColor: 'emerald' | 'indigo' | 'amber' | 'teal' | 'violet' | 'rose' | 'slate';
+  highContrast: boolean;
+  reduceMotion: boolean;
+  defaultLandingTab: string;
+  dateFormatPref: string;
+  numberDecimals: number;
+
+  // Actions
+  setFontSizeScale: (scale: number) => void;
+  setFontSizePreset: (preset: 'small' | 'normal' | 'medium' | 'large' | 'xlarge') => void;
+  setFontFamily: (font: 'system' | 'inter' | 'jakarta' | 'serif' | 'mono') => void;
+  setRowDensity: (density: 'compact' | 'normal' | 'comfortable') => void;
+  setAccentColor: (color: 'emerald' | 'indigo' | 'amber' | 'teal' | 'violet' | 'rose' | 'slate') => void;
+  setHighContrast: (val: boolean) => void;
+  setReduceMotion: (val: boolean) => void;
+  setDefaultLandingTab: (tab: string) => void;
+  setDateFormatPref: (fmt: string) => void;
+  setNumberDecimals: (num: number) => void;
+  
   setActiveTab: (tab: AppTab) => void;
   setActiveIntelChannel: (channel: string) => void;
   activeSettingsTab: string;
@@ -147,6 +171,87 @@ export const useUIStore = create<UIState>((set) => ({
       return {};
     }
   })(),
+
+  // Preferences Defaults from LocalStorage
+  fontSizeScale: (() => {
+    try { return Number(localStorage.getItem('lf_font_size_scale')) || 100; } catch (e) { return 100; }
+  })(),
+  fontSizePreset: (() => {
+    try { return (localStorage.getItem('lf_font_size_preset') as any) || 'normal'; } catch (e) { return 'normal'; }
+  })(),
+  fontFamily: (() => {
+    try { return (localStorage.getItem('lf_font_family') as any) || 'system'; } catch (e) { return 'system'; }
+  })(),
+  rowDensity: (() => {
+    try { return (localStorage.getItem('lf_row_density') as any) || 'normal'; } catch (e) { return 'normal'; }
+  })(),
+  accentColor: (() => {
+    try { return (localStorage.getItem('lf_accent_color') as any) || 'emerald'; } catch (e) { return 'emerald'; }
+  })(),
+  highContrast: (() => {
+    try { return localStorage.getItem('lf_high_contrast') === 'true'; } catch (e) { return false; }
+  })(),
+  reduceMotion: (() => {
+    try { return localStorage.getItem('lf_reduce_motion') === 'true'; } catch (e) { return false; }
+  })(),
+  defaultLandingTab: (() => {
+    try { return localStorage.getItem('lf_default_landing') || 'dashboard'; } catch (e) { return 'dashboard'; }
+  })(),
+  dateFormatPref: (() => {
+    try { return localStorage.getItem('lf_date_format') || 'YYYY-MM-DD'; } catch (e) { return 'YYYY-MM-DD'; }
+  })(),
+  numberDecimals: (() => {
+    try { return Number(localStorage.getItem('lf_number_decimals')) || 2; } catch (e) { return 2; }
+  })(),
+
+  // Preference Setters
+  setFontSizeScale: (fontSizeScale) => {
+    try { localStorage.setItem('lf_font_size_scale', String(fontSizeScale)); } catch (e) {}
+    set({ fontSizeScale });
+  },
+  setFontSizePreset: (fontSizePreset) => {
+    try { localStorage.setItem('lf_font_size_preset', fontSizePreset); } catch (e) {}
+    let scale = 100;
+    if (fontSizePreset === 'small') scale = 90;
+    if (fontSizePreset === 'normal') scale = 100;
+    if (fontSizePreset === 'medium') scale = 110;
+    if (fontSizePreset === 'large') scale = 120;
+    if (fontSizePreset === 'xlarge') scale = 130;
+    try { localStorage.setItem('lf_font_size_scale', String(scale)); } catch (e) {}
+    set({ fontSizePreset, fontSizeScale: scale });
+  },
+  setFontFamily: (fontFamily) => {
+    try { localStorage.setItem('lf_font_family', fontFamily); } catch (e) {}
+    set({ fontFamily });
+  },
+  setRowDensity: (rowDensity) => {
+    try { localStorage.setItem('lf_row_density', rowDensity); } catch (e) {}
+    set({ rowDensity });
+  },
+  setAccentColor: (accentColor) => {
+    try { localStorage.setItem('lf_accent_color', accentColor); } catch (e) {}
+    set({ accentColor });
+  },
+  setHighContrast: (highContrast) => {
+    try { localStorage.setItem('lf_high_contrast', String(highContrast)); } catch (e) {}
+    set({ highContrast });
+  },
+  setReduceMotion: (reduceMotion) => {
+    try { localStorage.setItem('lf_reduce_motion', String(reduceMotion)); } catch (e) {}
+    set({ reduceMotion });
+  },
+  setDefaultLandingTab: (defaultLandingTab) => {
+    try { localStorage.setItem('lf_default_landing', defaultLandingTab); } catch (e) {}
+    set({ defaultLandingTab });
+  },
+  setDateFormatPref: (dateFormatPref) => {
+    try { localStorage.setItem('lf_date_format', dateFormatPref); } catch (e) {}
+    set({ dateFormatPref });
+  },
+  setNumberDecimals: (numberDecimals) => {
+    try { localStorage.setItem('lf_number_decimals', String(numberDecimals)); } catch (e) {}
+    set({ numberDecimals });
+  },
 
   setActiveIntelChannel: (activeIntelChannel) => set({ activeIntelChannel }),
   setActiveSettingsTab: (activeSettingsTab) => set({ activeSettingsTab }),

@@ -45,7 +45,14 @@ export default function App() {
   const language = useUIStore(state => state.language);
   const speedDials = useUIStore(state => state.speedDials);
   const theme = useUIStore(state => state.theme);
+  const fontSizeScale = useUIStore(state => state.fontSizeScale);
+  const fontFamily = useUIStore(state => state.fontFamily);
+  const accentColor = useUIStore(state => state.accentColor);
+  const highContrast = useUIStore(state => state.highContrast);
+  const rowDensity = useUIStore(state => state.rowDensity);
+  const reduceMotion = useUIStore(state => state.reduceMotion);
 
+  // Dynamic Appearance & Accessibility Effect
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
@@ -56,7 +63,50 @@ export default function App() {
     } else {
       root.classList.add(theme);
     }
-  }, [theme]);
+
+    // Apply Text Sizing Scale
+    root.style.fontSize = `${fontSizeScale}%`;
+
+    // Apply Font Family
+    const fontMap: Record<string, string> = {
+      system: 'ui-sans-serif, system-ui, -apple-system, sans-serif',
+      inter: '"Inter", ui-sans-serif, system-ui, sans-serif',
+      jakarta: '"Plus Jakarta Sans", "Inter", sans-serif',
+      serif: '"Playfair Display", Georgia, serif',
+      mono: '"JetBrains Mono", SFMono-Regular, monospace'
+    };
+    root.style.setProperty('--font-sans', fontMap[fontFamily] || fontMap.system);
+
+    // Apply Accent Color Palette
+    const accentMap: Record<string, { brass: string; soft: string; line: string }> = {
+      emerald: { brass: '#D6A852', soft: 'rgba(214, 168, 82, 0.14)', line: 'rgba(214, 168, 82, 0.4)' },
+      indigo: { brass: '#6366F1', soft: 'rgba(99, 102, 241, 0.14)', line: 'rgba(99, 102, 241, 0.4)' },
+      amber: { brass: '#F59E0B', soft: 'rgba(245, 158, 11, 0.14)', line: 'rgba(245, 158, 11, 0.4)' },
+      teal: { brass: '#14B8A6', soft: 'rgba(20, 184, 166, 0.14)', line: 'rgba(20, 184, 166, 0.4)' },
+      violet: { brass: '#A855F7', soft: 'rgba(168, 85, 247, 0.14)', line: 'rgba(168, 85, 247, 0.4)' },
+      rose: { brass: '#F43F5E', soft: 'rgba(244, 63, 94, 0.14)', line: 'rgba(244, 63, 94, 0.4)' },
+      slate: { brass: '#94A3B8', soft: 'rgba(148, 163, 184, 0.14)', line: 'rgba(148, 163, 184, 0.4)' }
+    };
+    const palette = accentMap[accentColor] || accentMap.emerald;
+    root.style.setProperty('--brass', palette.brass);
+    root.style.setProperty('--brass-soft', palette.soft);
+    root.style.setProperty('--brass-line', palette.line);
+
+    // High Contrast & Row Density
+    if (highContrast) {
+      root.classList.add('high-contrast');
+    } else {
+      root.classList.remove('high-contrast');
+    }
+
+    if (reduceMotion) {
+      root.classList.add('reduce-motion');
+    } else {
+      root.classList.remove('reduce-motion');
+    }
+
+    root.setAttribute('data-density', rowDensity);
+  }, [theme, fontSizeScale, fontFamily, accentColor, highContrast, rowDensity, reduceMotion]);
   const isQuietMode = useUIStore(state => state.isQuietMode);
 
   useEffect(() => {

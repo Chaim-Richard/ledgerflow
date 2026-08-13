@@ -572,6 +572,7 @@ export interface User {
   photoUrl?: string;
   role: 'admin' | 'client';
   geminiApiKey?: string;
+  createdAt?: string;
   lastLoginAt?: string;
   metadata?: Record<string, any>;
   plan?: 'free' | 'growth' | 'enterprise';
