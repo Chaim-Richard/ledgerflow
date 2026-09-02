@@ -92,13 +92,3 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return workspaces.find(w => w.id === currentWorkspaceId);
   }
 }));
-
-if (typeof window !== 'undefined') {
-  (window as any)._getInternalIdToken = async () => {
-    const user = useAuthStore.getState().user;
-    if (user && typeof (user as any).getIdToken === 'function') {
-      return await (user as any).getIdToken();
-    }
-    return null;
-  };
-}

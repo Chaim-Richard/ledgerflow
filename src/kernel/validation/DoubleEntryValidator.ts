@@ -12,8 +12,8 @@ export class DoubleEntryValidator {
     if (!transaction || typeof transaction !== 'object') {
       throw new Error('Validation Failed: Invalid transaction payload.');
     }
-    if (!Array.isArray(transaction.lines) || transaction.lines.length === 0) {
-      throw new Error('Validation Failed: Transaction must have at least one line item.');
+    if (!Array.isArray(transaction.lines) || transaction.lines.length < 2) {
+      throw new Error('Validation Failed: Transaction must have at least two line items (Double-entry requirement).');
     }
     
     // ISO 4217 Currency Code Validation
@@ -52,20 +52,15 @@ export class DoubleEntryValidator {
       return sum.plus(new Decimal(cents));
     }, new Decimal(0));
     
-    // Automatically allow sub-cent floating point precision discrepancies (<= 10 cents)
+    // Enforce strict zero-balance double-entry ledger equality
     if (!netImpact.isZero()) {
-      if (netImpact.abs().lte(10)) {
-        // It's acceptable, we don't mutate the transaction here to avoid breaking state
-        return true;
-      } else {
-        const debitTotal = transaction.lines
-          .filter(l => (l.amountCents || 0) > 0)
-          .reduce((sum, l) => sum.plus(new Decimal(Math.round(l.amountCents || 0))), new Decimal(0));
-        const creditTotal = transaction.lines
-          .filter(l => (l.amountCents || 0) < 0)
-          .reduce((sum, l) => sum.plus(new Decimal(Math.round(l.amountCents || 0))), new Decimal(0));
-        throw new Error(`Validation Failed: Unbalanced entry. Net impact is ${netImpact.toString()} cents (Debits: ${debitTotal.toString()}, Credits: ${creditTotal.toString()}). Debits must exactly equal Credits.`);
-      }
+      const debitTotal = transaction.lines
+        .filter(l => (l.amountCents || 0) > 0)
+        .reduce((sum, l) => sum.plus(new Decimal(Math.round(l.amountCents || 0))), new Decimal(0));
+      const creditTotal = transaction.lines
+        .filter(l => (l.amountCents || 0) < 0)
+        .reduce((sum, l) => sum.plus(new Decimal(Math.round(l.amountCents || 0))), new Decimal(0));
+      throw new Error(`Validation Failed: Unbalanced entry. Net impact is ${netImpact.toString()} cents (Debits: ${debitTotal.toString()}, Credits: ${creditTotal.toString()}). Debits must exactly equal Credits.`);
     }
     
     return true;

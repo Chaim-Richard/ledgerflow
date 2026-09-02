@@ -1,5 +1,6 @@
 import express from 'express';
 import { getFirestore } from 'firebase-admin/firestore';
+import crypto from 'crypto';
 import { z } from 'zod';
 
 export const invoiceEmailRouter = express.Router();
@@ -23,10 +24,10 @@ invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
     
     const invoice = doc.data() as any || {};
 
-    // Generate a payment token if it doesn't have one
+    // Generate a cryptographically secure payment token if it doesn't have one
     let paymentToken = invoice.paymentToken;
     if (!paymentToken) {
-      paymentToken = `pay_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      paymentToken = `pay_${crypto.randomBytes(32).toString('hex')}`;
       await invoiceRef.update({
         paymentToken,
         status: 'sent',

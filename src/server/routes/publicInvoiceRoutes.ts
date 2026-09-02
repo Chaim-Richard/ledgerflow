@@ -15,8 +15,11 @@ export const publicInvoiceRouter = express.Router();
 
 publicInvoiceRouter.get('/:token', async (req, res) => {
   try {
-    const db = getFirestore();
     const token = req.params.token;
+    if (!token || typeof token !== 'string' || !/^pay_[a-zA-Z0-9_-]{10,128}$/.test(token)) {
+      return res.status(400).json({ error: 'Invalid token format' });
+    }
+    const db = getFirestore();
     
     const snapshot = await db.collectionGroup('invoices').where('paymentToken', '==', token).limit(1).get();
     
@@ -50,8 +53,11 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
 
 publicInvoiceRouter.post('/:token/pay', async (req, res) => {
   try {
-    const db = getFirestore();
     const token = req.params.token;
+    if (!token || typeof token !== 'string' || !/^pay_[a-zA-Z0-9_-]{10,128}$/.test(token)) {
+      return res.status(400).json({ error: 'Invalid token format' });
+    }
+    const db = getFirestore();
     
     const snapshot = await db.collectionGroup('invoices').where('paymentToken', '==', token).limit(1).get();
     

@@ -395,18 +395,18 @@ async function startServer() {
         return callback(new Error('CORS policy does not allow access from this origin'));
       }
       
-      // Default safety: Allow same-origin, localhost, and Cloud Run / AI Studio preview subdomains
-      if (
-        process.env.NODE_ENV !== 'production' ||
-        origin.includes('localhost') ||
-        origin.includes('127.0.0.1') ||
-        origin.includes('ais-') ||
-        origin.endsWith('.run.app')
-      ) {
+      // Strict origin check: Allow localhost, 127.0.0.1, and Cloud Run / AI Studio preview subdomains
+      const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/.test(origin);
+      const isCloudRunPreview = /^https:\/\/[a-z0-9-]+\.run\.app$/.test(origin);
+      if (isLocal || isCloudRunPreview) {
+        return callback(null, true);
+      }
+
+      if (process.env.NODE_ENV !== 'production') {
         return callback(null, true);
       }
       
-      return callback(null, true); // Permissive fallback when no explicit restriction is set
+      return callback(new Error('CORS policy does not allow access from this origin'));
     },
     credentials: true
   }));
@@ -441,13 +441,14 @@ async function startServer() {
       const sig = req.headers['stripe-signature'];
       let event;
 
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      if (!webhookSecret || !sig) {
+        console.error('Missing Stripe webhook signature or STRIPE_WEBHOOK_SECRET configuration.');
+        return res.status(400).send('Webhook Error: Missing signature or STRIPE_WEBHOOK_SECRET');
+      }
+
       try {
-        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-        if (webhookSecret && sig) {
-          event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-        } else {
-          event = JSON.parse(req.body.toString());
-        }
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
       } catch (err: any) {
         console.error('Webhook signature verification failed.', err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -459,7 +460,7 @@ async function startServer() {
         if (session.metadata?.invoiceId) {
           const invoiceId = session.metadata.invoiceId;
           const workspaceId = session.metadata.workspaceId;
-          const amountTotal = session.amount_total;
+          const amountTotal = session.amount_total || 0;
           
           const db = getFirestore();
           const invoiceRef = db.collection('workspaces').doc(workspaceId).collection('invoices').doc(invoiceId);
@@ -665,8 +666,8 @@ async function startServer() {
          throw new Error("Missing Gemini API Key. Please configure it in AI Settings.");
       }
 
-      // Check whether payload and task are cached via our SHA256 caching base BEFORE triggering AI!
-      const isCached = AIBackendService.apiCache.has(`${task}-${sha256Sync(JSON.stringify(payload || {}))}`);
+      // Check whether payload and task are cached via our unified caching base BEFORE triggering AI!
+      const isCached = AIBackendService.hasCachedResponse(task, payload);
 
       const aiService = new AIBackendService(apiKey);
       const result = await aiService.process(task, payload);
@@ -742,7 +743,12 @@ async function startServer() {
   });
 
   // API routes
-  app.post("/api/health", (req, res) => { console.log("FRONTEND ERROR:", req.body); fs.writeFileSync("frontend_error.log", JSON.stringify(req.body, null, 2)); res.json({ok:true}); });
+  app.post("/api/health", expressRateLimit({ windowMs: 60 * 1000, max: 30 }), (req, res) => {
+    const errorString = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
+    const sanitized = SecurityService.scrubPII(errorString).slice(0, 1024);
+    console.warn("[Client Telemetry Error]:", sanitized);
+    res.json({ ok: true });
+  });
   app.get("/api/health", async (req, res) => {
     res.json({ 
       status: "ok", 
@@ -848,7 +854,9 @@ async function startServer() {
 
         const computedHash = crypto.createHash('sha256').update(secretKey).digest('hex');
 
-        if (storedHash !== computedHash) {
+        const storedBuf = Buffer.from(storedHash, 'hex');
+        const computedBuf = Buffer.from(computedHash, 'hex');
+        if (storedBuf.length !== computedBuf.length || !crypto.timingSafeEqual(storedBuf, computedBuf)) {
            return res.status(401).json({ status: "error", message: "API key signature is invalid." });
         }
 
@@ -2247,188 +2255,6 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
     }
   });
 
-  app.delete("/api/v1/transactions/:id", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    try {
-      const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
-      if (!workspaceId) return sendError(res, "Missing workspaceId query parameter", 400);
-
-      const authReq = req as AuthenticatedRequest;
-      await authorizeWorkspace(authReq, workspaceId);
-
-      const txId = req.params.id;
-      const db = getDb();
-      
-      const txDoc = await db.collection("transactions").doc(txId).get();
-      if (!txDoc.exists) {
-        return sendError(res, "Transaction not found", 404);
-      }
-      
-      const txData = txDoc.data();
-      if (!txData || txData.workspaceId !== workspaceId) {
-        return sendError(res, "Transaction does not belong to this workspace", 403);
-      }
-
-      await verifyLockDate(workspaceId, txData.date);
-
-      // Terminal State Lock Rule Audit
-      if (txData.status === "certified" || txData.status === "voided") {
-        const uDoc = await db.collection("users").doc(authReq.user.uid).get();
-        if (!uDoc.exists || (uDoc.data()?.role !== "admin" && authReq.user.admin !== true)) {
-          return sendError(res, `Forbidden: Transaction status is audited and locked (${txData.status}). Destructive actions are restricted to administrators.`, 403);
-        }
-      }
-
-      await db.collection("transactions").doc(txId).delete();
-
-      const auditId = `audit-${Date.now()}`;
-      await db.collection("auditLogs").doc(auditId).set({
-        id: auditId,
-        workspaceId,
-        timestamp: new Date().toISOString(),
-        userId: authReq.user.uid,
-        userEmail: authReq.user.email || "developer@ledgerflow.io",
-        action: "TRANSACTION_DELETED_API",
-        details: `Deleted transaction ref [${txId}] via deep API interface.`
-      });
-
-      res.json({
-        status: "success",
-        message: "Transaction deleted successfully.",
-        deletedId: txId
-      });
-    } catch (err: any) {
-      sendError(res, err.message, 500);
-    }
-  });
-
-  app.put("/api/v1/transactions/:id", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    try {
-      const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
-      if (!workspaceId) return sendError(res, "Missing workspaceId field", 400);
-
-      const authReq = req as AuthenticatedRequest;
-      await authorizeWorkspace(authReq, workspaceId);
-
-      const txId = req.params.id;
-      const db = getDb();
-      
-      const txDoc = await db.collection("transactions").doc(txId).get();
-      if (!txDoc.exists) {
-        return sendError(res, "Transaction not found", 404);
-      }
-      
-      const txData = txDoc.data();
-      if (!txData || txData.workspaceId !== workspaceId) {
-        return sendError(res, "Transaction does not belong to this workspace", 403);
-      }
-
-      await verifyLockDate(workspaceId, txData.date);
-
-      // Terminal State Lock Rule Audit
-      if (txData.status === "certified" || txData.status === "voided") {
-        const uDoc = await db.collection("users").doc(authReq.user.uid).get();
-        if (!uDoc.exists || (uDoc.data()?.role !== "admin" && authReq.user.admin !== true)) {
-          return sendError(res, `Forbidden: Transaction status is audited and locked (${txData.status}). Modifications are restricted to administrators.`, 403);
-        }
-      }
-
-      if (req.body.date) {
-        await verifyLockDate(workspaceId, req.body.date);
-      }
-
-      const { date, description, amountCents, lines, payee, status, type } = req.body;
-
-      let transactionLines = lines || txData.lines || [];
-
-      if (lines) {
-        const netSum = lines.reduce((acc: number, entry: any) => acc + (entry.amountCents || 0), 0);
-        if (netSum !== 0) {
-          return sendError(res, `Double-entry ledger sum imbalance detected. Net total: ${netSum} cents. Sum must equal exactly zero.`, 400);
-        }
-      } else if (amountCents !== undefined) {
-        const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get();
-        const accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-
-        let debitAccount = accounts.find(a => a.type === 'expense') || accounts[0];
-        let creditAccount = accounts.find(a => a.type === 'asset' && a.code === '1000') || accounts.find(a => a.type === 'asset') || accounts[0];
-
-        if (!debitAccount || !creditAccount) {
-          return sendError(res, "Target workspace is unconfigured.", 400);
-        }
-
-        transactionLines = [
-          {
-            accountId: debitAccount.id,
-            accountName: debitAccount.name,
-            amountCents: Math.abs(amountCents),
-            description: "Dr - Automated Import Expense Line"
-          },
-          {
-            accountId: creditAccount.id,
-            accountName: creditAccount.name,
-            amountCents: -Math.abs(amountCents),
-            description: "Cr - Automated Double-Entry Balancing Ledger"
-          }
-        ];
-      }
-
-      const updatedTx = {
-        ...txData,
-        date: date || txData.date,
-        description: description || txData.description,
-        payee: payee !== undefined ? payee : (txData.payee || ""),
-        lines: transactionLines,
-        totalAmountCents: TruthEngine.deriveSignedTotal(transactionLines),
-        status: status || txData.status || "completed",
-        type: type || txData.type || "actual",
-        updatedAt: new Date().toISOString()
-      };
-
-      await db.collection("transactions").doc(txId).set(updatedTx);
-
-      // Append to event-sourced journal entries
-      if (updatedTx.lines && Array.isArray(updatedTx.lines)) {
-         const batch = db.batch();
-         updatedTx.lines.forEach((line: any, index: number) => {
-             const eventRef = db.collection('journalEntries').doc(`${txId}-update-${Date.now()}-line-${index}`);
-             batch.set(eventRef, {
-                 id: eventRef.id,
-                 timestamp: new Date().toISOString(),
-                 accountId: line.accountId,
-                 amountCents: line.amountCents,
-                 eventType: 'UPDATE',
-                 transactionId: txId,
-                 workspaceId: workspaceId,
-                 description: line.description || updatedTx.description || ""
-             });
-         });
-         await batch.commit();
-      }
-
-
-      const auditId = `audit-${Date.now()}`;
-      await db.collection("auditLogs").doc(auditId).set({
-        id: auditId,
-        workspaceId,
-        timestamp: new Date().toISOString(),
-        userId: authReq.user.uid,
-        userEmail: authReq.user.email || "developer@ledgerflow.io",
-        action: "TRANSACTION_UPDATED_API",
-        details: `Updated transaction ref [${txId}] via deep API interface.`
-      });
-
-      res.status(200).json({
-        status: "success",
-        message: "Transaction updated successfully.",
-        transactionId: txId,
-        data: updatedTx
-      });
-
-    } catch (err: any) {
-      sendError(res, err.message, 500);
-    }
-  });
-
   app.post("/api/v1/brain/analyze", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
       const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
@@ -3533,10 +3359,10 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
       const { access_token, item_id } = response.data;
       
-      // Store access_token in Firestore associated with the user/workspace
+      // Store encrypted access_token in Firestore associated with the user/workspace
       const db = getFirestore();
       await db.collection("users").doc(authReq.user.uid).collection("banks").add({
-        access_token,
+        access_token: SecurityService.encryptSensitiveField(access_token),
         item_id,
         createdAt: new Date().toISOString()
       });
@@ -3562,7 +3388,8 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       let allSyncTransactions: any[] = [];
       
       for (const doc of banksSnap.docs) {
-         const { access_token } = doc.data();
+         const rawToken = doc.data().access_token;
+         const access_token = SecurityService.decryptSensitiveField(rawToken);
          
          const today = new Date();
          const thirtyDaysAgo = new Date();
@@ -4081,6 +3908,8 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.use("/api/v1/consolidation", apiAuthenticate, consolidationRouter);
   app.use("/api/v1/lease", apiAuthenticate, leaseRouter);
   app.use("/api/v1/inventory", apiAuthenticate, inventoryRouter);
+  app.use("/api/v1/invoices/public", publicInvoiceRouter);
+  app.use("/api/v1/invoices/email", apiAuthenticate, invoiceEmailRouter);
 
   const http = await import('http');
   const httpServer = http.createServer(app);

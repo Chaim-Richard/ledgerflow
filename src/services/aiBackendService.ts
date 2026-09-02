@@ -25,6 +25,10 @@ export class AIBackendService {
     return this.apiCache.get(key) || null;
   }
 
+  public static hasCachedResponse(task: string, payload: any): boolean {
+    return this.getCachedResponse(task, payload) !== null;
+  }
+
   public static setCachedResponse(task: string, payload: any, response: any): void {
     const wsId = payload?.workspaceId || 'no-ws';
     const uid = payload?.uid || 'no-uid';

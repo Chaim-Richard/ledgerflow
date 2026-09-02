@@ -202,31 +202,65 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
 transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
   try {
     const { id } = req.params;
-    const { transaction, partialUpdate } = req.body;
+    let { transaction, partialUpdate } = req.body;
     const user = (req as any).user;
     const db = getFirestore();
-    if (!transaction.id) transaction.id = db.collection("transactions").doc().id;
+
+    // Support flat API payloads: { workspaceId, lines, date, ... }
+    if (!transaction && !partialUpdate && (req.body.workspaceId || req.body.lines || req.body.date)) {
+      transaction = { ...req.body, id };
+    }
     
-    // For partial updates (like flagging or voiding) we don't need double-entry validation
-    // For full updates (like line modifications) we do need validation
+    // For partial updates (like flagging or voiding)
     if (partialUpdate) {
       await db.runTransaction(async (t: any) => {
          const txRef = db.collection('transactions').doc(id);
          const doc = await t.get(txRef);
          if (!doc.exists) throw new Error('Not found');
+         const txData = doc.data();
+         const wsId = txData?.workspaceId;
          // Verify workspace
-         const wsDoc = await db.collection('workspaces').doc(doc.data()?.workspaceId).get();
-         if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid))) throw new Error('Not a member');
+         const wsDoc = await db.collection('workspaces').doc(wsId).get();
+         const wsData = wsDoc.data();
+         if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
+           throw new Error('Not a member');
+         }
+         if (wsData?.lockDate && txData?.date && txData.date <= wsData.lockDate) {
+           throw new Error(`Period Locked: Data mutation forbidden before ${wsData.lockDate}`);
+         }
+         if ((txData?.status === 'certified' || txData?.status === 'voided') && !user.admin) {
+           throw new Error(`Forbidden: Transaction status is locked (${txData?.status}).`);
+         }
          
          t.update(txRef, { ...partialUpdate, updatedAt: FieldValue.serverTimestamp() });
       });
-      return res.json({ status: 'ok' });
+
+      const auditId = `audit-${Date.now()}`;
+      await db.collection("auditLogs").doc(auditId).set({
+        id: auditId,
+        workspaceId: req.body.workspaceId || user.developerWorkspaceId || "unknown",
+        timestamp: new Date().toISOString(),
+        userId: user.uid,
+        userEmail: user.email || "developer@ledgerflow.io",
+        action: "TRANSACTION_UPDATED_PARTIAL",
+        details: `Partial update on transaction ref [${id}].`
+      });
+
+      return res.json({ status: 'ok', transactionId: id });
     }
 
-    if (!transaction || !transaction.workspaceId) return res.status(400).json({ error: 'Invalid payload' });
-    transaction.uid = user.uid; // Security fix: enforce ownership
+    if (!transaction || !transaction.workspaceId) return res.status(400).json({ error: 'Invalid payload: missing workspaceId' });
+    if (!transaction.id) transaction.id = id;
+    transaction.uid = user.uid; // Enforce ownership
     const wsDoc = await db.collection('workspaces').doc(transaction.workspaceId).get();
-    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
+    const wsData = wsDoc.data();
+    if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+
+    if (wsData?.lockDate && transaction.date && transaction.date <= wsData.lockDate) {
+      return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
+    }
 
     DoubleEntryValidator.validateJournalEntry(transaction);
 
@@ -235,17 +269,30 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       const doc = await t.get(txRef);
       if (!doc.exists) throw new Error('Not found');
       if (doc.data()?.workspaceId !== transaction.workspaceId) throw new Error('Workspace mismatch');
-      if (doc.data()?.status === 'certified' || doc.data()?.status === 'voided' || doc.data()?.isCleared === true) throw new Error('Cannot modify certified, cleared, or voided transactions');
+      if ((doc.data()?.status === 'certified' || doc.data()?.status === 'voided' || doc.data()?.isCleared === true) && !user.admin) {
+        throw new Error('Cannot modify certified, cleared, or voided transactions');
+      }
 
       t.update(txRef, { ...transaction, updatedAt: FieldValue.serverTimestamp() });
     });
 
-    res.json({ status: 'ok' });
+    const auditId = `audit-${Date.now()}`;
+    await db.collection("auditLogs").doc(auditId).set({
+      id: auditId,
+      workspaceId: transaction.workspaceId,
+      timestamp: new Date().toISOString(),
+      userId: user.uid,
+      userEmail: user.email || "developer@ledgerflow.io",
+      action: "TRANSACTION_UPDATED",
+      details: `Full update on transaction ref [${id}].`
+    });
+
+    res.json({ status: 'ok', transactionId: id, data: transaction });
   } catch (e: any) {
     if (e.message === 'Not found') {
        return res.status(404).json({ error: e.message });
     }
-    if (e.message === 'Not a member' || e.message === 'Workspace mismatch') {
+    if (e.message === 'Not a member' || e.message === 'Workspace mismatch' || e.message?.includes('Forbidden')) {
        return res.status(403).json({ error: e.message });
     }
     res.status(400).json({ error: e.message }); 
@@ -266,11 +313,33 @@ transactionRouter.delete('/:id', async (req, res) => {
     const data = doc.data();
     const wsId = workspaceId || data?.workspaceId;
     const wsDoc = await db.collection('workspaces').doc(wsId).get();
-    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+    const wsData = wsDoc.data();
+    if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
       return res.status(403).json({ error: 'Not a member' });
     }
+
+    if (wsData?.lockDate && data?.date && data.date <= wsData.lockDate) {
+      return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
+    }
+
+    if ((data?.status === 'certified' || data?.status === 'voided') && !user.admin) {
+      return res.status(403).json({ error: `Forbidden: Transaction status is audited and locked (${data?.status}). Destructive actions are restricted to administrators.` });
+    }
+
     await txRef.delete();
-    res.json({ status: 'ok' });
+
+    const auditId = `audit-${Date.now()}`;
+    await db.collection("auditLogs").doc(auditId).set({
+      id: auditId,
+      workspaceId: wsId,
+      timestamp: new Date().toISOString(),
+      userId: user.uid,
+      userEmail: user.email || "developer@ledgerflow.io",
+      action: "TRANSACTION_DELETED",
+      details: `Deleted transaction ref [${id}].`
+    });
+
+    res.json({ status: 'ok', deletedId: id });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
