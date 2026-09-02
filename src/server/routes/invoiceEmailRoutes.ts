@@ -9,12 +9,21 @@ invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
   try {
     const { workspaceId, toEmail, subject, body } = req.body;
     const invoiceId = req.params.invoiceId;
+    const user = (req as any).user;
 
     if (!workspaceId || !toEmail) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const db = getFirestore();
+    
+    // Verify user is a member of the workspace
+    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+    const wsData = wsDoc.data();
+    if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Forbidden: You are not a member of this workspace.' });
+    }
+
     const invoiceRef = db.collection('workspaces').doc(workspaceId).collection('invoices').doc(invoiceId);
     
     const doc = await invoiceRef.get();

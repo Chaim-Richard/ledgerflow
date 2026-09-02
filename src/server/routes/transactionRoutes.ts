@@ -232,6 +232,10 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
            throw new Error(`Forbidden: Transaction status is locked (${txData?.status}).`);
          }
          
+         if (partialUpdate.lines || partialUpdate.amountCents || partialUpdate.totalAmountCents || partialUpdate.workspaceId || partialUpdate.date) {
+           throw new Error('Restricted fields cannot be modified via partialUpdate. Use a full transaction update instead.');
+         }
+
          t.update(txRef, { ...partialUpdate, updatedAt: FieldValue.serverTimestamp() });
       });
 
@@ -271,6 +275,9 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       if (doc.data()?.workspaceId !== transaction.workspaceId) throw new Error('Workspace mismatch');
       if ((doc.data()?.status === 'certified' || doc.data()?.status === 'voided' || doc.data()?.isCleared === true) && !user.admin) {
         throw new Error('Cannot modify certified, cleared, or voided transactions');
+      }
+      if (wsData?.lockDate && doc.data()?.date && doc.data()?.date <= wsData.lockDate) {
+        throw new Error(`Period Locked: Cannot modify a transaction originally dated before ${wsData.lockDate}`);
       }
 
       t.update(txRef, { ...transaction, updatedAt: FieldValue.serverTimestamp() });

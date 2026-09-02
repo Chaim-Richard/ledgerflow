@@ -55,6 +55,7 @@ export class SecurityService {
    */
   static encryptSensitiveField(plainText: string): string {
     if (!plainText) return plainText;
+    if (plainText.startsWith('enc:')) return plainText; // Prevent double encryption
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv('aes-256-gcm', this.getEncryptionKey(), iv);
     let encrypted = cipher.update(plainText, 'utf8', 'hex');
