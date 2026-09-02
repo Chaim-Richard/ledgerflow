@@ -472,7 +472,7 @@ async function startServer() {
             const inv = doc.data() as any;
             if (inv && inv.status !== "paid") {
               // Admin SDK requires all reads before writes in a transaction
-              const accountsSnap = await t.get(db.collection('workspaces').doc(workspaceId).collection('accounts'));
+              const accountsSnap = await t.get(db.collection('chartAccounts').where('workspaceId', '==', workspaceId));
               const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
               t.update(invoiceRef, {
@@ -493,7 +493,7 @@ async function startServer() {
               );
               
               if (!cashAccount) {
-                const newCashRef = db.collection('workspaces').doc(workspaceId).collection('accounts').doc();
+                const newCashRef = db.collection('chartAccounts').doc();
                 cashAccount = {
                   id: newCashRef.id,
                   uid: 'system',
@@ -509,7 +509,7 @@ async function startServer() {
                 t.set(newCashRef, cashAccount);
               }
               if (!arAccount) {
-                const newArRef = db.collection('workspaces').doc(workspaceId).collection('accounts').doc();
+                const newArRef = db.collection('chartAccounts').doc();
                 arAccount = {
                   id: newArRef.id,
                   uid: 'system',
