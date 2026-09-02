@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import express from 'express';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
+import { TransactionSchema } from '../../schemas';
 import { parseLocalDate } from '../../lib/utils';
 
 export const transactionRouter = express.Router();
@@ -16,8 +17,8 @@ export function enforceDoubleEntrySafety(req: Request, res: Response, next: Next
   if (req.body.partialUpdate) {
     return next();
   }
-  if (!transaction || !Array.isArray(transaction.lines) || transaction.lines.length === 0) {
-    return res.status(400).json({ error: "Invalid transaction structure." });
+  if (!transaction || !Array.isArray(transaction.lines) || transaction.lines.length < 2) {
+    return res.status(400).json({ error: "Invalid transaction structure: at least 2 lines required." });
   }
   
   if (transaction.currency && !/^[A-Z]{3}$/.test(transaction.currency)) {
@@ -33,31 +34,12 @@ export function enforceDoubleEntrySafety(req: Request, res: Response, next: Next
     }, new Decimal(0));
 
     if (!netSum.isZero()) {
-      const discrepancyCents = netSum.toNumber();
-      
-      // AUTOMATED FX ROUNDING BALANCER
-      // If the discrepancy is purely a fractional penny rounding error (e.g., less than 10 cents),
-      // we automatically inject an Exchange Difference / Rounding Adjustment line to force balancing.
-      if (Math.abs(discrepancyCents) <= 10) {
-        transaction.lines.push({
-          id: `fx-adjust-${Date.now()}`,
-          accountId: 'fx-rounding-adjustment',
-          accountName: 'Exchange & Rounding Difference',
-          amountCents: -discrepancyCents, // Offset the discrepancy
-          description: 'Automated fractional rounding adjustment'
-        });
-        
-        // Recalculate total amount cents if needed
-        const debitSum = transaction.lines
-          .filter((l: any) => l.amountCents > 0)
-          .reduce((sum: number, l: any) => sum + l.amountCents, 0);
-        transaction.totalAmountCents = debitSum;
-      } else {
-        return res.status(422).json({
-          error: `Mathematical imbalance: Net ledger sum is ${discrepancyCents} cents. Debits must equal Credits.`
-        });
-      }
+      return res.status(422).json({
+        error: `Mathematical imbalance: Net ledger sum is ${netSum.toNumber()} cents. Debits must equal Credits.`
+      });
     }
+
+    DoubleEntryValidator.validateJournalEntry(transaction);
     next();
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
@@ -120,6 +102,11 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
     }
     
     transaction.uid = user.uid; // Security fix: enforce ownership
+
+    const parsed = TransactionSchema.safeParse(transaction);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Schema validation failed', details: parsed.error.issues });
+    }
 
     const db = getFirestore();
     if (!transaction.id) transaction.id = db.collection("transactions").doc().id;
@@ -430,7 +417,10 @@ transactionRouter.post('/batch', async (req, res) => {
      const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
      if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
      
-     if (!updates || updates.length === 0) return res.json({ status: 'ok' });
+     if (!updates || !Array.isArray(updates) || updates.length === 0) return res.json({ status: 'ok' });
+     if (updates.length > 500) {
+       return res.status(400).json({ error: 'Batch limit exceeded: maximum 500 updates allowed per request.' });
+     }
 
      const txRefs = updates.map((u: any) => db.collection('transactions').doc(u.id));
      const txDocs = await db.getAll(...txRefs);
@@ -649,7 +639,7 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
 
 transactionRouter.post('/reset', async (req, res) => {
   try {
-    const { workspaceId } = req.body;
+    const { workspaceId, confirmReset } = req.body;
     const user = (req as any).user;
     const db = getFirestore();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
@@ -659,11 +649,16 @@ transactionRouter.post('/reset', async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: Only the workspace owner or a global admin can reset data.' });
     }
 
+    if (confirmReset !== true) {
+      return res.status(400).json({ error: 'Explicit confirmation required (confirmReset: true).' });
+    }
+
+    // Never wipe auditLogs - the audit trail must be preserved
     const collections = [
       'transactions', 'chartAccounts', 'journalEntries', 'projects', 'budgets', 
       'vendors', 'customers', 'invoices', 'bills', 
       'inventory', 'assets', 'recurring', 'employees', 'payRuns', 
-      'taxRates', 'auditLogs', 'partners', 'autoRules', 'bankLines'
+      'taxRates', 'partners', 'autoRules', 'bankLines'
     ];
 
     for (const coll of collections) {
@@ -684,6 +679,16 @@ transactionRouter.post('/reset', async (req, res) => {
         await batch.commit();
       }
     }
+
+    // Record persistent audit log of the reset action
+    await db.collection('auditLogs').add({
+      workspaceId,
+      actorUid: user.uid,
+      actorEmail: user.email || 'authenticated-user',
+      action: 'WORKSPACE_DATA_RESET',
+      details: 'All financial and operational records reset by workspace owner.',
+      timestamp: FieldValue.serverTimestamp()
+    });
 
     res.json({ status: 'ok' });
   } catch (e: any) {

@@ -481,21 +481,60 @@ async function startServer() {
                 paidAt: new Date().toISOString()
               });
               
-              let cashAccount: any = accounts.find((a: any) => a.subtype === "cash" || (a.name || '').toLowerCase().includes('cash') || (a.name || '').toLowerCase().includes('bank') || (a.name || '').toLowerCase().includes('stripe'));
-              let arAccount: any = accounts.find((a: any) => a.subtype === "accounts_receivable" || (a.name || '').toLowerCase().includes('receivable'));
+              let cashAccount: any = accounts.find((a: any) => 
+                a.subtype === "cash" || a.subtype === "bank" || a.category === "cash" || a.role === "cash" || 
+                (a.type === "asset" && (a.name || '').toLowerCase().includes('cash')) || 
+                (a.type === "asset" && (a.name || '').toLowerCase().includes('bank')) || 
+                (a.type === "asset" && (a.name || '').toLowerCase().includes('stripe'))
+              );
+              let arAccount: any = accounts.find((a: any) => 
+                a.subtype === "accounts_receivable" || a.category === "accounts_receivable" || a.role === "accounts_receivable" || 
+                (a.type === "asset" && (a.name || '').toLowerCase().includes('receivable'))
+              );
               
-              if (!cashAccount) cashAccount = { id: "unknown_cash", name: "Stripe Clearing" } as any;
-              if (!arAccount) arAccount = { id: "unknown_ar", name: "Accounts Receivable" } as any;
+              if (!cashAccount) {
+                const newCashRef = db.collection('workspaces').doc(workspaceId).collection('accounts').doc();
+                cashAccount = {
+                  id: newCashRef.id,
+                  uid: 'system',
+                  workspaceId,
+                  name: 'Stripe Clearing Account',
+                  code: '1010',
+                  type: 'asset',
+                  subtype: 'cash',
+                  category: 'Current Assets',
+                  balanceCents: 0,
+                  createdAt: new Date().toISOString()
+                };
+                t.set(newCashRef, cashAccount);
+              }
+              if (!arAccount) {
+                const newArRef = db.collection('workspaces').doc(workspaceId).collection('accounts').doc();
+                arAccount = {
+                  id: newArRef.id,
+                  uid: 'system',
+                  workspaceId,
+                  name: 'Accounts Receivable',
+                  code: '1200',
+                  type: 'asset',
+                  subtype: 'accounts_receivable',
+                  category: 'Current Assets',
+                  balanceCents: 0,
+                  createdAt: new Date().toISOString()
+                };
+                t.set(newArRef, arAccount);
+              }
               
+              const exchangeRate = typeof inv?.exchangeRate === 'number' && inv.exchangeRate > 0 ? inv.exchangeRate : 1;
               const txRef = db.collection('transactions').doc();
               t.set(txRef, {
                 uid: 'system',
                 workspaceId,
-                date: new Date().toLocaleDateString('en-CA'),
+                date: new Date().toISOString().split('T')[0],
                 description: `Invoice ${inv?.number || "Unknown"} Payment via Stripe`,
                 totalAmountCents: amountTotal,
                 currency: inv?.currency || 'USD',
-                exchangeRate: 1,
+                exchangeRate: exchangeRate,
                 status: 'completed',
                 type: 'actual',
                 createdAt: new Date().toISOString(),
@@ -510,14 +549,14 @@ async function startServer() {
                     accountName: cashAccount.name,
                     amountCents: amountTotal, // Debit Cash
                     description: `Stripe Payment for Invoice ${inv?.number || "Unknown"}`,
-                    exchangeRate: 1
+                    exchangeRate: exchangeRate
                   },
                   {
                     accountId: arAccount.id,
                     accountName: arAccount.name,
                     amountCents: -amountTotal, // Credit AR
                     description: `A/R Clearance for Invoice ${inv?.number || "Unknown"}`,
-                    exchangeRate: 1
+                    exchangeRate: exchangeRate
                   }
                 ]
               });

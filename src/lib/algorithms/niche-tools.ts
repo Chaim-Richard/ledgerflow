@@ -14,9 +14,9 @@ export const LOAN_AMORTIZATION_ALGO: AlgorithmDefinition = {
     { key: 'termYears', label: 'Term (Years)', min: 1, max: 30, step: 1, defaultValue: 30 },
   ],
   compute: (transactions, accounts, inputs) => {
-    const principal = inputs.principal || 400000;
-    const rate = (inputs.annualRate || 6.5) / 100 / 12;
-    const numPayments = (inputs.termYears || 30) * 12;
+    const principal = inputs.principal ?? 400000;
+    const rate = (inputs.annualRate ?? 6.5) / 100 / 12;
+    const numPayments = (inputs.termYears ?? 30) * 12;
 
     const monthlyPayment = rate > 0
       ? (principal * rate * Math.pow(1 + rate, numPayments)) / (Math.pow(1 + rate, numPayments) - 1)
@@ -26,7 +26,7 @@ export const LOAN_AMORTIZATION_ALGO: AlgorithmDefinition = {
     let totalInterest = 0;
     const schedule: any[] = [];
 
-    for (let year = 1; year <= Math.min(inputs.termYears || 30, 10); year++) {
+    for (let year = 1; year <= Math.min(inputs.termYears ?? 30, 10); year++) {
       let yearInterest = 0;
       let yearPrincipal = 0;
       for (let m = 1; m <= 12; m++) {
@@ -177,13 +177,13 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
       Amount: Math.round(categoryBreakdown[k] / 100)
     }));
 
-    const estSavings = Math.round((deductibleCents / 100) * ((inputs.taxRate || 25) / 100));
+    const estSavings = Math.round((deductibleCents / 100) * (((inputs.taxRate ?? 25)) / 100));
 
     return {
       metrics: [
         { label: 'Deductible Expenses', value: `$${Math.round(deductibleCents / 100).toLocaleString()}`, color: 'emerald' },
         { label: 'Identified Line Items', value: deductibleCount, color: 'blue' },
-        { label: 'Estimated Tax Savings', value: `$${estSavings.toLocaleString()}`, color: 'brass', trend: `${inputs.taxRate || 25}% Marginal Bracket` }
+        { label: 'Estimated Tax Savings', value: `$${estSavings.toLocaleString()}`, color: 'brass', trend: `${inputs.taxRate ?? 25}% Marginal Bracket` }
       ],
       charts: [
         {
@@ -196,7 +196,7 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
       ],
       insights: [
         `Scanned ledger and isolated $${Math.round(deductibleCents / 100).toLocaleString()} in write-off eligible expenses.`,
-        `At a ${inputs.taxRate || 25}% tax bracket, this reduces federal/state tax liability by approximately $${estSavings.toLocaleString()}.`
+        `At a ${inputs.taxRate ?? 25}% tax bracket, this reduces federal/state tax liability by approximately $${estSavings.toLocaleString()}.`
       ]
     };
   }
@@ -250,13 +250,13 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
       totalNOICents = (33000 + 19500 + 41000) * 100;
     }
 
-    const estValuation = Math.round((totalNOICents / 100) / ((inputs.targetCapRate || 6.5) / 100));
+    const estValuation = Math.round((totalNOICents / 100) / (((inputs.targetCapRate ?? 6.5)) / 100));
 
     return {
       metrics: [
         { label: 'Total Portfolio NOI', value: `$${Math.round(totalNOICents / 100).toLocaleString()}`, color: 'emerald' },
         { label: 'Properties Tracked', value: chartData.length, color: 'blue' },
-        { label: 'Est. Portfolio Value', value: `$${estValuation.toLocaleString()}`, color: 'amber', trend: `At ${inputs.targetCapRate || 6.5}% Cap Rate` }
+        { label: 'Est. Portfolio Value', value: `$${estValuation.toLocaleString()}`, color: 'amber', trend: `At ${inputs.targetCapRate ?? 6.5}% Cap Rate` }
       ],
       charts: [
         {
@@ -273,7 +273,7 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
       ],
       insights: [
         `Portfolio generates $${Math.round(totalNOICents / 100).toLocaleString()} in aggregate Net Operating Income (NOI).`,
-        `At a target ${inputs.targetCapRate || 6.5}% cap rate, implied portfolio asset valuation is $${estValuation.toLocaleString()}.`
+        `At a target ${inputs.targetCapRate ?? 6.5}% cap rate, implied portfolio asset valuation is $${estValuation.toLocaleString()}.`
       ]
     };
   }
@@ -423,7 +423,7 @@ export const PROJECT_PROFITABILITY_ALGO: AlgorithmDefinition = {
       ],
       insights: [
         `Top performing job is "${list[0] ? list[0].Project : 'N/A'}" generating $${list[0] ? list[0].NetProfit.toLocaleString() : 0} net profit (${list[0] ? list[0].MarginPct : 0}% margin).`,
-        `Target margin threshold set to ${inputs.minMargin || 30}%.`
+        `Target margin threshold set to ${inputs.minMargin ?? 30}%.`
       ]
     };
   }

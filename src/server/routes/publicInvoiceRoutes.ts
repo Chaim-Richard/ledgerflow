@@ -39,9 +39,15 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
         status: invoice.status,
         amountCents: invoice.amountCents,
         totalCents: invoice.totalCents,
+        currency: invoice.currency || 'USD',
         customerName: invoice.customerName,
         paymentToken: invoice.paymentToken,
-        metadata: invoice.metadata
+        lines: Array.isArray(invoice.lines) ? invoice.lines.map((l: any) => ({
+          description: l.description,
+          quantity: l.quantity,
+          unitPriceCents: l.unitPriceCents,
+          amountCents: l.amountCents
+        })) : []
       }
     });
 
@@ -68,12 +74,20 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
     const doc = snapshot.docs[0];
     const invoice = doc.data();
 
-    if (invoice.status === 'paid') {
-      return res.status(400).json({ error: 'Invoice is already paid' });
+    const payableStatuses = ['sent', 'unpaid', 'pending', 'overdue'];
+    if (!payableStatuses.includes(invoice.status) || invoice.isLocked === true) {
+      return res.status(400).json({ 
+        error: `Invoice cannot be paid. Current status: ${invoice.status || 'unknown'}${invoice.isLocked ? ' (locked)' : ''}` 
+      });
     }
 
     const stripe = getStripe();
     const amount = invoice.totalCents || invoice.amountCents;
+
+    // Use configured application URL to prevent host-header poisoning
+    const hostHeader = (req.get('host') || 'localhost:3000').replace(/[^a-zA-Z0-9.:-]/g, '');
+    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const origin = process.env.APP_URL || process.env.VITE_APP_URL || `${protocol}://${hostHeader}`;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card', 'us_bank_account'],
@@ -91,8 +105,8 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
         },
       ],
       mode: 'payment',
-      success_url: `${req.protocol}://${req.get('host')}/i/${token}?success=true`,
-      cancel_url: `${req.protocol}://${req.get('host')}/i/${token}?canceled=true`,
+      success_url: `${origin}/i/${token}?success=true`,
+      cancel_url: `${origin}/i/${token}?canceled=true`,
       client_reference_id: doc.id,
       metadata: {
         invoiceId: doc.id,
