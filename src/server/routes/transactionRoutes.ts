@@ -232,7 +232,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
            throw new Error(`Forbidden: Transaction status is locked (${txData?.status}).`);
          }
          
-         if (partialUpdate.lines || partialUpdate.amountCents || partialUpdate.totalAmountCents || partialUpdate.workspaceId || partialUpdate.date) {
+         if (partialUpdate.lines !== undefined || partialUpdate.amountCents !== undefined || partialUpdate.totalAmountCents !== undefined || partialUpdate.workspaceId !== undefined || partialUpdate.date !== undefined) {
            throw new Error('Restricted fields cannot be modified via partialUpdate. Use a full transaction update instead.');
          }
 
