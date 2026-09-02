@@ -80,7 +80,7 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: (invoice.currency || 'usd').toLowerCase(),
             product_data: {
               name: `Invoice ${invoice.number}`,
               description: `Payment for ${invoice.customerName}`

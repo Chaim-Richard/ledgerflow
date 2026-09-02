@@ -15,7 +15,7 @@ export const TransactionSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   description: z.string().min(3).max(2000),
   totalAmountCents: z.number().int(),
-  status: z.enum(['pending', 'certified', 'voided', 'reconciled', 'completed', 'failed', 'flagged', 'reviewed']).default('pending'),
+  status: z.enum(['pending', 'certified', 'void', 'reconciled', 'completed', 'failed', 'flagged', 'reviewed']).default('pending'),
   type: z.enum(['journal', 'expense', 'income', 'bank_import']).default('journal'),
   lines: z.array(TransactionLineSchema).min(1).max(100),
   tags: z.array(z.string()).max(10).optional(),

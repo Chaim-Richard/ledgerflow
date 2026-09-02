@@ -471,14 +471,15 @@ async function startServer() {
             
             const inv = doc.data() as any;
             if (inv && inv.status !== "paid") {
+              // Admin SDK requires all reads before writes in a transaction
+              const accountsSnap = await t.get(db.collection('workspaces').doc(workspaceId).collection('accounts'));
+              const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
               t.update(invoiceRef, {
                 status: 'paid',
                 amountPaidCents: amountTotal,
                 paidAt: new Date().toISOString()
               });
-              
-              const accountsSnap = await t.get(db.collection('workspaces').doc(workspaceId).collection('accounts'));
-              const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
               
               let cashAccount: any = accounts.find((a: any) => a.subtype === "cash" || (a.name || '').toLowerCase().includes('cash') || (a.name || '').toLowerCase().includes('bank') || (a.name || '').toLowerCase().includes('stripe'));
               let arAccount: any = accounts.find((a: any) => a.subtype === "accounts_receivable" || (a.name || '').toLowerCase().includes('receivable'));
@@ -486,7 +487,7 @@ async function startServer() {
               if (!cashAccount) cashAccount = { id: "unknown_cash", name: "Stripe Clearing" } as any;
               if (!arAccount) arAccount = { id: "unknown_ar", name: "Accounts Receivable" } as any;
               
-              const txRef = db.collection('workspaces').doc(workspaceId).collection('transactions').doc();
+              const txRef = db.collection('transactions').doc();
               t.set(txRef, {
                 uid: 'system',
                 workspaceId,

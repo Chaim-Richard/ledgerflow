@@ -228,7 +228,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
          if (wsData?.lockDate && txData?.date && txData.date <= wsData.lockDate) {
            throw new Error(`Period Locked: Data mutation forbidden before ${wsData.lockDate}`);
          }
-         if ((txData?.status === 'certified' || txData?.status === 'voided') && !user.admin) {
+         if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) {
            throw new Error(`Forbidden: Transaction status is locked (${txData?.status}).`);
          }
          
@@ -273,7 +273,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       const doc = await t.get(txRef);
       if (!doc.exists) throw new Error('Not found');
       if (doc.data()?.workspaceId !== transaction.workspaceId) throw new Error('Workspace mismatch');
-      if ((doc.data()?.status === 'certified' || doc.data()?.status === 'voided' || doc.data()?.isCleared === true) && !user.admin) {
+      if ((doc.data()?.status === 'certified' || doc.data()?.status === 'void' || doc.data()?.isCleared === true) && !user.admin) {
         throw new Error('Cannot modify certified, cleared, or voided transactions');
       }
       if (wsData?.lockDate && doc.data()?.date && doc.data()?.date <= wsData.lockDate) {
@@ -329,7 +329,7 @@ transactionRouter.delete('/:id', async (req, res) => {
       return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
     }
 
-    if ((data?.status === 'certified' || data?.status === 'voided') && !user.admin) {
+    if ((data?.status === 'certified' || data?.status === 'void') && !user.admin) {
       return res.status(403).json({ error: `Forbidden: Transaction status is audited and locked (${data?.status}). Destructive actions are restricted to administrators.` });
     }
 
@@ -430,10 +430,31 @@ transactionRouter.post('/batch', async (req, res) => {
      const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
      if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
      
+     if (!updates || updates.length === 0) return res.json({ status: 'ok' });
+
+     const txRefs = updates.map((u: any) => db.collection('transactions').doc(u.id));
+     const txDocs = await db.getAll(...txRefs);
      const batch = db.batch();
-     for (const update of updates) {
-       batch.update(db.collection('transactions').doc(update.id), { ...update.data, updatedAt: FieldValue.serverTimestamp() });
+
+     for (let i = 0; i < txDocs.length; i++) {
+       const txDoc = txDocs[i];
+       if (!txDoc.exists) throw new Error(`Transaction ${updates[i].id} not found`);
+       
+       const txData = txDoc.data();
+       if (txData?.workspaceId !== workspaceId) throw new Error(`Transaction ${updates[i].id} does not belong to this workspace`);
+       
+       const wsData = wsDoc.data();
+       if (wsData?.lockDate && txData?.date && txData.date <= wsData.lockDate) throw new Error(`Period Locked: Transaction ${updates[i].id} is locked.`);
+       if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) throw new Error(`Forbidden: Transaction ${updates[i].id} status is locked.`);
+       
+       const updateData = updates[i].data;
+       if (updateData.lines !== undefined || updateData.amountCents !== undefined || updateData.totalAmountCents !== undefined || updateData.workspaceId !== undefined || updateData.date !== undefined || updateData.uid !== undefined) {
+         throw new Error(`Restricted fields cannot be modified via batch update on transaction ${updates[i].id}.`);
+       }
+
+       batch.update(txDoc.ref, { ...updateData, updatedAt: FieldValue.serverTimestamp() });
      }
+     
      await batch.commit();
      res.json({ status: 'ok' });
    } catch (e: any) {
@@ -632,8 +653,10 @@ transactionRouter.post('/reset', async (req, res) => {
     const user = (req as any).user;
     const db = getFirestore();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
-      return res.status(403).json({ error: 'Not a member' });
+    
+    // Only the workspace owner or a global admin can completely reset the workspace data
+    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !user.admin)) {
+      return res.status(403).json({ error: 'Forbidden: Only the workspace owner or a global admin can reset data.' });
     }
 
     const collections = [
