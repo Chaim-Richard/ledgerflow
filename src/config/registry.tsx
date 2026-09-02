@@ -102,7 +102,7 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'inventory', label: { en: 'Inventory', he: 'מלאי' }, icon: FolderKanban, groupId: 'operations', isAdvanced: true },
   { id: 'reports', label: { en: 'Financial Reports', he: 'דוחות' }, icon: FileText, groupId: 'planning' },
   { id: 'forecaster', label: { en: 'Cash Forecasting', he: 'תחזית תזרים' }, icon: TrendingUp, groupId: 'planning', isAdvanced: true },
-  { id: 'intelligence', label: { en: 'Analysis', he: 'מודיעין מתקדם' }, icon: BarChart3, groupId: 'planning', isAdvanced: true },
+  { id: 'intelligence', label: { en: 'Analysis', he: 'מודיעין מתקדם' }, icon: BarChart3, groupId: 'planning' },
   { id: 'vault', label: { en: 'Documents', he: 'כספת מסמכים' }, icon: ShieldCheck, groupId: 'system' },
   { id: 'settings', label: { en: 'Settings', he: 'הגדרות' }, icon: Settings, groupId: 'system' },
   { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת מתקדם' }, icon: Search, groupId: 'system', isAdvanced: true },
