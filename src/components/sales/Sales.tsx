@@ -34,6 +34,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { printInvoice } from '../../lib/printInvoice';
+import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
 export default function Sales() {
   const user = useAuthStore(s => s.user);
@@ -41,7 +42,33 @@ export default function Sales() {
   const customers = useLedgerStore(s => s.customers);
   const accounts = useLedgerStore(s => s.accounts);
   const { addEntity, updateEntity } = useEntityOperations();
-  const onAddInvoice = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('invoices', id, updates); } return addEntity('invoices', data); };
+  const onAddInvoice = async (data: any) => { 
+    let res;
+    if (data.id) { 
+      const { id, ...updates } = data; 
+      res = await updateEntity('invoices', id, updates); 
+    } else {
+      res = await addEntity('invoices', data); 
+    }
+
+    if (data.type === 'recurring') {
+      const nextOcc = calculateNextOccurrence(data.date || new Date().toISOString(), data.recurringInterval || 'monthly');
+      await addEntity('recurring', {
+        description: `Recurring Invoice: ${data.customerName || 'Customer'} - ${data.number || 'Standard'}`,
+        amountCents: data.totalCents || data.amountCents || 0,
+        frequency: data.recurringInterval || 'monthly',
+        nextOccurrence: nextOcc,
+        isActive: true,
+        template: {
+          description: `Invoice: ${data.customerName || 'Customer'}`,
+          amountCents: data.totalCents || data.amountCents || 0,
+          customerId: data.customerId,
+          tags: ['recurring', 'invoice', ...(data.tags || [])]
+        }
+      }, 'Recurring schedule registered');
+    }
+    return res;
+  };
   const onAddCustomer = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('customers', id, updates); } return addEntity('customers', data); };
   const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'customers' | 'pipeline'>('pipeline');
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);

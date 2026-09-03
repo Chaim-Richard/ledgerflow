@@ -1,10 +1,11 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Save, CreditCard } from 'lucide-react';
+import { X, Plus, Trash2, Save, CreditCard, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Bill, Vendor, ChartAccount } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
 
 interface BillModalProps {
@@ -18,7 +19,11 @@ interface BillModalProps {
 export default function BillModal({ isOpen, onClose, onSave, vendors = [], accounts = [] }: BillModalProps) {
   // Ensure we have arrays even if props were passed as null
   const safeVendors = Array.isArray(vendors) ? vendors : [];
-  const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'expense') : [];
+  const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'expense' || a?.type === 'cost_of_goods' || a?.type === 'asset') : [];
+  
+  const storeBills = useLedgerStore(s => s.bills) || [];
+  const storeTransactions = useLedgerStore(s => s.transactions) || [];
+  const [autofillNotice, setAutofillNotice] = useState<string | null>(null);
 
   const [bill, setBill] = useState<Partial<Bill>>(() => ({
     number: `BILL-${Date.now().toString().slice(-6)}`,
@@ -36,6 +41,56 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   const [attachments, setAttachments] = useState<File[]>([]);
 
   const total = splits.reduce((sum, split) => sum + split.amountCents, 0);
+
+  const handleVendorSelect = (vendorId: string) => {
+    const vend = safeVendors.find(v => v.id === vendorId);
+    setBill(prev => ({ ...prev, vendorId, vendorName: vend?.name }));
+    setAutofillNotice(null);
+
+    if (!vendorId) return;
+
+    // Look for last used account for this vendor from previous bills
+    let foundAccountId = '';
+    let foundDesc = '';
+
+    const prevBill = storeBills.find(b => b.vendorId === vendorId && b.splits && b.splits.length > 0 && b.splits[0].accountId);
+    if (prevBill && prevBill.splits?.[0]?.accountId) {
+      foundAccountId = prevBill.splits[0].accountId;
+      foundDesc = prevBill.splits[0].description || '';
+    } else {
+      // Look in transaction history
+      const prevTx = storeTransactions.find(t => 
+        (((t as any).vendorId === vendorId || (t.metadata as any)?.vendorId === vendorId) || (vend && t.description?.toLowerCase().includes(vend.name.toLowerCase()))) &&
+        t.lines && t.lines.length > 0
+      );
+      if (prevTx && prevTx.lines) {
+        const matchingLine = prevTx.lines.find(l => accounts.some(a => a.id === l.accountId && (a.type === 'expense' || a.type === 'cost_of_goods'))) || prevTx.lines[0];
+        if (matchingLine) {
+          foundAccountId = matchingLine.accountId;
+          foundDesc = prevTx.description || '';
+        }
+      }
+    }
+
+    if (foundAccountId) {
+      const targetAcc = accounts.find(a => a.id === foundAccountId);
+      setSplits(prev => {
+        const next = [...prev];
+        if (next.length > 0) {
+          next[0] = {
+            ...next[0],
+            accountId: foundAccountId,
+            description: next[0].description || foundDesc || `${vend?.name || 'Vendor'} expense`
+          };
+        }
+        return next;
+      });
+      if (targetAcc) {
+        setAutofillNotice(`Auto-filled account: ${targetAcc.name}`);
+        toast.info(`⚡ Auto-filled account "${targetAcc.name}" from previous ${vend?.name || 'vendor'} history.`);
+      }
+    }
+  };
 
   const handleAction = async (e: React.FormEvent, actionStatus: string) => {
     e.preventDefault();
@@ -102,14 +157,18 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
-              <label className="micro-label">Vendor</label>
+              <div className="flex items-center justify-between">
+                <label className="micro-label">Vendor</label>
+                {autofillNotice && (
+                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-200">
+                    <Sparkles size={10} /> Auto-filled
+                  </span>
+                )}
+              </div>
               <select 
                 required
                 value={bill.vendorId || ''}
-                onChange={(e) => {
-                  const vend = safeVendors.find(v => v.id === e.target.value);
-                  setBill({ ...bill, vendorId: e.target.value, vendorName: vend?.name });
-                }}
+                onChange={(e) => handleVendorSelect(e.target.value)}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="">Select Vendor</option>

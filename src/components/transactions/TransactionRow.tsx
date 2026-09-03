@@ -97,6 +97,22 @@ const TransactionRow = React.memo(({
   const isLocked = !!(lockDate && tx.date <= lockDate) || !!tx.isLocked;
   const displayTx = tx;
 
+  const [isEditingDesc, setIsEditingDesc] = React.useState(false);
+  const [descValue, setDescValue] = React.useState(displayTx.description);
+
+  React.useEffect(() => {
+    setDescValue(displayTx.description);
+  }, [displayTx.description]);
+
+  const handleDescSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setIsEditingDesc(false);
+    if (descValue !== displayTx.description && !isLocked && onUpdate) {
+      onUpdate(tx.id, { description: descValue });
+    }
+  };
+
   return (
     <div className="flex flex-col w-full h-full relative group/row">
       <div role="button" tabIndex={0} 
@@ -135,25 +151,55 @@ const TransactionRow = React.memo(({
         )}>
           {displayTx.date ? format(parseLocalDate(displayTx.date), 'dd MMM yyyy') : 'N/A'}
         </div>
-        <div className={cn(
-          "px-4 font-bold text-[var(--text)] transition-colors text-xs h-full flex flex-col justify-center relative border-r border-[var(--line)]/50 group-hover/active:text-white", 
-          isProMode && "px-2 text-[10px]",
-          isFocused && focusedField === 'description' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5",
-          "truncate"
-        )} dir="auto">
-          <span className="truncate w-full font-sans tracking-tight flex items-center gap-1.5 flex-wrap">
-            <HighlightMatch text={displayTx.description} match={searchTerm} />
-            {isLocked && (
-              <span title="Locked under Absolute Integrity">
-                <Lock className="text-amber-500 inline shrink-0 animate-pulse" size={11} />
+        <div 
+          onDoubleClick={(e) => {
+            if (!isLocked) {
+              e.stopPropagation();
+              setIsEditingDesc(true);
+            }
+          }}
+          className={cn(
+            "px-4 font-bold text-[var(--text)] transition-colors text-xs h-full flex flex-col justify-center relative border-r border-[var(--line)]/50 group-hover/active:text-white", 
+            isProMode && "px-2 text-[10px]",
+            isFocused && focusedField === 'description' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5",
+            "truncate"
+          )} 
+          dir="auto"
+        >
+          {isEditingDesc ? (
+            <input 
+              type="text"
+              autoFocus
+              value={descValue}
+              onChange={(e) => setDescValue(e.target.value)}
+              onBlur={() => handleDescSubmit()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleDescSubmit();
+                if (e.key === 'Escape') {
+                  setDescValue(displayTx.description);
+                  setIsEditingDesc(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full bg-white text-slate-900 px-2 py-1 text-xs font-semibold rounded border border-indigo-500 shadow-xs outline-none"
+            />
+          ) : (
+            <>
+              <span className="truncate w-full font-sans tracking-tight flex items-center gap-1.5 flex-wrap">
+                <HighlightMatch text={displayTx.description} match={searchTerm} />
+                {isLocked && (
+                  <span title="Locked under Absolute Integrity">
+                    <Lock className="text-amber-500 inline shrink-0 animate-pulse" size={11} />
+                  </span>
+                )}
               </span>
-            )}
-          </span>
-          {!isCompactMode && tx.verification?.hash && (
-            <span className="text-[9px] text-slate-500 font-mono flex items-center gap-1 transition-colors group-hover/active:text-white/40">
-              <Zap size={9} className={isLocked ? "text-amber-400" : "text-emerald-500"} />
-              {tx.verification.hash.slice(0, 8)} {isLocked && <span className="text-[7px] font-black tracking-widest uppercase bg-amber-400/10 text-amber-500 dark:text-amber-400 px-1.5 py-0.5 border border-amber-400/20 rounded font-sans scale-90 origin-left">SEALED</span>}
-            </span>
+              {!isCompactMode && tx.verification?.hash && (
+                <span className="text-[9px] text-slate-500 font-mono flex items-center gap-1 transition-colors group-hover/active:text-white/40">
+                  <Zap size={9} className={isLocked ? "text-amber-400" : "text-emerald-500"} />
+                  {tx.verification.hash.slice(0, 8)} {isLocked && <span className="text-[7px] font-black tracking-widest uppercase bg-amber-400/10 text-amber-500 dark:text-amber-400 px-1.5 py-0.5 border border-amber-400/20 rounded font-sans scale-90 origin-left">SEALED</span>}
+                </span>
+              )}
+            </>
           )}
         </div>
         {!isMobileGrid && (

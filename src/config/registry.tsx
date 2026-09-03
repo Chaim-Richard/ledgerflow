@@ -275,10 +275,8 @@ export const REPORT_COMPONENTS: Record<string, any> = {
   'PNLView': lazy(() => import('../components/ledger/ProfitAndLossView')),
   'BalanceSheetReportView': lazy(() => import('../components/ledger/BalanceSheetView')),
   'CashFlowView': lazy(() => import('../components/ledger/CashFlowView')),
-  
-  
-  
-  
+  'ARAgingReportView': lazy(() => import('../components/reporting/ARAgingReportView')),
+  'APAgingReportView': lazy(() => import('../components/reporting/APAgingReportView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = [
@@ -293,6 +291,8 @@ export const REPORT_TABS_REGISTRY = [
   { id: 'pnl', label: { en: 'Profit & Loss', he: 'רווח והפסד' }, componentName: 'PNLView', icon: Activity },
   { id: 'balance-sheet', label: { en: 'Balance Sheet', he: 'מאזן' }, componentName: 'BalanceSheetReportView', icon: Layers },
   { id: 'cash-flow', label: { en: 'Cash Flow', he: 'תזרים' }, componentName: 'CashFlowView', icon: RefreshCw },
+  { id: 'ar-aging', label: { en: 'A/R Aging', he: 'גיול לקוחות' }, componentName: 'ARAgingReportView', icon: Users },
+  { id: 'ap-aging', label: { en: 'A/P Aging', he: 'גיול ספקים' }, componentName: 'APAgingReportView', icon: Building },
 ];
 
 export const SETTINGS_TABS_REGISTRY = [

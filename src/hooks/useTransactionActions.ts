@@ -35,6 +35,7 @@ import { safeAsync, safeConfirm, getLocalDateISO } from '../lib/utils';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { useBillingStore } from '../modules/billing/BillingService';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
+import { findDueRecurring } from '../lib/recurringEngine';
 
 export function useTransactionActions() {
   const user = useAuthStore(s => s.user);
@@ -1602,6 +1603,44 @@ export function useTransactionActions() {
     handleBulkRepair,
     handleIntegrityAction,
     handleToggleFlag,
+    handleProcessDueRecurring: async () => {
+      if (!user || !currentWorkspaceId) return { count: 0 };
+      const recurringList = useLedgerStore.getState().recurring || [];
+      const { dueTemplates, generatedTransactions } = findDueRecurring(recurringList);
+
+      if (generatedTransactions.length === 0) {
+        toast.info('No recurring transactions due at this time.');
+        return { count: 0 };
+      }
+
+      const loader = toast.loading(`Processing ${generatedTransactions.length} due recurring transaction(s)...`);
+      try {
+        const batch = writeBatch(db);
+        for (const item of generatedTransactions) {
+          const txRef = doc(collection(db, 'workspaces', currentWorkspaceId, 'transactions'));
+          batch.set(txRef, {
+            ...item.transaction,
+            id: txRef.id,
+            uid: user.uid,
+            workspaceId: currentWorkspaceId,
+            createdAt: new Date().toISOString()
+          });
+
+          const recRef = doc(db, 'workspaces', currentWorkspaceId, 'recurring', item.templateId);
+          batch.update(recRef, {
+            nextOccurrence: item.updatedNextOccurrence
+          });
+        }
+
+        await batch.commit();
+        toast.success(`Successfully posted ${generatedTransactions.length} recurring transaction(s).`, { id: loader });
+        return { count: generatedTransactions.length };
+      } catch (err) {
+        console.error('Failed to process recurring transactions:', err);
+        toast.error('Failed to process recurring transactions.', { id: loader });
+        throw err;
+      }
+    },
     handleSmartCluster: async () => {
       if (!user || !currentWorkspaceId) return;
       const loader = toast.loading('Calculating transaction clusters...');
