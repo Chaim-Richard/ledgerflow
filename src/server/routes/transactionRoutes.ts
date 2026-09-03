@@ -653,13 +653,13 @@ transactionRouter.post('/close-year', async (req, res) => {
     }
 
     const wsData = wsDoc.data();
-    const isOwnerOrAdmin = wsData?.uid === user.uid || (Array.isArray(wsData?.members) && wsData.members.includes(user.uid)) || user.admin;
+    const isOwnerOrAdmin = wsData?.uid === user.uid || user.admin;
     if (!isOwnerOrAdmin) {
       return res.status(403).json({ error: 'Forbidden: Insufficient permissions to execute fiscal year close.' });
     }
 
-    // Check if period is already locked past this date
-    if (wsData?.lockDate && wsData.lockDate > closingDate) {
+    // Check if period is already locked past or on this date
+    if (wsData?.lockDate && wsData.lockDate >= closingDate) {
       return res.status(400).json({ error: `Cannot close year: Period is locked through ${wsData.lockDate}.` });
     }
 
@@ -680,7 +680,8 @@ transactionRouter.post('/close-year', async (req, res) => {
       uid: user.uid,
       closingDate,
       accounts,
-      transactions
+      transactions,
+      baseCurrency: wsData?.baseCurrency || 'USD'
     });
 
     // 4. Validate schema
@@ -708,10 +709,9 @@ transactionRouter.post('/close-year', async (req, res) => {
       });
     }
 
-    await batch.commit();
-
     // 6. Log audit event
-    await db.collection('auditLogs').add({
+    const auditRef = db.collection('auditLogs').doc();
+    batch.set(auditRef, {
       workspaceId,
       actorUid: user.uid,
       actorEmail: user.email || 'authenticated-user',
@@ -726,6 +726,8 @@ transactionRouter.post('/close-year', async (req, res) => {
       },
       timestamp: FieldValue.serverTimestamp()
     });
+
+    await batch.commit();
 
     res.json({
       status: 'ok',

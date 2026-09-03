@@ -29,8 +29,9 @@ export class ClosingEntryEngine {
     accounts: ChartAccount[];
     transactions: Transaction[];
     retainedEarningsAccountId?: string;
+    baseCurrency?: string;
   }): ClosingResult {
-    const { workspaceId, uid, closingDate, accounts, transactions } = params;
+    const { workspaceId, uid, closingDate, accounts, transactions, baseCurrency = 'USD' } = params;
 
     if (!closingDate || !/^\d{4}-\d{2}-\d{2}$/.test(closingDate)) {
       throw new Error(`Invalid closing date format: "${closingDate}". Expected YYYY-MM-DD.`);
@@ -248,7 +249,7 @@ export class ClosingEntryEngine {
       date: closingDate,
       description: `Fiscal Year Close (${closingDate}) - Transfer P&L to Retained Earnings`,
       totalAmountCents: totalDebitCents || Math.abs(netIncomeCents),
-      currency: 'USD',
+      currency: baseCurrency,
       exchangeRate: 1,
       status: 'completed',
       type: 'adjustment',
