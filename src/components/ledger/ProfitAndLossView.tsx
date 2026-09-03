@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal } from 'lucide-react';
+import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
-import { parseLocalDate, cn, getLocalDateISO } from '../../lib/utils';
+import { parseLocalDate, cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
 import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import DrillDownModal from '../layout/DrillDownModal';
 
 interface PLData {
   income: { total: number; accounts: Record<string, any> };
@@ -25,6 +26,18 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
     end: getLocalDateISO()
   });
   const [isComparative, setIsComparative] = useState(false);
+  const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('balance');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: any[] } | null>(null);
+
+  const toggleSort = (field: 'code' | 'name' | 'balance') => {
+    if (sortBy === field) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortDir('desc');
+    }
+  };
 
   const workspaces = useAuthStore(s => s.workspaces);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -354,12 +367,32 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
       {/* Detail Core */}
       <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative">
         <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
-        <div className="p-4 border-b border-slate-150 bg-[var(--ink)] flex items-center justify-between">
+        <div className="p-4 border-b border-slate-150 bg-[var(--ink)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">{labels.title}</h3>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Hierarchical Performance Synthesis</p>
           </div>
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Sort By:</span>
+            <div className="flex items-center gap-1 bg-[var(--surface)] border border-[var(--line)] rounded-lg p-0.5">
+              {(['balance', 'name', 'code'] as const).map(field => (
+                <button
+                  key={field}
+                  onClick={() => toggleSort(field)}
+                  className={cn(
+                    "px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded transition-colors flex items-center gap-1 cursor-pointer",
+                    sortBy === field ? "bg-slate-900 text-white" : "text-slate-500 hover:text-[var(--text)]"
+                  )}
+                >
+                  <span>{field}</span>
+                  {sortBy === field && (
+                    sortDir === 'asc' ? <ArrowUp size={9} /> : <ArrowDown size={9} />
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0 ml-2" />
+          </div>
         </div>
         
         <div className="p-5 space-y-8">
@@ -386,17 +419,43 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(data.income?.accounts || {}).map(([id, acc]: [string, any]) => {
+              {Object.entries(data.income?.accounts || {})
+                .sort(([idA, a]: [string, any], [idB, b]: [string, any]) => {
+                  let comp = 0;
+                  if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
+                  else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
+                  else comp = (a.balance || 0) - (b.balance || 0);
+                  return sortDir === 'asc' ? comp : -comp;
+                })
+                .map(([id, acc]: [string, any]) => {
                 const prevAcc = (prevData.income?.accounts as any)[id];
                 const prevBalance = prevAcc ? prevAcc.balance : 0;
                 const balance = acc.balance || 0;
                 const variance = isComparative && prevBalance !== 0 ? ((balance - prevBalance) / Math.abs(prevBalance)) * 100 : null;
 
                 return (
-                  <div key={id} className="flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-[var(--line)] transition-all group gap-4 min-w-0">
+                  <div 
+                    key={id} 
+                    onClick={() => {
+                      const matchedTxs = transactions.filter(t => 
+                        t.date >= dateRange.start && 
+                        t.date <= dateRange.end && 
+                        t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
+                      );
+                      setDrillDownTarget({
+                        accountName: acc.name,
+                        transactions: matchedTxs
+                      });
+                    }}
+                    title={`Click to drill down into ${acc.name}`}
+                    className="flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 transition-all group gap-4 min-w-0 cursor-pointer"
+                  >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-mono text-[8px] font-bold text-slate-400 bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
-                      <span className="text-[var(--text)] font-bold group-hover:text-[var(--brass)] transition-colors uppercase tracking-tight text-xs truncate">{acc.name}</span>
+                      <span className="text-[var(--text)] font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-tight text-xs truncate flex items-center gap-1.5">
+                        {acc.name}
+                        <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
+                      </span>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
                       <span className="font-mono text-[var(--text)] text-xs font-semibold">{formatCurrency(balance)}</span>
@@ -440,17 +499,43 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
                </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(data.expense?.accounts || {}).map(([id, acc]: [string, any]) => {
+              {Object.entries(data.expense?.accounts || {})
+                .sort(([idA, a]: [string, any], [idB, b]: [string, any]) => {
+                  let comp = 0;
+                  if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
+                  else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
+                  else comp = (a.balance || 0) - (b.balance || 0);
+                  return sortDir === 'asc' ? comp : -comp;
+                })
+                .map(([id, acc]: [string, any]) => {
                 const prevAcc = (prevData.expense?.accounts as any)[id];
                 const prevBalance = prevAcc ? prevAcc.balance : 0;
                 const balance = acc.balance || 0;
                 const variance = isComparative && prevBalance !== 0 ? ((balance - prevBalance) / Math.abs(prevBalance)) * 100 : null;
 
                 return (
-                  <div key={id} className="flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-[var(--line)] transition-all group gap-4 min-w-0">
+                  <div 
+                    key={id} 
+                    onClick={() => {
+                      const matchedTxs = transactions.filter(t => 
+                        t.date >= dateRange.start && 
+                        t.date <= dateRange.end && 
+                        t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
+                      );
+                      setDrillDownTarget({
+                        accountName: acc.name,
+                        transactions: matchedTxs
+                      });
+                    }}
+                    title={`Click to drill down into ${acc.name}`}
+                    className="flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 transition-all group gap-4 min-w-0 cursor-pointer"
+                  >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-mono text-[8px] font-bold text-slate-400 bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
-                      <span className="text-[var(--text)] font-bold group-hover:text-[var(--brass)] transition-colors uppercase tracking-tight text-xs truncate">{acc.name}</span>
+                      <span className="text-[var(--text)] font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-tight text-xs truncate flex items-center gap-1.5">
+                        {acc.name}
+                        <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
+                      </span>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
                       <span className="font-mono text-[var(--text)] text-xs font-semibold">{formatCurrency(balance)}</span>
@@ -502,6 +587,17 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
           </div>
         </div>
       </div>
+
+      {/* Drill-Down Modal */}
+      {drillDownTarget && (
+        <DrillDownModal
+          isOpen={!!drillDownTarget}
+          onClose={() => setDrillDownTarget(null)}
+          accountName={drillDownTarget.accountName}
+          transactions={drillDownTarget.transactions}
+          formatCurrency={formatCurrency}
+        />
+      )}
     </div>
   );
 };

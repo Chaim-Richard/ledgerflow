@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChartAccount } from '../../types';
 import { format } from 'date-fns';
-import { Scale, CheckCircle2, AlertCircle, Activity } from 'lucide-react';
+import { Scale, CheckCircle2, AlertCircle, Activity, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { formatDecimal, cn } from '../../lib/utils';
 import { motion } from 'motion/react';
+import { Download } from "lucide-react";
 
 interface TrialBalanceViewProps {
   accounts: ChartAccount[];
@@ -11,8 +12,22 @@ interface TrialBalanceViewProps {
   onDrillDown: (accountId: string) => void;
 }
 
-import { Download } from "lucide-react";
+type SortField = 'code' | 'name' | 'type' | 'debit' | 'credit';
+type SortDir = 'asc' | 'desc';
+
 export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown }: TrialBalanceViewProps) {
+  const [sortField, setSortField] = useState<SortField>('code');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
   const trialBalance = React.useMemo(() => {
     let totalDebits = 0;
     let totalCredits = 0;
@@ -35,14 +50,25 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       return { ...acc, debit, credit };
     });
 
+    lines.sort((a, b) => {
+      let comp = 0;
+      if (sortField === 'code') comp = (a.code || '').localeCompare(b.code || '');
+      else if (sortField === 'name') comp = (a.name || '').localeCompare(b.name || '');
+      else if (sortField === 'type') comp = (a.type || '').localeCompare(b.type || '');
+      else if (sortField === 'debit') comp = a.debit - b.debit;
+      else if (sortField === 'credit') comp = a.credit - b.credit;
+
+      return sortDir === 'asc' ? comp : -comp;
+    });
+
     return { lines, totalDebits, totalCredits, isBalanced: Math.abs(totalDebits - totalCredits) < 0.01 };
-  }, [accounts]);
+  }, [accounts, sortField, sortDir]);
 
   
   const handleExportCSV = () => {
     const headers = ['Account Code', 'Account Name', 'Type', 'Debit', 'Credit'];
     const rows = trialBalance.lines.map(line => [
-      line.id,
+      line.code || line.id,
       line.name,
       line.type,
       formatDecimal(line.debit),
@@ -58,6 +84,11 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown size={11} className="opacity-40" />;
+    return sortDir === 'asc' ? <ArrowUp size={11} className="text-emerald-400" /> : <ArrowDown size={11} className="text-emerald-400" />;
   };
 
   return (
@@ -103,10 +134,34 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       <div className="overflow-x-auto relative z-10 custom-scrollbar">
         <table className="w-full text-left min-w-[700px] text-xs">
           <thead>
-            <tr className="bg-slate-900 text-white whitespace-nowrap">
-              <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider">Core Identifier</th>
-              <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Debit Matrix</th>
-              <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Credit Matrix</th>
+            <tr className="bg-slate-900 text-white whitespace-nowrap select-none">
+              <th 
+                onClick={() => handleSort('code')}
+                className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span>Core Identifier</span>
+                  {renderSortIcon('code')}
+                </div>
+              </th>
+              <th 
+                onClick={() => handleSort('debit')}
+                className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right cursor-pointer hover:bg-slate-800 transition-colors"
+              >
+                <div className="flex items-center justify-end gap-2">
+                  <span>Debit Matrix</span>
+                  {renderSortIcon('debit')}
+                </div>
+              </th>
+              <th 
+                onClick={() => handleSort('credit')}
+                className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right cursor-pointer hover:bg-slate-800 transition-colors"
+              >
+                <div className="flex items-center justify-end gap-2">
+                  <span>Credit Matrix</span>
+                  {renderSortIcon('credit')}
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

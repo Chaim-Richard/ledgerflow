@@ -49,8 +49,11 @@ export const useBillingStore = create<BillingState>()(
               });
             }
           }
-        } catch (e) {
-          console.warn("Failed to fetch public registration limits:", e);
+        } catch (e: any) {
+          // Gracefully ignore aborted fetch on component unmount / dev reload
+          if (e?.name !== 'AbortError') {
+            console.debug("Registration status offline fallback enabled:", e?.message || e);
+          }
         }
       },
       checkQuota: () => {

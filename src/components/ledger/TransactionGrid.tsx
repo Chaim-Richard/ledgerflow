@@ -273,10 +273,32 @@ export default function TransactionGrid() {
   const onNewEntry = () => { txActions.handleQuickAdd?.({} as any); onAction("quick-entry"); };
   const onImport = () => onAction('open-importer');
   const onOpenImporter = () => onAction('open-importer');
-  const onCreateRule = (tx: any) => {}; // not fully implemented here
-  const categories = [];
-  const isProMode = false;
-  const isCompactMode = false;
+  const isProMode = useUIStore(s => s.isProMode);
+  const isCompactMode = useUIStore(s => s.isCompactMode);
+  const setProMode = useUIStore(s => s.setProMode);
+  const setCompactMode = useUIStore(s => s.setCompactMode);
+
+  const onCreateRule = (tx: any) => {
+    if (!tx || !tx.description) return;
+    const accountId = tx.lines?.[0]?.accountId;
+    const accountName = tx.lines?.[0]?.accountName || 'Unassigned';
+    
+    const newRule = {
+      id: `rule-${Date.now()}`,
+      name: `Auto-categorize: ${tx.description.slice(0, 30)}`,
+      pattern: tx.description.trim(),
+      targetAccountId: accountId,
+      targetAccountName: accountName,
+      priority: 10,
+      enabled: true,
+      conditions: [{ field: 'description', operator: 'contains', value: tx.description.trim() }],
+      actions: [{ type: 'setAccount', accountId, accountName }]
+    };
+
+    const currentRules = useLedgerStore.getState().autoRules || [];
+    useLedgerStore.getState().setAutoRules([...currentRules, newRule]);
+    toast.success(`Rule created for "${tx.description.slice(0, 25)}" → ${accountName}`);
+  };
   const dateFormat = 'MMM dd, yyyy';
   const passedAnomalies = undefined;
   // Defensive array checks
@@ -802,15 +824,30 @@ export default function TransactionGrid() {
             <div className="flex bg-[var(--panel)] p-1 rounded-xl border border-[var(--line)] self-stretch sm:self-auto shadow-3xs">
               <button 
                 onClick={() => setViewMode('grid')}
-                className={cn("flex-1 sm:flex-none h-8 px-4 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all", viewMode === 'grid' ? "bg-[var(--brass)] text-black shadow-xs scale-[1.02]" : "text-[var(--muted)] hover:text-[var(--text)]")}
+                className={cn("flex-1 sm:flex-none h-8 px-3 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer", viewMode === 'grid' ? "bg-[var(--brass)] text-black shadow-xs scale-[1.02]" : "text-[var(--muted)] hover:text-[var(--text)]")}
               >
-                Grid View
+                Grid
               </button>
               <button 
                 onClick={() => setViewMode('pivot')}
-                className={cn("flex-1 sm:flex-none h-8 px-4 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all", viewMode === 'pivot' ? "bg-[var(--brass)] text-black shadow-xs scale-[1.02]" : "text-[var(--muted)] hover:text-[var(--text)]")}
+                className={cn("flex-1 sm:flex-none h-8 px-3 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer", viewMode === 'pivot' ? "bg-[var(--brass)] text-black shadow-xs scale-[1.02]" : "text-[var(--muted)] hover:text-[var(--text)]")}
               >
-                Pivot Matrix
+                Pivot
+              </button>
+              <div className="w-px h-4 bg-slate-300 self-center mx-1" />
+              <button 
+                onClick={() => setProMode(!isProMode)}
+                title="Toggle Pro Density Mode"
+                className={cn("flex-1 sm:flex-none h-8 px-2.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer", isProMode ? "bg-indigo-600 text-white shadow-xs" : "text-[var(--muted)] hover:text-[var(--text)]")}
+              >
+                Pro
+              </button>
+              <button 
+                onClick={() => setCompactMode(!isCompactMode)}
+                title="Toggle Ultra Compact Mode"
+                className={cn("flex-1 sm:flex-none h-8 px-2.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer", isCompactMode ? "bg-slate-900 text-white shadow-xs" : "text-[var(--muted)] hover:text-[var(--text)]")}
+              >
+                Compact
               </button>
             </div>
           </div>

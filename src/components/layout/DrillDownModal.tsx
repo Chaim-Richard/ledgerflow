@@ -59,22 +59,26 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                 </thead>
                 <tbody>
                   {transactions.slice(0, displayLimit).map((tx) => {
-                    const line = tx.lines.find(l => l.accountName === accountName);
-                    if (!line) return null;
+                    const matchedLine = tx.lines?.find(l => l.accountName === accountName || l.accountId === accountName);
+                    const line = matchedLine || tx.lines?.[0];
+                    const amount = matchedLine ? matchedLine.amountCents : tx.totalAmountCents;
 
                     return (
                       <tr key={tx.id} className="group hover:bg-[var(--ink)] transition-all rounded-[32px] overflow-hidden">
                         <td className="py-4 pl-4 text-xs font-black text-slate-500 font-mono rounded-l-2xl border-y border-l border-[var(--line)] group-hover:border-slate-300">
-                          {format(parseLocalDate(tx.date), 'MMM dd, yyyy')}
+                          {tx.date ? format(parseLocalDate(tx.date), 'MMM dd, yyyy') : 'N/A'}
                         </td>
                         <td className="py-4 text-sm font-bold text-[var(--text)] border-y border-[var(--line)] group-hover:border-slate-300">
-                           {tx.description}
+                           <div className="flex flex-col">
+                             <span>{tx.description}</span>
+                             {tx.payee && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{tx.payee}</span>}
+                           </div>
                         </td>
                         <td className={cn(
                           "py-4 text-right pr-4 font-black font-mono border-y border-r border-[var(--line)] group-hover:border-slate-300 rounded-r-2xl",
-                          line.amountCents >= 0 ? "text-emerald-600" : "text-rose-600"
+                          amount >= 0 ? "text-emerald-600" : "text-rose-600"
                         )}>
-                          {line.amountCents >= 0 ? '+' : ''}{formatCurrency(line.amountCents)}
+                          {amount >= 0 ? '+' : ''}{formatCurrency(amount)}
                         </td>
                       </tr>
                     );

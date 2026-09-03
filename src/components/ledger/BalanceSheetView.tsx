@@ -9,12 +9,17 @@ import {
   Activity, 
   Calendar, 
   FileSpreadsheet, 
-  SplitSquareHorizontal
+  SplitSquareHorizontal,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ExternalLink
 } from 'lucide-react';
 import { formatDecimal, cn, getLocalDateISO } from '../../lib/utils';
 import { motion } from 'motion/react';
 import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
+import DrillDownModal from '../layout/DrillDownModal';
 
 interface BalanceSheetViewProps {
   accounts: ChartAccount[];
@@ -31,6 +36,18 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
   const [priorDate, setPriorDate] = useState<string>(
     getLocalDateISO(new Date(new Date().getFullYear() - 1, new Date().getMonth(), new Date().getDate()))
   );
+  const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('code');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[] } | null>(null);
+
+  const toggleSort = (field: 'code' | 'name' | 'balance') => {
+    if (sortBy === field) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortDir('asc');
+    }
+  };
 
   const workspaces = useAuthStore(s => s.workspaces);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -333,13 +350,34 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
           )}
         </div>
 
-        <button 
-          onClick={exportBalanceSheet}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
-        >
-          <FileSpreadsheet size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
-          <span>Export Blueprint</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider px-1">Sort:</span>
+            {(['code', 'name', 'balance'] as const).map(field => (
+              <button
+                key={field}
+                onClick={() => toggleSort(field)}
+                className={cn(
+                  "px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded transition-colors flex items-center gap-1 cursor-pointer",
+                  sortBy === field ? "bg-slate-900 text-white shadow-xs" : "text-slate-600 hover:text-[var(--text)]"
+                )}
+              >
+                <span>{field}</span>
+                {sortBy === field && (
+                  sortDir === 'asc' ? <ArrowUp size={9} /> : <ArrowDown size={9} />
+                )}
+              </button>
+            ))}
+          </div>
+
+          <button 
+            onClick={exportBalanceSheet}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
+          >
+            <FileSpreadsheet size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
+            <span>Export Blueprint</span>
+          </button>
+        </div>
       </div>
 
       {/* Fundamental Equilibrium Status Card */}
@@ -399,19 +437,38 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
           </div>
           <div className="p-4 flex-1 flex flex-col justify-between">
             <div className="space-y-2">
-              {accounts.filter(a => a.type === 'asset').map(acc => {
+              {accounts.filter(a => a.type === 'asset')
+                .sort((a, b) => {
+                  let comp = 0;
+                  if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
+                  else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
+                  else comp = (currentData.assets[a.id] || 0) - (currentData.assets[b.id] || 0);
+                  return sortDir === 'asc' ? comp : -comp;
+                })
+                .map(acc => {
                 const curVal = currentData.assets[acc.id] || 0;
                 const prVal = isComparative ? prevData.assets[acc.id] || 0 : curVal;
                 const variance = getVarianceAndPct(curVal, prVal);
 
                 return (
-                  <div key={acc.id} className="flex justify-between items-center hover:bg-[var(--ink)]/60 p-2 rounded-lg transition-all border border-transparent hover:border-[var(--line)] min-w-0">
+                  <div 
+                    key={acc.id} 
+                    onClick={() => {
+                      const matchedTxs = transactions.filter(t => !t.deletedAt && t.date <= asOfDate && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
+                      setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
+                    }}
+                    title={`Click to drill down into ${acc.name}`}
+                    className="flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
+                  >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-8 h-8 bg-[var(--ink)] text-slate-500 rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
                         {acc.code}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-[var(--text)] uppercase tracking-tight truncate">{acc.name}</p>
+                        <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase tracking-tight truncate flex items-center gap-1.5">
+                          {acc.name}
+                          <ExternalLink size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
+                        </p>
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">{acc.category || 'Direct Asset'}</p>
                       </div>
                     </div>
@@ -469,19 +526,38 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
               {/* Liabilities Section */}
               <div className="space-y-2">
                 <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider truncate border-b border-[var(--line)] pb-2">{labels.liabilitiesLabel}</p>
-                {accounts.filter(a => a.type === 'liability').map(acc => {
+                {accounts.filter(a => a.type === 'liability')
+                  .sort((a, b) => {
+                    let comp = 0;
+                    if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
+                    else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
+                    else comp = (currentData.liabilities[a.id] || 0) - (currentData.liabilities[b.id] || 0);
+                    return sortDir === 'asc' ? comp : -comp;
+                  })
+                  .map(acc => {
                   const curVal = currentData.liabilities[acc.id] || 0;
                   const prVal = isComparative ? prevData.liabilities[acc.id] || 0 : curVal;
                   const variance = getVarianceAndPct(curVal, prVal);
 
                   return (
-                    <div key={acc.id} className="flex justify-between items-center hover:bg-[var(--ink)]/60 p-2 rounded-lg transition-all border border-transparent hover:border-[var(--line)] min-w-0">
+                    <div 
+                      key={acc.id} 
+                      onClick={() => {
+                        const matchedTxs = transactions.filter(t => !t.deletedAt && t.date <= asOfDate && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
+                        setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
+                      }}
+                      title={`Click to drill down into ${acc.name}`}
+                      className="flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
+                    >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 bg-[var(--ink)] text-slate-500 rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
                           {acc.code}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-[var(--text)] uppercase tracking-tight truncate">{acc.name}</p>
+                          <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase tracking-tight truncate flex items-center gap-1.5">
+                            {acc.name}
+                            <ExternalLink size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
+                          </p>
                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">{acc.category || 'Current Liability'}</p>
                         </div>
                       </div>
@@ -510,19 +586,38 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
               {/* Equity Section */}
               <div className="space-y-2">
                 <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider truncate border-b border-[var(--line)] pb-2">{labels.equityLabel}</p>
-                {accounts.filter(a => a.type === 'equity').map(acc => {
+                {accounts.filter(a => a.type === 'equity')
+                  .sort((a, b) => {
+                    let comp = 0;
+                    if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
+                    else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
+                    else comp = (currentData.equity[a.id] || 0) - (currentData.equity[b.id] || 0);
+                    return sortDir === 'asc' ? comp : -comp;
+                  })
+                  .map(acc => {
                   const curVal = currentData.equity[acc.id] || 0;
                   const prVal = isComparative ? prevData.equity[acc.id] || 0 : curVal;
                   const variance = getVarianceAndPct(curVal, prVal);
 
                   return (
-                    <div key={acc.id} className="flex justify-between items-center hover:bg-[var(--ink)]/60 p-2 rounded-lg transition-all border border-transparent hover:border-[var(--line)] min-w-0">
+                    <div 
+                      key={acc.id} 
+                      onClick={() => {
+                        const matchedTxs = transactions.filter(t => !t.deletedAt && t.date <= asOfDate && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
+                        setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
+                      }}
+                      title={`Click to drill down into ${acc.name}`}
+                      className="flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
+                    >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 bg-[var(--ink)] text-slate-500 rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
                           {acc.code}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-[var(--text)] uppercase tracking-tight truncate">{acc.name}</p>
+                          <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase tracking-tight truncate flex items-center gap-1.5">
+                            {acc.name}
+                            <ExternalLink size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
+                          </p>
                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">{acc.category || 'Owner Equity'}</p>
                         </div>
                       </div>
@@ -532,7 +627,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <span className="font-mono text-[8px] text-slate-400">prev: {formatCurrency(prVal)}</span>
                             {variance.pct !== null && prVal !== 0 && (
-                              <span className={cn("text-[8px] font-bold", variance.pct >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                              <span className={cn("text-[8px] font-bold", variance.pct <= 0 ? "text-emerald-500" : "text-rose-500")}>
                                 {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
                               </span>
                             )}
@@ -544,13 +639,26 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                 })}
 
                 {/* Retained Earnings Line Item */}
-                <div className="flex justify-between items-center bg-emerald-50/20 hover:bg-emerald-50/40 p-2 rounded-lg transition-all border border-emerald-100/40 min-w-0">
+                <div 
+                  onClick={() => {
+                    const matchedTxs = transactions.filter(t => !t.deletedAt && t.date <= asOfDate && t.lines?.some(l => {
+                      const account = accounts.find(a => a.id === l.accountId);
+                      return account && (account.type === 'income' || account.type === 'revenue' || account.type === 'expense' || account.type === 'cost_of_goods');
+                    }));
+                    setDrillDownTarget({ accountName: 'Retained Earnings (Income & Expenses)', transactions: matchedTxs });
+                  }}
+                  title="Click to drill down into Retained Earnings transaction activity"
+                  className="flex justify-between items-center bg-emerald-50/20 hover:bg-emerald-50/50 p-2 rounded-lg transition-all border border-emerald-100/40 hover:border-emerald-300 min-w-0 cursor-pointer group/row"
+                >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-emerald-100 shrink-0">
                       INC
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-emerald-800 uppercase tracking-tight truncate">{labels.retainedEarningsLabel}</p>
+                      <p className="text-xs font-bold text-emerald-800 group-hover/row:text-emerald-950 uppercase tracking-tight truncate flex items-center gap-1.5">
+                        {labels.retainedEarningsLabel}
+                        <ExternalLink size={10} className="opacity-0 group-hover/row:opacity-100 text-emerald-600 transition-opacity" />
+                      </p>
                       <p className="text-[8px] font-bold text-emerald-600/60 uppercase tracking-wider truncate">{labels.retainedEarningsSub}</p>
                     </div>
                   </div>
@@ -606,6 +714,17 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
           </div>
         </motion.div>
       </div>
+
+      {/* Drill-Down Modal */}
+      {drillDownTarget && (
+        <DrillDownModal
+          isOpen={!!drillDownTarget}
+          onClose={() => setDrillDownTarget(null)}
+          accountName={drillDownTarget.accountName}
+          transactions={drillDownTarget.transactions}
+          formatCurrency={formatCurrency}
+        />
+      )}
     </div>
   );
 }

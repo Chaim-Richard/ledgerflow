@@ -140,7 +140,7 @@ export function RootLayout() {
       )}>
         {isDataTruncated && (
           <div className="bg-amber-500/10 text-amber-500 border-b border-amber-500/20 px-4 py-2 text-sm text-center font-medium">
-            Showing recent 5,000 transactions — historical reports and balances may be incomplete.
+            Active view is filtered — some historical records or balances may be segmented.
           </div>
         )}
         {!isFocusMode && <Header onLogout={handleLogout} onLoginPrompt={handleLoginPrompt} />}

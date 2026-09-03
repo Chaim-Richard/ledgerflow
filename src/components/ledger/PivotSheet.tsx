@@ -9,12 +9,14 @@ import {
   Calculator,
   Grid3X3,
   ListCollapse,
-  Plus
+  Plus,
+  ExternalLink
 } from 'lucide-react';
 import { formatDecimal, cn, formatCurrency, sanitizeCsvCell, resolveAccountName } from '../../lib/utils';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import DrillDownModal from '../layout/DrillDownModal';
 
 interface PivotSheetProps {
   transactions: Transaction[];
@@ -43,6 +45,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
   const [groupBy, setGroupBy] = useState<GroupBy>('category');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [drillDownTarget, setDrillDownTarget] = useState<{ title: string; transactions: Transaction[] } | null>(null);
 
   const toggleGroup = (groupId: string) => {
     const newExpanded = new Set(expandedGroups);
@@ -95,11 +98,15 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
 
   // 2. CROSS-TAB MATRIX MODE COMPILATION
   const matrixData = useMemo(() => {
-    if (pivotMode !== 'matrix') return { rows: [], cols: [], cells: {}, rowTotals: {}, colTotals: {}, grandTotal: 0 };
+    if (pivotMode !== 'matrix') return { rows: [], cols: [], cells: {}, cellItems: {}, rowTotals: {}, rowItems: {}, colTotals: {}, colItems: {}, allItems: [], grandTotal: 0 };
 
     const cells: Record<string, Record<string, number>> = {};
+    const cellItems: Record<string, Record<string, Transaction[]>> = {};
     const rowTotals: Record<string, number> = {};
+    const rowItems: Record<string, Transaction[]> = {};
     const colTotals: Record<string, number> = {};
+    const colItems: Record<string, Transaction[]> = {};
+    const allItems: Transaction[] = [];
     let grandTotal = 0;
 
     const rowKeys = new Set<string>();
@@ -120,11 +127,21 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
 
       if (!cells[rKey]) cells[rKey] = {};
       if (!cells[rKey][cKey]) cells[rKey][cKey] = 0;
-
       cells[rKey][cKey] += t.totalAmountCents;
+
+      if (!cellItems[rKey]) cellItems[rKey] = {};
+      if (!cellItems[rKey][cKey]) cellItems[rKey][cKey] = [];
+      cellItems[rKey][cKey].push(t);
       
       rowTotals[rKey] = (rowTotals[rKey] || 0) + t.totalAmountCents;
+      if (!rowItems[rKey]) rowItems[rKey] = [];
+      rowItems[rKey].push(t);
+
       colTotals[cKey] = (colTotals[cKey] || 0) + t.totalAmountCents;
+      if (!colItems[cKey]) colItems[cKey] = [];
+      colItems[cKey].push(t);
+
+      allItems.push(t);
       grandTotal += t.totalAmountCents;
     });
 
@@ -149,8 +166,12 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
       rows: sortedRows,
       cols: sortedCols,
       cells,
+      cellItems,
       rowTotals,
+      rowItems,
       colTotals,
+      colItems,
+      allItems,
       grandTotal
     };
 
@@ -348,9 +369,20 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                            </div>
                         </td>
                         <td className="px-4 py-3.5 text-center">
-                           <span className="text-[9.5px] font-bold text-slate-500 px-2.5 py-0.5 bg-slate-100 rounded-md">
-                             {data.items.length} lines
-                           </span>
+                           <button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               setDrillDownTarget({
+                                 title: `${groupName} (${data.items.length} transactions)`,
+                                 transactions: data.items
+                               });
+                             }}
+                             title="Drill down into transactions"
+                             className="text-[9.5px] font-bold text-slate-600 hover:text-indigo-600 px-2.5 py-0.5 bg-slate-100 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-md transition-colors inline-flex items-center gap-1 cursor-pointer"
+                           >
+                             <span>{data.items.length} lines</span>
+                             <ExternalLink size={9} />
+                           </button>
                         </td>
                         <td className="px-4 py-3.5">
                            <span className="text-[9px] font-mono font-bold text-slate-400 uppercase">
@@ -429,11 +461,31 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                       {/* Matrix cells intersections */}
                       {matrixData.cols.map(cKey => {
                         const cellVal = matrixData.cells[rKey]?.[cKey] || 0;
+                        const cellItems = matrixData.cellItems[rKey]?.[cKey] || [];
                         return (
-                          <td key={cKey} className="px-4 py-3 text-right font-mono text-[11px] border-r border-[var(--line)] font-medium">
+                          <td 
+                            key={cKey} 
+                            onClick={() => {
+                              if (cellItems.length > 0) {
+                                setDrillDownTarget({
+                                  title: `${rKey} × ${cKey}`,
+                                  transactions: cellItems
+                                });
+                              }
+                            }}
+                            title={cellItems.length > 0 ? `Click to inspect ${cellItems.length} transactions` : undefined}
+                            className={cn(
+                              "px-4 py-3 text-right font-mono text-[11px] border-r border-[var(--line)] font-medium transition-colors",
+                              cellItems.length > 0 ? "cursor-pointer hover:bg-indigo-50/80 dark:hover:bg-indigo-950/40 group/cell" : "cursor-default"
+                            )}
+                          >
                             {cellVal !== 0 ? (
-                              <span className={cellVal >= 0 ? "text-emerald-500" : "text-rose-500"}>
+                              <span className={cn(
+                                "flex items-center justify-end gap-1",
+                                cellVal >= 0 ? "text-emerald-500" : "text-rose-500"
+                              )}>
                                  {formatCurrency(cellVal)}
+                                 <ExternalLink size={10} className="opacity-0 group-hover/cell:opacity-100 text-indigo-500 transition-opacity" />
                               </span>
                             ) : (
                               <span className="text-slate-300">-</span>
@@ -443,9 +495,22 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                       })}
 
                       {/* Row Total Accumulator */}
-                      <td className="px-6 py-3 text-right font-mono text-xs font-bold bg-[var(--ink)]/30">
-                        <span className={rowTotalVal >= 0 ? "text-emerald-600" : "text-rose-600"}>
+                      <td 
+                        onClick={() => {
+                          const items = matrixData.rowItems[rKey] || [];
+                          if (items.length > 0) {
+                            setDrillDownTarget({
+                              title: `Total: ${rKey}`,
+                              transactions: items
+                            });
+                          }
+                        }}
+                        title={`Click to inspect all ${matrixData.rowItems[rKey]?.length || 0} transactions for ${rKey}`}
+                        className="px-6 py-3 text-right font-mono text-xs font-bold bg-[var(--ink)]/30 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40 cursor-pointer transition-colors group/rowtot"
+                      >
+                        <span className={cn("flex items-center justify-end gap-1.5", rowTotalVal >= 0 ? "text-emerald-600" : "text-rose-600")}>
                            {formatCurrency(rowTotalVal)}
+                           <ExternalLink size={11} className="opacity-0 group-hover/rowtot:opacity-100 text-indigo-500 transition-opacity" />
                         </span>
                       </td>
                     </tr>
@@ -459,19 +524,45 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                   </td>
                   {matrixData.cols.map(cKey => {
                     const colTotalVal = matrixData.colTotals[cKey] || 0;
+                    const items = matrixData.colItems[cKey] || [];
                     return (
-                      <td key={cKey} className="px-4 py-4 text-right font-mono text-xs font-bold border-r border-slate-150">
-                        <span className={colTotalVal >= 0 ? "text-emerald-600" : "text-rose-600"}>
+                      <td 
+                        key={cKey} 
+                        onClick={() => {
+                          if (items.length > 0) {
+                            setDrillDownTarget({
+                              title: `Column Total: ${cKey}`,
+                              transactions: items
+                            });
+                          }
+                        }}
+                        title={`Click to inspect all ${items.length} transactions for ${cKey}`}
+                        className="px-4 py-4 text-right font-mono text-xs font-bold border-r border-slate-150 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40 cursor-pointer transition-colors group/coltot"
+                      >
+                        <span className={cn("flex items-center justify-end gap-1", colTotalVal >= 0 ? "text-emerald-600" : "text-rose-600")}>
                            {formatCurrency(colTotalVal)}
+                           <ExternalLink size={10} className="opacity-0 group-hover/coltot:opacity-100 text-indigo-500 transition-opacity" />
                         </span>
                       </td>
                     );
                   })}
                   
                   {/* Grand total intersection Cell */}
-                  <td className="px-6 py-4 text-right font-mono text-xs font-black bg-slate-200/40">
-                    <span className={matrixData.grandTotal >= 0 ? "text-emerald-700" : "text-rose-700"}>
+                  <td 
+                    onClick={() => {
+                      if (matrixData.allItems.length > 0) {
+                        setDrillDownTarget({
+                          title: `Matrix Grand Total (${matrixData.allItems.length} transactions)`,
+                          transactions: matrixData.allItems
+                        });
+                      }
+                    }}
+                    title={`Click to inspect all ${matrixData.allItems.length} transactions`}
+                    className="px-6 py-4 text-right font-mono text-xs font-black bg-slate-200/40 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/40 cursor-pointer transition-colors group/gtot"
+                  >
+                    <span className={cn("flex items-center justify-end gap-1.5", matrixData.grandTotal >= 0 ? "text-emerald-700" : "text-rose-700")}>
                        {formatCurrency(matrixData.grandTotal)}
+                       <ExternalLink size={11} className="opacity-0 group-hover/gtot:opacity-100 text-indigo-600 transition-opacity" />
                     </span>
                   </td>
                 </tr>
@@ -504,6 +595,17 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
             <span>DOM: GRID-V3</span>
          </div>
       </div>
+
+      {/* Interactive Drill-Down Modal */}
+      {drillDownTarget && (
+        <DrillDownModal
+          isOpen={!!drillDownTarget}
+          onClose={() => setDrillDownTarget(null)}
+          accountName={drillDownTarget.title}
+          transactions={drillDownTarget.transactions}
+          formatCurrency={formatCurrency}
+        />
+      )}
     </div>
   );
 }

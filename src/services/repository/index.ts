@@ -11,11 +11,11 @@ export class DataRepository {
   
   // -- Subscriptions (Realtime) --
   
-  subscribeToTransactions(workspaceId: string, callback: (data: Transaction[], hasPendingWrites?: boolean) => void) {
+  subscribeToTransactions(workspaceId: string, callback: (data: Transaction[], hasPendingWrites?: boolean) => void, limitCount?: number) {
     return storage.subscribeToCollection<Transaction>('transactions', callback, {
       filters: [{ field: 'workspaceId', operator: '==', value: workspaceId }],
       orderBy: [{ field: 'date', direction: 'desc' }],
-      limit: 1000
+      ...(limitCount ? { limit: limitCount } : {})
     });
   }
 
