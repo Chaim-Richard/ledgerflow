@@ -681,7 +681,7 @@ transactionRouter.post('/close-year', async (req, res) => {
       closingDate,
       accounts,
       transactions,
-      baseCurrency: wsData?.baseCurrency || 'USD'
+      baseCurrency: wsData?.currency || 'USD'
     });
 
     // 4. Validate schema
