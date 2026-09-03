@@ -8,6 +8,7 @@ import { parseReceiptOCR } from '../../lib/algorithms/receipt-capture';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { toast } from 'sonner';
 import { getLocalDateISO } from '../../lib/utils';
+import AsyncButton from '../ui/AsyncButton';
 
 export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
   const [isAiParsing, setIsAiParsing] = useState(false);
@@ -224,12 +225,13 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
                 Done Editing
               </button>
             )}
-            <button 
+            <AsyncButton 
               className="w-full sm:flex-1 bg-[var(--brass)] text-black font-bold py-3 px-4 rounded-xl flex items-center justify-center transition-opacity hover:opacity-90 shadow-md"
               onClick={handleSave}
+              loadingText="Saving..."
             >
               <Check className="w-4 h-4 mr-2" /> Looks Right - Save It
-            </button>
+            </AsyncButton>
           </div>
         </div>
       )}

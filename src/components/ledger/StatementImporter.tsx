@@ -18,6 +18,7 @@ import { IntentResolver } from '../../lib/intentResolver';
 import { parseLocalDate, cn, getLocalDateISO } from '../../lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import AsyncButton from '../ui/AsyncButton';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { BloomFilter, MinHash, AnalyticalMatcher } from '../../lib/algorithms';
 
@@ -215,9 +216,9 @@ export default function StatementImporter({
     setStep('review');
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     const toImport = parsedTxs.filter(t => t.selected);
-    onImport(toImport);
+    await onImport(toImport);
     onClose();
     setStep('input');
     setRawText('');
@@ -506,13 +507,14 @@ export default function StatementImporter({
                 Process Deterministic Mapping
               </button>
             ) : (
-              <button 
+              <AsyncButton 
                 onClick={handleImport}
+                loadingText="Importing..."
                 className="px-8 py-3 bg-[var(--brass)] text-black rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-md text-xs uppercase tracking-wider cursor-pointer"
               >
                 <Check size={16} />
                 Import {parsedTxs.filter(t => t.selected).length} Entries
-              </button>
+              </AsyncButton>
             )}
           </div>
         </div>

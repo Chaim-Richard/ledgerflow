@@ -1,6 +1,7 @@
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency } from '../../lib/utils';
 import { ConfirmButton } from '../ui/ConfirmButton';
+import AsyncButton from '../ui/AsyncButton';
 import { toast } from 'sonner';
 import { StrategicEngine } from '../../services/strategicEngine';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
@@ -611,9 +612,13 @@ export default function Inventory() {
                   />
                 </div>
                 <div className="col-span-2 pt-4">
-                  <button type="submit" className="w-full py-5 bg-zinc-900 text-white rounded-[32px] font-black hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20">
+                  <AsyncButton 
+                    type="submit" 
+                    loadingText={editingItem ? 'Updating...' : 'Adding...'}
+                    className="w-full py-5 bg-zinc-900 text-white rounded-[32px] font-black hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20"
+                  >
                     {editingItem ? 'Update Item' : 'Add to Inventory'}
-                  </button>
+                  </AsyncButton>
                 </div>
               </form>
             </motion.div>

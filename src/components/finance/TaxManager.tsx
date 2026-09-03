@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { parseLocalDate, cn, formatCurrency, safeConfirm } from '../../lib/utils';
+import AsyncButton from '../ui/AsyncButton';
 
 interface TaxManagerProps {
   user?: User | null;
@@ -384,7 +385,13 @@ export default function TaxManager({
 
                 <div className="pt-8 flex gap-4 border-t border-[var(--line)] mt-8">
                   <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-[var(--surface)] border border-[var(--line)] text-slate-600 rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--ink)] transition-all active:scale-95 shadow-sm">Abort</button>
-                  <button type="submit" className="flex-[2] py-4 bg-slate-900 text-white rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md active:scale-95">Deploy Parameter</button>
+                  <AsyncButton 
+                    type="submit" 
+                    loadingText="Deploying..."
+                    className="flex-[2] py-4 bg-slate-900 text-white rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md active:scale-95"
+                  >
+                    Deploy Parameter
+                  </AsyncButton>
                 </div>
               </form>
             </motion.div>

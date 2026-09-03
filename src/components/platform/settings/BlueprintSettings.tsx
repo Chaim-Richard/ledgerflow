@@ -23,6 +23,7 @@ import {
   Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
+import AsyncButton from '../../ui/AsyncButton';
 
 export default function BlueprintSettings() {
   const language = useUIStore(state => state.language);
@@ -266,14 +267,15 @@ export default function BlueprintSettings() {
                 />
                 <Calendar size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
               </div>
-              <button
+              <AsyncButton
                 type="button"
                 onClick={handleSaveLockDate}
+                loadingText="Applying..."
                 className="px-6 bg-zinc-950 hover:bg-zinc-850 text-white rounded-[32px] text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all self-stretch"
               >
                 <Check size={13} />
                 Apply
-              </button>
+              </AsyncButton>
             </div>
           </div>
         </div>
@@ -292,15 +294,15 @@ export default function BlueprintSettings() {
             </div>
           </div>
           
-          <button
+          <AsyncButton
             type="button"
             onClick={handleSaveMappings}
-            disabled={isSavingMappings}
+            loadingText="Syncing..."
             className="px-6 py-3 bg-zinc-950 hover:bg-zinc-850 disabled:bg-zinc-300 text-white rounded-[32px] text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all self-stretch sm:self-auto justify-center"
           >
-            {isSavingMappings ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
-            {isSavingMappings ? 'Syncing...' : 'Save Mappings'}
-          </button>
+            <Save size={12} />
+            Save Mappings
+          </AsyncButton>
         </div>
 
         {/* Global Warnings if fallbacks are missing */}

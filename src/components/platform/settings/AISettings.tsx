@@ -6,6 +6,7 @@ import { cn } from '../../../lib/utils';
 import { toast } from 'sonner';
 import { db } from '../../../firebase';
 import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import AsyncButton from '../../ui/AsyncButton';
 
 export default function AISettings() {
   const updateGeminiApiKey = useAuthStore(s => s.updateGeminiApiKey);
@@ -284,14 +285,15 @@ export default function AISettings() {
                   Purge Bayes classifiers and fast heuristic pattern models mapping to current Workspace. Structured analytical custom rules remain persistent.
                 </p>
               </div>
-              <button 
+              <AsyncButton 
                 onClick={handleWipeRuleCache}
                 type="button"
+                loadingText="Wiping..."
                 className="w-full mt-4 px-6 py-3 bg-red-50 hover:bg-red-100 text-rose-600 rounded-[32px] text-[10px] font-medium uppercase tracking-wider transition-all ring-1 ring-inset ring-rose-500/35 flex items-center justify-center gap-2 active:scale-95"
               >
                 <RefreshCw size={12} />
                 Wipe Neuromatrix Pattern Cache
-              </button>
+              </AsyncButton>
             </div>
           </div>
         </div>
@@ -376,14 +378,14 @@ export default function AISettings() {
             Consolidate keys, dynamic model routing rules, and the mathematical classifier threshold variables.
           </p>
         </div>
-        <button
+        <AsyncButton
           onClick={handleSave}
-          disabled={isUpdating}
+          loadingText="SYNCHRONIZING..."
           className="btn-primary !px-10 !py-5 flex items-center justify-center gap-3 disabled:bg-zinc-300 shadow-2xl shadow-ledger-accent/20 w-full sm:w-auto sm:min-w-[240px] whitespace-nowrap active:scale-95 transition-all text-xs font-medium uppercase tracking-wider text-white leading-none inline-flex items-center"
         >
-          {isUpdating ? <RefreshCw className="animate-spin" size={16} /> : <Database size={16} />}
-          <span>{isUpdating ? 'SYNCHRONIZING...' : 'COMMIT RULES PLATFORM'}</span>
-        </button>
+          <Database size={16} />
+          <span>COMMIT RULES PLATFORM</span>
+        </AsyncButton>
       </div>
     </div>
   );

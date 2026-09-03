@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Invoice, Customer, ChartAccount } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import AsyncButton from '../ui/AsyncButton';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
   const total = items.reduce((sum, item) => sum + item.amountCents, 0);
 
-  const handleAction = (e: React.FormEvent, actionStatus: string) => {
+  const handleAction = async (e: React.FormEvent, actionStatus: string) => {
     e.preventDefault();
     if (!invoice.customerId) {
       toast.error('Please select a customer');
@@ -52,7 +53,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       toast.success(`${attachments.length} file(s) attached`);
     }
 
-    onSave({
+    await onSave({
       ...invoice,
       status: actionStatus as any,
       totalCents: total,
@@ -457,28 +458,31 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             >
               Cancel
             </button>
-            <button 
+            <AsyncButton 
               type="button"
               onClick={(e) => handleAction(e, 'draft')}
+              loadingText="Saving..."
               className="px-6 py-3.5 bg-zinc-100 text-zinc-700 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-200 transition-all flex items-center gap-2"
             >
               Save Draft
-            </button>
-            <button 
+            </AsyncButton>
+            <AsyncButton 
               type="submit"
               onClick={(e) => handleAction(e, 'pending')}
+              loadingText="Saving..."
               className="px-6 py-3.5 bg-zinc-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
             >
               <Save size={16} />
               Save & Close
-            </button>
-            <button 
+            </AsyncButton>
+            <AsyncButton 
               type="button"
               onClick={(e) => handleAction(e, 'sent')}
+              loadingText="Sending..."
               className="px-6 py-3.5 bg-slate-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
             >
               Send Invoice
-            </button>
+            </AsyncButton>
           </div>
         </div>
       </motion.div>

@@ -5,7 +5,7 @@ import firebaseConfig from '../firebase-applet-config.json';
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firestore with modern persistent cache configuration (replaces deprecated enableMultiTabIndexedDbPersistence)
+// Initialize Firestore with modern persistent cache configuration (replaces deprecated enableIndexedDbPersistence and enableMultiTabIndexedDbPersistence)
 const getDatabaseId = () => {
   const dbId = firebaseConfig.firestoreDatabaseId;
   return (dbId && dbId !== "(default)") ? dbId : undefined;

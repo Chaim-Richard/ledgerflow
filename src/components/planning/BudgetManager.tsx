@@ -21,6 +21,7 @@ import { cn, formatCurrency, getLocalDateISO, safeConfirm } from '../../lib/util
 import { addDoc, collection, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { toast } from 'sonner';
+import AsyncButton from '../ui/AsyncButton';
 
 
 
@@ -60,7 +61,7 @@ export default function BudgetManager() {
       setIsAdding(false);
       setEditingBudget(null);
     } catch (error) {
-      toast.error('Sync Failure: Allocation Fault');
+      toast.error('Could not save budget objective. Please try again.');
     }
   };
 
@@ -326,12 +327,13 @@ export default function BudgetManager() {
                   >
                     Abort
                   </button>
-                  <button 
+                  <AsyncButton 
                     type="submit"
+                    loadingText="Saving..."
                     className="flex-[2] py-5 bg-slate-900 text-white rounded-[32px] text-xs font-black uppercase tracking-[0.3em] hover:translate-y-[-2px] transition-all shadow-2xl"
                   >
                     Confirm Allocation
-                  </button>
+                  </AsyncButton>
                 </div>
               </form>
             </motion.div>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, ShieldCheck, Mail, UserPlus, FileText } from 'lucide-react';
 import { useBillingStore } from '../../modules/billing/BillingService';
 import LegalModal from '../../components/legal/LegalModal';
+import AsyncButton from '../../components/ui/AsyncButton';
 
 interface AuthScreenProps {
   onLogin: () => void;
@@ -143,21 +144,17 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onGuest, lang
                   />
                 </div>
                 
-                <button 
+                <AsyncButton 
                   type="submit"
                   disabled={isSubmitting || (isRegistering && !registrationAllowed)}
+                  loading={isSubmitting}
+                  loadingText={isRegistering ? 'Signing up...' : 'Signing in...'}
                   className="w-full h-12 mt-2 bg-[#0A0A0A] hover:bg-[#1A1A1A] text-white rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-3 transition-all disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0A0A0A] focus-visible:ring-offset-2"
                   aria-label={isRegistering ? "Submit Registration" : "Submit Login"}
                 >
-                  {isSubmitting ? (
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-                  ) : (
-                    <>
-                      {isRegistering ? <UserPlus size={18} aria-hidden="true" /> : <Mail size={18} aria-hidden="true" />}
-                      {isRegistering ? 'Sign up with Email' : 'Sign in with Email'}
-                    </>
-                  )}
-                </button>
+                  {isRegistering ? <UserPlus size={18} aria-hidden="true" /> : <Mail size={18} aria-hidden="true" />}
+                  {isRegistering ? 'Sign up with Email' : 'Sign in with Email'}
+                </AsyncButton>
               </form>
 
               <div className="relative my-6 text-center" aria-hidden="true">
@@ -166,16 +163,16 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onGuest, lang
               </div>
 
               <div className="flex flex-col gap-3">
-                <button 
+                <AsyncButton 
                   onClick={handleGoogleLogin}
                   type="button"
-                  disabled={isSubmitting}
+                  loadingText="Connecting..."
                   className="h-12 bg-white border border-[#E5E5E5] hover:border-[#0047AB] text-[#0A0A0A] rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-3 transition-all shadow-sm disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0047AB] focus-visible:ring-offset-2"
                   aria-label="Continue with Google Authentication"
                 >
                   <LogIn size={18} className="text-[#0047AB]" aria-hidden="true" />
                   Continue with Google
-                </button>
+                </AsyncButton>
 
                 <button 
                   onClick={onGuest}

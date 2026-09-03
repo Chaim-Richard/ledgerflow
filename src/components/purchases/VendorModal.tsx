@@ -6,6 +6,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { MatchingEngine } from '../../lib/MatchingEngine';
 import { toast } from 'sonner';
+import AsyncButton from '../ui/AsyncButton';
 
 interface VendorModalProps {
   isOpen: boolean;
@@ -39,9 +40,9 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(vendor);
+    await onSave(vendor);
   };
 
   if (!isOpen) return null;
@@ -174,13 +175,14 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
             >
               Cancel
             </button>
-            <button 
+            <AsyncButton 
               type="submit"
+              loadingText="Saving..."
               className="flex-1 py-4 bg-zinc-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-xs hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-2"
             >
               <Save size={18} />
               Save Vendor
-            </button>
+            </AsyncButton>
           </div>
         </form>
       </motion.div>

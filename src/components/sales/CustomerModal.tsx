@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Save, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Customer } from '../../types';
+import AsyncButton from '../ui/AsyncButton';
 
 interface CustomerModalProps {
   isOpen: boolean;
@@ -16,9 +17,9 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
     balanceCents: 0
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(customer);
+    await onSave(customer);
   };
 
   if (!isOpen) return null;
@@ -155,13 +156,14 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
             >
               Cancel
             </button>
-            <button 
+            <AsyncButton 
               type="submit"
+              loadingText="Saving..."
               className="flex-1 py-4 bg-zinc-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-xs hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-2"
             >
               <Save size={18} />
               Save Customer
-            </button>
+            </AsyncButton>
           </div>
         </form>
       </motion.div>

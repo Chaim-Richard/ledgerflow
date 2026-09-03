@@ -524,13 +524,14 @@ export default function Projects() {
               >
                 Cancel
               </button>
-              <button 
+              <AsyncButton 
                 onClick={handleAddProject}
-                disabled={loading || !newProject.name}
+                disabled={!newProject.name}
+                loadingText="PROCESSING..."
                 className="px-8 py-3 bg-indigo-600 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider hover:bg-indigo-600/90 transition-all shadow-xl disabled:opacity-50"
               >
-                {loading ? 'PROCESSING...' : 'INITIALIZE PROTOCOL'}
-              </button>
+                INITIALIZE PROTOCOL
+              </AsyncButton>
             </div>
           </motion.div>
         </div>
@@ -652,13 +653,14 @@ export default function Projects() {
               >
                 Cancel
               </button>
-              <button 
+              <AsyncButton 
                 onClick={handleUpdateProject}
-                disabled={loading || !editingProject.name}
+                disabled={!editingProject.name}
+                loadingText="COMMITTING..."
                 className="px-8 py-3 bg-indigo-600 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider hover:bg-indigo-600/90 transition-all shadow-xl disabled:opacity-50"
               >
-                {loading ? 'COMMITTING...' : 'SAVE MODIFICATIONS'}
-              </button>
+                SAVE MODIFICATIONS
+              </AsyncButton>
             </div>
           </motion.div>
         </div>

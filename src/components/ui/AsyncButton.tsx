@@ -3,7 +3,8 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface AsyncButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  onClick: (e: React.MouseEvent<HTMLButtonElement>) => Promise<void> | void;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => Promise<void> | void;
+  loading?: boolean;
   loadingText?: string;
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg' | 'icon';
@@ -13,6 +14,7 @@ interface AsyncButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
 export default function AsyncButton({
   children,
   onClick,
+  loading,
   loadingText,
   variant = 'primary',
   size = 'md',
@@ -21,16 +23,19 @@ export default function AsyncButton({
   icon,
   ...props
 }: AsyncButtonProps) {
-  const [isPending, setIsPending] = useState(false);
+  const [internalPending, setInternalPending] = useState(false);
+  const isPending = loading !== undefined ? loading : internalPending;
 
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (isPending || disabled) return;
     
-    try {
-      setIsPending(true);
-      await onClick(e);
-    } finally {
-      setIsPending(false);
+    if (onClick) {
+      try {
+        setInternalPending(true);
+        await onClick(e);
+      } finally {
+        setInternalPending(false);
+      }
     }
   };
 

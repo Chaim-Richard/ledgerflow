@@ -4,6 +4,7 @@ import { useScenarioStore } from '../../lib/scenarioStore';
 import { GitMerge, GitCommit, GitPullRequest, GitBranch, RotateCcw, Clock, ArrowRight, Save, Trash2, Zap, CheckCircle2, AlertCircle, Plus, FileText, Activity } from 'lucide-react';
 import { parseLocalDate, formatCurrency, cn, getLocalDateISO, safeConfirm } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import AsyncButton from '../ui/AsyncButton';
 
 export default function TimeMachine() {
   const transactions = useLedgerStore(s => s.transactions);
@@ -350,12 +351,13 @@ export default function TimeMachine() {
                 >
                   Cancel
                 </button>
-                <button 
+                <AsyncButton 
                   onClick={handleCreateBranch}
+                  loadingText="Creating..."
                   className="flex-1 px-4 py-3 rounded-xl bg-[#0047AB] hover:bg-blue-800 text-white font-bold text-sm shadow-md transition-colors"
                 >
                   Create Branch
-                </button>
+                </AsyncButton>
               </div>
             </div>
           </motion.div>

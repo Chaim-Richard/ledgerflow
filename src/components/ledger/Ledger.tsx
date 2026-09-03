@@ -28,6 +28,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from '../../firebase';
+import AsyncButton from '../ui/AsyncButton';
 import JournalEntryModal from './JournalEntryModal';
 import { LexiconText } from '../../hooks/useLexicon';
 
@@ -529,12 +530,13 @@ const Ledger = React.memo(() => {
                   >
                     Cancel
                   </button>
-                  <button 
+                  <AsyncButton 
                     type="submit"
+                    loadingText="Establishing..."
                     className="flex-1 py-4 bg-indigo-600 text-white rounded-[32px] font-black hover:opacity-90 transition-all shadow-xl shadow-ledger-accent/20 uppercase tracking-widest text-[10px]"
                   >
                     Establish Node
-                  </button>
+                  </AsyncButton>
                 </div>
               </form>
             </motion.div>
@@ -597,15 +599,16 @@ const Ledger = React.memo(() => {
                   >
                     Cancel
                   </button>
-                  <button 
-                    onClick={() => {
+                  <AsyncButton 
+                    onClick={async () => {
                       setActiveModal(null);
                       toast.success('Period closed successfully');
                     }}
+                    loadingText="Closing..."
                     className="flex-1 py-4 bg-zinc-900 text-white rounded-[32px] font-black hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20"
                   >
                     Confirm Close
-                  </button>
+                  </AsyncButton>
                 </div>
               </div>
             </motion.div>

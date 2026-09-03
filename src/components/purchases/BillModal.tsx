@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Bill, Vendor, ChartAccount } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import AsyncButton from '../ui/AsyncButton';
 
 interface BillModalProps {
   isOpen: boolean;
@@ -36,7 +37,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
   const total = splits.reduce((sum, split) => sum + split.amountCents, 0);
 
-  const handleAction = (e: React.FormEvent, actionStatus: string) => {
+  const handleAction = async (e: React.FormEvent, actionStatus: string) => {
     e.preventDefault();
     if (!bill.vendorId) {
       toast.error('Please select a vendor');
@@ -47,7 +48,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
       toast.success(`${attachments.length} file(s) attached`);
     }
 
-    onSave({
+    await onSave({
       ...bill,
       status: actionStatus as any,
       amountCents: total,
@@ -284,28 +285,31 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
             >
               Cancel
             </button>
-            <button 
+            <AsyncButton 
               type="button"
               onClick={(e) => handleAction(e, 'draft')}
+              loadingText="Saving..."
               className="px-6 py-3.5 bg-zinc-100 text-zinc-700 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-200 transition-all flex items-center gap-2"
             >
               Save Draft
-            </button>
-            <button 
+            </AsyncButton>
+            <AsyncButton 
               type="submit"
               onClick={(e) => handleAction(e, 'pending')}
+              loadingText="Saving..."
               className="px-6 py-3.5 bg-zinc-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
             >
               <Save size={16} />
               Save & Close
-            </button>
-            <button 
+            </AsyncButton>
+            <AsyncButton 
               type="button"
               onClick={(e) => handleAction(e, 'approved')}
+              loadingText="Approving..."
               className="px-6 py-3.5 bg-emerald-600 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2"
             >
               Approve Bill
-            </button>
+            </AsyncButton>
           </div>
         </div>
       </motion.div>
