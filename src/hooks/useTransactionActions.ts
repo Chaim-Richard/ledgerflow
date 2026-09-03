@@ -788,6 +788,52 @@ export function useTransactionActions() {
   
 
 
+  const handleCloseYear = async (closingDate: string, lockPeriod: boolean = true) => {
+    if (!user || !currentWorkspaceId) return;
+    const loader = toast.loading('Initiating fiscal year close protocol...');
+    try {
+      setIsSyncing(true);
+      const response = await fetch('/api/v1/transactions/close-year', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
+        },
+        body: JSON.stringify({ workspaceId: currentWorkspaceId, closingDate, lockPeriod })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to execute year-end close.');
+      }
+
+      // Add the new transaction to the client-side store
+      if (data.transaction) {
+        const currentTxs = useLedgerStore.getState().transactions;
+        useLedgerStore.getState().setTransactions([...currentTxs, data.transaction]);
+      }
+
+      // Add the generated synthetic account if it exists
+      if (data.generatedAccount) {
+        const currentAccs = useLedgerStore.getState().accounts;
+        useLedgerStore.getState().setAccounts([...currentAccs, data.generatedAccount]);
+      }
+
+      if (lockPeriod) {
+        useLedgerStore.getState().setLockDate(closingDate);
+      }
+
+      toast.success(data.message || `Fiscal year closed successfully.`, { id: loader });
+      return data;
+    } catch (error: any) {
+      console.error('Close Year Error:', error);
+      toast.error(error.message || 'Year-end close failed.', { id: loader });
+      throw error;
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleExport = (transactions: Transaction[]) => {
     const headers = ['Date', 'Transaction ID', 'Description', 'Account ID', 'Account Name', 'Debit', 'Credit', 'Status', 'Project', 'Department'];
     
@@ -1475,6 +1521,7 @@ export function useTransactionActions() {
     handleResetWorkspace,
     
     handleExport,
+    handleCloseYear,
     handleReconcileMatch,
     handleReconcileIgnore,
     handleReconcileCreate,

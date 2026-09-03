@@ -68,7 +68,7 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onGuest, lang
               The finance OS that does the thinking.
             </h1>
             <p className="text-white/80 text-sm leading-relaxed font-medium">
-              Depreciation schedules, 1099 compliance, anomaly detection and cash-flow
+              Depreciation schedules, contractor tagging, anomaly detection and cash-flow
               forecasting — computed with deterministic algorithms, not guesswork.
             </p>
           </div>

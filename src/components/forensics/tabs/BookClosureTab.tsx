@@ -2,46 +2,74 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Lock, Unlock } from 'lucide-react';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
+import { useAuthStore } from '../../../stores/useAuthStore';
+import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { toast } from 'sonner';
 import { parseLocalDate, getLocalDateISO } from '../../../lib/utils';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../../firebase';
 
 export default function BookClosureTab() {
   const { lockDate, setLockDate } = useLedgerStore(state => ({
     lockDate: state.lockDate,
     setLockDate: state.setLockDate
   }));
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const { handleCloseYear } = useTransactionActions();
 
   const [dateInput, setDateInput] = useState(lockDate ? lockDate.split('T')[0] : getLocalDateISO());
   const [password, setPassword] = useState('');
+  const [postClosingEntry, setPostClosingEntry] = useState(true);
   const [isLocking, setIsLocking] = useState(false);
 
-  const handleLockBooks = () => {
+  const handleLockBooks = async () => {
     if (!password) {
       toast.error('Closing password is required to secure the books.');
       return;
     }
-    // In a real system, you'd verify password against auth layer. Here we simulate it securely.
     setIsLocking(true);
-    setTimeout(() => {
-      setLockDate(parseLocalDate(dateInput).toISOString());
-      setIsLocking(false);
-      toast.success(`Books successfully closed through ${dateInput}. Prior entries are now immutable.`);
+    try {
+      if (postClosingEntry) {
+        await handleCloseYear(dateInput, true);
+      } else {
+        const isoDate = parseLocalDate(dateInput).toISOString();
+        setLockDate(isoDate);
+        if (currentWorkspaceId) {
+          await updateDoc(doc(db, 'workspaces', currentWorkspaceId), {
+            lockDate: isoDate
+          });
+        }
+        toast.success(`Books successfully closed through ${dateInput}. Prior entries are now immutable.`);
+      }
       setPassword('');
-    }, 600);
+    } catch (err: any) {
+      // toast is handled inside handleCloseYear for that path
+      if (!postClosingEntry) toast.error(err.message || 'Failed to complete book closure.');
+    } finally {
+      setIsLocking(false);
+    }
   };
 
-  const handleUnlockBooks = () => {
+  const handleUnlockBooks = async () => {
     if (!password) {
       toast.error('Administrator password is required to unlock the books.');
       return;
     }
     setIsLocking(true);
-    setTimeout(() => {
+    try {
       setLockDate(null);
-      setIsLocking(false);
+      if (currentWorkspaceId) {
+        await updateDoc(doc(db, 'workspaces', currentWorkspaceId), {
+          lockDate: null
+        });
+      }
       toast.success('Books unlocked. Historical ledgers are editable again.');
       setPassword('');
-    }, 600);
+    } catch (err: any) {
+      toast.error('Failed to unlock books.');
+    } finally {
+      setIsLocking(false);
+    }
   };
 
   return (
@@ -103,6 +131,23 @@ export default function BookClosureTab() {
               Restricts access to designated closing periods, preventing prior year tax or reconciliation drift over recorded accounting.
             </p>
           </div>
+
+          {!lockDate && (
+            <label className="flex items-start gap-3 p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={postClosingEntry}
+                onChange={(e) => setPostClosingEntry(e.target.checked)}
+                className="mt-0.5 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <div className="text-left">
+                <p className="text-xs font-bold text-[var(--text)]">Post Formal Year-End Closing Entry</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">
+                  Automatically zeroes out temporary Income &amp; Expense accounts and transfers Net Surplus to Retained Earnings (Equity).
+                </p>
+              </div>
+            </label>
+          )}
 
           <div className="pt-4 border-t border-[var(--line)]">
             {lockDate ? (

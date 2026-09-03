@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import express from 'express';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
+import { ClosingEntryEngine } from '../../kernel/ledger/ClosingEntryEngine';
 import { TransactionSchema } from '../../schemas';
 import { parseLocalDate } from '../../lib/utils';
 
@@ -631,6 +632,108 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
       status: 'ok',
       message: 'Month-end revaluation completed successfully. Adjusting journal entry posted.',
       transactionId: revalTx.id
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+transactionRouter.post('/close-year', async (req, res) => {
+  try {
+    const { workspaceId, closingDate, lockPeriod } = req.body;
+    const user = (req as any).user;
+    if (!workspaceId || !closingDate) {
+      return res.status(400).json({ error: 'Missing required parameters: workspaceId and closingDate (YYYY-MM-DD).' });
+    }
+
+    const db = getFirestore();
+    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+    if (!wsDoc.exists) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+
+    const wsData = wsDoc.data();
+    const isOwnerOrAdmin = wsData?.uid === user.uid || (Array.isArray(wsData?.members) && wsData.members.includes(user.uid)) || user.admin;
+    if (!isOwnerOrAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient permissions to execute fiscal year close.' });
+    }
+
+    // Check if period is already locked past this date
+    if (wsData?.lockDate && wsData.lockDate > closingDate) {
+      return res.status(400).json({ error: `Cannot close year: Period is locked through ${wsData.lockDate}.` });
+    }
+
+    // 1. Fetch all chartAccounts for workspace
+    const accountsSnap = await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get();
+    const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+
+    // 2. Fetch all transactions for workspace on or before closingDate
+    const txSnap = await db.collection('transactions')
+      .where('workspaceId', '==', workspaceId)
+      .where('date', '<=', closingDate)
+      .get();
+    const transactions = txSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+
+    // 3. Generate closing journal entry via ClosingEntryEngine
+    const result = ClosingEntryEngine.generateClosingJournalEntry({
+      workspaceId,
+      uid: user.uid,
+      closingDate,
+      accounts,
+      transactions
+    });
+
+    // 4. Validate schema
+    const parsed = TransactionSchema.safeParse(result.closingTransaction);
+    if (!parsed.success) {
+      return res.status(500).json({ error: 'Closing entry failed schema validation', details: parsed.error.issues });
+    }
+
+    // 5. Commit closing transaction
+    const txRef = db.collection('transactions').doc(result.closingTransaction.id);
+    const batch = db.batch();
+    batch.set(txRef, result.closingTransaction);
+
+    // If synthetic account was generated, persist it
+    if (result.generatedRetainedEarningsAccount) {
+      const accRef = db.collection('chartAccounts').doc(result.generatedRetainedEarningsAccount.id);
+      batch.set(accRef, result.generatedRetainedEarningsAccount);
+    }
+
+    // If lockPeriod is requested, advance workspace lockDate to closingDate
+    if (lockPeriod) {
+      batch.update(db.collection('workspaces').doc(workspaceId), {
+        lockDate: closingDate,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    await batch.commit();
+
+    // 6. Log audit event
+    await db.collection('auditLogs').add({
+      workspaceId,
+      actorUid: user.uid,
+      actorEmail: user.email || 'authenticated-user',
+      action: 'FISCAL_YEAR_CLOSE',
+      details: `Fiscal year closed as of ${closingDate}. Net income of $${(result.netIncomeCents / 100).toFixed(2)} transferred to Retained Earnings. ${result.revenueAccountsClosed} revenue accounts and ${result.expenseAccountsClosed} expense accounts closed.`,
+      metadata: {
+        transactionId: result.closingTransaction.id,
+        closingDate,
+        netIncomeCents: result.netIncomeCents,
+        lockPeriod: !!lockPeriod,
+        syntheticAccountCreated: !!result.generatedRetainedEarningsAccount
+      },
+      timestamp: FieldValue.serverTimestamp()
+    });
+
+    res.json({
+      status: 'ok',
+      message: `Fiscal year closed successfully as of ${closingDate}.`,
+      transaction: result.closingTransaction,
+      generatedAccount: result.generatedRetainedEarningsAccount,
+      summary: result.summary,
+      accountsClosed: result.revenueAccountsClosed + result.expenseAccountsClosed
     });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
