@@ -71,6 +71,7 @@ export interface LedgerState {
   isPrivacyMode: boolean;
   baseCurrency: string;
   matchingThreshold: number;
+  isDataTruncated: boolean;
   runningBalances: {
     totalIncome: number;
     totalExpense: number;
@@ -88,6 +89,7 @@ export interface LedgerState {
   setBaseCurrency: (currency: string) => void;
   setMatchingThreshold: (threshold: number) => void;
   setPrivacyMode: (active: boolean) => void;
+  setIsDataTruncated: (isTruncated: boolean) => void;
   commitTransaction: (tx: Transaction) => { success: boolean, error?: string };
   setAccounts: (data: ChartAccount[]) => void;
   updateAccount: (id: string, updates: Partial<ChartAccount>) => void;
@@ -187,12 +189,14 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   lockDate: null,
   baseCurrency: 'USD',
   matchingThreshold: 0.8,
+  isDataTruncated: false,
   isPrivacyMode: false,
 
   setLockDate: (date) => set({ lockDate: date }),
   setBaseCurrency: (currency) => set({ baseCurrency: currency }),
   setMatchingThreshold: (threshold) => set({ matchingThreshold: threshold }),
   setPrivacyMode: (active) => set({ isPrivacyMode: active }),
+  setIsDataTruncated: (isTruncated) => set({ isDataTruncated: isTruncated }),
 
   recomputeBalances: () => {
     if (typeof window !== 'undefined') {

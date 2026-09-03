@@ -10,7 +10,9 @@ import { RefreshCw,
   ShieldAlert,
   Compass,
   ChevronDown,
-  Plus
+  Plus,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
 import { AppTab } from '../../types';
@@ -36,12 +38,13 @@ interface SidebarProps {
 }
 
 const GROUP_ICONS: Record<string, any> = {
-  pulse: LayoutGrid,
-  finance: Layers,
-  operations: Briefcase,
-  planning: BarChart3,
-  system: Settings,
-  admin: ShieldAlert
+  dashboard: LayoutGrid,
+  transactions: Layers,
+  reconcile: RefreshCw,
+  money_in: ArrowUpRight,
+  money_out: ArrowDownRight,
+  reports: BarChart3,
+  settings: Settings
 };
 
 const WORLD_COLORS = [
@@ -72,7 +75,7 @@ const Sidebar = React.memo(({
   const accounts = useLedgerStore(s => s.accounts);
 
   const currentTabDef = APP_TABS.find(t => t.id === activeTab);
-  const activeGroupId = currentTabDef?.groupId || 'pulse';
+  const activeGroupId = currentTabDef?.groupId || 'dashboard';
 
   const worldItems = React.useMemo(() => {
     if (realProjects && realProjects.length > 0) {

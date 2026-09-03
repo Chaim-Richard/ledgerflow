@@ -44,7 +44,9 @@ export default function BookClosureTab() {
       setPassword('');
     } catch (err: any) {
       // toast is handled inside handleCloseYear for that path
-      if (!postClosingEntry) toast.error(err.message || 'Failed to complete book closure.');
+      if (!postClosingEntry) toast.error('Could not complete book closure.', {
+        description: `Please try again. (${err?.message || 'Unknown network error'})`
+      });
     } finally {
       setIsLocking(false);
     }

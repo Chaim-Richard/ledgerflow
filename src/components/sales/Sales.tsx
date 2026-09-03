@@ -253,7 +253,7 @@ export default function Sales() {
                       </div>
                     </td>
                     <td className="p-4 md:p-8">
-                      <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                      <div className="flex items-center gap-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
                         {inv.status !== 'paid' && (
                           <button 
                             onClick={() => onAddInvoice({ id: inv.id, status: 'paid' })}
@@ -343,7 +343,7 @@ export default function Sales() {
                       {formatCurrency(cust.balanceCents || 0)}
                     </td>
                     <td className="p-4 md:p-8">
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all justify-end">
+                      <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all justify-end">
                         
                         <button onClick={(e)=>{e.stopPropagation(); onAddInvoice({ custorId: cust.id }); toast.info(`Opening inv creation for ${cust.name}`)}} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Invoice"><Plus size={14}/></button>
                         

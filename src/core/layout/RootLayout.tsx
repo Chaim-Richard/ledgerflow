@@ -57,6 +57,8 @@ export function RootLayout() {
   const isDiagnosticConsoleOpen = useUIStore(state => state.isDiagnosticConsoleOpen);
   const setDiagnosticConsoleOpen = useUIStore(state => state.setDiagnosticConsoleOpen);
 
+  const isDataTruncated = useLedgerStore(state => state.isDataTruncated);
+
   const modals = {
     commandPalette: useUIStore(state => state.isCommandPaletteOpen),
     quickEntry: useUIStore(state => state.isQuickEntryOpen),
@@ -136,6 +138,11 @@ export function RootLayout() {
         "flex-1 flex flex-col overflow-hidden relative transition-all duration-300 bg-[var(--ink)] text-[var(--text)] pb-[env(safe-area-inset-bottom)] lg:pb-0",
         "pb-[64px] lg:pb-0" // Add 64px padding on mobile specifically for the BottomNav
       )}>
+        {isDataTruncated && (
+          <div className="bg-amber-500/10 text-amber-500 border-b border-amber-500/20 px-4 py-2 text-sm text-center font-medium">
+            Showing recent 5,000 transactions — historical reports and balances may be incomplete.
+          </div>
+        )}
         {!isFocusMode && <Header onLogout={handleLogout} onLoginPrompt={handleLoginPrompt} />}
         {!isFocusMode && <ModuleSubNav activeTab={activeTab as any} onTabChange={setActiveTab as any} />}
         

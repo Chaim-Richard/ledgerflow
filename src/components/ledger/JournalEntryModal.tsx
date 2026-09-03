@@ -17,6 +17,7 @@ import { collection, writeBatch, doc } from 'firebase/firestore';
 import { db, getIdToken } from '../../firebase';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import AsyncButton from '../ui/AsyncButton';
 import { MatchingEngine } from '../../lib/MatchingEngine';
 import { SpellChecker } from '../../lib/algorithms';
 import { TemporalValidity } from '../../types';
@@ -530,9 +531,10 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
               >
                 Discard Entry
               </button>
-              <button 
+              <AsyncButton 
                 onClick={handleSubmit}
                 disabled={!totals.isBalanced || isLocked}
+                loadingText="COMMITTING..."
                 className={cn(
                   "py-3 px-4 rounded-xl font-bold transition-all shadow-md order-1 sm:order-2 sm:flex-[2] text-xs uppercase tracking-wider",
                   (totals.isBalanced && !isLocked)
@@ -541,7 +543,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 )}
               >
                 {isLocked ? "PERIOD IS SEALED" : "COMMIT TO LEDGER"}
-              </button>
+              </AsyncButton>
             </div>
           </motion.div>
         </div>

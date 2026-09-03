@@ -88,35 +88,40 @@ export interface AppTabDefinition {
 }
 
 export const APP_TABS: AppTabDefinition[] = [
-  { id: 'dashboard', label: { en: 'Dashboard', he: 'לוח בקרה' }, icon: Home, groupId: 'pulse' },
-  { id: 'inbox', label: { en: 'Inbox (Triage)', he: 'דואר נכנס' }, icon: Inbox, groupId: 'pulse' },
-  { id: 'month-end-close', label: { en: 'Month-End Close', he: 'סגירת חודש' }, icon: ClipboardCheck, groupId: 'pulse' },
-  { id: 'copilot', label: { en: 'AI Co-pilot', he: 'טייס משנה אינטליגנטי' }, icon: Sparkles, groupId: 'pulse' },
-  { id: 'transactions', label: { en: 'Transactions', he: 'תנועות' }, icon: Layers, groupId: 'finance' },
-  { id: 'ledger', label: { en: 'Ledger & Journal', he: 'ספר ראשי ויומן' }, icon: Database, groupId: 'finance' },
-  { id: 'reconciliation', label: { en: 'Reconcile', he: 'התאמות חכמות' }, icon: RefreshCw, groupId: 'finance' },
-  { id: 'banking', label: { en: 'Bank Connections', he: 'חיבורי בנק' }, icon: Building, groupId: 'finance' },
-  { id: 'sales', label: { en: 'Money In', he: 'כסף נכנס' }, icon: ArrowUpRight, groupId: 'operations' },
-  { id: 'purchases', label: { en: 'Money Out', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'operations' },
-  { id: 'projects', label: { en: 'Project Tracking', he: 'פרויקטים' }, icon: FolderKanban, groupId: 'operations' },
-  { id: 'inventory', label: { en: 'Inventory', he: 'מלאי' }, icon: FolderKanban, groupId: 'operations' },
-  { id: 'reports', label: { en: 'Financial Reports', he: 'דוחות' }, icon: FileText, groupId: 'planning' },
-  { id: 'forecaster', label: { en: 'Cash Forecasting', he: 'תחזית תזרים' }, icon: TrendingUp, groupId: 'planning' },
-  { id: 'intelligence', label: { en: 'Analysis', he: 'מודיעין מתקדם' }, icon: BarChart3, groupId: 'planning' },
-  { id: 'vault', label: { en: 'Documents', he: 'כספת מסמכים' }, icon: ShieldCheck, groupId: 'system' },
-  { id: 'settings', label: { en: 'Settings', he: 'הגדרות' }, icon: Settings, groupId: 'system' },
-  { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת מתקדם' }, icon: Search, groupId: 'system' },
-  { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'system' },
-  { id: 'system-command-center', label: { en: 'Admin Panel', he: 'Admin Panel' }, icon: Building, groupId: 'admin', requiresOwner: true }
+  { id: 'dashboard', label: { en: 'Overview', he: 'סקירה' }, icon: Home, groupId: 'dashboard' },
+  { id: 'inbox', label: { en: 'To Review', he: 'לסקירה' }, icon: Inbox, groupId: 'dashboard' },
+  { id: 'copilot', label: { en: 'AI Co-pilot', he: 'טייס משנה' }, icon: Sparkles, groupId: 'dashboard' },
+
+  { id: 'transactions', label: { en: 'Transactions', he: 'תנועות' }, icon: Layers, groupId: 'transactions' },
+  { id: 'ledger', label: { en: 'Ledger & Journal', he: 'ספר ראשי ויומן' }, icon: Database, groupId: 'transactions' },
+  { id: 'banking', label: { en: 'Bank Connections', he: 'חיבורי בנק' }, icon: Building, groupId: 'transactions' },
+  { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת' }, icon: Search, groupId: 'transactions' },
+
+  { id: 'reconciliation', label: { en: 'Reconcile', he: 'התאמות' }, icon: RefreshCw, groupId: 'reconcile' },
+  { id: 'month-end-close', label: { en: 'Month-End Close', he: 'סגירת חודש' }, icon: ClipboardCheck, groupId: 'reconcile' },
+
+  { id: 'sales', label: { en: 'Sales', he: 'כסף נכנס' }, icon: ArrowUpRight, groupId: 'money_in' },
+  
+  { id: 'purchases', label: { en: 'Purchases', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'money_out' },
+
+  { id: 'reports', label: { en: 'Reports', he: 'דוחות' }, icon: FileText, groupId: 'reports' },
+  { id: 'forecaster', label: { en: 'Forecasting', he: 'תחזית תזרים' }, icon: TrendingUp, groupId: 'reports' },
+  { id: 'intelligence', label: { en: 'Insights', he: 'תובנות' }, icon: BarChart3, groupId: 'reports' },
+
+  { id: 'settings', label: { en: 'Preferences', he: 'הגדרות' }, icon: Settings, groupId: 'settings' },
+  { id: 'vault', label: { en: 'Documents', he: 'מסמכים' }, icon: ShieldCheck, groupId: 'settings' },
+  { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'settings' },
+  { id: 'system-command-center', label: { en: 'Admin Panel', he: 'ניהול' }, icon: Building, groupId: 'settings', requiresOwner: true }
 ];
 
 export const NAV_GROUPS: Record<string, Record<string, string>> = {
-  pulse: { en: 'Dashboard', he: 'ראשי' },
-  finance: { en: 'Accounting', he: 'הנהלת חשבונות' },
-  operations: { en: 'Business Ops', he: 'תפעול עסקי' },
-  planning: { en: 'Reports & Intel', he: 'דוחות ובינה' },
-  system: { en: 'Settings & Tools', he: 'הגדרות וכלים' },
-  admin: { en: 'Admin Panel', he: 'Admin Panel' }
+  dashboard: { en: 'Dashboard', he: 'לוח בקרה' },
+  transactions: { en: 'Transactions', he: 'תנועות' },
+  reconcile: { en: 'Reconcile', he: 'התאמות' },
+  money_in: { en: 'Money In', he: 'כסף נכנס' },
+  money_out: { en: 'Money Out', he: 'כסף יוצא' },
+  reports: { en: 'Reports', he: 'דוחות' },
+  settings: { en: 'Settings', he: 'הגדרות' }
 };
 
 export const getVisibleTabs = (lang: string, isOwner: boolean, hiddenTabs?: string[]) => {

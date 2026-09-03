@@ -231,6 +231,8 @@ export function useLedgerData() {
 
     const criticalListeners = [
       onSnapshot(query(collection(db, 'transactions'), ...filter, orderBy('date', 'desc'), limit(5000)), (snap) => {
+        const isTruncated = snap.docs.length >= 5000;
+        useLedgerStore.getState().setIsDataTruncated(isTruncated);
         scheduleUpdate('transactions', snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'transactions')),
       onSnapshot(query(collection(db, 'chartAccounts'), ...filter), (snap) => {

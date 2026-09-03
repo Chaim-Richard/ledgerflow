@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { parseLocalDate, resolveAccountName, cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import AsyncButton from '../ui/AsyncButton';
 
 const HighlightMatch = ({ text, match }: { text: string; match?: string }) => {
   if (!match) return <>{text}</>;
@@ -40,7 +41,7 @@ interface TransactionRowProps {
   isEven: boolean;
   focusedField: string | null;
   onToggleSelection: (id: string) => void;
-  onVoid: (id: string) => void;
+  onVoid: (id: string) => Promise<void> | void;
   onUpdate?: (id: string, updates: Partial<Transaction>) => void;
   onSelect?: (id: string) => void;
   onCreateRule: (tx: Transaction) => void;
@@ -339,13 +340,15 @@ const TransactionRow = React.memo(({
                 >
                   <AlertCircle size={14} />
                 </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); onVoid(tx.id); }}
+                <AsyncButton 
+                  onClick={(e) => { e.stopPropagation(); return onVoid(tx.id); }}
                   className="p-1 text-slate-500 hover:text-rose-600 rounded transition-all"
+                  variant="ghost"
+                  size="icon"
                   disabled={tx.type === 'reversal' || !!tx.reversalEventId}
                 >
                   <RotateCcw size={14} />
-                </button>
+                </AsyncButton>
               </div>
             )}
           </div>

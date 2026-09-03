@@ -104,10 +104,19 @@ export function useTransactionActions() {
 
     if (!err) {
       await recordAudit('VOID_TRANSACTION', 'transaction', id, { description: tx.description });
-      toast.success('Transaction voided');
+      toast.success('Transaction voided', {
+        action: {
+          label: 'Undo',
+          onClick: () => handleUpdateTransaction(id, { status: tx.status, deletedAt: tx.deletedAt || null } as any)
+        }
+      });
     } else {
       // No optimistic update rollback needed
-      toast.error('Failed to void transaction');
+      const message = err?.error || 'Unknown network error';
+      toast.error('Could not void transaction.', {
+        description: `Please try again. (${message})`
+      });
+      throw err;
     }
   };
 
@@ -604,6 +613,19 @@ export function useTransactionActions() {
     const loader = toast.loading(`Synchronizing ${ids.length} updates...`);
 
     try {
+      const oldStates = new Map<string, any>();
+      const currentTransactions = useLedgerStore.getState().transactions;
+      for (const id of ids) {
+         const tx = currentTransactions.find(t => t.id === id);
+         if (tx) {
+           oldStates.set(id, {
+             'dimensions.category': tx.dimensions?.category,
+             'dimensions.project': tx.dimensions?.project,
+             lines: tx.lines
+           });
+         }
+      }
+
       await runTransaction(db, async (transaction) => {
         const { category, accountName, project } = updates;
         const account = accounts.find(a => a.name === accountName);
@@ -611,10 +633,10 @@ export function useTransactionActions() {
         for (const id of ids) {
           const txRef = doc(db, 'transactions', id);
           const updateData: any = {};
-          if (category) updateData['dimensions.category'] = category;
-          if (project) updateData['dimensions.project'] = project;
+          if (category !== undefined) updateData['dimensions.category'] = category;
+          if (project !== undefined) updateData['dimensions.project'] = project;
           
-          if (accountName) {
+          if (accountName !== undefined) {
             updateData['lines'] = [
               { 
                 accountId: account?.id || 'uncategorized', 
@@ -630,10 +652,43 @@ export function useTransactionActions() {
           });
         }
       });
-      toast.success(`Updated ${ids.length} transactions with atomic finality.`, { id: loader });
-    } catch (error) {
+      
+      toast.success(`Updated ${ids.length} transactions with atomic finality.`, { 
+        id: loader,
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            const undoLoader = toast.loading('Reverting bulk updates...');
+            try {
+              await runTransaction(db, async (transaction) => {
+                for (const [id, oldState] of oldStates.entries()) {
+                   const txRef = doc(db, 'transactions', id);
+                   const updateData: any = {};
+                   if (updates.category !== undefined) updateData['dimensions.category'] = oldState['dimensions.category'] || null;
+                   if (updates.project !== undefined) updateData['dimensions.project'] = oldState['dimensions.project'] || null;
+                   if (updates.accountName !== undefined) updateData['lines'] = oldState.lines || [];
+                   
+                   transaction.update(txRef, {
+                     ...updateData,
+                     updatedAt: new Date().toISOString()
+                   });
+                }
+              });
+              toast.success('Bulk update reverted.', { id: undoLoader });
+            } catch (err) {
+              toast.error('Failed to revert bulk update.', { id: undoLoader });
+            }
+          }
+        }
+      });
+    } catch (error: any) {
       console.error(error);
-      toast.error('Bulk update failed. Transaction sequence aborted.', { id: loader });
+      const message = error?.message || 'Unknown network error';
+      toast.error('Could not complete bulk update.', { 
+        id: loader,
+        description: `Sequence aborted. (${message})`
+      });
+      throw error;
     }
   };
 
@@ -957,12 +1012,23 @@ export function useTransactionActions() {
       dataOut = true; err = null;
     } catch(e: any) {
       err = e;
-      toast.error('Network sync failed. Initiating atomic rollback.');
+      const message = e?.message || 'Unknown network error';
+      toast.error('Could not save your changes.', {
+        description: `Please try again. (${message})`
+      });
       setTransactions(originalTransactions);
+      throw err;
     }
 
     if (!err) {
       await recordAudit('UPDATE_TRANSACTION', 'transaction', id, updates);
+      
+      toast.success('Transaction updated', {
+        action: {
+          label: 'Undo',
+          onClick: () => handleUpdateTransaction(id, tx)
+        }
+      });
 
       // --- Persistent Rule Learning ---
       // If user manually updated the category, check if we should suggest a permanent rule
@@ -1004,6 +1070,7 @@ export function useTransactionActions() {
     } else {
       setTransactions(originalTransactions); // Rollback
       toast.error('Sync failed.');
+      throw err; // Rethrow to let caller know it failed
     }
   };
 

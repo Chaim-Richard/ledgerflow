@@ -16,7 +16,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { cn, safeConfirm } from '../../lib/utils';
-import { AsyncButton } from '../ui/AsyncButton';
+import AsyncButton from '../ui/AsyncButton';
 import { 
   collection, 
   query, 
@@ -132,7 +132,10 @@ export default function Vault() {
         throw new Error("Could not extract meaningful ledger data from document.");
       }
     } catch (err: any) {
-      toast.error(err.message || 'AI processing failed', { id: toastId });
+      toast.error('AI processing failed', { 
+        id: toastId,
+        description: err?.message || 'Unknown network error'
+      });
     } finally {
       setIsScanning(false);
     }
@@ -323,7 +326,7 @@ export default function Vault() {
 
               <div className="absolute top-6 right-6 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-2">
                  <AsyncButton 
-                  onClickAction={async () => { handleDelete(docItem.id); }}
+                  onClick={async () => { handleDelete(docItem.id); }}
                   className="w-10 h-10 flex items-center justify-center bg-rose-50 text-rose-500 rounded-[32px] hover:bg-rose-500 hover:text-white transition-all shadow-sm border border-rose-100"
                 >
                   <Trash2 size={18} />
@@ -513,7 +516,7 @@ export default function Vault() {
                       Raw
                     </a>
                     <AsyncButton 
-                      onClickAction={async () => handleDelete(selectedDoc.id)}
+                      onClick={async () => handleDelete(selectedDoc.id)}
                       className="w-14 h-14 flex items-center justify-center bg-rose-50 text-rose-500 rounded-[32px] hover:bg-rose-500 hover:text-white transition-all shadow-sm border border-rose-100"
                     >
                       <Trash2 size={24} />

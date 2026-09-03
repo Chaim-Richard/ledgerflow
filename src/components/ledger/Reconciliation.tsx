@@ -33,6 +33,8 @@ import { toast } from 'sonner';
 
 
 
+import AsyncButton from '../ui/AsyncButton';
+
 export default function Reconciliation() {
   const user = useAuthStore((s: any) => s.user);
   const workspaceId = useAuthStore((s: any) => s.currentWorkspaceId);
@@ -170,7 +172,9 @@ export default function Reconciliation() {
         toast.success(`Synapses Active: Successfully integrated ${matchedCount} verified bonds.`);
         setShowAutoConfirm(false);
     } catch(err:any) {
-        toast.error("Reconciliation cycle failed: " + err.message);
+        toast.error("Could not complete reconciliation cycle.", {
+          description: `Please try again. (${err?.message || 'Network sync error'})`
+        });
     } finally {
         setIsProcessing(false);
     }
@@ -182,7 +186,9 @@ export default function Reconciliation() {
        await onAutoReconcile();
        toast.success("Autonomous batch matching complete!");
     } catch (e: any) {
-        toast.error("Batch alignment failed: " + e.message);
+        toast.error("Could not complete batch alignment.", {
+          description: `Please try again. (${e?.message || 'Network sync error'})`
+        });
     } finally {
        setIsAutoReconciling(false);
     }
@@ -565,15 +571,16 @@ export default function Reconciliation() {
 
                              {/* Revert controls directly */}
                              <div className="shrink-0 flex items-center gap-3 w-full lg:w-auto justify-end border-t lg:border-t-0 pt-3 lg:pt-0">
-                               <button 
+                               <AsyncButton 
                                  onClick={(e) => {
                                    e.stopPropagation();
-                                   handleUndoAlignment(line.id, line.matchedTransactionId);
+                                   return handleUndoAlignment(line.id, line.matchedTransactionId);
                                  }}
+                                 loadingText="Reverting..."
                                  className="px-4 py-2 bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 hover:text-rose-700 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-1 leading-none shadow-xs"
                                >
                                  <X size={10} strokeWidth={2.5} /> Revert Verification
-                               </button>
+                               </AsyncButton>
                              </div>
                           </div>
                         </div>
@@ -722,13 +729,14 @@ export default function Reconciliation() {
                       Assert Match Verification
                     </button>
                   ) : (
-                    <button 
+                    <AsyncButton 
                       onClick={() => handleUndoAlignment(selectedBankLine!.id, selectedBankLine!.matchedTransactionId)}
+                      loadingText="Unbinding..."
                       className="px-8 h-12 bg-rose-600 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-rose-500 transition-all cursor-pointer shadow-lg shadow-rose-900/30 w-full sm:w-auto"
                     >
                       <X size={18} />
                       Unbind & Reopen Vector
-                    </button>
+                    </AsyncButton>
                   )}
                 </div>
               </div>

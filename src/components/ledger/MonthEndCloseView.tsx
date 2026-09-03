@@ -7,6 +7,8 @@ import { formatCurrency } from '../../lib/utils';
 import { Transaction } from '../../types';
 import { toast } from 'sonner';
 
+import AsyncButton from '../ui/AsyncButton';
+
 export default function MonthEndCloseView() {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
@@ -188,18 +190,19 @@ export default function MonthEndCloseView() {
                   </div>
                 </div>
               ) : (
-                <button
+                <AsyncButton
                   disabled={!isReady || isClosing}
                   onClick={handleClosePeriod}
+                  loadingText="Locking Period..."
                   className={`px-6 py-2.5 rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 ${
                     isReady 
                       ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200' 
                       : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                   }`}
                 >
-                  {isClosing ? 'Locking Period...' : 'Close Month'}
+                  Close Month
                   {!isClosing && <ArrowRight className="w-4 h-4" />}
-                </button>
+                </AsyncButton>
               )}
             </div>
 

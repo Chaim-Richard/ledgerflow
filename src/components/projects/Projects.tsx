@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, safeConfirm } from '../../lib/utils';
-import { AsyncButton } from '../ui/AsyncButton';
+import AsyncButton from '../ui/AsyncButton';
 import { toast } from 'sonner';
 import ProjectPipeline from './ProjectPipeline';
 
@@ -292,7 +292,7 @@ export default function Projects() {
                           <Pencil size={12} />
                         </button>
                         <AsyncButton 
-                          onClickAction={async () => {
+                          onClick={async () => {
                             handleDeleteProject(project.id);
                           }}
                           className={cn(

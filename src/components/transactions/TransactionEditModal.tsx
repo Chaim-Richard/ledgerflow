@@ -19,6 +19,7 @@ import { formatDecimal, getLocalDateISO } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import TagInput from './TagInput';
+import AsyncButton from '../ui/AsyncButton';
 
 interface TransactionEditModalProps {
   isOpen: boolean;
@@ -87,7 +88,7 @@ export default function TransactionEditModal({
     setLines(nextLines);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (isLocked) {
       toast.error('Period is sealed. Changes are prohibited to protect general ledger integrity.');
       return;
@@ -123,7 +124,7 @@ export default function TransactionEditModal({
       };
     });
 
-    onUpdate(transaction.id, {
+    await onUpdate(transaction.id, {
       date,
       description: description.trim(),
       payee: payee.trim() || undefined,
@@ -154,6 +155,19 @@ export default function TransactionEditModal({
     // Let's say we want to distribute the remaining amount to the last line.
     toast.info('Auto-balancing offset distributed to secondary vector.');
   };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        handleSave();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isOpen, handleSave, onClose]);
 
   if (!isOpen) return null;
 
@@ -678,14 +692,14 @@ export default function TransactionEditModal({
             >
               Cancel
             </button>
-            <button
+            <AsyncButton
               onClick={handleSave}
               disabled={isLocked}
-              type="button"
+              loadingText="Recording..."
               className="px-5 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-zinc-800/15 disabled:opacity-50"
             >
               Record synchronized changes
-            </button>
+            </AsyncButton>
           </div>
 
         </motion.div>
