@@ -68,12 +68,9 @@ export function getStripe(): Stripe {
 }
 
 // --- Environment Validation ---
-// Determine default NODE_ENV: compiled bundle in dist/ defaults to production, otherwise respects process.env.NODE_ENV or defaults to development
-const isCompiledBundle = (typeof __filename !== "undefined" && __filename.includes("dist"))
-  || (typeof __dirname !== "undefined" && __dirname.includes("dist"))
-  || Boolean(process.argv[1]?.includes("dist"));
-
-const defaultNodeEnv = process.env.NODE_ENV || (isCompiledBundle ? "production" : "development");
+// Determine default NODE_ENV: fail-safe to "production" unless explicitly set to "development" or running ts source directly
+const isTsSourceRun = Boolean(process.argv[1]?.endsWith(".ts"));
+const defaultNodeEnv = process.env.NODE_ENV || (isTsSourceRun ? "development" : "production");
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default(defaultNodeEnv as "development" | "production" | "test"),
@@ -403,30 +400,52 @@ async function getReportContext(req: AuthenticatedRequest, workspaceId: string) 
 async function startServer() {
   const app = express();
   const allowedOriginsEnv = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) : null;
+  
+  const isAllowedOrigin = (origin: string): boolean => {
+    if (!origin) return true;
+    
+    if (allowedOriginsEnv && allowedOriginsEnv.includes(origin)) {
+      return true;
+    }
+    
+    if (process.env.APP_URL && (origin === process.env.APP_URL || origin === process.env.APP_URL.replace(/\/$/, ''))) {
+      return true;
+    }
+
+    // Localhost & loopback
+    if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?$/.test(origin)) {
+      return true;
+    }
+
+    // Cloud Run and Google Cloud subdomains (*.run.app, *.us-east1.run.app, etc.)
+    if (/^https:\/\/([a-z0-9-]+\.)*run\.app(:[0-9]+)?$/.test(origin)) {
+      return true;
+    }
+
+    // Google AI Studio & Google domains
+    if (/^https:\/\/([a-z0-9-]+\.)*(google\.com|googleusercontent\.com|aistudio\.google\.com|ai\.studio)(:[0-9]+)?$/.test(origin)) {
+      return true;
+    }
+
+    // Firebase & Dev Workstations
+    if (/^https:\/\/([a-z0-9-]+\.)*(web\.app|firebaseapp\.com|cloudworkstations\.dev)(:[0-9]+)?$/.test(origin)) {
+      return true;
+    }
+
+    // Local private network development check (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    if (/^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:[0-9]+)?$/.test(origin)) {
+      return true;
+    }
+
+    return false;
+  };
+
   app.use(cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or same-origin)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOriginsEnv) {
-        if (allowedOriginsEnv.includes(origin)) return callback(null, true);
-        return callback(new Error('CORS policy does not allow access from this origin'));
-      }
-      
-      // Strict origin check: Allow localhost, 127.0.0.1, and Cloud Run / AI Studio preview subdomains
-      const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/.test(origin);
-      const isCloudRunPreview = /^https:\/\/[a-z0-9-]+\.run\.app$/.test(origin);
-      if (isLocal || isCloudRunPreview) {
+      if (!origin || isAllowedOrigin(origin)) {
         return callback(null, true);
       }
-
-      // Local private network development check (192.168.x.x, 10.x.x.x)
-      const isPrivateNetwork = /^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:[0-9]+)?$/.test(origin);
-      if (process.env.NODE_ENV !== 'production' && isPrivateNetwork) {
-        return callback(null, true);
-      }
-      
-      return callback(new Error('CORS policy does not allow access from this origin'));
+      return callback(null, false);
     },
     credentials: true
   }));
@@ -3992,7 +4011,14 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    // Robust dist path resolution for standalone and container deployments
+    const candidatePaths = [
+      path.join(process.cwd(), 'dist'),
+      path.join(__dirname, 'dist'),
+      path.join(__dirname, '../dist'),
+      process.cwd()
+    ];
+    const distPath = candidatePaths.find(p => fs.existsSync(path.join(p, 'index.html'))) || path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));

@@ -81,11 +81,19 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
             const isActive = activeViewId === view.id;
 
             return (
-              <button
+              <div
                 key={view.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setActiveView(isActive ? null : view.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setActiveView(isActive ? null : view.id);
+                  }
+                }}
                 className={cn(
-                  "group relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 border cursor-pointer",
+                  "group relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 border cursor-pointer select-none",
                   isActive
                     ? "bg-[var(--brass)]/15 border-[var(--brass)] text-[var(--text)] shadow-xs font-semibold scale-[1.02]"
                     : "bg-[var(--surface-elevated)] border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--line-strong)]"
@@ -127,7 +135,7 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
                 >
                   <Star size={12} className={cn(view.isPinned && "fill-amber-400 text-amber-400 opacity-100")} />
                 </button>
-              </button>
+              </div>
             );
           })}
         </div>

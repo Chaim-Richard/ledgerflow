@@ -13,8 +13,6 @@ interface AuthScreenProps {
   language: string;
 }
 
-const BG = "https://images.unsplash.com/photo-1497366412874-3415097a27e7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwbW9kZXJuJTIwYXJjaGl0ZWN0dXJlJTIwb2ZmaWNlfGVufDB8fHx8MTc4MDg3MjM4OXww&ixlib=rb-4.1.0&q=85";
-
 export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onGuest, language }: AuthScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
@@ -53,29 +51,37 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onGuest, lang
 
   return (
     <main className="min-h-screen grid lg:grid-cols-2 bg-[#F9F9F7]" aria-label="Authentication Page">
-      {/* Left visual */}
-      <section className="relative hidden w-full h-full lg:block" aria-hidden="true">
-        <img src={BG} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-[#0A0A0A]/60" />
-        <div className="relative h-full flex flex-col justify-between p-12 text-white">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 bg-white flex items-center justify-center rounded-xl shadow-lg">
-              <ShieldCheck size={20} className="text-[#0A0A0A]" />
-            </div>
-            <span className="font-display font-extrabold text-xl tracking-tight">LedgerFlow</span>
+      {/* Left visual: 100% offline-first self-contained architectural ledger backdrop */}
+      <section className="relative hidden w-full h-full lg:flex flex-col justify-between p-12 bg-[#090D16] text-white overflow-hidden" aria-hidden="true">
+        {/* Subtle decorative geometric coordinate grid */}
+        <div className="absolute inset-0 opacity-[0.07] pointer-events-none" style={{
+          backgroundImage: `linear-gradient(#4B6BFB 1px, transparent 1px), linear-gradient(90deg, #4B6BFB 1px, transparent 1px)`,
+          backgroundSize: '48px 48px'
+        }} />
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#0047AB]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#3B82F6]/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex items-center gap-2.5">
+          <div className="w-10 h-10 bg-white flex items-center justify-center rounded-xl shadow-lg">
+            <ShieldCheck size={20} className="text-[#090D16]" />
           </div>
-          <div className="max-w-md">
-            <h1 className="font-display font-black text-5xl leading-[1.0] tracking-tight mb-8 text-blue-400">
-              The finance OS that does the thinking.
-            </h1>
-            <p className="text-white/80 text-sm leading-relaxed font-medium">
-              Depreciation schedules, contractor tagging, anomaly detection and cash-flow
-              forecasting — computed with deterministic algorithms, not guesswork.
-            </p>
+          <span className="font-display font-extrabold text-xl tracking-tight text-white">LedgerFlow</span>
+        </div>
+
+        <div className="relative z-10 max-w-md my-auto py-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold tracking-wide mb-6">
+            Multi-Entity & Dimensional Ledger
           </div>
-          <div className="font-mono text-[11px] font-bold text-white/50 tracking-[0.2em] uppercase">
-            ENCRYPTED · MULTI-CURRENCY · AUDIT-READY
-          </div>
+          <h1 className="font-display font-black text-4xl leading-[1.15] tracking-tight mb-6 text-white">
+            Continuous accounting with multi-dimensional slicing.
+          </h1>
+          <p className="text-slate-300 text-sm leading-relaxed font-normal">
+            Slice transactions across entities, properties, projects, and departments. Real-time depreciation schedules, deterministic cash forecasting, and audit-ready tax tagging.
+          </p>
+        </div>
+
+        <div className="relative z-10 font-mono text-[11px] font-bold text-white/50 tracking-[0.2em] uppercase">
+          DIMENSIONAL LEDGER · REAL-TIME ANALYTICS · AUDIT-READY
         </div>
       </section>
 
