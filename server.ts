@@ -68,14 +68,22 @@ export function getStripe(): Stripe {
 }
 
 // --- Environment Validation ---
+// Determine default NODE_ENV: compiled bundle in dist/ defaults to production, otherwise respects process.env.NODE_ENV or defaults to development
+const isCompiledBundle = (typeof __filename !== "undefined" && __filename.includes("dist"))
+  || (typeof __dirname !== "undefined" && __dirname.includes("dist"))
+  || Boolean(process.argv[1]?.includes("dist"));
+
+const defaultNodeEnv = process.env.NODE_ENV || (isCompiledBundle ? "production" : "development");
+
 const EnvSchema = z.object({
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default(defaultNodeEnv as "development" | "production" | "test"),
   GEMINI_API_KEY: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().min(1),
   SESSION_SECRET: z.string().min(1),
   CURRENCY_API_KEY: z.string().min(1),
   TAX_API_KEY: z.string().min(1),
   SYSTEM_SALT: z.string().min(1),
+  FIREBASE_PROJECT_ID: z.string().optional(),
 });
 
 const envResult = EnvSchema.safeParse(process.env);
@@ -83,6 +91,9 @@ if (!envResult.success) {
   console.error("❌ Invalid environment variables:", envResult.error.format());
   process.exit(1);
 }
+
+// Ensure validated/defaulted values propagate to process.env
+process.env.NODE_ENV = envResult.data.NODE_ENV;
 
 // --- Types ---
 interface AuthUser extends admin.auth.DecodedIdToken {
@@ -93,18 +104,25 @@ interface AuthenticatedRequest extends express.Request {
   user: AuthUser;
 }
 
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
+// Load Firebase Config safely with environment override
+let firebaseConfig: Record<string, any> = {};
+try {
+  const configPath = path.resolve(process.cwd(), "firebase-applet-config.json");
+  if (fs.existsSync(configPath)) {
+    firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  }
+} catch (error) {
+  console.warn("[Firebase Admin] Warning: Could not read firebase-applet-config.json:", error);
+}
 
-// Load Firebase Config
-const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf8"));
+// Environment variable takes precedence over committed config file
+const activeFirebaseProjectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
 
-if (admin.apps.length === 0) {
-  const projectId = firebaseConfig.projectId;
+if (admin.apps.length === 0 && activeFirebaseProjectId) {
   admin.initializeApp({
-    projectId: projectId,
+    projectId: activeFirebaseProjectId,
   });
-  console.debug(`[Firebase Admin] Initialized for project: ${projectId}`);
+  console.debug(`[Firebase Admin] Initialized for project: ${activeFirebaseProjectId}`);
 }
 
 const upload = multer({ 
@@ -116,7 +134,7 @@ const upload = multer({
 });
 
 const getDb = () => {
-  const dbId = firebaseConfig.firestoreDatabaseId || "(default)";
+  const dbId = process.env.FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || "(default)";
   try {
     if (dbId && dbId !== "(default)") {
       return getFirestore(admin.app(), dbId);
@@ -402,7 +420,9 @@ async function startServer() {
         return callback(null, true);
       }
 
-      if (process.env.NODE_ENV !== 'production') {
+      // Local private network development check (192.168.x.x, 10.x.x.x)
+      const isPrivateNetwork = /^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:[0-9]+)?$/.test(origin);
+      if (process.env.NODE_ENV !== 'production' && isPrivateNetwork) {
         return callback(null, true);
       }
       
@@ -410,7 +430,14 @@ async function startServer() {
     },
     credentials: true
   }));
-  const PORT = 3000;
+
+  // Port Resolution:
+  // In AI Studio preview containers, Nginx reverse proxy listens on NGINX_PORT (8080) and routes to DEFAULT_APP_PORT (3000).
+  // In standalone deployments (Cloud Run, Heroku, Render, local Docker), Node listens directly on process.env.PORT.
+  const isAiStudioProxy = Boolean(process.env.APPLET_ID || process.env.NGINX_PORT);
+  const PORT = isAiStudioProxy
+    ? Number(process.env.DEFAULT_APP_PORT || 3000)
+    : (Number(process.env.PORT) || 3000);
 
   // Efficiency & Security Middleware
   app.set("trust proxy", 1); 
