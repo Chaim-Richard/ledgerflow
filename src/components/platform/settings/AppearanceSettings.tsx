@@ -28,6 +28,7 @@ export default function AppearanceSettings() {
   const user = useAuthStore(state => state.user);
   const userProfile = useAuthStore(state => state.userProfile);
   const setUserProfile = useAuthStore(state => state.setUserProfile);
+  const updateUserRole = useAuthStore(state => state.updateUserRole);
 
   const theme = useUIStore(state => state.theme);
   const setTheme = useUIStore(state => state.setTheme);
@@ -57,11 +58,14 @@ export default function AppearanceSettings() {
   const ownerEmail = user?.email || 'shmuelbiller@gmail.com';
   const isOwner = ownerEmail.toLowerCase() === 'shmuelbiller@gmail.com' || ownerEmail.toLowerCase().includes('shmuel') || userProfile?.role === 'admin';
 
-  const handleSaveRole = () => {
-    if (userProfile) {
-      setUserProfile({ ...userProfile, role: selectedRole });
+  const handleSaveRole = async () => {
+    try {
+      await updateUserRole(selectedRole);
+      toast.success(`Role updated to ${selectedRole.toUpperCase()}. Saved to profile.`);
+    } catch (err) {
+      console.error('Failed to update role:', err);
+      toast.error('Failed to update role.');
     }
-    toast.success(`Role updated to ${selectedRole.toUpperCase()}. Permissions synchronized.`);
   };
 
   const fontPresets = [

@@ -106,14 +106,45 @@ const Ledger = React.memo(() => {
   const txActions = useTransactionActions();
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
 
-  const onStartReconciliation = (data: any) => {};
-  const onCompleteReconciliation = (data: any) => {};
+  const onCompleteReconciliation = async (data: any) => {
+    try {
+      const recRecord = {
+        accountId: data.accountId,
+        accountName: data.accountName,
+        statementDate: data.statementDate,
+        statementBalanceCents: data.statementBalanceCents,
+        reconciledTransactionIds: data.reconciledIds || [],
+        reconciledCount: (data.reconciledIds || []).length,
+        status: 'completed',
+        completedAt: data.timestamp || new Date().toISOString()
+      };
+      
+      // Save reconciliation record in Firestore and state
+      await addEntity('reconciliations', recRecord, 'Reconciliation record saved');
+
+      // Update all reconciled transactions status
+      const updates = (data.reconciledIds || []).map((id: string) => 
+        updateEntity('transactions', id, { 
+          status: 'reconciled', 
+          reconciled: true, 
+          reconciledAt: new Date().toISOString() 
+        })
+      );
+      await Promise.all(updates);
+
+      toast.success(`Reconciliation finalized: ${(data.reconciledIds || []).length} transactions marked reconciled.`);
+    } catch (err) {
+      console.error('Failed to persist reconciliation:', err);
+      toast.error('Failed to save reconciliation.');
+      throw err;
+    }
+  };
+
   const onMatch = txActions.handleReconcileMatch;
   const onUndoMatch = txActions.handleReconcileUndo;
   const onIgnore = txActions.handleReconcileIgnore;
   const onAddFromBank = txActions.handleReconcileCreate;
   const onAutoReconcile = txActions.handleAutoReconcile;
-  const onBulkCategorize = (ids: string[], category: string, account: string) => {};
   const onParseReceipt = txActions.handleParseReceipt;
   const onAddTaxRate = (data: any) => addEntity('taxRates', data);
   const onUpdateTaxRate = (id: string, data: any) => updateEntity('taxRates', id, data);

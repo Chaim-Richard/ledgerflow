@@ -21,6 +21,7 @@ interface AuthState {
   setCurrentWorkspaceId: (id: string | null) => void;
   setCurrentProjectId: (id: string | null) => void;
   updateGeminiApiKey: (key: string) => Promise<void>;
+  updateUserRole: (role: 'admin' | 'client') => Promise<void>;
   
   // Helpers
   getCurrentWorkspace: () => Workspace | undefined;
@@ -83,6 +84,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     } catch (error) {
       console.error("Failed to update API key:", error);
+      throw error;
+    }
+  },
+
+  updateUserRole: async (role: 'admin' | 'client') => {
+    const { user, userProfile } = get();
+    if (!user) {
+      if (userProfile) {
+        set({ userProfile: { ...userProfile, role } });
+      }
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, { role });
+      if (userProfile) {
+        set({ userProfile: { ...userProfile, role } });
+      } else {
+        set({ 
+          userProfile: { 
+            uid: user.uid, 
+            email: user.email || '', 
+            role 
+          } as UserProfile 
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update user role:", error);
       throw error;
     }
   },

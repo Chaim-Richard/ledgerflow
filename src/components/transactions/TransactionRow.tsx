@@ -326,7 +326,9 @@ const TransactionRow = React.memo(({
                 </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onCreateRule(tx); }}
-                  className="p-1 text-slate-500 hover:text-indigo-600 rounded transition-all"
+                  className="p-1 text-slate-500 hover:text-indigo-600 rounded transition-all cursor-pointer"
+                  title="Create Auto-Categorization Rule"
+                  aria-label="Create Auto-Categorization Rule"
                 >
                   <Zap size={14} />
                 </button>

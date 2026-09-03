@@ -22,9 +22,8 @@ import { toast } from 'sonner';
 interface ReconciliationWizardProps {
   isOpen: boolean;
   onClose: () => void;
-  
   accounts: ChartAccount[];
-  onComplete: (data: any) => void;
+  onComplete: (data: any) => Promise<void> | void;
   formatCurrency: (val: number) => string;
 }
 
@@ -37,6 +36,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
   const [endingBalance, setEndingBalance] = useState<string>('0');
   const [reconciledIds, setReconciledIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   const account = useMemo(() => accounts.find(a => a.name === selectedAccount), [accounts, selectedAccount]);
   
@@ -95,23 +95,28 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
     toast.success(`Auto-matched ${matches.length} transactions based on statement balance.`);
   };
 
-  const handleFinalize = () => {
+  const handleFinalize = async () => {
     if (Math.abs(stats.difference) > 0.01) {
       toast.error('Difference must be zero to finalize reconciliation.');
       return;
     }
 
-    onComplete({
-      accountId: account?.id,
-      accountName: selectedAccount,
-      statementDate,
-      statementBalanceCents: stats.targetBalance,
-      reconciledIds,
-      timestamp: new Date().toISOString()
-    });
-    
-    toast.success('Reconciliation finalized successfully');
-    onClose();
+    setIsFinalizing(true);
+    try {
+      await onComplete({
+        accountId: account?.id,
+        accountName: selectedAccount,
+        statementDate,
+        statementBalanceCents: stats.targetBalance,
+        reconciledIds,
+        timestamp: new Date().toISOString()
+      });
+      onClose();
+    } catch (err) {
+      console.error('Finalization error:', err);
+    } finally {
+      setIsFinalizing(false);
+    }
   };
 
   if (!isOpen) return null;
