@@ -36,6 +36,7 @@ export default function Purchases() {
   const bills = useLedgerStore(s => s.bills);
   const vendors = useLedgerStore(s => s.vendors);
   const accounts = useLedgerStore(s => s.accounts);
+  const transactions = useLedgerStore(s => s.transactions);
   const { addEntity, updateEntity } = useEntityOperations();
 
   const vendorBalances = useMemo(() => {
@@ -45,8 +46,31 @@ export default function Purchases() {
         map[b.vendorId] = (map[b.vendorId] || 0) + (b.amountCents || 0);
       }
     });
+
+    // Transaction-based AP matching
+    if (transactions) {
+      transactions.forEach(tx => {
+        if (tx.status === 'void' || tx.status === 'reconciled') return;
+
+        let apAmount = 0;
+        tx.lines.forEach(l => {
+          const acc = accounts?.find(a => a.id === l.accountId);
+          if (acc && acc.type === 'liability' && acc.name.toLowerCase().includes('payable')) {
+            apAmount += Math.abs(l.amountCents);
+          }
+        });
+
+        if (apAmount > 0) {
+          const matchedVend = vendors?.find(v => tx.payee?.toLowerCase() === v.name.toLowerCase() || tx.description?.toLowerCase().includes(v.name.toLowerCase()));
+          if (matchedVend) {
+            map[matchedVend.id] = (map[matchedVend.id] || 0) + apAmount;
+          }
+        }
+      });
+    }
+
     return map;
-  }, [bills]);
+  }, [bills, transactions, vendors, accounts]);
   const onAddBill = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('bills', id, updates); } return addEntity('bills', data); };
   const onUpdateBill = (id: string, updates: any) => updateEntity('bills', id, updates);
   const onAddVendor = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('vendors', id, updates); } return addEntity('vendors', data); };

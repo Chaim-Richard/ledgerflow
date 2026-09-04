@@ -42,6 +42,11 @@ import { PROFITABILITY_HEATMAP_ALGO } from './profitability-heatmap';
 import { INTEREST_RATE_SENSITIVITY_ALGO } from './interest-rate-sensitivity';
 import { CUSTOMER_CHURN_ALGO } from './customer-churn';
 import { WORKING_CAPITAL_AGING_ALGO } from './working-capital-aging';
+import { GL_DETAIL_ALGO } from './gl-detail';
+import { BUDGET_VS_ACTUAL_ALGO } from './budget-vs-actual';
+import { COMPLIANCE_1099_ALGO } from './compliance-1099';
+import { PAYROLL_SUMMARY_ALGO } from './payroll-summary';
+import { SALES_TAX_LIABILITY_ALGO } from './sales-tax-liability';
 
 // Niche Daily Tools
 import { 
@@ -108,4 +113,11 @@ export const FINANCIAL_ALGORITHMS: Record<string, AlgorithmDefinition> = {
   'niche_4': PROPERTY_PNL_ALGO,
   'niche_5': RESTRICTED_FUND_ALGO,
   'niche_6': PROJECT_PROFITABILITY_ALGO,
+  
+  // Reports
+  'gl-detail': GL_DETAIL_ALGO,
+  'budget-vs-actual': BUDGET_VS_ACTUAL_ALGO,
+  '1099_totals': COMPLIANCE_1099_ALGO,
+  'payroll-summary': PAYROLL_SUMMARY_ALGO,
+  'sales-tax-liability': SALES_TAX_LIABILITY_ALGO,
 };

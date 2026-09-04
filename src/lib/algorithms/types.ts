@@ -1,13 +1,11 @@
 import { Transaction, ChartAccount } from '../../types';
 
-export interface AlgoInput {
-  key: string;
-  label: string;
-  min: number;
-  max: number;
-  step: number;
-  defaultValue: number;
-}
+export type AlgoInput =
+  | { kind?: 'number'; key: string; label: string; min: number; max: number; step: number; defaultValue: number }
+  | { kind: 'dateRange'; key: string; label: string; defaultValue: { start: string; end: string } }
+  | { kind: 'select'; key: string; label: string; options: { value: string; label: string }[]; defaultValue: string }
+  | { kind: 'boolean'; key: string; label: string; defaultValue: boolean }
+  | { kind: 'account'; key: string; label: string; defaultValue?: string; multiple?: boolean };
 
 export interface AlgoResultRow {
   [key: string]: any;
@@ -24,10 +22,11 @@ export interface AlgoResult {
 // SOURCE OF INTEGRITY:
 // All algorithms receive the raw `Transaction[]` and `ChartAccount[]` as the absolute source of integrity.
 // Do NOT fetch data directly inside the algorithm. Only compute based on the provided arrays.
-export type AlgoFn = (transactions: Transaction[], accounts: ChartAccount[], inputs: Record<string, number>, context?: { invoices?: any[], bills?: any[] }) => AlgoResult;
+export type AlgoFn = (transactions: Transaction[], accounts: ChartAccount[], inputs: Record<string, any>, context?: { invoices?: any[], bills?: any[] }) => AlgoResult;
 
 export interface AlgorithmDefinition {
   domain?: 'finance' | 'operations' | 'forensics' | 'planning' | 'treasury' | 'system' | 'valuation';
+  requires?: ('transactions' | 'invoices' | 'bills' | 'accounts' | 'budgets')[];
   tags?: string[];
   id: string;
   name: string;

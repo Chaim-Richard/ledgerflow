@@ -7,40 +7,88 @@ import {
   Zap,
   Star,
   Flame,
-  ArrowRight
+  ArrowRight,
+  AlertTriangle,
+  CalendarCheck,
+  TrendingDown,
+  PiggyBank,
+  Landmark,
+  Wrench,
+  Activity
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import ToolSandbox from './ToolSandbox';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { AlgorithmDefinition } from '../../lib/algorithms/types';
 
-const CATEGORIES = ['All', 'Speed Dial', 'Compliance', 'Intelligence', 'Automation', 'Planning', 'Valuation', 'Operations', 'Finance'];
+const CATEGORIES = [
+  'All', 
+  'Speed Dial', 
+  "Something's wrong", 
+  "It's month-end", 
+  "Where's the money going", 
+  "Can I afford it", 
+  "Tax time", 
+  "Set me up"
+];
 
-const getCategoryForAlgo = (algo: any): string => {
-  const domain = (algo.domain || '').toLowerCase();
-  if (domain === 'forensics') return 'Compliance';
-  if (domain === 'planning') return 'Planning';
-  if (domain === 'valuation') return 'Valuation';
-  if (domain === 'operations') return 'Operations';
-  if (domain === 'treasury' || domain === 'finance') return 'Finance';
-  if (domain === 'system') return 'Automation';
-  if (algo.tags && algo.tags.length > 0) {
-    if (algo.tags.includes('Audit') || algo.tags.includes('Compliance')) return 'Compliance';
-    if (algo.tags.includes('AI') || algo.tags.includes('Pattern')) return 'Intelligence';
-    if (algo.tags.includes('Automation')) return 'Automation';
-    if (algo.tags.includes('Forecasting') || algo.tags.includes('Cash')) return 'Planning';
+const getMomentGroup = (algo: AlgorithmDefinition): string => {
+  const id = algo.id;
+  const tags = algo.tags || [];
+  
+  if (['find-my-error', 'forensics_duplicates', 'forensics_anomaly', 'benfords_law', 'category_consistency', 'policy_violator', 'duplicate-detection', 'anomaly-detection', 'category-consistency'].includes(id) || tags.includes('Audit')) {
+    return "Something's wrong";
   }
-  return 'Finance';
+  
+  if (['working_capital_aging', 'working-capital-aging', 'subset_sum_recon', 'silent_micro_close', 'bank-rec-summary', 'gl-detail', 'continuous-close'].includes(id)) {
+    return "It's month-end";
+  }
+
+  if (['pareto_concentration', 'pareto-analysis', 'profitability_heatmap', 'profitability-heatmap', 'expense_velocity', 'expense-velocity', 'vendor_concentration', 'vendor-concentration', 'job_profitability', 'subscription_audit', 'saas-unit-economics', 'customer-churn', 'vendor-churn'].includes(id)) {
+    return "Where's the money going";
+  }
+
+  if (['runway_burn', 'cash-runway', 'monte_carlo', 'monte-carlo', 'virtual_tax_envelopes', 'wacc_capital', 'capital-budgeting', 'liquidity_stress', 'liquidity-stress', 'altman-z-score', 'cash-conversion-cycle', 'interest-rate-sensitivity', 'currency-exposure'].includes(id)) {
+    return "Can I afford it";
+  }
+
+  if (['tax_deduction_scanner', 'fixed_asset_amortizer', '1099_totals', 'sales_tax_liability', 'tax-deduction-scanner', 'auto-setup'].includes(id)) {
+    return "Tax time";
+  }
+
+  if (['zero_setup_books', 'rule_induction', 'cross_dimension_autofill', 'tf_idf', 'nl_entry_grammar', 'cross-dimension-inference', 'rule-induction', 'nl-parser', 'shared-transaction-identity'].includes(id)) {
+    return "Set me up";
+  }
+
+  return "Where's the money going"; // Default fallback
 };
 
-const TOOLS = Object.values(FINANCIAL_ALGORITHMS).map((algo: any) => ({
-  id: algo.id,
-  name: algo.name,
-  desc: algo.description,
-  cat: getCategoryForAlgo(algo),
-  implemented: true,
-  icon: Zap
-}));
+const getIconForGroup = (group: string) => {
+  switch (group) {
+    case "Something's wrong": return AlertTriangle;
+    case "It's month-end": return CalendarCheck;
+    case "Where's the money going": return TrendingDown;
+    case "Can I afford it": return PiggyBank;
+    case "Tax time": return Landmark;
+    case "Set me up": return Wrench;
+    default: return Activity;
+  }
+};
+
+const TOOLS = Object.values(FINANCIAL_ALGORITHMS).map((algo: any) => {
+  const group = getMomentGroup(algo);
+  return {
+    id: algo.id,
+    name: algo.name,
+    desc: algo.description,
+    cat: group,
+    implemented: true,
+    requires: algo.requires || [],
+    icon: getIconForGroup(group)
+  };
+});
 
 const DEFAULT_SPEED_DIAL = ['duplicate-detection', 'anomaly-detection', 'benfords-law', 'working-capital-aging'];
 
@@ -48,6 +96,11 @@ export default function ToolsCatalog() {
   const [activeCat, setActiveCat] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSandbox, setActiveSandbox] = useState<{ id: string, name: string } | null>(null);
+
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const workspaces = useAuthStore(s => s.workspaces);
+  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
+  const businessType = currentWorkspace?.businessType || 'services';
 
   const [speedDialIds, setSpeedDialIds] = useState<string[]>(() => {
     try {
@@ -75,6 +128,15 @@ export default function ToolsCatalog() {
 
   const speedDialTools = TOOLS.filter(t => speedDialIds.includes(t.id));
 
+  // Determine relevance based on businessType. This is a simple heuristic for sorting.
+  const isRelevant = (toolId: string) => {
+    if (businessType === 'saas' && toolId.includes('saas')) return true;
+    if (businessType === 'ecommerce' && toolId.includes('inventory')) return true;
+    if (businessType === 'real-estate' && toolId.includes('property')) return true;
+    if (businessType === 'freelance' && toolId.includes('1099')) return true;
+    return false; // Default: not boosted
+  };
+
   const filteredTools = TOOLS.filter(t => {
     const matchesCat = activeCat === 'All' 
       ? true 
@@ -85,6 +147,12 @@ export default function ToolsCatalog() {
     const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           t.desc.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCat && matchesSearch;
+  }).sort((a, b) => {
+    // Sort relevant tools first
+    const aRel = isRelevant(a.id) ? 1 : 0;
+    const bRel = isRelevant(b.id) ? 1 : 0;
+    if (aRel !== bRel) return bRel - aRel;
+    return a.name.localeCompare(b.name);
   });
 
   return (
@@ -204,7 +272,17 @@ export default function ToolsCatalog() {
                       </div>
                       <div>
                          <h3 className="text-lg font-black text-[var(--text)] tracking-tight uppercase mb-2 leading-tight pr-12">{tool.name}</h3>
-                         <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-3">{tool.cat}</p>
+                         <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                            <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">{tool.cat}</span>
+                            {tool.requires && tool.requires.length > 0 && (
+                              <>
+                                <span className="text-[var(--muted)] opacity-40 text-xs">•</span>
+                                <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-rose-900/30 bg-rose-500/10 text-rose-500">
+                                  Needs {tool.requires.join(', ')}
+                                </span>
+                              </>
+                            )}
+                         </div>
                          <p className="text-xs font-medium text-[var(--muted)] leading-relaxed line-clamp-2">{tool.desc}</p>
                       </div>
                    </div>

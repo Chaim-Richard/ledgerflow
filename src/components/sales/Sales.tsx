@@ -43,15 +43,45 @@ export default function Sales() {
   const accounts = useLedgerStore(s => s.accounts);
   const { addEntity, updateEntity } = useEntityOperations();
 
+  const transactions = useLedgerStore(s => s.transactions);
+
   const customerBalances = useMemo(() => {
     const map: Record<string, number> = {};
+    
+    // 1. Unpaid invoices
     (invoices || []).forEach(inv => {
       if (inv.customerId && inv.status !== 'paid' && inv.status !== 'rejected') {
         map[inv.customerId] = (map[inv.customerId] || 0) + (inv.amountCents || 0);
       }
     });
+
+    // 2. Transaction-based AR logic (fallback aging report logic)
+    // Add pending AR lines that map to this customer by name
+    if (transactions) {
+      transactions.forEach(tx => {
+        if (tx.status === 'void' || tx.status === 'reconciled') return;
+        
+        let arAmount = 0;
+        tx.lines.forEach(l => {
+          const acc = accounts?.find(a => a.id === l.accountId);
+          // If it's an AR account
+          if (acc && acc.type === 'asset' && acc.name.toLowerCase().includes('receivable')) {
+            arAmount += l.amountCents; // Positive is debit (increase AR)
+          }
+        });
+        
+        if (arAmount > 0) {
+          // Try to match to a customer
+          const matchedCust = customers?.find(c => tx.payee?.toLowerCase() === c.name.toLowerCase() || tx.description?.toLowerCase().includes(c.name.toLowerCase()));
+          if (matchedCust) {
+            map[matchedCust.id] = (map[matchedCust.id] || 0) + arAmount;
+          }
+        }
+      });
+    }
+
     return map;
-  }, [invoices]);
+  }, [invoices, transactions, customers, accounts]);
   const onAddInvoice = async (data: any) => { 
     let res;
     if (data.id) { 

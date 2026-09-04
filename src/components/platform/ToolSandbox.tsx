@@ -24,8 +24,8 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
   const algorithm = FINANCIAL_ALGORITHMS[toolId] || FINANCIAL_ALGORITHMS['1'];
   
   // Custom user inputs per algorithm
-  const [params, setParams] = useState<Record<string, number>>(() => {
-    const init: Record<string, number> = {};
+  const [params, setParams] = useState<Record<string, any>>(() => {
+    const init: Record<string, any> = {};
     algorithm.inputs.forEach((i: any) => init[i.key] = i.defaultValue);
     return init;
   });
@@ -75,20 +75,71 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1 opacity-60">Tune computational vectors</p>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                 {algorithm.inputs.map((inp: any) => (
-                    <div key={inp.key} className="space-y-3">
-                       <div className="flex justify-between items-center text-xs font-bold font-mono">
-                          <span className="text-[10px] text-[#8a8a8f] uppercase tracking-wider font-sans">{inp.label}</span>
-                          <span className="text-[var(--text)] dark:text-white">{params[inp.key]}</span>
-                       </div>
-                       <input 
-                         type="range" min={inp.min} max={inp.max} step={inp.step} 
-                         value={params[inp.key]} 
-                         onChange={e => setParams({...params, [inp.key]: Number(e.target.value)})}
-                         className="w-full accent-ledger-ink"
-                       />
-                    </div>
-                 ))}
+                 {algorithm.inputs.map((inp: any) => {
+                    const kind = inp.kind || 'number';
+                    
+                    return (
+                      <div key={inp.key} className="space-y-3">
+                         <div className="flex justify-between items-center text-xs font-bold font-mono">
+                            <span className="text-[10px] text-[#8a8a8f] uppercase tracking-wider font-sans">{inp.label}</span>
+                            {kind === 'number' && (
+                              <span className="text-[var(--text)] dark:text-white">{params[inp.key]}</span>
+                            )}
+                         </div>
+                         
+                         {kind === 'number' && (
+                           <input 
+                             type="range" min={inp.min} max={inp.max} step={inp.step} 
+                             value={params[inp.key]} 
+                             onChange={e => setParams({...params, [inp.key]: Number(e.target.value)})}
+                             className="w-full accent-ledger-ink"
+                           />
+                         )}
+
+                         {kind === 'boolean' && (
+                           <button
+                             type="button"
+                             onClick={() => setParams({...params, [inp.key]: !params[inp.key]})}
+                             className="w-full text-left p-2 border border-[var(--line)] rounded-lg bg-[var(--panel)] hover:bg-[var(--surface)] text-[var(--text)] text-xs font-medium cursor-pointer flex justify-between items-center"
+                           >
+                             <span>{params[inp.key] ? 'Enabled' : 'Disabled'}</span>
+                             <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${params[inp.key] ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                                <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${params[inp.key] ? 'translate-x-4' : 'translate-x-0'}`} />
+                             </div>
+                           </button>
+                         )}
+
+                         {kind === 'select' && (
+                           <select
+                             value={params[inp.key]}
+                             onChange={e => setParams({...params, [inp.key]: e.target.value})}
+                             className="w-full p-2 border border-[var(--line)] rounded-lg bg-[var(--panel)] text-[var(--text)] text-xs font-medium"
+                           >
+                             {inp.options?.map((opt: any) => (
+                               <option key={opt.value} value={opt.value}>{opt.label}</option>
+                             ))}
+                           </select>
+                         )}
+                         
+                         {kind === 'dateRange' && (
+                           <div className="grid grid-cols-2 gap-2">
+                             <input 
+                               type="date"
+                               value={params[inp.key]?.start || ''}
+                               onChange={e => setParams({...params, [inp.key]: { ...params[inp.key], start: e.target.value }})}
+                               className="w-full p-1.5 border border-[var(--line)] rounded-md bg-[var(--panel)] text-[var(--text)] text-[10px]"
+                             />
+                             <input 
+                               type="date"
+                               value={params[inp.key]?.end || ''}
+                               onChange={e => setParams({...params, [inp.key]: { ...params[inp.key], end: e.target.value }})}
+                               className="w-full p-1.5 border border-[var(--line)] rounded-md bg-[var(--panel)] text-[var(--text)] text-[10px]"
+                             />
+                           </div>
+                         )}
+                      </div>
+                    );
+                 })}
                  
                  <div className="p-4 bg-[var(--ink)] rounded-xl border border-[var(--line)]">
                     <span className="text-[9px] uppercase tracking-wider font-black text-slate-500 block mb-2">Ingestion Status</span>
