@@ -1,19 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { CheckCircle2, Circle, AlertTriangle, ArrowRight, BookOpen, Lock, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Circle, AlertTriangle, ArrowRight, BookOpen, Lock, ShieldCheck, Download } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../../lib/utils';
 import { Transaction } from '../../types';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 import AsyncButton from '../ui/AsyncButton';
 
 export default function MonthEndCloseView() {
-  const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
-  const bankLines = useLedgerStore(s => s.bankLines);
-  const workspaces = useAuthStore(s => s.workspaces);
+  const transactions = useLedgerStore(s => s.transactions) || [];
+  const accounts = useLedgerStore(s => s.accounts) || [];
+  const bankLines = useLedgerStore(s => s.bankLines) || [];
+  const invoices = useLedgerStore(s => s.invoices) || [];
+  const bills = useLedgerStore(s => s.bills) || [];
+  const workspaces = useAuthStore(s => s.workspaces) || [];
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
@@ -123,12 +126,121 @@ export default function MonthEndCloseView() {
   const completedSteps = checklist.filter(c => c.status === 'done').length;
   const isReady = completedSteps === totalSteps;
 
+  const handleExportAccountantPackage = () => {
+    try {
+      const toastId = toast.loading('Compiling accountant package workbook...');
+      
+      const periodStart = new Date(`${selectedMonth}-01T00:00:00`);
+      const periodEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0, 23, 59, 59);
+
+      const periodTx = transactions.filter(t => {
+        const td = new Date(t.date);
+        return td >= periodStart && td <= periodEnd;
+      });
+
+      const wb = XLSX.utils.book_new();
+
+      // 1. Trial Balance Sheet
+      const accountMap: Record<string, { code: string; name: string; type: string; debitCents: number; creditCents: number }> = {};
+      accounts.forEach(a => {
+        accountMap[a.id] = {
+          code: a.code || '',
+          name: a.name,
+          type: a.type,
+          debitCents: 0,
+          creditCents: 0
+        };
+      });
+
+      periodTx.forEach(t => {
+        t.lines.forEach(l => {
+          const acc = accountMap[l.accountId] || {
+            code: '',
+            name: l.accountName || l.accountId || 'Unassigned',
+            type: 'expense',
+            debitCents: 0,
+            creditCents: 0
+          };
+          if (l.amountCents > 0) {
+            acc.debitCents += l.amountCents;
+          } else {
+            acc.creditCents += Math.abs(l.amountCents);
+          }
+          accountMap[l.accountId] = acc;
+        });
+      });
+
+      const tbHeaders = ['Account Code', 'Account Name', 'Type', 'Period Debits ($)', 'Period Credits ($)', 'Net ($)'];
+      const tbRows = Object.values(accountMap).map(a => [
+        a.code,
+        a.name,
+        a.type.toUpperCase(),
+        (a.debitCents / 100).toFixed(2),
+        (a.creditCents / 100).toFixed(2),
+        ((a.debitCents - a.creditCents) / 100).toFixed(2)
+      ]);
+      const wsTB = XLSX.utils.aoa_to_sheet([tbHeaders, ...tbRows]);
+      XLSX.utils.book_append_sheet(wb, wsTB, "Trial Balance");
+
+      // 2. General Ledger / Transactions
+      const glHeaders = ['Date', 'Transaction ID', 'Description', 'Account Name', 'Type', 'Status', 'Amount ($)'];
+      const glRows = periodTx.flatMap(t => 
+        (t.lines && t.lines.length > 0 ? t.lines : [{ accountName: 'General', accountId: '', amountCents: t.totalAmountCents }]).map(l => [
+          t.date,
+          t.id,
+          t.description,
+          l.accountName || l.accountId || 'General',
+          t.type || 'actual',
+          t.status,
+          ((l.amountCents || t.totalAmountCents || 0) / 100).toFixed(2)
+        ])
+      );
+      const wsGL = XLSX.utils.aoa_to_sheet([glHeaders, ...glRows]);
+      XLSX.utils.book_append_sheet(wb, wsGL, "General Ledger");
+
+      // 3. Open Invoices (A/R)
+      const invHeaders = ['Invoice #', 'Customer Name', 'Issue Date', 'Due Date', 'Status', 'Total ($)'];
+      const invRows = invoices.map(i => [
+        i.number,
+        i.customerName,
+        i.date,
+        i.dueDate,
+        i.status,
+        ((i.totalCents || i.amountCents || 0) / 100).toFixed(2)
+      ]);
+      const wsInv = XLSX.utils.aoa_to_sheet([invHeaders, ...invRows]);
+      XLSX.utils.book_append_sheet(wb, wsInv, "Invoices (AR)");
+
+      // 4. Open Bills (A/P)
+      const billHeaders = ['Bill #', 'Vendor Name', 'Issue Date', 'Due Date', 'Status', 'Amount ($)'];
+      const billRows = bills.map(b => [
+        b.number,
+        b.vendorName,
+        b.date,
+        b.dueDate,
+        b.status,
+        ((b.amountCents || 0) / 100).toFixed(2)
+      ]);
+      const wsBills = XLSX.utils.aoa_to_sheet([billHeaders, ...billRows]);
+      XLSX.utils.book_append_sheet(wb, wsBills, "Bills (AP)");
+
+      // Write file
+      const fileName = `Accountant_Package_${selectedMonth}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      toast.success(`Accountant Package exported: ${fileName}`, { id: toastId });
+    } catch (err: any) {
+      console.error('Failed to export accountant package:', err);
+      toast.error('Failed to export accountant package workbook.');
+    }
+  };
+
   const handleClosePeriod = () => {
     setIsClosing(true);
     setTimeout(() => {
       setClosedPeriods([...closedPeriods, selectedMonth]);
       setIsClosing(false);
-    }, 1500);
+      toast.success(`Period ${selectedMonth} locked.`);
+    }, 1200);
   };
 
   const isClosed = closedPeriods.includes(selectedMonth);
@@ -177,13 +289,10 @@ export default function MonthEndCloseView() {
               {isClosed ? (
                 <div className="flex items-center gap-3">
                   <button 
-                    onClick={() => {
-                      const toastId = toast.loading('Compiling accountant package...');
-                      setTimeout(() => toast.success('Accountant Package (ZIP) generated and downloaded.', { id: toastId }), 2000);
-                    }}
-                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg flex items-center gap-2 font-medium hover:bg-slate-50 transition-colors shadow-sm text-sm"
+                    onClick={handleExportAccountantPackage}
+                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg flex items-center gap-2 font-medium hover:bg-slate-50 transition-colors shadow-sm text-sm cursor-pointer"
                   >
-                    <BookOpen className="w-4 h-4" /> Export to Accountant
+                    <BookOpen className="w-4 h-4 text-indigo-600" /> Export to Accountant (.xlsx)
                   </button>
                   <div className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center gap-2 font-medium">
                     <Lock className="w-4 h-4" /> Period Locked

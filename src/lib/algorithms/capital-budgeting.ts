@@ -107,9 +107,15 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
       { Parameter: 'Blended WACC', 'Rate (%)': parseFloat(waccPct) }
     ];
 
+    const irrFormatted = !isNaN(irr) ? `${(irr * 100).toFixed(2)}%` : 'N/A';
+    const isIrrViable = !isNaN(irr) && irr >= wacc;
+
     const insights = [
       `The enterprise hurdle rate (WACC) is calculated at ${waccPct}%, factoring an equity weight of ${inputs['equityDebtRatio']}% and a tax shield on debt of ${inputs['taxRatePct']}%.`,
       `The projected NPV stands at $${npv.toLocaleString(undefined, { maximumFractionDigits: 0, minimumFractionDigits: 0 })} against an initial capital outlay of $${initialInvestment.toLocaleString()}.`,
+      !isNaN(irr) 
+        ? (isIrrViable ? `The Internal Rate of Return (IRR) is ${irrFormatted}, clearing the ${waccPct}% WACC hurdle rate and indicating a value-accretive investment.` : `The Internal Rate of Return (IRR) is ${irrFormatted}, failing to meet the ${waccPct}% hurdle rate.`)
+        : 'Internal Rate of Return (IRR) could not be calculated due to non-standard cash flow pattern.',
       profitabilityIndex >= 1 
         ? `Profitability Index is ${profitabilityIndex.toFixed(2)} (> 1.0), indicating the present value of future cash flows exceeds the initial investment.`
         : `Profitability Index is ${profitabilityIndex.toFixed(2)} (< 1.0), signaling wealth destruction. Project should be rejected.`,
@@ -124,6 +130,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     return {
       metrics: [
         { label: 'WACC (Hurdle Rate)', value: `${waccPct}%`, color: 'blue' },
+        { label: 'Internal Rate of Return (IRR)', value: irrFormatted, color: isIrrViable ? 'green' : !isNaN(irr) ? 'red' : 'gray' },
         { label: 'Net Present Value', value: `$${Math.round(npv).toLocaleString()}`, color: npv >= 0 ? 'green' : 'red' },
         { label: 'Profitability Index', value: profitabilityIndex.toFixed(2), color: profitabilityIndex >= 1 ? 'green' : 'red' },
         { label: 'Discounted Payback', value: discountedPayback !== -1 ? `${discountedPayback.toFixed(1)} Yrs` : 'Never', color: discountedPayback !== -1 ? 'green' : 'red' }
