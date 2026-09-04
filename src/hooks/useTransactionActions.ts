@@ -1617,7 +1617,7 @@ export function useTransactionActions() {
       try {
         const batch = writeBatch(db);
         for (const item of generatedTransactions) {
-          const txRef = doc(collection(db, 'workspaces', currentWorkspaceId, 'transactions'));
+          const txRef = doc(collection(db, 'transactions'));
           batch.set(txRef, {
             ...item.transaction,
             id: txRef.id,
@@ -1626,7 +1626,7 @@ export function useTransactionActions() {
             createdAt: new Date().toISOString()
           });
 
-          const recRef = doc(db, 'workspaces', currentWorkspaceId, 'recurring', item.templateId);
+          const recRef = doc(db, 'recurring', item.templateId);
           batch.update(recRef, {
             nextOccurrence: item.updatedNextOccurrence
           });

@@ -9,7 +9,9 @@ interface FinancialCalculatorViewProps {
 
 export default function FinancialCalculatorView({ type }: FinancialCalculatorViewProps) {
   const transactions = useLedgerStore(state => state.transactions || []);
-  const accounts = useLedgerStore(state => state.accounts || []);
+  const rawAccounts = useLedgerStore(state => state.accounts || []);
+  const computedAccounts = useLedgerStore(state => state.computedAccounts || []);
+  const accounts = computedAccounts.length > 0 ? computedAccounts : rawAccounts;
 
   // Compute live ledger base figures
   const totalIncome = transactions.reduce((sum, t) => {

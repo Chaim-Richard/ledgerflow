@@ -8,7 +8,12 @@ import { useAuthStore } from '../../stores/useAuthStore';
 
 export default function CashFlowView() {
   const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
+  const rawAccounts = useLedgerStore(s => s.accounts);
+  const computedAccounts = useLedgerStore(s => s.computedAccounts);
+  const accounts = useMemo(() => {
+    return computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
+  }, [computedAccounts, rawAccounts]);
+
   const [dateRange, setDateRange] = useState({
     start: getLocalDateISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
     end: getLocalDateISO()

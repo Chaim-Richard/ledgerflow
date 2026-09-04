@@ -7,7 +7,9 @@ import { toast } from 'sonner';
 
 export default function DeveloperSettings() {
   const transactions = useLedgerStore(state => state.transactions);
-  const accounts = useLedgerStore(state => state.accounts);
+  const rawAccounts = useLedgerStore(state => state.accounts);
+  const computedAccounts = useLedgerStore(state => state.computedAccounts);
+  const accounts = computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
   
   const language = useUIStore(state => state.language);
   const lexiconOverrides = useUIStore(state => state.lexiconOverrides);

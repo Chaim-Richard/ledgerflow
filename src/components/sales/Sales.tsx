@@ -42,6 +42,16 @@ export default function Sales() {
   const customers = useLedgerStore(s => s.customers);
   const accounts = useLedgerStore(s => s.accounts);
   const { addEntity, updateEntity } = useEntityOperations();
+
+  const customerBalances = useMemo(() => {
+    const map: Record<string, number> = {};
+    (invoices || []).forEach(inv => {
+      if (inv.customerId && inv.status !== 'paid' && inv.status !== 'rejected') {
+        map[inv.customerId] = (map[inv.customerId] || 0) + (inv.amountCents || 0);
+      }
+    });
+    return map;
+  }, [invoices]);
   const onAddInvoice = async (data: any) => { 
     let res;
     if (data.id) { 
@@ -367,7 +377,7 @@ export default function Sales() {
                        </div>
                     </td>
                     <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-xl tracking-tighter">
-                      {formatCurrency(cust.balanceCents || 0)}
+                      {formatCurrency(customerBalances[cust.id] ?? cust.balanceCents ?? 0)}
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all justify-end">

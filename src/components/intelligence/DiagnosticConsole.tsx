@@ -21,7 +21,9 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
   const inputRef = useRef<HTMLInputElement>(null);
 
   const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
+  const rawAccounts = useLedgerStore(s => s.accounts);
+  const computedAccounts = useLedgerStore(s => s.computedAccounts);
+  const accounts = computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
   const projects = useLedgerStore(s => s.projects);
   const userProfile = useAuthStore(s => s.userProfile);
   const userKey = userProfile?.geminiApiKey;

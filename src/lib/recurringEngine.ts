@@ -1,7 +1,8 @@
-import { RecurringTransaction, Transaction, Invoice } from '../types';
+import { RecurringTransaction, Transaction } from '../types';
+import { parseLocalDate } from './utils';
 
 export function calculateNextOccurrence(currentDateStr: string, frequency: RecurringTransaction['frequency']): string {
-  const date = new Date(currentDateStr || new Date().toISOString());
+  const date = parseLocalDate(currentDateStr || new Date().toISOString().slice(0, 10));
   if (isNaN(date.getTime())) {
     const now = new Date();
     return now.toISOString().slice(0, 10);
@@ -27,7 +28,10 @@ export function calculateNextOccurrence(currentDateStr: string, frequency: Recur
       date.setMonth(date.getMonth() + 1);
   }
 
-  return date.toISOString().slice(0, 10);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export interface DueRecurringResult {
@@ -40,8 +44,8 @@ export interface DueRecurringResult {
 }
 
 export function findDueRecurring(recurringList: RecurringTransaction[], asOfDateStr?: string): DueRecurringResult {
-  const asOf = asOfDateStr ? new Date(asOfDateStr) : new Date();
-  asOf.setHours(23, 59, 59, 999);
+  const todayStr = asOfDateStr || new Date().toISOString().slice(0, 10);
+  const asOfTime = parseLocalDate(todayStr).getTime();
 
   const dueTemplates: RecurringTransaction[] = [];
   const generatedTransactions: DueRecurringResult['generatedTransactions'] = [];
@@ -49,46 +53,64 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
   for (const item of recurringList) {
     if (!item.isActive) continue;
     
-    const nextOcc = new Date(item.nextOccurrence || item.createdAt);
-    if (!isNaN(nextOcc.getTime()) && nextOcc <= asOf) {
+    let currentNextOccStr = item.nextOccurrence || item.createdAt.slice(0, 10);
+    let nextOccTime = parseLocalDate(currentNextOccStr).getTime();
+
+    if (!isNaN(nextOccTime) && nextOccTime <= asOfTime) {
       dueTemplates.push(item);
 
-      const template = (item.template || {}) as any;
-      const amount = item.amountCents || template.amountCents || template.totalAmountCents || 0;
+      const template = (item.template || {}) as Partial<Transaction>;
+      const amount = item.amountCents || template.totalAmountCents || 0;
+      const currency = template.currency || 'USD';
       
-      const newTx: Partial<Transaction> = {
-        description: item.description,
-        totalAmountCents: amount,
-        currency: 'USD',
-        date: item.nextOccurrence.slice(0, 10),
-        status: 'pending',
-        type: 'actual',
-        tags: [...(template.tags || []), 'recurring'],
-        lines: template.lines || [
+      let lines = template.lines;
+      if (!lines || lines.length === 0) {
+        const offsetAcc = template.projectId ? 'acc_1010' : 'acc_1010';
+        lines = [
           {
-            accountId: template.accountId || 'uncategorized',
-            accountName: template.accountName || 'Uncategorized',
+            accountId: (template as any).accountId || 'acc_5010',
+            accountName: (template as any).accountName || 'Operating Expense',
             amountCents: amount,
             description: item.description
+          },
+          {
+            accountId: offsetAcc,
+            accountName: 'Operating Cash',
+            amountCents: -amount,
+            description: item.description
           }
-        ],
-        projectId: template.projectId,
-        metadata: {
-          recurringTemplateId: item.id,
-          vendorId: template.vendorId,
-          customerId: template.customerId,
-          generatedAt: new Date().toISOString(),
-          ...(template.metadata || {})
-        }
-      };
+        ];
+      }
 
-      const updatedNext = calculateNextOccurrence(item.nextOccurrence, item.frequency);
+      // Handle catch-up loop if overdue
+      let latestNextOccStr = currentNextOccStr;
+      while (nextOccTime <= asOfTime) {
+        const newTx: Partial<Transaction> = {
+          description: item.description,
+          totalAmountCents: amount,
+          currency,
+          date: latestNextOccStr,
+          status: 'completed',
+          type: 'actual',
+          tags: [...(template.tags || []), 'recurring'],
+          lines,
+          projectId: template.projectId,
+          metadata: {
+            recurringTemplateId: item.id,
+            generatedAt: new Date().toISOString(),
+            ...(template.metadata || {})
+          }
+        };
 
-      generatedTransactions.push({
-        transaction: newTx,
-        templateId: item.id,
-        updatedNextOccurrence: updatedNext
-      });
+        latestNextOccStr = calculateNextOccurrence(latestNextOccStr, item.frequency);
+        nextOccTime = parseLocalDate(latestNextOccStr).getTime();
+
+        generatedTransactions.push({
+          transaction: newTx,
+          templateId: item.id,
+          updatedNextOccurrence: latestNextOccStr
+        });
+      }
     }
   }
 

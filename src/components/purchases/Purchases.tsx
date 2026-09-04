@@ -37,6 +37,16 @@ export default function Purchases() {
   const vendors = useLedgerStore(s => s.vendors);
   const accounts = useLedgerStore(s => s.accounts);
   const { addEntity, updateEntity } = useEntityOperations();
+
+  const vendorBalances = useMemo(() => {
+    const map: Record<string, number> = {};
+    (bills || []).forEach(b => {
+      if (b.vendorId && b.status !== 'paid' && b.status !== 'void') {
+        map[b.vendorId] = (map[b.vendorId] || 0) + (b.amountCents || 0);
+      }
+    });
+    return map;
+  }, [bills]);
   const onAddBill = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('bills', id, updates); } return addEntity('bills', data); };
   const onUpdateBill = (id: string, updates: any) => updateEntity('bills', id, updates);
   const onAddVendor = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('vendors', id, updates); } return addEntity('vendors', data); };
@@ -459,7 +469,7 @@ export default function Purchases() {
                        </div>
                     </td>
                     <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-xl tracking-tighter">
-                      {formatCurrency(vend.balanceCents || 0)}
+                      {formatCurrency(vendorBalances[vend.id] ?? vend.balanceCents ?? 0)}
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all justify-end">
