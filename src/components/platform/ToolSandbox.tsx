@@ -21,6 +21,10 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
   const accounts = computedAccounts.length > 0 ? computedAccounts : rawAccounts;
   const invoices = useLedgerStore(state => state.invoices || []);
   const bills = useLedgerStore(state => state.bills || []);
+  const vendors = useLedgerStore(state => state.vendors || []);
+  const employees = useLedgerStore(state => state.employees || []);
+  const budgets = useLedgerStore(state => state.budgets || []);
+  const customers = useLedgerStore(state => state.customers || []);
   
   const algorithm = useMemo(() => {
     if (FINANCIAL_ALGORITHMS[toolId]) return FINANCIAL_ALGORITHMS[toolId];
@@ -39,8 +43,8 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
 
   // Re-run anytime params change, using REAL user dataset
   const results = useMemo(() => {
-    return algorithm.compute(transactions, accounts, params, { invoices, bills });
-  }, [algorithm, transactions, accounts, params, invoices, bills]);
+    return algorithm.compute(transactions, accounts, params, { invoices, bills, vendors, employees, budgets, customers });
+  }, [algorithm, transactions, accounts, params, invoices, bills, vendors, employees, budgets, customers]);
 
   // Derive dynamic table columns from rows
   const tableColumns = useMemo(() => {

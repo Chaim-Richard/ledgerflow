@@ -1,6 +1,7 @@
 import { resolveAccountRole } from '../accountUtils';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { parseLocalDate } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
   id: 'planning_5',
@@ -41,15 +42,18 @@ export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
     let maxDate = new Date(0);
 
     transactions.forEach(t => {
-       if (t.status === 'void' || t.status === 'pending') return;
+       if (!isPostable(t)) return;
        const d = parseLocalDate(t.date);
        if (d < minDate) minDate = d;
        if (d > maxDate) maxDate = d;
 
        t.lines.forEach(l => {
           const acc = accounts.find(a => a.id === l.accountId);
-          if (acc && acc.category === 'expense') {
-             totalOutflow += Math.abs(l.amountCents);
+          if (acc) {
+             const catLower = (acc.category || '').toLowerCase();
+             if (acc.type === 'expense' || acc.type === 'cost_of_goods' || catLower === 'cogs' || catLower === 'expense' || catLower === 'direct costs') {
+                totalOutflow += Math.abs(lineAmount(l, t));
+             }
           }
        });
     });

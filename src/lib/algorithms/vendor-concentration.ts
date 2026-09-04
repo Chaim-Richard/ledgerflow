@@ -1,5 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
-import { Transaction } from '../../types';
+import { isPostable } from '../../lib/txFilters';
 
 export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
   id: 'intelligence_4',
@@ -16,17 +16,33 @@ export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
     let totalSpend = 0;
 
     transactions.forEach(tx => {
+      if (!isPostable(tx)) return;
+
       // Look at expenses
       const isExpense = tx.lines.some(l => {
          const acc = accounts.find(a => a.id === l.accountId);
-         return acc && acc.category === 'expense';
+         if (!acc) return false;
+         const catLower = (acc.category || '').toLowerCase();
+         return acc.type === 'expense' || acc.type === 'cost_of_goods' || catLower === 'cogs' || catLower === 'expense' || catLower === 'direct costs';
       });
-      if (isExpense || tx.totalAmountCents < 0) { // simplistic assumption if unmapped
-         const payee = (tx.payee || tx.description || 'Unknown').toUpperCase().trim();
+
+      if (isExpense || tx.totalAmountCents < 0) {
+         const payee = (tx.payee || tx.description || 'Unknown Vendor').toUpperCase().trim();
          if (!vendorSpend[payee]) vendorSpend[payee] = 0;
-         const amt = Math.abs(tx.totalAmountCents);
-         vendorSpend[payee] += amt;
-         totalSpend += amt;
+         
+         const rate = tx.exchangeRate || 1;
+         const expCents = tx.lines
+           .filter(l => {
+             const acc = accounts.find(a => a.id === l.accountId);
+             if (!acc) return false;
+             const catLower = (acc.category || '').toLowerCase();
+             return acc.type === 'expense' || acc.type === 'cost_of_goods' || catLower === 'cogs' || catLower === 'expense';
+           })
+           .reduce((s, l) => s + Math.abs(l.amountCents), 0) || Math.abs(tx.totalAmountCents);
+
+         const convertedAmt = Math.round(expCents * rate);
+         vendorSpend[payee] += convertedAmt;
+         totalSpend += convertedAmt;
       }
     });
 

@@ -1,15 +1,24 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
-import { useLedgerStore } from '../../stores/useLedgerStore';
 
 export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
   id: 'sales-tax-liability',
   name: 'Sales Tax Liability',
-  domain: 'treasury', // or operations
+  domain: 'treasury',
   tags: ['Tax', 'Compliance', 'Reporting'],
-  description: 'Calculates taxable sales, tax collected, and estimated tax due across jurisdictions based on invoiced revenue.',
+  description: 'Calculates taxable sales, tax collected, and estimated tax due across jurisdictions based on invoiced or collected revenue.',
   requires: ['invoices'], 
   inputs: [
+    {
+      kind: 'select',
+      key: 'accountingBasis',
+      label: 'Accounting Basis',
+      options: [
+        { value: 'cash', label: 'Cash Basis (Tax Collected on Payment)' },
+        { value: 'accrual', label: 'Accrual Basis (Tax Invoiced)' }
+      ],
+      defaultValue: 'cash'
+    },
     {
       kind: 'dateRange',
       key: 'period',
@@ -24,15 +33,17 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
         { value: '', label: 'All Jurisdictions' },
         { value: 'NY', label: 'New York (NY)' },
         { value: 'CA', label: 'California (CA)' },
-        { value: 'TX', label: 'Texas (TX)' }
+        { value: 'TX', label: 'Texas (TX)' },
+        { value: 'FL', label: 'Florida (FL)' }
       ],
       defaultValue: ''
     }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
-    // Note: Needs invoices. We fetch directly from the store as this is a read-only client-side sync operation.
-    const invoices = useLedgerStore.getState().invoices || [];
+  compute: (transactions, accounts, inputs, context): AlgoResult => {
+    const invoices = context?.invoices || [];
+    const customers = context?.customers || [];
     
+    const basis = inputs['accountingBasis'] || 'cash';
     const period = inputs['period'];
     const selectedJurisdiction = inputs['jurisdiction'];
 
@@ -45,11 +56,22 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
       endDate.setHours(23, 59, 59, 999);
     }
 
-    let relevantInvoices = invoices.filter(i => i.status === 'paid' || i.status === 'sent' || i.status === 'pending');
+    let relevantInvoices = invoices.filter((i: any) => {
+      if (i.deletedAt || i.status === 'void' || i.status === 'draft' || i.status === 'rejected' || i.status === 'cancelled') {
+        return false;
+      }
+      if (basis === 'cash') {
+        return i.status === 'paid' || i.status === 'partially_paid';
+      }
+      // accrual
+      return true;
+    });
 
     if (startDate && endDate) {
-      relevantInvoices = relevantInvoices.filter(i => {
-        const d = parseLocalDate(i.date || i.dueDate);
+      relevantInvoices = relevantInvoices.filter((i: any) => {
+        const dateStr = basis === 'cash' ? (i.paidAt || i.paymentDate || i.paidDate || i.date) : (i.date || i.dueDate);
+        if (!dateStr) return false;
+        const d = parseLocalDate(dateStr);
         return d >= startDate! && d <= endDate!;
       });
     }
@@ -61,28 +83,23 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
     let totalTaxableSales = 0;
     let totalTaxCollected = 0;
 
-    // Group by jurisdiction. Since invoices don't natively have jurisdiction, we'll infer it from customer state 
-    // or metadata, or just group by tax rate if missing.
-    const customers = useLedgerStore.getState().customers || [];
-    
     const jurisdictionTotals: Record<string, { sales: number, taxable: number, tax: number }> = {};
 
-    relevantInvoices.forEach(inv => {
+    relevantInvoices.forEach((inv: any) => {
       // Find customer to get jurisdiction
-      const customer = customers.find(c => c.id === inv.customerId);
-      // Rough heuristic: use customer metadata or fallback to a default if taxRate exists
+      const customer = customers.find((c: any) => c.id === inv.customerId);
       let jurisdiction = 'Unknown';
-      if (customer && (customer as any).state) {
-        jurisdiction = (customer as any).state;
+      if (customer && customer.state) {
+        jurisdiction = customer.state;
       } else if (inv.taxRate && inv.taxRate > 0) {
         jurisdiction = 'Taxable Region (Unknown)';
       }
 
       if (selectedJurisdiction && jurisdiction !== selectedJurisdiction && jurisdiction !== 'Unknown') {
-        return; // skip if filtering and it doesn't match
+        return;
       }
 
-      const salesCents = inv.amountCents || 0;
+      const salesCents = inv.amountCents || inv.totalCents || 0;
       const taxRate = inv.taxRate || 0;
       const isTaxable = taxRate > 0;
       
@@ -109,8 +126,6 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
       jurisdictionTotals[jurisdiction].sales += salesCents;
       jurisdictionTotals[jurisdiction].taxable += taxableSalesCents;
       jurisdictionTotals[jurisdiction].tax += taxCents;
-      
-      // We assume an invoice generates a transaction eventually. If we knew the tx ID, we'd add it.
     });
 
     Object.entries(jurisdictionTotals).forEach(([jur, totals]) => {
@@ -121,13 +136,13 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
         grossSales: formatCurrency(totals.sales),
         taxableSales: formatCurrency(totals.taxable),
         taxCollected: formatCurrency(totals.tax),
-        taxDue: formatCurrency(totals.tax) // Assuming all collected is due for basic reporting
+        taxDue: formatCurrency(totals.tax)
       });
     });
 
     return {
       metrics: [
-        { label: 'Gross Sales', value: formatCurrency(totalSales), color: 'text-white' },
+        { label: `Gross Sales (${basis.toUpperCase()})`, value: formatCurrency(totalSales), color: 'text-white' },
         { label: 'Taxable Sales', value: formatCurrency(totalTaxableSales), color: 'text-indigo-400' },
         { label: 'Tax Collected / Due', value: formatCurrency(totalTaxCollected), color: 'text-rose-400' }
       ],
@@ -146,7 +161,7 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
         }
       ],
       insights: [
-        `Generated liability report across ${rows.length} jurisdictions.`,
+        `Generated ${basis.toUpperCase()} sales tax liability report across ${rows.length} jurisdictions.`,
         `Effective blended sales tax rate across taxable sales: ${totalTaxableSales > 0 ? ((totalTaxCollected / totalTaxableSales) * 100).toFixed(2) : 0}%.`
       ],
       rows,

@@ -1,4 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
   id: 'valuation_2',
@@ -43,18 +44,17 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
     // Approximate EBIT from transactions
     let ebit = 0;
     transactions.forEach(t => {
-      if (t.status === 'void' || t.status === 'pending') return;
-      // Net revenue minus operating expenses (excluding interest/taxes). 
-      // We'll approximate this by summing P&L impact.
+      if (!isPostable(t)) return;
       t.lines.forEach(l => {
         const acc = accounts.find(a => a.id === l.accountId);
         if (acc) {
           const cat = acc.category?.toLowerCase() || '';
           const type = acc.type?.toLowerCase() || '';
-          if (cat === 'revenue') {
-             ebit += Math.abs(l.amountCents);
-          } else if (cat === 'expense' && !type.includes('tax') && !type.includes('interest')) {
-             ebit -= Math.abs(l.amountCents);
+          const amt = lineAmount(l, t);
+          if (cat === 'revenue' || type === 'income' || type === 'revenue' || cat === 'sales') {
+             ebit += Math.abs(amt);
+          } else if ((cat === 'expense' || type === 'expense' || cat === 'cogs' || type === 'cost_of_goods') && !type.includes('tax') && !type.includes('interest')) {
+             ebit -= Math.abs(amt);
           }
         }
       });

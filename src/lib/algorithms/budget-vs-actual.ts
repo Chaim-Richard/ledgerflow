@@ -1,7 +1,7 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction } from '../../types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
-import { useLedgerStore } from '../../stores/useLedgerStore';
+import { isPostable } from '../../lib/txFilters';
 
 export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
   id: 'budget-vs-actual',
@@ -16,22 +16,20 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
       key: 'period',
       label: 'Budget Period',
       options: [
+        { value: '2027', label: '2027 Annual' },
         { value: '2026', label: '2026 Annual' },
+        { value: '2025', label: '2025 Annual' },
         { value: '2026-03', label: 'March 2026' }
       ],
       defaultValue: '2026'
     }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
-    // Note: We need budgets. Since the AlgoFn signature only explicitly mentions transactions & accounts in arguments, 
-    // we fetch budgets from the store directly here since it's a synchronous lookup. 
-    // In a real system, we'd pass `budgets` through the context object or AlgoFn signature.
-    const budgets = useLedgerStore.getState().budgets || [];
-    
+  compute: (transactions, accounts, inputs, context): AlgoResult => {
+    const budgets = context?.budgets || [];
     const targetPeriod = inputs['period'] || '2026';
     
     // Filter budgets for the period
-    const activeBudgets = budgets.filter(b => b.period === targetPeriod && b.targetType === 'account');
+    const activeBudgets = budgets.filter((b: any) => b.period === targetPeriod && b.targetType === 'account');
     
     if (activeBudgets.length === 0) {
       return {
@@ -47,7 +45,7 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
     let totalBudget = 0;
     let totalActual = 0;
 
-    activeBudgets.forEach(budget => {
+    activeBudgets.forEach((budget: any) => {
       const accountId = budget.targetId;
       const account = accounts.find(a => a.id === accountId);
       
@@ -55,7 +53,7 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
       let actualCents = 0;
       
       transactions.forEach(tx => {
-        if (tx.status === 'void') return;
+        if (!isPostable(tx)) return;
         
         // Very rough period check: if budget is YYYY, match year. If YYYY-MM, match month.
         if (!tx.date.startsWith(targetPeriod)) return;

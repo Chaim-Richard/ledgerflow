@@ -1,4 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
   id: 'planning_6',
@@ -19,22 +20,27 @@ export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
     let cogs = 0;
 
     transactions.forEach(tx => {
-       if (tx.status === 'void' || tx.status === 'pending') return;
+       if (!isPostable(tx)) return;
        tx.lines.forEach(l => {
           const acc = accounts.find(a => a.id === l.accountId);
           if (acc) {
              const name = (acc.name || '').toLowerCase();
              const type = (acc.type || '').toLowerCase();
              const cat = (acc.category || '').toLowerCase();
+             const amt = Math.abs(lineAmount(l, tx));
              
-             if (name.includes('marketing') || name.includes('advertising') || name.includes('sales')) {
-                totalMarketingSpend += Math.abs(l.amountCents);
+             // Require expense type or marketing category to count as marketing spend
+             const isExpense = type === 'expense' || cat === 'expense' || cat === 'marketing';
+             const isMarketingName = name.includes('marketing') || name.includes('advertising') || name.includes('adwords') || name.includes('promotion') || name.includes('acquisition') || name.includes('sales commission');
+             
+             if (isExpense && isMarketingName) {
+                totalMarketingSpend += amt;
              }
-             if (type === 'income' || type === 'revenue' || cat === 'revenue') {
-                mrr += Math.abs(l.amountCents);
+             if (type === 'income' || type === 'revenue' || cat === 'revenue' || cat === 'income' || cat === 'sales') {
+                mrr += amt;
              }
-             if (type === 'cost_of_goods' || cat === 'cogs' || name.includes('hosting')) {
-                cogs += Math.abs(l.amountCents);
+             if (type === 'cost_of_goods' || cat === 'cogs' || (isExpense && (name.includes('hosting') || name.includes('cloud') || name.includes('infrastructure')))) {
+                cogs += amt;
              }
           }
        });

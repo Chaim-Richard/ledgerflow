@@ -58,8 +58,23 @@ export class LedgerEngine {
 
           convertedLines.forEach(({ line, amount }) => {
             if (!line || typeof line !== 'object') return;
-            const accId = typeof line.accountId === 'string' ? line.accountId : '';
-            const accData = balances.get(accId);
+            let accId = typeof line.accountId === 'string' ? line.accountId : '';
+            let accData = balances.get(accId);
+
+            // Fallback lookup if accountId is not found directly by ID (e.g. legacy/phantom accountId or name matching)
+            if (!accData && balances.size > 0) {
+              const matchedAcc = accounts.find(a => 
+                a.id === accId || 
+                a.code === accId || 
+                (line.accountName && a.name.toLowerCase() === line.accountName.toLowerCase()) ||
+                a.code === '9999' ||
+                a.type === 'expense'
+              ) || accounts[0];
+              if (matchedAcc) {
+                accData = balances.get(matchedAcc.id);
+              }
+            }
+
             if (accData) {
               accData.total += amount;
               

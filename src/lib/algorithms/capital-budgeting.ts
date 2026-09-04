@@ -1,6 +1,7 @@
 import { resolveAccountRole } from '../accountUtils';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { calculateNPV, calculateIRR } from './math';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
   id: 'valuation_1',
@@ -27,12 +28,9 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     
     // Group transaction cash flows by year to simulate project horizons
     const yearlyFlows: Record<string, number> = {};
-    let hasTransactions = false;
 
-    // A rigorous capital budget looks at net cash flows
     transactions.forEach(tx => {
-      hasTransactions = true;
-      if (tx.status === 'void' || tx.status === 'pending') return;
+      if (!isPostable(tx)) return;
       const year = tx.date.substring(0, 4);
       if (!yearlyFlows[year]) yearlyFlows[year] = 0;
       
@@ -41,15 +39,18 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
       tx.lines.forEach(l => {
          const acc = accounts.find(a => a.id === l.accountId);
          const role = resolveAccountRole(acc);
-         if (acc && (role === 'revenue' || role === 'cash')) {
-             netImpact += l.amountCents; // very rough approximation for positive flows
-         } else if (acc && (acc.category === 'expense' || acc.category === 'liability')) {
-             netImpact -= l.amountCents;
+         const amt = lineAmount(l, tx);
+         const catLower = (acc?.category || '').toLowerCase();
+         if (acc && (role === 'revenue' || role === 'cash' || acc.type === 'income' || catLower === 'revenue')) {
+             netImpact += amt;
+         } else if (acc && (role === 'expense' || acc.type === 'expense' || acc.type === 'cost_of_goods' || catLower === 'expense' || catLower === 'cogs' || acc.type === 'liability' || catLower === 'liability')) {
+             netImpact -= amt;
          }
       });
-      // Fallback if accounts aren't perfectly mapped
+      // Fallback if accounts aren't mapped
       if (netImpact === 0) {
-        netImpact = tx.totalAmountCents; 
+        const rate = tx.exchangeRate || 1;
+        netImpact = Math.round(tx.totalAmountCents * rate); 
       }
       yearlyFlows[year] += (netImpact / 100);
     });

@@ -1,7 +1,7 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction } from '../../types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
-import { useLedgerStore } from '../../stores/useLedgerStore';
+import { isPostable } from '../../lib/txFilters';
 
 export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
   id: '1099-totals',
@@ -9,15 +9,17 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
   domain: 'planning', // This maps to "Tax time"
   tags: ['Compliance', 'Tax', 'Reporting'],
   description: 'Calculates total payments to 1099-eligible vendors within a calendar year, filtering by IRS reporting thresholds.',
-  requires: ['transactions', 'bills'], // Technically needs bills/vendors
+  requires: ['transactions', 'bills'],
   inputs: [
     {
       kind: 'select',
       key: 'year',
       label: 'Tax Year',
       options: [
+        { value: '2027', label: '2027' },
         { value: '2026', label: '2026' },
-        { value: '2025', label: '2025' }
+        { value: '2025', label: '2025' },
+        { value: '2024', label: '2024' }
       ],
       defaultValue: '2026'
     },
@@ -31,15 +33,15 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
       defaultValue: 600
     }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
-    // Note: Needs vendors. We fetch directly from the store as this is a read-only client-side sync operation.
-    const vendors = useLedgerStore.getState().vendors || [];
+  compute: (transactions, accounts, inputs, context): AlgoResult => {
+    const vendors = context?.vendors || [];
+    const bills = context?.bills || [];
     
     const year = inputs['year'] || '2026';
     const thresholdCents = (inputs['threshold'] ?? 600) * 100;
 
     // Filter to 1099 vendors
-    const eligibleVendors = vendors.filter(v => v.is1099);
+    const eligibleVendors = vendors.filter((v: any) => v.is1099);
 
     if (eligibleVendors.length === 0) {
       return {
@@ -50,46 +52,52 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
       };
     }
 
-    // Since transactions don't natively carry vendorId on all entries reliably in this schema 
-    // unless mapped via bills or explicitly tagged, we'll look for cash-out transactions
-    // that match the vendor names, or if transactions have a vendorId (via `src/types.ts` expansion).
-    // In our current schema, we assume `transactions` has `description` that might match vendor names,
-    // or we might need to rely on `bills` being paid. 
-    // For this reporting tool, we will map `bills` that are 'paid' in the year.
-    const bills = useLedgerStore.getState().bills || [];
-    
     const rows: any[] = [];
     const sourceTransactionIds = new Set<string>();
     let totalEligiblePayments = 0;
     let qualifyingVendorCount = 0;
 
-    eligibleVendors.forEach(vendor => {
+    eligibleVendors.forEach((vendor: any) => {
       let paidCents = 0;
 
-      // Find all paid bills for this vendor in the target year
-      bills.forEach(bill => {
-        if (bill.vendorId === vendor.id && bill.status === 'paid') {
-          // Check payment date or bill date
-          // If bill has a paymentDate, use it, else use bill date as a proxy
-          const dateStr = bill.date || '';
-          if (dateStr.startsWith(year)) {
-            paidCents += bill.amountCents;
+      // 1. Find all paid bills for this vendor paid in the target year (cash basis)
+      bills.forEach((bill: any) => {
+        if (bill.vendorId === vendor.id && (bill.status === 'paid' || bill.status === 'partially_paid')) {
+          // Check actual payment date (cash basis)
+          const paymentDateStr = bill.paidAt || bill.paymentDate || bill.paidDate || bill.date || '';
+          if (paymentDateStr.startsWith(year)) {
+            paidCents += bill.amountCents || 0;
           }
         }
       });
       
-      // Also try to find direct expenses not linked to a bill by matching vendor name in description
-      // (This is a heuristic fallback often used in these systems)
+      // 2. Also find direct cash expense transactions paid to vendor (not mapped to a bill)
       transactions.forEach(tx => {
-        if (tx.status === 'void' || !tx.date.startsWith(year)) return;
+        if (!isPostable(tx) || !tx.date.startsWith(year)) return;
         
-        // If it's an expense and description matches vendor name
-        const isCashOut = tx.lines.some(e => e.amountCents < 0 && accounts.find(a => a.id === e.accountId)?.type === 'asset');
-        const hasExpense = tx.lines.some(e => e.amountCents > 0 && accounts.find(a => a.id === e.accountId)?.type === 'expense');
-        
-        if (isCashOut && hasExpense && (tx.description || '').toLowerCase().includes((vendor.name || '').toLowerCase())) {
-          // Add amount (avoid double counting if it's already linked to a bill... this is tough without explicit links)
-          // For now, we'll just use bills to be deterministic, but acknowledge the limitation.
+        const isVendorMatch = (tx as any).vendorId === vendor.id ||
+          (tx.payee && tx.payee.toLowerCase().includes(vendor.name.toLowerCase())) ||
+          (tx.description && tx.description.toLowerCase().includes(vendor.name.toLowerCase()));
+
+        if (isVendorMatch) {
+          // Check if tx is cash-out to expense without a bill
+          const isCashOut = tx.lines?.some(e => e.amountCents < 0);
+          const hasExpense = tx.lines?.some(e => {
+            const acc = accounts.find(a => a.id === e.accountId);
+            return acc && (acc.type === 'expense' || acc.type === 'cost_of_goods');
+          });
+
+          if (isCashOut && hasExpense) {
+            // Avoid double counting if transaction was generated from a bill
+            const isBillTx = (tx as any).billId || (tx as any).source === 'bill';
+            if (!isBillTx) {
+              const expCents = tx.lines
+                .filter(l => l.amountCents > 0)
+                .reduce((s, l) => s + l.amountCents, 0);
+              paidCents += expCents;
+              sourceTransactionIds.add(tx.id);
+            }
+          }
         }
       });
 
@@ -112,10 +120,11 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
       ],
       charts: [],
       insights: [
-        `Found ${qualifyingVendorCount} vendors exceeding the $${thresholdCents / 100} threshold for year ${year}.`,
-        'Ensure you have valid W-9s on file for these vendors.'
+        `Found ${qualifyingVendorCount} vendors exceeding the $${thresholdCents / 100} threshold for tax year ${year}.`,
+        'Ensure you have valid W-9s on file for these vendors prior to filing 1099-NEC forms.'
       ],
-      rows
+      rows,
+      sourceTransactionIds: Array.from(sourceTransactionIds)
     };
   }
 };

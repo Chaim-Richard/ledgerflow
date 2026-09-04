@@ -1,4 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
   id: 'valuation_3',
@@ -19,25 +20,28 @@ export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
       const type = (acc.type || '').toLowerCase();
       const bal = acc.balanceCents || 0;
 
-      if (cat === 'asset') {
+      if (type === 'asset' || cat === 'asset' || cat === 'cash' || cat === 'receivables' || cat === 'inventory') {
         totalAssets += bal;
-      } else if (cat === 'equity' || type.includes('retained')) {
+      } else if (type === 'equity' || cat === 'equity' || type.includes('retained') || cat.includes('retained')) {
         equity += Math.abs(bal);
       }
     });
 
     // Approximate revenue and net income from transactions
     transactions.forEach(tx => {
-       if (tx.status === 'void' || tx.status === 'pending') return;
+       if (!isPostable(tx)) return;
        tx.lines.forEach(l => {
           const acc = accounts.find(a => a.id === l.accountId);
           if (acc) {
              const cat = (acc.category || '').toLowerCase();
-             if (cat === 'revenue' || acc.type === 'income') {
-                revenue += Math.abs(l.amountCents);
-                netIncome += Math.abs(l.amountCents);
-             } else if (cat === 'expense' || cat === 'cost_of_goods') {
-                netIncome -= Math.abs(l.amountCents);
+             const type = (acc.type || '').toLowerCase();
+             const amt = lineAmount(l, tx);
+             if (type === 'income' || type === 'revenue' || cat === 'revenue' || cat === 'income' || cat === 'sales') {
+                const absAmt = Math.abs(amt);
+                revenue += absAmt;
+                netIncome += absAmt;
+             } else if (type === 'expense' || type === 'cost_of_goods' || cat === 'expense' || cat === 'cost_of_goods' || cat === 'cogs') {
+                netIncome -= Math.abs(amt);
              }
           }
        });

@@ -159,7 +159,8 @@ export function useTransactionActions() {
         newTransactions
           .filter(tx => !existingIds.has(tx.bankTransactionId) && !existingIds.has(tx.id) && !isPeriodLocked(tx.date))
           .forEach(tx => {
-          let lines = tx.lines && tx.lines.length > 0 ? tx.lines : [{ accountId: 'uncategorized', accountName: 'Uncategorized', amountCents: tx.amountCents }];
+          let defaultAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || 'acc_uncategorized';
+          let lines = tx.lines && tx.lines.length > 0 ? tx.lines : [{ accountId: defaultAccId, accountName: 'Uncategorized Expense', amountCents: tx.amountCents }];
           
           const isPreCategorized = lines.length > 0 && 
             lines[0].accountId !== 'uncategorized' && 
@@ -762,10 +763,10 @@ export function useTransactionActions() {
           };
         });
 
-        // Fallback for single line if lines extraction was shallow
+        const fallbackAcc = accounts.find(a => a.type === 'expense')?.id || accounts[0]?.id || 'acc_uncategorized';
         const finalLines = lines.length > 0 ? lines : [{
-          accountId: 'uncategorized',
-          accountName: data.categorySuggestion || 'Uncategorized',
+          accountId: fallbackAcc,
+          accountName: data.categorySuggestion || 'General Expense',
           amountCents: data.totalAmountCents,
           description: data.vendorName
         }];
@@ -1188,7 +1189,8 @@ export function useTransactionActions() {
         const txRef = doc(collection(db, 'transactions'));
         const bankRef = doc(db, 'bankLines', bankLine.id);
         
-        const rawLines = [{ accountId: 'uncategorized', accountName: 'Uncategorized', amountCents: bankLine.amountCents }];
+        const targetAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || 'acc_uncategorized';
+        const rawLines = [{ accountId: targetAccId, accountName: 'General Expense', amountCents: bankLine.amountCents }];
         const balancedLines = balanceTransactionLines(rawLines, bankLine.amountCents);
 
         transaction.set(txRef, {
@@ -1197,7 +1199,7 @@ export function useTransactionActions() {
           date: bankLine.date,
           description: bankLine.description,
           totalAmountCents: Math.abs(bankLine.amountCents),
-          status: 'pending',
+          status: 'completed',
           type: 'actual',
           createdAt: new Date().toISOString(),
           lines: balancedLines

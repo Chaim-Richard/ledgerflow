@@ -1,5 +1,6 @@
 import { resolveAccountRole } from '../accountUtils';
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
   id: 'ops_1',
@@ -32,13 +33,14 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
     });
 
     transactions.forEach(tx => {
-       if (tx.status === 'void' || tx.status === 'pending') return;
+       if (!isPostable(tx)) return;
        tx.lines.forEach(l => {
           const acc = accounts.find(a => a.id === l.accountId);
           if (acc) {
              const role = resolveAccountRole(acc);
-             if (role === 'cogs') cogs += Math.abs(l.amountCents);
-             if (role === 'revenue') revenue += Math.abs(l.amountCents);
+             const amt = lineAmount(l, tx);
+             if (role === 'cogs') cogs += Math.abs(amt);
+             if (role === 'revenue') revenue += Math.abs(amt);
           }
        });
     });

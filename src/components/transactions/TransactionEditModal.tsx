@@ -67,9 +67,10 @@ export default function TransactionEditModal({
   const sumLines = lines.reduce((sum, l) => sum + l.amountCents, 0);
 
   const handleAddLine = () => {
+    const defaultAcc = accounts.find(a => a.type === 'expense') || accounts[0];
     setLines([...lines, { 
-      accountId: 'uncategorized', 
-      accountName: 'Uncategorized', 
+      accountId: defaultAcc?.id || 'acc_uncategorized', 
+      accountName: defaultAcc?.name || 'General Expense', 
       amountCents: 0 
     }]);
   };

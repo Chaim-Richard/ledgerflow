@@ -1,34 +1,33 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction, Employee } from '../../types';
 import { formatCurrency } from '../../lib/utils';
-import { useLedgerStore } from '../../stores/useLedgerStore';
 import { computePeriodPayroll, PAYROLL_DISCLAIMER } from '../../lib/payroll-engine';
 
 export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
   id: 'payroll-summary',
   name: 'Payroll Liability Summary',
-  domain: 'operations', // This maps to "Operations" but conceptually is "It's month-end" or "Where's the money going"
+  domain: 'operations',
   tags: ['Reporting', 'HR', 'Payroll'],
   description: 'Simulates a payroll run for all active employees to determine net pay and employer tax burdens per pay period.',
-  requires: ['transactions'], // Doesn't need transactions directly, needs employees
+  requires: ['transactions'],
   inputs: [
     {
       kind: 'select',
       key: 'year',
       label: 'Tax Year',
       options: [
+        { value: '2027', label: '2027' },
         { value: '2026', label: '2026' },
         { value: '2025', label: '2025' }
       ],
       defaultValue: '2026'
     }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
-    // Note: We need employees. We fetch directly from the store.
-    const employees = useLedgerStore.getState().employees || [];
+  compute: (transactions, accounts, inputs, context): AlgoResult => {
+    const employees = context?.employees || [];
     const year = parseInt(inputs['year'] || '2026', 10);
     
-    const activeEmployees = employees.filter(e => e.status === 'Active');
+    const activeEmployees = employees.filter((e: any) => e.status === 'Active');
 
     if (activeEmployees.length === 0) {
       return {

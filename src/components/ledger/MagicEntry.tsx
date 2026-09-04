@@ -93,15 +93,20 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
          type: parsed.action
        });
     } else {
+       const { accounts } = useLedgerStore.getState();
+       const actionType = parsed.action || 'expense';
+       const targetAcc = accounts.find(a => actionType === 'expense' ? (a.type === 'expense' || a.category === 'Operations') : (a.type === 'income' || a.category === 'Sales')) || accounts[0];
+       const targetAccId = targetAcc?.id || 'acc_uncategorized';
+
        await handleQuickAdd({
          description: parsed.description || 'Natural Language Entry',
          totalAmountCents: parsed.amount,
          date: parsed.dateStr || getLocalDateISO(),
-         type: parsed.action || 'expense',
+         type: actionType,
          lines: [{
-           accountId: 'uncategorized',
-           accountName: parsed.description || 'General',
-           amountCents: parsed.action === 'expense' ? -Math.abs(parsed.amount) : Math.abs(parsed.amount)
+           accountId: targetAccId,
+           accountName: parsed.description || targetAcc?.name || 'General',
+           amountCents: actionType === 'expense' ? -Math.abs(parsed.amount) : Math.abs(parsed.amount)
          }]
        });
        toast.success('Transaction saved to General Ledger!');
