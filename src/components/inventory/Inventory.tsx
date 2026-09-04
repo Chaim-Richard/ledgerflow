@@ -1,5 +1,5 @@
 import { useAuthStore } from '../../stores/useAuthStore';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import AsyncButton from '../ui/AsyncButton';
 import { toast } from 'sonner';
@@ -151,6 +151,17 @@ export default function Inventory() {
   };
 
   const handleDelete = async (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (item && item.quantityAtHand > 0) {
+      if (!safeConfirm(`WARNING: "${item.name}" currently has ${item.quantityAtHand} units on hand representing active asset value. Are you sure you want to delete this inventory record?`)) {
+        return;
+      }
+    } else {
+      if (!safeConfirm('Are you sure you want to delete this inventory item?')) {
+        return;
+      }
+    }
+
     try {
       await deleteDoc(doc(db, 'inventory', id));
       toast.success('Item removed');
