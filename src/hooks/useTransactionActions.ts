@@ -1618,8 +1618,10 @@ export function useTransactionActions() {
         const batch = writeBatch(db);
         for (const item of generatedTransactions) {
           const txRef = doc(collection(db, 'transactions'));
+          const balancedLines = balanceTransactionLines(item.transaction.lines || [], item.transaction.totalAmountCents || 0);
           batch.set(txRef, {
             ...item.transaction,
+            lines: balancedLines,
             id: txRef.id,
             uid: user.uid,
             workspaceId: currentWorkspaceId,

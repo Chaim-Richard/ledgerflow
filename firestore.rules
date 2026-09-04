@@ -85,12 +85,18 @@ service cloud.firestore {
         affectedKeys(["uid", "email", "displayName", "photoURL", "lastActive", "activeTab", "state", "currentWorkspaceId"]);
     }
 
+    // Helper to check if a transaction date is on or before the workspace's lockDate
+    function isTransactionPeriodOpen(workspaceId, txDate) {
+      let wsData = get(/databases/$(database)/documents/workspaces/$(workspaceId)).data;
+      return wsData.lockDate == null || wsData.lockDate == "" || txDate > wsData.lockDate;
+    }
+
     // Specific rules for all tenant-scoped ledger resources to eliminate the general pattern loophole
     match /transactions/{transactionId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") && isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date);
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId) && isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date);
     }
 
     match /chartAccounts/{accountId} {
