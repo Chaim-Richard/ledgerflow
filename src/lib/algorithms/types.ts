@@ -9,10 +9,16 @@ export interface AlgoInput {
   defaultValue: number;
 }
 
+export interface AlgoResultRow {
+  [key: string]: any;
+}
+
 export interface AlgoResult {
   metrics: { label: string; value: string | number; trend?: string; color?: string }[];
   charts: { data: any[]; config: { xKey: string; yKeys: { key: string; color: string; name: string; type?: 'bar' | 'line' }[] } }[];
   insights: string[];
+  rows?: AlgoResultRow[];
+  sourceTransactionIds?: string[];
 }
 
 // SOURCE OF INTEGRITY:

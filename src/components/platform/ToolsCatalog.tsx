@@ -18,9 +18,9 @@ const getCategoryForAlgo = (algo: any): string => {
   if (domain === 'forensics') return 'Compliance';
   if (domain === 'planning') return 'Planning';
   if (domain === 'valuation') return 'Valuation';
-  if (domain === 'ease') return 'Automation';
-  if (domain === 'recon') return 'Compliance';
-  if (domain === 'ops') return 'Operations';
+  if (domain === 'operations') return 'Operations';
+  if (domain === 'treasury' || domain === 'finance') return 'Finance';
+  if (domain === 'system') return 'Automation';
   if (algo.tags && algo.tags.length > 0) {
     if (algo.tags.includes('Audit') || algo.tags.includes('Compliance')) return 'Compliance';
     if (algo.tags.includes('AI') || algo.tags.includes('Pattern')) return 'Intelligence';
