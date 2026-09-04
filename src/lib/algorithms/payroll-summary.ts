@@ -2,7 +2,7 @@ import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction, Employee } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { computePeriodPayroll } from '../../lib/payroll-engine';
+import { computePeriodPayroll, PAYROLL_DISCLAIMER } from '../../lib/payroll-engine';
 
 export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
   id: 'payroll-summary',
@@ -95,7 +95,8 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
       ],
       insights: [
         `Running payroll for ${activeEmployees.length} active employees will require ${formatCurrency(totalLiability)} in cash.`,
-        `Employer tax burden represents ${((totalEmployerBurden / totalGross) * 100).toFixed(2)}% of gross wages.`
+        `Employer tax burden represents ${((totalEmployerBurden / totalGross) * 100).toFixed(2)}% of gross wages.`,
+        `Notice: ${PAYROLL_DISCLAIMER}`
       ],
       rows
     };

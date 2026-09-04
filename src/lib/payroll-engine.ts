@@ -2,10 +2,15 @@ import { Employee, TemporalValidity } from '../types';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { getLocalDateISO } from './utils';
 
+export const PAYROLL_DISCLAIMER = 'Estimations for financial forecasting, budgeting, and enterprise liability planning only. Not a certified tax calculation for official IRS/state tax returns.';
+
 export interface PayPeriodBreakdown {
   grossPayCents: number;
+  preTaxDeductionsCents: number;
+  taxableGrossCents: number;
   employeeFicaSocialSecurityCents: number;
   employeeFicaMedicareCents: number;
+  employeeAdditionalMedicareCents: number;
   employeeFederalTaxCents: number;
   employeeStateTaxCents: number;
   employeeCityTaxCents: number;
@@ -18,6 +23,7 @@ export interface PayPeriodBreakdown {
   totalWithholdingCents: number;
   totalEmployerTaxCents: number;
   totalPeriodLiabilityCents: number;
+  disclaimer: string;
 }
 
 export function getPeriodsPerYear(frequency: Employee['payFrequency']): number {
@@ -31,7 +37,8 @@ export function getPeriodsPerYear(frequency: Employee['payFrequency']): number {
 
 /**
  * High-precision progressive tax tier withholding engine for multiple fiscal years.
- * Accounts for real-world IRS Single Filer brackets and year-end adjustments.
+ * Accounts for real-world IRS Single, Married, and Head of Household brackets,
+ * Social Security wage base caps, FUTA limits, and Additional Medicare rules.
  */
 
 export interface TaxBracket {
@@ -40,14 +47,27 @@ export interface TaxBracket {
 }
 
 export interface TaxYearConfig {
-  standardDeductionCents: number;
-  brackets: TaxBracket[];
+  standardDeductionSingleCents: number;
+  standardDeductionMarriedCents: number;
+  standardDeductionHeadOfHouseholdCents: number;
+  socialSecurityWageBaseCents: number;
+  futaWageBaseCents: number;
+  additionalMedicareThresholdSingleCents: number;
+  additionalMedicareThresholdMarriedCents: number;
+  singleBrackets: TaxBracket[];
+  marriedBrackets: TaxBracket[];
 }
 
 export const FEDERAL_TAX_YEARS: Record<number, TaxYearConfig> = {
   2024: {
-    standardDeductionCents: 1460000,
-    brackets: [
+    standardDeductionSingleCents: 1460000,
+    standardDeductionMarriedCents: 2920000,
+    standardDeductionHeadOfHouseholdCents: 2190000,
+    socialSecurityWageBaseCents: 16860000, // $168,600 cap
+    futaWageBaseCents: 700000, // $7,000 cap
+    additionalMedicareThresholdSingleCents: 20000000, // $200,000
+    additionalMedicareThresholdMarriedCents: 25000000, // $250,000
+    singleBrackets: [
       { limitCents: 1160000, rate: 0.10 },
       { limitCents: 4715000, rate: 0.12 },
       { limitCents: 10052500, rate: 0.22 },
@@ -55,11 +75,26 @@ export const FEDERAL_TAX_YEARS: Record<number, TaxYearConfig> = {
       { limitCents: 24372500, rate: 0.32 },
       { limitCents: 60935000, rate: 0.35 },
       { limitCents: Infinity, rate: 0.37 },
+    ],
+    marriedBrackets: [
+      { limitCents: 2320000, rate: 0.10 },
+      { limitCents: 9430000, rate: 0.12 },
+      { limitCents: 20105000, rate: 0.22 },
+      { limitCents: 38390000, rate: 0.24 },
+      { limitCents: 48745000, rate: 0.32 },
+      { limitCents: 73120000, rate: 0.35 },
+      { limitCents: Infinity, rate: 0.37 },
     ]
   },
   2025: {
-    standardDeductionCents: 1500000,
-    brackets: [
+    standardDeductionSingleCents: 1500000,
+    standardDeductionMarriedCents: 3000000,
+    standardDeductionHeadOfHouseholdCents: 2250000,
+    socialSecurityWageBaseCents: 17610000, // $176,100 cap
+    futaWageBaseCents: 700000, // $7,000 cap
+    additionalMedicareThresholdSingleCents: 20000000,
+    additionalMedicareThresholdMarriedCents: 25000000,
+    singleBrackets: [
       { limitCents: 1192500, rate: 0.10 },
       { limitCents: 4847500, rate: 0.12 },
       { limitCents: 10335000, rate: 0.22 },
@@ -67,11 +102,26 @@ export const FEDERAL_TAX_YEARS: Record<number, TaxYearConfig> = {
       { limitCents: 25052500, rate: 0.32 },
       { limitCents: 62635000, rate: 0.35 },
       { limitCents: Infinity, rate: 0.37 },
+    ],
+    marriedBrackets: [
+      { limitCents: 2385000, rate: 0.10 },
+      { limitCents: 9695000, rate: 0.12 },
+      { limitCents: 20670000, rate: 0.22 },
+      { limitCents: 39460000, rate: 0.24 },
+      { limitCents: 50105000, rate: 0.32 },
+      { limitCents: 75160000, rate: 0.35 },
+      { limitCents: Infinity, rate: 0.37 },
     ]
   },
   2026: {
-    standardDeductionCents: 1545000,
-    brackets: [
+    standardDeductionSingleCents: 1545000,
+    standardDeductionMarriedCents: 3090000,
+    standardDeductionHeadOfHouseholdCents: 2317500,
+    socialSecurityWageBaseCents: 18300000, // $183,000 cap
+    futaWageBaseCents: 700000, // $7,000 cap
+    additionalMedicareThresholdSingleCents: 20000000,
+    additionalMedicareThresholdMarriedCents: 25000000,
+    singleBrackets: [
       { limitCents: 1227500, rate: 0.10 },
       { limitCents: 4992500, rate: 0.12 },
       { limitCents: 10645000, rate: 0.22 },
@@ -79,14 +129,22 @@ export const FEDERAL_TAX_YEARS: Record<number, TaxYearConfig> = {
       { limitCents: 25805000, rate: 0.32 },
       { limitCents: 64515000, rate: 0.35 },
       { limitCents: Infinity, rate: 0.37 },
+    ],
+    marriedBrackets: [
+      { limitCents: 2455000, rate: 0.10 },
+      { limitCents: 9985000, rate: 0.12 },
+      { limitCents: 21290000, rate: 0.22 },
+      { limitCents: 40645000, rate: 0.24 },
+      { limitCents: 51610000, rate: 0.32 },
+      { limitCents: 77415000, rate: 0.35 },
+      { limitCents: Infinity, rate: 0.37 },
     ]
   }
 };
 
 /**
  * Returns tax laws for the specified fiscal year.
- * If the requested year is not in our federal table, it automatically
- * calculates inflation adjustments (3% margin compounded, $500 std deduction steps).
+ * Automatically compounds inflation adjustments for future or unindexed years.
  */
 export function getFederalTaxYearConfig(year: number): TaxYearConfig {
   if (FEDERAL_TAX_YEARS[year]) {
@@ -96,19 +154,33 @@ export function getFederalTaxYearConfig(year: number): TaxYearConfig {
   const delta = year - baseYear;
   const config2026 = FEDERAL_TAX_YEARS[baseYear];
 
-  // Standard deduction adjusts average $500 per year (50000 cents)
-  const standardDeductionCents = Math.max(1200000, config2026.standardDeductionCents + delta * 50000);
+  const standardDeductionSingleCents = Math.max(1200000, config2026.standardDeductionSingleCents + delta * 50000);
+  const standardDeductionMarriedCents = standardDeductionSingleCents * 2;
+  const standardDeductionHeadOfHouseholdCents = Math.round(standardDeductionSingleCents * 1.5);
 
-  // Compounds 3% inflation on upper limit ranges
   const scale = Math.pow(1.03, delta);
-  const brackets = config2026.brackets.map(b => ({
+  const socialSecurityWageBaseCents = Math.round(config2026.socialSecurityWageBaseCents * scale);
+
+  const singleBrackets = config2026.singleBrackets.map(b => ({
+    limitCents: b.limitCents === Infinity ? Infinity : Math.round(b.limitCents * scale),
+    rate: b.rate
+  }));
+
+  const marriedBrackets = config2026.marriedBrackets.map(b => ({
     limitCents: b.limitCents === Infinity ? Infinity : Math.round(b.limitCents * scale),
     rate: b.rate
   }));
 
   return {
-    standardDeductionCents,
-    brackets
+    standardDeductionSingleCents,
+    standardDeductionMarriedCents,
+    standardDeductionHeadOfHouseholdCents,
+    socialSecurityWageBaseCents,
+    futaWageBaseCents: 700000,
+    additionalMedicareThresholdSingleCents: 20000000,
+    additionalMedicareThresholdMarriedCents: 25000000,
+    singleBrackets,
+    marriedBrackets
   };
 }
 
@@ -116,6 +188,8 @@ export interface TemporalRegionalTaxRates {
   stateCode: string;
   stateName: string;
   stateRateSeries: TemporalValidity[];
+  sutaRate?: number;
+  sutaWageBaseCents?: number;
   cityCode?: string;
   cityName?: string;
   cityRateSeries?: TemporalValidity[];
@@ -128,6 +202,8 @@ export interface RegionalTaxRates {
   stateCode: string;
   stateName: string;
   stateRate: number; 
+  sutaRate: number;
+  sutaWageBaseCents: number;
   cityCode?: string;
   cityName?: string;
   cityRate?: number; 
@@ -137,12 +213,12 @@ export interface RegionalTaxRates {
 }
 
 export const REGIONAL_TAX_LOOKUPS: Record<string, TemporalRegionalTaxRates> = {
-  'NY': { stateCode: 'NY', stateName: 'New York', stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.065 }], cityCode: 'NYC', cityName: 'New York City', cityRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.03876 }], countyCode: 'KC', countyName: 'Kings County', countyRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.01 }] },
-  'CA': { stateCode: 'CA', stateName: 'California', stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.080 }], cityCode: 'SF', cityName: 'San Francisco', cityRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.015 }], countyCode: 'SFC', countyName: 'SF County', countyRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.005 }] },
-  'TX': { stateCode: 'TX', stateName: 'Texas', stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.00 }] },
-  'FL': { stateCode: 'FL', stateName: 'Florida', stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.00 }] },
-  'IL': { stateCode: 'IL', stateName: 'Illinois', stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.0495 }] },
-  'OH': { stateCode: 'OH', stateName: 'Ohio', stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.035 }], cityCode: 'CLE', cityName: 'Cleveland', cityRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.02 }], countyCode: 'CC', countyName: 'Cuyahoga County', countyRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.0075 }] },
+  'NY': { stateCode: 'NY', stateName: 'New York', sutaRate: 0.027, sutaWageBaseCents: 1280000, stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.065 }], cityCode: 'NYC', cityName: 'New York City', cityRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.03876 }], countyCode: 'KC', countyName: 'Kings County', countyRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.01 }] },
+  'CA': { stateCode: 'CA', stateName: 'California', sutaRate: 0.034, sutaWageBaseCents: 700000, stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.080 }], cityCode: 'SF', cityName: 'San Francisco', cityRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.015 }], countyCode: 'SFC', countyName: 'SF County', countyRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.005 }] },
+  'TX': { stateCode: 'TX', stateName: 'Texas', sutaRate: 0.027, sutaWageBaseCents: 900000, stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.00 }] },
+  'FL': { stateCode: 'FL', stateName: 'Florida', sutaRate: 0.027, sutaWageBaseCents: 700000, stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.00 }] },
+  'IL': { stateCode: 'IL', stateName: 'Illinois', sutaRate: 0.031, sutaWageBaseCents: 1359000, stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.0495 }] },
+  'OH': { stateCode: 'OH', stateName: 'Ohio', sutaRate: 0.027, sutaWageBaseCents: 900000, stateRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.035 }], cityCode: 'CLE', cityName: 'Cleveland', cityRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.02 }], countyCode: 'CC', countyName: 'Cuyahoga County', countyRateSeries: [{ validFrom: '0000-01-01', validTo: '9999-12-31', value: 0.0075 }] },
 };
 
 export function getRegionalTaxConfig(stateCode: string = 'NY', targetDateStr: string = getLocalDateISO()): RegionalTaxRates {
@@ -152,8 +228,10 @@ export function getRegionalTaxConfig(stateCode: string = 'NY', targetDateStr: st
   if (!config) {
     return {
       stateCode: code,
-      stateName: 'Default State',
+      stateName: `${code} (Default Bracket)`,
       stateRate: 0.045, 
+      sutaRate: 0.027,
+      sutaWageBaseCents: 1000000, // $10,000 default state wage base
       cityCode: 'GEN_CITY',
       cityName: 'Local City',
       cityRate: 0.01,  
@@ -167,6 +245,8 @@ export function getRegionalTaxConfig(stateCode: string = 'NY', targetDateStr: st
     stateCode: config.stateCode,
     stateName: config.stateName,
     stateRate: TruthEngine.resolveEffectiveValue(config.stateRateSeries, targetDateStr),
+    sutaRate: config.sutaRate ?? 0.027,
+    sutaWageBaseCents: config.sutaWageBaseCents ?? 1000000,
     cityCode: config.cityCode,
     cityName: config.cityName,
     cityRate: config.cityRateSeries ? TruthEngine.resolveEffectiveValue(config.cityRateSeries, targetDateStr) : undefined,
@@ -176,15 +256,34 @@ export function getRegionalTaxConfig(stateCode: string = 'NY', targetDateStr: st
   };
 }
 
-export function computeFederalIncomeTaxWithholding(annualSalaryCents: number, payPeriods: number, year: number = 2026): number {
+export function computeFederalIncomeTaxWithholding(
+  annualSalaryCents: number, 
+  payPeriods: number, 
+  year: number = 2026,
+  filingStatus: Employee['filingStatus'] = 'Single',
+  annualPreTaxDeductionsCents: number = 0
+): number {
   const config = getFederalTaxYearConfig(year);
-  const taxableAnnualSalaryCents = Math.max(0, annualSalaryCents - config.standardDeductionCents);
+  
+  // Resolve standard deduction based on filing status
+  let standardDeduction = config.standardDeductionSingleCents;
+  let brackets = config.singleBrackets;
+
+  if (filingStatus === 'Married') {
+    standardDeduction = config.standardDeductionMarriedCents;
+    brackets = config.marriedBrackets;
+  } else if (filingStatus === 'Head of Household') {
+    standardDeduction = config.standardDeductionHeadOfHouseholdCents;
+    brackets = config.singleBrackets;
+  }
+
+  const taxableAnnualSalaryCents = Math.max(0, annualSalaryCents - annualPreTaxDeductionsCents - standardDeduction);
   
   let remainingCents = taxableAnnualSalaryCents;
   let previousLimitCents = 0;
   let annualTaxCents = 0;
 
-  for (const bracket of config.brackets) {
+  for (const bracket of brackets) {
     const widthCents = bracket.limitCents - previousLimitCents;
     const taxableInThisBracketCents = Math.min(remainingCents, widthCents);
     
@@ -201,45 +300,71 @@ export function computeFederalIncomeTaxWithholding(annualSalaryCents: number, pa
 export function computePeriodPayroll(employee: Employee, year: number = 2026): PayPeriodBreakdown {
   const payPeriods = getPeriodsPerYear(employee.payFrequency);
   const grossPayCents = Math.round(employee.salaryCents / payPeriods);
+  const config = getFederalTaxYearConfig(year);
 
-  // FICA Employee: SS 6.2%, Medicare 1.45%
-  const employeeFicaSocialSecurityCents = Math.round(grossPayCents * 0.062);
-  const employeeFicaMedicareCents = Math.round(grossPayCents * 0.0145);
+  // Pre-tax deductions (401k, health, HSA)
+  const preTaxPeriodCents = employee.preTaxDeductionsCents || 0;
+  const annualPreTaxDeductionsCents = preTaxPeriodCents * payPeriods;
+  const taxableGrossAnnualCents = Math.max(0, employee.salaryCents - annualPreTaxDeductionsCents);
+  const taxableGrossCents = Math.max(0, grossPayCents - preTaxPeriodCents);
 
-  // FICA Employer matching: SS 6.2%, Medicare 1.45%
-  const employerFicaSocialSecurityCents = Math.round(grossPayCents * 0.062);
-  const employerFicaMedicareCents = Math.round(grossPayCents * 0.0145);
+  // 1. Social Security (6.2%) — Subject to annual wage base cap
+  const ssAnnualWageLimit = config.socialSecurityWageBaseCents;
+  const taxableSsAnnualCents = Math.min(taxableGrossAnnualCents, ssAnnualWageLimit);
+  const employeeFicaSocialSecurityCents = Math.round((taxableSsAnnualCents * 0.062) / payPeriods);
+  const employerFicaSocialSecurityCents = Math.round((taxableSsAnnualCents * 0.062) / payPeriods);
 
-  // Federal Income Tax (FIT) withholding using selected tax year
-  const employeeFederalTaxCents = computeFederalIncomeTaxWithholding(employee.salaryCents, payPeriods, year);
+  // 2. Medicare (1.45% base on all wages + 0.9% Additional Medicare for high earners over threshold)
+  const standardMedicareEmployeeCents = Math.round((taxableGrossAnnualCents * 0.0145) / payPeriods);
+  const employerFicaMedicareCents = Math.round((taxableGrossAnnualCents * 0.0145) / payPeriods);
 
-  // Regional Tax Rates calculation (State, City, County) from employee metadata or fallback
-  const userLocState = (employee as any).state || 'NY';
+  const additionalMedicareThreshold = employee.filingStatus === 'Married' 
+    ? config.additionalMedicareThresholdMarriedCents 
+    : config.additionalMedicareThresholdSingleCents;
+
+  const excessOverThresholdCents = Math.max(0, taxableGrossAnnualCents - additionalMedicareThreshold);
+  const employeeAdditionalMedicareCents = Math.round((excessOverThresholdCents * 0.009) / payPeriods);
+  const employeeFicaMedicareCents = standardMedicareEmployeeCents + employeeAdditionalMedicareCents;
+
+  // 3. Federal Income Tax (FIT) withholding using filing status and tax year
+  const employeeFederalTaxCents = computeFederalIncomeTaxWithholding(
+    employee.salaryCents, 
+    payPeriods, 
+    year, 
+    employee.filingStatus, 
+    annualPreTaxDeductionsCents
+  );
+
+  // 4. Regional Tax Rates calculation (State, City, County) from employee state
+  const userLocState = employee.state || 'NY';
   const regionalConfig = getRegionalTaxConfig(userLocState);
 
-  // State Income Tax mapping
-  const employeeStateTaxCents = Math.round(grossPayCents * regionalConfig.stateRate);
+  // State Income Tax mapping on taxable wages
+  const employeeStateTaxCents = Math.round(taxableGrossCents * regionalConfig.stateRate);
 
   // Local City Tax mapping
-  const employeeCityTaxCents = Math.round(grossPayCents * (regionalConfig.cityRate || 0));
+  const employeeCityTaxCents = Math.round(taxableGrossCents * (regionalConfig.cityRate || 0));
 
   // County margin surcharge mapping
-  const employeeCountyTaxCents = Math.round(grossPayCents * (regionalConfig.countyRate || 0));
+  const employeeCountyTaxCents = Math.round(taxableGrossCents * (regionalConfig.countyRate || 0));
 
-  // FUTA: 0.6% (accrued per period)
-  const employerFutaCents = Math.round(grossPayCents * 0.006);
-  // SUTA: 2.7% (accrued per period)
-  const employerSutaCents = Math.round(grossPayCents * 0.027);
+  // 5. FUTA: 0.6% on first $7,000 of wages per employee per year
+  const futaTaxableAnnualCents = Math.min(taxableGrossAnnualCents, config.futaWageBaseCents);
+  const employerFutaCents = Math.round((futaTaxableAnnualCents * 0.006) / payPeriods);
+
+  // 6. SUTA: State-specific rate on state wage base cap
+  const sutaTaxableAnnualCents = Math.min(taxableGrossAnnualCents, regionalConfig.sutaWageBaseCents);
+  const employerSutaCents = Math.round((sutaTaxableAnnualCents * regionalConfig.sutaRate) / payPeriods);
 
   const totalWithholdingCents = 
     employeeFicaSocialSecurityCents + 
     employeeFicaMedicareCents + 
     employeeFederalTaxCents + 
-    employeeStateTaxCents +
-    employeeCityTaxCents +
+    employeeStateTaxCents + 
+    employeeCityTaxCents + 
     employeeCountyTaxCents;
 
-  const netPayCents = grossPayCents - totalWithholdingCents;
+  const netPayCents = grossPayCents - preTaxPeriodCents - totalWithholdingCents;
 
   const totalEmployerTaxCents = 
     employerFicaSocialSecurityCents + 
@@ -247,13 +372,16 @@ export function computePeriodPayroll(employee: Employee, year: number = 2026): P
     employerFutaCents + 
     employerSutaCents;
 
-  // The economic liability is the sum of Gross wages + Employer taxes, which represents the total cash outflow expected from the enterprise.
+  // Total cash outflow expected from the enterprise: Gross wages + Employer taxes
   const totalPeriodLiabilityCents = grossPayCents + totalEmployerTaxCents;
 
   return {
     grossPayCents,
+    preTaxDeductionsCents: preTaxPeriodCents,
+    taxableGrossCents,
     employeeFicaSocialSecurityCents,
     employeeFicaMedicareCents,
+    employeeAdditionalMedicareCents,
     employeeFederalTaxCents,
     employeeStateTaxCents,
     employeeCityTaxCents,
@@ -266,5 +394,7 @@ export function computePeriodPayroll(employee: Employee, year: number = 2026): P
     totalWithholdingCents,
     totalEmployerTaxCents,
     totalPeriodLiabilityCents,
+    disclaimer: PAYROLL_DISCLAIMER
   };
 }
+

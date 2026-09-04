@@ -592,6 +592,10 @@ export interface Employee {
   payFrequency: 'Weekly' | 'Bi-Weekly' | 'Monthly';
   status: 'Active' | 'On Leave' | 'Terminated';
   department?: string;
+  state?: string;
+  filingStatus?: 'Single' | 'Married' | 'Head of Household';
+  preTaxDeductionsCents?: number;
+  allowances?: number;
   lastPayDate?: string;
   createdAt: string;
 }
