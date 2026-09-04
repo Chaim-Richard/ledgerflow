@@ -587,6 +587,7 @@ export interface Employee {
   uid: string;
   workspaceId: string;
   name: string;
+  email?: string;
   role: string;
   salaryCents: number;
   payFrequency: 'Weekly' | 'Bi-Weekly' | 'Monthly';
