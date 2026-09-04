@@ -319,14 +319,17 @@ const CHANNELS = [
 
 export default function AnalyticalCenter() {
   const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
+  const rawAccounts = useLedgerStore(s => s.accounts);
+  const computedAccounts = useLedgerStore(s => s.computedAccounts);
+  const accounts = useMemo(() => {
+    return computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
+  }, [computedAccounts, rawAccounts]);
   const projects = useLedgerStore(s => s.projects);
   const bills = useLedgerStore(s => s.bills);
   const invoices = useLedgerStore(s => s.invoices);
   const filterCriteria = useUIStore(s => s.filterCriteria);
   const { handleAction: onAction } = useCommandDispatcher();
-  const computedAccounts = useLedgerStore(s => s.computedAccounts);
-  const passedMetrics = useAuditTelemetry(transactions, computedAccounts);
+  const passedMetrics = useAuditTelemetry(transactions, accounts);
   
   const activeChannel = useUIStore(state => state.activeIntelChannel);
   const setActiveChannel = useUIStore(state => state.setActiveIntelChannel);

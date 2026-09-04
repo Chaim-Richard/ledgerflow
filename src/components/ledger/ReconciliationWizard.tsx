@@ -29,6 +29,7 @@ interface ReconciliationWizardProps {
 
 export default function ReconciliationWizard({ isOpen, onClose, accounts, onComplete, formatCurrency }: ReconciliationWizardProps) {
   const transactions = useLedgerStore(state => state.transactions || []);
+  const reconciliations = useLedgerStore(state => state.reconciliations || []);
   
   const [step, setStep] = useState(1);
   const [selectedAccount, setSelectedAccount] = useState<string>('');
@@ -38,33 +39,49 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
   const [searchTerm, setSearchTerm] = useState('');
   const [isFinalizing, setIsFinalizing] = useState(false);
 
-  const account = useMemo(() => accounts.find(a => a.name === selectedAccount), [accounts, selectedAccount]);
+  const account = useMemo(() => accounts.find(a => a.name === selectedAccount || a.id === selectedAccount), [accounts, selectedAccount]);
   
+  const lastReconciliation = useMemo(() => {
+    if (!account) return null;
+    const list = (reconciliations || []).filter(r => r.accountId === account.id || r.accountName === account.name);
+    list.sort((a, b) => (b.statementDate || '').localeCompare(a.statementDate || ''));
+    return list[0] || null;
+  }, [reconciliations, account]);
+
+  const beginningBalance = useMemo(() => {
+    if (lastReconciliation && typeof lastReconciliation.statementBalanceCents === 'number') {
+      return lastReconciliation.statementBalanceCents;
+    }
+    return account?.openingBalanceCents || account?.balanceCents || 0;
+  }, [lastReconciliation, account]);
+
   const filteredTransactions = useMemo(() => {
-    if (!selectedAccount) return [];
+    if (!selectedAccount || !account) return [];
     return (transactions || []).filter(t => 
-      t.lines?.some(l => l.accountName === selectedAccount) && 
+      !t.deletedAt &&
+      t.status !== 'reconciled' &&
       !t.clearedAt &&
+      t.date <= statementDate &&
+      t.lines?.some(l => l.accountId === account.id || l.accountName === account.name) && 
       (t.description.toLowerCase().includes(searchTerm.toLowerCase()) || t.totalAmountCents.toString().includes(searchTerm))
     ).map(t => ({
       ...t,
       // For reconciliation, we care about the amount specifically for the selected account
-      relevantAmountCents: t.lines?.find(l => l.accountName === selectedAccount)?.amountCents || 0
+      relevantAmountCents: t.lines?.find(l => l.accountId === account.id || l.accountName === account.name)?.amountCents || 0
     }));
-  }, [selectedAccount, searchTerm]);
+  }, [selectedAccount, account, statementDate, searchTerm, transactions]);
 
   const stats = useMemo(() => {
     const cleared = filteredTransactions
       .filter(t => reconciledIds.includes(t.id))
       .reduce((sum, t) => sum + t.relevantAmountCents, 0);
     
-    const beginningBalance = account?.balanceCents || 0;
     const targetBalance = TruthEngine.parseAmountToCents(endingBalance);
     const currentBalance = beginningBalance + cleared;
     const difference = targetBalance - currentBalance;
 
     return { cleared, beginningBalance, targetBalance, currentBalance, difference };
-  }, [filteredTransactions, reconciledIds, account, endingBalance]);
+  }, [filteredTransactions, reconciledIds, beginningBalance, endingBalance]);
 
   const handleToggle = (id: string) => {
     setReconciledIds(prev => 
@@ -74,18 +91,18 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
 
   const handleAutoMatch = () => {
     const targetAmountCents = TruthEngine.parseAmountToCents(endingBalance);
-    const currentTotal = account?.balanceCents || 0;
-    const needed = targetAmountCents - currentTotal;
+    const needed = targetAmountCents - beginningBalance;
 
     // Greedy matching algorithm for exact amounts
     const matches: string[] = [];
     let matchedSum = 0;
 
-    // Sort by amount to try and find combinations (simplified for now)
+    // Sort by amount to try and find combinations
     const sorted = [...filteredTransactions].sort((a, b) => Math.abs(b.relevantAmountCents) - Math.abs(a.relevantAmountCents));
 
     sorted.forEach(t => {
-      if (Math.abs(matchedSum + t.relevantAmountCents) <= Math.abs(needed) || Math.abs(t.relevantAmountCents - needed) < 100) {
+      if (Math.abs(matchedSum + t.relevantAmountCents - needed) < Math.abs(matchedSum - needed) || 
+          Math.abs(matchedSum + t.relevantAmountCents) <= Math.abs(needed)) {
         matches.push(t.id);
         matchedSum += t.relevantAmountCents;
       }

@@ -12,7 +12,11 @@ import { formatCurrency, getLocalDateISO, cn } from '../../lib/utils';
 
 export function TaxReserveWidget() {
   const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
+  const rawAccounts = useLedgerStore(s => s.accounts);
+  const computedAccounts = useLedgerStore(s => s.computedAccounts);
+  const accounts = useMemo(() => {
+    return computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
+  }, [computedAccounts, rawAccounts]);
   const bills = useLedgerStore(s => s.bills);
 
   // Mode: 'simple' vs 'autopilot'

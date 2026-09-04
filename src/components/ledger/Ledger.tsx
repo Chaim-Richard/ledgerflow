@@ -94,7 +94,11 @@ const Ledger = React.memo(() => {
   const user = useAuthStore(s => s.user) || ({} as any);
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
+  const rawAccounts = useLedgerStore(s => s.accounts);
+  const computedAccounts = useLedgerStore(s => s.computedAccounts);
+  const accounts = React.useMemo(() => {
+    return computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
+  }, [computedAccounts, rawAccounts]);
   const journalEntries = useLedgerStore(s => s.journalEntries);
   const reconciliations = useLedgerStore(s => s.reconciliations);
   const bankLines = useLedgerStore(s => s.bankLines || []);
