@@ -7,11 +7,17 @@ import {
   Scale,
   Wallet,
   ShieldCheck,
-  Building2
+  Building2,
+  CheckCircle2,
+  Layers,
+  UploadCloud,
+  Sparkles,
+  X
 } from 'lucide-react';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useScenarioStore } from '../lib/scenarioStore';
 import { useUIStore } from '../stores/useUIStore';
+import { useAuthStore } from '../stores/useAuthStore';
 import { TaxReserveWidget } from './finance/TaxReserveWidget';
 import OnboardingView from './onboarding/OnboardingView';
 import SavedViewsBar from './ui/SavedViewsBar';
@@ -38,10 +44,37 @@ export default function Dashboard() {
   const scenarios = useScenarioStore(s => s.scenarios);
   const activeScenarioId = useScenarioStore(s => s.activeScenarioId);
   const setQuickEntryOpen = useUIStore(s => s.setQuickEntryOpen);
+  const setTemplateSelectorOpen = useUIStore(s => s.setTemplateSelectorOpen);
   const setActiveTab = useUIStore(s => s.setActiveTab);
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const workspaces = useAuthStore(s => s.workspaces);
+
+  // Setup completion criteria:
+  // Brand new workspace has 0 transactions AND 0 accounts.
+  const isCompletelyEmpty = rawTransactions.length === 0 && accounts.length === 0;
 
   // Lens state: 'owner' vs 'accountant'
   const [lens, setLens] = useState<'owner' | 'accountant'>('owner');
+
+  // Track setup checklist banner dismissal in localStorage
+  const [isChecklistDismissed, setIsChecklistDismissed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(`lf_checklist_dismissed_${currentWorkspaceId}`) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const dismissChecklist = () => {
+    setIsChecklistDismissed(true);
+    try {
+      if (currentWorkspaceId) {
+        localStorage.setItem(`lf_checklist_dismissed_${currentWorkspaceId}`, 'true');
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   // Filter chips
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
@@ -50,10 +83,18 @@ export default function Dashboard() {
     setActiveFilters(prev => prev.filter(f => f !== filter));
   };
 
-  if (rawTransactions.length === 0) {
+  if (isCompletelyEmpty) {
     return <OnboardingView />;
   }
   const activeAccounts = computedAccounts.length > 0 ? computedAccounts : accounts;
+
+  // Setup steps status
+  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
+  const hasSelectedTemplate = Boolean(currentWorkspace?.businessType && currentWorkspace.businessType !== 'custom');
+  const hasAccounts = accounts.length > 0;
+  const hasTransactions = rawTransactions.length > 0;
+  const setupStepCount = [hasSelectedTemplate, hasAccounts, hasTransactions].filter(Boolean).length;
+  const isSetupIncomplete = setupStepCount < 3 && !isChecklistDismissed;
 
   // Real Calculated Financial Metrics
   const metrics = useMemo(() => {
@@ -220,6 +261,110 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Setup Checklist Guidance Banner (when setup is incomplete) */}
+      {isSetupIncomplete && (
+        <div className="bg-gradient-to-r from-[var(--brass-soft)] via-[var(--panel)] to-[var(--surface)] border border-[var(--brass-line)] rounded-2xl p-4 sm:p-5 relative shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-wider bg-[var(--brass)] text-black px-2 py-0.5 rounded-md font-bold">
+                  Setup Progress ({setupStepCount}/3)
+                </span>
+                <h3 className="text-sm font-semibold text-[var(--text)]">Workspace Setup Checklist</h3>
+              </div>
+              <p className="text-xs text-[var(--muted)]">
+                Ensure your chart of accounts and transactions are configured for complete algorithmic accuracy.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={dismissChecklist}
+              className="text-[var(--muted)] hover:text-[var(--text)] p-1 rounded-lg hover:bg-[var(--surface)] transition-colors cursor-pointer"
+              title="Dismiss checklist"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            {/* Step 1: Chart Template */}
+            <button
+              type="button"
+              onClick={() => setTemplateSelectorOpen(true)}
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
+                hasAccounts
+                  ? "bg-[var(--surface)]/80 border-[var(--brass-line)]/50"
+                  : "bg-[var(--panel)] border-[var(--brass-line)] hover:border-[var(--brass)]"
+              )}
+            >
+              <div className={cn(
+                "w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
+                hasAccounts ? "bg-emerald-500/10 text-emerald-500" : "bg-[var(--brass)]/10 text-[var(--brass)]"
+              )}>
+                {hasAccounts ? <CheckCircle2 size={16} /> : <Layers size={16} />}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[var(--text)] truncate">1. Chart Template</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">
+                  {hasAccounts ? `${accounts.length} accounts configured` : 'Select industry COA'}
+                </p>
+              </div>
+            </button>
+
+            {/* Step 2: Bank Lines / Import */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('banking')}
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
+                hasTransactions
+                  ? "bg-[var(--surface)]/80 border-[var(--brass-line)]/50"
+                  : "bg-[var(--panel)] border-[var(--line)] hover:border-[var(--brass-line)]"
+              )}
+            >
+              <div className={cn(
+                "w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
+                hasTransactions ? "bg-emerald-500/10 text-emerald-500" : "bg-indigo-500/10 text-indigo-500"
+              )}>
+                {hasTransactions ? <CheckCircle2 size={16} /> : <UploadCloud size={16} />}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[var(--text)] truncate">2. Import History</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">
+                  {hasTransactions ? `${rawTransactions.length} entries recorded` : 'Connect bank or CSV'}
+                </p>
+              </div>
+            </button>
+
+            {/* Step 3: Recon / First Entry */}
+            <button
+              type="button"
+              onClick={() => hasTransactions ? setActiveTab('reconciliation') : setQuickEntryOpen(true)}
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
+                hasTransactions
+                  ? "bg-[var(--surface)]/80 border-[var(--brass-line)]/50"
+                  : "bg-[var(--panel)] border-[var(--line)] hover:border-[var(--brass-line)]"
+              )}
+            >
+              <div className={cn(
+                "w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
+                hasTransactions ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+              )}>
+                {hasTransactions ? <CheckCircle2 size={16} /> : <Sparkles size={16} />}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[var(--text)] truncate">3. Reconcile & Verify</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">
+                  {hasTransactions ? 'Verify balances & rules' : 'Record manual entry'}
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Saved Views & Default Lenses Bar */}
       <SavedViewsBar />

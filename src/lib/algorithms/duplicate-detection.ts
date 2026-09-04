@@ -112,6 +112,33 @@ export const DUPLICATE_DETECTION_ALGO: AlgorithmDefinition = {
       Count: riskRanges[k as keyof typeof riskRanges]
     }));
 
+    const rows = [
+      ...exactDuplicates.map(([t1, t2]) => ({
+        id: `${t1.id}_${t2.id}`,
+        type: 'Exact',
+        date1: t1.date,
+        date2: t2.date,
+        amount: `$${(Math.abs(t1.totalAmountCents) / 100).toFixed(2)}`,
+        description1: t1.description,
+        description2: t2.description,
+        sourceIds: [t1.id, t2.id]
+      })),
+      ...suspectedDuplicates.map(([t1, t2]) => ({
+        id: `${t1.id}_${t2.id}`,
+        type: 'Suspected',
+        date1: t1.date,
+        date2: t2.date,
+        amount: `$${(Math.abs(t1.totalAmountCents) / 100).toFixed(2)}`,
+        description1: t1.description,
+        description2: t2.description,
+        sourceIds: [t1.id, t2.id]
+      }))
+    ];
+
+    const sourceTransactionIds = Array.from(
+      new Set([...exactDuplicates, ...suspectedDuplicates].flatMap(([t1, t2]) => [t1.id, t2.id]))
+    );
+
     return {
       metrics: [
         { label: 'Exact Duplicates', value: exactDuplicates.length, color: exactDuplicates.length > 0 ? 'text-rose-500' : 'text-slate-500' },
@@ -129,7 +156,9 @@ export const DUPLICATE_DETECTION_ALGO: AlgorithmDefinition = {
           data: chartData
         }
       ],
-      insights
+      insights,
+      rows,
+      sourceTransactionIds
     };
   }
 };

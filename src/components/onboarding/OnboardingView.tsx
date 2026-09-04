@@ -2,21 +2,28 @@ import React, { useState } from 'react';
 import { Building2, UploadCloud, PieChart, Sparkles, Plus, ArrowRight, Play, ServerCog, Layers } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { SYSTEM_GLOSSARY } from '../../config/registry';
 import { toast } from 'sonner';
 
 export default function OnboardingView() {
   const setQuickEntryOpen = useUIStore(s => s.setQuickEntryOpen);
   const setTemplateSelectorOpen = useUIStore(s => s.setTemplateSelectorOpen);
   const setActiveTab = useUIStore(s => s.setActiveTab);
+  const language = useUIStore(s => s.language) as 'en' | 'he';
   
   const [isDemoLoading, setIsDemoLoading] = useState(false);
+
+  // Helper for translated terms with fallbacks
+  const t = (key: string, defaultVal: string) => {
+    return SYSTEM_GLOSSARY[key]?.[language] || defaultVal;
+  };
 
   const loadDemoData = () => {
     setIsDemoLoading(true);
     toast.promise(new Promise(resolve => setTimeout(resolve, 2500)), {
-      loading: 'Synthesizing demo data matrix...',
-      success: 'Demo environment fully populated.',
-      error: 'Failed to load demo.'
+      loading: language === 'he' ? 'טוען סביבת הדגמה...' : 'Synthesizing demo data matrix...',
+      success: language === 'he' ? 'סביבת ההדגמה נטענה בהצלחה.' : 'Demo environment fully populated.',
+      error: language === 'he' ? 'שגיאה בטעינת נתוני הדגמה.' : 'Failed to load demo.'
     });
     setTimeout(() => {
       setIsDemoLoading(false);
@@ -34,10 +41,10 @@ export default function OnboardingView() {
             <ServerCog className="w-8 h-8 text-black" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text)] font-display">
-            Your Ledger is Ready.
+            {t('dashboard.welcome.title', 'Your Ledger is Ready.')}
           </h1>
           <p className="text-base text-[var(--muted)] max-w-lg mx-auto">
-            The mathematical engine is online. Complete these quick steps to set up your chart of accounts and start tracking finances.
+            {t('dashboard.welcome.subtitle', 'The mathematical engine is online. Complete these quick steps to set up your chart of accounts and start tracking finances.')}
           </p>
         </div>
 
@@ -52,9 +59,11 @@ export default function OnboardingView() {
             <div className="w-9 h-9 bg-[var(--brass)]/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <Layers className="w-4 h-4 text-[var(--brass)]" />
             </div>
-            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">1. Select Chart Template</h3>
+            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
+              1. {t('dashboard.onboarding.step1.title', 'Select Chart Template')}
+            </h3>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed">
-              Seed 200+ industry accounts for SaaS, E-Commerce, Consulting, or Real Estate.
+              {t('dashboard.onboarding.step1.desc', 'Seed 200+ industry accounts for SaaS, E-Commerce, Consulting, or Real Estate.')}
             </p>
           </button>
 
@@ -66,9 +75,11 @@ export default function OnboardingView() {
             <div className="w-9 h-9 bg-[var(--elevated)] rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <UploadCloud className="w-4 h-4 text-indigo-500" />
             </div>
-            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">2. Import History</h3>
+            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
+              2. {t('dashboard.onboarding.step2.title', 'Import History')}
+            </h3>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed">
-              Connect bank lines or upload CSV statements to populate transaction history.
+              {t('dashboard.onboarding.step2.desc', 'Connect bank lines or upload CSV statements to populate transaction history.')}
             </p>
           </button>
 
@@ -80,9 +91,11 @@ export default function OnboardingView() {
             <div className="w-9 h-9 bg-[var(--elevated)] rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <Sparkles className="w-4 h-4 text-amber-500" />
             </div>
-            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">3. Train AI Matching</h3>
+            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
+              3. {language === 'he' ? 'אימון התאמות AI' : '3. Train AI Matching'}
+            </h3>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed">
-              Review categorizations. The intelligence layer learns rules automatically.
+              {language === 'he' ? 'בדיקת סיווגים. שכבת הבינה לומדת כללים באופן אוטומטי.' : 'Review categorizations. The intelligence layer learns rules automatically.'}
             </p>
           </button>
 
@@ -94,9 +107,11 @@ export default function OnboardingView() {
             <div className="w-9 h-9 bg-[var(--elevated)] rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <PieChart className="w-4 h-4 text-emerald-500" />
             </div>
-            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">4. Financial Statements</h3>
+            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
+              4. {t('dashboard.onboarding.step3.title', 'Financial Statements')}
+            </h3>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed">
-              Generate instant P&L, Balance Sheets, and Cash Flow statements.
+              {t('dashboard.onboarding.step3.desc', 'Generate instant P&L, Balance Sheets, and Cash Flow statements.')}
             </p>
           </button>
           
@@ -110,10 +125,12 @@ export default function OnboardingView() {
             className="w-full sm:w-auto px-6 py-3 bg-[var(--brass)] text-black font-semibold rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Record First Entry Manually
+            {language === 'he' ? 'רישום תנועה ראשונה ידנית' : 'Record First Entry Manually'}
           </button>
           
-          <span className="text-[var(--faint)] font-mono text-xs uppercase tracking-widest hidden sm:inline-block">or</span>
+          <span className="text-[var(--faint)] font-mono text-xs uppercase tracking-widest hidden sm:inline-block">
+            {language === 'he' ? 'או' : 'or'}
+          </span>
           
           <button 
             type="button"
@@ -122,9 +139,9 @@ export default function OnboardingView() {
             className="w-full sm:w-auto px-6 py-3 bg-[var(--elevated)] border border-[var(--line)] text-[var(--text)] font-medium rounded-xl hover:bg-[var(--line)] transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
             {isDemoLoading ? (
-              <span className="flex items-center gap-2"><Sparkles className="w-4 h-4 animate-pulse text-[var(--brass)]" /> Loading Matrix...</span>
+              <span className="flex items-center gap-2"><Sparkles className="w-4 h-4 animate-pulse text-[var(--brass)]" /> {language === 'he' ? 'טוען סביבה...' : 'Loading Matrix...'}</span>
             ) : (
-              <><Play className="w-4 h-4 text-emerald-500" /> Explore with Sample Data</>
+              <><Play className="w-4 h-4 text-emerald-500" /> {language === 'he' ? 'חקור נתוני הדגמה' : 'Explore with Sample Data'}</>
             )}
           </button>
         </div>

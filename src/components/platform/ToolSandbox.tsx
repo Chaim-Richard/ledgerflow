@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { X, Play, CheckCircle2, BarChart3 } from 'lucide-react';
+import { X, Play, CheckCircle2, BarChart3, ListFilter, ArrowUpRight } from 'lucide-react';
 import { LineChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useUIStore } from '../../stores/useUIStore';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
 
 interface ToolSandboxProps {
@@ -12,6 +13,7 @@ interface ToolSandboxProps {
 }
 
 export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxProps) {
+  const setActiveTab = useUIStore(state => state.setActiveTab);
   const transactions = useLedgerStore(state => state.transactions || []);
   const rawAccounts = useLedgerStore(state => state.accounts || []);
   const computedAccounts = useLedgerStore(state => state.computedAccounts || []);
@@ -152,6 +154,63 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                      ))}
                   </div>
                </div>
+
+               {/* Drill-down Results Table (if tool outputs rows) */}
+               {results.rows && results.rows.length > 0 && (
+                 <div className="p-6 bg-slate-900 border border-white/10 rounded-[32px] space-y-4">
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-2">
+                       <ListFilter size={16} className="text-[var(--brass)]" />
+                       <h3 className="text-xs font-black uppercase tracking-wider text-[var(--brass)]">
+                         Flagged Record Evidence ({results.rows.length} Items)
+                       </h3>
+                     </div>
+                     {results.sourceTransactionIds && results.sourceTransactionIds.length > 0 && (
+                       <button
+                         type="button"
+                         onClick={() => {
+                           onClose();
+                           setActiveTab('transactions');
+                         }}
+                         className="text-xs font-bold text-[var(--brass)] hover:underline flex items-center gap-1 cursor-pointer"
+                       >
+                         View in Ledger Grid <ArrowUpRight size={14} />
+                       </button>
+                     )}
+                   </div>
+
+                   <div className="overflow-x-auto">
+                     <table className="w-full text-left text-xs text-slate-300">
+                       <thead className="border-b border-white/10 text-[10px] uppercase font-bold text-slate-400">
+                         <tr>
+                           <th className="py-2.5 px-3">Classification</th>
+                           <th className="py-2.5 px-3">Primary Date</th>
+                           <th className="py-2.5 px-3">Comparison Date</th>
+                           <th className="py-2.5 px-3">Amount</th>
+                           <th className="py-2.5 px-3">Primary Description</th>
+                           <th className="py-2.5 px-3">Matched Description</th>
+                         </tr>
+                       </thead>
+                       <tbody className="divide-y divide-white/5 font-mono">
+                         {results.rows.map((row: any, idx: number) => (
+                           <tr key={row.id || idx} className="hover:bg-white/5 transition-colors">
+                             <td className="py-2.5 px-3">
+                               <span className={row.type === 'Exact' ? 'text-rose-400 font-bold' : 'text-amber-400 font-medium'}>
+                                 {row.type || 'Flagged'}
+                               </span>
+                             </td>
+                             <td className="py-2.5 px-3 whitespace-nowrap">{row.date1 || '-'}</td>
+                             <td className="py-2.5 px-3 whitespace-nowrap">{row.date2 || '-'}</td>
+                             <td className="py-2.5 px-3 font-bold text-white whitespace-nowrap">{row.amount || '-'}</td>
+                             <td className="py-2.5 px-3 text-slate-200 max-w-xs truncate font-sans">{row.description1 || '-'}</td>
+                             <td className="py-2.5 px-3 text-slate-400 max-w-xs truncate font-sans">{row.description2 || '-'}</td>
+                           </tr>
+                         ))}
+                       </tbody>
+                     </table>
+                   </div>
+                 </div>
+               )}
            </div>
         </div>
       </motion.div>

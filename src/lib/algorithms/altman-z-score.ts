@@ -60,20 +60,21 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
       });
     });
 
-    if (totalAssets === 0) {
+    if (totalAssets <= 0) {
       return {
         metrics: [
           { label: 'Z-Score', value: 'N/A' }
         ],
         charts: [],
-        insights: ['Total Assets are zero. Altman Z-Score requires a capitalized balance sheet to calculate meaningful solvency metrics.']
+        insights: ['Total Assets are zero or negative. Altman Z-Score requires a capitalized balance sheet to calculate meaningful solvency metrics.']
       };
     }
 
+    const safeTotalAssets = Math.max(totalAssets, 1);
     const workingCapital = currentAssets - currentLiabilities;
-    const t1 = workingCapital / totalAssets;
-    const t2 = retainedEarnings / totalAssets;
-    const t3 = ebit / totalAssets;
+    const t1 = workingCapital / safeTotalAssets;
+    const t2 = retainedEarnings / safeTotalAssets;
+    const t3 = ebit / safeTotalAssets;
     // For T4 we need Market Value of Equity / Total Liabilities. 
     // We'll use Book Value of Equity for private companies formula: Z' = 0.717T1 + 0.847T2 + 3.107T3 + 0.420T4 + 0.998T5 (where T5 is Sales / Total Assets)
     // Actually the standard private model: Z' = 6.56(T1) + 3.26(T2) + 6.72(T3) + 1.05(T4)

@@ -93,7 +93,7 @@ function findOutliers(transactions: Transaction[], threshold = 3.5) {
   const amounts = transactions.map((t) => t.totalAmountCents);
   const med = median(amounts);
   const mad = median(amounts.map((a) => Math.abs(a - med)));
-  if (mad === 0) return [];
+  if (!mad || mad <= 0 || !Number.isFinite(mad)) return [];
 
   return transactions
     .map((t) => ({
@@ -102,7 +102,7 @@ function findOutliers(transactions: Transaction[], threshold = 3.5) {
       zScore: (0.6745 * (t.totalAmountCents - med)) / mad,
       medianCents: med,
     }))
-    .filter((r) => Math.abs(r.zScore) > threshold);
+    .filter((r) => Number.isFinite(r.zScore) && Math.abs(r.zScore) > threshold);
 }
 
 export const anomalyDetection = buildHelper((transactions, accounts, inputs) => {
