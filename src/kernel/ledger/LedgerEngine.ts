@@ -109,8 +109,8 @@ export class LedgerEngine {
             const accId = typeof line.accountId === 'string' ? line.accountId : '';
             const accData = balances.get(accId);
             if (accData) {
-              const debit = typeof line.debit === 'number' ? Math.round(line.debit * 100) : 0;
-              const credit = typeof line.credit === 'number' ? Math.round(line.credit * 100) : 0;
+              const debit = typeof line.debit === 'number' ? line.debit : ((line as any).debitCents || 0);
+              const credit = typeof line.credit === 'number' ? line.credit : ((line as any).creditCents || 0);
               accData.total += debit - credit;
             }
           });
@@ -119,6 +119,41 @@ export class LedgerEngine {
     }
 
     return balances;
+  }
+
+  /**
+   * Recomputes ChartAccount array with live calculated balanceCents
+   */
+  static recomputeAccountBalances(
+    accounts: ChartAccount[],
+    transactions: Transaction[],
+    journalEntries: JournalEntry[] = []
+  ): ChartAccount[] {
+    const map = this.computeDimensionalBalances(accounts, transactions, journalEntries);
+    return accounts.map(acc => {
+      const data = map.get(acc.id);
+      const isDebit = acc.type === 'asset' || acc.type === 'expense' || acc.type === 'cost_of_goods';
+      const net = data ? data.total : (isDebit ? (acc.openingBalanceCents || 0) : -(acc.openingBalanceCents || 0));
+      // Convert signed balance to natural account balance
+      const balanceCents = isDebit ? net : -net;
+      return {
+        ...acc,
+        balanceCents
+      };
+    });
+  }
+
+  /**
+   * Verifies double-entry zero-sum across all computed accounts
+   */
+  static verifyZeroSum(accounts: ChartAccount[]): boolean {
+    let totalNet = 0;
+    accounts.forEach(acc => {
+      const isDebit = acc.type === 'asset' || acc.type === 'expense' || acc.type === 'cost_of_goods';
+      const signed = isDebit ? (acc.balanceCents || 0) : -(acc.balanceCents || 0);
+      totalNet += signed;
+    });
+    return Math.abs(totalNet) === 0;
   }
 
   /**

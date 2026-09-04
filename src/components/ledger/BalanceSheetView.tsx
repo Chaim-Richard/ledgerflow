@@ -109,6 +109,12 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
     const equity: { [id: string]: number } = {};
     const income: { [id: string]: number } = {};
     const expense: { [id: string]: number } = {};
+
+    const accountMap = new Map<string, ChartAccount>();
+    accounts.forEach(acc => {
+      accountMap.set(acc.id, acc);
+      accountMap.set(acc.name, acc);
+    });
     
     // Initialize with account opening balances
     accounts.forEach(acc => {
@@ -125,17 +131,18 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
       if (tx.deletedAt || tx.date > dateCutoff) return;
       tx.lines?.forEach(line => {
         const id = line.accountId;
-        const acc = accounts.find(a => a.id === id);
+        const acc = accountMap.get(id) || accountMap.get(line.accountName);
         if (!acc) return;
+        const accId = acc.id;
         
         const isDebitNature = acc.type === 'asset' || acc.type === 'expense' || acc.type === 'cost_of_goods';
         const delta = isDebitNature ? line.amountCents : -line.amountCents;
 
-        if (acc.type === 'asset') assets[id] = (assets[id] || 0) + delta;
-        else if (acc.type === 'liability') liabilities[id] = (liabilities[id] || 0) + delta;
-        else if (acc.type === 'equity') equity[id] = (equity[id] || 0) + delta;
-        else if (acc.type === 'income' || acc.type === 'revenue') income[id] = (income[id] || 0) + delta;
-        else if (acc.type === 'expense' || acc.type === 'cost_of_goods') expense[id] = (expense[id] || 0) + delta;
+        if (acc.type === 'asset') assets[accId] = (assets[accId] || 0) + delta;
+        else if (acc.type === 'liability') liabilities[accId] = (liabilities[accId] || 0) + delta;
+        else if (acc.type === 'equity') equity[accId] = (equity[accId] || 0) + delta;
+        else if (acc.type === 'income' || acc.type === 'revenue') income[accId] = (income[accId] || 0) + delta;
+        else if (acc.type === 'expense' || acc.type === 'cost_of_goods') expense[accId] = (expense[accId] || 0) + delta;
       });
     });
 
@@ -144,18 +151,21 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
       if (entry.deletedAt || entry.date > dateCutoff) return;
       entry.lines?.forEach(line => {
         const id = line.accountId;
-        const acc = accounts.find(a => a.id === id);
+        const acc = accountMap.get(id) || accountMap.get(line.accountName);
         if (!acc) return;
+        const accId = acc.id;
 
-        const netAmount = line.debit - line.credit;
+        const debit = typeof line.debit === 'number' ? line.debit : ((line as any).debitCents || 0);
+        const credit = typeof line.credit === 'number' ? line.credit : ((line as any).creditCents || 0);
+        const netAmount = debit - credit;
         const isDebitNature = acc.type === 'asset' || acc.type === 'expense' || acc.type === 'cost_of_goods';
         const delta = isDebitNature ? netAmount : -netAmount;
 
-        if (acc.type === 'asset') assets[id] = (assets[id] || 0) + delta;
-        else if (acc.type === 'liability') liabilities[id] = (liabilities[id] || 0) + delta;
-        else if (acc.type === 'equity') equity[id] = (equity[id] || 0) + delta;
-        else if ((acc.type === 'income' || acc.type === 'revenue')) income[id] = (income[id] || 0) + delta;
-        else if ((acc.type === 'expense' || acc.type === 'cost_of_goods')) expense[id] = (expense[id] || 0) + delta;
+        if (acc.type === 'asset') assets[accId] = (assets[accId] || 0) + delta;
+        else if (acc.type === 'liability') liabilities[accId] = (liabilities[accId] || 0) + delta;
+        else if (acc.type === 'equity') equity[accId] = (equity[accId] || 0) + delta;
+        else if ((acc.type === 'income' || acc.type === 'revenue')) income[accId] = (income[accId] || 0) + delta;
+        else if ((acc.type === 'expense' || acc.type === 'cost_of_goods')) expense[accId] = (expense[accId] || 0) + delta;
       });
     });
 
@@ -185,7 +195,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
     const currentData = getPeriodBalances(asOfDate);
     const prevData = isComparative ? getPeriodBalances(priorDate) : currentData;
     return { currentData, prevData };
-  }, [accounts, journalEntries, asOfDate, priorDate, isComparative]);
+  }, [transactions, accounts, journalEntries, asOfDate, priorDate, isComparative]);
 
   const exportBalanceSheet = () => {
     const rows = [
