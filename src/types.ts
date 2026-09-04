@@ -224,7 +224,7 @@ export interface Bill {
   }>;
   date?: string;
   dueDate: string;
-  status: 'draft' | 'pending' | 'approved' | 'paid' | 'overdue' | 'unpaid' | 'void';
+  status: 'draft' | 'pending' | 'approved' | 'paid' | 'partially_paid' | 'overdue' | 'unpaid' | 'void';
   reversalEventId?: string;
   isLocked?: boolean;
   lockedAt?: string;
@@ -245,7 +245,7 @@ export interface Invoice {
   dueDate: string;
   tags?: string[];
   metadata?: Record<string, any>;
-  status: 'pending' | 'paid' | 'overdue' | 'sent' | 'draft' | 'approved' | 'rejected' | 'invoiced';
+  status: 'pending' | 'paid' | 'partially_paid' | 'overdue' | 'sent' | 'draft' | 'approved' | 'rejected' | 'invoiced';
   type?: 'standard' | 'recurring' | 'progress' | 'estimate' | 'quote' | 'change-order' | 'time-materials'; // For advanced billing workflows
   recurringInterval?: 'monthly' | 'weekly' | 'yearly';
   progressPercentage?: number;

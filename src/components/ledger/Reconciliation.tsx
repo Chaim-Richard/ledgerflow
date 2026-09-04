@@ -50,6 +50,7 @@ export default function Reconciliation() {
   const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
   const [selectedLedgerId, setSelectedLedgerId] = useState<string | null>(null);
   const [showAutoConfirm, setShowAutoConfirm] = useState(false);
+  const [matchToleranceCents, setMatchToleranceCents] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAutoReconciling, setIsAutoReconciling] = useState(false);
   
@@ -93,7 +94,7 @@ export default function Reconciliation() {
         // Exact Amount Match (High Weight)
         if (Math.abs(ltx.totalAmountCents) === Math.abs(btx.amountCents)) {
           score += 100;
-        } else if (Math.abs(Math.abs(ltx.totalAmountCents) - Math.abs(btx.amountCents)) < 150) {
+        } else if (Math.abs(Math.abs(ltx.totalAmountCents) - Math.abs(btx.amountCents)) <= matchToleranceCents) {
           score += 30; // Near match / tiny difference
         }
 
@@ -120,7 +121,7 @@ export default function Reconciliation() {
     });
 
     return sourceItems;
-  }, [unmatchedBankLines, unclearedLedgerTransactions, user?.uid]);
+  }, [unmatchedBankLines, unclearedLedgerTransactions, user?.uid, matchToleranceCents]);
   
   const optimizedMatches = useMemo(() => {
      if (!aiSuggestionsMap || !Array.isArray(aiSuggestionsMap)) return new Map();
@@ -867,6 +868,12 @@ export default function Reconciliation() {
                                    <span className="text-[8px] uppercase tracking-widest font-black text-slate-400 block mb-0.5">Assigned Target record</span>
                                    <p className="font-bold text-[var(--text)] truncate text-sm">{matchedLtx.description}</p>
                                    <p className="text-[10px] font-semibold text-slate-500 font-mono mt-0.5">{matchedLtx.date} • {formatCurrency(matchedLtx.totalAmountCents)}</p>
+                                   {Math.abs(btx.amountCents) !== Math.abs(matchedLtx.totalAmountCents) && (
+                                     <span className="text-[9px] text-amber-600 font-bold uppercase tracking-wider block mt-1 bg-amber-50/50 inline-block px-1.5 py-0.5 rounded border border-amber-200">
+                                       Diff: {formatCurrency(Math.abs(Math.abs(btx.amountCents) - Math.abs(matchedLtx.totalAmountCents)))}
+                                     </span>
+                                   )}
+
                                 </div>
                               </div>
                            </div>

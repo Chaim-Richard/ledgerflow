@@ -71,7 +71,7 @@ export default function StatementImporter({
   const [parsedTxs, setParsedTxs] = useState<ParsedTx[]>([]);
   const [step, setStep] = useState<'input' | 'mapping' | 'review'>('input');
   const [csvData, setCsvData] = useState<string[][]>([]);
-  const [mapping, setMapping] = useState({ date: -1, description: -1, amount: -1 });
+  const [mapping, setMapping] = useState({ date: -1, description: -1, amount: -1, debit: -1, credit: -1, payee: -1, memo: -1, skipRows: 1 });
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -115,23 +115,77 @@ export default function StatementImporter({
     }
   };
 
+  const normalizeDateString = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const s = dateStr.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const usMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (usMatch) {
+      let [_, m, d, y] = usMatch;
+      if (y.length === 2) {
+        y = parseInt(y) > 50 ? '19' + y : '20' + y;
+      }
+      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().split('T')[0];
+    }
+    return '';
+  };
+
+  const [skippedCount, setSkippedCount] = useState(0);
+
   const handleMapColumns = () => {
-    if (mapping.date === -1 || mapping.description === -1 || mapping.amount === -1) {
-      toast.error("Please map all required columns (Date, Description, Amount)");
+    const hasAmount = mapping.amount !== -1;
+    const hasDebitCredit = (mapping as any).debit !== -1 && (mapping as any).credit !== -1;
+    
+    if (mapping.date === -1 || mapping.description === -1 || (!hasAmount && !hasDebitCredit)) {
+      toast.error("Please map Date, Description, and either Amount OR Debit & Credit.");
       return;
     }
 
-    const dataRows = csvData.slice(1); // Assume first row is header
+    const dataRows = csvData.slice((mapping as any).skipRows !== undefined ? (mapping as any).skipRows : 1);
+    
+    let skipped = 0;
+    
     const results = dataRows.map(row => {
-      const amountStr = row[mapping.amount]?.replace(/[$,]/g, '');
-      const amountCents = TruthEngine.parseAmountToCents(amountStr || '0');
+      let amountCents = 0;
+      if (hasAmount) {
+        const amountStr = row[mapping.amount]?.replace(/[$,]/g, '');
+        amountCents = TruthEngine.parseAmountToCents(amountStr || '0');
+      } else {
+        const debitStr = row[(mapping as any).debit]?.replace(/[$,]/g, '');
+        const creditStr = row[(mapping as any).credit]?.replace(/[$,]/g, '');
+        const debit = TruthEngine.parseAmountToCents(debitStr || '0');
+        const credit = TruthEngine.parseAmountToCents(creditStr || '0');
+        amountCents = credit - debit;
+      }
+      
+      const rawDate = row[mapping.date];
+      const date = normalizeDateString(rawDate);
+      
+      const descArr = [row[mapping.description]];
+      if ((mapping as any).payee !== undefined && (mapping as any).payee !== -1 && row[(mapping as any).payee]) {
+        descArr.push(row[(mapping as any).payee]);
+      }
+      if ((mapping as any).memo !== undefined && (mapping as any).memo !== -1 && row[(mapping as any).memo]) {
+        descArr.push(row[(mapping as any).memo]);
+      }
+      
       return {
-        date: row[mapping.date],
-        description: row[mapping.description],
-        amountCents
+        date,
+        description: descArr.filter(Boolean).join(' - '),
+        amountCents,
+        _originalDate: rawDate
       };
-    }).filter(tx => tx.date && tx.description && !isNaN(tx.amountCents));
+    }).filter(tx => {
+      const isValid = tx.date && tx.description && !isNaN(tx.amountCents);
+      if (!isValid) skipped++;
+      return isValid;
+    });
 
+    setSkippedCount(skipped);
     processResults(results);
   };
 
@@ -319,7 +373,11 @@ export default function StatementImporter({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {(['date', 'description', 'amount'] as const).map(field => (
+                  <div className="space-y-3 md:col-span-3">
+                    <label className="micro-label !text-[var(--text)]">Header Rows to Skip</label>
+                    <input type="number" min="0" value={(mapping as any).skipRows} onChange={(e) => setMapping({...mapping, skipRows: parseInt(e.target.value) || 0})} className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)]" />
+                  </div>
+                  {(['date', 'description', 'amount', 'debit', 'credit', 'payee', 'memo'] as const).map(field => (
                     <div key={field} className="space-y-3">
                       <label className="micro-label !text-[var(--text)] capitalize">{field} Column</label>
                       <select 

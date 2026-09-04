@@ -124,7 +124,7 @@ export class LedgerPostService {
     const status = invoiceData.status || 'pending';
     if (status === 'draft' || status === 'rejected') {
       // If setting to draft or rejected, reversing prior postings (if any) is sufficient
-      if (true) {
+      if (txsToPost.length > 0) {
         await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
       }
       return;
@@ -138,7 +138,83 @@ export class LedgerPostService {
     const invoiceNum = invoiceData.number || invoiceId;
     const customer = invoiceData.customerName || 'Customer';
 
-    // 2. Transaction 1: Accrual Posting (DR A/R, CR Revenue)
+    const taxAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['tax payable', 'sales tax', 'tax liability', 'tax'],
+      a => a.type === 'liability' && (a.name.toLowerCase().includes('tax') || a.category === 'Taxes'),
+      'Sales Tax Payable'
+    );
+
+    const discountAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['discount', 'sales discount'],
+      a => a.type === 'expense' || (a.type === 'income' && a.name.toLowerCase().includes('discount')),
+      'Sales Discounts'
+    );
+    
+    const retainageAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['retainage', 'retention'],
+      a => a.type === 'asset' && a.name.toLowerCase().includes('retainage'),
+      'Retainage Receivable'
+    );
+
+    // 2. Transaction 1: Accrual Posting
+    const taxAmount = roundCents((invoiceData.taxAmountCents || invoiceData.salesTaxCents || (invoiceData.taxRate ? (rawAmount / (1 + invoiceData.taxRate)) * invoiceData.taxRate : 0)) * rate);
+    const discountAmount = roundCents((invoiceData.discountCents || 0) * rate);
+    const retainageAmount = roundCents((invoiceData.retainageCents || 0) * rate);
+    
+    const revenueAmount = amount + retainageAmount + discountAmount - taxAmount;
+
+    const accrualLines: any[] = [
+      {
+        accountId: arAccount.id,
+        accountName: arAccount.name,
+        amountCents: amount, // Debit
+        description: `Accounts Receivable posting for Invoice ${invoiceNum}`,
+        exchangeRate: rate
+      }
+    ];
+
+    if (retainageAmount > 0) {
+      accrualLines.push({
+        accountId: retainageAccount.id,
+        accountName: retainageAccount.name,
+        amountCents: retainageAmount, // Debit
+        description: `Retainage withheld for Invoice ${invoiceNum}`,
+        exchangeRate: rate
+      });
+    }
+    if (discountAmount > 0) {
+      accrualLines.push({
+        accountId: discountAccount.id,
+        accountName: discountAccount.name,
+        amountCents: discountAmount, // Debit
+        description: `Discount applied to Invoice ${invoiceNum}`,
+        exchangeRate: rate
+      });
+    }
+    if (taxAmount > 0) {
+      accrualLines.push({
+        accountId: taxAccount.id,
+        accountName: taxAccount.name,
+        amountCents: -taxAmount, // Credit
+        description: `Sales Tax collected for Invoice ${invoiceNum}`,
+        exchangeRate: rate
+      });
+    }
+
+    accrualLines.push({
+      accountId: revenueAccount.id,
+      accountName: revenueAccount.name,
+      amountCents: -revenueAmount, // Credit
+      description: `Revenue posting for Invoice ${invoiceNum}`,
+      exchangeRate: rate
+    });
+
     const accrualTx = {
       uid,
       workspaceId,
@@ -154,22 +230,7 @@ export class LedgerPostService {
         invoiceId,
         type: 'invoice-accrual'
       },
-      lines: [
-        {
-          accountId: arAccount.id,
-          accountName: arAccount.name,
-          amountCents: amount, // Debit (positive)
-          description: `Accounts Receivable posting for Invoice ${invoiceNum}`,
-          exchangeRate: rate
-        },
-        {
-          accountId: revenueAccount.id,
-          accountName: revenueAccount.name,
-          amountCents: -amount, // Credit (negative)
-          description: `Revenue posting for Invoice ${invoiceNum}`,
-          exchangeRate: rate
-        }
-      ]
+      lines: accrualLines
     };
     txsToPost.push(accrualTx);
 
@@ -335,7 +396,7 @@ export class LedgerPostService {
 
     const status = billData.status || 'pending';
     if (status === 'draft' || status === 'rejected') {
-      if (true) {
+      if (txsToPost.length > 0) {
         await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
       }
       return;
@@ -349,7 +410,46 @@ export class LedgerPostService {
     const billNum = billData.number || billId;
     const vendor = billData.vendorName || 'Vendor';
 
-    // 2. Transaction 1: Accrual Posting (DR Expense, CR A/P)
+    const taxAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['tax paid', 'input tax', 'tax asset', 'tax', 'tax expense'],
+      a => (a.type === 'asset' || a.type === 'expense' || a.type === 'liability') && a.name.toLowerCase().includes('tax'),
+      'Tax Paid'
+    );
+
+    // 2. Transaction 1: Accrual Posting
+    const taxAmount = roundCents((billData.taxAmountCents || (billData.taxRate ? (rawAmount / (1 + billData.taxRate)) * billData.taxRate : 0)) * rate);
+    const expenseAmount = amount - taxAmount;
+
+    const accrualLines: any[] = [];
+    
+    if (expenseAmount !== 0) {
+      accrualLines.push({
+        accountId: expenseAccount.id,
+        accountName: expenseAccount.name,
+        amountCents: expenseAmount, // Debit
+        description: `Expense posting for Bill ${billNum}`,
+        exchangeRate: rate
+      });
+    }
+    if (taxAmount > 0) {
+      accrualLines.push({
+        accountId: taxAccount.id,
+        accountName: taxAccount.name,
+        amountCents: taxAmount, // Debit
+        description: `Tax on Bill ${billNum}`,
+        exchangeRate: rate
+      });
+    }
+    accrualLines.push({
+      accountId: apAccount.id,
+      accountName: apAccount.name,
+      amountCents: -amount, // Credit
+      description: `Accounts Payable posting for Bill ${billNum}`,
+      exchangeRate: rate
+    });
+
     const accrualTx = {
       uid,
       workspaceId,
@@ -365,22 +465,7 @@ export class LedgerPostService {
         billId,
         type: 'bill-accrual'
       },
-      lines: [
-        {
-          accountId: expenseAccount.id,
-          accountName: expenseAccount.name,
-          amountCents: amount, // Debit (positive)
-          description: `Expense posting for Bill ${billNum}`,
-          exchangeRate: rate
-        },
-        {
-          accountId: apAccount.id,
-          accountName: apAccount.name,
-          amountCents: -amount, // Credit (negative)
-          description: `Accounts Payable posting for Bill ${billNum}`,
-          exchangeRate: rate
-        }
-      ]
+      lines: accrualLines
     };
     txsToPost.push(accrualTx);
 
