@@ -313,7 +313,7 @@ export default function ToolsCatalog() {
                       <button className={cn(
                         "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-all",
                         tool.implemented ? "text-[var(--text)] group-hover:text-[var(--brass)]" : "text-[var(--muted)] cursor-not-allowed"
-                      )}>
+                      )} aria-label="Zap action">
                          {tool.implemented ? 'Open Mathematical Sandbox' : 'In Development'}
                          {tool.implemented && <Zap size={14} className="text-[var(--brass)]" />}
                       </button>

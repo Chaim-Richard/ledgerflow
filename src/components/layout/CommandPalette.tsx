@@ -377,7 +377,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                   <button
                     onClick={handleExecuteIntent}
                     className="w-full flex items-center justify-between p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl transition-all shadow-md group text-left cursor-pointer"
-                  >
+                   aria-label="Instant Command Execution (Press Enter) Execute">
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 bg-white/20 rounded-xl">
                         {parsedIntent.type === 'project' ? <FolderPlus size={20} /> : <Zap size={20} />}

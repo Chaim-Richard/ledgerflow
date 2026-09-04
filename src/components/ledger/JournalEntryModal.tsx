@@ -397,7 +397,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                       type="button"
                       onClick={handleAddLine}
                       className="flex items-center gap-2 text-xs font-bold text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
-                    >
+                     aria-label="Add Line">
                       <Plus size={14} /> Add Line
                     </button>
                   </div>
@@ -528,7 +528,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 type="button"
                 onClick={onClose}
                 className="py-3 px-4 bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] rounded-xl font-bold hover:bg-[var(--ink)] hover:text-[var(--text)] transition-all order-2 sm:order-1 sm:flex-1 cursor-pointer text-xs uppercase tracking-wider"
-              >
+               aria-label="Discard Entry">
                 Discard Entry
               </button>
               <AsyncButton 

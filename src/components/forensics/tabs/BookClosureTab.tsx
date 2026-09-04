@@ -157,7 +157,7 @@ export default function BookClosureTab() {
                 onClick={handleUnlockBooks}
                 disabled={isLocking}
                 className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
-              >
+               aria-label="Action button">
                 {isLocking ? 'Unlocking...' : 'Unlock Books & Remove Date'}
               </button>
             ) : (
@@ -165,7 +165,7 @@ export default function BookClosureTab() {
                 onClick={handleLockBooks}
                 disabled={isLocking}
                 className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-black uppercase tracking-widest text-[11px] transition-all bg-slate-900 text-white shadow-xl hover:translate-y-[-2px] disabled:opacity-50"
-              >
+               aria-label="Action button">
                 {isLocking ? 'Securing Ledger Chain...' : 'Secure & Close Books'}
               </button>
             )}

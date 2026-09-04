@@ -1005,7 +1005,7 @@ export default function ApiHub() {
                   <button
                     onClick={copyKey}
                     className="px-6 py-4 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shrink-0 shadow-sm"
-                  >
+                   aria-label="Check Circle2 action">
                     {isCopied ? <CheckCircle2 size={18} /> : <Copy size={18} />}
                     {isCopied ? 'Copied' : 'Copy Token'}
                   </button>
@@ -1244,7 +1244,7 @@ export default function ApiHub() {
                     onClick={generateNewKey}
                     disabled={isRegenerating || selectedScopes.length === 0}
                     className="px-5 py-2 bg-slate-950 text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-all disabled:opacity-50 shrink-0 shadow-sm"
-                  >
+                   aria-label="Action button">
                     {isRegenerating ? 'Generating...' : 'Confirm and Provision'}
                   </button>
                 </div>
@@ -2664,7 +2664,7 @@ fetch(url, {
                 onClick={runSandboxRequest}
                 disabled={sandboxLoading}
                 className="w-full py-3.5 bg-slate-950 text-white font-black uppercase tracking-wider text-xs rounded-xl hover:bg-slate-800 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:scale-[1.01]"
-              >
+               aria-label="Refresh Cw action">
                 {sandboxLoading ? (
                   <>
                     <RefreshCw className="animate-spin" size={14} />
@@ -2844,7 +2844,7 @@ fetch(url, {
               <button
                 onClick={fetchLogs}
                 className="p-2 bg-[var(--ink)] border border-[var(--line)] text-slate-700 rounded-lg hover:bg-slate-100 transition-all flex items-center gap-1.5 text-xs font-bold shrink-0 cursor-pointer"
-              >
+               aria-label="Sync Feed">
                 <RefreshCw size={12} /> Sync Feed
               </button>
             </div>

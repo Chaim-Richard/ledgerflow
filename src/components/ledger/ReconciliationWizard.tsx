@@ -346,7 +346,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               <button 
                 onClick={handleAutoMatch}
                 className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-indigo-600 rounded-[32px] font-black uppercase tracking-[0.1em] text-[10px] border border-indigo-600/20 hover:bg-indigo-600/10 transition-all"
-              >
+               aria-label="Rule Auto-Match">
                 <Sparkles size={18} />
                 Rule Auto-Match
               </button>
@@ -358,7 +358,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                     ? "bg-slate-900 text-white hover:brightness-110 shadow-ledger-google-blue/20" 
                     : "bg-[var(--ink)] text-slate-500/30 cursor-not-allowed border border-[var(--line)] grayscale"
                 )}
-              >
+               aria-label="Finalize Alignment">
                 <CheckCircle2 size={18} />
                 Finalize Alignment
               </button>

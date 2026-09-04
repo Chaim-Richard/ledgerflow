@@ -123,7 +123,7 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
           <button 
             onClick={downloadAuditLog}
             className="h-14 px-8 bg-slate-900 text-white hover:bg-zinc-800 rounded-[32px] flex items-center gap-3 text-[10px] font-medium uppercase tracking-wider transition-all shadow-xl shadow-ledger-ink/10"
-          >
+           aria-label="Export Core">
             <Download size={18} />
             Export Core
           </button>

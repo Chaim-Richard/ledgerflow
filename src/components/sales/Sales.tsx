@@ -412,7 +412,7 @@ export default function Sales() {
                     <td className="p-4 md:p-8">
                       <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all justify-end">
                         
-                        <button onClick={(e)=>{e.stopPropagation(); onAddInvoice({ custorId: cust.id }); toast.info(`Opening inv creation for ${cust.name}`)}} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Invoice"><Plus size={14}/></button>
+                        <button onClick={(e)=> {e.stopPropagation(); onAddInvoice({ custorId: cust.id }); toast.info(`Opening inv creation for ${cust.name}`)}} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Invoice"><Plus size={14}/></button>
                         
                       </div>
                     </td>

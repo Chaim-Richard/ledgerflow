@@ -154,7 +154,7 @@ const Sidebar = React.memo(({
               <button
                 onClick={onNewWorkspace}
                 className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] transition-colors"
-              >
+               aria-label="New Workspace">
                 <Plus size={14} />
                 <span>New Workspace</span>
               </button>
@@ -256,7 +256,7 @@ const Sidebar = React.memo(({
                uiStore.isSidebarOpen ? "justify-between" : "justify-center"
              )}
              title={uiStore.isSidebarOpen ? undefined : "Install App"}
-           >
+            aria-label="uiStore.isSidebarOpen ? undefined :">
              <div className="flex items-center gap-2.5">
                <Download size={16} className="shrink-0 text-emerald-400 group-hover:scale-110 transition-transform" />
                {uiStore.isSidebarOpen && <span>Install App</span>}
@@ -275,7 +275,7 @@ const Sidebar = React.memo(({
              !uiStore.isSidebarOpen && "justify-center"
            )}
            title={uiStore.isSidebarOpen ? undefined : (user ? "Log Out" : "Exit Guest / Sign In")}
-         >
+          aria-label="uiStore.isSidebarOpen ? undefined : (user ?">
            <LogOut size={16} className="shrink-0 text-[var(--faint)] group-hover:text-red-400 transition-colors" />
            {uiStore.isSidebarOpen && <span>{user ? "Log Out" : "Exit Guest / Sign In"}</span>}
          </button>

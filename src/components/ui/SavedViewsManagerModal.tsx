@@ -204,7 +204,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
           <button
             onClick={onClose}
             className="p-2 text-[var(--muted)] hover:text-[var(--text)] rounded-lg hover:bg-[var(--line)] transition-colors cursor-pointer"
-          >
+           aria-label="Action button">
             <X size={18} />
           </button>
         </div>
@@ -229,14 +229,14 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                 <button
                   onClick={resetToDefaultViews}
                   className="px-3 py-2 text-xs font-medium text-[var(--muted)] hover:text-[var(--text)] border border-[var(--line)] rounded-xl hover:bg-[var(--line)]/50 transition-all cursor-pointer"
-                >
+                 aria-label="Reset Presets">
                   Reset Presets
                 </button>
                 
                 <button
                   onClick={handleStartCreate}
                   className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[var(--brass)] text-black rounded-xl hover:opacity-90 shadow-xs transition-all cursor-pointer"
-                >
+                 aria-label="Create Custom View">
                   <Plus size={15} />
                   <span>Create Custom View</span>
                 </button>
@@ -483,7 +483,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                   type="button"
                   onClick={handleSaveForm}
                   className="px-5 py-2 text-xs font-semibold bg-[var(--brass)] text-black rounded-xl hover:opacity-90 shadow-xs"
-                >
+                 aria-label="Save View Config">
                   Save View Config
                 </button>
               </div>
@@ -665,7 +665,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
           <button
             onClick={onClose}
             className="px-4 py-1.5 font-semibold bg-[var(--bg)] border border-[var(--line)] text-[var(--text)] rounded-xl hover:bg-[var(--line)]/50 transition-all cursor-pointer"
-          >
+           aria-label="Close">
             Close
           </button>
         </div>

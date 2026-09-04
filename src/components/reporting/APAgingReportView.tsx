@@ -234,7 +234,7 @@ export default function APAgingReportView() {
           <button 
             onClick={handleExport}
             className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 shrink-0 cursor-pointer shadow-xs"
-          >
+           aria-label="Export CSV">
             <Download className="w-3.5 h-3.5" />
             Export CSV
           </button>

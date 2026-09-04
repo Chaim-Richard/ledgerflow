@@ -318,10 +318,10 @@ export default function Purchases() {
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all">
+          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all" aria-label="Filter action">
             <Filter size={20} />
           </button>
-          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all">
+          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all" aria-label="Download action">
             <Download size={20} />
           </button>
         </div>
@@ -498,7 +498,7 @@ export default function Purchases() {
                     <td className="p-4 md:p-8">
                       <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all justify-end">
                         
-                        <button onClick={(e)=>{e.stopPropagation(); onAddBill({ vendorId: vend.id }); toast.info(`Opening bill creation for ${vend.name}`)}} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Bill"><Plus size={14}/></button>
+                        <button onClick={(e)=> {e.stopPropagation(); onAddBill({ vendorId: vend.id }); toast.info(`Opening bill creation for ${vend.name}`)}} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Bill"><Plus size={14}/></button>
                         
                       </div>
                     </td>

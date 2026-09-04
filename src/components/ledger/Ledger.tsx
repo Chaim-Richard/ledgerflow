@@ -78,7 +78,7 @@ const TabButton = ({ id, label, icon: Icon, active, onClick, cardKey }: { id: Su
         ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold border-[var(--brass-line)] shadow-sm" 
         : "bg-[var(--surface)] border-[var(--line)]/80 text-[var(--muted)] hover:border-[var(--brass-line)]/60 hover:text-[var(--text)] shadow-3xs"
     )}
-  >
+   aria-label="Icon action">
     <Icon size={14} />
     {cardKey ? <LexiconText cardKey={cardKey} defaultVal={label} /> : label}
   </button>

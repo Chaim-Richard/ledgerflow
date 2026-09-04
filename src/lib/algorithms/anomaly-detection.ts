@@ -99,7 +99,7 @@ function findOutliers(transactions: Transaction[], threshold = 3.5) {
     .map((t) => ({
       transactionId: t.id,
       amountCents: t.totalAmountCents,
-      zScore: (0.6745 * (t.totalAmountCents - med)) / mad,
+      zScore: mad > 0 ? (0.6745 * (t.totalAmountCents - med)) / Math.max(mad, 1) : 0,
       medianCents: med,
     }))
     .filter((r) => Number.isFinite(r.zScore) && Math.abs(r.zScore) > threshold);

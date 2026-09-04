@@ -431,7 +431,7 @@ export default function BlueprintSettings() {
               type="button"
               onClick={handleAddCategoryMapping}
               className="py-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
-            >
+             aria-label="Add Override Rule">
               <Plus size={14} strokeWidth={3} />
               Add Override Rule
             </button>

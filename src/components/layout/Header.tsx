@@ -74,7 +74,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           onClick={toggleTheme}
           className="p-2 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] rounded-lg transition-colors"
           title="Toggle light/dark map view"
-        >
+         aria-label="Toggle light/dark map view">
           {isDark ? <Sun size={17} /> : <Moon size={17} />}
         </button>
 
@@ -101,7 +101,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
             onClick={onLoginPrompt || onLogout}
             className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-medium text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-md hover:bg-amber-500/20 transition-all"
             title="Currently in Guest Mode. Click to sign in."
-          >
+           aria-label="Currently in Guest Mode. Click to sign in.">
             <span>Guest</span>
             <span className="text-[10px] text-amber-300 underline font-semibold">Sign In</span>
           </button>

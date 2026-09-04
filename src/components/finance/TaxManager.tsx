@@ -117,7 +117,7 @@ export default function TaxManager({
                ))}
              </select>
           </div>
-          <button className="flex items-center gap-2 px-6 py-3.5 bg-[var(--brass)] text-black rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-md cursor-pointer">
+          <button className="flex items-center gap-2 px-6 py-3.5 bg-[var(--brass)] text-black rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-md cursor-pointer" aria-label="Fiscal Export">
             <Download size={16} />
             Fiscal Export
           </button>

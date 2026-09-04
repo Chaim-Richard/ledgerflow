@@ -45,7 +45,7 @@ export default function Consolidation() {
             <Globe className="w-3.5 h-3.5 text-emerald-400" />
             <span>Worlds: {summary.worldStatements.length}</span>
           </div>
-          <button className="h-10 px-4 bg-purple-500 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-purple-400 transition-colors">
+          <button className="h-10 px-4 bg-purple-500 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-purple-400 transition-colors" aria-label="Export Report">
             <Download className="w-4 h-4" /> Export Report
           </button>
         </div>

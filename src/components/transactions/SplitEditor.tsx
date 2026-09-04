@@ -248,7 +248,7 @@ export default function SplitEditor({
           <button 
             onClick={addLine}
             className="flex items-center gap-3 px-6 py-4 bg-[var(--surface)]/50 hover:bg-[var(--ink)]/50 text-indigo-600 rounded-[32px] text-[10px] font-black uppercase tracking-[0.2em] transition-all mt-6 w-full justify-center border border-dashed border-[var(--line)] group"
-          >
+           aria-label="Append Split Line">
             <Plus size={16} className="group-hover:scale-125 transition-transform" />
             Append Split Line
           </button>
@@ -279,7 +279,7 @@ export default function SplitEditor({
             <button 
               onClick={onClose} 
               className="px-6 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-[var(--text)] transition-all"
-            >
+             aria-label="Cancel">
               Cancel
             </button>
             <button 

@@ -150,13 +150,13 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
             <button 
               onClick={onClose}
               className="flex-1 py-4 bg-[var(--surface)] text-zinc-600 rounded-[32px] font-black hover:bg-zinc-100 transition-all border border-[var(--line)]"
-            >
+             aria-label="Reject">
               Reject
             </button>
             <button 
               onClick={onVerify}
               className="flex-1 py-4 bg-zinc-900 text-white rounded-[32px] font-black hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-2"
-            >
+             aria-label="Commit to Ledger">
               Commit to Ledger
               <ArrowRight size={18} />
             </button>

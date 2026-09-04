@@ -81,7 +81,7 @@ export default function ContextualToolbelt({
                isPrivacyMode && "text-emerald-600 bg-emerald-50"
              )}
              title={isPrivacyMode ? "Toggle visible figures" : "Mask sensitive financials"}
-           >
+            aria-label="isPrivacyMode ?">
              <Lock size={14} />
            </button>
 
@@ -93,7 +93,7 @@ export default function ContextualToolbelt({
                !isConsistent && "text-rose-600 bg-rose-50"
              )}
              title="Recalculate dual equilibrium balance validation"
-           >
+            aria-label="Recalculate dual equilibrium balance validation">
              <RefreshCw size={14} className={cn(!isConsistent && "animate-spin")} />
            </button>
         </div>
@@ -105,7 +105,7 @@ export default function ContextualToolbelt({
               onClick={tool.action}
               className="whitespace-nowrap shrink-0 px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--surface)] hover:bg-[var(--ink)] active:bg-slate-100 border border-[var(--line)] text-slate-700 shadow-sm hover:text-[var(--text)] flex items-center gap-1.5 transition-all group"
               title={tool.tooltip}
-            >
+             aria-label="tool.tooltip">
               <tool.icon size={14} className="text-slate-500 group-hover:text-[var(--text)] transition-colors" />
               <span>{tool.label}</span>
             </button>

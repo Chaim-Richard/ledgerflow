@@ -855,6 +855,7 @@ export default function TransactionGrid() {
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 flex-1 max-w-[900px] mt-2 xl:mt-0">
              <button 
                 onClick={toggleSelectAll}
+                aria-label={selectedIds.size > 0 ? `Selected ${selectedIds.size} transactions` : 'Select all transactions'}
                 className={cn(
                   "hidden xl:flex h-10 px-4 items-center gap-3 rounded-xl border transition-all text-[9px] font-bold uppercase tracking-wider shrink-0 cursor-pointer",
                   selectedIds.size > 0 
@@ -955,6 +956,7 @@ export default function TransactionGrid() {
                   <button 
                     onClick={handleExportCSV}
                     className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:text-[var(--text)] transition-all shrink-0 shadow-3xs cursor-pointer"
+                    aria-label="Export CSV"
                   >
                     <ArrowDownRight size={13} className="rotate-90 shrink-0" />
                     Export
@@ -974,6 +976,7 @@ export default function TransactionGrid() {
             <button 
               onClick={onNewEntry}
               className="h-10 px-5 bg-[var(--brass)] text-black hover:opacity-90 rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap flex items-center gap-2 shadow-xs cursor-pointer"
+              aria-label="Create new entry"
             >
               <Plus size={14} className="stroke-[3px]" />
               New Entry
@@ -1035,7 +1038,8 @@ export default function TransactionGrid() {
             <div className="w-px h-6 bg-slate-200 opacity-50" />
             <button 
               onClick={handleBulkSweep}
-              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-[var(--surface)] border border-indigo-600/20 hover:border-indigo-600 rounded-xl transition-all shadow-sm shrink-0"
+              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-[var(--surface)] border border-indigo-600/20 hover:border-indigo-600 rounded-xl transition-all shadow-sm shrink-0 cursor-pointer"
+              aria-label="Analytical Categorization"
             >
               <Sparkles size={16} className="shrink-0" />
               <span className="hidden sm:inline">Analytical Categorization</span>

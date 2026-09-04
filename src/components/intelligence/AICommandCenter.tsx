@@ -121,14 +121,14 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                 type="submit"
                 disabled={!query.trim() || isProcessing}
                 className="px-8 h-14 bg-indigo-600 text-white rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all active:scale-95 disabled:opacity-20 flex items-center gap-3 shadow-[0_15px_30px_-10px_rgba(79,70,229,0.4)]"
-              >
+               aria-label="Zap action">
                 {isProcessing ? "Processing..." : "Run Analysis"}
                 <Zap size={14} />
               </button>
               <div className="h-10 w-px bg-[var(--surface)]/10 mx-4" />
               <div className="flex items-center gap-6">
-                 <button type="button" className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Compare Period</button>
-                 <button type="button" className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors">Anomaly Sweep</button>
+                 <button type="button" className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors" aria-label="Compare Period">Compare Period</button>
+                 <button type="button" className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors" aria-label="Anomaly Sweep">Anomaly Sweep</button>
               </div>
             </div>
           </form>
@@ -160,7 +160,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                    { label: "Reconcile Missing Metadata", icon: Filter, color: 'text-amber-400' },
                    { label: "Predict Q3 Growth Matrix", icon: BarChart3, color: 'text-emerald-400' }
                  ].map((item, i) => (
-                   <button key={i} className="flex items-center justify-between p-4 bg-[var(--surface)]/5 rounded-[32px] border border-white/5 hover:border-indigo-500/30 hover:bg-[var(--surface)]/10 transition-all group active:scale-95">
+                   <button key={i} className="flex items-center justify-between p-4 bg-[var(--surface)]/5 rounded-[32px] border border-white/5 hover:border-indigo-500/30 hover:bg-[var(--surface)]/10 transition-all group active:scale-95" aria-label="Arrow Right action">
                      <div className="flex items-center gap-4">
                        <item.icon size={16} className={item.color} />
                        <span className="text-[10px] font-black text-white/80 uppercase tracking-widest">{item.label}</span>

@@ -213,7 +213,7 @@ export default function BudgetManager() {
                     <Layers size={14} className="text-slate-500 opacity-30" />
                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest opacity-30">Analytical Snapshot Matrix</span>
                  </div>
-                 <button className="w-10 h-10 bg-[var(--ink)] rounded-xl flex items-center justify-center text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all border border-[var(--line)] group-hover:scale-110">
+                 <button className="w-10 h-10 bg-[var(--ink)] rounded-xl flex items-center justify-center text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all border border-[var(--line)] group-hover:scale-110" aria-label="Arrow Up Right action">
                     <ArrowUpRight size={18} />
                  </button>
               </div>

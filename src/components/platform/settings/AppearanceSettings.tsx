@@ -121,7 +121,7 @@ export default function AppearanceSettings() {
           <button
             onClick={handleSaveRole}
             className="px-5 py-2.5 bg-[var(--brass)] text-black font-bold text-xs rounded-xl shadow-md hover:opacity-90 transition-all flex items-center gap-2 cursor-pointer shrink-0"
-          >
+           aria-label="Confirm Role Rights">
             <KeyRound size={14} />
             <span>Confirm Role Rights</span>
           </button>

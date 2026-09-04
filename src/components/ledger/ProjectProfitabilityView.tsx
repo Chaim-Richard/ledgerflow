@@ -115,7 +115,7 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
                    {showAllChart ? 'Show Top 10' : `Show All (${projectProfitability.length})`}
                  </button>
                )}
-               <button className="w-10 h-10 flex items-center justify-center rounded-full bg-[var(--ink)] text-slate-500 hover:bg-slate-100 transition-all">
+               <button className="w-10 h-10 flex items-center justify-center rounded-full bg-[var(--ink)] text-slate-500 hover:bg-slate-100 transition-all" aria-label="Maximize2 action">
                   <Maximize2 size={16} />
                </button>
              </div>
@@ -174,7 +174,7 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
             <h3 className="text-sm font-black text-[var(--text)] uppercase tracking-widest">Project Ledger Engine</h3>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Real-time vector synchronization</p>
           </div>
-          <button className="px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-[var(--ink)] flex items-center gap-2 transition-all">
+          <button className="px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-[var(--ink)] flex items-center gap-2 transition-all" aria-label="Export Node">
             <Download size={14} /> Export Node
           </button>
         </div>

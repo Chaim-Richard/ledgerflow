@@ -203,7 +203,7 @@ export default function TimeMachine() {
                   {isActive && !isMain && (
                     <button 
                       className="flex-1 bg-[#0047AB] hover:bg-blue-800 text-white py-2 rounded-xl text-xs font-bold transition-colors"
-                    >
+                     aria-label="Merge to Main">
                       Merge to Main
                     </button>
                   )}
@@ -247,7 +247,7 @@ export default function TimeMachine() {
                         Posted {commit.txs.length} transactions
                       </div>
                     </div>
-                    <button className="text-xs font-bold text-[#0047AB] bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors">
+                    <button className="text-xs font-bold text-[#0047AB] bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors" aria-label="Checkout">
                       <RotateCcw size={14} />
                       Checkout
                     </button>
@@ -296,7 +296,7 @@ export default function TimeMachine() {
               <option>Today (Live)</option>
             </select>
           </div>
-          <button className="mt-8 px-8 py-3 bg-[#0047AB] hover:bg-blue-800 text-white font-bold text-sm rounded-xl transition-all shadow-md">
+          <button className="mt-8 px-8 py-3 bg-[#0047AB] hover:bg-blue-800 text-white font-bold text-sm rounded-xl transition-all shadow-md" aria-label="Compute Diff">
             Compute Diff
           </button>
         </div>

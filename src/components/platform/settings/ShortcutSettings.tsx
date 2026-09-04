@@ -74,7 +74,7 @@ export default function ShortcutSettings() {
             onClick={handleAdd}
             disabled={!newKey || !selectedTab}
             className="h-10 px-6 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-          >
+           aria-label="Add">
             <Plus size={16} />
             Add
           </button>

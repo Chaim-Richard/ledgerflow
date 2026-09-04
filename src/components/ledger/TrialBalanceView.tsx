@@ -313,13 +313,13 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
           <button 
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3 py-1 bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] rounded-lg text-[9px] font-bold uppercase tracking-wider hover:text-[var(--text)] transition-all cursor-pointer"
-          >
+           aria-label="CSV">
             <Download size={11} /> CSV
           </button>
           <button 
             onClick={handleExportExcel}
             className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600/10 text-emerald-600 border border-emerald-500/30 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-600/20 transition-all cursor-pointer"
-          >
+           aria-label="Excel">
             <FileSpreadsheet size={11} /> Excel
           </button>
         </div>

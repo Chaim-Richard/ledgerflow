@@ -131,7 +131,7 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
             onClick={runRevaluation} 
             disabled={isRevaluing || !activeWorkspace}
             className="w-full px-4 py-2 bg-[var(--brass)] hover:opacity-90 text-black rounded-lg text-sm font-bold transition-colors cursor-pointer"
-          >
+           aria-label="Action button">
             {isRevaluing ? 'Processing...' : (language === 'he' ? 'הפעל שערוך סוף חודש (API)' : 'Run Month-End Revaluation (API)')}
           </button>
           {revalResult && (

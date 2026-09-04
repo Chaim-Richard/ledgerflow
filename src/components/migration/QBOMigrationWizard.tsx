@@ -476,7 +476,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                     type="button"
                     onClick={handleLoadSampleQBO}
                     className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer"
-                  >
+                   aria-label="Try with Sample Export">
                     <Sparkles size={14} /> Try with Sample Export
                   </button>
                 </div>
@@ -673,7 +673,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
             onClick={handleNext}
             disabled={isProcessing || (step === 1 && parsedRows.length === 0)}
             className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
-          >
+           aria-label="Loader2 action">
             {isProcessing ? (
               <><Loader2 size={16} className="animate-spin" /> Importing Transactions...</>
             ) : (

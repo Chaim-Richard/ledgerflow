@@ -111,7 +111,7 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
             <div className="p-4 md:p-8 border-t border-[var(--line)] bg-[var(--surface)]/30">
                <div className="flex items-center justify-between">
                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">End of Drill-Down View</p>
-                  <button onClick={onClose} className="btn-secondary">Close Report</button>
+                  <button onClick={onClose} className="btn-secondary" aria-label="Close Report">Close Report</button>
                </div>
             </div>
           </motion.div>

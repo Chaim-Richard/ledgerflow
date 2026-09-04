@@ -279,7 +279,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
             <h2 className="text-xl font-black text-[var(--text)] uppercase italic tracking-tighter">Bank Feed Ingestion</h2>
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1 opacity-40">Rule CSV parsing & topological mapping</p>
           </div>
-          <button onClick={onClose} className="w-10 h-10 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-slate-500 transition-all">
+          <button onClick={onClose} className="w-10 h-10 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-slate-500 transition-all" aria-label="Alert Circle action">
             <AlertCircle className="rotate-45" size={20} />
           </button>
         </div>
@@ -414,14 +414,14 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
         </div>
 
         <div className="p-4 md:p-8 border-t border-[var(--line)] flex items-center justify-end gap-5 bg-[var(--ink)]/20">
-          <button onClick={onClose} className="px-8 py-3 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] hover:text-[var(--text)] transition-all">
+          <button onClick={onClose} className="px-8 py-3 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] hover:text-[var(--text)] transition-all" aria-label="Abort Mission">
             Abort Mission
           </button>
           <button 
             onClick={handleConfirm}
             disabled={!selectedIndices.size || isMapping}
             className="px-10 py-3 bg-indigo-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-xs hover:brightness-110 disabled:opacity-30 disabled:grayscale transition-all shadow-xl shadow-ledger-accent/20"
-          >
+           aria-label="Import Vectors">
             Import {selectedIndices.size} Vectors
           </button>
         </div>

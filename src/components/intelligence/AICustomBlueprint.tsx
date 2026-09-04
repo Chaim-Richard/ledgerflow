@@ -197,7 +197,7 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
                     ? "bg-zinc-100 text-zinc-400 cursor-not-allowed" 
                     : "bg-orange-500 text-white hover:bg-orange-600"
                 )}
-              >
+               aria-label="Loader2 action">
                 {isGenerating ? (
                   <>
                     <Loader2 className="animate-spin" size={24} />
@@ -291,7 +291,7 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
                 <button 
                   onClick={handleApply}
                   className="flex-1 py-5 bg-zinc-900 text-white rounded-[32px] font-black hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20 flex items-center justify-center gap-2"
-                >
+                 aria-label="Apply & Save Blueprint">
                   Apply & Save Blueprint
                   <ArrowRight size={20} />
                 </button>

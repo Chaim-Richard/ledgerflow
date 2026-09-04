@@ -384,7 +384,7 @@ const ForensicChart = React.memo(({ transactions, isCompactMode, periodicity = [
                 <Target size={14} />
                 Variance Analysis: Transaction amount exceeds recent historical average for this vendor.
               </div>
-              <button className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:underline">
+              <button className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:underline" aria-label="Audit Record">
                 Audit Record
                 <ArrowRight size={14} />
               </button>

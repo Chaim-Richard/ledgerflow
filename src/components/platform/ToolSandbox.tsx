@@ -282,7 +282,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                          onClick={handleExportCSV}
                          className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
                          title="Download as CSV"
-                       >
+                        aria-label="Download as CSV">
                          <Download size={13} />
                          <span>CSV</span>
                        </button>
@@ -291,7 +291,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                          onClick={handleExportXLSX}
                          className="px-2.5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
                          title="Download as Excel (.xlsx)"
-                       >
+                        aria-label="Download as Excel (.xlsx)">
                          <FileSpreadsheet size={13} />
                          <span>Excel</span>
                        </button>

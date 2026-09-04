@@ -158,7 +158,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'terms' }: Le
             <button
               onClick={onClose}
               className="px-5 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-xl font-bold text-xs transition-colors"
-            >
+             aria-label="Acknowledge & Close">
               Acknowledge & Close
             </button>
           </div>

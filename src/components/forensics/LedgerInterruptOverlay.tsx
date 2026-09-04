@@ -157,7 +157,7 @@ export default function LedgerInterruptOverlay() {
                 <button
                   onClick={handleInspect}
                   className="px-6 py-3 bg-red-500 hover:bg-red-600 active:scale-95 text-white rounded-[32px] text-[11px] font-medium uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-red-500/10"
-                >
+                 aria-label="Deep Audit Diagnosis">
                   <Eye size={16} />
                   Deep Audit Diagnosis
                 </button>
@@ -165,7 +165,7 @@ export default function LedgerInterruptOverlay() {
                 <button
                   onClick={handleSyncBalances}
                   className="px-6 py-3 bg-zinc-900 hover:bg-zinc-800 border border-white/10 active:scale-95 text-zinc-100 rounded-[32px] text-[11px] font-medium uppercase tracking-wider flex items-center gap-2 transition-all"
-                >
+                 aria-label="Trigger Core Re-Sync">
                   <RefreshCw size={16} />
                   Trigger Core Re-Sync
                 </button>
@@ -173,7 +173,7 @@ export default function LedgerInterruptOverlay() {
                 <button
                   onClick={handleOverride}
                   className="px-6 py-3 bg-transparent hover:bg-[var(--surface)]/5 active:scale-95 text-zinc-400 hover:text-white rounded-[32px] text-[11px] font-medium uppercase tracking-wider transition-all"
-                >
+                 aria-label="Safe Bypass">
                   Safe Bypass
                 </button>
               </div>

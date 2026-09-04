@@ -351,7 +351,7 @@ export default function EconomicsMatrixTab({
                 ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                 : "bg-slate-900 text-white hover:bg-indigo-600 hover:shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98]"
             )}
-          >
+           aria-label="Refresh Cw action">
             {isStressRunning ? (
               <>
                 <RefreshCw size={14} className="animate-spin" />
@@ -520,7 +520,7 @@ export default function EconomicsMatrixTab({
             <button 
               onClick={handleRunStressSimulation}
               className="px-5 py-2.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:bg-[var(--ink)] text-[10px] font-mono uppercase tracking-[0.1em] text-slate-700 shadow-sm active:scale-95 transition-all font-black"
-            >
+             aria-label="[Initialize 200+ Enterprise Load Validation]">
               [Initialize 200+ Enterprise Load Validation]
             </button>
           </div>

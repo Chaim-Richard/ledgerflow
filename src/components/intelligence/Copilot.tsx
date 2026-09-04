@@ -163,7 +163,7 @@ export default function Copilot() {
             <button type="button" 
               className="absolute right-3 p-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-[32px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md active:scale-95" 
               disabled={loading || !input.trim()} 
-            >
+             aria-label="Send action">
               <Send size={20} className="ml-0.5" />
             </button>
           </form>

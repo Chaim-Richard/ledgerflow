@@ -341,7 +341,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               type="button"
               onClick={onClose}
               className="px-6 py-3.5 bg-[var(--surface)] border border-[var(--line)] text-zinc-600 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-[var(--ink)] transition-all"
-            >
+             aria-label="Cancel">
               Cancel
             </button>
             <AsyncButton 

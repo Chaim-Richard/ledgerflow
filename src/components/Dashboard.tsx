@@ -282,7 +282,7 @@ export default function Dashboard() {
               onClick={dismissChecklist}
               className="text-[var(--muted)] hover:text-[var(--text)] p-1 rounded-lg hover:bg-[var(--surface)] transition-colors cursor-pointer"
               title="Dismiss checklist"
-            >
+             aria-label="Dismiss checklist">
               <X size={16} />
             </button>
           </div>

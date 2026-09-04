@@ -430,7 +430,7 @@ export default function TransactionEditModal({
                       type="button"
                       onClick={handleAddLine}
                       className="flex items-center gap-1 px-3 py-1 bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-bold rounded-lg transition-all"
-                    >
+                     aria-label="Add Split Vector">
                       <Plus size={12} />
                       <span>Add Split Vector</span>
                     </button>
@@ -689,7 +689,7 @@ export default function TransactionEditModal({
               onClick={onClose}
               type="button"
               className="px-4 py-2 hover:bg-zinc-100 rounded-xl text-xs font-semibold text-zinc-500 hover:text-[var(--text)] transition-colors"
-            >
+             aria-label="Cancel">
               Cancel
             </button>
             <AsyncButton

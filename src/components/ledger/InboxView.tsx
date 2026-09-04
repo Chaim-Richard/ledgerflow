@@ -117,7 +117,7 @@ export default function InboxView() {
               <button 
                 onClick={handleAutoFile}
                 className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2"
-              >
+               aria-label="Auto-file all">
                 <Check size={16} />
                 Auto-file all {highConfidence.length}
               </button>
@@ -159,7 +159,7 @@ export default function InboxView() {
               <button 
                 onClick={handleBatchConfirm}
                 className="bg-[#0047AB] hover:bg-blue-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2"
-              >
+               aria-label="Confirm Batch">
                 <CheckSquare size={16} />
                 Confirm Batch
               </button>

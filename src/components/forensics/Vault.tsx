@@ -482,7 +482,7 @@ export default function Vault() {
                         <button 
                           onClick={handleInjectTransaction}
                           className="w-full mt-6 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-sm"
-                        >
+                         aria-label="Inject & Sync Ledger">
                           <CheckCircle2 size={16} />
                           Inject & Sync Ledger
                         </button>
@@ -494,7 +494,7 @@ export default function Vault() {
                     <button 
                       onClick={handleScanReceipt}
                       disabled={isScanning || !!selectedDoc.linkedTransactionId || !!extractedData}
-                      className="h-14 px-8 bg-slate-900 text-white rounded-[32px] flex-1 font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                      className="h-14 px-8 bg-slate-900 text-white rounded-[32px] flex-1 font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" aria-label=")}">
                       {isScanning ? (
                         <>
                           <Sparkles size={16} className="animate-spin-slow text-emerald-400" />

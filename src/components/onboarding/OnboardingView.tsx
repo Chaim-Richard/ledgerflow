@@ -137,7 +137,7 @@ export default function OnboardingView() {
             onClick={loadDemoData}
             disabled={isDemoLoading}
             className="w-full sm:w-auto px-6 py-3 bg-[var(--elevated)] border border-[var(--line)] text-[var(--text)] font-medium rounded-xl hover:bg-[var(--line)] transition-colors flex items-center justify-center gap-2 cursor-pointer"
-          >
+           aria-label=") : ( <> )}">
             {isDemoLoading ? (
               <span className="flex items-center gap-2"><Sparkles className="w-4 h-4 animate-pulse text-[var(--brass)]" /> {language === 'he' ? 'טוען סביבה...' : 'Loading Matrix...'}</span>
             ) : (

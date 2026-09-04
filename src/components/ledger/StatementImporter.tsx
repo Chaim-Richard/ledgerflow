@@ -375,7 +375,7 @@ export default function StatementImporter({
                     <button 
                       onClick={toggleAll}
                       className="text-xs font-black text-indigo-600 uppercase tracking-widest hover:underline"
-                    >
+                     aria-label="Action button">
                       {parsedTxs.every(t => t.selected) ? 'Deselect All' : 'Select All'}
                     </button>
                     <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">
@@ -494,7 +494,7 @@ export default function StatementImporter({
                 onClick={handleParse}
                 disabled={isParsing || !rawText.trim()}
                 className="px-8 py-3 bg-[var(--brass)] text-black rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-xs uppercase tracking-wider cursor-pointer"
-              >
+               aria-label="Loader2 action">
                 {isParsing ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />}
                 {isParsing ? 'Rule Analysis...' : 'Unstructured Parse'}
               </button>
@@ -502,7 +502,7 @@ export default function StatementImporter({
               <button 
                 onClick={handleMapColumns}
                 className="px-8 py-3 bg-[var(--brass)] text-black rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-md text-xs uppercase tracking-wider cursor-pointer"
-              >
+               aria-label="Process Deterministic Mapping">
                 <ArrowRight size={16} />
                 Process Deterministic Mapping
               </button>

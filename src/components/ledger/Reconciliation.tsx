@@ -341,7 +341,7 @@ export default function Reconciliation() {
                onClick={handleAutoReconcile}
                disabled={isAutoReconciling}
                className="flex items-center gap-2 px-5 h-10 bg-[var(--brass)] text-black font-bold rounded-xl text-[10px] uppercase tracking-wider hover:opacity-90 transition-all shadow-md disabled:opacity-50 cursor-pointer"
-             >
+              aria-label="Auto Align All">
                {isAutoReconciling ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                Auto Align All
              </button>
@@ -883,7 +883,7 @@ export default function Reconciliation() {
                         onClick={executeSelectedBatchMatches} 
                         disabled={isProcessing} 
                         className="bg-emerald-600 hover:bg-emerald-500 cursor-pointer transition-all text-white px-8 h-12 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2.5 disabled:opacity-50"
-                     >
+                      aria-label="Apply Checked Synapses Now ( )">
                         {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />} 
                         Apply Checked Synapses Now ({Object.values(selectedBatchIds).filter(Boolean).length})
                      </button>

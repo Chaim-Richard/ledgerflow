@@ -645,7 +645,7 @@ export default function SystemCommandCenter() {
                           type="submit"
                           disabled={savingUser}
                           className="flex-[2] px-4 py-3 bg-[#0047AB] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#003380] transition-all disabled:opacity-50"
-                        >
+                         aria-label="Action button">
                           {savingUser ? 'Syncing...' : 'Deploy Directives'}
                         </button>
                       </div>
@@ -730,7 +730,7 @@ export default function SystemCommandCenter() {
                   disabled={bulkSyncing || telemetry.tenants.length === 0}
                   onClick={handleBulkApplyBaseline}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-md transition-all flex items-center gap-2 border border-indigo-400/30 disabled:opacity-40"
-                >
+                 aria-label="Sync to All Workspaces">
                   <RefreshCw size={11} className={cn(bulkSyncing && "animate-spin")} />
                   Sync to All Workspaces
                 </button>
@@ -883,7 +883,7 @@ export default function SystemCommandCenter() {
                     type="submit"
                     disabled={updatingGlobal}
                     className="w-full h-11 bg-[#0047AB] hover:bg-[#0047AB]/90 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
-                  >
+                   aria-label="Action button">
                     {updatingGlobal ? (
                       <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
@@ -1570,7 +1570,7 @@ export default function SystemCommandCenter() {
                         type="submit"
                         disabled={savingWorkspace}
                         className="flex-1 h-12 bg-slate-900 text-white hover:bg-[#0047AB] rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2"
-                      >
+                       aria-label="Action button">
                         {savingWorkspace ? (
                           <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         ) : (
@@ -1642,7 +1642,7 @@ export default function SystemCommandCenter() {
                 <button 
                   type="button"
                   className="flex-1 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg bg-[var(--surface)] text-[var(--text)] shadow-3xs"
-                >
+                 aria-label="Latest Events ( )">
                   Latest Events ({liveErrors.length})
                 </button>
                 {simulatedLogs.length > 0 && (

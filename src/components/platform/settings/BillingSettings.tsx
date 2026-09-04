@@ -146,7 +146,7 @@ export default function BillingSettings() {
                 <li className="flex items-center gap-2"><Server size={12} className={!isPro ? 'text-indigo-500' : 'text-slate-400'} /> 10,000 API Compute Credits</li>
               </ul>
 
-              <button disabled className={`w-full py-3 font-bold text-xs uppercase tracking-wider rounded-xl cursor-not-allowed ${!isPro ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+              <button disabled className={`w-full py-3 font-bold text-xs uppercase tracking-wider rounded-xl cursor-not-allowed ${!isPro ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`} aria-label="Current Plan">
                 Current Plan
               </button>
             </div>
@@ -177,7 +177,7 @@ export default function BillingSettings() {
               </ul>
 
               {isPro ? (
-                <button disabled className="w-full py-3 bg-indigo-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-not-allowed flex justify-center items-center gap-2">
+                <button disabled className="w-full py-3 bg-indigo-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-not-allowed flex justify-center items-center gap-2" aria-label="Active Subscription">
                   <CheckCircle2 size={16} /> Active Subscription
                 </button>
               ) : (

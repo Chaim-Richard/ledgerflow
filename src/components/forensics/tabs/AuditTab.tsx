@@ -45,7 +45,7 @@ export default function AuditTab({
           onClick={runDiagnostics}
           disabled={isVerifying}
           className="h-14 px-10 bg-slate-900 text-white rounded-[32px] flex items-center gap-4 font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all group/btn disabled:opacity-50"
-        >
+         aria-label="Refresh Cw action">
           {isVerifying ? <RefreshCw className="animate-spin" size={16} /> : <Activity size={16} />}
           {isVerifying ? 'Hashing ledger values...' : 'Run master verification'}
         </button>
@@ -145,7 +145,7 @@ export default function AuditTab({
                 <button 
                   onClick={handleFixImbalances}
                   className="w-full h-11 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-rose-700 transition-all flex items-center justify-center gap-2"
-                >
+                 aria-label="Balance Ledger Cents">
                   <Wand2 size={12} /> Balance Ledger Cents
                 </button>
               )}
@@ -162,7 +162,7 @@ export default function AuditTab({
                   onClick={handleRepairChain}
                   disabled={isRepairing}
                   className="w-full h-11 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-rose-700 transition-all flex items-center justify-center gap-2"
-                >
+                 aria-label="Re-serialize Timeline Hash Chain">
                   <RefreshCw className={cn("size-3", isRepairing && "animate-spin")} />
                   Re-serialize Timeline Hash Chain
                 </button>

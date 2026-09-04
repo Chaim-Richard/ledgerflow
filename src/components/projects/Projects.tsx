@@ -422,7 +422,7 @@ export default function Projects() {
                   </div>
 
                   <div className="mt-6 pt-4 border-t border-[var(--line)]">
-                    <button className="w-full h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold uppercase tracking-wider text-[9px] transition-all flex items-center justify-center gap-2 shadow-3xs cursor-pointer">
+                    <button className="w-full h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold uppercase tracking-wider text-[9px] transition-all flex items-center justify-center gap-2 shadow-3xs cursor-pointer" aria-label="Generate Brief">
                       <BarChart3 size={12} className="text-slate-300" />
                       Generate Brief
                     </button>

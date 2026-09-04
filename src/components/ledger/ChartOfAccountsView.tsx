@@ -57,7 +57,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
           <td className="p-4 font-mono text-xs text-slate-500" onClick={() => hasChildren && toggleExpand(account.id)}>
             <div className="flex items-center gap-2" style={{ paddingLeft: `${depth * 16}px` }}>
               {hasChildren ? (
-                <button className="p-1 hover:bg-slate-100 rounded transition-colors text-slate-400">
+                <button className="p-1 hover:bg-slate-100 rounded transition-colors text-slate-400" aria-label="Chevron Down action">
                   {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                 </button>
               ) : (

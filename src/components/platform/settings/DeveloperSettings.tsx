@@ -69,7 +69,7 @@ export default function DeveloperSettings() {
                   Register endpoints to receive real-time rule updates and fiscal anomaly detected events.
                 </p>
               </div>
-              <button className="mt-4 px-8 py-3 bg-[var(--brass)] text-black rounded-xl text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-all cursor-pointer">
+              <button className="mt-4 px-8 py-3 bg-[var(--brass)] text-black rounded-xl text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-all cursor-pointer" aria-label="Provision New Endpoint">
                 Provision New Endpoint
               </button>
             </div>
@@ -93,7 +93,7 @@ export default function DeveloperSettings() {
                   <button 
                     onClick={resetLexiconOverrides}
                     className="px-4 py-2 border border-rose-200 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase text-rose-600 tracking-wider flex items-center gap-2 transition-colors self-start md:self-auto"
-                  >
+                   aria-label="Purge Edits">
                     <Trash2 size={12} /> Purge Edits
                   </button>
                 )}
@@ -121,7 +121,7 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
                         onClick={copyLexiconCodeToClipboard}
                         className="absolute top-2 right-2 p-2 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 text-white rounded-lg transition-colors cursor-pointer"
                         title="Copy Config Patch"
-                      >
+                       aria-label="Copy Config Patch">
                         <Copy size={12} />
                       </button>
                     </div>
@@ -173,7 +173,7 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
               <button 
                 onClick={handleOFXExport}
                 className="flex items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:border-[var(--brass-line)] transition-all group cursor-pointer"
-              >
+               aria-label="Bank Interchange (OFX) Intuit / Quicken Compatible">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 bg-[var(--ink)] rounded-lg flex items-center justify-center text-[var(--text)] group-hover:bg-[var(--brass)] group-hover:text-black transition-all">
                     <RefreshCw size={18} />
