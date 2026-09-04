@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { X, Play, CheckCircle2, BarChart3, ListFilter, ArrowUpRight } from 'lucide-react';
+import { X, Play, CheckCircle2, BarChart3, ListFilter, ArrowUpRight, Download, FileSpreadsheet } from 'lucide-react';
 import { LineChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
+import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
@@ -21,7 +22,13 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
   const invoices = useLedgerStore(state => state.invoices || []);
   const bills = useLedgerStore(state => state.bills || []);
   
-  const algorithm = FINANCIAL_ALGORITHMS[toolId] || FINANCIAL_ALGORITHMS['1'];
+  const algorithm = useMemo(() => {
+    if (FINANCIAL_ALGORITHMS[toolId]) return FINANCIAL_ALGORITHMS[toolId];
+    const found = Object.values(FINANCIAL_ALGORITHMS).find(
+      (a: any) => a.id === toolId || a.id?.replace(/_/g, '-') === toolId || a.id?.replace(/-/g, '_') === toolId
+    );
+    return found || FINANCIAL_ALGORITHMS['1'];
+  }, [toolId]);
   
   // Custom user inputs per algorithm
   const [params, setParams] = useState<Record<string, any>>(() => {
@@ -34,6 +41,44 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
   const results = useMemo(() => {
     return algorithm.compute(transactions, accounts, params, { invoices, bills });
   }, [algorithm, transactions, accounts, params, invoices, bills]);
+
+  // Derive dynamic table columns from rows
+  const tableColumns = useMemo(() => {
+    if (!results.rows || results.rows.length === 0) return [];
+    const keys = Object.keys(results.rows[0]).filter(k => k !== 'id' && k !== 'sourceIds');
+    return keys.map(key => ({
+      key,
+      label: key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/_/g, ' ')
+        .replace(/^\w/, c => c.toUpperCase())
+        .trim()
+    }));
+  }, [results.rows]);
+
+  const handleExportXLSX = () => {
+    if (!results.rows || results.rows.length === 0) return;
+    const ws = XLSX.utils.json_to_sheet(results.rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+    const sanitizedName = algorithm.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    XLSX.writeFile(wb, `${sanitizedName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const handleExportCSV = () => {
+    if (!results.rows || results.rows.length === 0) return;
+    const ws = XLSX.utils.json_to_sheet(results.rows);
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const sanitizedName = algorithm.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    link.setAttribute('download', `${sanitizedName}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <motion.div 
@@ -137,6 +182,21 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                              />
                            </div>
                          )}
+
+                         {kind === 'account' && (
+                           <select
+                             value={params[inp.key] || ''}
+                             onChange={e => setParams({...params, [inp.key]: e.target.value})}
+                             className="w-full p-2 border border-[var(--line)] rounded-lg bg-[var(--panel)] text-[var(--text)] text-xs font-medium"
+                           >
+                             <option value="">All Accounts</option>
+                             {accounts.map((acc: any) => (
+                               <option key={acc.id} value={acc.id}>
+                                 {acc.code ? `${acc.code} - ` : ''}{acc.name} ({acc.type})
+                               </option>
+                             ))}
+                           </select>
+                         )}
                       </div>
                     );
                  })}
@@ -209,52 +269,81 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                {/* Drill-down Results Table (if tool outputs rows) */}
                {results.rows && results.rows.length > 0 && (
                  <div className="p-6 bg-slate-900 border border-white/10 rounded-[32px] space-y-4">
-                   <div className="flex items-center justify-between">
+                   <div className="flex flex-wrap items-center justify-between gap-3">
                      <div className="flex items-center gap-2">
                        <ListFilter size={16} className="text-[var(--brass)]" />
                        <h3 className="text-xs font-black uppercase tracking-wider text-[var(--brass)]">
-                         Flagged Record Evidence ({results.rows.length} Items)
+                         Report Output & Details ({results.rows.length} Items)
                        </h3>
                      </div>
-                     {results.sourceTransactionIds && results.sourceTransactionIds.length > 0 && (
+                     <div className="flex items-center gap-2">
                        <button
                          type="button"
-                         onClick={() => {
-                           onClose();
-                           setActiveTab('transactions');
-                         }}
-                         className="text-xs font-bold text-[var(--brass)] hover:underline flex items-center gap-1 cursor-pointer"
+                         onClick={handleExportCSV}
+                         className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                         title="Download as CSV"
                        >
-                         View in Ledger Grid <ArrowUpRight size={14} />
+                         <Download size={13} />
+                         <span>CSV</span>
                        </button>
-                     )}
+                       <button
+                         type="button"
+                         onClick={handleExportXLSX}
+                         className="px-2.5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                         title="Download as Excel (.xlsx)"
+                       >
+                         <FileSpreadsheet size={13} />
+                         <span>Excel</span>
+                       </button>
+                       {results.sourceTransactionIds && results.sourceTransactionIds.length > 0 && (
+                         <button
+                           type="button"
+                           onClick={() => {
+                             onClose();
+                             setActiveTab('transactions');
+                           }}
+                           className="text-xs font-bold text-[var(--brass)] hover:underline flex items-center gap-1 cursor-pointer ml-2"
+                         >
+                           View in Ledger Grid <ArrowUpRight size={14} />
+                         </button>
+                       )}
+                     </div>
                    </div>
 
                    <div className="overflow-x-auto">
                      <table className="w-full text-left text-xs text-slate-300">
                        <thead className="border-b border-white/10 text-[10px] uppercase font-bold text-slate-400">
                          <tr>
-                           <th className="py-2.5 px-3">Classification</th>
-                           <th className="py-2.5 px-3">Primary Date</th>
-                           <th className="py-2.5 px-3">Comparison Date</th>
-                           <th className="py-2.5 px-3">Amount</th>
-                           <th className="py-2.5 px-3">Primary Description</th>
-                           <th className="py-2.5 px-3">Matched Description</th>
+                           {tableColumns.map(col => (
+                             <th key={col.key} className="py-2.5 px-3 whitespace-nowrap">
+                               {col.label}
+                             </th>
+                           ))}
                          </tr>
                        </thead>
                        <tbody className="divide-y divide-white/5 font-mono">
                          {results.rows.map((row: any, idx: number) => (
                            <tr key={row.id || idx} className="hover:bg-white/5 transition-colors">
-                             <td className="py-2.5 px-3">
-                               <span className={row.type === 'Exact' ? 'text-rose-400 font-bold' : 'text-amber-400 font-medium'}>
-                                 {row.type || 'Flagged'}
-                               </span>
-                             </td>
-                             <td className="py-2.5 px-3 whitespace-nowrap">{row.date1 || '-'}</td>
-                             <td className="py-2.5 px-3 whitespace-nowrap">{row.date2 || '-'}</td>
-                             <td className="py-2.5 px-3 font-bold text-white whitespace-nowrap">{row.amount || '-'}</td>
-                             <td className="py-2.5 px-3 text-slate-200 max-w-xs truncate font-sans">{row.description1 || '-'}</td>
-                             <td className="py-2.5 px-3 text-slate-400 max-w-xs truncate font-sans">{row.description2 || '-'}</td>
+                             {tableColumns.map(col => {
+                               const val = row[col.key];
+                               const isFlagType = col.key === 'type';
+                               const isAmountOrVariance = ['amount', 'grossSales', 'taxableSales', 'taxCollected', 'taxDue', 'budget', 'actual', 'variance', 'balance', 'debit', 'credit', 'gross', 'net', 'taxes', 'employerBurden', 'liability'].includes(col.key);
+                               
+                               return (
+                                 <td 
+                                   key={col.key} 
+                                   className={"py-2.5 px-3 whitespace-nowrap " + (isAmountOrVariance ? "font-bold text-white" : "")}
+                                 >
+                                   {isFlagType ? (
+                                     <span className={val === 'Exact' ? 'text-rose-400 font-bold' : 'text-amber-400 font-medium'}>
+                                       {val || 'Flagged'}
+                                     </span>
+                                   ) : (
+                                     val !== undefined && val !== null ? String(val) : '-'
+                                   )}
+                                 </td>
+                               );
+                             })}
                            </tr>
                          ))}
                        </tbody>

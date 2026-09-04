@@ -36,32 +36,54 @@ const CATEGORIES = [
 
 const getMomentGroup = (algo: AlgorithmDefinition): string => {
   const id = algo.id;
-  const tags = algo.tags || [];
-  
-  if (['find-my-error', 'forensics_duplicates', 'forensics_anomaly', 'benfords_law', 'category_consistency', 'policy_violator', 'duplicate-detection', 'anomaly-detection', 'category-consistency'].includes(id) || tags.includes('Audit')) {
-    return "Something's wrong";
-  }
-  
-  if (['working_capital_aging', 'working-capital-aging', 'subset_sum_recon', 'silent_micro_close', 'bank-rec-summary', 'gl-detail', 'continuous-close'].includes(id)) {
-    return "It's month-end";
-  }
+  const tags = (algo.tags || []).map(t => t.toLowerCase());
+  const domain = (algo.domain || '').toLowerCase();
+  const name = (algo.name || '').toLowerCase();
 
-  if (['pareto_concentration', 'pareto-analysis', 'profitability_heatmap', 'profitability-heatmap', 'expense_velocity', 'expense-velocity', 'vendor_concentration', 'vendor-concentration', 'job_profitability', 'subscription_audit', 'saas-unit-economics', 'customer-churn', 'vendor-churn'].includes(id)) {
-    return "Where's the money going";
-  }
-
-  if (['runway_burn', 'cash-runway', 'monte_carlo', 'monte-carlo', 'virtual_tax_envelopes', 'wacc_capital', 'capital-budgeting', 'liquidity_stress', 'liquidity-stress', 'altman-z-score', 'cash-conversion-cycle', 'interest-rate-sensitivity', 'currency-exposure'].includes(id)) {
-    return "Can I afford it";
-  }
-
-  if (['tax_deduction_scanner', 'fixed_asset_amortizer', '1099_totals', 'sales_tax_liability', 'tax-deduction-scanner', 'auto-setup'].includes(id)) {
+  // 1. Tax time
+  if (
+    ['1099-totals', '1099_totals', 'sales-tax-liability', 'sales_tax_liability', 'tax_deduction_scanner', 'tax-deduction-scanner', 'niche_3', 'fixed_asset_amortizer', '3', 'tax_set_aside'].includes(id) ||
+    tags.some(t => t.includes('tax') || t.includes('1099')) ||
+    name.includes('1099') || name.includes('sales tax')
+  ) {
     return "Tax time";
   }
 
-  if (['zero_setup_books', 'rule_induction', 'cross_dimension_autofill', 'tf_idf', 'nl_entry_grammar', 'cross-dimension-inference', 'rule-induction', 'nl-parser', 'shared-transaction-identity'].includes(id)) {
+  // 2. Something's wrong (Forensics, Audit, Anomalies, Duplicates, Policy Violations)
+  if (
+    ['find-my-error', 'find_my_error', 'forensics_duplicates', 'forensics_anomaly', 'forensics_anomaly_detection', 'benfords_law', 'forensics_benford', 'category_consistency', 'forensics_categorization_consistency', 'policy_violator', 'forensics_policy', 'duplicate-detection', 'anomaly-detection', 'category-consistency', 'localized_forensics', 'moat_1'].includes(id) ||
+    domain === 'forensics' ||
+    tags.some(t => t.includes('fraud') || t.includes('outlier') || t.includes('anomaly'))
+  ) {
+    return "Something's wrong";
+  }
+  
+  // 3. It's month-end (Reconciliation, General Ledger, Payroll, Close, Working Capital / Aging)
+  if (
+    ['gl-detail', 'payroll-summary', 'working_capital_aging', 'working-capital-aging', 'ops_2', 'ops_6', 'subset_sum_recon', 'recon_1', 'silent_micro_close', 'bank-rec-summary', 'continuous-close', 'continuous_close', 'moat_2'].includes(id) ||
+    name.includes('general ledger') || name.includes('payroll') || name.includes('close') || name.includes('reconciliation')
+  ) {
+    return "It's month-end";
+  }
+
+  // 4. Can I afford it (Runway, Burn, Budget vs Actual, Monte Carlo, Solvency, Liquidity, CCC, Capital Budgeting)
+  if (
+    ['budget-vs-actual', 'runway_burn', 'cash-runway', 'planning_runway', 'planning_3', 'monte_carlo', 'monte-carlo', 'planning_4', 'wacc_capital', 'capital-budgeting', 'valuation_1', 'liquidity_stress', 'liquidity-stress', 'planning_5', 'altman-z-score', 'valuation_2', 'cash-conversion-cycle', 'ops_1', 'interest-rate-sensitivity', 'treasury_2', 'currency-exposure', 'treasury_1', 'valuation_3', 'niche_1'].includes(id) ||
+    name.includes('budget') || name.includes('runway') || name.includes('solvency') || name.includes('liquidity') || name.includes('wacc')
+  ) {
+    return "Can I afford it";
+  }
+
+  // 5. Set me up (Auto setup, Rule induction, NL entry grammar, Inference, Token weighting, Setup)
+  if (
+    ['zero_setup_books', 'auto_setup', 'ease_1', 'rule_induction', 'ops_3', 'rule-induction', 'cross_dimension_autofill', 'cross-dimension-inference', 'moat_3', 'nl_entry_grammar', 'nl_parser', 'nl-parser', 'ease_2', 'shared-transaction-identity', 'shared_transaction_identity', 'moat_4', 'receipt_capture', 'ease_4', 'tf_idf', 'tf_idf_matching', 'system_1', 'fenwick_time_travel', '1', 'dimensional_ledger', '2'].includes(id) ||
+    domain === 'system' ||
+    name.includes('setup') || name.includes('induction')
+  ) {
     return "Set me up";
   }
 
+  // 6. Where's the money going (Concentration, Profitability, Expense velocity, Churn, Subscriptions)
   return "Where's the money going"; // Default fallback
 };
 
