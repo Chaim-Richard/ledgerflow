@@ -29,13 +29,17 @@ export function useCollaborators() {
 
     // Mark current user as active
     const updatePresence = async () => {
-      await setDoc(userDocRef, {
-        uid: userProfile.uid,
-        name: userProfile.displayName || userProfile.email?.split('@')[0] || 'Anonymous',
-        email: userProfile.email,
-        lastActive: serverTimestamp(),
-        color: userColor
-      }, { merge: true });
+      try {
+        await setDoc(userDocRef, {
+          uid: userProfile.uid,
+          name: userProfile.displayName || userProfile.email?.split('@')[0] || 'Anonymous',
+          email: userProfile.email,
+          lastActive: serverTimestamp(),
+          color: userColor
+        }, { merge: true });
+      } catch (err) {
+        console.warn('Presence update deferred:', err);
+      }
     };
 
     updatePresence();
@@ -60,13 +64,13 @@ export function useCollaborators() {
 
     // Cleanup presence on unmount
     window.addEventListener('beforeunload', () => {
-      deleteDoc(userDocRef);
+      deleteDoc(userDocRef).catch(() => {});
     });
 
     return () => {
       clearInterval(interval);
       unsubscribe();
-      deleteDoc(userDocRef);
+      deleteDoc(userDocRef).catch(() => {});
     };
   }, [userProfile]);
 

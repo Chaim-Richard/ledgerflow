@@ -26,7 +26,7 @@ export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
   ],
   compute: (transactions, accounts, inputs): AlgoResult => {
     const threshold = (inputs['spikeThresholdPct'] ?? 50) / 100;
-    const windowDays = inputs['movingAverageDays'] ?? 7;
+    const windowDays = Math.max(1, inputs['movingAverageDays'] ?? 7);
     
     // 1. Group daily outgoing cash
     const dailyExpenses: Record<string, number> = {};

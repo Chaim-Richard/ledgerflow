@@ -13,7 +13,9 @@ interface ToolSandboxProps {
 
 export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxProps) {
   const transactions = useLedgerStore(state => state.transactions || []);
-  const accounts = useLedgerStore(state => state.accounts || []);
+  const rawAccounts = useLedgerStore(state => state.accounts || []);
+  const computedAccounts = useLedgerStore(state => state.computedAccounts || []);
+  const accounts = computedAccounts.length > 0 ? computedAccounts : rawAccounts;
   const invoices = useLedgerStore(state => state.invoices || []);
   const bills = useLedgerStore(state => state.bills || []);
   
@@ -29,7 +31,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
   // Re-run anytime params change, using REAL user dataset
   const results = useMemo(() => {
     return algorithm.compute(transactions, accounts, params, { invoices, bills });
-  }, [algorithm, transactions, accounts, params]);
+  }, [algorithm, transactions, accounts, params, invoices, bills]);
 
   return (
     <motion.div 

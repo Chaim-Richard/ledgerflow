@@ -97,7 +97,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
        if (cumulativeDCF >= 0 && discountedPayback === -1) {
          // Interpolate exact year fraction
          const prevCumulative = cumulativeDCF - dcf;
-         discountedPayback = i + (Math.abs(prevCumulative) / dcf);
+         discountedPayback = i + (dcf === 0 ? 0 : Math.abs(prevCumulative) / dcf);
        }
     }
 

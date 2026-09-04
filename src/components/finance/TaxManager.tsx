@@ -90,7 +90,7 @@ export default function TaxManager({
       estimatedTax,
       salesTaxCollected
     };
-  }, [selectedYear, accounts, taxRates, includeSE]);
+  }, [transactions, selectedYear, accounts, taxRates, includeSE]);
 
   return (
     <div className="space-y-12 p-4 md:p-6 lg:p-10 w-full max-w-[1550px] mx-auto pb-20 animate-in fade-in duration-500">

@@ -72,7 +72,9 @@ const Sidebar = React.memo(({
   const user = useAuthStore(s => s.user);
   const userProfile = useAuthStore(s => s.userProfile);
   const realProjects = useLedgerStore(s => s.projects);
-  const accounts = useLedgerStore(s => s.accounts);
+  const rawAccounts = useLedgerStore(s => s.accounts);
+  const computedAccounts = useLedgerStore(s => s.computedAccounts);
+  const accounts = computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
 
   const currentTabDef = APP_TABS.find(t => t.id === activeTab);
   const activeGroupId = currentTabDef?.groupId || 'dashboard';
