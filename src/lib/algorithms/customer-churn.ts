@@ -83,7 +83,7 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
       };
     }
 
-    const churnRate = (churnedCustomers / totalCustomers) * 100;
+    const churnRate = totalCustomers === 0 ? 0 : (churnedCustomers / totalCustomers) * 100;
     
     // Sort chart data
     chartData.sort((a, b) => b.DaysSinceActive - a.DaysSinceActive);

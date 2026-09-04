@@ -413,7 +413,7 @@ export default function TransactionGrid() {
       project: Array.from(projectsSet).sort(),
       status: Array.from(statusesSet).sort()
     };
-  }, [safeTransactions]);
+  }, [safeTransactions, accounts]);
 
   const toggleColumnFilter = (column: string, value: string) => {
     const keyMap: Record<string, string> = {
@@ -540,7 +540,7 @@ export default function TransactionGrid() {
       groups[key].count += 1;
     });
     return Object.entries(groups).map(([name, data]) => ({ name, value: data.total / 100, count: data.count })).sort((a, b) => b.value - a.value);
-  }, [smartFilteredTransactions]);
+  }, [smartFilteredTransactions, accounts]);
 
   const [isMobileGrid, setIsMobileGrid] = useState(false);
   const [isTabletGrid, setIsTabletGrid] = useState(false);

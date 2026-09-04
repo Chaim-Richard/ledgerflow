@@ -28,4 +28,9 @@ To ensure complexity does not grow over time, all "tools" are separated into thr
 ## 4. Modifying Types & Schemas
 - `src/types.ts` is the single source of truth for interfaces (e.g., `Transaction`, `ChartAccount`).
 
+## 5. Firestore Collection Architecture & Conventions
+- All core ledger collections (`transactions`, `recurring`, `chartAccounts`, `projects`, `bankLines`, `auditLogs`) are **top-level collections** scoped by a `workspaceId` field.
+- Do NOT write transactions or recurring rules to nested subcollections like `workspaces/{id}/transactions` — top-level queries and security rules expect top-level paths.
+- Base ledger currency defaults to the workspace currency (or USD if unspecified). Always preserve multi-currency properties (`currency`, `exchangeRate`) when generating entries.
+
 By following this exact pattern, we avoid piling complex logic into React components, and maintain a highly modular, plug-and-play toolkit.

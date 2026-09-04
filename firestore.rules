@@ -88,9 +88,9 @@ service cloud.firestore {
     // Specific rules for all tenant-scoped ledger resources to eliminate the general pattern loophole
     match /transactions/{transactionId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if false; // Re-routed to backend server validation layer
-      allow update: if false; // Re-routed to backend server validation layer
-      allow delete: if false; // Re-routed to backend server validation layer
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
     }
 
     match /chartAccounts/{accountId} {

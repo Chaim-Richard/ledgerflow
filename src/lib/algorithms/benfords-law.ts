@@ -61,7 +61,7 @@ export const BENFORDS_LAW_ALGO: AlgorithmDefinition = {
     
     for (let i = 1; i <= 9; i++) {
       const expectedPct = Math.log10(1 + 1 / i) * 100;
-      const actualPct = (digitCounts[i] / totalCount) * 100;
+      const actualPct = totalCount === 0 ? 0 : (digitCounts[i] / totalCount) * 100;
       const deviation = Math.abs(actualPct - expectedPct);
       
       totalMAD += deviation;
