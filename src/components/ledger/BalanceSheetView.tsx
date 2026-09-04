@@ -16,6 +16,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { formatDecimal, cn, getLocalDateISO } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { motion } from 'motion/react';
 import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -128,15 +129,16 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
 
     // Sum transactions before or on cutoff date
     transactions.forEach(tx => {
-      if (tx.deletedAt || tx.date > dateCutoff) return;
+      if (!isPostable(tx) || tx.date > dateCutoff) return;
       tx.lines?.forEach(line => {
         const id = line.accountId;
         const acc = accountMap.get(id) || accountMap.get(line.accountName);
         if (!acc) return;
         const accId = acc.id;
         
+        const amt = lineAmount(line, tx);
         const isDebitNature = acc.type === 'asset' || acc.type === 'expense' || acc.type === 'cost_of_goods';
-        const delta = isDebitNature ? line.amountCents : -line.amountCents;
+        const delta = isDebitNature ? amt : -amt;
 
         if (acc.type === 'asset') assets[accId] = (assets[accId] || 0) + delta;
         else if (acc.type === 'liability') liabilities[accId] = (liabilities[accId] || 0) + delta;

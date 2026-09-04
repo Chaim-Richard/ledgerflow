@@ -13,6 +13,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { formatDecimal, cn, formatCurrency, sanitizeCsvCell, resolveAccountName } from '../../lib/utils';
+import { isPostable } from '../../lib/txFilters';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -80,6 +81,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
     const groups: Record<string, { total: number, items: Transaction[] }> = {};
     
     transactions.forEach(t => {
+      if (!isPostable(t)) return;
       const key = getDimensionValue(t, groupBy);
 
       if (searchTerm && 
@@ -88,8 +90,11 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
         return;
       }
 
+      const txRate = t.exchangeRate || 1;
+      const convertedCents = Math.round(t.totalAmountCents * txRate);
+
       if (!groups[key]) groups[key] = { total: 0, items: [] };
-      groups[key].total += t.totalAmountCents;
+      groups[key].total += convertedCents;
       groups[key].items.push(t);
     });
 
@@ -113,6 +118,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
     const colKeys = new Set<string>();
 
     transactions.forEach(t => {
+      if (!isPostable(t)) return;
       const rKey = getDimensionValue(t, rowDim);
       const cKey = getDimensionValue(t, colDim);
 
@@ -125,24 +131,27 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
       rowKeys.add(rKey);
       colKeys.add(cKey);
 
+      const txRate = t.exchangeRate || 1;
+      const convertedCents = Math.round(t.totalAmountCents * txRate);
+
       if (!cells[rKey]) cells[rKey] = {};
       if (!cells[rKey][cKey]) cells[rKey][cKey] = 0;
-      cells[rKey][cKey] += t.totalAmountCents;
+      cells[rKey][cKey] += convertedCents;
 
       if (!cellItems[rKey]) cellItems[rKey] = {};
       if (!cellItems[rKey][cKey]) cellItems[rKey][cKey] = [];
       cellItems[rKey][cKey].push(t);
       
-      rowTotals[rKey] = (rowTotals[rKey] || 0) + t.totalAmountCents;
+      rowTotals[rKey] = (rowTotals[rKey] || 0) + convertedCents;
       if (!rowItems[rKey]) rowItems[rKey] = [];
       rowItems[rKey].push(t);
 
-      colTotals[cKey] = (colTotals[cKey] || 0) + t.totalAmountCents;
+      colTotals[cKey] = (colTotals[cKey] || 0) + convertedCents;
       if (!colItems[cKey]) colItems[cKey] = [];
       colItems[cKey].push(t);
 
       allItems.push(t);
-      grandTotal += t.totalAmountCents;
+      grandTotal += convertedCents;
     });
 
     const sortedRows = Array.from(rowKeys).sort((a, b) => Math.abs(rowTotals[b]) - Math.abs(rowTotals[a]));

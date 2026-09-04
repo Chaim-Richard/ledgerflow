@@ -2,6 +2,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { parseLocalDate, formatDecimal, formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -90,7 +91,7 @@ export default function CashFlowView() {
         netChange: 0,
       };
 
-      const periodTxs = transactions.filter(t => t.date >= start && t.date <= end);
+      const periodTxs = transactions.filter(t => isPostable(t) && t.date >= start && t.date <= end);
       const cashAccounts = accounts.filter(a => resolveAccountRole(a) === 'cash' || (a.type === 'asset' && a.code?.startsWith('10')));
 
       periodTxs.forEach(tx => {
@@ -102,9 +103,10 @@ export default function CashFlowView() {
           const acc = accounts.find(a => a.id === line.accountId);
           if (!acc || cashAccounts.find(ca => ca.id === acc.id)) return;
 
-          const absoluteAmount = Math.abs(line.amountCents);
+          const cents = lineAmount(line, tx);
+          const absoluteAmount = Math.abs(cents);
           // If transaction increases cash, the offsetting line is negative (credit). If credit is income, it's inflow.
-          const isCashInflow = line.amountCents < 0; 
+          const isCashInflow = cents < 0; 
           const moneyFlow = isCashInflow ? absoluteAmount : -absoluteAmount;
 
           if ((acc.type === 'income' || acc.type === 'revenue') || (acc.type === 'expense' || acc.type === 'cost_of_goods')) {

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { parseLocalDate, cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -9,6 +10,7 @@ import DrillDownModal from '../layout/DrillDownModal';
 
 interface PLData {
   income: { total: number; accounts: Record<string, any> };
+  cogs: { total: number; accounts: Record<string, any> };
   expense: { total: number; accounts: Record<string, any> };
   grossProfit: number;
   netIncome: number;
@@ -107,6 +109,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
   const { data, prevData } = useMemo(() => {
     const defaultData = {
       income: { total: 0, accounts: {} },
+      cogs: { total: 0, accounts: {} },
       expense: { total: 0, accounts: {} },
       grossProfit: 0,
       netIncome: 0
@@ -116,6 +119,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
     const calculatePeriod = (start: string, end: string) => {
       const pl: PLData = {
         income: { total: 0, accounts: {} },
+        cogs: { total: 0, accounts: {} },
         expense: { total: 0, accounts: {} },
         grossProfit: 0,
         netIncome: 0
@@ -124,7 +128,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
       const accountMap = new Map();
       for (let i = 0; i < accounts.length; i++) accountMap.set(accounts[i].id, accounts[i]);
 
-      const filtered = transactions.filter(t => t.date >= start && t.date <= end);
+      const filtered = transactions.filter(t => isPostable(t) && t.date >= start && t.date <= end);
 
       for (let i = 0; i < filtered.length; i++) {
         const t = filtered[i];
@@ -134,15 +138,24 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
           const acc = accountMap.get(l.accountId);
           if (!acc) continue;
 
+          const amt = lineAmount(l, t);
+
           if (acc.type === 'income' || acc.type === 'revenue') {
-            const amount = -(l.amountCents || 0);
+            const amount = -amt;
             pl.income.total += amount;
             if (!pl.income.accounts[acc.id]) {
               pl.income.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0 };
             }
             pl.income.accounts[acc.id].balance += amount;
-          } else if (acc.type === 'expense' || acc.type === 'cost_of_goods') {
-            const amount = (l.amountCents || 0);
+          } else if (acc.type === 'cost_of_goods') {
+            const amount = amt;
+            pl.cogs.total += amount;
+            if (!pl.cogs.accounts[acc.id]) {
+              pl.cogs.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0 };
+            }
+            pl.cogs.accounts[acc.id].balance += amount;
+          } else if (acc.type === 'expense') {
+            const amount = amt;
             pl.expense.total += amount;
             if (!pl.expense.accounts[acc.id]) {
               pl.expense.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0 };
@@ -152,8 +165,8 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
         }
       }
 
-      pl.grossProfit = pl.income.total;
-      pl.netIncome = pl.income.total - pl.expense.total;
+      pl.grossProfit = pl.income.total - pl.cogs.total;
+      pl.netIncome = pl.grossProfit - pl.expense.total;
       return pl;
     };
 

@@ -1,6 +1,7 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction } from '../../types';
 import { parseLocalDate, formatCurrency } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { format, isWithinInterval } from 'date-fns';
 
 export const GL_DETAIL_ALGO: AlgorithmDefinition = {
@@ -38,7 +39,7 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
     }
 
     // 1. Filter by date and account
-    let relevantTxs = transactions.filter(t => t.status !== 'void');
+    let relevantTxs = transactions.filter(t => isPostable(t));
 
     if (startDate && endDate) {
       relevantTxs = relevantTxs.filter(t => {
@@ -68,8 +69,9 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
         const account = accounts.find(a => a.id === e.accountId);
         const isDebitNormal = account ? ['asset', 'expense', 'cost_of_goods'].includes(account.type) : true;
         
-        const debit = e.amountCents > 0 ? e.amountCents : 0;
-        const credit = e.amountCents < 0 ? Math.abs(e.amountCents) : 0;
+        const amt = lineAmount(e, t);
+        const debit = amt > 0 ? amt : 0;
+        const credit = amt < 0 ? Math.abs(amt) : 0;
         
         totalDebits += debit;
         totalCredits += credit;

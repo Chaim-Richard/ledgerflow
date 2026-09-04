@@ -599,9 +599,9 @@ export function useLedgerComputation(
         if (isMatch && keyValues['is']) {
           const isDirective = keyValues['is'];
           if (isDirective === 'pending' && t.status !== 'pending') isMatch = false;
-          else if (isDirective === 'posted' && t.status !== 'posted') isMatch = false;
+          else if (isDirective === 'posted' && t.status !== 'completed' && (t.status as string) !== 'posted') isMatch = false;
           else if (isDirective === 'cleared' && !t.isCleared) isMatch = false;
-          else if (isDirective === 'reconciled' && !t.isCleared) isMatch = false;
+          else if (isDirective === 'reconciled' && t.status !== 'reconciled' && !t.isCleared) isMatch = false;
           else if (isDirective === 'unbalanced') {
             const isUnbalanced = LedgerEngine.auditTransaction(t, accountMap).some((err: string) => err.toLowerCase().includes('unbalanced'));
             if (!isUnbalanced) isMatch = false;
