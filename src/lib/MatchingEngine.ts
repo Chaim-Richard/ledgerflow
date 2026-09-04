@@ -66,7 +66,7 @@ export class MatchingEngine {
     // 3. Dynamic Auto-Learning on Finished Historical Transactions (3x accuracy improvements)
     if (allTransactions && allTransactions.length > 0) {
       allTransactions.forEach(t => {
-        if (!t.deletedAt && t.lines && t.lines.length > 0) {
+        if (!t.deletedAt && t.status !== 'void' && t.lines && t.lines.length > 0) {
           t.lines.forEach(line => {
             if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
               this.bayes.train(t.description, line.accountName);
@@ -118,11 +118,14 @@ export class MatchingEngine {
     const exactCache = this.analyticalCache[lowerDesc];
     if (exactCache) return { accountName: exactCache.accountName, tags: exactCache.tags, dimensions: baseDimensions };
 
-    // LAYER 3: Analytical Memory (Partial Word Match)
-    const partialMatch = Object.entries(this.analyticalCache).find(([key]) => 
-      lowerDesc.includes(key) || key.includes(lowerDesc)
-    );
-    if (partialMatch) return { accountName: partialMatch[1].accountName, tags: partialMatch[1].tags, dimensions: baseDimensions };
+    // LAYER 3: Analytical Memory (Partial Word Match) - Pick longest matching pattern
+    const partialMatches = Object.entries(this.analyticalCache)
+      .filter(([key]) => key.length >= 4 && lowerDesc.includes(key))
+      .sort((a, b) => b[0].length - a[0].length);
+    if (partialMatches.length > 0) {
+      const best = partialMatches[0][1];
+      return { accountName: best.accountName, tags: best.tags, dimensions: baseDimensions };
+    }
     
     // LAYER 4: Analytical Similarity (Jaro-Winkler + Semantic Overlap)
     if (lowerDesc.length > 3) {
@@ -218,12 +221,13 @@ export class MatchingEngine {
       return { accountName: exactCache.accountName, layer: 'Exact Cache Pattern Match' + dimensionReason, confidence: 1.0, dimensions: baseDimensions };
     }
 
-    // LAYER 3: Analytical Memory (Partial Word Match)
-    const partialMatch = Object.entries(this.analyticalCache).find(([key]) => 
-      lowerDesc.includes(key) || key.includes(lowerDesc)
-    );
-    if (partialMatch) {
-      return { accountName: partialMatch[1].accountName, layer: 'Partial Cache Pattern' + dimensionReason, confidence: 0.95, dimensions: baseDimensions };
+    // LAYER 3: Analytical Memory (Partial Word Match) - Pick longest matching pattern
+    const partialMatches = Object.entries(this.analyticalCache)
+      .filter(([key]) => key.length >= 4 && lowerDesc.includes(key))
+      .sort((a, b) => b[0].length - a[0].length);
+    if (partialMatches.length > 0) {
+      const best = partialMatches[0][1];
+      return { accountName: best.accountName, layer: 'Partial Cache Pattern' + dimensionReason, confidence: 0.95, dimensions: baseDimensions };
     }
     
     // LAYER 4: Analytical Similarity (Jaro-Winkler + Semantic Overlap)
@@ -251,9 +255,9 @@ export class MatchingEngine {
     }
 
     // LAYER 5: Statistical Inference (Probabilistic Models)
-    if (lowerDesc.length > 3) {
+    if (lowerDesc.length > 5) {
       const prediction = this.bayes.classify(lowerDesc);
-      if (prediction) {
+      if (prediction && prediction.confidence > this.threshold) {
         return { 
           accountName: prediction.category, 
           layer: 'Bayesian Auto-Learning Model' + dimensionReason, 

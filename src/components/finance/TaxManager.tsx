@@ -76,7 +76,14 @@ export default function TaxManager({
       }
     }
 
-    const estimatedTax = netProfit > 0 ? (netProfit * effectiveTaxRate) + (includeSE ? netProfit * 0.153 : 0) : 0; 
+    let seTax = 0;
+    if (includeSE && netProfit > 0) {
+      const seEarnings = netProfit * 0.9235;
+      seTax = seEarnings * 0.153;
+    }
+    const taxableIncome = Math.max(0, netProfit - (seTax * 0.5));
+    const incomeTax = taxableIncome * effectiveTaxRate;
+    const estimatedTax = netProfit > 0 ? incomeTax + seTax : 0; 
 
     const salesTaxCollected = yearTransactions
       .flatMap(tx => tx.lines)

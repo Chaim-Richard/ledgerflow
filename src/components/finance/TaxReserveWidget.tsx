@@ -56,7 +56,13 @@ export function TaxReserveWidget() {
     // Fallback if no specific bank accounts yet, use cumulative cash flows from transactions
     if (cash === 0) {
       transactions.forEach(t => {
-        cash += t.totalAmountCents || 0;
+        if (t.status === 'void') return;
+        t.lines?.forEach(l => {
+          const acc = accounts.find(a => a.id === l.accountId);
+          if (acc && resolveAccountRole(acc) === 'cash') {
+            cash += l.amountCents;
+          }
+        });
       });
     }
     return Math.max(0, cash);

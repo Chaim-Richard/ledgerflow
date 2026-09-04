@@ -1148,26 +1148,29 @@ export function useTransactionActions() {
   const handleReconcileMatch = async (bankLineId: string, transactionId: string) => {
     setIsSyncing(true);
     try {
-      await runTransaction(db, async (transaction) => {
-        await fetch('/api/v1/transactions/reconcile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
-          body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: [
-            { type: 'updateBankLine', id: bankLineId, data: { status: 'matched', matchedTransactionId: transactionId } },
-            { type: 'updateTransaction', id: transactionId, data: { status: 'reconciled' } }
-          ]})
-        });
+      const res = await fetch('/api/v1/transactions/reconcile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+        body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: [
+          { type: 'updateBankLine', id: bankLineId, data: { status: 'matched', matchedTransactionId: transactionId } },
+          { type: 'updateTransaction', id: transactionId, data: { status: 'reconciled' } }
+        ]})
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Server error on match');
       toast.success('Alignment confirmed and certified.');
-    } catch (error) {
-      toast.error('Matching cycle failed.');
+    } catch (error: any) {
+      toast.error('Matching cycle failed: ' + (error?.message || 'Network error'));
+    } finally {
+      setIsSyncing(false);
     }
   };
 
   const handleReconcileIgnore = async (bankLineId: string) => {
     if (!user || !currentWorkspaceId) return;
+    setIsSyncing(true);
     try {
-      await fetch('/api/v1/transactions/reconcile', {
+      const res = await fetch('/api/v1/transactions/reconcile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
           body: JSON.stringify({ 
@@ -1175,9 +1178,13 @@ export function useTransactionActions() {
             operations: [{ type: 'updateBankLine', id: bankLineId, data: { status: 'ignored' } }] 
           })
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Server error on ignore');
       toast.info('Item ignored');
-    } catch (error) {
-      toast.error('Action failed');
+    } catch (error: any) {
+      toast.error('Action failed: ' + (error?.message || 'Network error'));
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -1185,32 +1192,42 @@ export function useTransactionActions() {
     if (!user || !currentWorkspaceId) return;
     setIsSyncing(true);
     try {
-      await runTransaction(db, async (transaction) => {
-        const txRef = doc(collection(db, 'transactions'));
-        const bankRef = doc(db, 'bankLines', bankLine.id);
-        
-        const targetAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || 'acc_uncategorized';
-        const rawLines = [{ accountId: targetAccId, accountName: 'General Expense', amountCents: bankLine.amountCents }];
-        const balancedLines = balanceTransactionLines(rawLines, bankLine.amountCents);
+      const txId = doc(collection(db, 'transactions')).id;
+      const targetAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id;
+      if (!targetAccId) throw new Error('No valid account node found to target.');
+      
+      const rawLines = [{ accountId: targetAccId, accountName: 'General Expense', amountCents: bankLine.amountCents }];
+      const balancedLines = balanceTransactionLines(rawLines, bankLine.amountCents);
 
-        transaction.set(txRef, {
-          uid: user.uid,
-          workspaceId: currentWorkspaceId,
-          date: bankLine.date,
-          description: bankLine.description,
-          totalAmountCents: Math.abs(bankLine.amountCents),
-          status: 'completed',
-          type: 'actual',
-          createdAt: new Date().toISOString(),
-          lines: balancedLines
-        });
-        
-        transaction.update(bankRef, { status: 'matched', matchedTransactionId: txRef.id });
+      const txData = {
+        id: txId,
+        uid: user.uid,
+        workspaceId: currentWorkspaceId,
+        date: bankLine.date,
+        description: bankLine.description,
+        totalAmountCents: Math.abs(bankLine.amountCents),
+        status: 'reconciled',
+        type: 'actual',
+        createdAt: new Date().toISOString(),
+        lines: balancedLines
+      };
+
+      const res = await fetch('/api/v1/transactions/reconcile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+        body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: [
+          { type: 'createTransaction', id: txId, data: txData },
+          { type: 'updateBankLine', id: bankLine.id, data: { status: 'matched', matchedTransactionId: txId } }
+        ]})
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to synthesize transaction');
       toast.success('Atomic transaction synthesized and reconciled.');
-    } catch (error) {
+    } catch (error: any) {
       handleFirestoreError(error, OperationType.WRITE, 'bankLines/synthesis');
-      toast.error('Synthesis cycle interrupted.');
+      toast.error('Synthesis cycle interrupted: ' + (error?.message || 'Network error'));
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -1430,22 +1447,18 @@ export function useTransactionActions() {
     const loader = toast.loading('Synchronizing re-serialized chain...');
     
     try {
-      const batch = writeBatch(db);
-      const batchRepair: any[] = [];
-      repairedTxs.forEach(tx => {
-        batchRepair.push({ id: tx.id, data: { verification: tx.verification } });
-      });
-      await batch.commit();
+      const batchRepair = repairedTxs.map(tx => ({ id: tx.id, data: { verification: tx.verification } }));
       if (batchRepair.length > 0) {
-         await fetch('/api/v1/transactions/batch', {
+         const res = await fetch('/api/v1/transactions/batch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
             body: JSON.stringify({ workspaceId: currentWorkspaceId, updates: batchRepair })
          });
+         if (!res.ok) throw new Error('Batch repair API rejected updates');
       }
       toast.success('Ledger chain cryptographically certified.', { id: loader });
-    } catch (error) {
-      toast.error('Sync failed.', { id: loader });
+    } catch (error: any) {
+      toast.error('Sync failed: ' + (error?.message || 'Network error'), { id: loader });
     }
   };
 
@@ -1455,110 +1468,123 @@ export function useTransactionActions() {
     const loader = toast.loading('Initiating auto-reconciliation...');
     
     try {
-      await runTransaction(db, async (transaction) => {
-        const qBank = query(
-          collection(db, 'bankLines'), 
-          where('workspaceId', '==', currentWorkspaceId), 
-          where('uid', '==', user.uid),
-          where('status', '==', 'pending')
-        );
-        const qTx = query(
-          collection(db, 'transactions'), 
-          where('workspaceId', '==', currentWorkspaceId), 
-          where('uid', '==', user.uid),
-          where('status', '!=', 'reconciled')
-        );
-        
-        const [bankSnap, txSnap] = await Promise.all([getDocs(qBank), getDocs(qTx)]);
-        const bankLines = bankSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        const transactions = txSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        
-        const minHash = new MinHash(64, user?.uid);
-        let matchCount = 0;
+      const qBank = query(
+        collection(db, 'bankLines'), 
+        where('workspaceId', '==', currentWorkspaceId), 
+        where('uid', '==', user.uid),
+        where('status', '==', 'pending')
+      );
+      const qTx = query(
+        collection(db, 'transactions'), 
+        where('workspaceId', '==', currentWorkspaceId), 
+        where('uid', '==', user.uid)
+      );
+      
+      const [bankSnap, txSnap] = await Promise.all([getDocs(qBank), getDocs(qTx)]);
+      const bankLines = bankSnap.docs.map(d => ({ id: d.id, ...d.data() } as BankStatementLine));
+      const transactions = txSnap.docs
+        .map(d => ({ id: d.id, ...d.data() } as Transaction))
+        .filter(t => t.status !== 'reconciled' && t.status !== 'void');
+      
+      const minHash = new MinHash(64, user?.uid);
+      let matchCount = 0;
 
-        // Pre-calculate signatures for transactions
-        const txSignatures = transactions.map(tx => ({
-          id: tx.id,
-          sig: minHash.createSignature(`${tx.description} ${tx.totalAmountCents}`)
-        }));
+      // Pre-calculate signatures for transactions
+      const txSignatures = transactions.map(tx => ({
+        id: tx.id,
+        sig: minHash.createSignature(`${tx.description} ${tx.totalAmountCents}`)
+      }));
 
-        // 1. Calculate Score Matrix for all possible pairs
-        const sourceItems = bankLines.map(bl => {
-          const scoreMap = new Map<string, number>();
-          const blSig = minHash.createSignature(`${bl.description} ${bl.amountCents}`);
-          const blDescClean = (bl.description || '').toLowerCase().replace(/[^a-z0-9 \u0590-\u05FF]/g, '').trim();
+      // 1. Calculate Score Matrix for all possible pairs
+      const sourceItems = bankLines.map(bl => {
+        const scoreMap = new Map<string, number>();
+        const blSig = minHash.createSignature(`${bl.description} ${bl.amountCents}`);
+        const blDescClean = (bl.description || '').toLowerCase().replace(/[^a-z0-9 \u0590-\u05FF]/g, '').trim();
+        
+        transactions.forEach((tx, idx) => {
+          // Check sign direction:
+          const cashLines = tx.lines?.filter(l => {
+            const acc = accounts.find(a => a.id === l.accountId);
+            return acc && resolveAccountRole(acc) === 'cash';
+          }) || [];
+          const cashDelta = cashLines.reduce((s, l) => s + l.amountCents, 0);
+
+          // If transaction has explicit cash lines, cash movement direction MUST match bank line sign!
+          if (cashDelta !== 0 && Math.sign(cashDelta) !== Math.sign(bl.amountCents)) {
+            return; // Skip incompatible cash directions
+          }
+
+          let score = 0;
           
-          transactions.forEach((tx, idx) => {
-            let score = 0;
-            
-            // Amount Match (Critical)
-            if (Math.abs(bl.amountCents) === Math.abs(tx.totalAmountCents)) {
-              score += 65;
-            }
+          // Amount Match
+          if (Math.abs(bl.amountCents) === Math.abs(tx.totalAmountCents)) {
+            score += 65;
+          }
 
-            // Date Proximity
-            const bDate = parseLocalDate(bl.date).getTime();
-            const tDate = parseLocalDate(tx.date).getTime();
-            const dayDiff = Math.abs(bDate - tDate) / (1000 * 60 * 60 * 24);
-            if (dayDiff <= 7) score += (7 - dayDiff) * 3;
+          // Date Proximity
+          const bDate = parseLocalDate(bl.date).getTime();
+          const tDate = parseLocalDate(tx.date).getTime();
+          const dayDiff = Math.abs(bDate - tDate) / (1000 * 60 * 60 * 24);
+          if (dayDiff <= 7) score += (7 - dayDiff) * 3;
 
-            // Description Similarity (Hybrid: MinHash + Jaro-Winkler)
-            const txDescClean = (tx.description || '').toLowerCase().replace(/[^a-z0-9 \u0590-\u05FF]/g, '').trim();
-            const similarityMinHash = minHash.compare(blSig, txSignatures[idx].sig);
-            const similarityJW = jaroWinklerSimilarity(blDescClean, txDescClean, user?.uid);
-            
-            const combinedSimilarity = (similarityMinHash * 0.3) + (similarityJW * 0.7);
-            
-            if (combinedSimilarity > 0.4) {
-               score += combinedSimilarity * 45;
-            }
+          // Description Similarity (Hybrid: MinHash + Jaro-Winkler)
+          const txDescClean = (tx.description || '').toLowerCase().replace(/[^a-z0-9 \u0590-\u05FF]/g, '').trim();
+          const similarityMinHash = minHash.compare(blSig, txSignatures[idx].sig);
+          const similarityJW = jaroWinklerSimilarity(blDescClean, txDescClean, user?.uid);
+          
+          const combinedSimilarity = (similarityMinHash * 0.3) + (similarityJW * 0.7);
+          
+          if (combinedSimilarity > 0.3) {
+             score += combinedSimilarity * 45;
+          }
 
-            if (score >= 75) {
-              scoreMap.set(tx.id, score);
-            }
-          });
-
-          return { id: bl.id, scoreMap };
+          // Require a minimum combined similarity threshold (0.35) or higher score to prevent false amount-only matches
+          if (score >= 75 && (combinedSimilarity >= 0.35 || dayDiff <= 2)) {
+            scoreMap.set(tx.id, score);
+          }
         });
 
-        // 2. Resolve via Global Optimum Algorithm
-        // Deep memory safety: only include transaction IDs that actually registered a probabilistic score > 0
-        // Prevents generating 50,000x50,000 arrays (2.5B floats = 20GB RAM browser crash)
-        const relevantTargets = new Set<string>();
-        sourceItems.forEach(item => {
-          for (const key of item.scoreMap.keys()) relevantTargets.add(key);
-        });
-        const targetIds = Array.from(relevantTargets);
-        
-        const optimalMatches = findGlobalOptimalMatch(sourceItems, targetIds);
-        const batchReconcile: any[] = [];
-
-        // 3. Apply Matches in Transaction
-        optimalMatches.forEach((txId, blId) => {
-          batchReconcile.push(
-            { type: 'updateBankLine', id: blId, data: { status: 'matched', matchedTransactionId: txId } },
-            { type: 'updateTransaction', id: txId, data: { status: 'reconciled' } }
-          );
-          matchCount++;
-        });
-
-        return { matchCount, batchReconcile };
-      }).then(async ({ matchCount, batchReconcile }) => {
-        if (batchReconcile.length > 0) {
-           await fetch('/api/v1/transactions/reconcile', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
-              body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: batchReconcile })
-           });
-        }
-        if (matchCount && matchCount > 0) {
-          toast.success(`Optimal alignment complete. ${matchCount} nodes synchronized.`, { id: loader });
-        } else {
-          toast.info('Scan complete. No high-confidence matches found.', { id: loader });
-        }
+        return { id: bl.id, scoreMap };
       });
-    } catch (error) {
-      toast.error('Reconciliation cycle interrupted. Atomic state preserved.', { id: loader });
+
+      // 2. Resolve via Global Optimum Algorithm
+      const relevantTargets = new Set<string>();
+      sourceItems.forEach(item => {
+        for (const key of item.scoreMap.keys()) relevantTargets.add(key);
+      });
+      const targetIds = Array.from(relevantTargets);
+      
+      const optimalMatches = findGlobalOptimalMatch(sourceItems, targetIds);
+      const batchReconcile: any[] = [];
+
+      // 3. Apply Matches
+      optimalMatches.forEach((txId, blId) => {
+        batchReconcile.push(
+          { type: 'updateBankLine', id: blId, data: { status: 'matched', matchedTransactionId: txId } },
+          { type: 'updateTransaction', id: txId, data: { status: 'reconciled' } }
+        );
+        matchCount++;
+      });
+
+      if (batchReconcile.length > 0) {
+         const res = await fetch('/api/v1/transactions/reconcile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+            body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: batchReconcile })
+         });
+         const data = await res.json();
+         if (!res.ok) throw new Error(data.error || 'Server rejected auto-reconcile operations');
+      }
+
+      if (matchCount > 0) {
+        toast.success(`Optimal alignment complete. ${matchCount} nodes synchronized.`, { id: loader });
+      } else {
+        toast.info('Scan complete. No high-confidence matches found.', { id: loader });
+      }
+    } catch (error: any) {
+      toast.error('Reconciliation cycle interrupted: ' + (error?.message || 'Error occurred'), { id: loader });
+    } finally {
+      setIsSyncing(false);
     }
   };
 

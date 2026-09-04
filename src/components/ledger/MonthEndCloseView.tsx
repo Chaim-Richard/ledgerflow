@@ -16,10 +16,11 @@ export default function MonthEndCloseView() {
   const bankLines = useLedgerStore(s => s.bankLines) || [];
   const invoices = useLedgerStore(s => s.invoices) || [];
   const bills = useLedgerStore(s => s.bills) || [];
-  const workspaces = useAuthStore(s => s.workspaces) || [];
+  const user = useAuthStore(s => s.user);
+  const userWorkspaces = useAuthStore(s => s.workspaces) || [];
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   
-  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
+  const currentWorkspace = userWorkspaces.find(w => w.id === currentWorkspaceId);
   const currency = currentWorkspace?.currency || 'USD';
 
   // State
@@ -30,34 +31,26 @@ export default function MonthEndCloseView() {
   });
 
   const [isClosing, setIsClosing] = useState(false);
-  const [closedPeriods, setClosedPeriods] = useState<string[]>([]); // In reality, fetch from backend
+  const [closedPeriods, setClosedPeriods] = useState<string[]>([]);
 
   const stats = useMemo(() => {
-    const periodStart = new Date(`${selectedMonth}-01T00:00:00`);
-    const periodEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0, 23, 59, 59);
-
-    const periodTx = transactions.filter(t => {
-      const td = new Date(t.date);
-      return td >= periodStart && td <= periodEnd;
-    });
-
-    const periodBankLines = bankLines.filter(l => {
-      const td = new Date(l.date);
-      return td >= periodStart && td <= periodEnd;
-    });
+    const periodTx = transactions.filter(t => !t.deletedAt && t.status !== 'void' && (t.date || '').startsWith(selectedMonth));
+    const periodBankLines = bankLines.filter(l => (l.date || '').startsWith(selectedMonth));
 
     const uncategorizedCount = periodTx.filter(t => 
-      t.lines.some(l => !l.accountId || l.accountId === 'uncategorized')
+      t.lines?.some(l => !l.accountId || l.accountId === 'uncategorized' || l.accountName === 'Uncategorized')
     ).length;
 
-    const unreconciledBankLines = periodBankLines.filter(l => !l.matchedTransactionId).length;
-    const isReconciled = periodBankLines.length > 0 && unreconciledBankLines === 0;
+    const unreconciledBankLines = periodBankLines.filter(l => l.status === 'pending' || !l.matchedTransactionId).length;
+    // Vacuously reconciled if zero pending lines in bank feed
+    const isReconciled = unreconciledBankLines === 0;
 
-    // Trial balance nets to zero
+    // Trial balance net calculation across cumulative ledger up to month end
     let tbNet = 0;
-    periodTx.forEach(t => {
-      t.lines.forEach(l => {
-        tbNet += l.amountCents;
+    const cumulativeTx = transactions.filter(t => !t.deletedAt && t.status !== 'void' && (t.date || '') <= `${selectedMonth}-31`);
+    cumulativeTx.forEach(t => {
+      t.lines?.forEach(l => {
+        tbNet += l.amountCents || 0;
       });
     });
     const tbIsZero = Math.abs(tbNet) === 0;
@@ -65,12 +58,11 @@ export default function MonthEndCloseView() {
     // Anomalies
     const flaggedTx = periodTx.filter(t => t.status === 'flagged').length;
 
-    // Invoices/Bills over 60 days
-    const oldUnpaid = periodTx.filter(t => 
-      t.type === 'actual' && 
-      (t.status === 'pending' || t.status === 'overdue') &&
-      t.dueDate && new Date(t.dueDate) < new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
-    ).length;
+    // Invoices and Bills over 60 days overdue
+    const aged60Ms = Date.now() - 60 * 24 * 60 * 60 * 1000;
+    const oldInvoices = invoices.filter(inv => inv.status !== 'paid' && inv.status !== 'void' && inv.dueDate && new Date(inv.dueDate).getTime() < aged60Ms).length;
+    const oldBills = bills.filter(b => b.status !== 'paid' && b.status !== 'void' && b.dueDate && new Date(b.dueDate).getTime() < aged60Ms).length;
+    const oldUnpaid = oldInvoices + oldBills;
 
     return {
       uncategorizedCount,
@@ -81,44 +73,44 @@ export default function MonthEndCloseView() {
       oldUnpaid,
       periodBankLinesCount: periodBankLines.length
     };
-  }, [transactions, bankLines, selectedMonth]);
+  }, [transactions, bankLines, invoices, bills, selectedMonth]);
 
   const checklist = [
     {
       id: 'import',
       title: 'Bank Accounts Imported',
-      desc: stats.periodBankLinesCount > 0 ? `Imported ${stats.periodBankLinesCount} lines this period.` : 'No bank activity imported.',
-      status: stats.periodBankLinesCount > 0 ? 'done' : 'pending'
+      desc: stats.periodBankLinesCount > 0 ? `Imported ${stats.periodBankLinesCount} bank lines this period.` : 'No bank feed activity (manual entry mode).',
+      status: 'done' as const
     },
     {
       id: 'uncategorized',
       title: 'Categorize Transactions',
       desc: stats.uncategorizedCount === 0 ? 'All transactions categorized.' : `${stats.uncategorizedCount} transactions missing category.`,
-      status: stats.uncategorizedCount === 0 ? 'done' : 'pending'
+      status: stats.uncategorizedCount === 0 ? ('done' as const) : ('pending' as const)
     },
     {
       id: 'reconcile',
       title: 'Bank Reconciliation',
-      desc: stats.isReconciled ? 'All accounts reconciled.' : `${stats.unreconciledBankLines} lines pending match.`,
-      status: stats.isReconciled ? 'done' : 'pending'
+      desc: stats.periodBankLinesCount === 0 ? 'No bank feed items to reconcile.' : stats.isReconciled ? 'All bank lines reconciled.' : `${stats.unreconciledBankLines} lines pending match.`,
+      status: stats.isReconciled ? ('done' as const) : ('pending' as const)
     },
     {
       id: 'trial-balance',
       title: 'Trial Balance Verification',
       desc: stats.tbIsZero ? 'Debits equal credits (nets to zero).' : 'Trial balance is out of balance!',
-      status: stats.tbIsZero ? 'done' : 'error'
+      status: stats.tbIsZero ? ('done' as const) : ('error' as const)
     },
     {
       id: 'anomalies',
       title: 'Anomaly Resolution',
       desc: stats.flaggedTx === 0 ? 'No unresolved anomalies.' : `${stats.flaggedTx} anomalies need review.`,
-      status: stats.flaggedTx === 0 ? 'done' : 'warning'
+      status: stats.flaggedTx === 0 ? ('done' as const) : ('warning' as const)
     },
     {
       id: 'ar-ap',
       title: 'Aging Review',
-      desc: stats.oldUnpaid === 0 ? 'No severely aged receivables/payables.' : `${stats.oldUnpaid} items > 60 days old.`,
-      status: stats.oldUnpaid === 0 ? 'done' : 'warning'
+      desc: stats.oldUnpaid === 0 ? 'No severely aged receivables or payables.' : `${stats.oldUnpaid} unpaid items > 60 days old.`,
+      status: stats.oldUnpaid === 0 ? ('done' as const) : ('warning' as const)
     }
   ];
 
@@ -130,17 +122,12 @@ export default function MonthEndCloseView() {
     try {
       const toastId = toast.loading('Compiling accountant package workbook...');
       
-      const periodStart = new Date(`${selectedMonth}-01T00:00:00`);
-      const periodEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0, 23, 59, 59);
-
-      const periodTx = transactions.filter(t => {
-        const td = new Date(t.date);
-        return td >= periodStart && td <= periodEnd;
-      });
+      const periodTx = transactions.filter(t => !t.deletedAt && t.status !== 'void' && (t.date || '').startsWith(selectedMonth));
+      const cumulativeTx = transactions.filter(t => !t.deletedAt && t.status !== 'void' && (t.date || '') <= `${selectedMonth}-31`);
 
       const wb = XLSX.utils.book_new();
 
-      // 1. Trial Balance Sheet
+      // 1. Cumulative Trial Balance Sheet
       const accountMap: Record<string, { code: string; name: string; type: string; debitCents: number; creditCents: number }> = {};
       accounts.forEach(a => {
         accountMap[a.id] = {
@@ -152,8 +139,8 @@ export default function MonthEndCloseView() {
         };
       });
 
-      periodTx.forEach(t => {
-        t.lines.forEach(l => {
+      cumulativeTx.forEach(t => {
+        t.lines?.forEach(l => {
           const acc = accountMap[l.accountId] || {
             code: '',
             name: l.accountName || l.accountId || 'Unassigned',
@@ -170,7 +157,7 @@ export default function MonthEndCloseView() {
         });
       });
 
-      const tbHeaders = ['Account Code', 'Account Name', 'Type', 'Period Debits ($)', 'Period Credits ($)', 'Net ($)'];
+      const tbHeaders = ['Account Code', 'Account Name', 'Type', 'Cumulative Debits ($)', 'Cumulative Credits ($)', 'Net Balance ($)'];
       const tbRows = Object.values(accountMap).map(a => [
         a.code,
         a.name,
@@ -234,16 +221,38 @@ export default function MonthEndCloseView() {
     }
   };
 
-  const handleClosePeriod = () => {
+  const handleClosePeriod = async () => {
+    if (!user || !currentWorkspaceId) return;
     setIsClosing(true);
-    setTimeout(() => {
-      setClosedPeriods([...closedPeriods, selectedMonth]);
+    try {
+      const isFiscalYearEnd = selectedMonth.endsWith('-12');
+      const token = await user.getIdToken();
+      const res = await fetch('/api/v1/transactions/close-month', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          workspaceId: currentWorkspaceId,
+          month: selectedMonth,
+          isFiscalYearEnd
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to close period');
+
+      setClosedPeriods(prev => [...prev, selectedMonth]);
+      toast.success(data.message || `Period ${selectedMonth} locked.`);
+    } catch (err: any) {
+      toast.error(`Failed to lock period: ${err?.message || 'Error'}`);
+    } finally {
       setIsClosing(false);
-      toast.success(`Period ${selectedMonth} locked.`);
-    }, 1200);
+    }
   };
 
-  const isClosed = closedPeriods.includes(selectedMonth);
+  const monthEndDate = `${selectedMonth}-28`;
+  const isClosed = (currentWorkspace?.lockDate && currentWorkspace.lockDate >= monthEndDate) || closedPeriods.includes(selectedMonth);
 
   return (
     <div className="h-full flex flex-col bg-[var(--color-ledger-bg)]">
@@ -286,33 +295,33 @@ export default function MonthEndCloseView() {
                   </span>
                 </div>
               </div>
-              {isClosed ? (
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={handleExportAccountantPackage}
-                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg flex items-center gap-2 font-medium hover:bg-slate-50 transition-colors shadow-sm text-sm cursor-pointer"
-                  >
-                    <BookOpen className="w-4 h-4 text-indigo-600" /> Export to Accountant (.xlsx)
-                  </button>
-                  <div className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center gap-2 font-medium">
+              <div className="flex items-center gap-3 flex-wrap">
+                <button 
+                  onClick={handleExportAccountantPackage}
+                  className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg flex items-center gap-2 font-medium hover:bg-slate-50 transition-colors shadow-sm text-sm cursor-pointer"
+                >
+                  <BookOpen className="w-4 h-4 text-indigo-600" /> Export Accountant Package (.xlsx)
+                </button>
+                {isClosed ? (
+                  <div className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg flex items-center gap-2 font-medium text-sm">
                     <Lock className="w-4 h-4" /> Period Locked
                   </div>
-                </div>
-              ) : (
-                <AsyncButton
-                  disabled={!isReady || isClosing}
-                  onClick={handleClosePeriod}
-                  loadingText="Locking Period..."
-                  className={`px-6 py-2.5 rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 ${
-                    isReady 
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200' 
-                      : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  }`}
-                >
-                  Close Month
-                  {!isClosing && <ArrowRight className="w-4 h-4" />}
-                </AsyncButton>
-              )}
+                ) : (
+                  <AsyncButton
+                    disabled={!isReady || isClosing}
+                    onClick={handleClosePeriod}
+                    loadingText="Locking Period..."
+                    className={`px-6 py-2.5 rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 ${
+                      isReady 
+                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200' 
+                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Close Month
+                    {!isClosing && <ArrowRight className="w-4 h-4" />}
+                  </AsyncButton>
+                )}
+              </div>
             </div>
 
             <div className="divide-y divide-[var(--color-ledger-line)]">

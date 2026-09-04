@@ -245,7 +245,7 @@ export interface Invoice {
   dueDate: string;
   tags?: string[];
   metadata?: Record<string, any>;
-  status: 'pending' | 'paid' | 'partially_paid' | 'overdue' | 'sent' | 'draft' | 'approved' | 'rejected' | 'invoiced';
+  status: 'pending' | 'paid' | 'partially_paid' | 'overdue' | 'sent' | 'draft' | 'approved' | 'rejected' | 'invoiced' | 'void';
   type?: 'standard' | 'recurring' | 'progress' | 'estimate' | 'quote' | 'change-order' | 'time-materials'; // For advanced billing workflows
   recurringInterval?: 'monthly' | 'weekly' | 'yearly';
   progressPercentage?: number;
@@ -531,6 +531,7 @@ export interface BankStatementLine {
   id: string;
   uid: string;
   workspaceId: string;
+  accountId?: string;
   date: string;
   description: string;
   amountCents: number;

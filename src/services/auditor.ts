@@ -143,8 +143,8 @@ export const DoubleEntryAuditor = {
         imbalances.push({ id: entry.id, type: 'journal', diff });
       }
 
-      totalDebits += Math.round(entryDebit * 100);
-      totalCredits += Math.round(entryCredit * 100);
+      totalDebits += Math.round(entryDebit);
+      totalCredits += Math.round(entryCredit);
     });
 
     // 3. Construct Merkle Root of Trust

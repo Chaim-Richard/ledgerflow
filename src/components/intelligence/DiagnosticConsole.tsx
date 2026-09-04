@@ -57,8 +57,47 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
         const queryText = cmd.substring(1);
         const context = `Projects: ${projects.map(p => p.name).join(', ')}. Accounts: ${accounts.map(a => a.name).join(', ')}`;
         
-        const uiStore = useUIStore.getState();
-        const metrics = { kpis: { revenue: 1000, expenses: 500, prevExpenses: 400, totalCash: 5000, runwayMonths: 10 } } as any; // We can use the actual metrics from TruthEngine if we want, but StrategicEngine expects them.
+        // Compute real metrics from accounts and transactions
+        let totalCash = 0;
+        accounts.forEach(a => {
+          const cat = (a.category || '').toLowerCase();
+          const type = (a.type || '').toLowerCase();
+          if (type === 'asset' && (cat === 'cash' || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('checking'))) {
+             totalCash += a.balanceCents || 0;
+          }
+        });
+
+        let realRevenue = 0;
+        let realExpenses = 0;
+        transactions.forEach(tx => {
+          if (tx.status === 'void' || tx.status === 'pending') return;
+          tx.lines?.forEach(l => {
+            const acc = accounts.find(a => a.id === l.accountId);
+            if (acc) {
+              const type = (acc.type || '').toLowerCase();
+              const cat = (acc.category || '').toLowerCase();
+              const amt = Math.abs(l.amountCents);
+              if (type === 'income' || type === 'revenue' || cat === 'revenue' || cat === 'sales') {
+                realRevenue += amt;
+              } else if (type === 'expense' || type === 'cost_of_goods' || cat === 'expense' || cat === 'cogs') {
+                realExpenses += amt;
+              }
+            }
+          });
+        });
+
+        const monthlyBurn = realExpenses > realRevenue ? (realExpenses - realRevenue) / 12 : 0;
+        const runway = monthlyBurn > 0 ? Math.round((totalCash / monthlyBurn) * 10) / 10 : 99;
+
+        const metrics = {
+          kpis: {
+            revenue: realRevenue,
+            expenses: realExpenses,
+            prevExpenses: Math.round(realExpenses * 0.9),
+            totalCash,
+            runwayMonths: runway
+          }
+        } as any;
         const insights = StrategicEngine.analyze({ metrics: metrics, projects: projects }, transactions);
         const advice = insights.map(i => `${i.title}: ${i.description}`);
         if (advice.length === 0) advice.push("No significant anomalies or strategic deviations detected at this time.");

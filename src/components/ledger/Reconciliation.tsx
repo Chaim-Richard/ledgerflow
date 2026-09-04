@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { parseLocalDate, cn, formatCurrency, resolveAccountName } from '../../lib/utils';
+import { resolveAccountRole } from '../../lib/accountUtils';
 import { Transaction, BankStatementLine, ChartAccount, User } from '../../types';
 import { format } from 'date-fns';
 import { 
@@ -59,27 +60,38 @@ export default function Reconciliation() {
   
   // Custom filter states
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   
   // Granular checkable state for the smart auto-alignment bulk modal
   const [selectedBatchIds, setSelectedBatchIds] = useState<Record<string, boolean>>({});
 
   const safeBankLines = Array.isArray(bankLines) ? bankLines : [];
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const safeAccounts = Array.isArray(accounts) ? accounts : [];
+
+  const cashAccounts = useMemo(() => safeAccounts.filter(a => resolveAccountRole(a) === 'cash'), [safeAccounts]);
 
   // Active pending statement lines
   const unmatchedBankLines = useMemo(() => {
-    return safeBankLines.filter(line => line.status === 'pending');
-  }, [safeBankLines]);
+    return safeBankLines.filter(line => line.status === 'pending' && (selectedAccountId === 'all' || !line.accountId || line.accountId === selectedAccountId));
+  }, [safeBankLines, selectedAccountId]);
 
   // Synchronized matched statement lines (History)
   const matchedBankLines = useMemo(() => {
-    return safeBankLines.filter(line => line.status === 'matched');
-  }, [safeBankLines]);
+    return safeBankLines.filter(line => line.status === 'matched' && (selectedAccountId === 'all' || !line.accountId || line.accountId === selectedAccountId));
+  }, [safeBankLines, selectedAccountId]);
 
-  // Uncleared internal ledger transactions
+  // Uncleared internal ledger transactions (excluding void and reconciled)
   const unclearedLedgerTransactions = useMemo(() => {
-    return safeTransactions.filter(tx => tx.status !== 'reconciled');
-  }, [safeTransactions]);
+    return safeTransactions.filter(tx => {
+      if (tx.status === 'reconciled' || tx.status === 'void' || tx.deletedAt) return false;
+      if (selectedAccountId !== 'all') {
+        const touchesAccount = tx.lines?.some((l: any) => l.accountId === selectedAccountId);
+        if (!touchesAccount) return false;
+      }
+      return true;
+    });
+  }, [safeTransactions, selectedAccountId]);
 
   // AI/Heuristic dynamic suggestion index maps
   const aiSuggestionsMap = useMemo(() => {
@@ -89,6 +101,18 @@ export default function Reconciliation() {
       const scoreMap = new Map<string, number>();
       
       unclearedLedgerTransactions.forEach(ltx => {
+        // Sign direction validation for cash account movement
+        const cashLines = ltx.lines?.filter((l: any) => {
+          const acc = safeAccounts.find(a => a.id === l.accountId);
+          return acc && resolveAccountRole(acc) === 'cash';
+        }) || [];
+        const cashDelta = cashLines.reduce((s: number, l: any) => s + l.amountCents, 0);
+
+        // Disallow matching positive bank deposits with negative cash outflows and vice versa
+        if (cashDelta !== 0 && Math.sign(cashDelta) !== Math.sign(btx.amountCents)) {
+          return;
+        }
+
         let score = 0;
         
         // Exact Amount Match (High Weight)
@@ -112,7 +136,12 @@ export default function Reconciliation() {
           else if (dayDiff <= 7) score += 8;
         }
 
-        if (score > 115) { // Threshold for considering it a strong match candidate
+        // Require similarity > 0.3 or dateDiff <= 2 to prevent pure amount-only false positives
+        const bDateMs = parseLocalDate(btx.date).getTime();
+        const lDateMs = parseLocalDate(ltx.date).getTime();
+        const dDiff = (!isNaN(bDateMs) && !isNaN(lDateMs)) ? Math.abs(bDateMs - lDateMs) / (1000 * 60 * 60 * 24) : 99;
+
+        if (score > 115 && (descSimilarity >= 0.3 || dDiff <= 2)) { // Threshold for considering it a strong match candidate
           scoreMap.set(ltx.id, score);
         }
       });
@@ -121,7 +150,7 @@ export default function Reconciliation() {
     });
 
     return sourceItems;
-  }, [unmatchedBankLines, unclearedLedgerTransactions, user?.uid, matchToleranceCents]);
+  }, [unmatchedBankLines, unclearedLedgerTransactions, user?.uid, matchToleranceCents, safeAccounts]);
   
   const optimizedMatches = useMemo(() => {
      if (!aiSuggestionsMap || !Array.isArray(aiSuggestionsMap)) return new Map();
@@ -356,23 +385,39 @@ export default function Reconciliation() {
 
       {/* Verification Filter & Info Stripe */}
       <div className="bg-[var(--ink)] border-b border-[var(--line)] px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-          <Info size={14} className="text-indigo-500" />
+        <div className="flex items-center gap-3 text-xs text-[var(--muted)] font-medium">
+          <Info size={14} className="text-[var(--brass)] shrink-0" />
           <span>
             {viewMode === 'pending' 
               ? "Select an isolated bank statement entry and trace its corresponding entry inside the internal ledger." 
               : "Review completed configurations. Click any row to view full structural linkages or break erroneous alignment vectors."}
           </span>
         </div>
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-          <input
-            type="text"
-            placeholder="Quick search amounts or labels..."
-            className="w-full h-9 pl-9 pr-4 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500 transition-all"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
+        <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
+          {cashAccounts.length > 0 && (
+            <select
+              value={selectedAccountId}
+              onChange={e => setSelectedAccountId(e.target.value)}
+              className="h-9 px-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-xs font-semibold text-[var(--text)] outline-none focus:border-[var(--brass)] transition-all cursor-pointer"
+            >
+              <option value="all">All Cash Accounts ({cashAccounts.length})</option>
+              {cashAccounts.map(acc => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.code ? `${acc.code} - ${acc.name}` : acc.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={14} />
+            <input
+              type="text"
+              placeholder="Quick search amounts or labels..."
+              className="w-full h-9 pl-9 pr-4 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-xs font-semibold text-[var(--text)] outline-none focus:border-[var(--brass)] transition-all"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 

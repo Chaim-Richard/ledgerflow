@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
 import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
+import { resolveAccountRole } from '../../lib/accountUtils';
 import { format, differenceInDays, addDays, startOfDay } from 'date-fns';
 
 import BillModal from './BillModal';
@@ -50,12 +51,12 @@ export default function Purchases() {
     // Transaction-based AP matching
     if (transactions) {
       transactions.forEach(tx => {
-        if (tx.status === 'void' || tx.status === 'reconciled') return;
+        if (tx.status === 'void') return;
 
         let apAmount = 0;
         tx.lines.forEach(l => {
           const acc = accounts?.find(a => a.id === l.accountId);
-          if (acc && acc.type === 'liability' && acc.name.toLowerCase().includes('payable')) {
+          if (acc && (resolveAccountRole(acc) === 'ap' || (acc.type === 'liability' && acc.name.toLowerCase().includes('payable')))) {
             apAmount += Math.abs(l.amountCents);
           }
         });
@@ -90,7 +91,7 @@ export default function Purchases() {
     };
 
     bills.forEach(bill => {
-      if (bill.status === 'paid') return;
+      if (bill.status === 'paid' || bill.status === 'void') return;
       
       const dueDate = parseLocalDate(bill.dueDate);
       const daysDiff = differenceInDays(dueDate, today);

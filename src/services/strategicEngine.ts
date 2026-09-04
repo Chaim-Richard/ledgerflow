@@ -188,8 +188,14 @@ export class StrategicEngine {
     }
 
     // 7. Flow Variance Analysis (Volatility Index)
-    const dailyInflow = transactions.filter(t => t.totalAmountCents > 0).length;
-    const dailyOutflow = transactions.filter(t => t.totalAmountCents < 0).length;
+    const isExpenseTx = (t: Transaction) => t.lines?.some(l => {
+      const name = (l.accountName || '').toLowerCase();
+      return name.includes('expense') || name.includes('cogs') || name.includes('cost') || name.includes('payable') || name.includes('vendor') || name.includes('purchase');
+    });
+    const isIncomeTx = (t: Transaction) => !isExpenseTx(t);
+
+    const dailyInflow = transactions.filter(t => isIncomeTx(t)).length;
+    const dailyOutflow = transactions.filter(t => isExpenseTx(t)).length;
     if (dailyOutflow > dailyInflow * 3) {
        insights.push({
           type: "efficiency",
@@ -417,7 +423,11 @@ export class StrategicEngine {
     
     transactions.forEach(t => {
       const month = t.date.substring(0, 7);
-      if (t.totalAmountCents > 0) {
+      const isExpense = t.lines?.some(l => {
+        const name = (l.accountName || '').toLowerCase();
+        return name.includes('expense') || name.includes('cogs') || name.includes('cost') || name.includes('payable') || name.includes('vendor') || name.includes('purchase');
+      });
+      if (!isExpense) {
         monthlyInflow[month] = (monthlyInflow[month] || 0) + (t.totalAmountCents / 100);
       } else {
         monthlyOutflow[month] = (monthlyOutflow[month] || 0) + (Math.abs(t.totalAmountCents) / 100);
@@ -478,7 +488,13 @@ export class StrategicEngine {
     const totalInventoryValue = items.reduce((sum, item) => sum + (item.unitCostCents * (item.quantityAtHand || 0)), 0) || 1;
     
     // 1. UNIT ECONOMICS LEARNING POOL
-    const expenses = transactions.filter(t => t.totalAmountCents < 0);
+    const isExpenseTx = (t: Transaction) => t.lines?.some(l => {
+      const name = (l.accountName || '').toLowerCase();
+      return name.includes('expense') || name.includes('cogs') || name.includes('cost') || name.includes('payable') || name.includes('vendor') || name.includes('purchase');
+    });
+    const isIncomeTx = (t: Transaction) => !isExpenseTx(t);
+
+    const expenses = transactions.filter(t => isExpenseTx(t));
     const absOverhead = Math.abs(expenses.reduce((sum, t) => sum + t.totalAmountCents, 0));
 
     // 2. TEMPORAL VENDOR SOURCING GRAPH (Self-learning from history)
@@ -527,7 +543,7 @@ export class StrategicEngine {
         return matchesSku || matchesName;
       });
       
-      const sales = itemTransactions.filter(t => t.totalAmountCents > 0);
+      const sales = itemTransactions.filter(t => isIncomeTx(t));
       const salesCount = sales.length;
       const totalOps = itemTransactions.length;
 
@@ -569,7 +585,7 @@ export class StrategicEngine {
         : 0;
 
       // ANOMALY ENGINE & CONVERGENCE
-      const purchasePrices = itemTransactions.filter(t => t.totalAmountCents < 0).map(t => Math.abs(t.totalAmountCents));
+      const purchasePrices = itemTransactions.filter(t => isExpenseTx(t)).map(t => Math.abs(t.totalAmountCents));
       let volatility = 0;
       let convergence = 0; // 1 = perfectly stable prices across sources
       

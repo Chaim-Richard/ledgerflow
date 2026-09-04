@@ -742,6 +742,94 @@ transactionRouter.post('/close-year', async (req, res) => {
   }
 });
 
+transactionRouter.post('/close-month', async (req, res) => {
+  try {
+    const { workspaceId, month, isFiscalYearEnd } = req.body;
+    if (!workspaceId || !month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({ error: 'Missing or invalid parameters: workspaceId and month (YYYY-MM) required.' });
+    }
+
+    const db = getFirestore();
+    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+    if (!wsDoc.exists) {
+      return res.status(404).json({ error: 'Workspace not found.' });
+    }
+
+    const user = (req as any).user;
+    const wsData = wsDoc.data();
+    const isOwnerOrAdmin = wsData?.uid === user.uid || wsData?.members?.includes(user.uid) || user.admin;
+    if (!isOwnerOrAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient permissions to close period.' });
+    }
+
+    // Calculate end date of month
+    const [yearStr, monthStr] = month.split('-');
+    const year = parseInt(yearStr, 10);
+    const monthNum = parseInt(monthStr, 10);
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    const closingDate = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
+
+    const batch = db.batch();
+    let closingTxResult: any = null;
+
+    if (isFiscalYearEnd) {
+      const accountsSnap = await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get();
+      const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+
+      const txSnap = await db.collection('transactions')
+        .where('workspaceId', '==', workspaceId)
+        .where('date', '<=', closingDate)
+        .get();
+      const transactions = txSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+
+      closingTxResult = ClosingEntryEngine.generateClosingJournalEntry({
+        workspaceId,
+        uid: user.uid,
+        closingDate,
+        accounts,
+        transactions,
+        baseCurrency: wsData?.currency || 'USD'
+      });
+
+      const txRef = db.collection('transactions').doc(closingTxResult.closingTransaction.id);
+      batch.set(txRef, closingTxResult.closingTransaction);
+
+      if (closingTxResult.generatedRetainedEarningsAccount) {
+        const accRef = db.collection('chartAccounts').doc(closingTxResult.generatedRetainedEarningsAccount.id);
+        batch.set(accRef, closingTxResult.generatedRetainedEarningsAccount);
+      }
+    }
+
+    batch.update(db.collection('workspaces').doc(workspaceId), {
+      lockDate: closingDate,
+      updatedAt: new Date().toISOString()
+    });
+
+    const auditRef = db.collection('auditLogs').doc();
+    batch.set(auditRef, {
+      workspaceId,
+      actorUid: user.uid,
+      actorEmail: user.email || 'authenticated-user',
+      action: 'MONTH_END_CLOSE',
+      details: `Month-end closed for ${month} through ${closingDate}.${isFiscalYearEnd ? ' Fiscal year end closing entry generated.' : ''}`,
+      timestamp: FieldValue.serverTimestamp()
+    });
+
+    await batch.commit();
+
+    res.json({
+      status: 'ok',
+      month,
+      closingDate,
+      lockDate: closingDate,
+      message: `Period ${month} locked through ${closingDate}.`,
+      closingTransaction: closingTxResult?.closingTransaction || null
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 transactionRouter.post('/reset', async (req, res) => {
   try {
     const { workspaceId, confirmReset } = req.body;

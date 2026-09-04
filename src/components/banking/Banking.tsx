@@ -34,8 +34,10 @@ export default function Banking() {
       const data = await res.json();
       if (res.ok && data.success) {
         toast.success(`Synchronized ${accountName} with bank feed.`);
+      } else if (res.ok) {
+        toast.info(data.message || 'Bank feed synced. No new transactions.');
       } else {
-        toast.info(`Bank feed synced. ${data.message || 'No new transactions.'}`);
+        toast.error(`Bank feed error: ${data.error || data.message || 'Failed to sync with institution.'}`);
       }
     } catch (err) {
       console.error('Error syncing bank feed:', err);

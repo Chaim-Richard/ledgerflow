@@ -22,6 +22,7 @@ import {
   Check
 } from 'lucide-react';
 import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
+import { resolveAccountRole } from '../../lib/accountUtils';
 import { format, differenceInDays } from 'date-fns';
 import { motion } from 'motion/react';
 
@@ -50,8 +51,8 @@ export default function Sales() {
     
     // 1. Unpaid invoices
     (invoices || []).forEach(inv => {
-      if (inv.customerId && inv.status !== 'paid' && inv.status !== 'rejected') {
-        map[inv.customerId] = (map[inv.customerId] || 0) + (inv.amountCents || 0);
+      if (inv.customerId && inv.status !== 'paid' && inv.status !== 'rejected' && inv.status !== 'void') {
+        map[inv.customerId] = (map[inv.customerId] || 0) + (inv.amountCents || inv.totalCents || 0);
       }
     });
 
@@ -59,13 +60,13 @@ export default function Sales() {
     // Add pending AR lines that map to this customer by name
     if (transactions) {
       transactions.forEach(tx => {
-        if (tx.status === 'void' || tx.status === 'reconciled') return;
+        if (tx.status === 'void') return;
         
         let arAmount = 0;
         tx.lines.forEach(l => {
           const acc = accounts?.find(a => a.id === l.accountId);
           // If it's an AR account
-          if (acc && acc.type === 'asset' && acc.name.toLowerCase().includes('receivable')) {
+          if (acc && (resolveAccountRole(acc) === 'ar' || (acc.type === 'asset' && acc.name.toLowerCase().includes('receivable')))) {
             arAmount += l.amountCents; // Positive is debit (increase AR)
           }
         });
@@ -118,13 +119,13 @@ export default function Sales() {
   const agingBuckets = useMemo(() => {
     const now = new Date();
     return {
-      overdue: invoices.filter(i => i.status === 'overdue').reduce((sum, i) => sum + (i.totalCents || 0), 0),
+      overdue: invoices.filter(i => i.status !== 'paid' && i.status !== 'void' && i.status !== 'rejected' && (i.status === 'overdue' || parseLocalDate(i.dueDate) < now)).reduce((sum, i) => sum + (i.totalCents || i.amountCents || 0), 0),
       dueSoon: invoices.filter(i => {
         const dueDate = parseLocalDate(i.dueDate);
         const diff = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
         return (i.status === 'sent' || i.status === 'pending') && diff >= 0 && diff <= 30;
-      }).reduce((sum, i) => sum + (i.totalCents || 0), 0),
-      total: invoices.filter(i => i.status !== 'paid').reduce((sum, i) => sum + (i.totalCents || 0), 0)
+      }).reduce((sum, i) => sum + (i.totalCents || i.amountCents || 0), 0),
+      total: invoices.filter(i => i.status !== 'paid' && i.status !== 'void' && i.status !== 'rejected').reduce((sum, i) => sum + (i.totalCents || i.amountCents || 0), 0)
     };
   }, [invoices]);
 
@@ -145,6 +146,7 @@ export default function Sales() {
       case 'pending':
         return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'overdue': return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'void': return 'bg-zinc-100 text-zinc-500 border-zinc-200 line-through';
       default: return 'bg-[var(--ink)] text-zinc-650 border-[var(--line)]';
     }
   };
