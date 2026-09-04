@@ -1,5 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
-import { ChartAccount, Transaction } from '../../types';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
   id: 'treasury_1',
@@ -13,23 +13,23 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
   compute: (transactions, accounts, inputs): AlgoResult => {
     const shockPct = (inputs.shockPct ?? 10) / 100;
     
-    // Attempt to identify FX transactions. 
-    // In our simplified ledger, we can check for lines with custom exchange rates or accounts with a specific currency tag.
     const fxBalances: Record<string, number> = {};
     let totalBaseExposure = 0;
 
     transactions.forEach(tx => {
-       tx.lines.forEach(line => {
-          // If transaction or line has an exchange rate !== 1, it's an FX transaction
-          const isFx = (tx as any).exchangeRate && (tx as any).exchangeRate !== 1;
-          const currencyCode = (tx as any).currency || 'USD'; // Assuming base is USD
-          
-          if (isFx && currencyCode !== 'USD') {
+       if (!isPostable(tx)) return;
+
+       const rate = tx.exchangeRate && tx.exchangeRate !== 1 ? tx.exchangeRate : 1;
+       const currencyCode = (tx as any).currency || (rate !== 1 ? 'FX' : 'USD');
+       
+       if (rate !== 1 || (currencyCode !== 'USD' && currencyCode !== 'FX')) {
+          tx.lines.forEach(line => {
+             const baseAmt = Math.round(Math.abs(lineAmount(line, tx)) * rate);
              if (!fxBalances[currencyCode]) fxBalances[currencyCode] = 0;
-             fxBalances[currencyCode] += line.amountCents; // Raw foreign amount if known, or base equivalent
-             totalBaseExposure += Math.abs(line.amountCents);
-          }
-       });
+             fxBalances[currencyCode] += baseAmt;
+             totalBaseExposure += baseAmt;
+          });
+       }
     });
 
     if (totalBaseExposure === 0) {

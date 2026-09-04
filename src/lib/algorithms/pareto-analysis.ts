@@ -1,4 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
   id: 'intelligence_pareto',
@@ -24,12 +25,37 @@ export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
     let totalVolume = 0;
     
     transactions.forEach(tx => {
-      // Very basic categorization based on amount polarity for simplicity.
-      // A more robust system would map against accounts.
-      if (isRevenue && tx.totalAmountCents < 0) return; // Skip expenses if analyzing revenue
-      if (!isRevenue && tx.totalAmountCents > 0) return; // Skip revenue if analyzing expenses
-      
-      const absAmount = Math.abs(tx.totalAmountCents);
+      if (!isPostable(tx)) return;
+
+      // Classify based on account types/categories
+      const isMatchingTx = tx.lines.some(l => {
+        const acc = accounts.find(a => a.id === l.accountId);
+        if (!acc) return false;
+        const catLower = (acc.category || '').toLowerCase();
+        const typeLower = (acc.type || '').toLowerCase();
+        if (isRevenue) {
+          return typeLower === 'income' || typeLower === 'revenue' || catLower === 'revenue' || catLower === 'sales';
+        } else {
+          return typeLower === 'expense' || typeLower === 'cost_of_goods' || catLower === 'cogs' || catLower === 'expense' || catLower === 'direct costs' || catLower === 'operations';
+        }
+      });
+
+      if (!isMatchingTx) return;
+
+      const rate = tx.exchangeRate || 1;
+      const relevantCents = tx.lines.filter(l => {
+        const acc = accounts.find(a => a.id === l.accountId);
+        if (!acc) return false;
+        const catLower = (acc.category || '').toLowerCase();
+        const typeLower = (acc.type || '').toLowerCase();
+        if (isRevenue) {
+          return typeLower === 'income' || typeLower === 'revenue' || catLower === 'revenue' || catLower === 'sales';
+        } else {
+          return typeLower === 'expense' || typeLower === 'cost_of_goods' || catLower === 'cogs' || catLower === 'expense' || catLower === 'direct costs';
+        }
+      }).reduce((sum, l) => sum + Math.abs(lineAmount(l, tx)), 0) || Math.abs(tx.totalAmountCents);
+
+      const absAmount = Math.round(relevantCents * rate);
       if (absAmount === 0) return;
       
       const name = (tx.payee || tx.description || 'Unknown').trim();
@@ -43,9 +69,9 @@ export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
     // Sort entities by volume (descending)
     const sortedEntities = Object.keys(entityVolume).sort((a, b) => entityVolume[b] - entityVolume[a]);
     
-    if (sortedEntities.length === 0) {
+    if (sortedEntities.length === 0 || totalVolume === 0) {
       return {
-        metrics: [],
+        metrics: [{ label: 'Status', value: 'No Data' }],
         charts: [],
         insights: ['No relevant transactions found for the selected analysis mode.']
       };
@@ -63,7 +89,7 @@ export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
       const volume = entityVolume[entity];
       cumulativeVolume += volume;
       
-      const cumulativePct = (cumulativeVolume / totalVolume) * 100;
+      const cumulativePct = totalVolume > 0 ? (cumulativeVolume / totalVolume) * 100 : 0;
       
       if (cumulativeVolume <= target80 || entitiesTo80 === 0) { // Catch the one that crosses the line
          if (cumulativeVolume >= target80 && entitiesTo80 === 0) {
@@ -86,7 +112,7 @@ export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
     // Prevent zero if target crossed on first item
     if (entitiesTo80 === 0 && sortedEntities.length > 0) entitiesTo80 = 1;
     
-    const concentrationPct = (entitiesTo80 / sortedEntities.length) * 100;
+    const concentrationPct = sortedEntities.length > 0 ? (entitiesTo80 / sortedEntities.length) * 100 : 0;
     
     const insights = [];
     insights.push(`Analyzed ${sortedEntities.length} unique entities generating $${(totalVolume / 100).toLocaleString()}.`);
@@ -119,3 +145,4 @@ export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
     };
   }
 };
+

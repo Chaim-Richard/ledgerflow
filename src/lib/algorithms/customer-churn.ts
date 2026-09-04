@@ -1,5 +1,6 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { parseLocalDate } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
   id: 'intelligence_6',
@@ -13,20 +14,24 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
   compute: (transactions, accounts, inputs): AlgoResult => {
     const thresholdDays = inputs.churnThresholdDays ?? 90;
     
-    // Simplistic identification of customers from transaction data based on income/revenue
+    // Identification of customers from transaction data based on income/revenue
     const customerLastSeen: Record<string, number> = {};
     const customerValue: Record<string, number> = {};
     
     transactions.forEach(tx => {
-       if (tx.status === 'void' || tx.status === 'pending') return;
+       if (!isPostable(tx)) return;
        
        let isRevenue = false;
        let txAmount = 0;
        tx.lines.forEach(l => {
           const acc = accounts.find(a => a.id === l.accountId);
-          if (acc && (acc.type === 'income' || acc.type === 'revenue' || acc.category === 'revenue')) {
-             isRevenue = true;
-             txAmount += Math.abs(l.amountCents);
+          if (acc) {
+             const typeLower = (acc.type || '').toLowerCase();
+             const catLower = (acc.category || '').toLowerCase();
+             if (typeLower === 'income' || typeLower === 'revenue' || catLower === 'revenue' || catLower === 'sales') {
+                isRevenue = true;
+                txAmount += Math.abs(lineAmount(l, tx));
+             }
           }
        });
 
@@ -38,7 +43,7 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
              customerLastSeen[payee] = txDate;
           }
           if (!customerValue[payee]) customerValue[payee] = 0;
-          customerValue[payee] += txAmount;
+          customerValue[payee] += Math.round(txAmount * (tx.exchangeRate || 1));
        }
     });
 
