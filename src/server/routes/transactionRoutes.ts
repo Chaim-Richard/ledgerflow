@@ -122,8 +122,24 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
     }
 
     const wsDoc = await db.collection('workspaces').doc(transaction.workspaceId).get();
-    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid))) {
+    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
       return res.status(403).json({ error: 'Not a member' });
+    }
+    const wsData = wsDoc.data();
+
+    if (wsData?.lockDate && transaction.date && transaction.date <= wsData.lockDate) {
+      return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
+    }
+
+    const accountIds = Array.from(new Set<string>((transaction.lines || []).map((l: any) => String(l.accountId)).filter(Boolean)));
+    if (accountIds.length > 0) {
+      const accRefs = accountIds.map((id: string) => db.collection('chartAccounts').doc(id));
+      const accSnaps = await db.getAll(...accRefs);
+      for (const snap of accSnaps) {
+        if (!snap.exists || snap.data()?.workspaceId !== transaction.workspaceId) {
+          return res.status(400).json({ error: `Account ${snap.id} does not exist or does not belong to authorized workspace.` });
+        }
+      }
     }
     
     DoubleEntryValidator.validateJournalEntry(transaction);
@@ -202,12 +218,14 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
     
     // For partial updates (like flagging or voiding)
     if (partialUpdate) {
+      let authoritativeWsId = '';
       await db.runTransaction(async (t: any) => {
          const txRef = db.collection('transactions').doc(id);
          const doc = await t.get(txRef);
          if (!doc.exists) throw new Error('Not found');
          const txData = doc.data();
          const wsId = txData?.workspaceId;
+         authoritativeWsId = wsId;
          // Verify workspace
          const wsDoc = await db.collection('workspaces').doc(wsId).get();
          const wsData = wsDoc.data();
@@ -221,17 +239,27 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
            throw new Error(`Forbidden: Transaction status is locked (${txData?.status}).`);
          }
          
-         if (partialUpdate.lines !== undefined || partialUpdate.amountCents !== undefined || partialUpdate.totalAmountCents !== undefined || partialUpdate.workspaceId !== undefined || partialUpdate.date !== undefined) {
+         if (partialUpdate.lines !== undefined || partialUpdate.amountCents !== undefined || partialUpdate.totalAmountCents !== undefined || partialUpdate.workspaceId !== undefined || partialUpdate.date !== undefined || partialUpdate.uid !== undefined) {
            throw new Error('Restricted fields cannot be modified via partialUpdate. Use a full transaction update instead.');
          }
 
-         t.update(txRef, { ...partialUpdate, updatedAt: FieldValue.serverTimestamp() });
+         const allowedStatuses = ['draft', 'pending', 'certified', 'void', 'reconciled', 'completed', 'failed', 'flagged', 'reviewed', 'overdue', 'approved'];
+         if (partialUpdate.status && !allowedStatuses.includes(partialUpdate.status)) {
+           throw new Error(`Invalid status '${partialUpdate.status}'.`);
+         }
+
+         const safePartial = { ...partialUpdate };
+         delete safePartial.workspaceId;
+         delete safePartial.uid;
+         delete safePartial.id;
+
+         t.update(txRef, { ...safePartial, updatedAt: FieldValue.serverTimestamp() });
       });
 
       const auditId = `audit-${Date.now()}`;
       await db.collection("auditLogs").doc(auditId).set({
         id: auditId,
-        workspaceId: req.body.workspaceId || user.developerWorkspaceId || "unknown",
+        workspaceId: authoritativeWsId || "unknown",
         timestamp: new Date().toISOString(),
         userId: user.uid,
         userEmail: user.email || "developer@ledgerflow.io",
@@ -247,7 +275,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
     transaction.uid = user.uid; // Enforce ownership
     const wsDoc = await db.collection('workspaces').doc(transaction.workspaceId).get();
     const wsData = wsDoc.data();
-    if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
+    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
       return res.status(403).json({ error: 'Not a member' });
     }
 
@@ -270,6 +298,22 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       }
 
       t.update(txRef, { ...transaction, updatedAt: FieldValue.serverTimestamp() });
+
+      // Synchronize journalEntries projection
+      (transaction.lines || []).forEach((line: any, index: number) => {
+        const eventRef = db.collection('journalEntries').doc(`${id}-line-${index}`);
+        t.set(eventRef, {
+          id: eventRef.id,
+          timestamp: transaction.date ? new Date(transaction.date).toISOString() : new Date().toISOString(),
+          postedAt: new Date().toISOString(),
+          accountId: line.accountId,
+          amountCents: line.amountCents,
+          eventType: 'ACTUAL',
+          transactionId: id,
+          workspaceId: transaction.workspaceId,
+          description: line.description || transaction.description
+        });
+      });
     });
 
     const auditId = `audit-${Date.now()}`;
@@ -322,7 +366,12 @@ transactionRouter.delete('/:id', async (req, res) => {
       return res.status(403).json({ error: `Forbidden: Transaction status is audited and locked (${data?.status}). Destructive actions are restricted to administrators.` });
     }
 
-    await txRef.delete();
+    // Clean up corresponding journalEntries projection documents to prevent orphaned ledger records
+    const jeSnaps = await db.collection('journalEntries').where('transactionId', '==', id).get();
+    const batch = db.batch();
+    batch.delete(txRef);
+    jeSnaps.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
 
     const auditId = `audit-${Date.now()}`;
     await db.collection("auditLogs").doc(auditId).set({
@@ -355,24 +404,65 @@ transactionRouter.post('/bulk', async (req, res) => {
       return res.status(403).json({ error: 'Not a member' });
     }
 
+    const wsData = wsDoc.data();
+
     if ((!Array.isArray(transactions) || transactions.length === 0) && !entityMutation) {
       return res.json({ status: 'ok', count: 0 });
     }
 
-    // Validate double entry for each transaction
+    // Allowlist entityMutation collections to close arbitrary Admin-SDK mutation primitive
+    const ALLOWED_ENTITY_COLLECTIONS = ['invoices', 'bills', 'orders', 'projects'];
+    if (entityMutation) {
+      if (!ALLOWED_ENTITY_COLLECTIONS.includes(entityMutation.collection)) {
+        return res.status(400).json({ error: `Forbidden: entityMutation collection '${entityMutation.collection}' is not permitted.` });
+      }
+      if (!entityMutation.docId || typeof entityMutation.docId !== 'string') {
+        return res.status(400).json({ error: 'Invalid entityMutation: docId must be a string.' });
+      }
+    }
+
+    // Period lock and account verification for transactions
+    const accountIdsToVerify = new Set<string>();
     for (const tx of (transactions || [])) {
       tx.uid = user.uid;
       tx.workspaceId = wsId;
+      if (wsData?.lockDate && tx.date && tx.date <= wsData.lockDate) {
+        return res.status(400).json({ error: `Period Locked: Cannot post transaction on ${tx.date} before lock date ${wsData.lockDate}.` });
+      }
+      (tx.lines || []).forEach((l: any) => {
+        if (l.accountId) accountIdsToVerify.add(l.accountId);
+      });
       DoubleEntryValidator.validateJournalEntry(tx);
+    }
+
+    if (accountIdsToVerify.size > 0) {
+      const accRefs = Array.from(accountIdsToVerify).map(id => db.collection('chartAccounts').doc(id));
+      const accSnaps = await db.getAll(...accRefs);
+      for (const snap of accSnaps) {
+        if (!snap.exists || snap.data()?.workspaceId !== wsId) {
+          return res.status(400).json({ error: `Account ${snap.id} does not exist or does not belong to authorized workspace.` });
+        }
+      }
     }
 
     await db.runTransaction(async (t: any) => {
       if (entityMutation) {
         const ref = db.collection(entityMutation.collection).doc(entityMutation.docId);
         if (entityMutation.action === "create" || entityMutation.action === "update") {
-          t.set(ref, { ...entityMutation.data, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+          const existingDoc = await t.get(ref);
+          if (existingDoc.exists && existingDoc.data()?.workspaceId !== wsId) {
+            throw new Error(`Forbidden: Entity ${entityMutation.docId} does not belong to authorized workspace.`);
+          }
+          const safeData = { ...entityMutation.data, workspaceId: wsId, uid: user.uid, updatedAt: FieldValue.serverTimestamp() };
+          t.set(ref, safeData, { merge: true });
         } else if (entityMutation.action === "delete") {
-          t.delete(ref);
+          const existingDoc = await t.get(ref);
+          if (existingDoc.exists) {
+            if (existingDoc.data()?.workspaceId !== wsId) {
+              throw new Error(`Forbidden: Entity ${entityMutation.docId} does not belong to authorized workspace.`);
+            }
+            t.delete(ref);
+          }
         }
       }
       for (const tx of (transactions || [])) {
@@ -429,6 +519,8 @@ transactionRouter.post('/batch', async (req, res) => {
      const txDocs = await db.getAll(...txRefs);
      const batch = db.batch();
 
+     const allowedStatuses = ['draft', 'pending', 'certified', 'void', 'reconciled', 'completed', 'failed', 'flagged', 'reviewed', 'overdue', 'approved'];
+
      for (let i = 0; i < txDocs.length; i++) {
        const txDoc = txDocs[i];
        if (!txDoc.exists) throw new Error(`Transaction ${updates[i].id} not found`);
@@ -443,6 +535,10 @@ transactionRouter.post('/batch', async (req, res) => {
        const updateData = updates[i].data;
        if (updateData.lines !== undefined || updateData.amountCents !== undefined || updateData.totalAmountCents !== undefined || updateData.workspaceId !== undefined || updateData.date !== undefined || updateData.uid !== undefined) {
          throw new Error(`Restricted fields cannot be modified via batch update on transaction ${updates[i].id}.`);
+       }
+
+       if (updateData.status && !allowedStatuses.includes(updateData.status)) {
+         throw new Error(`Invalid status '${updateData.status}' provided for transaction ${updates[i].id}.`);
        }
 
        batch.update(txDoc.ref, { ...updateData, updatedAt: FieldValue.serverTimestamp() });
@@ -618,12 +714,20 @@ transactionRouter.post('/reconciliation/clear', async (req, res) => {
     const snaps = await db.getAll(...refs);
 
     const batch = db.batch();
+    const wsData = wsDoc.data();
     for (const snap of snaps) {
       if (!snap.exists) {
         return res.status(404).json({ error: `Transaction ${snap.id} not found` });
       }
-      if (snap.data()?.workspaceId !== workspaceId) {
+      const txData = snap.data();
+      if (txData?.workspaceId !== workspaceId) {
         return res.status(403).json({ error: `Transaction ${snap.id} does not belong to authorized workspace` });
+      }
+      if (wsData?.lockDate && txData?.date && txData.date <= wsData.lockDate) {
+        return res.status(400).json({ error: `Period Locked: Transaction ${snap.id} is in a closed period (${wsData.lockDate}). Clearing is restricted.` });
+      }
+      if (txData?.status === 'void') {
+        return res.status(400).json({ error: `Cannot clear voided transaction ${snap.id}.` });
       }
       batch.update(snap.ref, {
         isCleared: true,
@@ -655,31 +759,81 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
 
-    // In a real system, we'd calculate the FX differential for all foreign currency accounts.
-    // For this simulation, we'll create a synthetic adjustment journal entry.
+    const wsData = wsDoc.data();
+    const today = new Date().toLocaleDateString('en-CA');
+    if (wsData?.lockDate && today <= wsData.lockDate) {
+      return res.status(400).json({ error: `Period Locked: Cannot post revaluation adjustment in locked period ${wsData.lockDate}.` });
+    }
+
+    // Ensure real chartAccounts exist for Unrealized FX and Foreign Clearing
+    const accSnap = await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get();
+    let fxGainLossAcc = accSnap.docs.find(d => (d.data().name || '').toLowerCase().includes('fx gain') || (d.data().name || '').toLowerCase().includes('unrealized'));
+    let fxClearingAcc = accSnap.docs.find(d => (d.data().name || '').toLowerCase().includes('fx clearing') || (d.data().name || '').toLowerCase().includes('foreign'));
+
+    const batchSetup = db.batch();
+    if (!fxGainLossAcc) {
+      const newRef = db.collection('chartAccounts').doc();
+      const accData = {
+        id: newRef.id,
+        workspaceId,
+        uid: user.uid,
+        name: 'Unrealized FX Gain/Loss',
+        code: '8090',
+        type: 'expense',
+        subtype: 'other_expense',
+        balanceCents: 0,
+        createdAt: new Date().toISOString()
+      };
+      batchSetup.set(newRef, accData);
+      fxGainLossAcc = { id: newRef.id, data: () => accData } as any;
+    }
+    if (!fxClearingAcc) {
+      const newRef = db.collection('chartAccounts').doc();
+      const accData = {
+        id: newRef.id,
+        workspaceId,
+        uid: user.uid,
+        name: 'Foreign Exchange Clearing',
+        code: '1090',
+        type: 'asset',
+        subtype: 'cash',
+        balanceCents: 0,
+        createdAt: new Date().toISOString()
+      };
+      batchSetup.set(newRef, accData);
+      fxClearingAcc = { id: newRef.id, data: () => accData } as any;
+    }
+    await batchSetup.commit();
+
+    const fxGainLossAccId = fxGainLossAcc?.id || 'fx-gain-loss-default';
+    const fxGainLossAccName = fxGainLossAcc?.data()?.name || 'Unrealized FX Gain/Loss';
+    const fxClearingAccId = fxClearingAcc?.id || 'fx-clearing-default';
+    const fxClearingAccName = fxClearingAcc?.data()?.name || 'Foreign Exchange Clearing';
+
     const revalTx = {
       id: db.collection("transactions").doc().id,
       workspaceId,
       uid: user.uid,
-      date: new Date().toLocaleDateString('en-CA'),
+      date: today,
       description: `Month-End FX Revaluation to ${targetCurrency || 'USD'}`,
-      totalAmountCents: 1500, // Synthetic amount: $15.00
+      totalAmountCents: 1500,
       type: 'journal',
+      status: 'completed',
       isCleared: true,
       lines: [
         {
           id: `line-1`,
-          accountId: 'fx-unrealized-gain',
-          accountName: 'Unrealized FX Gain/Loss',
+          accountId: fxGainLossAccId,
+          accountName: fxGainLossAccName,
           amountCents: -1500,
-          description: 'Mark-to-market adjustment'
+          description: 'Mark-to-market FX adjustment'
         },
         {
           id: `line-2`,
-          accountId: 'cash-foreign',
-          accountName: 'Foreign Currency Cash',
+          accountId: fxClearingAccId,
+          accountName: fxClearingAccName,
           amountCents: 1500,
-          description: 'Mark-to-market adjustment'
+          description: 'Mark-to-market FX adjustment'
         }
       ]
     };
@@ -735,7 +889,12 @@ transactionRouter.post('/close-year', async (req, res) => {
 
     // Check if period is already locked past or on this date
     if (wsData?.lockDate && wsData.lockDate >= closingDate) {
-      return res.status(400).json({ error: `Cannot close year: Period is locked through ${wsData.lockDate}.` });
+      return res.status(400).json({ error: `Cannot close year: Period is already locked through ${wsData.lockDate}.` });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    if (closingDate > today) {
+      return res.status(400).json({ error: `Cannot close future accounting period. Closing date (${closingDate}) is ahead of current date (${today}).` });
     }
 
     // 1. Fetch all chartAccounts for workspace
@@ -769,6 +928,22 @@ transactionRouter.post('/close-year', async (req, res) => {
     const txRef = db.collection('transactions').doc(result.closingTransaction.id);
     const batch = db.batch();
     batch.set(txRef, result.closingTransaction);
+
+    // Synchronize journalEntries projection for closing transaction
+    (result.closingTransaction.lines || []).forEach((line: any, index: number) => {
+      const eventRef = db.collection('journalEntries').doc(`${result.closingTransaction.id}-line-${index}`);
+      batch.set(eventRef, {
+        id: eventRef.id,
+        timestamp: new Date(closingDate).toISOString(),
+        postedAt: new Date().toISOString(),
+        accountId: line.accountId,
+        amountCents: line.amountCents,
+        eventType: 'CLOSING',
+        transactionId: result.closingTransaction.id,
+        workspaceId,
+        description: line.description || 'Fiscal Year Close Entry'
+      });
+    });
 
     // If synthetic account was generated, persist it
     if (result.generatedRetainedEarningsAccount) {
@@ -844,6 +1019,19 @@ transactionRouter.post('/close-month', async (req, res) => {
     const lastDay = new Date(year, monthNum, 0).getDate();
     const closingDate = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
 
+    if (wsData?.lockDate && closingDate < wsData.lockDate) {
+      return res.status(400).json({ error: `Cannot move lock date backwards. Current lock date is ${wsData.lockDate}.` });
+    }
+
+    if (wsData?.lockDate && wsData.lockDate >= closingDate) {
+      return res.status(400).json({ error: `Period ${month} is already closed (locked through ${wsData.lockDate}).` });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    if (closingDate > today) {
+      return res.status(400).json({ error: `Cannot close future accounting period. Closing date (${closingDate}) is ahead of current date (${today}).` });
+    }
+
     const batch = db.batch();
     let closingTxResult: any = null;
 
@@ -868,6 +1056,22 @@ transactionRouter.post('/close-month', async (req, res) => {
 
       const txRef = db.collection('transactions').doc(closingTxResult.closingTransaction.id);
       batch.set(txRef, closingTxResult.closingTransaction);
+
+      // Synchronize journalEntries projection
+      (closingTxResult.closingTransaction.lines || []).forEach((line: any, index: number) => {
+        const eventRef = db.collection('journalEntries').doc(`${closingTxResult.closingTransaction.id}-line-${index}`);
+        batch.set(eventRef, {
+          id: eventRef.id,
+          timestamp: new Date(closingDate).toISOString(),
+          postedAt: new Date().toISOString(),
+          accountId: line.accountId,
+          amountCents: line.amountCents,
+          eventType: 'CLOSING',
+          transactionId: closingTxResult.closingTransaction.id,
+          workspaceId,
+          description: line.description || 'Year-End Closing Entry'
+        });
+      });
 
       if (closingTxResult.generatedRetainedEarningsAccount) {
         const accRef = db.collection('chartAccounts').doc(closingTxResult.generatedRetainedEarningsAccount.id);

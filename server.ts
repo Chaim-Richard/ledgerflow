@@ -295,9 +295,12 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
     
     const data = workspaceSnap.data();
     const isOwner = data?.uid === req.user.uid;
-    const isAdmin = data?.admins?.[req.user.uid] === true || req.user.admin === true;
+    const isMember = Array.isArray(data?.members) && data.members.includes(req.user.uid);
+    const isAdmin = data?.admins?.[req.user.uid] === true || 
+                    (Array.isArray(data?.admins) && data.admins.includes(req.user.uid)) || 
+                    req.user.admin === true;
     
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isMember && !isAdmin) {
       console.error("[DEBUG] authorizeWorkspace - Forbidden access for user:", req.user.uid, "to workspace:", workspaceId);
       throw new Error("FORBIDDEN: You do not have permission to access workspace " + workspaceId);
     }
@@ -3275,12 +3278,35 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
       if (session.payment_status === 'paid' && session.metadata?.workspaceId === workspaceId) {
         const db = getDb();
+        const eventRef = db.collection('stripeProcessedEvents').doc(`session_${session.id}`);
+        const alreadyClaimed = await db.runTransaction(async (t) => {
+          const snap = await t.get(eventRef);
+          if (snap.exists) return true;
+          t.set(eventRef, {
+            sessionId: session.id,
+            workspaceId,
+            claimedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          return false;
+        });
+
+        const targetPlan = session.metadata?.plan === 'enterprise' ? 'enterprise' : (session.metadata?.plan === 'pro' ? 'pro' : 'pro');
+        const creditsToGrant = targetPlan === 'enterprise' ? 10000000 : 1000000;
+
+        if (alreadyClaimed) {
+          return res.json({ status: "success", plan: targetPlan, message: "Session already verified" });
+        }
+
         await db.collection("workspaces").doc(workspaceId).set({
-          billingCycle: "pro",
-          computeLimit: 1000000, 
+          plan: targetPlan,
+          billingCycle: "monthly",
+          computeCreditBalance: admin.firestore.FieldValue.increment(creditsToGrant),
+          computeLimit: creditsToGrant, 
+          stripeCustomerId: session.customer || null,
+          stripeSubscriptionId: session.subscription || null,
           lastUpgradedAt: new Date().toISOString()
         }, { merge: true });
-        return res.json({ status: "success", plan: "pro" });
+        return res.json({ status: "success", plan: targetPlan });
       } else {
          return res.status(400).json({ status: "incomplete", message: "Session not paid or metadata mismatch" });
       }

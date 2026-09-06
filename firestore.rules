@@ -71,6 +71,7 @@ service cloud.firestore {
       allow update: if isSignedIn() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid && isUnchanged("uid") &&
         request.resource.data.name.size() < 128 &&
         (!("description" in request.resource.data) || request.resource.data.description.size() < 1000) &&
+        isUnchanged("lockDate") &&
         isUnchanged("plan") && isUnchanged("computeCreditBalance") && isUnchanged("apiQuotaMonthlyLimitCents") && isUnchanged("maxSeats") && isUnchanged("concurrentUserLimit") &&
         isUnchanged("apiQuotaTotalCentsUsed") && isUnchanged("stripeCustomerId") && isUnchanged("seatCount") &&
         isUnchanged("billingCycle") && isUnchanged("status") && isUnchanged("lockedUntilDate") &&
@@ -122,8 +123,8 @@ service cloud.firestore {
 
     match /auditLogs/{logId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(logId) &&
-        affectedKeys(["id", "uid", "workspaceId", "action", "details", "createdAt", "severity", "userEmail", "email", "documentId", "entityId", "collectionName", "entityType", "previousState", "newState", "metadata", "hash", "previousHash", "timestamp"]);
+      allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || request.resource.data.userId == request.auth.uid) && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(logId) &&
+        affectedKeys(["id", "uid", "userId", "workspaceId", "action", "details", "severity", "userEmail", "email", "actorUid", "actorEmail", "documentId", "entityId", "collectionName", "entityType", "metadata", "timestamp"]);
       allow update, delete: if false; // Forensically immutable audit trail
     }
 
@@ -135,6 +136,20 @@ service cloud.firestore {
     match /bankLines/{lineId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create, update, delete: if false; // Server-side managed
+    }
+
+    match /billingLedgerTraces/{traceId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create, update, delete: if false; // Server-side trace generation only
+    }
+
+    match /deepAuditJobs/{jobId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create, update, delete: if false; // Server-side job execution only
+    }
+
+    match /stripeProcessedEvents/{eventId} {
+      allow read, write: if false; // Internal server-side idempotency lock only
     }
 
     match /learnedDeltas/{deltaId} {
@@ -160,7 +175,7 @@ service cloud.firestore {
     }
 
     function isProtectedCollection(name) {
-      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines"];
+      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents"];
     }
 
     // Standard rule for remaining secondary metrics and details matching the blueprint
