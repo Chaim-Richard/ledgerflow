@@ -100,4 +100,47 @@ export function isExpenseTransaction(tx: Transaction, accountMap?: Map<string, C
   return false;
 }
 
+/**
+ * Determines whether a transaction represents an outflow / expense
+ */
+export function isOutflow(t: Transaction, accounts?: ChartAccount[] | Map<string, ChartAccount>): boolean {
+  if (!isPostable(t)) return false;
+  if (t.type === 'expense' || (t.type as string) === 'cost_of_goods') return true;
+  if (t.type === 'income' || (t.type as string) === 'revenue') return false;
+  
+  const map = Array.isArray(accounts) 
+    ? new Map(accounts.map(a => [a.id, a])) 
+    : accounts;
+    
+  if (t.lines && t.lines.length > 0) {
+    const hasExpenseLine = t.lines.some(l => {
+      const acc = map?.get(l.accountId);
+      return acc ? isExpenseAccount(acc) : false;
+    });
+    if (hasExpenseLine) return true;
+  }
+  return true;
+}
+
+/**
+ * Determines whether a transaction represents an inflow / income
+ */
+export function isInflow(t: Transaction, accounts?: ChartAccount[] | Map<string, ChartAccount>): boolean {
+  if (!isPostable(t)) return false;
+  if (t.type === 'income' || (t.type as string) === 'revenue') return true;
+  if (t.type === 'expense' || (t.type as string) === 'cost_of_goods') return false;
+  
+  const map = Array.isArray(accounts) 
+    ? new Map(accounts.map(a => [a.id, a])) 
+    : accounts;
+    
+  if (t.lines && t.lines.length > 0) {
+    return t.lines.some(l => {
+      const acc = map?.get(l.accountId);
+      return acc ? isRevenueAccount(acc) : false;
+    });
+  }
+  return false;
+}
+
 

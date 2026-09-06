@@ -224,10 +224,14 @@ export default function SystemCommandCenter() {
     if (!editingUser) return;
     setSavingUser(true);
     try {
+      const roleToSave = userFormState.role || editingUser.role || "client";
+      const customLimitVal = Number(userFormState.customLimit) || 0;
+      const computeLimitVal = Number(userFormState.computeCreditLimit) || 0;
+
       await setDoc(doc(db, "users", editingUser.uid), {
-        role: userFormState.role || "client",
-        customLimit: Number(userFormState.customLimit) || null,
-        computeCreditLimit: Number(userFormState.computeCreditLimit) || null,
+        role: roleToSave,
+        customLimit: customLimitVal,
+        computeCreditLimit: computeLimitVal,
         updatedAt: new Date().toISOString()
       }, { merge: true });
 

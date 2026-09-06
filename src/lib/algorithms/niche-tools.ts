@@ -1,5 +1,6 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction, ChartAccount } from '../../types';
+import { isOutflow, isInflow } from '../txFilters';
 
 // 1. Mortgage / Loan Amortization Schedule
 export const LOAN_AMORTIZATION_ALGO: AlgorithmDefinition = {
@@ -85,7 +86,7 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
     const payeeMap = new Map<string, { count: number; totalCents: number; avgCents: number; lastDate: string }>();
 
     transactions.forEach(t => {
-      if (!t || t.totalAmountCents >= 0) return; // Outflows only
+      if (!t || !isOutflow(t, accounts)) return; // Outflows only
       const payee = t.payee || t.description || 'Unknown Vendor';
       const existing = payeeMap.get(payee) || { count: 0, totalCents: 0, avgCents: 0, lastDate: t.date };
       existing.count += 1;
@@ -151,7 +152,7 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
     let deductibleCount = 0;
 
     transactions.forEach(t => {
-      if (!t || t.totalAmountCents >= 0) return;
+      if (!t || !isOutflow(t, accounts)) return;
       const amt = Math.abs(t.totalAmountCents);
       const desc = (t.description || '').toLowerCase();
       const payee = (t.payee || '').toLowerCase();
@@ -219,7 +220,7 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
       if (!t || !t.project) return;
       const prop = t.project;
       const existing = propertyMap.get(prop) || { revCents: 0, expCents: 0 };
-      if (t.totalAmountCents > 0) {
+      if (isInflow(t, accounts)) {
         existing.revCents += t.totalAmountCents;
       } else {
         existing.expCents += Math.abs(t.totalAmountCents);
@@ -296,7 +297,7 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
       if (!t || !t.projectId) return;
       const key = t.project || t.projectId;
       const existing = grantMap.get(key) || { receivedCents: 0, spentCents: 0 };
-      if (t.totalAmountCents > 0) {
+      if (isInflow(t, accounts)) {
         existing.receivedCents += t.totalAmountCents;
       } else {
         existing.spentCents += Math.abs(t.totalAmountCents);
@@ -371,7 +372,7 @@ export const PROJECT_PROFITABILITY_ALGO: AlgorithmDefinition = {
       if (!t || !t.project) return;
       const p = t.project;
       const existing = projMap.get(p) || { revCents: 0, expCents: 0 };
-      if (t.totalAmountCents > 0) {
+      if (isInflow(t, accounts)) {
         existing.revCents += t.totalAmountCents;
       } else {
         existing.expCents += Math.abs(t.totalAmountCents);

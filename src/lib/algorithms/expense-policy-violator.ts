@@ -1,5 +1,6 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { parseLocalDate } from '../../lib/utils';
+import { isOutflow } from '../txFilters';
 
 export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
   id: 'forensics_policy',
@@ -31,7 +32,7 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
     
     transactions.forEach(tx => {
       // Look at expense/liability accounts or general spending
-      if (tx.totalAmountCents > 0) return; // Only look at outgoing/negative or just look at all absolute
+      if (!isOutflow(tx, accounts)) return;
       
       const absAmount = Math.abs(tx.totalAmountCents);
       if (absAmount < 500) return; // Skip tiny transactions

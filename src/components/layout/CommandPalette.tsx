@@ -12,6 +12,8 @@ import { Transaction, Project } from '../../types';
 import { getLocalDateISO, resolveAccountName } from '../../lib/utils';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { resolveAccountRole } from '../../lib/accountUtils';
+import { isCashAccount } from '../../lib/txFilters';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -49,10 +51,16 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
     if (parsedIntent.type === 'transaction') {
       const amountCents = parsedIntent.amountCents || 0;
       const isExpense = parsedIntent.action === 'expense';
-      const cashAccountId = ledger.accounts.find(a => a.type === 'asset')?.id || 'acc-cash';
-      const categoryAccountId = isExpense 
-        ? (ledger.accounts.find(a => a.type === 'expense')?.id || 'acc-exp')
-        : (ledger.accounts.find(a => a.type === 'income')?.id || 'acc-inc');
+      const cashAccount = ledger.accounts.find(a => resolveAccountRole(a) === 'cash') || ledger.accounts.find(a => isCashAccount(a)) || ledger.accounts[0];
+      const categoryAccount = ledger.accounts.find(a => resolveAccountRole(a) === (isExpense ? 'expense' : 'revenue')) || ledger.accounts.find(a => a.type === (isExpense ? 'expense' : 'income')) || ledger.accounts[0];
+      if (!cashAccount || !categoryAccount) {
+        toast.error('Cannot post transaction: No chart of accounts available.');
+        return;
+      }
+      const cashAccountId = cashAccount.id;
+      const categoryAccountId = categoryAccount.id;
+      const cashAccountName = cashAccount.name;
+      const categoryAccountName = categoryAccount.name;
       await handleQuickAdd({
         date: parsedIntent.dateStr || getLocalDateISO(),
         description: parsedIntent.description || 'Natural Language Entry',
@@ -60,13 +68,13 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
         lines: [
           {
             accountId: categoryAccountId,
-            accountName: isExpense ? 'General Expense' : 'Revenue',
+            accountName: categoryAccountName,
             amountCents: isExpense ? amountCents : -amountCents,
             description: parsedIntent.description || 'NL line'
           },
           {
             accountId: cashAccountId,
-            accountName: parsedIntent.method || 'Cash / Checking',
+            accountName: cashAccountName,
             amountCents: isExpense ? -amountCents : amountCents,
             description: 'Payment settlement'
           }

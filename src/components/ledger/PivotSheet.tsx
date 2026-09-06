@@ -560,7 +560,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                              </span>
                           </td>
                           <td className="px-6 py-2.5 text-right font-mono text-[11px] font-medium">
-                             <span className={t.totalAmountCents >= 0 ? "text-emerald-500" : "text-rose-500"}>
+                             <span className={((t.type as string) === 'income' || (t.type as string) === 'revenue') ? "text-emerald-500" : "text-rose-500"}>
                                 {formatCurrency(t.totalAmountCents)}
                              </span>
                           </td>

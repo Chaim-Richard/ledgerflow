@@ -1,5 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
-import { isPostable } from '../../lib/txFilters';
+import { isPostable, isOutflow } from '../../lib/txFilters';
 
 export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
   id: 'intelligence_4',
@@ -26,7 +26,7 @@ export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
          return acc.type === 'expense' || acc.type === 'cost_of_goods' || catLower === 'cogs' || catLower === 'expense' || catLower === 'direct costs';
       });
 
-      if (isExpense || tx.totalAmountCents < 0) {
+      if (isExpense || isOutflow(tx, accounts)) {
          const payee = (tx.payee || tx.description || 'Unknown Vendor').toUpperCase().trim();
          if (!vendorSpend[payee]) vendorSpend[payee] = 0;
          

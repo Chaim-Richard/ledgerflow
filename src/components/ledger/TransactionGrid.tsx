@@ -21,6 +21,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName } from '../../lib/utils';
+import { isCashAccount } from '../../lib/txFilters';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import TransactionRow from '../transactions/TransactionRow';
@@ -223,7 +224,7 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
                 value={tx.totalAmountCents / 100}
                 type="number"
                 onSave={(v) => {
-                  data.onUpdate?.(tx.id, { totalAmountCents: TruthEngine.parseAmountToCents(v) });
+                  data.onUpdate?.(tx.id, { totalAmountCents: TruthEngine.parseAmountToCents(v || '0') });
                   data.setEditingCell(null);
                 }}
                 onClose={() => data.setEditingCell(null)}
@@ -236,7 +237,16 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
                 value={resolveAccountName(accounts, tx.lines?.[0]?.accountId, tx.lines?.[0]?.accountName)}
                 type="category"
                 onSave={(v) => {
-                  data.onUpdate?.(tx.id, { lines: [{ accountId: tx.lines?.[0]?.accountId || 'unassigned', accountName: v, amountCents: tx.totalAmountCents }] });
+                  const targetAcc = accounts.find(a => a.name === v || a.id === v) || { id: tx.lines?.[0]?.accountId || 'unassigned', name: v };
+                  const bankAcc = accounts.find(a => isCashAccount(a)) || accounts[0];
+                  const updatedLines = tx.lines && tx.lines.length >= 2 ? [
+                    { ...tx.lines[0], accountId: targetAcc.id, accountName: targetAcc.name },
+                    ...tx.lines.slice(1)
+                  ] : [
+                    { accountId: targetAcc.id, accountName: targetAcc.name, amountCents: Math.abs(tx.totalAmountCents) },
+                    { accountId: bankAcc?.id || '1010', accountName: bankAcc?.name || 'Main Checking', amountCents: -Math.abs(tx.totalAmountCents) }
+                  ];
+                  data.onUpdate?.(tx.id, { lines: updatedLines });
                   data.setEditingCell(null);
                 }}
                 onClose={() => data.setEditingCell(null)}
@@ -248,7 +258,10 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
               <GridEditor 
                 value={tx.project || ''}
                 onSave={(v) => {
-                  data.onUpdate?.(tx.id, { project: v });
+                  data.onUpdate?.(tx.id, { 
+                    project: v,
+                    lines: (tx.lines || []).map(l => ({ ...l, project: v }))
+                  });
                   data.setEditingCell(null);
                 }}
                 onClose={() => data.setEditingCell(null)}
@@ -268,7 +281,7 @@ export default function TransactionGrid() {
   const { handleAction: onAction } = useCommandDispatcher();
   const txActions = useTransactionActions();
   const { updateEntity, deleteEntity } = useEntityOperations();
-  const onUpdate = (id: string, updates: any) => updateEntity('transactions', id, updates);
+  const onUpdate = (id: string, updates: any) => txActions?.handleUpdateTransaction ? txActions.handleUpdateTransaction(id, updates) : updateEntity('transactions', id, updates);
   const onVoid = (id: string) => deleteEntity('transactions', id);
   const onNewEntry = () => { txActions.handleQuickAdd?.({} as any); onAction("quick-entry"); };
   const onImport = () => onAction('open-importer');
@@ -631,14 +644,15 @@ export default function TransactionGrid() {
       const targetAcc = accountNameMap.get(suggestion.accountName);
       
       if (tx && targetAcc && (!tx.lines || tx.lines.length === 0 || tx.lines[0].accountName === 'Uncategorized' || tx.lines[0].accountName === 'Unassigned')) {
-        onUpdate?.(id, { 
-          lines: [{ 
-            accountId: targetAcc.id, 
-            accountName: targetAcc.name, 
-            amountCents: tx.totalAmountCents,
-            dimensions: suggestion.dimensions || undefined
-          }] 
-        });
+        const bankAcc = accounts.find(a => isCashAccount(a)) || accounts[0];
+        const updatedLines = tx.lines && tx.lines.length >= 2 ? [
+          { ...tx.lines[0], accountId: targetAcc.id, accountName: targetAcc.name, dimensions: suggestion.dimensions || tx.lines[0].dimensions },
+          ...tx.lines.slice(1)
+        ] : [
+          { accountId: targetAcc.id, accountName: targetAcc.name, amountCents: Math.abs(tx.totalAmountCents), dimensions: suggestion.dimensions || undefined },
+          { accountId: bankAcc?.id || '1010', accountName: bankAcc?.name || 'Main Checking', amountCents: -Math.abs(tx.totalAmountCents) }
+        ];
+        onUpdate?.(id, { lines: updatedLines });
         count++;
       }
     });

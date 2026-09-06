@@ -1,5 +1,6 @@
 import { Transaction, ChartAccount } from '../../types';
 import { AlgorithmDefinition } from './types';
+import { isPostable } from '../txFilters';
 
 // The NP-hard subset sum problem with fee tolerance pruning
 // Finds which subset of open items sums to a bank deposit.
@@ -67,7 +68,7 @@ export const SUBSET_SUM_RECONCILIATION: AlgorithmDefinition = {
     let candidates: { id: string; amountCents: number }[] = [];
     if (transactions && transactions.length > 0) {
       candidates = transactions
-        .filter(t => t.totalAmountCents > 0)
+        .filter(t => isPostable(t) && Math.abs(t.totalAmountCents) > 0)
         .slice(0, inputs.numInvoices)
         .map(t => ({ id: t.id || `TX-${t.date}`, amountCents: Math.abs(t.totalAmountCents) }));
     }
