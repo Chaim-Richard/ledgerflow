@@ -1,7 +1,8 @@
 import express from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
-import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
-import { getDb, validateWorkspaceMember, assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
+import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
+import { getDb, validateWorkspaceMember, assertPeriodOpen } from '../db/firestore';
+import { Transaction } from '../../types';
 
 export const leaseRouter = express.Router();
 
@@ -30,15 +31,15 @@ leaseRouter.post('/capitalize', async (req, res) => {
     const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
 
     // 1. Validate workspace membership
-    await validateWorkspaceMember(db, workspaceId, user);
+    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+    const wsData = wsDoc.data();
+    if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
 
     // 2. Validate period lock
     await assertPeriodOpen(db, workspaceId, txDate);
 
-    // 3. Validate accounts exist and belong to workspace
-    const accountMap = await validateWorkspaceAccounts(db, workspaceId, [rouAssetAccountId, leaseLiabilityAccountId]);
-    const rouAcc = accountMap.get(rouAssetAccountId)!;
-    const liabilityAcc = accountMap.get(leaseLiabilityAccountId)!;
 
     const tx = {
       id: db.collection("transactions").doc().id,
@@ -69,7 +70,12 @@ leaseRouter.post('/capitalize', async (req, res) => {
     };
 
     // Double entry check
-    DoubleEntryValidator.validateJournalEntry(tx as any);
+    // DoubleEntryValidator.validateJournalEntry(tx as any);
+    await TransactionValidator.validateAndPrepare(tx as Transaction, {
+        workspaceId,
+        user: { uid: user.uid, admin: user.admin },
+        wsData
+    });
 
     const responsePayload = {
       status: 'ok',
