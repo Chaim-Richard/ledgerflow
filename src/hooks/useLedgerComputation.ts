@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Transaction, FilterCriteria, ChartAccount } from '../types';
-import { LedgerEngine } from '../lib/ledger-engine';
+import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
 import { jaroWinklerSimilarity } from '../lib/algorithms';
 import { useScenarioStore } from '../lib/scenarioStore';
 import { useAuthStore } from '../stores/useAuthStore';

@@ -90,7 +90,7 @@ export interface LedgerState {
   setMatchingThreshold: (threshold: number) => void;
   setPrivacyMode: (active: boolean) => void;
   setIsDataTruncated: (isTruncated: boolean) => void;
-  commitTransaction: (tx: Transaction) => { success: boolean, error?: string };
+  validateTransaction: (tx: Transaction) => { success: boolean, error?: string };
   setAccounts: (data: ChartAccount[]) => void;
   updateAccount: (id: string, updates: Partial<ChartAccount>) => void;
   setJournalEntries: (data: JournalEntry[]) => void;
@@ -248,7 +248,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     }
   },
 
-  commitTransaction: (tx) => { 
+  validateTransaction: (tx) => { 
     try {
       DoubleEntryValidator.validateJournalEntry(tx);
       // Usually here it would call an API or event ledger

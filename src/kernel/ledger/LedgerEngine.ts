@@ -2,6 +2,90 @@ import { ChartAccount, Transaction, JournalEntry } from '../../types';
 
 export class LedgerEngine {
   /**
+   * Validates if a transaction satisfies the fundamental double-entry invariant.
+   */
+  static isBalanced(tx: Transaction): boolean {
+    if (!tx.lines || tx.lines.length === 0) return false;
+    // We use integer cents, so sum must be exactly zero
+    const sum = tx.lines.reduce((acc, line) => acc + (line.amountCents || 0), 0);
+    return sum === 0;
+  }
+
+  private static normalizationCache = new Map<string, any>();
+  private static MAX_CACHE_SIZE = 150000;
+
+  private static CACHED_SANITIZE_REGEX_CORP = /\b(inc|ltd|corp|co|llc|plc|gmbh|sa|bv|nv|ag|sas)\b/g;
+  private static CACHED_SANITIZE_REGEX_CHARS = /[^a-z0-9]/g;
+
+  private static sanitizeText(s: string) {
+    return (s || '').toLowerCase()
+        .replace(LedgerEngine.CACHED_SANITIZE_REGEX_CORP, '')
+        .replace(LedgerEngine.CACHED_SANITIZE_REGEX_CHARS, ' ')
+        .trim();
+  }
+
+  static normalize(transactions: Transaction[]) {
+    // Basic high-speed eviction if cache grows too large
+    if (this.normalizationCache.size > this.MAX_CACHE_SIZE) {
+      this.normalizationCache.clear();
+    }
+
+    return transactions.map(t => {
+      const cacheKey = `${t.id}-${t.description}-${t.totalAmountCents}-${t.date}`;
+      
+      if (this.normalizationCache.has(cacheKey)) {
+        return this.normalizationCache.get(cacheKey);
+      }
+
+      const absAmount = Math.abs(t.totalAmountCents || 0) / 100;
+      const tDate = t.date || '';
+      
+      const norm = {
+        ...t,
+        _normalized: {
+          searchStr: `${t.description || ''} ${absAmount} ${tDate} ${t.isCleared ? 'cleared' : 'pending'} ${t.tags?.join(' ') || ''} ${t.project || ''} ${t.classId || ''} ${t.locationId || ''} ${t.dimensions ? Object.values(t.dimensions).join(' ') : ''} ${t.metadata ? JSON.stringify(t.metadata) : ''} ${t.lines?.map(l => `${l.accountName} ${l.description || ''} ${l.tags?.join(' ') || ''} ${l.class || ''} ${l.location || ''} ${l.project || ''} ${l.dimensions ? Object.values(l.dimensions).join(' ') : ''}`).join(' ')}`.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+          month: tDate.length >= 7 ? tDate.substring(0, 7) : '',
+          absAmount,
+          sanitizedDescription: this.sanitizeText(t.description || ''),
+          year: tDate.length >= 4 ? tDate.substring(0, 4) : '',
+          isLarge: absAmount > 5000,
+          isTiny: absAmount < 1.00,
+          isBalanced: (t.lines?.reduce((acc, line) => acc + (line.amountCents || 0), 0) || 0) === 0
+        }
+      };
+
+      this.normalizationCache.set(cacheKey, norm);
+      return norm;
+    });
+  }
+
+  /**
+   * Detects "Zombie" transactions - entries that passed balance check but contain 
+   * orphaned accounts or zero-value non-offsetting lines.
+   */
+  static auditTransaction(tx: Transaction, accounts: ChartAccount[] | Set<string>): string[] {
+    const errors: string[] = [];
+    if (!this.isBalanced(tx)) errors.push('Mathematical imbalance');
+    
+    const isSet = accounts instanceof Set;
+
+    if (tx.lines) {
+      tx.lines.forEach((line, idx) => {
+        const found = isSet ? (accounts as Set<string>).has(line.accountId) : (accounts as ChartAccount[]).some(a => a.id === line.accountId);
+        if (!found) {
+          errors.push(`Line ${idx + 1}: Account "${line.accountName}" not found in chart`);
+        }
+        if (line.amountCents === 0) {
+          errors.push(`Line ${idx + 1}: Zero-value entries skew audit trails`);
+        }
+      });
+    }
+
+    return errors;
+  }
+
+  /**
    * Calculates multidimensional balances (by project, tag, etc).
    * Moved from lib/ledger-engine to kernel/ledger.
    */
