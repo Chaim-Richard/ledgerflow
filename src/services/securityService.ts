@@ -34,19 +34,31 @@ export class SecurityService {
    */
   static scrubPII(text: string): string {
     if (!text) return "";
-    // Enhanced regex for credit cards, accounts, SSNs, emails, phones, private identifiers, API keys
     return text
-      .replace(/\b(?:\d[ -]*?){13,16}\b/g, "[CREDIT_CARD_REDACTED]")
-      .replace(/\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, "[SSN_REDACTED]")
-      .replace(/[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+/g, "[EMAIL_REDACTED]")
-      .replace(/\b(?:\+?1[-. ]?)?\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})\b/g, "[PHONE_REDACTED]")
+      // Secret API keys
       .replace(/\b(lf_live_[a-zA-Z0-9_-]+|lf_test_[a-zA-Z0-9_-]+|sk_live_[a-zA-Z0-9_-]+|sk_test_[a-zA-Z0-9_-]+)\b/g, "[SECRET_KEY_REDACTED]")
-      .replace(/\b\d{8,12}\b/g, "[ACCOUNT_REDACTED]")
-      .replace(/\b\d{9}\b/g, "[ROUTING_REDACTED]");
+      // Credit card numbers (formatted or contiguous 13-16 digits)
+      .replace(/\b(?:\d{4}[ -]?){3}\d{1,4}\b|\b\d{13,16}\b/g, "[CREDIT_CARD_REDACTED]")
+      // Emails
+      .replace(/[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+/g, "[EMAIL_REDACTED]")
+      // Formatted SSNs (e.g. 123-45-6789) or explicitly labeled SSN
+      .replace(/\b\d{3}-\d{2}-\d{4}\b|\b(?:ssn|social security)[\s#:]*(\d{9})\b/gi, "[SSN_REDACTED]")
+      // Formatted phone numbers (e.g. (123) 456-7890, +1 123-456-7890, 123.456.7890)
+      .replace(/\b(?:\+?1[-. ]?)?\(?([0-9]{3})\)?[-. ]([0-9]{3})[-. ]([0-9]{4})\b/g, "[PHONE_REDACTED]")
+      // Routing numbers with explicit context
+      .replace(/\b(?:routing|aba|rtn)[\s#:]*(\d{9})\b/gi, "[ROUTING_REDACTED]")
+      // Bank account numbers with explicit context
+      .replace(/\b(?:acct|account|acc)[\s#:]*(\d{6,17})\b/gi, "[ACCOUNT_REDACTED]");
   }
 
   private static getEncryptionKey(): Buffer {
-    const secret = process.env.SYSTEM_SALT || process.env.ENCRYPTION_SECRET || "default-ledgerflow-secure-key-32b";
+    const secret = process.env.SYSTEM_SALT || process.env.ENCRYPTION_SECRET;
+    if (!secret) {
+      if (process.env.NODE_ENV === 'test') {
+        return crypto.createHash('sha256').update("test-ledgerflow-secure-key-32b").digest();
+      }
+      throw new Error("SYSTEM_SALT or ENCRYPTION_SECRET environment variable is not set. Refusing to encrypt/decrypt without a secure secret.");
+    }
     return crypto.createHash('sha256').update(secret).digest();
   }
 

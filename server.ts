@@ -2830,12 +2830,20 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const { userId } = req.params;
       const { role, customLimit, computeCreditLimit } = req.body;
 
-      await db.collection("users").doc(userId).set({
-        role: role || "client",
-        customLimit: Number(customLimit) || null,
-        computeCreditLimit: Number(computeCreditLimit) || null,
+      const updateData: Record<string, any> = {
         updatedAt: new Date().toISOString()
-      }, { merge: true });
+      };
+      if (role !== undefined && typeof role === 'string') {
+        updateData.role = role;
+      }
+      if (customLimit !== undefined) {
+        updateData.customLimit = customLimit === null || customLimit === '' ? null : Number(customLimit);
+      }
+      if (computeCreditLimit !== undefined) {
+        updateData.computeCreditLimit = computeCreditLimit === null || computeCreditLimit === '' ? null : Number(computeCreditLimit);
+      }
+
+      await db.collection("users").doc(userId).set(updateData, { merge: true });
 
       res.json({ status: "success", message: "User privileges updated" });
     } catch (err: any) {
@@ -3285,29 +3293,102 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
     try {
       const csvData = fs.readFileSync(req.file.path, "utf8");
-      const records = parseCsv(csvData, {
+      const records: Array<Record<string, string>> = parseCsv(csvData, {
         columns: true,
         skip_empty_lines: true,
-        trim: true
+        trim: true,
+        relax_column_count: true
       });
 
-      // Map common bank headers to our format
+      if (!records || records.length === 0) {
+        if (req.file) fs.unlinkSync(req.file.path);
+        return res.json([]);
+      }
+
+      const sampleKeys = Object.keys(records[0] || {});
+      
+      // Score-based column detector
+      const findBestCol = (patterns: RegExp[], excludePatterns: RegExp[] = []): string | undefined => {
+        let bestKey: string | undefined;
+        let bestScore = -1;
+        for (const key of sampleKeys) {
+          const lower = key.toLowerCase().trim();
+          if (excludePatterns.some(p => p.test(lower))) continue;
+          for (let i = 0; i < patterns.length; i++) {
+            if (patterns[i].test(lower)) {
+              const score = 100 - i * 10;
+              if (score > bestScore) {
+                bestScore = score;
+                bestKey = key;
+              }
+            }
+          }
+        }
+        return bestKey;
+      };
+
+      const dateKey = findBestCol([/^date$/i, /^trans(action)?[_\s]?date$/i, /^posted[_\s]?date$/i, /date/i]);
+      const descKey = findBestCol([/^description$/i, /^memo$/i, /^payee$/i, /^narrative$/i, /^details$/i, /desc/i, /name/i]);
+      const debitKey = findBestCol([/^debit$/i, /^withdrawal$/i, /^outflow$/i, /^charge$/i, /^debit[_\s]?amount$/i], [/balance/i]);
+      const creditKey = findBestCol([/^credit$/i, /^deposit$/i, /^inflow$/i, /^payment$/i, /^credit[_\s]?amount$/i], [/balance/i]);
+      const amountKey = findBestCol([/^amount$/i, /^total$/i, /^net$/i, /^sum$/i, /amount/i], [/balance/i, /account[_\s]?num/i, /debit/i, /credit/i]);
+      const categoryKey = findBestCol([/^category$/i, /^account[_\s]?category$/i, /^class$/i, /^label$/i, /category/i]);
+
+      const normalizeDate = (rawDate: string): string => {
+        if (!rawDate) return new Date().toISOString().split('T')[0];
+        const s = rawDate.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        const usMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (usMatch) {
+          let [_, m, d, y] = usMatch;
+          if (y.length === 2) {
+            y = parseInt(y, 10) > 50 ? '19' + y : '20' + y;
+          }
+          return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+        const parsed = new Date(s);
+        if (!isNaN(parsed.getTime())) {
+          return parsed.toISOString().split('T')[0];
+        }
+        return new Date().toISOString().split('T')[0];
+      };
+
       const batchId = Date.now();
-      const transactions = records.map((r: any, idx: number) => {
-        const dateKey = Object.keys(r).find(k => k.toLowerCase().includes("date"));
-        const descKey = Object.keys(r).find(k => k.toLowerCase().includes("desc") || k.toLowerCase().includes("memo") || k.toLowerCase().includes("payee"));
-        const amountKey = Object.keys(r).find(k => k.toLowerCase().includes("amount") || k.toLowerCase().includes("total"));
-        const categoryKey = Object.keys(r).find(k => k.toLowerCase().includes("category") || k.toLowerCase().includes("account") || k.toLowerCase().includes("label") || k.toLowerCase().includes("class"));
+      const transactions: any[] = [];
+      const rejected: any[] = [];
 
-        const categoryVal = categoryKey ? r[categoryKey] : null;
+      records.forEach((r, idx) => {
+        try {
+          let amountCents = 0;
+          if (debitKey && creditKey && (r[debitKey] !== undefined || r[creditKey] !== undefined)) {
+            const deb = TruthEngine.parseAmountToCentsOrZero(r[debitKey]);
+            const cred = TruthEngine.parseAmountToCentsOrZero(r[creditKey]);
+            amountCents = cred - deb;
+          } else if (amountKey && r[amountKey] !== undefined) {
+            amountCents = TruthEngine.parseAmountToCents(r[amountKey]);
+          } else {
+            throw new Error("No amount column found for row");
+          }
 
-        return {
-          id: `csv-${batchId}-${idx}`,
-          date: r[dateKey || ""] || new Date().toISOString().split('T')[0],
-          description: r[descKey || ""] || "Unknown Transaction",
-          amountCents: TruthEngine.parseAmountToCents(r[amountKey || ""]),
-          category: categoryVal ? categoryVal.trim() : undefined
-        };
+          const rawDate = dateKey ? r[dateKey] : '';
+          const date = normalizeDate(rawDate);
+          const description = (descKey ? r[descKey] : '') || "Bank Transaction";
+          const categoryVal = categoryKey ? r[categoryKey] : null;
+
+          transactions.push({
+            id: `csv-${batchId}-${idx}`,
+            date,
+            description: description.trim(),
+            amountCents,
+            category: categoryVal ? categoryVal.trim() : undefined
+          });
+        } catch (rowErr: any) {
+          rejected.push({
+            row: idx + 1,
+            reason: rowErr?.message || "Invalid row format",
+            raw: r
+          });
+        }
       });
 
       fs.unlinkSync(req.file.path);

@@ -38,6 +38,7 @@ export default function TransactionEditModal({
   onClose,
   onUpdate
 }: TransactionEditModalProps) {
+  const baseCurrency = useLedgerStore(s => s.baseCurrency) || 'USD';
   const [date, setDate] = useState(() => transaction?.date || '');
   const [description, setDescription] = useState(() => transaction?.description || '');
   const [payee, setPayee] = useState(() => transaction?.payee || '');
@@ -47,7 +48,7 @@ export default function TransactionEditModal({
   const [isCleared, setIsCleared] = useState(() => transaction?.isCleared || false);
   const [isFlagged, setIsFlagged] = useState(() => transaction?.isFlagged || false);
   const [fileUrls, setFileUrls] = useState<string[]>(() => transaction?.fileUrls || []);
-  const [originalCurrency, setOriginalCurrency] = useState(() => transaction?.originalCurrency || 'USD');
+  const [originalCurrency, setOriginalCurrency] = useState(() => transaction?.originalCurrency || baseCurrency);
   const [exchangeRate, setExchangeRate] = useState<number>(() => transaction?.exchangeRate || 1.0);
   const [isFetchingRate, setIsFetchingRate] = useState(false);
   const classes = useLedgerStore(s => s.classes);
@@ -69,8 +70,8 @@ export default function TransactionEditModal({
   const handleAddLine = () => {
     const defaultAcc = accounts.find(a => a.type === 'expense') || accounts[0];
     setLines([...lines, { 
-      accountId: defaultAcc?.id || 'acc_uncategorized', 
-      accountName: defaultAcc?.name || 'General Expense', 
+      accountId: defaultAcc?.id || '', 
+      accountName: defaultAcc?.name || '', 
       amountCents: 0 
     }]);
   };
@@ -101,9 +102,9 @@ export default function TransactionEditModal({
     }
 
     // Check if any line has unassigned account
-    const hasUnassigned = lines.some(l => !l.accountId || l.accountId === '');
+    const hasUnassigned = lines.some(l => !l.accountId || l.accountId === '' || l.accountId === 'uncategorized' || l.accountId === 'unassigned');
     if (hasUnassigned) {
-      toast.error('All transaction ledger lines must be linked to a chart of account.');
+      toast.error('All transaction ledger lines must be linked to a valid chart of account.');
       return;
     }
 
@@ -114,14 +115,15 @@ export default function TransactionEditModal({
       return;
     }
 
-    // In double-entry ledger bookkeeping, the gross transaction size is the total debit value (or absolute credit size), equivalent to half the absolute sum.
-    const calculatedTotal = TruthEngine.deriveSignedTotal(lines, accounts);
+    // In double-entry ledger bookkeeping, the gross transaction size is the total debit value (or absolute credit size)
+    const calculatedTotal = Math.abs(TruthEngine.deriveSignedTotal(lines, accounts));
 
     const finalLines = lines.map(l => {
       const acc = accounts.find(a => a.id === l.accountId);
       return {
         ...l,
-        accountName: acc ? acc.name : l.accountName
+        accountName: acc ? acc.name : l.accountName,
+        project: l.project || project.trim() || undefined
       };
     });
 
@@ -135,8 +137,8 @@ export default function TransactionEditModal({
       isCleared,
       isFlagged,
       fileUrls,
-      originalCurrency: originalCurrency !== 'USD' ? originalCurrency : undefined,
-      exchangeRate: originalCurrency !== 'USD' ? exchangeRate : undefined,
+      originalCurrency: originalCurrency !== baseCurrency ? originalCurrency : undefined,
+      exchangeRate: originalCurrency !== baseCurrency ? exchangeRate : undefined,
       lines: finalLines,
       totalAmountCents: calculatedTotal
     });

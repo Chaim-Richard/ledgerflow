@@ -66,15 +66,51 @@ export class TruthEngine {
     return debitSum || Math.abs(lines[0]?.amountCents || 0);
   }
 
-  static parseAmountToCents(amountString: string | number): number {
-    const cleaned = String(amountString).replace(/,/g, '');
-    if (!cleaned) throw new Error('Integrity Violation: Amount cannot be empty');
+  static parseAmountToCents(amountString: string | number | null | undefined): number {
+    if (amountString === null || amountString === undefined) {
+      throw new Error('Integrity Violation: Amount cannot be empty');
+    }
+    let s = String(amountString).trim();
+    if (!s) throw new Error('Integrity Violation: Amount cannot be empty');
+
+    // Handle unicode minus, currency symbols, commas, and whitespace
+    s = s.replace(/\u2212/g, '-').replace(/[$€£¥]/g, '').replace(/,/g, '').trim();
+
+    // Handle parenthesized negatives: (123.45) -> -123.45
+    if (s.startsWith('(') && s.endsWith(')')) {
+      s = '-' + s.slice(1, -1).trim();
+    }
+
+    // Handle trailing CR (credit / negative) / DR (debit / positive)
+    let isCR = false;
+    let isDR = false;
+    if (/[\s]?(CR|cr)$/i.test(s)) {
+      isCR = true;
+      s = s.replace(/[\s]?(CR|cr)$/i, '').trim();
+    } else if (/[\s]?(DR|dr)$/i.test(s)) {
+      isDR = true;
+      s = s.replace(/[\s]?(DR|dr)$/i, '').trim();
+    }
+
     try {
-      const val = new Decimal(cleaned).mul(100).round().toNumber();
+      let val = new Decimal(s).mul(100).round().toNumber();
       if (isNaN(val)) throw new Error('Integrity Violation: Parsed amount is NaN');
+      if (isCR) val = -Math.abs(val);
+      if (isDR) val = Math.abs(val);
       return val;
     } catch (e) {
       throw new Error(`Integrity Violation: Invalid amount format: ${amountString}`);
+    }
+  }
+
+  static parseAmountToCentsOrZero(amountString: string | number | null | undefined): number {
+    if (amountString === null || amountString === undefined) return 0;
+    const s = String(amountString).trim();
+    if (!s) return 0;
+    try {
+      return TruthEngine.parseAmountToCents(s);
+    } catch {
+      return 0;
     }
   }
 

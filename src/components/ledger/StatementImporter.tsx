@@ -220,12 +220,12 @@ export default function StatementImporter({
       let amountCents = 0;
       if (hasAmount) {
         const amountStr = cleanAmountStr(row[mapping.amount]);
-        amountCents = TruthEngine.parseAmountToCents(amountStr);
+        amountCents = TruthEngine.parseAmountToCentsOrZero(amountStr);
       } else {
         const debitStr = cleanAmountStr(row[(mapping as any).debit]);
         const creditStr = cleanAmountStr(row[(mapping as any).credit]);
-        const debit = TruthEngine.parseAmountToCents(debitStr);
-        const credit = TruthEngine.parseAmountToCents(creditStr);
+        const debit = TruthEngine.parseAmountToCentsOrZero(debitStr);
+        const credit = TruthEngine.parseAmountToCentsOrZero(creditStr);
         amountCents = credit - debit;
       }
       

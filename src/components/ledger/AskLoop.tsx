@@ -35,9 +35,9 @@ export default function AskLoop() {
     });
   }, [transactions]);
 
-  // Find default expense and owner draw accounts
+  // Find default expense and owner draw accounts from the real chart of accounts
   const defaultExpenseAccount = useMemo(() => {
-    return accounts.find(a => a.type === 'expense') || { id: '6000', name: 'General Expense' };
+    return accounts.find(a => a.type === 'expense') || accounts[0];
   }, [accounts]);
 
   const ownerDrawAccount = useMemo(() => {
@@ -46,24 +46,36 @@ export default function AskLoop() {
       a.name.toLowerCase().includes('draw') || 
       a.name.toLowerCase().includes('distribution') ||
       a.name.toLowerCase().includes('owner')
-    ) || { id: '3000', name: 'Owner Draw / Equity' };
+    ) || accounts.find(a => a.type === 'equity') || accounts[0];
   }, [accounts]);
 
   const handleResolve = async (txId: string, accountId: string, accountName: string, note?: string) => {
     const tx = transactions.find(t => t.id === txId);
-    if (!tx) return;
+    if (!tx || !accountId) return;
 
-    const currentLine = tx.lines?.[0];
-    const updatedLine = {
-      accountId,
-      accountName,
-      amountCents: currentLine?.amountCents ?? tx.totalAmountCents,
-      description: note || currentLine?.description || tx.description
-    };
+    let updatedLines = tx.lines && tx.lines.length > 0 ? tx.lines.map(l => ({ ...l })) : [];
+    if (updatedLines.length === 0) {
+      const cashAcc = accounts.find(a => a.type === 'asset' || a.category === 'cash_and_equivalents') || accounts[0];
+      const amt = tx.totalAmountCents || 0;
+      updatedLines = [
+        { accountId, accountName, amountCents: amt, description: note || tx.description },
+        { accountId: cashAcc?.id || 'acc_cash', accountName: cashAcc?.name || 'Cash', amountCents: -amt }
+      ];
+    } else {
+      // Find the uncategorized line or positive expense line
+      const catLineIdx = updatedLines.findIndex(l => !l.accountId || l.accountId === 'uncategorized' || l.accountId === 'unassigned' || l.amountCents > 0);
+      const targetIdx = catLineIdx !== -1 ? catLineIdx : 0;
+      updatedLines[targetIdx] = {
+        ...updatedLines[targetIdx],
+        accountId,
+        accountName,
+        description: note || updatedLines[targetIdx].description || tx.description
+      };
+    }
 
     try {
       await handleUpdateTransaction(txId, {
-        lines: [updatedLine],
+        lines: updatedLines,
         status: 'reviewed',
         verification: {
           status: 'verified',
@@ -74,8 +86,8 @@ export default function AskLoop() {
         }
       });
       toast.success(`Categorized "${tx.description}" as ${accountName}`);
-    } catch (err) {
-      toast.error('Failed to update transaction.');
+    } catch (err: any) {
+      toast.error(`Failed to update transaction: ${err?.message || 'Double-entry integrity check failed'}`);
     }
   };
 

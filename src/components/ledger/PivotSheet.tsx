@@ -10,8 +10,10 @@ import {
   Grid3X3,
   ListCollapse,
   Plus,
-  ExternalLink
+  ExternalLink,
+  Calendar
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { formatDecimal, cn, formatCurrency, sanitizeCsvCell, resolveAccountName } from '../../lib/utils';
 import { isPostable } from '../../lib/txFilters';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
@@ -26,6 +28,7 @@ interface PivotSheetProps {
 
 type GroupBy = string; // Dynamic dimension ID or 'month' | 'payee'
 type PivotMode = 'flat' | 'matrix';
+type PeriodFilter = 'all' | 'this_year' | 'last_year' | 'this_quarter' | 'this_month' | 'custom';
 
 export default function PivotSheet({ transactions, isEmbedded = false }: PivotSheetProps) {
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
@@ -45,6 +48,9 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
   const [colDim, setColDim] = useState<GroupBy>('month');
   const [groupBy, setGroupBy] = useState<GroupBy>('category');
   const [searchTerm, setSearchTerm] = useState('');
+  const [period, setPeriod] = useState<PeriodFilter>('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [drillDownTarget, setDrillDownTarget] = useState<{ title: string; transactions: Transaction[] } | null>(null);
 
@@ -58,118 +64,201 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
     setExpandedGroups(newExpanded);
   };
 
-  // Helper code to map a Transaction to a group key representation using dynamic dimension resolver
-  const getDimensionValue = (t: Transaction, dim: GroupBy): string => {
+  // Compute active date boundaries
+  const { startDate, endDate } = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+
+    if (period === 'this_year') {
+      return { startDate: `${y}-01-01`, endDate: `${y}-12-31` };
+    }
+    if (period === 'last_year') {
+      return { startDate: `${y - 1}-01-01`, endDate: `${y - 1}-12-31` };
+    }
+    if (period === 'this_month') {
+      const lastDay = new Date(y, m + 1, 0).getDate();
+      return { 
+        startDate: `${y}-${String(m + 1).padStart(2, '0')}-01`, 
+        endDate: `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}` 
+      };
+    }
+    if (period === 'this_quarter') {
+      const qStartMonth = Math.floor(m / 3) * 3;
+      const qEndMonth = qStartMonth + 2;
+      const lastDay = new Date(y, qEndMonth + 1, 0).getDate();
+      return {
+        startDate: `${y}-${String(qStartMonth + 1).padStart(2, '0')}-01`,
+        endDate: `${y}-${String(qEndMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+      };
+    }
+    if (period === 'custom') {
+      return { startDate: customStartDate, endDate: customEndDate };
+    }
+    return { startDate: '', endDate: '' };
+  }, [period, customStartDate, customEndDate]);
+
+  // Scoped & Postable transactions
+  const scopedTransactions = useMemo(() => {
+    return transactions.filter(t => {
+      if (!isPostable(t)) return false;
+      if (startDate && t.date < startDate) return false;
+      if (endDate && t.date > endDate) return false;
+      return true;
+    });
+  }, [transactions, startDate, endDate]);
+
+  // Helper code to map a Transaction/Line to a group key representation
+  const getLineDimensionValue = (t: Transaction, line: any, dim: GroupBy): string => {
     if (dim === 'payee') {
       return t.payee || t.description || 'Direct Entry';
     }
     if (dim === 'month') {
       if (!t.date) return 'Unknown Date';
-      const parts = t.date.split('-');
-      if (parts.length < 2) return 'Unknown Date';
-      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
-      return d.toLocaleString('default', { month: 'short', year: 'numeric' });
+      return t.date.substring(0, 7); // ISO YYYY-MM
+    }
+    if (dim === 'account' || dim === 'accountId') {
+      return resolveAccountName(accounts, line?.accountId, line?.accountName) || 'Unassigned';
     }
 
-    // Try line-level dimension resolution
-    const lineVal = t.lines?.[0] ? getLineDimension(t.lines[0], t, dim) : 'Unassigned';
+    const lineVal = line ? getLineDimension(line, t, dim) : 'Unassigned';
     return lineVal || 'Unassigned';
   };
 
-  // 1. FLAT MODE COMPILATION (O(N) List Aggregate)
+  const formatDimensionDisplay = (dim: GroupBy, key: string): string => {
+    if (dim === 'month' && /^\d{4}-\d{2}$/.test(key)) {
+      const [year, month] = key.split('-');
+      const d = new Date(Number(year), Number(month) - 1, 1);
+      return d.toLocaleString('default', { month: 'short', year: 'numeric' });
+    }
+    return key;
+  };
+
+  // 1. FLAT MODE COMPILATION (Line-accurate Aggregation)
   const groupedData = useMemo(() => {
-    const groups: Record<string, { total: number, items: Transaction[] }> = {};
+    const groups: Record<string, { total: number, items: Transaction[], lineCount: number }> = {};
+    const seenTxInGroup: Record<string, Set<string>> = {};
     
-    transactions.forEach(t => {
-      if (!isPostable(t)) return;
-      const key = getDimensionValue(t, groupBy);
-
-      if (searchTerm && 
-          !key.toLowerCase().includes(searchTerm.toLowerCase()) && 
-          !t.description.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return;
-      }
-
+    scopedTransactions.forEach(t => {
       const txRate = t.exchangeRate || 1;
-      const convertedCents = Math.round(t.totalAmountCents * txRate);
+      const linesToProcess = (t.lines && t.lines.length > 0) 
+        ? t.lines 
+        : [{ accountId: '', accountName: '', amountCents: t.totalAmountCents, description: t.description }];
 
-      if (!groups[key]) groups[key] = { total: 0, items: [] };
-      groups[key].total += convertedCents;
-      groups[key].items.push(t);
+      linesToProcess.forEach(line => {
+        const key = getLineDimensionValue(t, line, groupBy);
+
+        if (searchTerm && 
+            !key.toLowerCase().includes(searchTerm.toLowerCase()) && 
+            !t.description.toLowerCase().includes(searchTerm.toLowerCase()) &&
+            !(t.payee || '').toLowerCase().includes(searchTerm.toLowerCase())) {
+          return;
+        }
+
+        const convertedCents = Math.round((line.amountCents || 0) * txRate);
+
+        if (!groups[key]) {
+          groups[key] = { total: 0, items: [], lineCount: 0 };
+          seenTxInGroup[key] = new Set();
+        }
+        groups[key].total += convertedCents;
+        groups[key].lineCount += 1;
+
+        if (!seenTxInGroup[key].has(t.id)) {
+          seenTxInGroup[key].add(t.id);
+          groups[key].items.push(t);
+        }
+      });
     });
 
     return Object.entries(groups).sort((a, b) => Math.abs(b[1].total) - Math.abs(a[1].total));
-  }, [transactions, groupBy, searchTerm]);
+  }, [scopedTransactions, groupBy, searchTerm, accounts]);
 
   // 2. CROSS-TAB MATRIX MODE COMPILATION
   const matrixData = useMemo(() => {
-    if (pivotMode !== 'matrix') return { rows: [], cols: [], cells: {}, cellItems: {}, rowTotals: {}, rowItems: {}, colTotals: {}, colItems: {}, allItems: [], grandTotal: 0 };
+    if (pivotMode !== 'matrix') {
+      return { rows: [], cols: [], cells: {}, cellItems: {}, rowTotals: {}, rowItems: {}, colTotals: {}, colItems: {}, allItems: [], grandTotal: 0 };
+    }
 
     const cells: Record<string, Record<string, number>> = {};
     const cellItems: Record<string, Record<string, Transaction[]>> = {};
+    const seenCellTxs: Record<string, Record<string, Set<string>>> = {};
     const rowTotals: Record<string, number> = {};
     const rowItems: Record<string, Transaction[]> = {};
+    const seenRowTxs: Record<string, Set<string>> = {};
     const colTotals: Record<string, number> = {};
     const colItems: Record<string, Transaction[]> = {};
+    const seenColTxs: Record<string, Set<string>> = {};
     const allItems: Transaction[] = [];
+    const seenAllTxs = new Set<string>();
     let grandTotal = 0;
 
     const rowKeys = new Set<string>();
     const colKeys = new Set<string>();
 
-    transactions.forEach(t => {
-      if (!isPostable(t)) return;
-      const rKey = getDimensionValue(t, rowDim);
-      const cKey = getDimensionValue(t, colDim);
-
-      if (searchTerm && 
-          !rKey.toLowerCase().includes(searchTerm.toLowerCase()) && 
-          !cKey.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return;
-      }
-
-      rowKeys.add(rKey);
-      colKeys.add(cKey);
-
+    scopedTransactions.forEach(t => {
       const txRate = t.exchangeRate || 1;
-      const convertedCents = Math.round(t.totalAmountCents * txRate);
+      const linesToProcess = (t.lines && t.lines.length > 0) 
+        ? t.lines 
+        : [{ accountId: '', accountName: '', amountCents: t.totalAmountCents, description: t.description }];
 
-      if (!cells[rKey]) cells[rKey] = {};
-      if (!cells[rKey][cKey]) cells[rKey][cKey] = 0;
-      cells[rKey][cKey] += convertedCents;
+      linesToProcess.forEach(line => {
+        const rKey = getLineDimensionValue(t, line, rowDim);
+        const cKey = getLineDimensionValue(t, line, colDim);
 
-      if (!cellItems[rKey]) cellItems[rKey] = {};
-      if (!cellItems[rKey][cKey]) cellItems[rKey][cKey] = [];
-      cellItems[rKey][cKey].push(t);
-      
-      rowTotals[rKey] = (rowTotals[rKey] || 0) + convertedCents;
-      if (!rowItems[rKey]) rowItems[rKey] = [];
-      rowItems[rKey].push(t);
+        if (searchTerm && 
+            !rKey.toLowerCase().includes(searchTerm.toLowerCase()) && 
+            !cKey.toLowerCase().includes(searchTerm.toLowerCase()) &&
+            !t.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+          return;
+        }
 
-      colTotals[cKey] = (colTotals[cKey] || 0) + convertedCents;
-      if (!colItems[cKey]) colItems[cKey] = [];
-      colItems[cKey].push(t);
+        rowKeys.add(rKey);
+        colKeys.add(cKey);
 
-      allItems.push(t);
-      grandTotal += convertedCents;
+        const convertedCents = Math.round((line.amountCents || 0) * txRate);
+
+        if (!cells[rKey]) cells[rKey] = {};
+        if (!cells[rKey][cKey]) cells[rKey][cKey] = 0;
+        cells[rKey][cKey] += convertedCents;
+
+        if (!cellItems[rKey]) cellItems[rKey] = {};
+        if (!cellItems[rKey][cKey]) cellItems[rKey][cKey] = [];
+        if (!seenCellTxs[rKey]) seenCellTxs[rKey] = {};
+        if (!seenCellTxs[rKey][cKey]) seenCellTxs[rKey][cKey] = new Set();
+        if (!seenCellTxs[rKey][cKey].has(t.id)) {
+          seenCellTxs[rKey][cKey].add(t.id);
+          cellItems[rKey][cKey].push(t);
+        }
+        
+        rowTotals[rKey] = (rowTotals[rKey] || 0) + convertedCents;
+        if (!rowItems[rKey]) rowItems[rKey] = [];
+        if (!seenRowTxs[rKey]) seenRowTxs[rKey] = new Set();
+        if (!seenRowTxs[rKey].has(t.id)) {
+          seenRowTxs[rKey].add(t.id);
+          rowItems[rKey].push(t);
+        }
+
+        colTotals[cKey] = (colTotals[cKey] || 0) + convertedCents;
+        if (!colItems[cKey]) colItems[cKey] = [];
+        if (!seenColTxs[cKey]) seenColTxs[cKey] = new Set();
+        if (!seenColTxs[cKey].has(t.id)) {
+          seenColTxs[cKey].add(t.id);
+          colItems[cKey].push(t);
+        }
+
+        if (!seenAllTxs.has(t.id)) {
+          seenAllTxs.add(t.id);
+          allItems.push(t);
+        }
+        grandTotal += convertedCents;
+      });
     });
 
-    const sortedRows = Array.from(rowKeys).sort((a, b) => Math.abs(rowTotals[b]) - Math.abs(rowTotals[a]));
+    const sortedRows = Array.from(rowKeys).sort((a, b) => Math.abs(rowTotals[b] || 0) - Math.abs(rowTotals[a] || 0));
     
-    // Sort columns chronologically if month, else alphanumeric
-    const sortedCols = Array.from(colKeys).sort((a, b) => {
-      if (colDim === 'month') {
-        const parseMonth = (s: string) => {
-          const parts = s.split(' ');
-          if (parts.length < 2) return 0;
-          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          const mIdx = months.indexOf(parts[0]);
-          return Number(parts[1]) * 12 + (mIdx !== -1 ? mIdx : 0);
-        };
-        return parseMonth(a) - parseMonth(b);
-      }
-      return a.localeCompare(b);
-    });
+    // Alphanumeric ISO sort (e.g. YYYY-MM is chronological in every locale)
+    const sortedCols = Array.from(colKeys).sort((a, b) => a.localeCompare(b));
 
     return {
       rows: sortedRows,
@@ -184,7 +273,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
       grandTotal
     };
 
-  }, [transactions, pivotMode, rowDim, colDim, searchTerm]);
+  }, [scopedTransactions, pivotMode, rowDim, colDim, searchTerm, accounts]);
 
   return (
     <div className={cn(
@@ -205,59 +294,105 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-             {/* Mode Selector */}
-             <div className="flex p-0.5 bg-[var(--panel)] border border-[var(--line)] rounded-xl shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setPivotMode('flat')}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer",
-                    pivotMode === 'flat' ? "bg-[var(--brass)] text-black shadow-3xs" : "text-[var(--muted)] hover:text-[var(--text)]"
-                  )}
-                >
-                  <ListCollapse size={11} />
-                  <span>Flat View</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPivotMode('matrix')}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer",
-                    pivotMode === 'matrix' ? "bg-[var(--brass)] text-black shadow-3xs" : "text-[var(--muted)] hover:text-[var(--text)]"
-                  )}
-                >
-                  <Grid3X3 size={11} />
-                  <span>Cross-Tab Matrix</span>
-                </button>
-             </div>
+              {/* Period Filter */}
+              <div className="flex items-center gap-1.5 bg-[var(--panel)] border border-[var(--line)] rounded-xl px-2 py-1">
+                 <Calendar size={12} className="text-slate-400" />
+                 <select
+                   aria-label="Filter period"
+                   value={period}
+                   onChange={(e) => setPeriod(e.target.value as PeriodFilter)}
+                   className="bg-transparent text-[9.5px] font-bold uppercase tracking-wider text-[var(--text)] outline-none cursor-pointer"
+                 >
+                   <option value="all">All Dates</option>
+                   <option value="this_year">This Year</option>
+                   <option value="last_year">Last Year</option>
+                   <option value="this_quarter">This Quarter</option>
+                   <option value="this_month">This Month</option>
+                   <option value="custom">Custom Range</option>
+                 </select>
+                 {period === 'custom' && (
+                   <div className="flex items-center gap-1 ml-1 border-l border-[var(--line)] pl-1.5">
+                     <input
+                       type="date"
+                       aria-label="Start date"
+                       value={customStartDate}
+                       onChange={(e) => setCustomStartDate(e.target.value)}
+                       className="bg-[var(--surface)] border border-[var(--line)] rounded px-1.5 py-0.5 text-[9px] font-mono outline-none"
+                     />
+                     <span className="text-[9px] text-slate-400">to</span>
+                     <input
+                       type="date"
+                       aria-label="End date"
+                       value={customEndDate}
+                       onChange={(e) => setCustomEndDate(e.target.value)}
+                       className="bg-[var(--surface)] border border-[var(--line)] rounded px-1.5 py-0.5 text-[9px] font-mono outline-none"
+                     />
+                   </div>
+                 )}
+              </div>
 
-             {/* Export Data Button */}
-             <button 
-               type="button"
-               onClick={() => {
-                 if (transactions.length === 0) return;
-                 const headers = ['Date', 'Description', 'Payee', 'Category', 'Amount (USD)'];
-                 const rows = transactions.map(t => [
-                   t.date,
-                   `"${t.description.replace(/"/g, '""')}"`,
-                   `"${(t.payee || '').replace(/"/g, '""')}"`,
-                   `"${resolveAccountName(accounts, t.lines[0]?.accountId, t.lines[0]?.accountName).replace(/"/g, '""')}"`,
-                   formatDecimal(t.totalAmountCents)
-                 ]);
-                 const csvString = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-                 const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-                 const url = URL.createObjectURL(blob);
-                 const link = document.createElement('a');
-                 link.href = url;
-                 link.download = 'pivot_export.csv';
-                 link.click();
-                 URL.revokeObjectURL(url);
-               }}
-               className="h-9 px-3 border border-[var(--line)] hover:border-slate-350 bg-[var(--surface)] hover:bg-[var(--ink)] rounded-xl flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0"
-             >
-               <Download size={12} /> 
-               <span>CSV</span>
-             </button>
+              {/* Mode Selector */}
+              <div className="flex p-0.5 bg-[var(--panel)] border border-[var(--line)] rounded-xl shrink-0">
+                 <button
+                   type="button"
+                   onClick={() => setPivotMode('flat')}
+                   className={cn(
+                     "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer",
+                     pivotMode === 'flat' ? "bg-[var(--brass)] text-black shadow-3xs" : "text-[var(--muted)] hover:text-[var(--text)]"
+                   )}
+                 >
+                   <ListCollapse size={11} />
+                   <span>Flat View</span>
+                 </button>
+                 <button
+                   type="button"
+                   onClick={() => setPivotMode('matrix')}
+                   className={cn(
+                     "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer",
+                     pivotMode === 'matrix' ? "bg-[var(--brass)] text-black shadow-3xs" : "text-[var(--muted)] hover:text-[var(--text)]"
+                   )}
+                 >
+                   <Grid3X3 size={11} />
+                   <span>Cross-Tab Matrix</span>
+                 </button>
+              </div>
+
+              {/* Export Data Button */}
+              <button 
+                type="button"
+                onClick={() => {
+                  if (scopedTransactions.length === 0) {
+                    toast.error("No transactions to export in this scope.");
+                    return;
+                  }
+                  const headers = ['Date', 'Transaction ID', 'Description', 'Payee', 'Account', 'Amount (USD)'];
+                  const rows = scopedTransactions.flatMap(t => {
+                    const lines = (t.lines && t.lines.length > 0) 
+                      ? t.lines 
+                      : [{ accountId: '', accountName: '', amountCents: t.totalAmountCents }];
+                    return lines.map(l => [
+                      t.date,
+                      t.id,
+                      `"${t.description.replace(/"/g, '""')}"`,
+                      `"${(t.payee || '').replace(/"/g, '""')}"`,
+                      `"${resolveAccountName(accounts, l.accountId, l.accountName).replace(/"/g, '""')}"`,
+                      formatDecimal(Math.round((l.amountCents || 0) * (t.exchangeRate || 1)))
+                    ]);
+                  });
+                  const csvString = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+                  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `pivot_export_${new Date().toISOString().split('T')[0]}.csv`;
+                  link.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="h-9 px-3 border border-[var(--line)] hover:border-slate-350 bg-[var(--surface)] hover:bg-[var(--ink)] rounded-xl flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0"
+              >
+                <Download size={12} /> 
+                <span>CSV</span>
+              </button>
           </div>
         </div>
 
@@ -446,7 +581,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                   </th>
                   {matrixData.cols.map(cKey => (
                     <th key={cKey} className="px-4 py-4 text-[9.5px] font-bold text-slate-500 uppercase tracking-widest text-right font-mono border-r border-slate-150">
-                      {cKey}
+                      {formatDimensionDisplay(colDim, cKey)}
                     </th>
                   ))}
                   <th className="px-6 py-4 text-[9.5px] font-bold text-slate-700 uppercase tracking-widest text-right bg-slate-100/70">
@@ -463,7 +598,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                       <td className="sticky left-0 z-10 bg-[var(--surface)] group-hover:bg-[var(--ink)]/50 px-6 py-3 text-xs font-bold text-slate-850 uppercase tracking-tight border-r border-[var(--line)]">
                         <div className="flex items-center gap-2">
                            <span className="text-[8.5px] font-mono text-slate-400">R{(rIdx + 1).toString().padStart(2, '0')}</span>
-                           <span className="truncate max-w-[170px]">{rKey}</span>
+                           <span className="truncate max-w-[170px]">{formatDimensionDisplay(rowDim, rKey)}</span>
                         </div>
                       </td>
                       
@@ -477,7 +612,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                             onClick={() => {
                               if (cellItems.length > 0) {
                                 setDrillDownTarget({
-                                  title: `${rKey} × ${cKey}`,
+                                  title: `${formatDimensionDisplay(rowDim, rKey)} × ${formatDimensionDisplay(colDim, cKey)}`,
                                   transactions: cellItems
                                 });
                               }
@@ -509,12 +644,12 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                           const items = matrixData.rowItems[rKey] || [];
                           if (items.length > 0) {
                             setDrillDownTarget({
-                              title: `Total: ${rKey}`,
+                              title: `Total: ${formatDimensionDisplay(rowDim, rKey)}`,
                               transactions: items
                             });
                           }
                         }}
-                        title={`Click to inspect all ${matrixData.rowItems[rKey]?.length || 0} transactions for ${rKey}`}
+                        title={`Click to inspect all ${matrixData.rowItems[rKey]?.length || 0} transactions for ${formatDimensionDisplay(rowDim, rKey)}`}
                         className="px-6 py-3 text-right font-mono text-xs font-bold bg-[var(--ink)]/30 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40 cursor-pointer transition-colors group/rowtot"
                       >
                         <span className={cn("flex items-center justify-end gap-1.5", rowTotalVal >= 0 ? "text-emerald-600" : "text-rose-600")}>
@@ -540,7 +675,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                         onClick={() => {
                           if (items.length > 0) {
                             setDrillDownTarget({
-                              title: `Column Total: ${cKey}`,
+                              title: `Column Total: ${formatDimensionDisplay(colDim, cKey)}`,
                               transactions: items
                             });
                           }

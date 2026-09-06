@@ -56,22 +56,70 @@ export default function InboxView() {
   const mediumConfidence = pendingTransactions.filter(t => t.uiConfidence >= 60 && t.uiConfidence < 90);
   const lowConfidence = pendingTransactions.filter(t => t.uiConfidence < 60);
 
-  const _handleCategorize = async (transactionIds: string[], category: string, account: string) => {
+  const _handleCategorize = async (transactionIds: string[], category: string, targetAccountId?: string) => {
+    // Find matching chart account
+    let resolvedAcc = accounts.find(a => a.id === targetAccountId);
+    if (!resolvedAcc && category) {
+      const lowerCat = category.toLowerCase();
+      resolvedAcc = accounts.find(a => 
+        a.name.toLowerCase().includes(lowerCat) || 
+        (a.category && a.category.toLowerCase().includes(lowerCat))
+      );
+    }
+    if (!resolvedAcc) {
+      // Fallback to first expense account or standard chart account
+      resolvedAcc = accounts.find(a => a.type === 'expense') || accounts[0];
+    }
+
     for (const id of transactionIds) {
-      await updateEntity('transactions', id, { status: 'completed' }); // categorize and complete
+      const tx = transactions.find(t => t.id === id);
+      if (!tx) continue;
+
+      let updatedLines = tx.lines && tx.lines.length > 0 ? tx.lines.map(l => ({ ...l })) : [];
+      if (updatedLines.length === 0) {
+        const cashAcc = accounts.find(a => a.type === 'asset' || a.category === 'cash_and_equivalents') || accounts[0];
+        const amt = tx.totalAmountCents || 0;
+        updatedLines = [
+          { accountId: resolvedAcc.id, accountName: resolvedAcc.name, amountCents: amt, category },
+          { accountId: cashAcc?.id || 'acc_cash', accountName: cashAcc?.name || 'Cash', amountCents: -amt }
+        ];
+      } else {
+        // Find line that needs categorization (e.g. non-cash or uncategorized line)
+        const catLineIdx = updatedLines.findIndex(l => !l.accountId || l.accountId === 'uncategorized' || l.accountId === 'unassigned' || l.amountCents > 0);
+        const targetIdx = catLineIdx !== -1 ? catLineIdx : 0;
+        updatedLines[targetIdx] = {
+          ...updatedLines[targetIdx],
+          accountId: resolvedAcc.id,
+          accountName: resolvedAcc.name,
+          category: category || updatedLines[targetIdx].category
+        };
+      }
+
+      await updateEntity('transactions', id, { 
+        lines: updatedLines, 
+        status: 'completed',
+        isReviewed: true
+      });
     }
   };
 
   const handleAutoFile = () => {
-    _handleCategorize(highConfidence.map(t => t.id), 'Auto-filed', 'expense');
+    _handleCategorize(highConfidence.map(t => t.id), 'Auto-filed');
   };
 
   const handleBatchConfirm = () => {
-    _handleCategorize(mediumConfidence.map(t => t.id), 'Batch Confirmed', 'expense');
+    const saasAcc = accounts.find(a => a.name.toLowerCase().includes('software') || a.name.toLowerCase().includes('saas') || a.name.toLowerCase().includes('subscription')) || accounts.find(a => a.type === 'expense');
+    _handleCategorize(mediumConfidence.map(t => t.id), 'Software / SaaS', saasAcc?.id);
   };
 
   const handleResolveLow = (id: string, category: string) => {
-    _handleCategorize([id], category, 'expense');
+    if (category.toLowerCase().includes('business')) {
+      const bizAcc = accounts.find(a => a.name.toLowerCase().includes('office') || a.name.toLowerCase().includes('general') || a.type === 'expense');
+      _handleCategorize([id], 'Business Expense', bizAcc?.id);
+    } else {
+      const ownerDrawAcc = accounts.find(a => a.type === 'equity' || a.name.toLowerCase().includes('draw') || a.name.toLowerCase().includes('distribution')) || accounts.find(a => a.type === 'equity');
+      _handleCategorize([id], 'Owner Draw', ownerDrawAcc?.id);
+    }
   };
 
   if (pendingTransactions.length === 0) {
