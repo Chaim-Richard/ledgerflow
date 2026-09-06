@@ -27,6 +27,8 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
   const employees = useLedgerStore(state => state.employees || []);
   const budgets = useLedgerStore(state => state.budgets || []);
   const customers = useLedgerStore(state => state.customers || []);
+  const baseCurrency = useLedgerStore(state => state.baseCurrency || 'USD');
+  const reportingCurrency = baseCurrency;
   
   const algorithm = useMemo(() => {
     if (FINANCIAL_ALGORITHMS[toolId]) return FINANCIAL_ALGORITHMS[toolId];
@@ -51,7 +53,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
       accounts,
       params.asOfDate,
       period,
-      'USD',
+      reportingCurrency,
       { invoices, bills, vendors, employees, budgets, customers }
     );
 

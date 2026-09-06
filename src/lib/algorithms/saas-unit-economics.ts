@@ -83,7 +83,7 @@ export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
     }
 
     // Assumptions for the period based on normalized monthly ledger data
-    const grossMarginPct = mrr > 0 ? Math.max(0, (mrr - avgCogs) / mrr) : 0;
+    const grossMarginPct = mrr > 0 ? (mrr - avgCogs) / mrr : 0;
     const arpu = newCustomers > 0 ? (mrr / newCustomers) : 0; // Normalized Monthly ARPU
     
     // CAC = Monthly Marketing Spend / Monthly New Customers

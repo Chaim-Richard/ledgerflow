@@ -1,6 +1,6 @@
 import { parseLocalDate } from '../utils';
 import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition, buildHelper } from './types';
+import { AlgorithmDefinition, buildLegacyHelper } from './types';
 
 const BENFORD_EXPECTED: Record<number, number> = {
   1: 0.301, 2: 0.176, 3: 0.125, 4: 0.097, 5: 0.079,
@@ -105,7 +105,7 @@ function findOutliers(transactions: Transaction[], threshold = 3.5) {
     .filter((r) => Number.isFinite(r.zScore) && Math.abs(r.zScore) > threshold);
 }
 
-export const anomalyDetection = buildHelper((transactions, accounts, inputs) => {
+export const anomalyDetection = buildLegacyHelper((transactions, accounts, inputs) => {
   const windowDays = inputs['windowDays'] ?? 3;
   const zScoreThreshold = inputs['zScoreThreshold'] ?? 3.5;
 
@@ -114,11 +114,13 @@ export const anomalyDetection = buildHelper((transactions, accounts, inputs) => 
   // Expenses for Benford's Law
   const expenseAccounts = new Set(accounts.filter(a => a.type === 'expense').map(a => a.id));
   
-  // Find outliers by account
+  // Find outliers by account (deduplicating transaction per account)
   const byAccount = new Map<string, Transaction[]>();
   for (const tx of transactions) {
+    const seenAccountInTx = new Set<string>();
     for (const line of tx.lines) {
-      if (expenseAccounts.has(line.accountId)) {
+      if (expenseAccounts.has(line.accountId) && !seenAccountInTx.has(line.accountId)) {
+         seenAccountInTx.add(line.accountId);
          const group = byAccount.get(line.accountId) ?? [];
          group.push(tx);
          byAccount.set(line.accountId, group);
@@ -135,8 +137,12 @@ export const anomalyDetection = buildHelper((transactions, accounts, inputs) => 
     }
   }
 
-  // Get amounts for Benford's Law (only expenses)
-  const expenseAmounts = Array.from(byAccount.values()).flat().map(tx => tx.totalAmountCents);
+  // Get amounts for Benford's Law (unique expense transactions)
+  const uniqueExpenseTxs = new Set<Transaction>();
+  for (const txs of byAccount.values()) {
+    for (const tx of txs) uniqueExpenseTxs.add(tx);
+  }
+  const expenseAmounts = Array.from(uniqueExpenseTxs).map(tx => tx.totalAmountCents);
   const benford = benfordsLawTest(expenseAmounts);
 
   const insights: string[] = [];

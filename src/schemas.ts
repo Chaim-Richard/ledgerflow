@@ -33,7 +33,7 @@ export const TransactionSchema = z.object({
   workspaceId: z.string(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   description: z.string().max(2000).default(''),
-  totalAmountCents: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+  totalAmountCents: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   currency: z.string().optional().default('USD'),
   originalCurrency: z.string().optional(),
   exchangeRate: z.number().positive().finite().default(1),

@@ -5,6 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
 import { ClosingEntryEngine } from '../../kernel/ledger/ClosingEntryEngine';
 import { TransactionSchema } from '../../schemas';
+import { Transaction } from '../../types';
 import { parseLocalDate } from '../../lib/utils';
 import { getDb } from '../db/firestore';
 
@@ -105,47 +106,7 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
     
     transaction.uid = user.uid; // Security fix: enforce ownership
 
-    const parsed = TransactionSchema.safeParse(transaction);
-    if (!parsed.success) {
-      return res.status(400).json({ error: 'Schema validation failed', details: parsed.error.issues });
-    }
-
-    const db = getDb();
-    if (!transaction.id) transaction.id = db.collection("transactions").doc().id;
-    
-    if (idempotencyKey) {
-       const idempotencyRef = db.collection('idempotencyKeys').doc(idempotencyKey);
-       const idempotencyDoc = await idempotencyRef.get();
-       if (idempotencyDoc.exists) {
-          const data = idempotencyDoc.data();
-          return res.status(data?.code || 409).json(data?.body || { error: 'Duplicate request processing' });
-       }
-    }
-
-    const wsDoc = await db.collection('workspaces').doc(transaction.workspaceId).get();
-    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
-      return res.status(403).json({ error: 'Not a member' });
-    }
-    const wsData = wsDoc.data();
-
-    if (wsData?.lockDate && transaction.date && transaction.date <= wsData.lockDate) {
-      return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
-    }
-
-    const accountIds = Array.from(new Set<string>((transaction.lines || []).map((l: any) => String(l.accountId)).filter(Boolean)));
-    if (accountIds.length > 0) {
-      const accRefs = accountIds.map((id: string) => db.collection('chartAccounts').doc(id));
-      const accSnaps = await db.getAll(...accRefs);
-      for (const snap of accSnaps) {
-        if (!snap.exists || snap.data()?.workspaceId !== transaction.workspaceId) {
-          return res.status(400).json({ error: `Account ${snap.id} does not exist or does not belong to authorized workspace.` });
-        }
-      }
-    }
-    
-    DoubleEntryValidator.validateJournalEntry(transaction);
-    
-    // Standardize totalAmountCents
+    // Standardize totalAmountCents prior to schema parsing if omitted
     if (!transaction.totalAmountCents) {
        const debitSum = (transaction.lines || [])
          .filter((l: any) => (l.amountCents || 0) > 0)
@@ -153,31 +114,78 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
        transaction.totalAmountCents = debitSum || Math.abs(transaction.lines?.[0]?.amountCents || 0);
     }
 
+    const parsed = TransactionSchema.safeParse(transaction);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Schema validation failed', details: parsed.error.issues });
+    }
+
+    const db = getDb();
+    const finalTxToSave: Transaction = {
+      ...parsed.data,
+      id: parsed.data.id || db.collection("transactions").doc().id,
+    } as Transaction;
+    const transactionToSave = finalTxToSave;
+    
+    // Namespace idempotency key by workspaceId to prevent cross-workspace key collisions
+    const scopedIdempotencyKey = idempotencyKey ? `${transactionToSave.workspaceId}_${idempotencyKey}` : null;
+    
+    if (scopedIdempotencyKey) {
+       const idempotencyRef = db.collection('idempotencyKeys').doc(scopedIdempotencyKey);
+       const idempotencyDoc = await idempotencyRef.get();
+       if (idempotencyDoc.exists) {
+          const data = idempotencyDoc.data();
+          return res.status(data?.code || 409).json(data?.body || { error: 'Duplicate request processing' });
+       }
+    }
+
+    const wsDoc = await db.collection('workspaces').doc(transactionToSave.workspaceId).get();
+    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+    const wsData = wsDoc.data();
+
+    if (wsData?.lockDate && transactionToSave.date && transactionToSave.date <= wsData.lockDate) {
+      return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
+    }
+
+    const accountIds = Array.from(new Set<string>((transactionToSave.lines || []).map((l: any) => String(l.accountId)).filter(Boolean)));
+    if (accountIds.length > 0) {
+      const accRefs = accountIds.map((id: string) => db.collection('chartAccounts').doc(id));
+      const accSnaps = await db.getAll(...accRefs);
+      for (const snap of accSnaps) {
+        if (!snap.exists || snap.data()?.workspaceId !== transactionToSave.workspaceId) {
+          return res.status(400).json({ error: `Account ${snap.id} does not exist or does not belong to authorized workspace.` });
+        }
+      }
+    }
+    
+    DoubleEntryValidator.validateJournalEntry(transactionToSave);
+
     await db.runTransaction(async (t: any) => {
-      if (idempotencyKey) {
-         const idempotencyRef = db.collection('idempotencyKeys').doc(idempotencyKey);
+      if (scopedIdempotencyKey) {
+         const idempotencyRef = db.collection('idempotencyKeys').doc(scopedIdempotencyKey);
          const idempotencyDoc = await t.get(idempotencyRef);
          if (idempotencyDoc.exists) {
             throw new Error('Duplicate request processing');
          }
       }
 
-      const txRef = db.collection('transactions').doc(transaction.id);
+      const txRef = db.collection('transactions').doc(transactionToSave.id);
       const doc = await t.get(txRef);
       if (doc.exists) {
          throw new Error('Duplicate request processing');
       }
 
-      t.set(txRef, { ...transaction, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      t.set(txRef, { ...transactionToSave, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
 
-      if (idempotencyKey) {
-         const idempotencyRef = db.collection('idempotencyKeys').doc(idempotencyKey);
-         const responseBody = { status: 'ok', transactionId: transaction.id };
+      if (scopedIdempotencyKey) {
+         const idempotencyRef = db.collection('idempotencyKeys').doc(scopedIdempotencyKey);
+         const responseBody = { status: 'ok', transactionId: transactionToSave.id };
          t.set(idempotencyRef, { code: 200, body: responseBody, createdAt: FieldValue.serverTimestamp() });
       }
     });
 
-    res.status(200).json({ status: 'ok', transactionId: transaction.id });
+    res.status(200).json({ status: 'ok', transactionId: transactionToSave.id, data: transactionToSave });
   } catch (e: any) {
     if (e.message === 'Duplicate request processing') {
        return res.status(409).json({ error: e.message });
@@ -392,9 +400,17 @@ transactionRouter.post('/bulk', async (req, res) => {
       }
     }
 
-    // Period lock and account verification for transactions
+    // Period lock, duplicate ID check, and account verification for transactions
     const accountIdsToVerify = new Set<string>();
+    const seenTxIds = new Set<string>();
+
     for (const tx of (transactions || [])) {
+      if (tx.id) {
+        if (seenTxIds.has(tx.id)) {
+          return res.status(400).json({ error: `Duplicate transaction ID '${tx.id}' in bulk request payload.` });
+        }
+        seenTxIds.add(tx.id);
+      }
       tx.uid = user.uid;
       tx.workspaceId = wsId;
       if (wsData?.lockDate && tx.date && tx.date <= wsData.lockDate) {

@@ -34,9 +34,12 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
           currentLiabilities += Math.abs(bal);
         }
       } else if (type === 'equity') {
-        equity += Math.abs(bal);
+        // In credit-normal system, credit balance (-bal in debit system) is positive equity
+        // Debit balance (+bal) represents deficit/negative equity
+        const eqVal = -bal;
+        equity += eqVal;
         if (cat.includes('retained') || name.includes('retained')) {
-          retainedEarnings += Math.abs(bal);
+          retainedEarnings += eqVal;
         }
       }
     });

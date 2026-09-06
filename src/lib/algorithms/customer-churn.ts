@@ -18,8 +18,14 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
     const customerLastSeen: Record<string, number> = {};
     const customerValue: Record<string, number> = {};
     
+    let maxTxDate = 0;
+
     transactions.forEach(tx => {
        if (!isPostable(tx)) return;
+       if (tx.date) {
+          const d = parseLocalDate(tx.date).getTime();
+          if (d > maxTxDate) maxTxDate = d;
+       }
        
        let isRevenue = false;
        let txAmount = 0;
@@ -47,7 +53,7 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
        }
     });
 
-    const now = new Date().getTime();
+    const now = maxTxDate > 0 ? maxTxDate : new Date().getTime();
     let totalCustomers = 0;
     let churnedCustomers = 0;
     let atRiskCustomers = 0;

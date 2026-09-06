@@ -60,9 +60,9 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
       const role = resolveAccountRole(acc);
       const bal = accountBalances[acc.id] || 0;
 
-      if (role === 'inventory') inventory += Math.max(0, bal);
-      else if (role === 'ar') ar += Math.max(0, bal);
-      else if (role === 'ap') ap += Math.abs(bal);
+      if (role === 'inventory') inventory += bal;
+      else if (role === 'ar') ar += bal;
+      else if (role === 'ap') ap += -bal; // Liability balance is credit-normal
     });
 
     if (cogs === 0 || revenue === 0) {

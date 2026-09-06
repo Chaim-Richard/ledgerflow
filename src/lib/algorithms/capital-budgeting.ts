@@ -10,6 +10,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
   tags: ['Valuation', 'NPV', 'IRR', 'WACC', 'Payback'],
   description: 'Computes Weighted Average Cost of Capital (WACC) and evaluates project viability using NPV, IRR, Profitability Index, and Discounted Payback Period.',
   inputs: [
+    { key: 'initialInvestment', label: 'Initial Outlay ($)', min: 0, max: 10000000, step: 5000, defaultValue: 100000 },
     { key: 'costOfEquityPct', label: 'Cost of Equity (%)', min: 1, max: 30, step: 0.5, defaultValue: 10 },
     { key: 'costOfDebtPct', label: 'Cost of Debt (%)', min: 1, max: 20, step: 0.5, defaultValue: 5 },
     { key: 'taxRatePct', label: 'Corporate Tax Rate (%)', min: 0, max: 50, step: 1, defaultValue: 21 },
@@ -26,7 +27,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     const wacc = (equityPct * ke) + (debtPct * kd * (1 - tax));
     const waccPct = (wacc * 100).toFixed(2);
     
-    // Group transaction cash flows by year to simulate project horizons
+    // Group transaction cash flows by year
     const yearlyFlows: Record<string, number> = {};
 
     transactions.forEach(tx => {
@@ -44,7 +45,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
          const amt = lineAmount(l, tx);
          if (acc && role === 'cash') {
              hasCashAccount = true;
-             netImpact += amt; // Debit is positive cash inflow, credit is negative outflow
+             netImpact += amt; // Inflows positive, outflows negative
          }
       });
 
@@ -68,18 +69,28 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     const sortedYears = Object.keys(yearlyFlows).sort();
     let cashFlowArray = sortedYears.map(y => yearlyFlows[y]);
     
-    // If no ledger data, use standard simulation profile
-    if (cashFlowArray.length === 0) {
-      cashFlowArray = [30000, 45000, 60000, 50000, 40000];
+    // Determine Initial Investment (Capex) from input or first negative year flow
+    let initialInvestment = inputs['initialInvestment'] ?? 0;
+    if (cashFlowArray.length > 0 && cashFlowArray[0] < 0) {
+      initialInvestment = Math.abs(cashFlowArray[0]);
+      cashFlowArray = cashFlowArray.slice(1);
     }
-    
-    // Determine Initial Investment (Capex) - assume the largest negative outflow or a simulated baseline
-    let initialInvestment: number;
-    if (cashFlowArray[0] < 0) {
-       initialInvestment = Math.abs(cashFlowArray[0]);
-       cashFlowArray = cashFlowArray.slice(1);
-    } else {
-       initialInvestment = Math.max(...cashFlowArray) * 1.5 || 100000;
+
+    if (cashFlowArray.length === 0 && initialInvestment === 0) {
+      return {
+        metrics: [
+          { label: 'WACC (Hurdle Rate)', value: `${waccPct}%`, color: 'blue' },
+          { label: 'Internal Rate of Return (IRR)', value: 'N/A', color: 'gray' },
+          { label: 'Net Present Value', value: '$0', color: 'gray' },
+          { label: 'Profitability Index', value: '0.00', color: 'gray' },
+          { label: 'Discounted Payback', value: 'N/A', color: 'gray' }
+        ],
+        charts: [],
+        insights: [
+          `The enterprise hurdle rate (WACC) is calculated at ${waccPct}%.`,
+          'No transaction cash flows or initial project outlay specified in ledger or inputs. Provide an initial outlay or record project transactions to evaluate NPV/IRR.'
+        ]
+      };
     }
 
     const npv = calculateNPV(wacc, initialInvestment, cashFlowArray);

@@ -1,11 +1,13 @@
 import { Transaction, ChartAccount } from '../../types';
 import { AlgorithmDefinition, adaptLegacy } from './types';
 import { parseLocalDate } from '../../lib/utils';
+import { isPostable } from '../../lib/txFilters';
 
-export function detectRecurrences(transactions: Transaction[]) {
+export function detectRecurrences(transactions: Transaction[], minOccurrences = 2) {
     // 1. Group by entity/vendor (using description or simple hash)
     const groups: Record<string, Transaction[]> = {};
     transactions.forEach(t => {
+        if (!isPostable(t)) return;
         // Simple normalization
         const vendor = t.description?.toLowerCase().replace(/[^a-z]/g, '').substring(0, 15) || 'unknown';
         if (!groups[vendor]) groups[vendor] = [];
@@ -16,7 +18,7 @@ export function detectRecurrences(transactions: Transaction[]) {
 
     // 2. Analyze each group
     for (const [vendor, txs] of Object.entries(groups)) {
-        if (txs.length < 3) continue; // Need at least 3 occurrences to establish a pattern
+        if (txs.length < minOccurrences) continue; // Respect minOccurrences parameter
         
         // Sort by date
         txs.sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
@@ -80,9 +82,9 @@ export const RECURRENCE_DETECTION: AlgorithmDefinition = {
   compute: adaptLegacy((transactions, accounts, inputs) => {
     // We will use the live transactions
     const start = performance.now();
-    const recurrences = detectRecurrences(transactions);
-    // filter to those with at least minOccurrences
-    const filtered = recurrences.filter(r => r.txCount >= inputs.minOccurrences);
+    const minOcc = inputs['minOccurrences'] ?? 3;
+    const recurrences = detectRecurrences(transactions, minOcc);
+    const filtered = recurrences.filter(r => r.txCount >= minOcc);
     const ms = performance.now() - start;
     
     // Calculate total monthly impact

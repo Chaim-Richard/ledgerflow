@@ -1,5 +1,5 @@
 import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition, buildHelper } from './types';
+import { AlgorithmDefinition, buildLegacyHelper } from './types';
 
 function normalize(description: string): string {
   return description
@@ -14,7 +14,7 @@ function tokens(description: string): Set<string> {
   return new Set(normalize(description).split(" ").filter((t) => t.length > 2));
 }
 
-export const categorizationConsistency = buildHelper((transactions, accounts, inputs) => {
+export const categorizationConsistency = buildLegacyHelper((transactions, accounts, inputs) => {
   const consistencyThreshold = inputs['consistencyThreshold'] ?? 0.8;
   const targetDomain = 'expense'; // default to only analyzing expenses
   

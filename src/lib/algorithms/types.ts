@@ -113,7 +113,5 @@ export interface AlgorithmDefinition {
   compute: AlgoFn;
 }
 
-export const buildHelper = (fn: AlgoFn | LegacyAlgoFn): AlgoFn => {
-  if (fn.length <= 2) return fn as AlgoFn;
-  return adaptLegacy(fn as LegacyAlgoFn);
-};
+export const buildLegacyHelper = (fn: LegacyAlgoFn): AlgoFn => adaptLegacy(fn);
+export const buildHelper = (fn: AlgoFn): AlgoFn => fn;
