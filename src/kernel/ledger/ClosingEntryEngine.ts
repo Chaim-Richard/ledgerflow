@@ -1,7 +1,7 @@
 import Decimal from 'decimal.js';
 import { ChartAccount, Transaction, TransactionLine } from '../../types';
 import { DoubleEntryValidator } from '../validation/DoubleEntryValidator';
-import { isPostable } from '../../lib/txFilters';
+import { isPostable, isRevenueAccount, isExpenseAccount } from '../../lib/txFilters';
 
 export interface ClosingResult {
   closingTransaction: Transaction;
@@ -44,9 +44,9 @@ export class ClosingEntryEngine {
 
     accounts.forEach(acc => {
       if (acc.workspaceId && acc.workspaceId !== workspaceId) return;
-      if (acc.type === 'income' || acc.type === 'revenue') {
+      if (isRevenueAccount(acc)) {
         incomeAccountMap.set(acc.id, acc);
-      } else if (acc.type === 'expense' || acc.type === 'cost_of_goods') {
+      } else if (isExpenseAccount(acc)) {
         expenseAccountMap.set(acc.id, acc);
       }
     });
@@ -109,22 +109,42 @@ export class ClosingEntryEngine {
     let isSynthetic = false;
 
     if (!retainedEarningsAcc) {
+      // Priority 1: Explicit Subtype or Category Match
       retainedEarningsAcc = accounts.find(a => 
         a.workspaceId === workspaceId && 
-        (a.subtype === 'retained_earnings' || a.category === 'retained_earnings')
+        (a.subtype === 'retained_earnings' || a.category?.toLowerCase() === 'retained earnings')
       );
     }
 
     if (!retainedEarningsAcc) {
+      // Priority 2: Specific Code Matching (GAAP/IFRS standard codes)
+      // We explicitly exclude 3000 if it's usually "Owner's Equity" or "Capital"
+      const prioritizedCodes = ['3100', '3900', '3200', '3070'];
       retainedEarningsAcc = accounts.find(a => 
         a.workspaceId === workspaceId && 
         a.type === 'equity' && 
-        (a.name.toLowerCase().includes('retained') || a.code === '3100' || a.code === '3900' || a.code === '3200' || a.code === '3000')
+        prioritizedCodes.includes(a.code || '')
       );
     }
 
     if (!retainedEarningsAcc) {
-      retainedEarningsAcc = accounts.find(a => a.workspaceId === workspaceId && a.type === 'equity');
+      // Priority 3: Semantic name matching
+      retainedEarningsAcc = accounts.find(a => 
+        a.workspaceId === workspaceId && 
+        a.type === 'equity' && 
+        a.name.toLowerCase().includes('retained earnings')
+      );
+    }
+
+    if (!retainedEarningsAcc) {
+      // Final Fallback: First Equity account that ISN'T "Owner's Equity" or "Capital"
+      retainedEarningsAcc = accounts.find(a => 
+        a.workspaceId === workspaceId && 
+        a.type === 'equity' && 
+        !a.name.toLowerCase().includes('owner') &&
+        !a.name.toLowerCase().includes('capital') &&
+        a.code !== '3000'
+      );
     }
 
     if (!retainedEarningsAcc) {

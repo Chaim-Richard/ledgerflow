@@ -1,38 +1,38 @@
 import { resolveAccountRole } from '../../lib/accountUtils';
-import React, { useState } from 'react';
-import { TrendingUp, Activity, BarChart, Zap, Calendar, ArrowUpRight } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { doubleExponentialSmoothing } from '../../lib/algorithms/forecasting';
+import React, { useState, useMemo } from 'react';
+import { TrendingUp, Activity, BarChart, Zap, Calendar, ArrowUpRight, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { cn, formatCurrency } from '../../lib/utils';
+import { StrategicEngine } from '../../services/strategicEngine';
 
 import { useLedgerStore } from '../../stores/useLedgerStore';
 
 export default function CashFlowPredictor() {
   const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
 
   const [activeTab, setActiveTab] = useState<'forecast' | 'trends'>('forecast');
   
-  // Historical cash flow data (monthly net cash flow)
-  const historicalData = (() => {
+  const forecastData = useMemo(() => {
+    return StrategicEngine.getForecast(transactions, accounts);
+  }, [transactions, accounts]);
+
+  const historicalData = useMemo(() => {
     const monthlyMap: Record<string, number> = {};
     transactions.forEach(t => {
       if (!t.date) return;
       const m = t.date.substring(0, 7);
       if (!monthlyMap[m]) monthlyMap[m] = 0;
       t.lines.forEach(l => {
-        const acc = useLedgerStore.getState().accounts.find(a => a.id === l.accountId);
+        const acc = accounts.find(a => a.id === l.accountId);
         if (acc && resolveAccountRole(acc) === 'cash') {
           monthlyMap[m] += l.amountCents / 100;
         }
       });
     });
-    return Object.keys(monthlyMap).sort().map(k => monthlyMap[k]);
-  })();
+    return Object.entries(monthlyMap).sort((a, b) => a[0].localeCompare(b[0])).map(([m, val]) => ({ month: m, value: val }));
+  }, [transactions, accounts]);
   
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
-  // Generate 6-month forecast using Holt's Method (alpha=0.3, beta=0.2)
-  const forecast = doubleExponentialSmoothing(historicalData, 0.3, 0.2, 6);
-  const forecastMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 
   return (
     <div className="h-full flex flex-col bg-[var(--ink)] text-[var(--text)]">
@@ -43,7 +43,7 @@ export default function CashFlowPredictor() {
             Cash Forecasting
           </h1>
           <p className="text-sm text-[var(--muted)] mt-1">
-            Time-series forecasting using Double Exponential Smoothing (Holt's Method).
+            Predictive liquidity analysis using Holt-Winters Triple Exponential Smoothing.
           </p>
         </div>
       </div>
@@ -67,44 +67,60 @@ export default function CashFlowPredictor() {
           ))}
         </div>
 
-        {activeTab === 'forecast' && (
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)] flex items-center justify-between">
-               <h2 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-emerald-500" />
-                  Forward Predictions (Holt's Method, α=0.3, β=0.2)
-               </h2>
+        {activeTab === 'forecast' && forecastData && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={cn(
+                "p-4 rounded-2xl border flex items-start gap-4",
+                forecastData.riskLevel === 'low' ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"
+              )}>
+                {forecastData.riskLevel === 'low' ? <CheckCircle2 className="text-emerald-500" /> : <ShieldAlert className="text-amber-500" />}
+                <div>
+                  <h3 className="font-bold text-slate-900 capitalize">{forecastData.riskLevel} Risk Forecast</h3>
+                  <p className="text-xs text-slate-600 mt-1">{forecastData.insights[0]}</p>
+                </div>
+              </div>
+              <div className="p-4 rounded-2xl border bg-indigo-50 border-indigo-200 flex items-start gap-4">
+                <Zap className="text-indigo-500" />
+                <div>
+                  <h3 className="font-bold text-slate-900">Strategic Recommendation</h3>
+                  <p className="text-xs text-slate-600 mt-1">{forecastData.recommendations[0]}</p>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-12 p-4 bg-[var(--ink)] border-b border-[var(--line)] text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              <div className="col-span-4">Future Period</div>
-              <div className="col-span-4 text-right">Predicted Net Cash Flow</div>
-              <div className="col-span-4 text-right">Trend Velocity</div>
-            </div>
-            <div className="divide-y divide-slate-200">
-              {forecast.map((val, idx) => {
-                 const prevVal = idx === 0 ? historicalData[historicalData.length-1] : forecast[idx-1];
-                 const velocity = ((val - prevVal) / prevVal) * 100;
-                 return (
-                   <div key={idx} className="grid grid-cols-12 p-4 items-center hover:bg-[var(--ink)] transition-colors">
-                     <div className="col-span-4 flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-slate-400" />
-                        <span className="font-bold text-[var(--text)]">2027 {forecastMonths[idx]}</span>
-                     </div>
-                     <div className="col-span-4 text-right font-mono font-bold text-emerald-600">
-                        ${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                     </div>
-                     <div className="col-span-4 flex justify-end">
-                        <span className={cn(
-                           "px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1",
-                           velocity > 0 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
-                        )}>
-                           <ArrowUpRight className="w-3 h-3" />
-                           {velocity > 0 ? '+' : ''}{velocity.toFixed(2)}%
-                        </span>
-                     </div>
-                   </div>
-                 );
-              })}
+
+            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)] flex items-center justify-between">
+                 <h2 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-emerald-500" />
+                    Liquidity Projections (Deterministic & Statistical)
+                 </h2>
+              </div>
+              <div className="grid grid-cols-12 p-4 bg-[var(--ink)] border-b border-[var(--line)] text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <div className="col-span-3">Future Period</div>
+                <div className="col-span-3 text-right">Inflow</div>
+                <div className="col-span-3 text-right">Outflow</div>
+                <div className="col-span-3 text-right">Proj. Balance</div>
+              </div>
+              <div className="divide-y divide-slate-200">
+                {forecastData.projections.map((p: any, idx: number) => (
+                  <div key={idx} className="grid grid-cols-12 p-4 items-center hover:bg-[var(--ink)] transition-colors">
+                    <div className="col-span-3 flex items-center gap-2">
+                       <Calendar className="w-4 h-4 text-slate-400" />
+                       <span className="font-bold text-[var(--text)]">{p.month}</span>
+                    </div>
+                    <div className="col-span-3 text-right font-mono font-bold text-emerald-600">
+                       +{formatCurrency(p.inflow * 100)}
+                    </div>
+                    <div className="col-span-3 text-right font-mono font-bold text-rose-600">
+                       -{formatCurrency(p.outflow * 100)}
+                    </div>
+                    <div className="col-span-3 text-right font-mono font-bold text-slate-900">
+                       {formatCurrency(p.balance * 100)}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -112,17 +128,20 @@ export default function CashFlowPredictor() {
         {activeTab === 'trends' && (
            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 shadow-sm">
              <div className="flex h-64 items-end gap-2 mt-4">
-                {historicalData.map((val, idx) => {
-                   const max = Math.max(...historicalData);
-                   const height = (val / max) * 100;
+                {historicalData.map((d, idx) => {
+                   const max = Math.max(...historicalData.map(h => Math.abs(h.value)), 1);
+                   const height = (Math.abs(d.value) / max) * 100;
                    return (
                       <div key={idx} className="flex-1 flex flex-col justify-end items-center gap-2 group relative">
-                         <div className="w-full bg-slate-200 rounded-t-sm hover:bg-slate-300 transition-colors relative" style={{ height: `${height}%` }}>
+                         <div className={cn(
+                           "w-full rounded-t-sm transition-colors relative",
+                           d.value >= 0 ? "bg-emerald-200 hover:bg-emerald-300" : "bg-rose-200 hover:bg-rose-300"
+                         )} style={{ height: `${height}%` }}>
                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap pointer-events-none z-10">
-                               ${val.toLocaleString()}
+                               {formatCurrency(d.value * 100)}
                             </div>
                          </div>
-                         <div className="text-[10px] font-bold text-slate-500 uppercase">{months[idx]}</div>
+                         <div className="text-[10px] font-bold text-slate-500 uppercase">{d.month.split('-')[1]}</div>
                       </div>
                    )
                 })}

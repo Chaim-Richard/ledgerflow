@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { ChartAccount, Transaction } from '../types';
 import { toast } from 'sonner';
-import { isPostable, isOpenInvoice, isOpenBill, lineAmount } from '../lib/txFilters';
+import { isPostable, isOpenInvoice, isOpenBill, lineAmount, isRevenueAccount, isExpenseAccount, calculateTransactionImpact } from '../lib/txFilters';
 import { resolveAccountRole } from '../lib/accountUtils';
 
 export function useFinancialReporting() {
@@ -95,15 +95,16 @@ export function useFinancialReporting() {
       };
 
       transactions.filter(isPostable).forEach((tx: any) => {
+        const accountMap = new Map(accounts.map(a => [a.id, a]));
         tx.lines?.forEach((line: any) => {
-          const acc = accounts.find(a => a.id === line.accountId);
+          const acc = accountMap.get(line.accountId);
           if (!acc) return;
 
           const role = resolveAccountRole(acc);
           const amt = lineAmount(line, tx);
 
-          if (acc.type === 'income' || acc.type === 'revenue') cashFlow.operating.total -= amt;
-          if (acc.type === 'expense' || acc.type === 'cost_of_goods') cashFlow.operating.total -= amt;
+          if (isRevenueAccount(acc)) cashFlow.operating.total -= amt;
+          if (isExpenseAccount(acc)) cashFlow.operating.total -= amt;
 
           if (role === 'ar' || acc.category === 'Receivables' || acc.category === 'Receivable') cashFlow.operating.total -= amt;
           if (role === 'ap' || acc.category === 'Payables' || acc.category === 'Payable') cashFlow.operating.total += amt;
@@ -135,12 +136,12 @@ export function useFinancialReporting() {
     // Local calculation for immediate feedback
     let localIncome = 0;
     let localExpenses = 0;
+    const accountMap = new Map(accounts.map(a => [a.id, a]));
+
     transactions.filter(isPostable).forEach((t: Transaction) => {
-      t.lines?.forEach((l: any) => {
-        const acc = accounts.find((a: ChartAccount) => a.id === l.accountId);
-        if (acc?.type === 'income' || acc?.type === 'revenue') localIncome += -lineAmount(l, t);
-        if (acc?.type === 'expense' || acc?.type === 'cost_of_goods') localExpenses += lineAmount(l, t);
-      });
+      const impact = calculateTransactionImpact(t, accountMap);
+      if (impact > 0) localIncome += impact;
+      else if (impact < 0) localExpenses += Math.abs(impact);
     });
 
     return {

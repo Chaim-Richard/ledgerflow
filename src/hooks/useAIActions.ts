@@ -23,8 +23,9 @@ export function useAIActions() {
     if (!transactions.length) return;
     setIsAnalyzing(true);
     try {
+      const { accounts } = useLedgerStore.getState();
       const metrics = { kpis: { revenue: 1000, expenses: 500, prevExpenses: 400, totalCash: 5000, runwayMonths: 10 } } as any; 
-      const insights = StrategicEngine.analyze({ metrics, projects: [] }, transactions);
+      const insights = StrategicEngine.analyze({ metrics, projects: [] }, transactions, accounts);
       
       const formattedInsights = {
         executiveSummary: "Algorithmic analysis completed.",

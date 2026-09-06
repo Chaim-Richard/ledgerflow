@@ -1,3 +1,4 @@
+import { isPostable, lineAmount, isRevenueAccount, isExpenseAccount, calculateTransactionImpact } from './txFilters';
 import { parseLocalDate } from './utils';
 import { PerformanceTelemetry } from "./telemetry";
 
@@ -24,10 +25,12 @@ const defaultRandom = seedPRNG(globalSeed);
  * This is a mathematical prerequisite for Holt-Winters, ARIMA, and Kalman Filter forecasting to run on equal intervals.
  * 
  * @param transactions Array of transactions containing dates and value splits
+ * @param accounts Chart of accounts for role resolution
  * @param options Configuration options for days and aggregation metrics
  */
 export function aggregateLedgerToDailySeries(
-  transactions: { date: string; lines?: { amountCents: number }[]; totalAmountCents?: number }[],
+  transactions: any[],
+  accounts: any[],
   options: {
     days?: number;
     metric?: 'volume' | 'debit' | 'credit' | 'net_flow' | 'running_balance';
@@ -44,6 +47,8 @@ export function aggregateLedgerToDailySeries(
   const start = new Date(end.getTime());
   start.setUTCDate(end.getUTCDate() - days + 1);
 
+  const accountMap = new Map(accounts.map(a => [a.id, a]));
+
   // Pre-seed the calendar series
   const seriesMap: Record<string, number> = {};
   const datesList: string[] = [];
@@ -59,70 +64,49 @@ export function aggregateLedgerToDailySeries(
   const firstDay = datesList[0];
   let initialBalDelta = 0;
 
-  // Mathematic Integrity O(N) Vectorization instead of O(N log N) sorting.
-  // Performs a single-pass summation which handles 50,000+ operations cleanly without browser memory exhaustion.
+  // Canonical accounting-aware summation
   for (let i = 0; i < transactions.length; i++) {
     const tx = transactions[i];
-    // Blazing fast string slicing (Y-M-D) vs native Date parsing inside the loop
-    const txDay = tx.date.substring(0, 10);
+    if (!isPostable(tx)) continue;
     
-    let txValue = 0;
+    const txDay = tx.date.substring(0, 10);
+    let txValue: number;
     
     if (metric === 'running_balance') {
-      if (tx.lines && tx.lines.length > 0) {
-        for (let j = 0; j < tx.lines.length; j++) txValue += tx.lines[j].amountCents;
-      } else if (tx.totalAmountCents) {
-        txValue += tx.totalAmountCents;
-      }
+      // For running balance, we sum ALL lines (Total DR - Total CR) which should be 0 if balanced,
+      // but here we usually mean the balance of a specific set of accounts.
+      // If no account filter is provided, we assume "Cash" impact or similar.
+      // However, historically this function was used for cash-flow-like running balances.
+      txValue = tx.lines?.reduce((sum: number, l: any) => sum + lineAmount(l, tx), 0) || 0;
       
       if (txDay < firstDay) {
         initialBalDelta += txValue;
       } else if (seriesMap[txDay] !== undefined) {
-        seriesMap[txDay] += txValue; // Bucket daily deltas
+        seriesMap[txDay] += txValue;
+      }
+    } else if (metric === 'net_flow') {
+      txValue = calculateTransactionImpact(tx, accountMap);
+      if (seriesMap[txDay] !== undefined) {
+        seriesMap[txDay] += txValue;
+      }
+    } else if (metric === 'volume') {
+      // Volume is the absolute activity
+      txValue = tx.lines?.reduce((sum: number, l: any) => sum + Math.abs(lineAmount(l, tx)), 0) / 2 || 0;
+      if (seriesMap[txDay] !== undefined) {
+        seriesMap[txDay] += txValue;
+      }
+    } else if (metric === 'debit') {
+      txValue = tx.lines?.reduce((sum: number, l: any) => sum + Math.max(0, lineAmount(l, tx)), 0) || 0;
+      if (seriesMap[txDay] !== undefined) {
+        seriesMap[txDay] += txValue;
+      }
+    } else if (metric === 'credit') {
+      txValue = tx.lines?.reduce((sum: number, l: any) => sum + Math.abs(Math.min(0, lineAmount(l, tx))), 0) || 0;
+      if (seriesMap[txDay] !== undefined) {
+        seriesMap[txDay] += txValue;
       }
     } else {
-      if (seriesMap[txDay] !== undefined) {
-        if (metric === 'volume') {
-          seriesMap[txDay] += tx.totalAmountCents || 0;
-        } else if (metric === 'net_flow') {
-          const type = (tx as any).type;
-          if (type === 'income' || type === 'revenue') {
-            txValue = Math.abs(tx.totalAmountCents || 0);
-          } else if (type === 'expense' || type === 'cost_of_goods') {
-            txValue = -Math.abs(tx.totalAmountCents || 0);
-          } else if (tx.lines && tx.lines.length > 0) {
-            let sumPositive = 0;
-            let sumNegative = 0;
-            for (let j = 0; j < tx.lines.length; j++) {
-              if (tx.lines[j].amountCents > 0) sumPositive += tx.lines[j].amountCents;
-              else sumNegative += Math.abs(tx.lines[j].amountCents);
-            }
-            txValue = sumPositive - sumNegative;
-            if (txValue === 0 && tx.totalAmountCents) {
-              txValue = tx.totalAmountCents;
-            }
-          } else {
-            txValue = tx.totalAmountCents || 0;
-          }
-          seriesMap[txDay] += txValue;
-        } else if (metric === 'debit') {
-          if (tx.lines && tx.lines.length > 0) {
-            for (let j = 0; j < tx.lines.length; j++) {
-              if (tx.lines[j].amountCents > 0) txValue += tx.lines[j].amountCents;
-            }
-          } else {
-            txValue += tx.totalAmountCents || 0;
-          }
-          seriesMap[txDay] += txValue;
-        } else if (metric === 'credit') {
-          if (tx.lines && tx.lines.length > 0) {
-            for (let j = 0; j < tx.lines.length; j++) {
-              if (tx.lines[j].amountCents < 0) txValue += Math.abs(tx.lines[j].amountCents);
-            }
-          }
-          seriesMap[txDay] += txValue;
-        }
-      }
+      continue;
     }
   }
 

@@ -8,19 +8,7 @@ import { TransactionSchema } from '../../schemas';
 import { Transaction } from '../../types';
 import { parseLocalDate } from '../../lib/utils';
 import { getDb } from '../db/firestore';
-
-async function validateAccountsBelongToWorkspace(db: any, workspaceId: string, lines: any[]) {
-  const accountIds = Array.from(new Set<string>((lines || []).map((l: any) => String(l.accountId)).filter(Boolean)));
-  if (accountIds.length > 0) {
-    const accRefs = accountIds.map((id: string) => db.collection('chartAccounts').doc(id));
-    const accSnaps = await db.getAll(...accRefs);
-    for (const snap of accSnaps) {
-      if (!snap.exists || snap.data()?.workspaceId !== workspaceId) {
-        throw new Error(`Account ${snap.id} does not exist or does not belong to authorized workspace.`);
-      }
-    }
-  }
-}
+import { isPostable, getAbsoluteTotal } from '../../lib/txFilters';
 
 export const transactionRouter = express.Router();
 
@@ -121,10 +109,7 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
 
     // Standardize totalAmountCents prior to schema parsing if omitted
     if (!transaction.totalAmountCents) {
-       const debitSum = (transaction.lines || [])
-         .filter((l: any) => (l.amountCents || 0) > 0)
-         .reduce((sum: number, l: any) => sum + (l.amountCents || 0), 0);
-       transaction.totalAmountCents = debitSum || Math.abs(transaction.lines?.[0]?.amountCents || 0);
+       transaction.totalAmountCents = getAbsoluteTotal(transaction);
     }
 
     const parsed = TransactionSchema.safeParse(transaction);
@@ -161,7 +146,16 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
       return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
     }
 
-    await validateAccountsBelongToWorkspace(db, transactionToSave.workspaceId, transactionToSave.lines);
+    const accountIds = Array.from(new Set<string>((transactionToSave.lines || []).map((l: any) => String(l.accountId)).filter(Boolean)));
+    if (accountIds.length > 0) {
+      const accRefs = accountIds.map((id: string) => db.collection('chartAccounts').doc(id));
+      const accSnaps = await db.getAll(...accRefs);
+      for (const snap of accSnaps) {
+        if (!snap.exists || snap.data()?.workspaceId !== transactionToSave.workspaceId) {
+          return res.status(400).json({ error: `Account ${snap.id} does not exist or does not belong to authorized workspace.` });
+        }
+      }
+    }
     
     DoubleEntryValidator.validateJournalEntry(transactionToSave);
 
@@ -254,7 +248,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
          t.update(txRef, { ...safePartial, updatedAt: FieldValue.serverTimestamp() });
       });
 
-      const auditId = db.collection('auditLogs').doc().id;
+      const auditId = `audit-${Date.now()}`;
       await db.collection("auditLogs").doc(auditId).set({
         id: auditId,
         workspaceId: authoritativeWsId || "unknown",
@@ -281,8 +275,6 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
     }
 
-    await validateAccountsBelongToWorkspace(db, transaction.workspaceId, transaction.lines);
-
     DoubleEntryValidator.validateJournalEntry(transaction);
 
     await db.runTransaction(async (t: any) => {
@@ -300,7 +292,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       t.update(txRef, { ...transaction, updatedAt: FieldValue.serverTimestamp() });
     });
 
-    const auditId = db.collection('auditLogs').doc().id;
+    const auditId = `audit-${Date.now()}`;
     await db.collection("auditLogs").doc(auditId).set({
       id: auditId,
       workspaceId: transaction.workspaceId,
@@ -358,7 +350,7 @@ transactionRouter.delete('/:id', async (req, res) => {
 
     await txRef.delete();
 
-    const auditId = db.collection('auditLogs').doc().id;
+    const auditId = `audit-${Date.now()}`;
     await db.collection("auditLogs").doc(auditId).set({
       id: auditId,
       workspaceId: transactionWsId,
@@ -461,10 +453,7 @@ transactionRouter.post('/bulk', async (req, res) => {
       for (const tx of (transactions || [])) {
         if (!tx.id) tx.id = db.collection('transactions').doc().id;
         if (!tx.totalAmountCents) {
-          const debitSum = (tx.lines || [])
-            .filter((l: any) => (l.amountCents || 0) > 0)
-            .reduce((sum: number, l: any) => sum + (l.amountCents || 0), 0);
-          tx.totalAmountCents = debitSum || Math.abs(tx.lines?.[0]?.amountCents || 0);
+          tx.totalAmountCents = getAbsoluteTotal(tx);
         }
 
         const txRef = db.collection('transactions').doc(tx.id);

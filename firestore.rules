@@ -71,7 +71,6 @@ service cloud.firestore {
       allow update: if isSignedIn() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid && isUnchanged("uid") &&
         request.resource.data.name.size() < 128 &&
         (!("description" in request.resource.data) || request.resource.data.description.size() < 1000) &&
-        isUnchanged("lockDate") &&
         isUnchanged("plan") && isUnchanged("computeCreditBalance") && isUnchanged("apiQuotaMonthlyLimitCents") && isUnchanged("maxSeats") && isUnchanged("concurrentUserLimit") &&
         isUnchanged("apiQuotaTotalCentsUsed") && isUnchanged("stripeCustomerId") && isUnchanged("seatCount") &&
         isUnchanged("billingCycle") && isUnchanged("status") && isUnchanged("lockedUntilDate") &&
@@ -94,13 +93,17 @@ service cloud.firestore {
 
     // Specific rules for all tenant-scoped ledger resources to eliminate the general pattern loophole
     match /transactions/{transactionId} {
+      function isBalanced() {
+        return request.resource.data.lines.map(l => l.amountCents).sum() == 0;
+      }
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date) &&
-        isValidId(transactionId) &&
+        isValidId(transactionId) && isBalanced() &&
         affectedKeys(["id", "uid", "workspaceId", "date", "dueDate", "description", "payee", "lines", "totalAmountCents", "taxAmountCents", "currency", "originalCurrency", "exchangeRate", "schemaVersion", "fileUrls", "isCleared", "clearedAt", "bankTransactionId", "units", "unitType", "status", "type", "total_impact", "projectId", "classId", "locationId", "employeeId", "tags", "metadata", "verification", "createdAt", "updatedAt"]);
       allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
         isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date) &&
         isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date) &&
+        isBalanced() &&
         affectedKeys(["id", "uid", "workspaceId", "date", "dueDate", "description", "payee", "lines", "totalAmountCents", "taxAmountCents", "currency", "originalCurrency", "exchangeRate", "schemaVersion", "fileUrls", "isCleared", "clearedAt", "bankTransactionId", "units", "unitType", "status", "type", "total_impact", "projectId", "classId", "locationId", "employeeId", "tags", "metadata", "verification", "createdAt", "updatedAt"]);
       allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId) && isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date);
     }

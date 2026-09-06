@@ -32,7 +32,7 @@ export class LedgerEngine {
     }
 
     return transactions.map(t => {
-      const cacheKey = `${t.id}-${t.description}-${t.totalAmountCents}-${t.date}-${t.isCleared ? 1 : 0}-${t.status || ''}-${t.tags?.join(',') || ''}-${t.project || ''}-${t.lines?.length || 0}-${JSON.stringify(t.dimensions || {})}`;
+      const cacheKey = `${t.id}-${t.description || ''}-${t.totalAmountCents}-${t.date || ''}-${t.isCleared ? 1 : 0}-${t.status || ''}-${t.tags?.join(',') || ''}-${t.project || ''}-${t.classId || ''}-${t.locationId || ''}-${JSON.stringify(t.dimensions || {})}-${JSON.stringify(t.metadata || {})}-${JSON.stringify(t.lines || [])}`;
       
       if (this.normalizationCache.has(cacheKey)) {
         return this.normalizationCache.get(cacheKey);

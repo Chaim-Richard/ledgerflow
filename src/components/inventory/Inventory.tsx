@@ -85,8 +85,8 @@ export default function Inventory() {
   }, [storeTransactions]);
 
   const economicItems = useMemo(() => {
-    return StrategicEngine.analyzeUnitEconomics(items, activeTransactions);
-  }, [items, activeTransactions]);
+    return StrategicEngine.analyzeUnitEconomics(items, activeTransactions, accounts);
+  }, [items, activeTransactions, accounts]);
 
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 

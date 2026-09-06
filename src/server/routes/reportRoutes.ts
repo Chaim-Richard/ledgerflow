@@ -2,7 +2,7 @@ import express from "express";
 import admin from "firebase-admin";
 import { z } from "zod";
 import { getDb, validateWorkspaceMember } from "../db/firestore";
-import { calculateNetIncome } from "../../lib/txFilters";
+import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount } from "../../lib/txFilters";
 import { ReportRangeSchema, WorkspaceIdSchema } from "../../schemas";
 
 export const reportRouter = express.Router();
@@ -77,14 +77,14 @@ reportRouter.get("/profit-and-loss", async (req, res) => {
       netIncome: 0
     };
     accounts.forEach((acc: any) => {
-      if (acc.type === 'income' || acc.type === 'revenue') {
+      if (isRevenueAccount(acc)) {
         pl.income.accounts[acc.id] = { name: acc.name, balance: 0, parentId: acc.parentId };
-      } else if (acc.type === 'expense') {
+      } else if (isExpenseAccount(acc)) {
         pl.expense.accounts[acc.id] = { name: acc.name, balance: 0, parentId: acc.parentId };
       }
     });
     for (const tx of transactions) {
-      if (tx.status === 'void' || tx.status === 'voided') continue;
+      if (!isPostable(tx)) continue;
       if (tx.date < start || tx.date > end) continue;
       tx.lines?.forEach((line: any) => {
         if (pl.income.accounts[line.accountId]) {
@@ -126,7 +126,7 @@ reportRouter.get("/balance-sheet", async (req, res) => {
     });
 
     for (const tx of transactions) {
-      if (tx.status === 'void' || tx.status === 'voided') continue;
+      if (!isPostable(tx)) continue;
       if (tx.date > end) continue;
       tx.lines?.forEach((line: any) => {
         if (balances[line.accountId] !== undefined) {
@@ -246,7 +246,7 @@ reportRouter.get("/trial-balance", async (req, res) => {
       };
     });
     for (const tx of transactions) {
-      if (tx.status === 'void' || tx.status === 'voided') continue;
+      if (!isPostable(tx)) continue;
       tx.lines?.forEach((line: any) => {
         if (trialBalance[line.accountId]) {
           if (line.amountCents > 0) trialBalance[line.accountId].debit += line.amountCents;
@@ -296,6 +296,7 @@ reportRouter.get("/cash-flow", async (req, res) => {
     };
 
     transactions.forEach((tx: any) => {
+      if (!isPostable(tx)) return;
       tx.lines?.forEach((line: any) => {
         const acc = accounts.find(a => a.id === line.accountId);
         if (!acc) return;
@@ -356,6 +357,7 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
       const account = accounts.find(a => a.id === b.accountId);
       let actual = 0;
       transactions.forEach((tx: any) => {
+        if (!isPostable(tx)) return;
         tx.lines?.forEach((line: any) => {
           if (line.accountId === b.accountId) {
             actual += Math.abs(line.amountCents);

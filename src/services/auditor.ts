@@ -1,3 +1,4 @@
+import { isPostable } from '../lib/txFilters';
 import { Transaction, ChartAccount, JournalEntry } from '../types';
 import { MerkleTree, MinHash, sha256Sync } from '../lib/algorithms';
 import { PerformanceTelemetry } from '../lib/telemetry';
@@ -52,7 +53,7 @@ export const DoubleEntryAuditor = {
       .map(item => item.t);
 
     // Filter to active transactions for cryptographic sequence verification
-    const activeTxs = chronosTxs.filter(t => !t.deletedAt && t.status !== 'void' && t.status !== 'failed');
+    const activeTxs = chronosTxs.filter(t => isPostable(t));
 
     // Optimized Duplicate Detection using Bucketing
     const signatureBuckets = new Map<number, { id: string; sig: number[] }[]>();
@@ -205,7 +206,7 @@ export const DoubleEntryAuditor = {
     let lastHash = 'genesis';
     
     return sorted.map(tx => {
-      if (tx.deletedAt || tx.status === 'void' || tx.status === 'failed') {
+      if (!isPostable(tx)) {
         return tx;
       }
       const newHash = DoubleEntryAuditor.computeHash(tx, lastHash);

@@ -1,10 +1,11 @@
-import { Transaction, Project, TransactionLine, AnalyticalMetrics } from "../types";
+import { Transaction, Project, TransactionLine, AnalyticalMetrics, ChartAccount } from "../types";
 import { TruthEngine } from '../modules/integrity/TruthEngine';
 
 import { format, addMonths } from "date-fns";
 
 import { predictHoltWinters } from "../lib/algorithms";
 import { parseLocalDate } from '../lib/utils';
+import { isPostable, calculateTransactionImpact, lineAmount, isExpenseAccount, isRevenueAccount, isInflow, isOutflow } from '../lib/txFilters';
 
 export interface Insight {
   type: string;
@@ -15,12 +16,12 @@ export interface Insight {
 }
 
 export class StrategicEngine {
-  static analyze(data: { metrics: AnalyticalMetrics; projects: Project[] }, transactions: Transaction[]): Insight[] {
-    if (!transactions || transactions.length === 0 || !data?.metrics || !data.metrics.kpis || data.metrics.kpis.revenue === 0 && data.metrics.kpis.expenses === 0) {
+  static analyze(data: { metrics: AnalyticalMetrics; projects: Project[] }, transactions: Transaction[], accounts: ChartAccount[]): Insight[] {
+    if (!transactions || transactions.length === 0 || !data?.metrics || !data.metrics.kpis || (data.metrics.kpis.revenue === 0 && data.metrics.kpis.expenses === 0)) {
       return [];
     }
     const insights: Insight[] = [];
-    const now = new Date();
+    const accountMap = new Map(accounts.map(a => [a.id, a]));
     
     // 1. Burn Rate Analysis (Deterministic)
     const currentBurn = data.metrics.kpis.expenses;
@@ -60,25 +61,25 @@ export class StrategicEngine {
     const vendorActivity: Record<string, number[]> = {};
     const vendorPrices: Record<string, Record<string, number>> = {}; // vendor -> item -> price
 
-    transactions.forEach(t => {
+    transactions.filter(isPostable).forEach(t => {
        const vendor = (t.payee || (t.description || "Vendor").split(' ')[0]).toUpperCase();
+       const impact = Math.abs(calculateTransactionImpact(t, accountMap));
+       if (impact === 0) return;
+
        if (!vendorActivity[vendor]) vendorActivity[vendor] = [];
-       vendorActivity[vendor].push(Math.abs(t.totalAmountCents));
+       vendorActivity[vendor].push(impact);
 
        // Deep Item Tracking for Arbitrage
-       const amount = Math.abs(t.totalAmountCents);
-       if (amount > 0) {
-         const desc = (t.description || '').toLowerCase();
-         if (!vendorPrices[vendor]) vendorPrices[vendor] = {};
-         // Crude item extraction for advice
-         const matches = desc.match(/[a-z]{3,}/g);
-         if (matches) {
-            matches.slice(0, 2).forEach(m => {
-               if (!vendorPrices[vendor][m] || amount < vendorPrices[vendor][m]) {
-                  vendorPrices[vendor][m] = amount;
-               }
-            });
-         }
+       const desc = (t.description || '').toLowerCase();
+       if (!vendorPrices[vendor]) vendorPrices[vendor] = {};
+       // Crude item extraction for advice
+       const matches = desc.match(/[a-z]{3,}/g);
+       if (matches) {
+          matches.slice(0, 2).forEach(m => {
+             if (!vendorPrices[vendor][m] || impact < vendorPrices[vendor][m]) {
+                vendorPrices[vendor][m] = impact;
+             }
+          });
        }
     });
 
@@ -148,12 +149,16 @@ export class StrategicEngine {
     const atRiskProjects = data.projects.filter(p => {
        if (p.status !== 'active' || p.budgetCents <= 0) return false;
        
-       const spentCents = transactions.reduce((acc, t) => {
+       const spentCents = transactions.filter(isPostable).reduce((sum, t) => {
           const projectLine = t.lines?.find((l: TransactionLine) => l.project === p.id);
-          if (projectLine && projectLine.amountCents < 0) {
-             return acc + Math.abs(projectLine.amountCents);
+          if (projectLine) {
+             const amt = lineAmount(projectLine, t);
+             const account = accountMap.get(projectLine.accountId);
+             if (isExpenseAccount(account) && amt > 0) {
+               return sum + amt;
+             }
           }
-          return acc;
+          return sum;
        }, 0);
 
        return (spentCents / p.budgetCents) > 0.9;
@@ -172,7 +177,8 @@ export class StrategicEngine {
     // 6. Duplicate Identification
     const seen: Record<string, string[]> = {};
     transactions.forEach(t => {
-      const key = `${t.date}-${t.totalAmountCents}-${t.description.substring(0, 8).toLowerCase()}`;
+      const impact = calculateTransactionImpact(t, accountMap);
+      const key = `${t.date}-${impact}-${t.description.substring(0, 8).toLowerCase()}`;
       if (!seen[key]) seen[key] = [];
       seen[key].push(t.id);
     });
@@ -188,14 +194,8 @@ export class StrategicEngine {
     }
 
     // 7. Flow Variance Analysis (Volatility Index)
-    const isExpenseTx = (t: Transaction) => t.lines?.some(l => {
-      const name = (l.accountName || '').toLowerCase();
-      return name.includes('expense') || name.includes('cogs') || name.includes('cost') || name.includes('payable') || name.includes('vendor') || name.includes('purchase');
-    });
-    const isIncomeTx = (t: Transaction) => !isExpenseTx(t);
-
-    const dailyInflow = transactions.filter(t => isIncomeTx(t)).length;
-    const dailyOutflow = transactions.filter(t => isExpenseTx(t)).length;
+    const dailyInflow = transactions.filter(t => isInflow(t, accountMap)).length;
+    const dailyOutflow = transactions.filter(t => isOutflow(t, accountMap)).length;
     if (dailyOutflow > dailyInflow * 3) {
        insights.push({
           type: "efficiency",
@@ -208,9 +208,14 @@ export class StrategicEngine {
 
     // 8. Recursive Sector Risk (Concentration)
     const categoryExposure: Record<string, number> = {};
-    transactions.forEach(t => {
-       const cat = t.lines?.[0]?.accountName || 'Unknown';
-       categoryExposure[cat] = (categoryExposure[cat] || 0) + Math.abs(t.totalAmountCents);
+    transactions.filter(isPostable).forEach(t => {
+       t.lines?.forEach(l => {
+         const acc = accountMap.get(l.accountId);
+         if (isExpenseAccount(acc)) {
+           const cat = l.accountName || l.accountId;
+           categoryExposure[cat] = (categoryExposure[cat] || 0) + lineAmount(l, t);
+         }
+       });
     });
 
     const totalExposure = Object.values(categoryExposure).reduce((a, b) => a + b, 0);
@@ -273,7 +278,6 @@ export class StrategicEngine {
     }
 
     // 12. Corporate Vitality Proxy (Deterministic)
-    const workingCapital = data.metrics.kpis.totalCash;
     const safeExpensesForProxy = data.metrics.kpis.expenses > 0 ? data.metrics.kpis.expenses : 1;
     const liquidityProxy = (data.metrics.kpis.revenue * 3) / (safeExpensesForProxy * 2); // Velocity-weighted proxy
     
@@ -417,20 +421,19 @@ export class StrategicEngine {
     return denom === 0 ? 0 : (n * sumAB - sumA * sumB) / denom;
   }
 
-  static getForecast(transactions: Transaction[]): any {
+  static getForecast(transactions: Transaction[], accounts: ChartAccount[]): any {
     const monthlyInflow: Record<string, number> = {};
     const monthlyOutflow: Record<string, number> = {};
+    const accountMap = new Map(accounts.map(a => [a.id, a]));
     
-    transactions.forEach(t => {
+    transactions.filter(isPostable).forEach(t => {
       const month = t.date.substring(0, 7);
-      const isExpense = t.lines?.some(l => {
-        const name = (l.accountName || '').toLowerCase();
-        return name.includes('expense') || name.includes('cogs') || name.includes('cost') || name.includes('payable') || name.includes('vendor') || name.includes('purchase');
-      });
-      if (!isExpense) {
-        monthlyInflow[month] = (monthlyInflow[month] || 0) + (t.totalAmountCents / 100);
-      } else {
-        monthlyOutflow[month] = (monthlyOutflow[month] || 0) + (Math.abs(t.totalAmountCents) / 100);
+      const impact = calculateTransactionImpact(t, accountMap);
+      
+      if (impact > 0) {
+        monthlyInflow[month] = (monthlyInflow[month] || 0) + (impact / 100);
+      } else if (impact < 0) {
+        monthlyOutflow[month] = (monthlyOutflow[month] || 0) + (Math.abs(impact) / 100);
       }
     });
 
@@ -477,33 +480,29 @@ export class StrategicEngine {
     };
   }
 
-  static analyzeUnitEconomics(items: any[], transactions: Transaction[]): any {
+  static analyzeUnitEconomics(items: any[], transactions: Transaction[], accounts: ChartAccount[]): any {
     if (!items.length) return [];
 
     const now = new Date().getTime();
-    const SIX_MONTHS_MS = 180 * 24 * 60 * 60 * 1000;
+    const accountMap = new Map(accounts.map(a => [a.id, a]));
     const itemsBySku = new Map(items.map(i => [i.sku.toLowerCase(), i]));
     const itemsByName = new Map(items.map(i => [i.name.toLowerCase(), i]));
 
     const totalInventoryValue = items.reduce((sum, item) => sum + (item.unitCostCents * (item.quantityAtHand || 0)), 0) || 1;
     
     // 1. UNIT ECONOMICS LEARNING POOL
-    const isExpenseTx = (t: Transaction) => t.lines?.some(l => {
-      const name = (l.accountName || '').toLowerCase();
-      return name.includes('expense') || name.includes('cogs') || name.includes('cost') || name.includes('payable') || name.includes('vendor') || name.includes('purchase');
-    });
-    const isIncomeTx = (t: Transaction) => !isExpenseTx(t);
-
-    const expenses = transactions.filter(t => isExpenseTx(t));
-    const absOverhead = Math.abs(expenses.reduce((sum, t) => sum + t.totalAmountCents, 0));
+    const postableTxs = transactions.filter(isPostable);
+    const expenses = postableTxs.filter(t => isOutflow(t, accountMap));
+    const absOverhead = Math.abs(expenses.reduce((sum, t) => sum + calculateTransactionImpact(t, accountMap), 0));
 
     // 2. TEMPORAL VENDOR SOURCING GRAPH (Self-learning from history)
     const sourcingGraph: Record<string, Record<string, { price: number, weight: number, date: number }>> = {};
     
-    transactions.forEach(t => {
+    postableTxs.forEach(t => {
       const desc = (t.description || '').toLowerCase();
       const vendor = (t.payee || "Market Source").toUpperCase();
-      const amount = Math.abs(t.totalAmountCents);
+      const impact = Math.abs(calculateTransactionImpact(t, accountMap));
+      if (impact === 0) return;
       const tDate = parseLocalDate(t.date).getTime();
       
       // Learning Weight: Decays over time (Recency Bias)
@@ -518,12 +517,12 @@ export class StrategicEngine {
           if (!sourcingGraph[item.id]) sourcingGraph[item.id] = {};
           
           // Data Chain Filter: Only accept as unit price if roughly within market range (50% - 500% of base)
-          const isPlausibleUnitPrice = amount > (item.unitCostCents * 0.5) && amount < (item.unitCostCents * 5);
+          const isPlausibleUnitPrice = impact > (item.unitCostCents * 0.5) && impact < (item.unitCostCents * 5);
           
           if (isPlausibleUnitPrice) {
             const existing = sourcingGraph[item.id][vendor];
             if (!existing || tDate > existing.date) {
-              sourcingGraph[item.id][vendor] = { price: amount, weight: recencyWeight, date: tDate };
+              sourcingGraph[item.id][vendor] = { price: impact, weight: recencyWeight, date: tDate };
             }
           }
         }
@@ -536,14 +535,14 @@ export class StrategicEngine {
       const skuLower = item.sku.toLowerCase();
       
       // RELATIONAL DATA DISCOVERY (SKU prioritized over description)
-      const itemTransactions = transactions.filter(t => {
+      const itemTransactions = postableTxs.filter(t => {
         const desc = (t.description || '').toLowerCase();
         const matchesSku = skuLower && (desc.includes(skuLower) || t.id.includes(skuLower));
         const matchesName = desc.includes(itemNameLower);
         return matchesSku || matchesName;
       });
       
-      const sales = itemTransactions.filter(t => isIncomeTx(t));
+      const sales = itemTransactions.filter(t => isInflow(t, accountMap));
       const salesCount = sales.length;
       const totalOps = itemTransactions.length;
 
@@ -553,7 +552,7 @@ export class StrategicEngine {
         return desc.includes(itemNameLower) || (skuLower && desc.includes(skuLower));
       });
       
-      const directCostTotal = Math.abs(directExpenses.reduce((sum, t) => sum + t.totalAmountCents, 0));
+      const directCostTotal = Math.abs(directExpenses.reduce((sum, t) => sum + calculateTransactionImpact(t, accountMap), 0));
       const directAllocation = item.quantityAtHand > 0 ? directCostTotal / item.quantityAtHand : 0;
 
       // VELOCITY-AWARE OVERHEAD (New)
@@ -585,7 +584,7 @@ export class StrategicEngine {
         : 0;
 
       // ANOMALY ENGINE & CONVERGENCE
-      const purchasePrices = itemTransactions.filter(t => isExpenseTx(t)).map(t => Math.abs(t.totalAmountCents));
+      const purchasePrices = itemTransactions.filter(t => isOutflow(t, accountMap)).map(t => Math.abs(calculateTransactionImpact(t, accountMap)));
       let volatility = 0;
       let convergence = 0; // 1 = perfectly stable prices across sources
       

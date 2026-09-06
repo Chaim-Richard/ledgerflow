@@ -4,6 +4,7 @@ import { getLocalDateISO, roundCents } from '../lib/utils';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { ChartAccount } from '../types';
+import { isPostable } from '../lib/txFilters';
 
 export class LedgerPostService {
   private static getAccounts(context?: any): ChartAccount[] {
@@ -100,7 +101,7 @@ export class LedgerPostService {
     // Find prior active non-reversal postings for this invoice to generate reversing entries
     const existingTxs = this.getTransactions(context).filter(t => 
       t.metadata?.invoiceId === invoiceId && 
-      t.status !== 'void' && 
+      isPostable(t) && 
       !t.metadata?.isReversal
     );
 
@@ -136,8 +137,8 @@ export class LedgerPostService {
     }
 
     const status = invoiceData.status || 'pending';
-    if (status === 'draft' || status === 'rejected') {
-      // If setting to draft or rejected, reversing prior postings (if any) is sufficient
+    if (status === 'draft' || status === 'rejected' || status === 'void' || status === 'cancelled') {
+      // If setting to draft, rejected, voided, or cancelled, reversing prior postings (if any) is sufficient
       if (txsToPost.length > 0) {
         await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
       }
@@ -290,44 +291,6 @@ export class LedgerPostService {
       }
     }
 
-    // 4. Transaction 3: Reversing Entry if Voided (DR Revenue, CR A/R)
-    if (status === 'void') {
-      const voidDate = invoiceData.voidDate || invoiceData.voidedAt || today;
-      const voidTx = {
-        uid,
-        workspaceId,
-        date: voidDate,
-        description: `Void Reversing Entry - Invoice ${invoiceNum}`,
-        totalAmountCents: amount,
-        currency: invoiceData.currency || 'USD',
-        exchangeRate: rate,
-        status: 'completed',
-        type: 'actual',
-        createdAt: new Date().toISOString(),
-        metadata: {
-          invoiceId,
-          type: 'invoice-void'
-        },
-        lines: [
-          {
-            accountId: revenueAccount.id,
-            accountName: revenueAccount.name,
-            amountCents: amount, // Debit (reverses revenue)
-            description: `Revenue cancellation for voided Invoice ${invoiceNum}`,
-            exchangeRate: rate
-          },
-          {
-            accountId: arAccount.id,
-            accountName: arAccount.name,
-            amountCents: -amount, // Credit (reverses A/R)
-            description: `A/R write-off for voided Invoice ${invoiceNum}`,
-            exchangeRate: rate
-          }
-        ]
-      };
-      txsToPost.push(voidTx);
-    }
-
     // Atomic post via Server API
     await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
   }
@@ -374,7 +337,7 @@ export class LedgerPostService {
     // Find prior active non-reversal postings for this bill
     const existingTxs = this.getTransactions(context).filter(t => 
       t.metadata?.billId === billId && 
-      t.status !== 'void' && 
+      isPostable(t) && 
       !t.metadata?.isReversal
     );
 
@@ -410,7 +373,7 @@ export class LedgerPostService {
     }
 
     const status = billData.status || 'pending';
-    if (status === 'draft' || status === 'rejected') {
+    if (status === 'draft' || status === 'rejected' || status === 'void' || status === 'cancelled') {
       if (txsToPost.length > 0) {
         await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
       }
@@ -527,44 +490,6 @@ export class LedgerPostService {
       }
     }
 
-    // 4. Transaction 3: Reversing Entry if Voided (DR A/P, CR Expense)
-    if (status === 'void' || status === 'cancelled') {
-      const voidDate = billData.voidDate || billData.voidedAt || today;
-      const voidTx = {
-        uid,
-        workspaceId,
-        date: voidDate,
-        description: `Void Reversing Entry - Bill ${billNum}`,
-        totalAmountCents: amount,
-        currency: billData.currency || 'USD',
-        exchangeRate: rate,
-        status: 'completed',
-        type: 'actual',
-        createdAt: new Date().toISOString(),
-        metadata: {
-          billId,
-          type: 'bill-void'
-        },
-        lines: [
-          {
-            accountId: apAccount.id,
-            accountName: apAccount.name,
-            amountCents: amount, // Debit (reverses A/P)
-            description: `A/P reversal for voided Bill ${billNum}`,
-            exchangeRate: rate
-          },
-          {
-            accountId: expenseAccount.id,
-            accountName: expenseAccount.name,
-            amountCents: -amount, // Credit (reverses Expense)
-            description: `Expense reversal for voided Bill ${billNum}`,
-            exchangeRate: rate
-          }
-        ]
-      };
-      txsToPost.push(voidTx);
-    }
-
     // Atomic post via Server API
     await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
   }
@@ -577,7 +502,7 @@ export class LedgerPostService {
 
     const existingTxs = this.getTransactions(context).filter(t => 
       t.metadata?.[keyName] === id && 
-      t.status !== 'void' && 
+      isPostable(t) && 
       !t.metadata?.isReversal
     );
 

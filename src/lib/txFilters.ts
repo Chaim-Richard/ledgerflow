@@ -150,6 +150,31 @@ export function isInflow(t: Transaction, accounts?: ChartAccount[] | Map<string,
 }
 
 /**
+ * Calculates the net income-statement impact (Inflow - Outflow) of a transaction.
+ * This is the canonical way to determine the "value" of a transaction for reports.
+ * Returns (Sum of Revenue credits) - (Sum of Expense/COGS debits).
+ */
+export function calculateTransactionImpact(t: Transaction, accountMap?: Map<string, ChartAccount>): number {
+  if (!isPostable(t)) return 0;
+  let impact = 0;
+  const lines = t.lines || [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    const acc = accountMap?.get(l.accountId);
+    const amt = lineAmount(l, t);
+    
+    if (isRevenueAccount(acc)) {
+      impact -= amt; // Revenue is credit (negative), so subtract to get positive impact
+    } else if (isExpenseAccount(acc)) {
+      impact -= amt; // Expense is debit (positive), so subtract to get negative impact
+    }
+  }
+  
+  return impact;
+}
+
+/**
  * Predicate to determine if an invoice is open/unpaid
  */
 export function isOpenInvoice(item: any): boolean {
@@ -215,6 +240,17 @@ export function calculateNetIncome(
   const netIncome = grossProfit - expense;
 
   return { income, cogs, expense, grossProfit, netIncome };
+}
+
+/**
+ * Computes the absolute total of a transaction (sum of all positive line amounts).
+ * This replaces scattered manual absolute-total calculation loops across the codebase.
+ */
+export function getAbsoluteTotal(tx: Transaction): number {
+  if (!tx || !Array.isArray(tx.lines)) return 0;
+  return tx.lines
+    .filter(l => (l.amountCents || 0) > 0)
+    .reduce((sum, l) => sum + lineAmount(l, tx), 0);
 }
 
 

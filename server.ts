@@ -1183,9 +1183,12 @@ async function startServer() {
               message: "Payment Required: Workspace compute credit balance depleted. Please recharge your API balance or enable bypass billing."
             });
           }
-        } catch (quotaErr) {
-          // Silent fallback to allow continuity if DB fails
-          console.warn("[Deep Auth] Quota check bypass due to DB failure");
+        } catch (quotaErr: any) {
+          console.error("[Deep Auth] Quota check failed - Denying access (Fail Closed)", quotaErr);
+          return res.status(500).json({
+            status: "error",
+            message: "Internal Authentication Error: Quota verification service is currently unavailable. Please retry in a few moments."
+          });
         }
 
         // Set request user details for request pipeline context

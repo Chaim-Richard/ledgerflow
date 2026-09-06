@@ -7,6 +7,7 @@ import { StrategicEngine } from '../../services/strategicEngine';
 import { useUIStore } from '../../stores/useUIStore';
 import { DoubleEntryAuditor } from '../../services/auditor';
 import { cn } from '../../lib/utils';
+import { isRevenueAccount, isExpenseAccount, isCashAccount, isPostable, calculateTransactionImpact } from '../../lib/txFilters';
 
 interface DiagnosticConsoleProps {
   isOpen: boolean;
@@ -55,14 +56,12 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
       
       try {
         const queryText = cmd.substring(1);
-        const context = `Projects: ${projects.map(p => p.name).join(', ')}. Accounts: ${accounts.map(a => a.name).join(', ')}`;
+        const accountMap = new Map(accounts.map(a => [a.id, a]));
         
         // Compute real metrics from accounts and transactions
         let totalCash = 0;
         accounts.forEach(a => {
-          const cat = (a.category || '').toLowerCase();
-          const type = (a.type || '').toLowerCase();
-          if (type === 'asset' && (cat === 'cash' || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('checking'))) {
+          if (isCashAccount(a)) {
              totalCash += a.balanceCents || 0;
           }
         });
@@ -70,20 +69,13 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
         let realRevenue = 0;
         let realExpenses = 0;
         transactions.forEach(tx => {
-          if (tx.status === 'void' || tx.status === 'pending') return;
-          tx.lines?.forEach(l => {
-            const acc = accounts.find(a => a.id === l.accountId);
-            if (acc) {
-              const type = (acc.type || '').toLowerCase();
-              const cat = (acc.category || '').toLowerCase();
-              const amt = Math.abs(l.amountCents);
-              if (type === 'income' || type === 'revenue' || cat === 'revenue' || cat === 'sales') {
-                realRevenue += amt;
-              } else if (type === 'expense' || type === 'cost_of_goods' || cat === 'expense' || cat === 'cogs') {
-                realExpenses += amt;
-              }
-            }
-          });
+          if (!isPostable(tx)) return;
+          const impact = calculateTransactionImpact(tx, accountMap);
+          if (impact > 0) {
+            realRevenue += impact;
+          } else if (impact < 0) {
+            realExpenses += Math.abs(impact);
+          }
         });
 
         const monthlyBurn = realExpenses > realRevenue ? (realExpenses - realRevenue) / 12 : 0;
@@ -98,7 +90,7 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
             runwayMonths: runway
           }
         } as any;
-        const insights = StrategicEngine.analyze({ metrics: metrics, projects: projects }, transactions);
+        const insights = StrategicEngine.analyze({ metrics: metrics, projects: projects }, transactions, accounts);
         const advice = insights.map(i => `${i.title}: ${i.description}`);
         if (advice.length === 0) advice.push("No significant anomalies or strategic deviations detected at this time.");
 

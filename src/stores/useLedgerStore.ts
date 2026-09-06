@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
 import { DoubleEntryAuditor, AuditResult } from '../services/auditor';
 import { globalEventBus } from '../lib/eventBus';
-import { isPostable, lineAmount, isRevenueAccount, isExpenseAccount } from '../lib/txFilters';
+import { isPostable, lineAmount, isRevenueAccount, isExpenseAccount, calculateTransactionImpact } from '../lib/txFilters';
 import { 
   Transaction, 
   ChartAccount, 
@@ -278,36 +278,31 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       transactions.forEach(tx => {
         if (!tx || typeof tx !== 'object' || !isPostable(tx)) return;
         
-        let txIncome = 0;
-        let txExpense = 0;
+        const impact = calculateTransactionImpact(tx, accountMap);
+        
+        if (impact > 0) {
+          integrity.totalIncome += impact;
+        } else if (impact < 0) {
+          integrity.totalExpense += Math.abs(impact);
+        }
+        
+        integrity.totalBalance += impact;
 
         if (Array.isArray(tx.lines)) {
           tx.lines.forEach(l => {
             if (!l || typeof l !== 'object') return;
-            const acc = accountMap.get(l.accountId);
             const amt = lineAmount(l, tx);
-            
-            if (isRevenueAccount(acc)) {
-              txIncome -= amt; // Revenue is credit (negative), so we subtract to get positive income
-            } else if (isExpenseAccount(acc)) {
-              txExpense += amt; // Expense is debit (positive)
-            }
-
             const cat = (typeof l.category === 'string' && l.category) ? l.category : 'General';
             integrity.categoryMetrics[cat] = (integrity.categoryMetrics[cat] || 0) + amt;
           });
         }
-        
-        integrity.totalIncome += txIncome;
-        integrity.totalExpense += txExpense;
-        integrity.totalBalance += (txIncome - txExpense);
 
         if (tx.projectId && typeof tx.projectId === 'string') {
           if (!integrity.projectMetrics[tx.projectId]) {
             integrity.projectMetrics[tx.projectId] = { income: 0, expense: 0 };
           }
-          integrity.projectMetrics[tx.projectId].income += txIncome;
-          integrity.projectMetrics[tx.projectId].expense += txExpense;
+          if (impact > 0) integrity.projectMetrics[tx.projectId].income += impact;
+          else if (impact < 0) integrity.projectMetrics[tx.projectId].expense += Math.abs(impact);
         }
       });
     }
@@ -391,38 +386,32 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     allTxs.forEach(tx => {
       if (!isPostable(tx)) return;
 
-      let txIncome = 0;
-      let txExpense = 0;
-      
       const accountMap = new Map(get().accounts.map(a => [a.id, a]));
+      const impact = calculateTransactionImpact(tx, accountMap);
+
+      if (impact > 0) {
+        runningBalances.totalIncome += impact;
+      } else if (impact < 0) {
+        runningBalances.totalExpense += Math.abs(impact);
+      }
+      
+      runningBalances.totalBalance += impact;
 
       if (Array.isArray(tx.lines)) {
         tx.lines.forEach(l => {
           if (!l || typeof l !== 'object') return;
-          const acc = accountMap.get(l.accountId);
           const amt = lineAmount(l, tx);
-
-          if (isRevenueAccount(acc)) {
-            txIncome -= amt;
-          } else if (isExpenseAccount(acc)) {
-            txExpense += amt;
-          }
-
           const cat = (typeof l.category === 'string' && l.category) ? l.category : 'General';
           runningBalances.categoryMetrics[cat] = (runningBalances.categoryMetrics[cat] || 0) + amt;
         });
       }
 
-      runningBalances.totalIncome += txIncome;
-      runningBalances.totalExpense += txExpense;
-      runningBalances.totalBalance += (txIncome - txExpense);
-
       if (tx.projectId && typeof tx.projectId === 'string') {
         if (!runningBalances.projectMetrics[tx.projectId]) {
           runningBalances.projectMetrics[tx.projectId] = { income: 0, expense: 0 };
         }
-        runningBalances.projectMetrics[tx.projectId].income += txIncome;
-        runningBalances.projectMetrics[tx.projectId].expense += txExpense;
+        if (impact > 0) runningBalances.projectMetrics[tx.projectId].income += impact;
+        else if (impact < 0) runningBalances.projectMetrics[tx.projectId].expense += Math.abs(impact);
       }
     });
 
