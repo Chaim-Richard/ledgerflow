@@ -11,7 +11,7 @@ export const PATTERNS = {
   TEXT_OP: /(greater than|more than|over|above|less than|under|below|at least|at most|around|about|approx|approximately)\s*([\d,]+(\.\d+)?)/,
   RANGE: /between\s*([\d,]+(\.\d+)?)\s*and\s*([\d,]+(\.\d+)?)/,
   PERCENTILE: /\b(top|bottom)\s*(10|25|50)\s*%?\b/,
-  MONTH: /(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/,
+  MONTH: /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/,
   YEAR: /\b(20\d{2})\b/,
   RELATIVE: /\b(last month|this month|last week|this week|yesterday|today|last year|this year|last 7 days|last 30 days|ytd)\b/,
   QUARTER: /\b(q[1-4])\b/,
@@ -106,19 +106,7 @@ export class TransactionQueryEngine {
     const averageMatch = queryText.match(PATTERNS.AVERAGE);
     if (averageMatch) queryText = queryText.replace(PATTERNS.AVERAGE, ' ');
 
-    // 2. Temporal Context Parsers
-    const monthMatch = queryText.match(PATTERNS.MONTH);
-    if (monthMatch) queryText = queryText.replace(PATTERNS.MONTH, ' ');
-
-    const yearMatch = queryText.match(PATTERNS.YEAR);
-    if (yearMatch) queryText = queryText.replace(PATTERNS.YEAR, ' ');
-
-    const relativeTimeMatch = queryText.match(PATTERNS.RELATIVE);
-    if (relativeTimeMatch) queryText = queryText.replace(PATTERNS.RELATIVE, ' ');
-
-    const quarterMatch = queryText.match(PATTERNS.QUARTER);
-    if (quarterMatch) queryText = queryText.replace(PATTERNS.QUARTER, ' ');
-
+    // 2. Temporal Context Parsers (Most specific first)
     const dateRangeMatch = queryText.match(PATTERNS.DATE_RANGE);
     if (dateRangeMatch) queryText = queryText.replace(PATTERNS.DATE_RANGE, ' ');
 
@@ -127,6 +115,18 @@ export class TransactionQueryEngine {
 
     const beforeDateMatch = queryText.match(PATTERNS.BEFORE_DATE);
     if (beforeDateMatch) queryText = queryText.replace(PATTERNS.BEFORE_DATE, ' ');
+
+    const relativeTimeMatch = queryText.match(PATTERNS.RELATIVE);
+    if (relativeTimeMatch) queryText = queryText.replace(PATTERNS.RELATIVE, ' ');
+
+    const quarterMatch = queryText.match(PATTERNS.QUARTER);
+    if (quarterMatch) queryText = queryText.replace(PATTERNS.QUARTER, ' ');
+
+    const monthMatch = queryText.match(PATTERNS.MONTH);
+    if (monthMatch) queryText = queryText.replace(PATTERNS.MONTH, ' ');
+
+    const yearMatch = queryText.match(PATTERNS.YEAR);
+    if (yearMatch) queryText = queryText.replace(PATTERNS.YEAR, ' ');
 
     // 3. Entity & Advanced String Tags
     const categoryMatch = queryText.match(PATTERNS.CATEGORY);
@@ -437,7 +437,7 @@ export class TransactionQueryEngine {
           else if (isDirective === 'cleared' && !t.isCleared) isMatch = false;
           else if (isDirective === 'reconciled' && t.status !== 'reconciled' && !t.isCleared) isMatch = false;
           else if (isDirective === 'unbalanced') {
-            const isUnbalanced = LedgerEngine.auditTransaction(t, accountMap).some((err: string) => err.toLowerCase().includes('unbalanced'));
+            const isUnbalanced = LedgerEngine.auditTransaction(t, accountMap).some((err: string) => err.toLowerCase().includes('unbalanced') || err.toLowerCase().includes('imbalance'));
             if (!isUnbalanced) isMatch = false;
           }
           else if (isDirective === 'error') {
@@ -479,9 +479,14 @@ export class TransactionQueryEngine {
         if (isMatch && percentileMatch) {
           const side = percentileMatch[1].toLowerCase();
           const pct = percentileMatch[2];
-          if (side === 'top' && pct === '10' && t._normalized.absAmount < thresholds.percentiles.top10) isMatch = false;
-          if (side === 'top' && pct === '25' && t._normalized.absAmount < thresholds.percentiles.top25) isMatch = false;
-          if (side === 'bottom' && pct === '10' && t._normalized.absAmount > thresholds.percentiles.bottom10) isMatch = false;
+          const amt = t._normalized.absAmount;
+          if (side === 'top') {
+            const threshold = pct === '10' ? thresholds.percentiles.top10 : pct === '25' ? thresholds.percentiles.top25 : (thresholds.percentiles.top25 * 0.5);
+            if (amt < threshold) isMatch = false;
+          } else if (side === 'bottom') {
+            const threshold = pct === '10' ? thresholds.percentiles.bottom10 : pct === '25' ? (thresholds.percentiles.bottom10 * 2) : (thresholds.percentiles.bottom10 * 3);
+            if (amt > threshold) isMatch = false;
+          }
         }
 
         // D. Temporal Vectoring
@@ -513,6 +518,30 @@ export class TransactionQueryEngine {
              const tTime = parseLocalDate(tDateStr).getTime();
              const diffDays = Math.floor((parsedNowTime - tTime) / (1000 * 60 * 60 * 24));
              if (diffDays < 0 || diffDays > 30) isMatch = false;
+          } else if (parsedRelativeRel === 'last 7 days') {
+             const tTime = parseLocalDate(tDateStr).getTime();
+             const diffDays = Math.floor((parsedNowTime - tTime) / (1000 * 60 * 60 * 24));
+             if (diffDays < 0 || diffDays > 7) isMatch = false;
+          } else if (parsedRelativeRel === 'yesterday') {
+             const yesterday = new Date(parsedNow);
+             yesterday.setDate(yesterday.getDate() - 1);
+             if (tDateStr !== format(yesterday, 'yyyy-MM-dd')) isMatch = false;
+          } else if (parsedRelativeRel === 'this week') {
+             const tDateObj = parseLocalDate(tDateStr);
+             const dayOfWeek = parsedNow.getDay() || 7;
+             const startOfWeek = new Date(parsedNow);
+             startOfWeek.setDate(parsedNow.getDate() - dayOfWeek + 1);
+             startOfWeek.setHours(0,0,0,0);
+             if (tDateObj < startOfWeek || tDateObj > parsedNow) isMatch = false;
+          } else if (parsedRelativeRel === 'last week') {
+             const tDateObj = parseLocalDate(tDateStr);
+             const dayOfWeek = parsedNow.getDay() || 7;
+             const startOfThisWeek = new Date(parsedNow);
+             startOfThisWeek.setDate(parsedNow.getDate() - dayOfWeek + 1);
+             startOfThisWeek.setHours(0,0,0,0);
+             const startOfLastWeek = new Date(startOfThisWeek);
+             startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+             if (tDateObj < startOfLastWeek || tDateObj >= startOfThisWeek) isMatch = false;
           } else if (parsedRelativeRel === 'ytd') {
              const tYear = parseInt(tDateStr.substring(0, 4), 10);
              const tDateObj = parseLocalDate(tDateStr);
