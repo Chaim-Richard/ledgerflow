@@ -17,8 +17,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
-import { cn, formatCurrency, parseLocalDate } from '../../lib/utils';
-import { isOpenBill } from '../../lib/txFilters';
+import { cn, formatCurrency } from '../../lib/utils';
 
 interface VendorAgingSummary {
   vendorId: string;
@@ -69,7 +68,7 @@ export default function APAgingReportView() {
       });
     });
 
-    const openBills = bills.filter(isOpenBill);
+    const openBills = bills.filter(b => b.status !== 'paid' && b.status !== 'void');
 
     openBills.forEach(bill => {
       const vId = bill.vendorId || 'unknown';
@@ -94,7 +93,7 @@ export default function APAgingReportView() {
       summary.bills.push(bill);
 
       const billAmount = bill.amountCents || 0;
-      const dueDate = bill.dueDate ? parseLocalDate(bill.dueDate) : (bill.date ? parseLocalDate(bill.date) : asOfDate);
+      const dueDate = bill.dueDate ? new Date(bill.dueDate) : (bill.date ? new Date(bill.date) : asOfDate);
       const diffTime = asOfDate.getTime() - dueDate.getTime();
       const daysOverdue = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
 
@@ -137,15 +136,15 @@ export default function APAgingReportView() {
 
   // Filter & Sort
   const filteredData = useMemo(() => {
-    let list = agingData.filter(item => {
+    const list = agingData.filter(item => {
       const matchesSearch = item.vendorName.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesPayThisWeek = !payThisWeekOnly || item.dueThisWeekCents > 0;
       return matchesSearch && matchesPayThisWeek;
     });
 
     list.sort((a, b) => {
-      let aVal: any = a[sortField];
-      let bVal: any = b[sortField];
+      const aVal: any = a[sortField];
+      const bVal: any = b[sortField];
       if (typeof aVal === 'string') {
         return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       }

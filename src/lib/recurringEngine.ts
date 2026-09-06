@@ -53,7 +53,7 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
   for (const item of recurringList) {
     if (!item.isActive) continue;
     
-    let currentNextOccStr = item.nextOccurrence || item.createdAt.slice(0, 10);
+    const currentNextOccStr = item.nextOccurrence || item.createdAt.slice(0, 10);
     let nextOccTime = parseLocalDate(currentNextOccStr).getTime();
 
     if (!isNaN(nextOccTime) && nextOccTime <= asOfTime) {

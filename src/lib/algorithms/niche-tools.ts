@@ -147,7 +147,7 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
   ],
   compute: (transactions, accounts, inputs: any = {}) => {
     let deductibleCents = 0;
-    let categoryBreakdown: Record<string, number> = {};
+    const categoryBreakdown: Record<string, number> = {};
     let deductibleCount = 0;
 
     transactions.forEach(t => {

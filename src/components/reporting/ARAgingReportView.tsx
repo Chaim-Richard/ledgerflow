@@ -16,8 +16,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
-import { cn, formatCurrency, parseLocalDate } from '../../lib/utils';
-import { isOpenInvoice } from '../../lib/txFilters';
+import { cn, formatCurrency } from '../../lib/utils';
 import DrillDownModal from '../layout/DrillDownModal';
 
 interface CustomerAgingSummary {
@@ -63,7 +62,7 @@ export default function ARAgingReportView() {
       });
     });
 
-    const openInvoices = invoices.filter(isOpenInvoice);
+    const openInvoices = invoices.filter(inv => inv.status !== 'paid' && inv.status !== 'rejected');
 
     openInvoices.forEach(inv => {
       const custId = inv.customerId || 'unknown';
@@ -87,7 +86,7 @@ export default function ARAgingReportView() {
       summary.invoices.push(inv);
 
       const invAmount = inv.totalCents || inv.amountCents || 0;
-      const dueDate = inv.dueDate ? parseLocalDate(inv.dueDate) : (inv.date ? parseLocalDate(inv.date) : asOfDate);
+      const dueDate = inv.dueDate ? new Date(inv.dueDate) : (inv.date ? new Date(inv.date) : asOfDate);
       const diffTime = asOfDate.getTime() - dueDate.getTime();
       const daysOverdue = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
 
@@ -125,13 +124,13 @@ export default function ARAgingReportView() {
 
   // Filter & Sort
   const filteredData = useMemo(() => {
-    let list = agingData.filter(item => 
+    const list = agingData.filter(item => 
       item.customerName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     list.sort((a, b) => {
-      let aVal: any = a[sortField];
-      let bVal: any = b[sortField];
+      const aVal: any = a[sortField];
+      const bVal: any = b[sortField];
       if (typeof aVal === 'string') {
         return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       }

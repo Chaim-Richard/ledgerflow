@@ -77,11 +77,11 @@ export default function InboxView() {
 
       let updatedLines = tx.lines && tx.lines.length > 0 ? tx.lines.map(l => ({ ...l })) : [];
       if (updatedLines.length === 0) {
-        const cashAcc = accounts.find(a => a.type === 'asset' || a.category === 'cash_and_equivalents') || accounts[0];
+        const cashAcc = accounts.find(a => a.code === '1010' || a.category === 'Cash' || a.category === 'cash_and_equivalents' || a.type === 'asset') || accounts[0];
         const amt = tx.totalAmountCents || 0;
         updatedLines = [
           { accountId: resolvedAcc.id, accountName: resolvedAcc.name, amountCents: amt, category },
-          { accountId: cashAcc?.id || 'acc_cash', accountName: cashAcc?.name || 'Cash', amountCents: -amt }
+          { accountId: cashAcc?.id || resolvedAcc.id, accountName: cashAcc?.name || 'Main Checking', amountCents: -amt }
         ];
       } else {
         // Find line that needs categorization (e.g. non-cash or uncategorized line)

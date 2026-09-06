@@ -9,7 +9,7 @@
     "db:init": "node scripts/init-db.js",
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && eslint .",
     "test": "tsx --test src/tests/*.test.ts",
     "preview": "vite preview",
     "start": "node dist/server.cjs"

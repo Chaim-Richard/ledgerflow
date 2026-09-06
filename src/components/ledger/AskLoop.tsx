@@ -55,11 +55,11 @@ export default function AskLoop() {
 
     let updatedLines = tx.lines && tx.lines.length > 0 ? tx.lines.map(l => ({ ...l })) : [];
     if (updatedLines.length === 0) {
-      const cashAcc = accounts.find(a => a.type === 'asset' || a.category === 'cash_and_equivalents') || accounts[0];
+      const cashAcc = accounts.find(a => a.code === '1010' || a.category === 'Cash' || a.category === 'cash_and_equivalents' || a.type === 'asset') || accounts[0];
       const amt = tx.totalAmountCents || 0;
       updatedLines = [
         { accountId, accountName, amountCents: amt, description: note || tx.description },
-        { accountId: cashAcc?.id || 'acc_cash', accountName: cashAcc?.name || 'Cash', amountCents: -amt }
+        { accountId: cashAcc?.id || accountId, accountName: cashAcc?.name || 'Main Checking', amountCents: -amt }
       ];
     } else {
       // Find the uncategorized line or positive expense line

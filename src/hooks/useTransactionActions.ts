@@ -159,7 +159,7 @@ export function useTransactionActions() {
         newTransactions
           .filter(tx => !existingIds.has(tx.bankTransactionId) && !existingIds.has(tx.id) && !isPeriodLocked(tx.date))
           .forEach(tx => {
-          let defaultAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || 'acc_uncategorized';
+          const defaultAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || 'acc_uncategorized';
           let lines = tx.lines && tx.lines.length > 0 ? tx.lines : [{ accountId: defaultAccId, accountName: 'Uncategorized Expense', amountCents: tx.amountCents }];
           
           const isPreCategorized = lines.length > 0 && 

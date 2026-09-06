@@ -125,7 +125,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
         }
 
         // Parse Date using local calendar safe formatting
-        let rawDate = dateIdx >= 0 ? row[dateIdx] : '';
+        const rawDate = dateIdx >= 0 ? row[dateIdx] : '';
         let dateStr = getLocalDateISO();
         if (rawDate) {
           if (typeof rawDate === 'number') {

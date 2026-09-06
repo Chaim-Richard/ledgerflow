@@ -58,7 +58,7 @@ export class LedgerEngine {
 
           convertedLines.forEach(({ line, amount }) => {
             if (!line || typeof line !== 'object') return;
-            let accId = typeof line.accountId === 'string' ? line.accountId : '';
+            const accId = typeof line.accountId === 'string' ? line.accountId : '';
             let accData = balances.get(accId);
 
             // Fallback lookup if accountId is not found directly by ID (match by code or exact name)

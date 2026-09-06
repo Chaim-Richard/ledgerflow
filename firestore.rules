@@ -47,13 +47,13 @@ service cloud.firestore {
       allow get: if isSignedIn() && request.auth.uid == userId;
       allow list: if isSignedIn() && request.auth.uid == userId;
       allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) &&
-        affectedKeys(["uid", "email", "role", "createdAt"]) &&
+        affectedKeys(["uid", "email", "role", "createdAt", "geminiApiKey", "updatedAt"]) &&
         (request.resource.data.role == "client" || (request.resource.data.role == "admin" && request.auth.token.admin == true)) &&
         request.resource.data.email == request.auth.token.email;
       allow update: if isSignedIn() && request.auth.uid == userId && 
         isUnchanged("role") && 
         isUnchanged("email") &&
-        affectedKeys(["uid", "email", "role", "createdAt"]);
+        affectedKeys(["uid", "email", "role", "createdAt", "geminiApiKey", "updatedAt"]);
       allow delete: if false;
     }
 

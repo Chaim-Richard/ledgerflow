@@ -1782,7 +1782,7 @@ async function startServer() {
         const guess = classifier.classify(desc || "");
         const category = guess ? guess.category : "Operating Expenses";
         
-        let suggestedAccount = accounts.find(a => a.name.toLowerCase().includes((category || "").toLowerCase()) || a.type === 'expense');
+        const suggestedAccount = accounts.find(a => a.name.toLowerCase().includes((category || "").toLowerCase()) || a.type === 'expense');
         const accResult = suggestedAccount ? { id: suggestedAccount.id, name: suggestedAccount.name } : (accounts[0] ? { id: accounts[0].id, name: accounts[0].name } : null);
 
         return {
@@ -2665,10 +2665,10 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       // Gemini 2.5 Flash Pricing Model True Alignment ($0.075 / 1M input, $0.30 / 1M output)
       // cost in cents = (prompt / 1M * 7.5) + (output / 1M * 30)
       const baseCentsExact = (promptTokens * 7.5 / 1000000) + (outputTokens * 30 / 1000000);
-      let baseCents = baseCentsExact;
+      const baseCents = baseCentsExact;
       
       // Compute Credits = exact token proxy (avoid arbitrary 100 base)
-      let baseWeight = totalTokens;
+      const baseWeight = totalTokens;
 
       try {
         const db = getDb();
@@ -2750,8 +2750,8 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const prediction = classifier.classify(description);
 
       // Programmatically record compute billing for the workspace on classify
-      let baseWeight = 2; // 2 credits per classification
-      let baseCents = 2;  // 2 cents charged per single class request
+      const baseWeight = 2; // 2 credits per classification
+      const baseCents = 2;  // 2 cents charged per single class request
       try {
         const db = getDb();
         const wsRef = db.collection("workspaces").doc(workspaceId);
@@ -2892,7 +2892,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       
       apiLogs.forEach(log => {
          // rough attribution by path or apiKey
-         let assignedWs = Object.keys(tenants).find(ws => log.path.includes(ws) || log.apiKeyUsed.includes(ws.substring(0, 5)));
+         const assignedWs = Object.keys(tenants).find(ws => log.path.includes(ws) || log.apiKeyUsed.includes(ws.substring(0, 5)));
          if (assignedWs) {
              tenants[assignedWs].requestCount++;
              if (log.statusCode >= 500) tenants[assignedWs].errorCount++;
