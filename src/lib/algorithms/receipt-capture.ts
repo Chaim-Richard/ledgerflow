@@ -1,5 +1,5 @@
 import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition } from './types';
+import { AlgorithmDefinition, adaptLegacy } from './types';
 
 // OCR output simulator and positional heuristic parser
 export function parseReceiptOCR(ocrLines: string[], existingMerchants: string[]) {
@@ -72,7 +72,7 @@ export const RECEIPT_CAPTURE_ALGO: AlgorithmDefinition = {
         "VISA **** 1234"
     ];
 
-    const merchants = Array.from(new Set(transactions.map(t => t.payee || t.description || ''))).filter(m => m.length > 3);
+    const merchants = Array.from(new Set<string>(transactions.map(t => t.payee || t.description || ''))).filter(m => m.length > 3);
     if (!merchants.includes('Home Depot')) merchants.push('Home Depot');
 
     const result = parseReceiptOCR(testOCRData, merchants);

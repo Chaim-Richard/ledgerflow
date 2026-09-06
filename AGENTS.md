@@ -33,4 +33,11 @@ To ensure complexity does not grow over time, all "tools" are separated into thr
 - Do NOT write transactions or recurring rules to nested subcollections like `workspaces/{id}/transactions` — top-level queries and security rules expect top-level paths.
 - Base ledger currency defaults to the workspace currency (or USD if unspecified). Always preserve multi-currency properties (`currency`, `exchangeRate`) when generating entries.
 
+## 6. Core Data Model Invariants & Rules
+- **Top-Level Collections Only**: All Firestore collections (`transactions`, `invoices`, `bills`, `chartAccounts`, `projects`, etc.) are TOP-LEVEL collections scoped by a `workspaceId` field. There are NO nested subcollections (e.g. do not use `workspaces/{id}/invoices/{id}`).
+- **Absolute Transaction Totals**: `totalAmountCents` is ALWAYS absolute. Transaction direction comes strictly from line items (`lines[]`), never from the sign of `totalAmountCents`.
+- **Plural Fixed Categories**: Account categories use a fixed plural vocabulary: `Cash`, `Receivables`, `Payables`, `Fixed Assets`, `COGS`, `Revenue`... Singular variants (e.g. `'Receivable'` or `'Fixed Asset'`) match nothing.
+- **Dynamic Role Resolution**: Never hardcode literal account IDs. Resolve roles via `resolveAccountRole(account)` or refuse to post.
+- **Postable Filtering**: Every financial report or computation MUST filter transactions with `isPostable()` from `src/lib/txFilters.ts`.
+
 By following this exact pattern, we avoid piling complex logic into React components, and maintain a highly modular, plug-and-play toolkit.

@@ -1,30 +1,45 @@
-# Enterprise Financial Ledger
+# LedgerFlow Enterprise ERP
 
-Welcome to the Enterprise Financial Ledger application. 
+LedgerFlow is an Enterprise Resource Planning (ERP) and Financial Ledger system built with React 18, Vite, Tailwind CSS, and Zustand. It features real-time double-entry ledger accounting, zero-configuration plugin views, and pure financial algorithm tools.
 
-This application is built for maximum efficiency and maintainability, using:
-- **Vite** for blazing fast HMR and optimized builds
-- **React.lazy** for dynamic component splitting and fast load times
-- **Zustand** for zero-boilerplate, highly efficient state management
-- **D3/Recharts** for hardware-accelerated SVG and Canvas visual intelligence
+## Architecture & System Overview
 
-## Fast Modification Guides
-To make sure any change you want to make is easy and fast, check out our dedicated architecture guidelines:
+All tools and views are organized into three strict layers:
 
-- 📖 **[Architecture & Modification Guide](README-ARCHITECTURE.md)**: Details on where to find things, how the plugins work, and where the single source of truth is stored.
-- 🤖 **[Agent Instructions](AGENTS.md)**: Identical instructions formatted specifically for AI and AI Studio context windows so AI assistants always know exactly how to alter this repo.
+1. **Layer 1: Data Source of Truth (Zustand & Firestore)**
+   - Core financial data is stored in `useLedgerStore` (`src/stores/useLedgerStore.ts`).
+   - The primary data sources are top-level Firestore collections (`transactions`, `accounts`, `invoices`, `bills`, `projects`, `recurring`) scoped strictly by `workspaceId`.
 
-## CLI Scaffolding (New!)
-We've added a CLI tool to make adding new features extremely fast without copy/pasting files.
+2. **Layer 2: Pure Math Algorithms (`src/lib/algorithms/`)**
+   - Pure, deterministic financial algorithms receiving an `AlgorithmContext` (`{ transactions, accounts, period, asOfDate, reportingCurrency }`) and returning `{ metrics, charts, insights }`.
+   - Registered centrally in `FINANCIAL_ALGORITHMS` (`src/lib/algorithms/index.ts`).
 
-**To add a new View / Plugin:**
+3. **Layer 3: Dynamic Views & Registries (`src/config/registry.tsx`)**
+   - Standard React components registered under `VIEW_COMPONENTS` and navigation registries in `src/config/registry.tsx`.
+   - Plug-and-play components dropped into `src/plugins/` are automatically scanned and mounted.
+
+## Common Developer Tasks
+
+### 1. Adding a Financial Algorithm
+- Create your algorithm file in `src/lib/algorithms/your-algorithm.ts`.
+- Export an `AlgorithmDefinition` implementing `compute: (ctx, inputs) => AlgoResult`.
+- Register it in `src/lib/algorithms/index.ts`. It will automatically appear in the Tool Sandbox.
+
+### 2. Adding a New View
+- **Plugin Option (Zero Configuration):** Create `src/plugins/MyTool.tsx` exporting `config` and a default React component. It is auto-discovered via `import.meta.glob`.
+- **Core View Option:** Add your component under `src/components/`, register it lazily in `VIEW_COMPONENTS` inside `src/config/registry.tsx`, and add its tab definition to `NAV_GROUPS`.
+
+### 3. Modifying Types & Schemas
+- `src/types.ts` is the single source of truth for TypeScript interfaces (`Transaction`, `ChartAccount`, `Invoice`, etc.).
+- `src/schemas.ts` defines Zod validation schemas for API endpoints.
+
+## CLI Commands
+
 ```bash
-npm run scaffold:plugin MyNewView
+npm run dev              # Start Vite dev server on port 3000
+npm run build            # Full production build
+npm run lint             # Run tsc and eslint
+npm test                 # Run test suite
+npm run scaffold:plugin  # Scaffold a new plugin component
+npm run scaffold:algo    # Scaffold a new algorithm
 ```
-*This automatically generates the component in `src/plugins/` and it gets immediately picked up by the navigation registry!*
-
-**To add a new Financial Algorithm:**
-```bash
-npm run scaffold:algo my-new-algorithm
-```
-*This creates a new tool in `src/lib/algorithms/`. Import it to `index.ts` and it will appear in the Sandbox automatically.*
