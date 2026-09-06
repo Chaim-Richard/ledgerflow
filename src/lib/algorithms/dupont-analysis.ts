@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
@@ -8,7 +8,8 @@ export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
   tags: ['DuPont', 'ROE', 'Profitability', 'Efficiency', 'Leverage'],
   description: 'Deconstructs Return on Equity (ROE) into Profit Margin, Asset Turnover, and Financial Leverage to identify the core drivers of shareholder return.',
   inputs: [],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts, accounting } = ctx;
     let revenue = 0;
     let netIncome = 0;
     let totalAssets = 0;
@@ -16,13 +17,11 @@ export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
 
     // Use accounts for assets and equity
     accounts.forEach(acc => {
-      const cat = (acc.category || '').toLowerCase();
-      const type = (acc.type || '').toLowerCase();
       const bal = acc.balanceCents || 0;
 
-      if (type === 'asset' || cat === 'asset' || cat === 'cash' || cat === 'receivables' || cat === 'inventory') {
+      if (accounting.isAsset(acc.id)) {
         totalAssets += bal;
-      } else if (type === 'equity' || cat === 'equity' || type.includes('retained') || cat.includes('retained')) {
+      } else if (accounting.isEquity(acc.id)) {
         equity += Math.abs(bal);
       }
     });
@@ -31,18 +30,13 @@ export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
     transactions.forEach(tx => {
        if (!isPostable(tx)) return;
        tx.lines.forEach(l => {
-          const acc = accounts.find(a => a.id === l.accountId);
-          if (acc) {
-             const cat = (acc.category || '').toLowerCase();
-             const type = (acc.type || '').toLowerCase();
-             const amt = lineAmount(l, tx);
-             if (type === 'income' || type === 'revenue' || cat === 'revenue' || cat === 'income' || cat === 'sales') {
-                const absAmt = Math.abs(amt);
-                revenue += absAmt;
-                netIncome += absAmt;
-             } else if (type === 'expense' || type === 'cost_of_goods' || cat === 'expense' || cat === 'cost_of_goods' || cat === 'cogs') {
-                netIncome -= Math.abs(amt);
-             }
+          const amt = lineAmount(l, tx);
+          if (accounting.isRevenue(l.accountId)) {
+             const absAmt = Math.abs(amt);
+             revenue += absAmt;
+             netIncome += absAmt;
+          } else if (accounting.isExpense(l.accountId) || accounting.isCOGS(l.accountId)) {
+             netIncome -= Math.abs(amt);
           }
        });
     });
@@ -97,5 +91,5 @@ export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
         equityMultiplier > 2 ? 'Note: High Equity Multiplier (>2.0x) indicates significant reliance on debt financing to drive ROE.' : 'Leverage is conservative, suggesting ROE is driven primarily by operational efficiency rather than debt.'
       ]
     };
-  })
+  }
 };

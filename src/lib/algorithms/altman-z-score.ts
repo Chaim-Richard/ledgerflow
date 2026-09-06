@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
@@ -8,7 +8,8 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
   tags: ['Solvency', 'Risk', 'Bankruptcy', 'Z-Score'],
   description: 'Calculates the Altman Z-Score to predict the probability of bankruptcy or severe financial distress based on balance sheet and income statement ratios.',
   inputs: [],
-  compute: adaptLegacy((transactions, accounts, inputs) => {
+  compute: (ctx, inputs) => {
+    const { transactions, accounts, accounting } = ctx;
     
     let totalAssets = 0;
     let totalLiabilities = 0;
@@ -18,24 +19,21 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
     let equity = 0;
 
     accounts.forEach(acc => {
-      const type = acc.type?.toLowerCase() || '';
       const cat = acc.category?.toLowerCase() || '';
       const name = acc.name?.toLowerCase() || '';
       const bal = acc.balanceCents || 0;
 
-      if (type === 'asset') {
+      if (accounting.isAsset(acc.id)) {
         totalAssets += bal;
-        if (cat.includes('current') || name.includes('current') || cat.includes('bank') || name.includes('bank') || cat.includes('cash') || name.includes('cash') || cat.includes('receivable') || name.includes('receivable')) {
+        if (accounting.isCash(acc.id) || accounting.isAR(acc.id) || cat.includes('current') || name.includes('current')) {
           currentAssets += bal;
         }
-      } else if (type === 'liability') {
-        totalLiabilities += Math.abs(bal); // liabilities usually negative in credit-normal, but let's take absolute
-        if (cat.includes('current') || name.includes('current') || cat.includes('payable') || name.includes('payable') || cat.includes('short') || name.includes('short')) {
+      } else if (accounting.isLiability(acc.id)) {
+        totalLiabilities += Math.abs(bal);
+        if (accounting.isAP(acc.id) || cat.includes('current') || name.includes('current') || cat.includes('short') || name.includes('short')) {
           currentLiabilities += Math.abs(bal);
         }
-      } else if (type === 'equity') {
-        // In credit-normal system, credit balance (-bal in debit system) is positive equity
-        // Debit balance (+bal) represents deficit/negative equity
+      } else if (accounting.isEquity(acc.id)) {
         const eqVal = -bal;
         equity += eqVal;
         if (cat.includes('retained') || name.includes('retained')) {
@@ -49,15 +47,15 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
     transactions.forEach(t => {
       if (!isPostable(t)) return;
       t.lines.forEach(l => {
-        const acc = accounts.find(a => a.id === l.accountId);
-        if (acc) {
-          const cat = acc.category?.toLowerCase() || '';
-          const type = acc.type?.toLowerCase() || '';
-          const amt = lineAmount(l, t);
-          if (cat === 'revenue' || type === 'income' || type === 'revenue' || cat === 'sales') {
-             ebit += Math.abs(amt);
-          } else if ((cat === 'expense' || type === 'expense' || cat === 'cogs' || type === 'cost_of_goods') && !type.includes('tax') && !type.includes('interest')) {
-             ebit -= Math.abs(amt);
+        const amt = lineAmount(l, t);
+        if (accounting.isRevenue(l.accountId)) {
+          ebit += Math.abs(amt);
+        } else if (accounting.isExpense(l.accountId) || accounting.isCOGS(l.accountId)) {
+          // Exclude tax and interest
+          const acc = accounts.find(a => a.id === l.accountId);
+          const type = acc?.type?.toLowerCase() || '';
+          if (!type.includes('tax') && !type.includes('interest')) {
+            ebit -= Math.abs(amt);
           }
         }
       });
@@ -119,5 +117,5 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
         `Working capital constitutes ${(t1 * 100).toFixed(1)}% of total assets, which is a key driver of short-term liquidity.`
       ]
     };
-  })
+  }
 };

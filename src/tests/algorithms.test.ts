@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { CASH_CONVERSION_CYCLE_ALGO } from '../lib/algorithms/cash-conversion-cycle.js';
 import { ALTMAN_Z_SCORE_ALGO } from '../lib/algorithms/altman-z-score.js';
+import { buildAlgorithmContext } from '../lib/algorithms/types.js';
 
 describe('Financial Algorithms Test Suite', () => {
   test('Altman Z-Score computes correctly and avoids division by zero', () => {
-    const computeFn = ALTMAN_Z_SCORE_ALGO.compute as any;
-    const resEmpty = computeFn([], [], { publicCompany: 0 }, {});
+    const computeFn = ALTMAN_Z_SCORE_ALGO.compute;
+    const ctxEmpty = buildAlgorithmContext([], [], '2026-09-06', { start: '2026-01-01', end: '2026-12-31' });
+    const resEmpty = computeFn(ctxEmpty, { publicCompany: 0 });
     assert.equal(resEmpty.metrics[0].value, 'N/A');
 
     const accounts = [
@@ -24,7 +26,8 @@ describe('Financial Algorithms Test Suite', () => {
       ]}
     ];
 
-    const res = computeFn(transactions as any, accounts as any, { publicCompany: 0 });
+    const ctx = buildAlgorithmContext(transactions as any, accounts as any, '2026-09-06', { start: '2026-01-01', end: '2026-12-31' });
+    const res = computeFn(ctx, { publicCompany: 0 });
     assert.ok(res.metrics.length > 0);
   });
 });
