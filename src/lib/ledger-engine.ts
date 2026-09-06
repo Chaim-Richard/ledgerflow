@@ -81,10 +81,12 @@ export class LedgerEngine {
 
     // Initialize with absolute safety
     accounts.forEach(acc => {
+      const isDebit = acc.type === 'asset' || acc.type === 'expense' || acc.type === 'cost_of_goods';
       const opening = acc.openingBalanceCents || 0;
+      const initial = isDebit ? opening : -opening;
       balances.set(acc.id, { 
-        total: opening, 
-        projects: new Map([[null, opening], ['unallocated', 0]]) 
+        total: initial, 
+        projects: new Map([[null, initial], ['unallocated', 0]]) 
       });
     });
 
@@ -170,13 +172,18 @@ export class LedgerEngine {
 
     const rollupCache = new Map<string, { total: number, projects: Map<string | null, number> }>();
 
-    const getRolledUpBalance = (accId: string): { total: number, projects: Map<string | null, number> } => {
+    const getRolledUpBalance = (accId: string, visited = new Set<string>()): { total: number, projects: Map<string | null, number> } => {
       if (rollupCache.has(accId)) {
         return rollupCache.get(accId)!;
       }
 
+      if (visited.has(accId)) {
+        // Prevent infinite loops on circular parent-child account references
+        return balances.get(accId) || { total: 0, projects: new Map() };
+      }
+      visited.add(accId);
+
       const selfData = balances.get(accId) || { total: 0, projects: new Map() };
-      // Copy current flat data
       const rolledUpTotal = {
         total: selfData.total,
         projects: new Map(selfData.projects)
@@ -184,7 +191,7 @@ export class LedgerEngine {
 
       const children = parentToChildren.get(accId) || [];
       for (const childId of children) {
-        const childRolledUp = getRolledUpBalance(childId);
+        const childRolledUp = getRolledUpBalance(childId, new Set(visited));
         rolledUpTotal.total += childRolledUp.total;
 
         // Roll up projects
