@@ -86,24 +86,14 @@ export function useLedgerData() {
   useEffect(() => {
     if (!user) return;
     return onSnapshot(doc(db, 'users', user.uid), async (snap) => {
-      const isOwnerEmail = user.email?.toLowerCase() === 'shmuelbiller@gmail.com' || user.email?.toLowerCase().includes('shmuel');
       if (snap.exists()) {
         const data = snap.data() as UserProfile;
-        if (isOwnerEmail && data.role !== 'admin') {
-          // Upgrade owner to admin role automatically
-          await safeAsync(
-            setDoc(doc(db, 'users', user.uid), { ...data, role: 'admin' }, { merge: true }),
-            OperationType.UPDATE,
-            `users/${user.uid}`
-          );
-          data.role = 'admin';
-        }
         setUserProfile(data);
       } else {
         const profileData: UserProfile = {
           uid: user.uid,
-          email: user.email || 'shmuelbiller@gmail.com',
-          role: 'admin', // Default workspace creator/owner to admin
+          email: user.email || '',
+          role: 'client', // Default new users to 'client' role; admin elevated via backend or owner logic
           createdAt: new Date().toISOString()
         };
         await safeAsync(

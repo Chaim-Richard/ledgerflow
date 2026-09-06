@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { db } from '../../../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { APP_TABS, SYSTEM_GLOSSARY } from '../../../config/registry';
@@ -34,6 +35,7 @@ export default function BlueprintSettings() {
   const resetLexiconOverrides = useUIStore(state => state.resetLexiconOverrides);
 
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
+  const txActions = useTransactionActions();
 
   // Read lockDate and actions from ledger store
   const lockDate = useLedgerStore(state => state.lockDate);
@@ -140,23 +142,12 @@ export default function BlueprintSettings() {
 
   // Save the custom lock date
   const handleSaveLockDate = async () => {
-    setLockDate(selectedLockDate || null);
-    
-    if (currentWorkspaceId) {
-      try {
-        await updateDoc(doc(db, 'workspaces', currentWorkspaceId), {
-          lockDate: selectedLockDate || null
-        });
-      } catch (err) {
-        console.error("Failed to persist lock date:", err);
-      }
+    if (selectedLockDate) {
+      await txActions.handleCloseMonth(selectedLockDate);
+    } else {
+      setLockDate(null);
+      toast.info("Lock date cleared locally. (Cloud sync requires administrative override)");
     }
-
-    toast.success('System parameters locked', {
-      description: selectedLockDate 
-        ? `Ledger transactions pre-dating ${selectedLockDate} are restricted.`
-        : 'Accounting lock removed. Period modifications unrestricted.'
-    });
   };
 
   // Switch workspace currency

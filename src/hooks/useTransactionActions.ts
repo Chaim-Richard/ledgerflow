@@ -1697,6 +1697,41 @@ export function useTransactionActions() {
     
     handleExport,
     handleCloseYear,
+    handleCloseMonth: async (dateStr: string | null) => {
+      if (!user || !currentWorkspaceId) return;
+      
+      const loader = toast.loading('Applying fiscal period lock...');
+      try {
+        setIsSyncing(true);
+        // Extract YYYY-MM from YYYY-MM-DD
+        const month = dateStr ? dateStr.substring(0, 7) : '';
+        
+        if (!month) {
+          throw new Error("Invalid month format for period lock.");
+        }
+
+        const response = await fetch('/api/v1/transactions/close-month', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${await user.getIdToken()}`
+          },
+          body: JSON.stringify({ workspaceId: currentWorkspaceId, month })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to close month.');
+        }
+
+        useLedgerStore.getState().setLockDate(data.closingDate);
+        toast.success(data.message || `Month closed successfully.`, { id: loader });
+      } catch (error: any) {
+        toast.error(error.message || 'Month-end close failed.', { id: loader });
+      } finally {
+        setIsSyncing(false);
+      }
+    },
     handleReconcileMatch,
     handleReconcileIgnore,
     handleReconcileCreate,

@@ -7,7 +7,7 @@ export const SplitAllocationSchema = z.object({
   weight: z.number().min(0).max(1),
   amountCents: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   notes: z.string().max(500).optional(),
-}).passthrough();
+});
 
 export const TransactionLineSchema = z.object({
   accountId: z.string().min(1),
@@ -25,7 +25,7 @@ export const TransactionLineSchema = z.object({
   taxAmountCents: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   quantity: z.number().positive().finite().optional(),
   unitPriceCents: z.number().int().nonnegative().optional(),
-}).passthrough();
+});
 
 export const TransactionSchema = z.object({
   id: z.string().optional(),
@@ -48,7 +48,7 @@ export const TransactionSchema = z.object({
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
   metadata: z.record(z.string(), z.any()).optional(),
-}).passthrough();
+});
 
 export const ChartAccountSchema = z.object({
   id: z.string().optional(),
@@ -66,7 +66,7 @@ export const ChartAccountSchema = z.object({
   parentId: z.string().optional(),
   openingBalanceCents: z.number().int().default(0),
   isActive: z.boolean().optional(),
-}).passthrough();
+});
 
 export const WorkspaceSchema = z.object({
   id: z.string().optional(),

@@ -16,17 +16,13 @@ export default function SecuritySettings() {
   const txActions = useTransactionActions();
 
   const handleLockDateChange = async (dateStr: string | null) => {
-    setLockDate(dateStr);
-    if (currentWorkspaceId) {
-      try {
-        await updateDoc(doc(db, 'workspaces', currentWorkspaceId), {
-          lockDate: dateStr
-        });
-        toast.success("Fiscal lock date synced safely on cloud workspace.");
-      } catch (err: any) {
-        console.error(err);
-        toast.error("Failed to persist fiscal lock configuration.");
-      }
+    if (dateStr) {
+      await txActions.handleCloseMonth(dateStr);
+    } else {
+      // If we want to allow clearing, we'd need a route for that, 
+      // but for now we follow the audit which emphasizes close-month.
+      setLockDate(null);
+      toast.info("Lock date cleared locally. (Cloud sync requires administrative override)");
     }
   };
 
