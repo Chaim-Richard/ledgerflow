@@ -195,7 +195,7 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
   },
 
   addSavedView: (newViewData) => {
-    const id = `view-custom-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const id = `view-custom-${crypto.randomUUID()}`;
     const now = new Date().toISOString();
     const newView: SavedView = {
       ...newViewData,

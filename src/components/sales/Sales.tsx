@@ -334,7 +334,7 @@ export default function Sales() {
                         )}
                         <button 
                           onClick={() => {
-                            const newBill = { ...inv, id: `inv-${Date.now()}`, number: `${inv.number}-COPY`, status: 'unpaid' as any };
+                            const newBill = { ...inv, id: `inv-${crypto.randomUUID()}`, number: `${inv.number}-COPY`, status: 'unpaid' as any };
                             onAddInvoice(newBill);
                             toast.success('Liability Copied');
                           }}

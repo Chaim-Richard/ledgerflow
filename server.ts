@@ -585,11 +585,15 @@ async function startServer() {
                 const accountsSnap = await t.get(db.collection('chartAccounts').where('workspaceId', '==', wsId));
                 const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
+                const currentPaidCents = inv.amountPaidCents || 0;
+                const newTotalPaid = currentPaidCents + amountTotal;
+                const totalInvoiceCents = inv.totalCents || inv.amountCents || 0;
+
                 t.update(targetRef, {
-                  status: 'paid',
-                  amountPaidCents: amountTotal,
+                  status: newTotalPaid >= totalInvoiceCents ? 'paid' : 'partially_paid',
+                  amountPaidCents: admin.firestore.FieldValue.increment(amountTotal),
                   paidAt: new Date().toISOString(),
-                  isLocked: true
+                  isLocked: newTotalPaid >= totalInvoiceCents
                 });
                 
                 let cashAccount: any = accounts.find((a: any) => 
@@ -973,7 +977,7 @@ async function startServer() {
 
           if (chargedWeightScore > 0) {
             // Log trace audit record
-            const traceId = `trace-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+            const traceId = `trace-${crypto.randomUUID()}`;
             await db.collection("billingLedgerTraces").doc(traceId).set({
               id: traceId,
               workspaceId,
@@ -1642,7 +1646,7 @@ async function startServer() {
       if (!name) return sendError(res, "Missing required fields: 'name'", 400);
 
       const db = getDb();
-      const newId = `proj_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const newId = `proj_${crypto.randomUUID().replace(/-/g, '')}`;
       const newProject = {
         id: newId,
         workspaceId,
@@ -1709,7 +1713,7 @@ async function startServer() {
       }
 
       const db = getDb();
-      const newId = `acc_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const newId = `acc_${crypto.randomUUID().replace(/-/g, '')}`;
       const newAccount = {
         id: newId,
         workspaceId,
@@ -1919,7 +1923,7 @@ async function startServer() {
           });
 
           // Log trace audit record
-          const traceId = `trace-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+          const traceId = `trace-${crypto.randomUUID()}`;
           await db.collection("billingLedgerTraces").doc(traceId).set({
             id: traceId,
             workspaceId,
@@ -2407,7 +2411,7 @@ async function startServer() {
       await authorizeWorkspace(authReq, workspaceId);
 
       const db = getDb();
-      const jobId = `job_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const jobId = `job_${crypto.randomUUID().replace(/-/g, '')}`;
 
       const initialJob = {
         id: jobId,
@@ -2607,9 +2611,10 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
       });
 
       // Record telemetry trace and bill standard credit units
-      const billingRef = db.collection("billingLedgerTraces").doc(`trace-${Date.now()}`);
+      const traceId = crypto.randomUUID();
+      const billingRef = db.collection("billingLedgerTraces").doc(`trace-${traceId}`);
       await billingRef.set({
-        id: `trace-${Date.now()}`,
+        id: `trace-${traceId}`,
         workspaceId,
         uid,
         userEmail: "api-client@ledgerflow.io",
@@ -2793,7 +2798,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
           });
 
           // Log trace audit record
-          const traceId = `trace-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+          const traceId = `trace-${crypto.randomUUID()}`;
           await db.collection("billingLedgerTraces").doc(traceId).set({
             id: traceId,
             workspaceId,
@@ -2875,7 +2880,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
           });
 
           // Log trace audit record
-          const traceId = `trace-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+          const traceId = `trace-${crypto.randomUUID()}`;
           await db.collection("billingLedgerTraces").doc(traceId).set({
             id: traceId,
             workspaceId,
@@ -3563,7 +3568,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const sanitizedExecutionTime = Math.max(1, Math.min(60000, Math.floor(Math.abs(Number(executionTimeMs) || 50))));
 
       const ledgerEntry = {
-        id: `trace-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+        id: `trace-${crypto.randomUUID()}`,
         workspaceId,
         uid: authReq.user.uid,
         userEmail: authReq.user.email,
@@ -3572,7 +3577,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         weightScore: sanitizedWeight,
         executionTimeMs: sanitizedExecutionTime,
         timestamp: new Date().toISOString(),
-        hash: crypto.createHash('sha256').update(`${workspaceId}-${algorithmName}-${sanitizedWeight}-${Date.now()}`).digest('hex')
+        hash: crypto.createHash('sha256').update(`${workspaceId}-${algorithmName}-${sanitizedWeight}-${crypto.randomUUID()}`).digest('hex')
       };
 
       try {
@@ -3723,7 +3728,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         return new Date().toISOString().split('T')[0];
       };
 
-      const batchId = Date.now();
+      const batchId = crypto.randomUUID().split('-')[0];
       const transactions: any[] = [];
       const rejected: any[] = [];
 

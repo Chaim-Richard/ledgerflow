@@ -43,6 +43,7 @@ export function useTransactionActions() {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const setTransactions = useLedgerStore(s => s.setTransactions);
+  const setAccounts = useLedgerStore(s => s.setAccounts);
   const accounts = useLedgerStore(s => s.accounts);
   const analyticalPatternCache = useLedgerStore(s => s.analyticalPatternCache);
   const matchingThreshold = useLedgerStore(s => s.matchingThreshold);
@@ -203,7 +204,7 @@ export function useTransactionActions() {
                 if (!ccAccount) {
                    // Deep economic self-healing: create the liability account automatically!
                    // Note: we just generate a random ID for it.
-                   const newAccId = 'auto_cc_' + Date.now();
+                   const newAccId = 'auto_cc_' + crypto.randomUUID().split('-')[0];
                    ccAccount = {
                      id: newAccId,
                      uid: user.uid,
@@ -215,10 +216,9 @@ export function useTransactionActions() {
                      subtype: 'Credit Card',
                      balanceCents: 0
                    } as any;
-                   // Wait, we bypass proper await for local push; 
-                   // real write happens via store/db listener eventually, but we need it here now:
+                   // Use setAccounts instead of direct mutation
                    if (ccAccount) {
-                      (accounts as any).push(ccAccount);
+                      setAccounts([...accounts, ccAccount]);
                       accountsByName.set(ccAccount.name, ccAccount);
                       accountsById.set(ccAccount.id, ccAccount);
                       ccAccountPrecomputed = ccAccount;
@@ -501,7 +501,7 @@ export function useTransactionActions() {
     };
 
     // Create optimistic ID
-    const tempId = `temp-${Date.now()}`;
+    const tempId = `temp-${crypto.randomUUID().split('-')[0]}`;
     const optimisticTx: Transaction = {
       id: tempId,
       uid: user.uid,

@@ -32,7 +32,10 @@ export class LedgerEngine {
     }
 
     return transactions.map(t => {
-      const cacheKey = `${t.id}-${t.description || ''}-${t.totalAmountCents}-${t.date || ''}-${t.isCleared ? 1 : 0}-${t.status || ''}-${t.tags?.join(',') || ''}-${t.project || ''}-${t.classId || ''}-${t.locationId || ''}-${JSON.stringify(t.dimensions || {})}-${JSON.stringify(t.metadata || {})}-${JSON.stringify(t.lines || [])}`;
+      // Robust Deterministic Cache Key
+      // We hash the lines to keep the key length manageable while ensuring any line change invalidates the cache
+      const linesSignature = (t.lines || []).map(l => `${l.accountId}:${l.amountCents}`).join('|');
+      const cacheKey = `${t.id}-${t.totalAmountCents}-${t.date}-${t.status}-${t.isCleared ? 1 : 0}-${t.tags?.join(',')}-${t.project || ''}-${linesSignature}`;
       
       if (this.normalizationCache.has(cacheKey)) {
         return this.normalizationCache.get(cacheKey);

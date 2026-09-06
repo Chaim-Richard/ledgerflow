@@ -461,7 +461,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
           ];
 
           const newTx = {
-            id: `tx-qbo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: `tx-qbo-${crypto.randomUUID()}`,
             uid: user?.uid || 'system',
             workspaceId: currentWorkspaceId,
             date: row.date,

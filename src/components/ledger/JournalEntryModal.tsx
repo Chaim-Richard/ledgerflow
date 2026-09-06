@@ -467,17 +467,17 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                               <input 
                                 required
                                 list={`je-account-${idx}`}
-                                value={accounts.find(a => a.id === line.accountId)?.name || line.accountId || ''}
+                                value={accounts.find(a => a.id === line.accountId) ? `${accounts.find(a => a.id === line.accountId)?.code} - ${accounts.find(a => a.id === line.accountId)?.name}` : line.accountId || ''}
                                 onChange={(e) => {
-                                  const acc = accounts.find(a => a.name === e.target.value || a.id === e.target.value);
+                                  const acc = accounts.find(a => `${a.code} - ${a.name}` === e.target.value || a.id === e.target.value);
                                   handleLineChange(idx, 'accountId', acc ? acc.id : e.target.value);
                                 }}
                                 placeholder="Select Account..."
                                 className="w-full px-3 py-2 bg-transparent border-none focus:ring-0 font-bold text-[var(--text)] min-w-[150px]"
                               />
                               <datalist id={`je-account-${idx}`}>
-                                {accounts.map(acc => (
-                                  <option key={acc.id} value={acc.name}>{acc.code}</option>
+                                {accounts.sort((a, b) => a.code.localeCompare(b.code)).map(acc => (
+                                  <option key={acc.id} value={`${acc.code} - ${acc.name}`}>{acc.name}</option>
                                 ))}
                               </datalist>
                             </div>

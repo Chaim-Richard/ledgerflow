@@ -444,7 +444,7 @@ export default function Purchases() {
                         )}
                         <button 
                           onClick={() => {
-                            const newBill = { ...bill, id: `bill-${Date.now()}`, number: `${bill.number}-COPY`, status: 'unpaid' as any };
+                            const newBill = { ...bill, id: `bill-${crypto.randomUUID()}`, number: `${bill.number}-COPY`, status: 'unpaid' as any };
                             onAddBill(newBill);
                             toast.success('Liability Copied');
                           }}

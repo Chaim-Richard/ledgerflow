@@ -130,7 +130,7 @@ reportRouter.get("/balance-sheet", async (req, res) => {
       if (tx.date > end) continue;
       tx.lines?.forEach((line: any) => {
         if (balances[line.accountId] !== undefined) {
-          balances[line.accountId] += line.amountCents;
+          balances[line.accountId] += lineAmount(line, tx);
         }
       });
     }

@@ -52,73 +52,82 @@ export const DoubleEntryAuditor = {
       .sort((a, b) => { if (a.time !== b.time) return a.time - b.time; return (a.t && b.t && a.t.id && b.t.id) ? a.t.id.localeCompare(b.t.id) : 0; })
       .map(item => item.t);
 
-    // Filter to active transactions for cryptographic sequence verification
-    const activeTxs = chronosTxs.filter(t => isPostable(t));
+    // Causal Integrity Check: All transactions with a verification block are part of the cryptographic sequence.
+    // We do NOT filter to isPostable() because void/deleted transactions still exist in the immutable chain.
+    const chainTxs = chronosTxs.filter(t => t.verification?.hash || t.verification?.previousHash);
 
     // Optimized Duplicate Detection using Bucketing
     const signatureBuckets = new Map<number, { id: string; sig: number[] }[]>();
-    const skipDuplicateCheck = activeTxs.length > 5000;
+    const skipDuplicateCheck = chronosTxs.length > 5000;
 
     // 1. Audit Transactions & Hash Chain
-    activeTxs.forEach((t, i) => {
-      // Verify Cryptographic Link
-      if (i > 0 && t.verification?.previousHash) {
-        const prevTx = activeTxs[i - 1];
-        if (t.verification.previousHash !== prevTx.verification?.hash) {
-          hashChainValid = false;
-          if (brokenChainIndex === null) brokenChainIndex = i;
-        }
-      }
-
-      let txDebit = 0;
-      let txCredit = 0;
+    chronosTxs.forEach((t, i) => {
+      const isActive = isPostable(t);
       
-      const lines = t.lines || [];
-      if (lines.length === 0) {
-        orphans.push({ id: t.id, type: 'transaction', message: 'No allocation lines found' });
-      }
-
-      for (let lIdx = 0; lIdx < lines.length; lIdx++) {
-        const line = lines[lIdx];
-        if (!accountIds.has(line.accountId)) {
-          missingAccounts.push({ id: t.id, accountName: line.accountName || line.accountId, lineIdx: lIdx });
-        }
-        
-        if (line.amountCents > 0) txDebit += line.amountCents;
-        else txCredit += Math.abs(line.amountCents);
-      }
-
-      const diff = txDebit - txCredit;
-      if (Math.abs(diff) > 0.01) {
-        imbalances.push({ id: t.id, type: 'transaction', diff });
-      }
-
-      totalDebits += txDebit;
-      totalCredits += txCredit;
-
-      // 1.1 Causal Integrity Check
-      if (t.verification?.status === 'verified' && t.verification.hash !== DoubleEntryAuditor.computeHash(t, t.verification.previousHash)) {
-        orphans.push({ id: t.id, type: 'transaction', message: 'Signature Mismatch: Potential manual tampering detected' });
-      }
-
-      // 1.2 Optimized Duplicate Check (LSH MinHash with Bucketing)
-      if (!skipDuplicateCheck) {
-        const currentSig = minHash.createSignature(`${t.description} ${t.totalAmountCents} ${t.date}`);
-        const amountKey = t.totalAmountCents;
-        
-        const bucket = signatureBuckets.get(amountKey) || [];
-        const startIndex = Math.max(0, bucket.length - 10);
-        for (let bIdx = startIndex; bIdx < bucket.length; bIdx++) {
-          const prev = bucket[bIdx];
-          const similarity = minHash.compare(currentSig, prev.sig);
-          if (similarity > 0.95) {
-            duplicateCandidates.push({ id: t.id, reason: `Pattern similarity (${Math.round(similarity * 100)}%) with ${prev.id}` });
-            break; 
+      // Verify Cryptographic Link (using chainTxs context for index lookup)
+      if (t.verification?.hash) {
+        const chainIdx = chainTxs.findIndex(ct => ct.id === t.id);
+        if (chainIdx > 0) {
+          const prevTx = chainTxs[chainIdx - 1];
+          if (t.verification.previousHash !== prevTx.verification?.hash) {
+            hashChainValid = false;
+            if (brokenChainIndex === null) brokenChainIndex = i;
           }
         }
+      }
+
+      // Only perform financial auditing on postable entries
+      if (isActive) {
+        let txDebit = 0;
+        let txCredit = 0;
         
-        if (!signatureBuckets.has(amountKey)) signatureBuckets.set(amountKey, []);
-        signatureBuckets.get(amountKey)!.push({ id: t.id, sig: currentSig });
+        const lines = t.lines || [];
+        if (lines.length === 0) {
+          orphans.push({ id: t.id, type: 'transaction', message: 'No allocation lines found' });
+        }
+
+        for (let lIdx = 0; lIdx < lines.length; lIdx++) {
+          const line = lines[lIdx];
+          if (!accountIds.has(line.accountId)) {
+            missingAccounts.push({ id: t.id, accountName: line.accountName || line.accountId, lineIdx: lIdx });
+          }
+          
+          if (line.amountCents > 0) txDebit += line.amountCents;
+          else txCredit += Math.abs(line.amountCents);
+        }
+
+        const diff = txDebit - txCredit;
+        if (Math.abs(diff) > 0.01) {
+          imbalances.push({ id: t.id, type: 'transaction', diff });
+        }
+
+        totalDebits += txDebit;
+        totalCredits += txCredit;
+
+        // 1.1 Causal Integrity Check
+        if (t.verification?.status === 'verified' && t.verification.hash !== DoubleEntryAuditor.computeHash(t, t.verification.previousHash)) {
+          orphans.push({ id: t.id, type: 'transaction', message: 'Signature Mismatch: Potential manual tampering detected' });
+        }
+
+        // 1.2 Optimized Duplicate Check (LSH MinHash with Bucketing)
+        if (!skipDuplicateCheck) {
+          const currentSig = minHash.createSignature(`${t.description} ${t.totalAmountCents} ${t.date}`);
+          const amountKey = t.totalAmountCents;
+          
+          const bucket = signatureBuckets.get(amountKey) || [];
+          const startIndex = Math.max(0, bucket.length - 10);
+          for (let bIdx = startIndex; bIdx < bucket.length; bIdx++) {
+            const prev = bucket[bIdx];
+            const similarity = minHash.compare(currentSig, prev.sig);
+            if (similarity > 0.95) {
+              duplicateCandidates.push({ id: t.id, reason: `Pattern similarity (${Math.round(similarity * 100)}%) with ${prev.id}` });
+              break; 
+            }
+          }
+          
+          if (!signatureBuckets.has(amountKey)) signatureBuckets.set(amountKey, []);
+          signatureBuckets.get(amountKey)!.push({ id: t.id, sig: currentSig });
+        }
       }
     });
 
@@ -145,7 +154,7 @@ export const DoubleEntryAuditor = {
     });
 
     // 3. Construct Merkle Root of Trust
-    const tree = new MerkleTree(activeTxs.map(t => t.verification?.hash || t.id));
+    const tree = new MerkleTree(chronosTxs.filter(t => t.verification?.hash).map(t => t.verification!.hash));
 
     PerformanceTelemetry.end("DoubleEntryAuditor:auditLedger");
     return {
@@ -166,30 +175,32 @@ export const DoubleEntryAuditor = {
   /**
    * Generates a deterministic signature for a transaction.
    * Cryptographically covers all transaction fields to prevent tampering.
+   * Uses a canonical string representation (sorted keys) to ensure order-independence.
    */
   computeHash: (tx: Transaction, previousHash?: string): string => {
-    const payload = JSON.stringify({
+    // Canonical Object construction (Sorted Keys)
+    const canonical = {
+      amount: tx.totalAmountCents,
+      currency: tx.currency || 'USD',
       date: tx.date,
       desc: tx.description,
-      amount: tx.totalAmountCents,
-      status: tx.status || 'completed',
-      type: tx.type || 'expense',
-      currency: tx.currency || 'USD',
       exchangeRate: tx.exchangeRate || 1,
+      lines: (tx.lines || []).map(l => ({
+        accountId: l.accountId,
+        amountCents: l.amountCents,
+        class: l.class || '',
+        desc: l.description || '',
+        loc: l.location || '',
+        proj: l.project || ''
+      })).sort((a, b) => a.accountId.localeCompare(b.accountId) || a.amountCents - b.amountCents),
       payee: tx.payee || '',
+      prev: previousHash || 'genesis',
       project: tx.project || '',
-      lines: (tx.lines || []).map(l => [
-        l.accountId, 
-        l.amountCents, 
-        l.accountName || '', 
-        l.description || '', 
-        (l as any).currency || '', 
-        (l as any).exchangeRate || 1
-      ]),
-      prev: previousHash || 'genesis'
-    });
+      status: tx.status || 'completed',
+      type: tx.type || 'expense'
+    };
     
-    return sha256Sync(payload);
+    return sha256Sync(JSON.stringify(canonical));
   },
 
   /**

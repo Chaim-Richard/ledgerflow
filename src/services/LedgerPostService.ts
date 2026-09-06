@@ -99,10 +99,14 @@ export class LedgerPostService {
     );
 
     // Find prior active non-reversal postings for this invoice to generate reversing entries
-    const existingTxs = this.getTransactions(context).filter(t => 
-      t.metadata?.invoiceId === invoiceId && 
+    // Improved logic: exclude any transaction that has ALREADY been reversed
+    const allTxs = this.getTransactions(context).filter(t => t.metadata?.invoiceId === invoiceId);
+    const reversedIds = new Set(allTxs.filter(t => t.metadata?.isReversal).map(t => t.metadata?.reversesTxId || t.metadata?.reversedTransactionId));
+    
+    const existingTxs = allTxs.filter(t => 
       isPostable(t) && 
-      !t.metadata?.isReversal
+      !t.metadata?.isReversal &&
+      !reversedIds.has(t.id)
     );
 
     const txsToPost: any[] = [];
@@ -177,7 +181,7 @@ export class LedgerPostService {
       accounts,
       mappings,
       ['retainage', 'retention'],
-      a => a.type === 'asset' && a.name.toLowerCase().includes('retainage'),
+      a => a.type === 'asset' && a.category === 'Receivables' && (a.name.toLowerCase().includes('retainage') || a.name.toLowerCase().includes('retention')),
       'Retainage Receivable'
     ) : null;
     
@@ -335,10 +339,14 @@ export class LedgerPostService {
     );
 
     // Find prior active non-reversal postings for this bill
-    const existingTxs = this.getTransactions(context).filter(t => 
-      t.metadata?.billId === billId && 
+    // Improved logic: exclude any transaction that has ALREADY been reversed
+    const allTxs = this.getTransactions(context).filter(t => t.metadata?.billId === billId);
+    const reversedIds = new Set(allTxs.filter(t => t.metadata?.isReversal).map(t => t.metadata?.reversesTxId || t.metadata?.reversedTransactionId));
+    
+    const existingTxs = allTxs.filter(t => 
       isPostable(t) && 
-      !t.metadata?.isReversal
+      !t.metadata?.isReversal &&
+      !reversedIds.has(t.id)
     );
 
     const txsToPost: any[] = [];
@@ -500,10 +508,13 @@ export class LedgerPostService {
   static async deletePostings(id: string, keyName: 'invoiceId' | 'billId', workspaceId: string, entityMutation?: any, context?: any) {
     if (!workspaceId || !id) return;
 
-    const existingTxs = this.getTransactions(context).filter(t => 
-      t.metadata?.[keyName] === id && 
+    const allTxs = this.getTransactions(context).filter(t => t.metadata?.[keyName] === id);
+    const reversedIds = new Set(allTxs.filter(t => t.metadata?.isReversal).map(t => t.metadata?.reversesTxId || t.metadata?.reversedTransactionId));
+    
+    const existingTxs = allTxs.filter(t => 
       isPostable(t) && 
-      !t.metadata?.isReversal
+      !t.metadata?.isReversal &&
+      !reversedIds.has(t.id)
     );
 
     if (existingTxs.length === 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation, context); } return; }

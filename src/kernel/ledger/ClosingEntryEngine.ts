@@ -109,6 +109,15 @@ export class ClosingEntryEngine {
     let isSynthetic = false;
 
     if (!retainedEarningsAcc) {
+      // Priority 0: Exact Name Match
+      retainedEarningsAcc = accounts.find(a => 
+        a.workspaceId === workspaceId && 
+        a.type === 'equity' &&
+        a.name === 'Retained Earnings'
+      );
+    }
+
+    if (!retainedEarningsAcc) {
       // Priority 1: Explicit Subtype or Category Match
       retainedEarningsAcc = accounts.find(a => 
         a.workspaceId === workspaceId && 
@@ -118,12 +127,14 @@ export class ClosingEntryEngine {
 
     if (!retainedEarningsAcc) {
       // Priority 2: Specific Code Matching (GAAP/IFRS standard codes)
-      // We explicitly exclude 3000 if it's usually "Owner's Equity" or "Capital"
+      // We explicitly exclude 3000 as it's usually "Owner's Equity" or "Capital" in many systems
       const prioritizedCodes = ['3100', '3900', '3200', '3070'];
       retainedEarningsAcc = accounts.find(a => 
         a.workspaceId === workspaceId && 
         a.type === 'equity' && 
-        prioritizedCodes.includes(a.code || '')
+        prioritizedCodes.includes(a.code || '') &&
+        !a.name.toLowerCase().includes('owner') &&
+        !a.name.toLowerCase().includes('capital')
       );
     }
 
@@ -258,7 +269,7 @@ export class ClosingEntryEngine {
       .filter(l => l.amountCents > 0)
       .reduce((sum, l) => sum + l.amountCents, 0);
 
-    const txId = `close-${closingDate.replace(/-/g, '')}-${Date.now().toString(36)}`;
+    const txId = `close-${closingDate.replace(/-/g, '')}-${crypto.randomUUID().split('-')[0]}`;
 
     const closingTransaction: Transaction = {
       id: txId,

@@ -1,10 +1,14 @@
 import express from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
+import Decimal from 'decimal.js';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
 import { getDb, validateWorkspaceMember, assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
 
 export const inventoryRouter = express.Router();
 
+/**
+ * Recognizes COGS for a sale. Reduces quantity on hand.
+ */
 inventoryRouter.post('/cogs', async (req, res) => {
   try {
     const { workspaceId, itemId, quantitySold, inventoryAccountId, cogsAccountId, date } = req.body;
@@ -53,12 +57,17 @@ inventoryRouter.post('/cogs', async (req, res) => {
     if (typeof itemData.unitCostCents !== 'number' || itemData.unitCostCents <= 0) {
       return res.status(400).json({ error: `Inventory item ${itemId} has no valid unitCostCents configured.` });
     }
+
     const currentQty = typeof itemData.quantityOnHand === 'number' ? itemData.quantityOnHand : 0;
     if (quantitySold > currentQty) {
       return res.status(400).json({ error: `Insufficient inventory stock. Requested ${quantitySold}, available ${currentQty}.` });
     }
-    const unitCostCents = itemData.unitCostCents;
-    const totalCogsCents = Math.round(quantitySold * unitCostCents);
+
+    // #76 - Use Decimal for COGS precision
+    const unitCostDec = new Decimal(itemData.unitCostCents);
+    const totalCogsDec = unitCostDec.mul(quantitySold);
+    const totalCogsCents = totalCogsDec.round().toNumber();
+    
     const itemName = itemData.name || itemData.sku || itemId;
 
     const tx = {
@@ -96,7 +105,7 @@ inventoryRouter.post('/cogs', async (req, res) => {
       status: 'ok',
       message: 'Inventory COGS recorded successfully.',
       transactionId: tx.id,
-      unitCostCents,
+      unitCostCents: itemData.unitCostCents,
       totalCogsCents
     };
 
@@ -135,6 +144,94 @@ inventoryRouter.post('/cogs', async (req, res) => {
     res.json(resultResponse);
   } catch (e: any) {
     res.status(e.message?.includes('Unauthorized') ? 403 : 400).json({ error: e.message });
+  }
+});
+
+/**
+ * Purchases or Adjusts inventory. 
+ * Implements Weighted Average Cost (WAC) logic if purchasing.
+ */
+inventoryRouter.post('/adjust', async (req, res) => {
+  try {
+    const { workspaceId, itemId, quantityChange, unitCostCents, inventoryAccountId, offsetAccountId, type, date } = req.body;
+    const user = (req as any).user;
+    const db = getDb();
+
+    if (!workspaceId || !itemId || quantityChange === undefined || !inventoryAccountId || !offsetAccountId) {
+      return res.status(400).json({ error: "Missing required fields." });
+    }
+
+    await validateWorkspaceMember(db, workspaceId, user);
+    const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
+    await assertPeriodOpen(db, workspaceId, txDate);
+
+    const accountMap = await validateWorkspaceAccounts(db, workspaceId, [inventoryAccountId, offsetAccountId]);
+    const inventoryAcc = accountMap.get(inventoryAccountId)!;
+    const offsetAcc = accountMap.get(offsetAccountId)!;
+
+    const itemRef = db.collection('inventory').doc(itemId);
+    const itemSnap = await itemRef.get();
+    if (!itemSnap.exists) return res.status(404).json({ error: 'Item not found' });
+    const itemData = itemSnap.data()!;
+
+    const oldQty = new Decimal(itemData.quantityOnHand || 0);
+    const oldWAC = new Decimal(itemData.unitCostCents || 0);
+    const deltaQty = new Decimal(quantityChange);
+    const newPurchasePrice = new Decimal(unitCostCents || itemData.unitCostCents || 0);
+
+    let newWAC = oldWAC;
+    if (type === 'purchase' && deltaQty.gt(0)) {
+      // #76 - WAC logic using Decimal precision
+      // WAC = (OldValue + NewValue) / (OldQty + NewQty)
+      const totalOldValue = oldQty.mul(oldWAC);
+      const totalNewValue = deltaQty.mul(newPurchasePrice);
+      newWAC = totalOldValue.plus(totalNewValue).div(oldQty.plus(deltaQty));
+    }
+
+    const totalAdjustmentValue = deltaQty.mul(newPurchasePrice).round().toNumber();
+
+    const tx = {
+      id: db.collection("transactions").doc().id,
+      workspaceId,
+      uid: user.uid,
+      date: txDate,
+      description: `Inventory ${type || 'Adjustment'}: ${itemData.name || itemId} (Qty Δ: ${quantityChange})`,
+      totalAmountCents: Math.abs(totalAdjustmentValue),
+      type: 'journal',
+      status: 'approved',
+      isCleared: true,
+      lines: [
+        {
+          id: `line-1`,
+          accountId: inventoryAccountId,
+          accountName: inventoryAcc.name,
+          amountCents: totalAdjustmentValue,
+          description: `${type === 'purchase' ? 'Purchase' : 'Adjustment'} of ${quantityChange} units`
+        },
+        {
+          id: `line-2`,
+          accountId: offsetAccountId,
+          accountName: offsetAcc.name,
+          amountCents: -totalAdjustmentValue,
+          description: `Offset for inventory ${type || 'adjustment'}`
+        }
+      ]
+    };
+
+    await db.runTransaction(async (t: any) => {
+      const txRef = db.collection('transactions').doc(tx.id);
+      t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      
+      t.update(itemRef, {
+        quantityOnHand: FieldValue.increment(quantityChange),
+        unitCostCents: newWAC.round().toNumber(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+    });
+
+    res.json({ status: 'ok', newWAC: newWAC.toNumber(), newQuantity: oldQty.plus(deltaQty).toNumber() });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
   }
 });
 
