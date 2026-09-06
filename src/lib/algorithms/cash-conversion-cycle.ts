@@ -14,35 +14,54 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
   compute: (transactions, accounts, inputs): AlgoResult => {
     const periodDays = inputs.annualizationDays ?? 365;
 
-    let inventory = 0;
-    let ar = 0;
-    let ap = 0;
-    
+    const accountBalances: Record<string, number> = {};
+    accounts.forEach(acc => {
+      accountBalances[acc.id] = acc.openingBalanceCents || (accounts.some(a => a.openingBalanceCents) ? 0 : (acc.balanceCents || 0));
+    });
+
+    const sourceTransactionIds = new Set<string>();
+
     // Cost of Goods Sold and Revenue
     let cogs = 0;
     let revenue = 0;
 
-    // Use accounts for balances
-    accounts.forEach(acc => {
-      const role = resolveAccountRole(acc);
-      const bal = acc.balanceCents || 0;
-
-      if (role === 'inventory') inventory += bal;
-      else if (role === 'ar') ar += bal;
-      else if (role === 'ap') ap += Math.abs(bal);
-    });
-
     transactions.forEach(tx => {
        if (!isPostable(tx)) return;
+       let hasRelevantLine = false;
        tx.lines.forEach(l => {
           const acc = accounts.find(a => a.id === l.accountId);
           if (acc) {
-             const role = resolveAccountRole(acc);
              const amt = lineAmount(l, tx);
-             if (role === 'cogs') cogs += Math.abs(amt);
-             if (role === 'revenue') revenue += Math.abs(amt);
+             accountBalances[acc.id] = (accountBalances[acc.id] || 0) + amt;
+             const role = resolveAccountRole(acc);
+             if (role === 'cogs') {
+               cogs += Math.abs(amt);
+               hasRelevantLine = true;
+             }
+             if (role === 'revenue') {
+               revenue += Math.abs(amt);
+               hasRelevantLine = true;
+             }
+             if (role === 'inventory' || role === 'ar' || role === 'ap') {
+               hasRelevantLine = true;
+             }
           }
        });
+       if (hasRelevantLine) sourceTransactionIds.add(tx.id);
+    });
+
+    // Derive ending balances
+    let inventory = 0;
+    let ar = 0;
+    let ap = 0;
+
+    accounts.forEach(acc => {
+      const role = resolveAccountRole(acc);
+      const bal = accountBalances[acc.id] || 0;
+
+      if (role === 'inventory') inventory += Math.max(0, bal);
+      else if (role === 'ar') ar += Math.max(0, bal);
+      else if (role === 'ap') ap += Math.abs(bal);
     });
 
     if (cogs === 0 || revenue === 0) {
@@ -100,7 +119,8 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
         `Capital is tied up in inventory for ~${Math.round(dio)} days, and customers take ~${Math.round(dso)} days to pay.`,
         `The entity defers its own payments to suppliers by ~${Math.round(dpo)} days, providing working capital relief.`,
         ccc < 0 ? 'Excellent: A negative CCC means suppliers are funding operations before the entity pays for inventory.' : 'Monitor receivables collection and inventory turnover to lower the cash cycle.'
-      ]
+      ],
+      sourceTransactionIds: Array.from(sourceTransactionIds)
     };
   }
 };

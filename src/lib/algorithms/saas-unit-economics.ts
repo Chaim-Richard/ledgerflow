@@ -15,12 +15,17 @@ export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
     const churnRate = (inputs.assumedChurnPct ?? 3) / 100;
     const newCustomers = inputs.newCustomers ?? 50;
 
-    let totalMarketingSpend = 0;
-    let mrr = 0; // Approx MRR based on recent revenue
-    let cogs = 0;
+    const monthlyRevenue: Record<string, number> = {};
+    const monthlyMarketing: Record<string, number> = {};
+    const monthlyCogs: Record<string, number> = {};
+    const sourceTransactionIds = new Set<string>();
 
     transactions.forEach(tx => {
        if (!isPostable(tx)) return;
+       const monthKey = (tx.date || '').substring(0, 7);
+       if (!monthKey) return;
+
+       let hasRelevantLine = false;
        tx.lines.forEach(l => {
           const acc = accounts.find(a => a.id === l.accountId);
           if (acc) {
@@ -34,35 +39,57 @@ export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
              const isMarketingName = name.includes('marketing') || name.includes('advertising') || name.includes('adwords') || name.includes('promotion') || name.includes('acquisition') || name.includes('sales commission');
              
              if (isExpense && isMarketingName) {
-                totalMarketingSpend += amt;
+                monthlyMarketing[monthKey] = (monthlyMarketing[monthKey] || 0) + amt;
+                hasRelevantLine = true;
              }
              if (type === 'income' || type === 'revenue' || cat === 'revenue' || cat === 'income' || cat === 'sales') {
-                mrr += amt;
+                monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + amt;
+                hasRelevantLine = true;
              }
              if (type === 'cost_of_goods' || cat === 'cogs' || (isExpense && (name.includes('hosting') || name.includes('cloud') || name.includes('infrastructure')))) {
-                cogs += amt;
+                monthlyCogs[monthKey] = (monthlyCogs[monthKey] || 0) + amt;
+                hasRelevantLine = true;
              }
           }
        });
+       if (hasRelevantLine) sourceTransactionIds.add(tx.id);
     });
 
-    if (totalMarketingSpend === 0 || mrr === 0) {
+    const activeMonths = Array.from(new Set([...Object.keys(monthlyRevenue), ...Object.keys(monthlyMarketing)])).sort();
+    const recentMonths = activeMonths.slice(-3);
+    const monthsCount = recentMonths.length || 1;
+
+    let totalRecentRev = 0;
+    let totalRecentMktg = 0;
+    let totalRecentCogs = 0;
+
+    recentMonths.forEach(m => {
+      totalRecentRev += (monthlyRevenue[m] || 0);
+      totalRecentMktg += (monthlyMarketing[m] || 0);
+      totalRecentCogs += (monthlyCogs[m] || 0);
+    });
+
+    const mrr = Math.round(totalRecentRev / monthsCount);
+    const avgMarketingSpend = Math.round(totalRecentMktg / monthsCount);
+    const avgCogs = Math.round(totalRecentCogs / monthsCount);
+
+    if (avgMarketingSpend === 0 || mrr === 0) {
       return {
         metrics: [{ label: 'Status', value: 'Insufficient SaaS Data' }],
         charts: [],
-        insights: ['Unit economics calculation requires Sales & Marketing expenses and recorded Revenue to compute CAC and LTV.']
+        insights: ['Unit economics calculation requires Sales & Marketing expenses and recorded Revenue in the evaluation window to compute CAC and LTV.'],
+        sourceTransactionIds: Array.from(sourceTransactionIds)
       };
     }
 
-    // Assumptions for the period based on ledger data
-    // Assuming transactions represent a 1-month period for simplicity.
-    const grossMarginPct = mrr > 0 ? ((mrr - cogs) / mrr) : 0;
-    const arpu = newCustomers > 0 ? (mrr / newCustomers) : 0; // Simplistic ARPU
+    // Assumptions for the period based on normalized monthly ledger data
+    const grossMarginPct = mrr > 0 ? Math.max(0, (mrr - avgCogs) / mrr) : 0;
+    const arpu = newCustomers > 0 ? (mrr / newCustomers) : 0; // Normalized Monthly ARPU
     
-    // CAC = Total Marketing Spend / New Customers
-    const cac = totalMarketingSpend / newCustomers;
+    // CAC = Monthly Marketing Spend / Monthly New Customers
+    const cac = avgMarketingSpend / newCustomers;
 
-    // LTV = (ARPU * Gross Margin) / Churn Rate
+    // LTV = (Monthly ARPU * Gross Margin) / Churn Rate
     const ltv = churnRate > 0 ? ((arpu * grossMarginPct) / churnRate) : 0;
 
     const ltvCacRatio = cac > 0 ? (ltv / cac) : 0;
@@ -98,7 +125,8 @@ export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
         `For every $1 spent on acquisition (CAC: $${(cac/100).toFixed(0)}), the entity expects to generate $${(ltv/100).toFixed(0)} in lifetime value.`,
         `The LTV:CAC ratio is ${ltvCacRatio.toFixed(1)}x. A ratio > 3.0x is considered healthy for a SaaS business.`,
         `It takes approximately ${paybackMonths.toFixed(1)} months to recover the CAC based on current gross margins (${(grossMarginPct*100).toFixed(1)}%).`
-      ]
+      ],
+      sourceTransactionIds: Array.from(sourceTransactionIds)
     };
   }
 };

@@ -15,8 +15,16 @@ revenueRouter.post('/recognize', async (req, res) => {
       return res.status(400).json({ error: "Missing required fields (workspaceId, amountCents, deferredAccountId, revenueAccountId)." });
     }
 
-    if (typeof amountCents !== 'number' || amountCents <= 0) {
+    if (!Number.isInteger(amountCents) || amountCents <= 0) {
       return res.status(400).json({ error: "amountCents must be a positive integer." });
+    }
+
+    const idempotencyKey = (req.headers['idempotency-key'] as string) || (contractId && periodId ? `${contractId}_${periodId}` : undefined);
+    if (idempotencyKey) {
+      const idempDoc = await db.collection('idempotencyKeys').doc(`${workspaceId}_rev_${idempotencyKey}`).get();
+      if (idempDoc.exists) {
+        return res.json(idempDoc.data()?.response);
+      }
     }
 
     const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
@@ -63,6 +71,12 @@ revenueRouter.post('/recognize', async (req, res) => {
     // Double entry check
     DoubleEntryValidator.validateJournalEntry(tx as any);
 
+    const responsePayload = {
+      status: 'ok',
+      message: 'Revenue recognized successfully (ASC 606 compliance).',
+      transactionId: tx.id
+    };
+
     await db.runTransaction(async (t: any) => {
       const txRef = db.collection('transactions').doc(tx.id);
       t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
@@ -80,13 +94,18 @@ revenueRouter.post('/recognize', async (req, res) => {
             description: line.description || tx.description
          });
       });
+
+      if (idempotencyKey) {
+        const idempRef = db.collection('idempotencyKeys').doc(`${workspaceId}_rev_${idempotencyKey}`);
+        t.set(idempRef, {
+          response: responsePayload,
+          timestamp: new Date().toISOString(),
+          workspaceId
+        });
+      }
     });
 
-    res.json({
-      status: 'ok',
-      message: 'Revenue recognized successfully (ASC 606 compliance).',
-      transactionId: tx.id
-    });
+    res.json(responsePayload);
   } catch (e: any) {
     res.status(e.message?.includes('Unauthorized') ? 403 : 400).json({ error: e.message });
   }

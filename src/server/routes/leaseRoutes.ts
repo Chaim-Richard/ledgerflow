@@ -15,8 +15,16 @@ leaseRouter.post('/capitalize', async (req, res) => {
       return res.status(400).json({ error: "Missing required fields for ASC 842 capitalization." });
     }
 
-    if (typeof pvAmountCents !== 'number' || pvAmountCents <= 0) {
+    if (!Number.isInteger(pvAmountCents) || pvAmountCents <= 0) {
       return res.status(400).json({ error: "pvAmountCents must be a positive integer." });
+    }
+
+    const idempotencyKey = (req.headers['idempotency-key'] as string) || (leaseName ? `lease_${leaseName.toLowerCase().replace(/[^a-z0-9]/g, '_')}` : undefined);
+    if (idempotencyKey) {
+      const idempDoc = await db.collection('idempotencyKeys').doc(`${workspaceId}_lease_${idempotencyKey}`).get();
+      if (idempDoc.exists) {
+        return res.json(idempDoc.data()?.response);
+      }
     }
 
     const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
@@ -63,6 +71,12 @@ leaseRouter.post('/capitalize', async (req, res) => {
     // Double entry check
     DoubleEntryValidator.validateJournalEntry(tx as any);
 
+    const responsePayload = {
+      status: 'ok',
+      message: 'ASC 842 Lease capitalized successfully.',
+      transactionId: tx.id
+    };
+
     await db.runTransaction(async (t: any) => {
       const txRef = db.collection('transactions').doc(tx.id);
       t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
@@ -80,13 +94,18 @@ leaseRouter.post('/capitalize', async (req, res) => {
             description: line.description || tx.description
          });
       });
+
+      if (idempotencyKey) {
+        const idempRef = db.collection('idempotencyKeys').doc(`${workspaceId}_lease_${idempotencyKey}`);
+        t.set(idempRef, {
+          response: responsePayload,
+          timestamp: new Date().toISOString(),
+          workspaceId
+        });
+      }
     });
 
-    res.json({
-      status: 'ok',
-      message: 'ASC 842 Lease capitalized successfully.',
-      transactionId: tx.id
-    });
+    res.json(responsePayload);
   } catch (e: any) {
     res.status(e.message?.includes('Unauthorized') ? 403 : 400).json({ error: e.message });
   }

@@ -15,8 +15,16 @@ inventoryRouter.post('/cogs', async (req, res) => {
       return res.status(400).json({ error: "Missing required fields (workspaceId, itemId, quantitySold, inventoryAccountId, cogsAccountId)." });
     }
 
-    if (typeof quantitySold !== 'number' || quantitySold <= 0) {
+    if (!Number.isInteger(quantitySold) || quantitySold <= 0) {
       return res.status(400).json({ error: "quantitySold must be a positive integer." });
+    }
+
+    const idempotencyKey = req.headers['idempotency-key'] as string;
+    if (idempotencyKey) {
+      const idempDoc = await db.collection('idempotencyKeys').doc(`${workspaceId}_inv_${idempotencyKey}`).get();
+      if (idempDoc.exists) {
+        return res.json(idempDoc.data()?.response);
+      }
     }
 
     const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
@@ -42,7 +50,10 @@ inventoryRouter.post('/cogs', async (req, res) => {
       return res.status(403).json({ error: 'Security Violation: Item belongs to another workspace.' });
     }
 
-    const unitCostCents = typeof itemData.unitCostCents === 'number' && itemData.unitCostCents > 0 ? itemData.unitCostCents : 5000;
+    if (typeof itemData.unitCostCents !== 'number' || itemData.unitCostCents <= 0) {
+      return res.status(400).json({ error: `Inventory item ${itemId} has no valid unitCostCents configured.` });
+    }
+    const unitCostCents = itemData.unitCostCents;
     const totalCogsCents = Math.round(quantitySold * unitCostCents);
     const itemName = itemData.name || itemData.sku || itemId;
 
@@ -77,10 +88,25 @@ inventoryRouter.post('/cogs', async (req, res) => {
     // Double entry check
     DoubleEntryValidator.validateJournalEntry(tx as any);
 
+    const responsePayload = {
+      status: 'ok',
+      message: 'Inventory COGS recorded successfully.',
+      transactionId: tx.id,
+      unitCostCents,
+      totalCogsCents
+    };
+
     await db.runTransaction(async (t: any) => {
       const txRef = db.collection('transactions').doc(tx.id);
       t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       
+      // Reduce on-hand inventory quantity
+      const itemRef = db.collection('inventory').doc(itemId);
+      t.update(itemRef, {
+        quantityOnHand: FieldValue.increment(-quantitySold),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+
       tx.lines.forEach((line: any, index: number) => {
          const eventRef = db.collection('journalEntries').doc(`${tx.id}-line-${index}`);
          t.set(eventRef, {
@@ -94,15 +120,18 @@ inventoryRouter.post('/cogs', async (req, res) => {
             description: line.description || tx.description
          });
       });
+
+      if (idempotencyKey) {
+        const idempRef = db.collection('idempotencyKeys').doc(`${workspaceId}_inv_${idempotencyKey}`);
+        t.set(idempRef, {
+          response: responsePayload,
+          timestamp: new Date().toISOString(),
+          workspaceId
+        });
+      }
     });
 
-    res.json({
-      status: 'ok',
-      message: 'Inventory COGS recorded successfully.',
-      transactionId: tx.id,
-      unitCostCents,
-      totalCogsCents
-    });
+    res.json(responsePayload);
   } catch (e: any) {
     res.status(e.message?.includes('Unauthorized') ? 403 : 400).json({ error: e.message });
   }

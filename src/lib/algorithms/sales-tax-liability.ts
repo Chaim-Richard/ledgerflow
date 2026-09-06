@@ -99,7 +99,23 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
         return;
       }
 
-      const salesCents = inv.amountCents || inv.totalCents || 0;
+      const totalInvCents = inv.totalCents || inv.amountCents || 0;
+      let salesCents = totalInvCents;
+      if (basis === 'cash') {
+        const paidCents = typeof inv.amountPaidCents === 'number' 
+          ? inv.amountPaidCents 
+          : (typeof inv.paidAmountCents === 'number' ? inv.paidAmountCents : (inv.status === 'paid' ? totalInvCents : 0));
+        salesCents = paidCents;
+      }
+
+      if (salesCents <= 0) return;
+
+      if (inv.id) sourceTransactionIds.add(inv.id);
+      if (inv.transactionId) sourceTransactionIds.add(inv.transactionId);
+      if (Array.isArray(inv.paymentTransactionIds)) {
+        inv.paymentTransactionIds.forEach((ptId: string) => sourceTransactionIds.add(ptId));
+      }
+
       const taxRate = inv.taxRate || 0;
       const isTaxable = taxRate > 0;
       

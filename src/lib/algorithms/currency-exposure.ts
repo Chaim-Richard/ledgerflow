@@ -13,23 +13,47 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
   compute: (transactions, accounts, inputs): AlgoResult => {
     const shockPct = (inputs.shockPct ?? 10) / 100;
     
-    const fxBalances: Record<string, number> = {};
-    let totalBaseExposure = 0;
+    const accountMap = new Map(accounts.map(a => [a.id, a]));
+    const fxNetBalances: Record<string, number> = {};
+    const sourceTransactionIds = new Set<string>();
 
     transactions.forEach(tx => {
        if (!isPostable(tx)) return;
 
-       const rate = tx.exchangeRate && tx.exchangeRate !== 1 ? tx.exchangeRate : 1;
+       const rate = tx.exchangeRate && tx.exchangeRate > 0 && tx.exchangeRate !== 1 ? tx.exchangeRate : 1;
        const currencyCode = (tx as any).currency || (rate !== 1 ? 'FX' : 'USD');
        
        if (rate !== 1 || (currencyCode !== 'USD' && currencyCode !== 'FX')) {
+          sourceTransactionIds.add(tx.id);
           tx.lines.forEach(line => {
-             const baseAmt = Math.round(Math.abs(lineAmount(line, tx)) * rate);
-             if (!fxBalances[currencyCode]) fxBalances[currencyCode] = 0;
-             fxBalances[currencyCode] += baseAmt;
-             totalBaseExposure += baseAmt;
+             const acc = accountMap.get(line.accountId);
+             // Focus on monetary balance sheet items (assets & liabilities) or net lines
+             const amt = lineAmount(line, tx);
+             const baseAmt = Math.round(amt * rate);
+             
+             if (!fxNetBalances[currencyCode]) fxNetBalances[currencyCode] = 0;
+             // If account type is known: assets increase exposure with debits, liabilities with credits
+             if (acc?.type === 'liability' || acc?.type === 'equity') {
+               fxNetBalances[currencyCode] -= baseAmt;
+             } else {
+               fxNetBalances[currencyCode] += baseAmt;
+             }
           });
        }
+    });
+
+    // Net exposure per foreign currency
+    let totalBaseExposure = 0;
+    const currencyExposureData: { currency: string; exposure: number; netBaseAmount: number }[] = [];
+
+    Object.entries(fxNetBalances).forEach(([curr, netCents]) => {
+      const absExp = Math.abs(netCents);
+      totalBaseExposure += absExp;
+      currencyExposureData.push({
+        currency: curr,
+        exposure: parseFloat((absExp / 100).toFixed(2)),
+        netBaseAmount: parseFloat((netCents / 100).toFixed(2))
+      });
     });
 
     if (totalBaseExposure === 0) {
@@ -53,14 +77,15 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
              xKey: 'currency',
              yKeys: [{ key: 'exposure', name: 'Exposure (Base)', color: '#f59e0b', type: 'bar' }]
           },
-          data: Object.keys(fxBalances).map(k => ({ currency: k, exposure: Math.abs(fxBalances[k] / 100) }))
+          data: currencyExposureData
         }
       ],
       insights: [
-        `Entity has $${(totalBaseExposure / 100).toLocaleString()} exposed to non-base currencies.`,
-        `A ${inputs.shockPct}% adverse move in FX rates would result in a $${(shockImpact / 100).toLocaleString()} realized loss.`,
+        `Entity has $${(totalBaseExposure / 100).toLocaleString()} net exposed to non-base currencies across ${currencyExposureData.length} foreign currencies.`,
+        `A ${inputs.shockPct}% adverse move in FX rates would result in a $${(shockImpact / 100).toLocaleString()} realized shock loss.`,
         `Consider implementing forward contracts or natural hedging to mitigate currency concentration.`
-      ]
+      ],
+      sourceTransactionIds: Array.from(sourceTransactionIds)
     };
   }
 };

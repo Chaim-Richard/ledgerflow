@@ -24,29 +24,38 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
     const cashAccounts = accounts.filter(a => resolveAccountRole(a) === 'cash');
     const cashAccountIds = new Set(cashAccounts.map(a => a.id));
     
-    const initialAccountBalanceCents = cashAccounts.reduce((sum, a) => sum + (a.balanceCents || 0), 0);
+    const openingCashCents = cashAccounts.reduce((sum, a) => sum + (a.openingBalanceCents || 0), 0);
     let netTxCashFlow = 0;
+    const sourceTransactionIds = new Set<string>();
     
     // Group transactions by YYYY-MM
     const monthlyNet: Record<string, number> = {};
     
     transactions.forEach(tx => {
+      if ((tx.status as any) === 'void' || (tx.status as any) === 'voided') return;
       let netCashImpact = 0;
+      let hasCashLine = false;
       if (tx.lines && tx.lines.length > 0) {
         tx.lines.forEach(l => {
           if (cashAccountIds.has(l.accountId)) {
             netCashImpact += l.amountCents;
+            hasCashLine = true;
           }
         });
       }
+      if (hasCashLine) {
+        sourceTransactionIds.add(tx.id);
+      }
       netTxCashFlow += netCashImpact;
       
-      const monthKey = tx.date.substring(0, 7); // YYYY-MM
-      if (!monthlyNet[monthKey]) monthlyNet[monthKey] = 0;
-      monthlyNet[monthKey] += netCashImpact;
+      const monthKey = (tx.date || '').substring(0, 7); // YYYY-MM
+      if (monthKey) {
+        if (!monthlyNet[monthKey]) monthlyNet[monthKey] = 0;
+        monthlyNet[monthKey] += netCashImpact;
+      }
     });
 
-    const currentCashCents = initialAccountBalanceCents !== 0 ? initialAccountBalanceCents : netTxCashFlow;
+    const currentCashCents = openingCashCents + netTxCashFlow;
     
     // 2. Calculate average burn over the requested window across all months in the window
     const sortedMonths = Object.keys(monthlyNet).sort();
@@ -125,7 +134,8 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
           data: chartData
         }
       ],
-      insights
+      insights,
+      sourceTransactionIds: Array.from(sourceTransactionIds)
     };
   }
 };

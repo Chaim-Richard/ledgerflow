@@ -35,8 +35,21 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
     const invoice = doc.data();
 
     const lineTotal = Array.isArray(invoice.lines) 
-      ? invoice.lines.reduce((sum: number, l: any) => sum + (l.amountCents || (l.quantity || 1) * (l.unitPriceCents || 0)), 0)
+      ? invoice.lines.reduce((sum: number, l: any) => {
+          const lineAmt = typeof l.amountCents === 'number' 
+            ? l.amountCents 
+            : Math.round((Number(l.quantity) || 1) * (Number(l.unitPriceCents) || 0));
+          return sum + lineAmt;
+        }, 0)
       : 0;
+
+    const totalInvoiceAmount = typeof invoice.totalCents === 'number'
+      ? invoice.totalCents
+      : (typeof invoice.amountCents === 'number' ? invoice.amountCents : lineTotal);
+    const amountPaid = typeof invoice.amountPaidCents === 'number' 
+      ? invoice.amountPaidCents 
+      : (typeof invoice.paidAmountCents === 'number' ? invoice.paidAmountCents : 0);
+    const remainingBalance = Math.max(0, totalInvoiceAmount - amountPaid);
 
     res.json({
       invoice: {
@@ -45,8 +58,10 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
         date: invoice.date,
         dueDate: invoice.dueDate,
         status: invoice.status,
-        amountCents: invoice.amountCents ?? lineTotal,
-        totalCents: invoice.totalCents ?? invoice.amountCents ?? lineTotal,
+        amountCents: totalInvoiceAmount,
+        totalCents: totalInvoiceAmount,
+        amountPaidCents: amountPaid,
+        remainingBalanceCents: remainingBalance,
         currency: invoice.currency || 'USD',
         customerName: invoice.customerName,
         paymentToken: invoice.paymentToken,
@@ -54,7 +69,7 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
           description: l.description,
           quantity: l.quantity,
           unitPriceCents: l.unitPriceCents,
-          amountCents: l.amountCents
+          amountCents: typeof l.amountCents === 'number' ? l.amountCents : Math.round((Number(l.quantity) || 1) * (Number(l.unitPriceCents) || 0))
         })) : []
       }
     });
@@ -94,18 +109,32 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
 
     const stripe = getStripe();
     const lineTotal = Array.isArray(invoice.lines)
-      ? invoice.lines.reduce((sum: number, l: any) => sum + (l.amountCents || (l.quantity || 1) * (l.unitPriceCents || 0)), 0)
+      ? invoice.lines.reduce((sum: number, l: any) => {
+          const lineAmt = typeof l.amountCents === 'number' 
+            ? l.amountCents 
+            : Math.round((Number(l.quantity) || 1) * (Number(l.unitPriceCents) || 0));
+          return sum + lineAmt;
+        }, 0)
       : 0;
-    const amount = invoice.totalCents || invoice.amountCents || lineTotal;
 
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ error: 'Invoice total amount is invalid or zero.' });
+    const totalInvoiceAmount = typeof invoice.totalCents === 'number'
+      ? invoice.totalCents
+      : (typeof invoice.amountCents === 'number' ? invoice.amountCents : lineTotal);
+    const amountPaid = typeof invoice.amountPaidCents === 'number' 
+      ? invoice.amountPaidCents 
+      : (typeof invoice.paidAmountCents === 'number' ? invoice.paidAmountCents : 0);
+    const remainingBalance = totalInvoiceAmount - amountPaid;
+
+    if (!Number.isInteger(remainingBalance) || remainingBalance <= 0) {
+      return res.status(400).json({ error: 'Invoice has no outstanding unpaid balance or is already paid.' });
     }
 
     // Use configured application URL to prevent host-header poisoning
     const hostHeader = (req.get('host') || 'localhost:3000').replace(/[^a-zA-Z0-9.:-]/g, '');
     const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
     const origin = process.env.APP_URL || process.env.VITE_APP_URL || `${protocol}://${hostHeader}`;
+
+    const idempotencyKey = `checkout_${doc.id}_${remainingBalance}_${token.slice(-16)}`;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card', 'us_bank_account'],
@@ -117,7 +146,7 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
               name: `Invoice ${invoice.number || 'Payment'}`,
               description: `Payment for ${invoice.customerName || 'Services'}`
             },
-            unit_amount: amount,
+            unit_amount: remainingBalance,
           },
           quantity: 1,
         },
@@ -131,6 +160,8 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
         workspaceId: invoice.workspaceId,
         paymentToken: token
       }
+    }, {
+      idempotencyKey
     });
 
     res.json({ url: session.url });
