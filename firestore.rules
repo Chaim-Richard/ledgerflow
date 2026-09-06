@@ -152,6 +152,22 @@ service cloud.firestore {
       allow read, write: if false; // Internal server-side idempotency lock only
     }
 
+    match /admins/{docId} {
+      allow read: if isSignedIn() && request.auth.token.admin == true;
+      allow write: if false; // Server-side admin SDK only
+    }
+
+    match /external_api_cache/{cacheKey} {
+      allow read, write: if false; // Internal server-side cache only
+    }
+
+    match /reconciliations/{recId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(recId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
     match /learnedDeltas/{deltaId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(deltaId) &&
@@ -175,7 +191,7 @@ service cloud.firestore {
     }
 
     function isProtectedCollection(name) {
-      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents"];
+      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations"];
     }
 
     // Standard rule for remaining secondary metrics and details matching the blueprint

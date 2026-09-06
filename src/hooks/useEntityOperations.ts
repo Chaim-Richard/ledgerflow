@@ -4,7 +4,10 @@ import {
   updateDoc, 
   deleteDoc, 
   doc,
-  setDoc
+  setDoc,
+  query,
+  where,
+  getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -20,21 +23,33 @@ export function useEntityOperations() {
 
   /**
    * Recalculate and update durable balanceCents for a customer or vendor entity
+   * Queries authoritative Firestore data scoped to this entity rather than relying on truncated UI cache.
    */
   const syncEntityBalance = async (entityType: 'customers' | 'vendors', entityId: string) => {
     if (!entityId || !currentWorkspaceId) return;
     try {
-      const store = useLedgerStore.getState();
       let balanceCents = 0;
 
       if (entityType === 'customers') {
-        const customerInvoices = store.invoices.filter(
-          inv => inv.customerId === entityId && (inv.status as string) !== 'paid' && (inv.status as string) !== 'void' && (inv.status as string) !== 'rejected'
+        const q = query(
+          collection(db, 'invoices'),
+          where('workspaceId', '==', currentWorkspaceId),
+          where('customerId', '==', entityId)
+        );
+        const snap = await getDocs(q);
+        const customerInvoices = snap.docs.map(d => d.data()).filter(
+          inv => (inv.status as string) !== 'paid' && (inv.status as string) !== 'void' && (inv.status as string) !== 'rejected'
         );
         balanceCents = customerInvoices.reduce((sum, inv) => sum + (inv.amountCents || 0), 0);
       } else {
-        const vendorBills = store.bills.filter(
-          b => b.vendorId === entityId && (b.status as string) !== 'paid' && (b.status as string) !== 'void'
+        const q = query(
+          collection(db, 'bills'),
+          where('workspaceId', '==', currentWorkspaceId),
+          where('vendorId', '==', entityId)
+        );
+        const snap = await getDocs(q);
+        const vendorBills = snap.docs.map(d => d.data()).filter(
+          b => (b.status as string) !== 'paid' && (b.status as string) !== 'void'
         );
         balanceCents = vendorBills.reduce((sum, b) => sum + (b.amountCents || 0), 0);
       }
@@ -66,6 +81,19 @@ export function useEntityOperations() {
         accountName,
         count: (existing?.count || 0) + 1,
         lastUpdated: new Date().toISOString()
+      }, { merge: true });
+
+      // Feed delta learning to learnedDeltas for AI and categorization models
+      const deltaId = `${currentWorkspaceId}_${patternId}`;
+      const deltaRef = doc(db, 'learnedDeltas', deltaId);
+      await setDoc(deltaRef, {
+        id: deltaId,
+        uid: user.uid,
+        workspaceId: currentWorkspaceId,
+        apiKeyId: "human_web_console",
+        description: cleanDesc.slice(0, 500),
+        category: (accountName || "General").slice(0, 100),
+        timestamp: new Date().toISOString()
       }, { merge: true });
     } catch (e) {
       console.warn("Soft learning deferred", e);

@@ -1636,6 +1636,11 @@ async function startServer() {
       const { name, type, code, parentId, isActive, tags } = req.body;
       if (!name || !type) return sendError(res, "Missing required fields: 'name' and 'type'", 400);
 
+      const allowedTypes = ['asset', 'liability', 'equity', 'revenue', 'expense', 'other_income', 'other_expense'];
+      if (!allowedTypes.includes(type)) {
+        return sendError(res, `Invalid account type '${type}'. Allowed types: ${allowedTypes.join(', ')}`, 400);
+      }
+
       const db = getDb();
       const newId = `acc_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
       const newAccount = {
@@ -3714,11 +3719,15 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       return payload; // don't cache
     }
 
-    // Asynchronously save to cache
-    cacheRef.set({
-      timestamp: Date.now(),
-      payload
-    }).catch(err => console.error("Cache save error:", err));
+    // Save to cache
+    try {
+      await cacheRef.set({
+        timestamp: Date.now(),
+        payload
+      });
+    } catch (err) {
+      console.error("Cache save error:", err);
+    }
     
     return payload;
   }

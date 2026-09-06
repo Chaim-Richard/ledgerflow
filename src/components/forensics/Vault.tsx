@@ -73,8 +73,8 @@ export default function Vault() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 750000) {
-      toast.error('File too large. Maximum size is 750KB for the current database schema.');
+    if (file.size > 700000) {
+      toast.error('File too large. Maximum size is 700KB to safely fit within database document limits.');
       return;
     }
 
@@ -83,28 +83,32 @@ export default function Vault() {
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64DataUri = reader.result as string;
-        
-        const newDoc: Omit<CloudDocument, 'id'> = {
-          uid: uid || "",
-          workspaceId: workspaceId || "",
-          name: file.name,
-          fileUrl: base64DataUri, // Persistent Data URI
-          mimeType: file.type,
-          sizeBytes: file.size,
-          tags: ['General'],
-          createdAt: new Date().toISOString()
-        };
+        try {
+          const base64DataUri = reader.result as string;
+          
+          const newDoc: Omit<CloudDocument, 'id'> = {
+            uid: uid || "",
+            workspaceId: workspaceId || "",
+            name: file.name,
+            fileUrl: base64DataUri, // Persistent Data URI
+            mimeType: file.type,
+            sizeBytes: file.size,
+            tags: ['General'],
+            createdAt: new Date().toISOString()
+          };
 
-        await addDoc(collection(db, 'documents'), newDoc);
-        toast.success('Document uploaded to Vault', { id: toastId });
+          await addDoc(collection(db, 'documents'), newDoc);
+          toast.success('Document uploaded to Vault', { id: toastId });
+        } catch (uploadErr: any) {
+          toast.error(uploadErr?.message || 'Failed to save document to database', { id: toastId });
+        }
       };
       reader.onerror = () => {
         toast.error('Failed to read file', { id: toastId });
       };
       reader.readAsDataURL(file);
-    } catch (err) {
-      toast.error('Failed to upload document', { id: toastId });
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to upload document', { id: toastId });
     }
   };
 
