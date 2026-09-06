@@ -1,45 +1,59 @@
 import express from 'express';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
+import { getDb, validateWorkspaceMember, assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
 
 export const revenueRouter = express.Router();
 
 revenueRouter.post('/recognize', async (req, res) => {
   try {
-    const { workspaceId, contractId, periodId, amountCents, deferredAccountId, revenueAccountId } = req.body;
+    const { workspaceId, contractId, periodId, amountCents, deferredAccountId, revenueAccountId, date } = req.body;
     const user = (req as any).user;
-    const db = getFirestore();
+    const db = getDb();
     
     if (!workspaceId || !amountCents || !deferredAccountId || !revenueAccountId) {
-      return res.status(400).json({ error: "Missing required fields." });
+      return res.status(400).json({ error: "Missing required fields (workspaceId, amountCents, deferredAccountId, revenueAccountId)." });
     }
 
-    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
-      return res.status(403).json({ error: 'Not a member' });
+    if (typeof amountCents !== 'number' || amountCents <= 0) {
+      return res.status(400).json({ error: "amountCents must be a positive integer." });
     }
+
+    const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
+
+    // 1. Validate workspace membership
+    await validateWorkspaceMember(db, workspaceId, user);
+
+    // 2. Validate period lock
+    await assertPeriodOpen(db, workspaceId, txDate);
+
+    // 3. Validate accounts exist and belong to workspace
+    const accountMap = await validateWorkspaceAccounts(db, workspaceId, [deferredAccountId, revenueAccountId]);
+    const deferredAcc = accountMap.get(deferredAccountId)!;
+    const revenueAcc = accountMap.get(revenueAccountId)!;
 
     const tx = {
       id: db.collection("transactions").doc().id,
       workspaceId,
       uid: user.uid,
-      date: new Date().toLocaleDateString('en-CA'),
+      date: txDate,
       description: `ASC 606 Revenue Recognition for Contract ${contractId || 'Unknown'} (Period ${periodId || 'N/A'})`,
       totalAmountCents: amountCents,
       type: 'journal',
+      status: 'posted',
       isCleared: true,
       lines: [
         {
           id: `line-1`,
           accountId: deferredAccountId,
-          accountName: 'Deferred Revenue',
+          accountName: deferredAcc.name,
           amountCents: amountCents, // Debit Liability
           description: 'Recognized revenue - reducing liability'
         },
         {
           id: `line-2`,
           accountId: revenueAccountId,
-          accountName: 'Recognized Revenue',
+          accountName: revenueAcc.name,
           amountCents: -amountCents, // Credit Revenue
           description: 'Recognized revenue - increasing income'
         }
@@ -74,6 +88,7 @@ revenueRouter.post('/recognize', async (req, res) => {
       transactionId: tx.id
     });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    res.status(e.message?.includes('Unauthorized') ? 403 : 400).json({ error: e.message });
   }
 });
+

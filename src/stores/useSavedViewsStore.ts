@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Transaction, ChartAccount } from '../types';
 import { useUIStore } from './useUIStore';
+import { isPostable, isIncomeTransaction, isExpenseTransaction } from '../lib/txFilters';
 
 export interface SavedViewFilter {
   searchTerm?: string;
@@ -333,7 +334,7 @@ export function computeSavedViewMetrics(
   let matchingCount = 0;
 
   transactions.forEach((tx) => {
-    if (!tx) return;
+    if (!tx || !isPostable(tx)) return;
 
     const absAmt = Math.abs(tx.totalAmountCents || 0);
     if (filter.minAmountCents !== undefined && absAmt < filter.minAmountCents) return;
@@ -342,9 +343,14 @@ export function computeSavedViewMetrics(
     if (filter.startDate && tx.date < filter.startDate) return;
     if (filter.endDate && tx.date > filter.endDate) return;
 
+    const isInc = isIncomeTransaction(tx, accountMap);
+    const isExp = isExpenseTransaction(tx, accountMap);
+
     if (filter.type && filter.type !== 'all') {
-      if (filter.type === 'income' && tx.totalAmountCents < 0) return;
-      if (filter.type === 'expense' && tx.totalAmountCents > 0) return;
+      if (filter.type === 'income' && !isInc) return;
+      if (filter.type === 'expense' && !isExp) return;
+      if (filter.type === 'journal' && tx.type !== 'journal') return;
+      if (filter.type === 'bank_import' && tx.type !== 'bank_import') return;
     }
 
     if (filter.status && filter.status !== 'all') {
@@ -376,13 +382,23 @@ export function computeSavedViewMetrics(
     }
 
     matchingCount++;
-    const amt = tx.totalAmountCents || 0;
-    if (amt > 0) {
-      moneyInCents += amt;
+    if (isInc) {
+      moneyInCents += absAmt;
+      totalSumCents += absAmt;
+    } else if (isExp) {
+      moneyOutCents += absAmt;
+      totalSumCents -= absAmt;
     } else {
-      moneyOutCents += Math.abs(amt);
+      if (tx.type === 'income') {
+        moneyInCents += absAmt;
+        totalSumCents += absAmt;
+      } else if (tx.type === 'expense') {
+        moneyOutCents += absAmt;
+        totalSumCents -= absAmt;
+      } else {
+        totalSumCents += absAmt;
+      }
     }
-    totalSumCents += amt;
   });
 
   const netBalanceCents = moneyInCents - moneyOutCents;

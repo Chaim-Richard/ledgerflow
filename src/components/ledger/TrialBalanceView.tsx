@@ -9,6 +9,7 @@ import {
 import { formatDecimal, sanitizeCsvCell, cn } from '../../lib/utils';
 import { motion } from 'motion/react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import * as XLSX from 'xlsx';
 
 interface TrialBalanceViewProps {
@@ -52,7 +53,11 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
 
   // Compute live, accurate balances as of the chosen asOfDate
   const trialBalance = useMemo(() => {
-    // 1. Calculate running balances per account up to asOfDate
+    // 1. Build map of accounts for O(1) lookups
+    const accountById = new Map(accounts.map(a => [a.id, a]));
+    const accountByName = new Map(accounts.map(a => [a.name, a]));
+
+    // 2. Calculate running balances per account up to asOfDate
     const accountTotals: Record<string, { debitCents: number; creditCents: number; netSigned: number }> = {};
     
     // Initialize with opening balances
@@ -68,9 +73,9 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
 
     // Accumulate standard transactions
     transactions.forEach(tx => {
-      if (tx.deletedAt || tx.date > asOfDate) return;
+      if (!isPostable(tx) || tx.date > asOfDate) return;
       tx.lines?.forEach(line => {
-        const acc = accounts.find(a => a.id === line.accountId || a.name === line.accountName);
+        const acc = accountById.get(line.accountId) || accountByName.get(line.accountName || '');
         if (!acc) return;
         
         if (!accountTotals[acc.id]) {
@@ -78,7 +83,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
         }
         
         const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
-        const amount = line.amountCents || 0;
+        const amount = lineAmount(line, tx);
         
         // In standard double-entry journal/tx lines:
         // Positive is debit, negative is credit (or vice versa depending on nature)
@@ -96,7 +101,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       const entryDate = entry.date || entry.createdAt?.substring(0, 10) || '';
       if (entryDate > asOfDate) return;
       entry.lines?.forEach(line => {
-        const acc = accounts.find(a => a.id === line.accountId || a.name === line.accountName);
+        const acc = accountById.get(line.accountId) || accountByName.get(line.accountName || '');
         if (!acc) return;
         
         if (!accountTotals[acc.id]) {

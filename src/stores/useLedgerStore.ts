@@ -500,6 +500,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   resetStore: () => {
     set({
       transactions: [],
+      optimisticIds: new Set(),
       accounts: [],
       journalEntries: [],
       projects: [],
@@ -517,15 +518,34 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       classes: [],
       locations: [],
       customFields: [],
-      bankLines: [],
       auditLogs: [],
+      partners: [],
+      reconciliations: [],
+      bankLines: [],
+      customTemplates: [],
+      autoRules: [],
+      activityFeed: [],
+      analyticalPatternCache: {},
       computedAccounts: [],
+      totalLedgerBalance: 0,
+      projectedBalanceCents: 0,
+      lastActivity: '',
+      lockDate: null,
+      auditResult: null,
       runningBalances: {
         totalIncome: 0,
         totalExpense: 0,
         totalBalance: 0,
         projectMetrics: {},
         categoryMetrics: {}
+      },
+      integrityStatus: {
+        lastChecked: new Date().toISOString(),
+        isConsistent: true,
+        shadowTotalCents: 0,
+        incrementalTotalCents: 0,
+        driftCents: 0,
+        isVerifying: false
       }
     });
   }

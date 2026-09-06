@@ -1,26 +1,57 @@
 import { Transaction, ChartAccount } from '../../types';
 import { AlgorithmDefinition } from './types';
+import { isPostable, lineAmount, isRevenueAccount, isExpenseAccount } from '../txFilters';
 
 // Takes a number (e.g. net profit) and the transactions that make it up, and generates a natural sentence.
-export function explainNetProfit(transactions: Transaction[], month: string) {
+export function explainNetProfit(transactions: Transaction[], month: string, accounts?: ChartAccount[]) {
     let revenue = 0;
     let expenses = 0;
     const expenseMap = new Map<string, number>();
     const revenueMap = new Map<string, number>();
+    const accountMap = accounts ? new Map(accounts.map(a => [a.id, a])) : undefined;
 
     transactions.forEach(t => {
+        if (!isPostable(t)) return;
         if (!t.date.startsWith(month)) return; // Filter by month (YYYY-MM)
 
-        const amt = t.totalAmountCents;
-        const payee = t.payee || t.description || 'Unknown';
+        const payee = t.payee || t.description || 'General Ledger';
+        let txRev = 0;
+        let txExp = 0;
 
-        if (amt > 0) {
-            revenue += amt;
-            revenueMap.set(payee, (revenueMap.get(payee) || 0) + amt);
+        if (Array.isArray(t.lines) && t.lines.length > 0) {
+          t.lines.forEach(l => {
+            const acc = accountMap?.get(l.accountId);
+            const amt = lineAmount(l, t);
+            if (acc) {
+              if (isRevenueAccount(acc) && amt < 0) {
+                txRev += Math.abs(amt);
+              } else if (isExpenseAccount(acc) && amt > 0) {
+                txExp += amt;
+              }
+            } else {
+              if (t.type === 'income') {
+                if (amt < 0) txRev += Math.abs(amt);
+              } else if (t.type === 'expense') {
+                if (amt > 0) txExp += amt;
+              }
+            }
+          });
         } else {
-            const absAmt = Math.abs(amt);
-            expenses += absAmt;
-            expenseMap.set(payee, (expenseMap.get(payee) || 0) + absAmt);
+          const amt = Math.abs(t.totalAmountCents || 0);
+          if (t.type === 'income') {
+            txRev += amt;
+          } else if (t.type === 'expense') {
+            txExp += amt;
+          }
+        }
+
+        if (txRev > 0) {
+          revenue += txRev;
+          revenueMap.set(payee, (revenueMap.get(payee) || 0) + txRev);
+        }
+        if (txExp > 0) {
+          expenses += txExp;
+          expenseMap.set(payee, (expenseMap.get(payee) || 0) + txExp);
         }
     });
 
@@ -34,13 +65,14 @@ export function explainNetProfit(transactions: Transaction[], month: string) {
     expenseMap.forEach((amt, payee) => { if (amt > biggestExp.amt) biggestExp = { payee, amt }; });
 
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const monthStr = monthNames[parseInt(month.split('-')[1]) - 1] || month;
+    const monthIndex = parseInt(month.split('-')[1], 10) - 1;
+    const monthStr = monthNames[monthIndex] || month;
 
-    let sentence = `You made $${(netProfit/100).toFixed(0)} in ${monthStr}: $${(revenue/100).toFixed(0)} earned`;
-    if (biggestRev.amt > 0) sentence += ` (mostly ${biggestRev.payee}, $${(biggestRev.amt/100).toFixed(0)})`;
+    let sentence = `You generated $${(netProfit/100).toFixed(0)} in net earnings for ${monthStr}: $${(revenue/100).toFixed(0)} in operating revenue`;
+    if (biggestRev.amt > 0) sentence += ` (top driver: ${biggestRev.payee}, $${(biggestRev.amt/100).toFixed(0)})`;
     
-    sentence += ` minus $${(expenses/100).toFixed(0)} spent`;
-    if (biggestExp.amt > 0) sentence += ` (biggest: ${biggestExp.payee} $${(biggestExp.amt/100).toFixed(0)}).`;
+    sentence += ` minus $${(expenses/100).toFixed(0)} in expenses`;
+    if (biggestExp.amt > 0) sentence += ` (largest: ${biggestExp.payee}, $${(biggestExp.amt/100).toFixed(0)}).`;
 
     return { sentence, netProfit, revenue, expenses };
 }
@@ -59,12 +91,14 @@ export const NUMBER_EXPLAINER_ALGO: AlgorithmDefinition = {
     const year = new Date().getFullYear();
     const monthStr = `${year}-${inputs.targetMonth.toString().padStart(2, '0')}`;
     
-    const result = explainNetProfit(transactions, monthStr);
+    const result = explainNetProfit(transactions, monthStr, accounts);
     const ms = performance.now() - start;
 
     return {
       metrics: [
         { label: 'Net Profit', value: `$${(result.netProfit/100).toFixed(2)}` },
+        { label: 'Revenue', value: `$${(result.revenue/100).toFixed(2)}` },
+        { label: 'Expenses', value: `$${(result.expenses/100).toFixed(2)}` },
         { label: 'Execution Time', value: `${ms.toFixed(2)} ms` }
       ],
       charts: [],
@@ -76,3 +110,4 @@ export const NUMBER_EXPLAINER_ALGO: AlgorithmDefinition = {
     };
   }
 };
+

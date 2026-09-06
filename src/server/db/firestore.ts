@@ -1,0 +1,82 @@
+import admin from 'firebase-admin';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import path from 'path';
+import fs from 'fs';
+
+let firebaseConfig: Record<string, any> = {};
+try {
+  const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
+  if (fs.existsSync(configPath)) {
+    firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  }
+} catch (error) {
+  console.warn('[Firebase Admin] Warning: Could not read firebase-applet-config.json:', error);
+}
+
+const activeFirebaseProjectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
+
+if (admin.apps.length === 0 && activeFirebaseProjectId) {
+  admin.initializeApp({
+    projectId: activeFirebaseProjectId,
+  });
+}
+
+export const getDb = (): Firestore => {
+  const dbId = process.env.FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)';
+  try {
+    if (dbId && dbId !== '(default)') {
+      return getFirestore(admin.app(), dbId);
+    }
+    return getFirestore(admin.app());
+  } catch (error) {
+    console.error(`[Firebase Admin] Failed getFirestore for: ${dbId}`, error);
+    return getFirestore(admin.app());
+  }
+};
+
+export async function validateWorkspaceMember(db: Firestore, workspaceId: string, user: { uid: string; admin?: boolean }) {
+  if (!workspaceId) throw new Error('Workspace ID is required.');
+  const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+  if (!wsDoc.exists) throw new Error('Workspace not found.');
+  const data = wsDoc.data() || {};
+  const isMember = data.uid === user.uid || (Array.isArray(data.members) && data.members.includes(user.uid)) || (data.admins && data.admins[user.uid]) || user.admin;
+  if (!isMember) {
+    throw new Error('Unauthorized: You are not a member of this workspace.');
+  }
+  return { wsDoc, data };
+}
+
+export async function assertPeriodOpen(db: Firestore, workspaceId: string, date: string) {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error(`Invalid transaction date format: ${date}. Expected YYYY-MM-DD.`);
+  }
+  const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+  const lockDate = wsDoc.data()?.lockDate;
+  if (lockDate && date <= lockDate) {
+    throw new Error(`Period Locked: Posting forbidden for transaction date ${date} on or prior to lock date ${lockDate}.`);
+  }
+}
+
+export async function validateWorkspaceAccounts(db: Firestore, workspaceId: string, accountIds: string[]): Promise<Map<string, { id: string; name: string; type: string; category?: string }>> {
+  const accountMap = new Map<string, { id: string; name: string; type: string; category?: string }>();
+  for (const accId of accountIds) {
+    if (!accId) {
+      throw new Error('Invalid account ID: missing account identifier.');
+    }
+    const accDoc = await db.collection('chartAccounts').doc(accId).get();
+    if (!accDoc.exists) {
+      throw new Error(`Account ${accId} not found in chart of accounts.`);
+    }
+    const accData = accDoc.data() || {};
+    if (accData.workspaceId !== workspaceId) {
+      throw new Error(`Security Violation: Account ${accId} (${accData.name || 'unnamed'}) belongs to another workspace (${accData.workspaceId}). Cross-workspace ledger references are forbidden.`);
+    }
+    accountMap.set(accId, {
+      id: accDoc.id,
+      name: accData.name || 'Account',
+      type: accData.type || 'asset',
+      category: accData.category
+    });
+  }
+  return accountMap;
+}

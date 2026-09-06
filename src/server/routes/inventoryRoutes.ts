@@ -1,52 +1,75 @@
 import express from 'express';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
+import { getDb, validateWorkspaceMember, assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
 
 export const inventoryRouter = express.Router();
 
 inventoryRouter.post('/cogs', async (req, res) => {
   try {
-    const { workspaceId, itemId, quantitySold, inventoryAccountId, cogsAccountId } = req.body;
+    const { workspaceId, itemId, quantitySold, inventoryAccountId, cogsAccountId, date } = req.body;
     const user = (req as any).user;
-    const db = getFirestore();
+    const db = getDb();
     
     if (!workspaceId || !itemId || !quantitySold || !inventoryAccountId || !cogsAccountId) {
-      return res.status(400).json({ error: "Missing required fields." });
+      return res.status(400).json({ error: "Missing required fields (workspaceId, itemId, quantitySold, inventoryAccountId, cogsAccountId)." });
     }
 
-    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
-      return res.status(403).json({ error: 'Not a member' });
+    if (typeof quantitySold !== 'number' || quantitySold <= 0) {
+      return res.status(400).json({ error: "quantitySold must be a positive integer." });
     }
 
-    // In a real system, we'd query inventory layers for FIFO calculation.
-    // For this simulation, we'll assume a blended unit cost of $50 (5000 cents).
-    const blendedUnitCost = 5000;
-    const totalCogsCents = quantitySold * blendedUnitCost;
+    const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
+
+    // 1. Validate workspace membership
+    await validateWorkspaceMember(db, workspaceId, user);
+
+    // 2. Validate period lock
+    await assertPeriodOpen(db, workspaceId, txDate);
+
+    // 3. Validate accounts exist and belong to workspace
+    const accountMap = await validateWorkspaceAccounts(db, workspaceId, [inventoryAccountId, cogsAccountId]);
+    const inventoryAcc = accountMap.get(inventoryAccountId)!;
+    const cogsAcc = accountMap.get(cogsAccountId)!;
+
+    // 4. Fetch the real inventory item from Firestore
+    const itemDoc = await db.collection('inventory').doc(itemId).get();
+    if (!itemDoc.exists) {
+      return res.status(404).json({ error: `Inventory item ${itemId} not found.` });
+    }
+    const itemData = itemDoc.data() || {};
+    if (itemData.workspaceId && itemData.workspaceId !== workspaceId) {
+      return res.status(403).json({ error: 'Security Violation: Item belongs to another workspace.' });
+    }
+
+    const unitCostCents = typeof itemData.unitCostCents === 'number' && itemData.unitCostCents > 0 ? itemData.unitCostCents : 5000;
+    const totalCogsCents = Math.round(quantitySold * unitCostCents);
+    const itemName = itemData.name || itemData.sku || itemId;
 
     const tx = {
       id: db.collection("transactions").doc().id,
       workspaceId,
       uid: user.uid,
-      date: new Date().toLocaleDateString('en-CA'),
-      description: `Inventory COGS (FIFO Valuation) - Item: ${itemId} (Qty: ${quantitySold})`,
+      date: txDate,
+      description: `Inventory COGS Recognition: ${itemName} (Qty: ${quantitySold})`,
       totalAmountCents: totalCogsCents,
       type: 'journal',
+      status: 'posted',
       isCleared: true,
       lines: [
         {
           id: `line-1`,
           accountId: cogsAccountId,
-          accountName: 'Cost of Goods Sold',
+          accountName: cogsAcc.name,
           amountCents: totalCogsCents, // Debit Expense
-          description: 'Recognize cost of goods sold'
+          description: `Recognize COGS for ${quantitySold} units of ${itemName}`
         },
         {
           id: `line-2`,
           accountId: inventoryAccountId,
-          accountName: 'Inventory Asset',
+          accountName: inventoryAcc.name,
           amountCents: -totalCogsCents, // Credit Asset
-          description: 'Reduce inventory asset'
+          description: `Reduce inventory asset for ${quantitySold} units of ${itemName}`
         }
       ]
     };
@@ -77,10 +100,11 @@ inventoryRouter.post('/cogs', async (req, res) => {
       status: 'ok',
       message: 'Inventory COGS recorded successfully.',
       transactionId: tx.id,
-      blendedUnitCost,
+      unitCostCents,
       totalCogsCents
     });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    res.status(e.message?.includes('Unauthorized') ? 403 : 400).json({ error: e.message });
   }
 });
+

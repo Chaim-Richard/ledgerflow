@@ -2,26 +2,43 @@ import React, { useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { ArrowUpRight, ArrowDownRight, Wallet, ArrowRight, Compass, Sparkles } from 'lucide-react';
 import { explainNetProfit } from '../../lib/algorithms/number-explainer';
+import { isPostable, isIncomeTransaction, isExpenseTransaction } from '../../lib/txFilters';
 
 export default function OwnerLens() {
   const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
   const [showAllActivity, setShowAllActivity] = React.useState(false);
+
+  const accountMap = useMemo(() => new Map(accounts.map(a => [a.id, a])), [accounts]);
 
   const stats = useMemo(() => {
     let moneyIn = 0;
     let moneyOut = 0;
     
     transactions.forEach(t => {
-      if (t.totalAmountCents > 0) moneyIn += t.totalAmountCents;
-      else moneyOut += Math.abs(t.totalAmountCents);
+      if (!isPostable(t)) return;
+      const isInc = isIncomeTransaction(t, accountMap);
+      const isExp = isExpenseTransaction(t, accountMap);
+      const amount = Math.abs(t.totalAmountCents || 0);
+
+      if (isInc) {
+        moneyIn += amount;
+      } else if (isExp) {
+        moneyOut += amount;
+      } else {
+        // Journal or transfer fallback
+        if (t.type === 'income') moneyIn += amount;
+        else if (t.type === 'expense') moneyOut += amount;
+      }
     });
     
     const left = moneyIn - moneyOut;
     return { moneyIn, moneyOut, left };
-  }, [transactions]);
+  }, [transactions, accountMap]);
 
   const monthStr = new Date().toISOString().slice(0, 7);
-  const explainer = useMemo(() => explainNetProfit(transactions, monthStr), [transactions, monthStr]);
+  const explainer = useMemo(() => explainNetProfit(transactions, monthStr, accounts), [transactions, monthStr, accounts]);
+
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto py-6 px-2 sm:px-4">
@@ -106,22 +123,27 @@ export default function OwnerLens() {
               No transactions recorded yet in this workspace.
             </div>
           ) : (
-            (showAllActivity ? transactions : transactions.slice(0, 5)).map(t => (
-              <div key={t.id} className="flex items-center justify-between p-4 bg-[var(--panel)] border border-[var(--line)] hover:border-[var(--brass-line)]/60 rounded-xl shadow-xs transition-all">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${t.totalAmountCents > 0 ? 'bg-[var(--brass-soft)] border-[var(--brass-line)] text-[var(--pos)]' : 'bg-[var(--surface)] border-[var(--line)] text-[var(--muted)]'}`}>
-                    {t.totalAmountCents > 0 ? <ArrowUpRight className="w-5 h-5 text-[var(--pos)]" /> : <ArrowRight className="w-5 h-5 text-[var(--muted)]" />}
+            (showAllActivity ? transactions : transactions.slice(0, 5)).map(t => {
+              const isInc = isIncomeTransaction(t, accountMap);
+              const isExp = isExpenseTransaction(t, accountMap);
+              const amt = Math.abs(t.totalAmountCents || 0);
+              return (
+                <div key={t.id} className="flex items-center justify-between p-4 bg-[var(--panel)] border border-[var(--line)] hover:border-[var(--brass-line)]/60 rounded-xl shadow-xs transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${isInc ? 'bg-[var(--brass-soft)] border-[var(--brass-line)] text-[var(--pos)]' : isExp ? 'bg-[var(--surface)] border-[var(--line)] text-[var(--neg)]' : 'bg-[var(--surface)] border-[var(--line)] text-[var(--muted)]'}`}>
+                      {isInc ? <ArrowUpRight className="w-5 h-5 text-[var(--pos)]" /> : isExp ? <ArrowDownRight className="w-5 h-5 text-[var(--neg)]" /> : <ArrowRight className="w-5 h-5 text-[var(--muted)]" />}
+                    </div>
+                    <div>
+                      <p className="font-bold text-[var(--text)] text-sm">{t.payee || t.description}</p>
+                      <p className="text-xs font-mono text-[var(--muted)]">{t.date}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-[var(--text)] text-sm">{t.payee || t.description}</p>
-                    <p className="text-xs font-mono text-[var(--muted)]">{t.date}</p>
-                  </div>
+                  <p className={`font-mono font-bold text-base ${isInc ? 'text-[var(--pos)]' : isExp ? 'text-[var(--neg)]' : 'text-[var(--text)]'}`}>
+                    {isInc ? '+' : isExp ? '-' : ''}${(amt / 100).toFixed(2)}
+                  </p>
                 </div>
-                <p className={`font-mono font-bold text-base ${t.totalAmountCents > 0 ? 'text-[var(--pos)]' : 'text-[var(--text)]'}`}>
-                  {t.totalAmountCents > 0 ? '+' : ''}${(t.totalAmountCents / 100).toFixed(2)}
-                </p>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
