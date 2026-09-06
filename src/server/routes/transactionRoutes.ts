@@ -1,11 +1,12 @@
 import Decimal from "decimal.js";
 import { Request, Response, NextFunction } from "express";
 import express from 'express';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
 import { ClosingEntryEngine } from '../../kernel/ledger/ClosingEntryEngine';
 import { TransactionSchema } from '../../schemas';
 import { parseLocalDate } from '../../lib/utils';
+import { getDb } from '../db/firestore';
 
 export const transactionRouter = express.Router();
 
@@ -54,7 +55,7 @@ transactionRouter.get('/', async (req, res) => {
     if (!workspaceId) return res.status(400).json({ error: "Missing workspaceId query parameters" });
 
     const user = (req as any).user;
-    const db = getFirestore();
+    const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
       return res.status(403).json({ error: 'Not a member' });
@@ -109,7 +110,7 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
       return res.status(400).json({ error: 'Schema validation failed', details: parsed.error.issues });
     }
 
-    const db = getFirestore();
+    const db = getDb();
     if (!transaction.id) transaction.id = db.collection("transactions").doc().id;
     
     if (idempotencyKey) {
@@ -209,7 +210,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
     const { partialUpdate } = req.body;
     let { transaction } = req.body;
     const user = (req as any).user;
-    const db = getFirestore();
+    const db = getDb();
 
     // Support flat API payloads: { workspaceId, lines, date, ... }
     if (!transaction && !partialUpdate && (req.body.workspaceId || req.body.lines || req.body.date)) {
@@ -299,6 +300,10 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
 
       t.update(txRef, { ...transaction, updatedAt: FieldValue.serverTimestamp() });
 
+      // Clean up prior journal entries projection to prevent orphaned entries if lines count changed
+      const oldJes = await t.get(db.collection('journalEntries').where('transactionId', '==', id));
+      oldJes.docs.forEach((d: any) => t.delete(d.ref));
+
       // Synchronize journalEntries projection
       (transaction.lines || []).forEach((line: any, index: number) => {
         const eventRef = db.collection('journalEntries').doc(`${id}-line-${index}`);
@@ -344,15 +349,21 @@ transactionRouter.delete('/:id', async (req, res) => {
     const { id } = req.params;
     const workspaceId = (req.query.workspaceId as string) || (req.body?.workspaceId as string);
     const user = (req as any).user;
-    const db = getFirestore();
+    const db = getDb();
     const txRef = db.collection('transactions').doc(id);
     const doc = await txRef.get();
     if (!doc.exists) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
     const data = doc.data();
-    const wsId = workspaceId || data?.workspaceId;
-    const wsDoc = await db.collection('workspaces').doc(wsId).get();
+    const transactionWsId = data?.workspaceId;
+    if (!transactionWsId) {
+      return res.status(400).json({ error: 'Corrupt transaction: missing workspaceId' });
+    }
+    if (workspaceId && workspaceId !== transactionWsId) {
+      return res.status(403).json({ error: 'Workspace mismatch: transaction belongs to a different workspace' });
+    }
+    const wsDoc = await db.collection('workspaces').doc(transactionWsId).get();
     const wsData = wsDoc.data();
     if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
       return res.status(403).json({ error: 'Not a member' });
@@ -362,8 +373,8 @@ transactionRouter.delete('/:id', async (req, res) => {
       return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
     }
 
-    if ((data?.status === 'certified' || data?.status === 'void') && !user.admin) {
-      return res.status(403).json({ error: `Forbidden: Transaction status is audited and locked (${data?.status}). Destructive actions are restricted to administrators.` });
+    if ((data?.status === 'certified' || data?.status === 'void' || data?.isCleared === true) && !user.admin) {
+      return res.status(403).json({ error: `Forbidden: Transaction status is audited, cleared, or locked (${data?.status}). Destructive actions are restricted to administrators.` });
     }
 
     // Clean up corresponding journalEntries projection documents to prevent orphaned ledger records
@@ -376,7 +387,7 @@ transactionRouter.delete('/:id', async (req, res) => {
     const auditId = `audit-${Date.now()}`;
     await db.collection("auditLogs").doc(auditId).set({
       id: auditId,
-      workspaceId: wsId,
+      workspaceId: transactionWsId,
       timestamp: new Date().toISOString(),
       userId: user.uid,
       userEmail: user.email || "developer@ledgerflow.io",
@@ -395,7 +406,7 @@ transactionRouter.post('/bulk', async (req, res) => {
   try {
     const { transactions, workspaceId, entityMutation } = req.body;
     const user = (req as any).user;
-    const db = getFirestore();
+    const db = getDb();
     const wsId = workspaceId || transactions?.[0]?.workspaceId;
     if (!wsId) return res.status(400).json({ error: 'Missing workspaceId' });
 
@@ -506,7 +517,15 @@ transactionRouter.post('/batch', async (req, res) => {
    try {
      const { updates, workspaceId } = req.body;
      const user = (req as any).user;
-     const db = getFirestore();
+     const db = getDb();
+     if (!workspaceId || !Array.isArray(updates) || updates.length === 0) {
+       return res.status(400).json({ error: "Missing workspaceId or updates" });
+     }
+     
+     if (updates.length > 500) {
+       return res.status(400).json({ error: "Batch size exceeds limit of 500 items" });
+     }
+
      const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
      if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
      
@@ -565,7 +584,7 @@ transactionRouter.post('/reconcile', async (req, res) => {
        return res.status(400).json({ error: 'Operations batch exceeds 250 operations limit' });
      }
      const user = (req as any).user;
-     const db = getFirestore();
+     const db = getDb();
      const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
      if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
        return res.status(403).json({ error: 'Not a member' });
@@ -592,17 +611,27 @@ transactionRouter.post('/reconcile', async (req, res) => {
             if (!txSnap.exists || txSnap.data()?.workspaceId !== workspaceId) {
               throw new Error(`Transaction ${op.id} does not belong to authorized workspace`);
             }
+            const existingTx = txSnap.data() || {};
             // Check period lock
             if (wsData?.lockDate) {
-              if (txSnap.data()?.date <= wsData.lockDate) {
+              if (existingTx.date && existingTx.date <= wsData.lockDate) {
                 throw new Error(`Cannot modify transaction in locked period`);
               }
               if (op.data?.date && op.data.date <= wsData.lockDate) {
                 throw new Error(`Cannot move transaction into locked period`);
               }
             }
+            if ((existingTx.status === 'certified' || existingTx.status === 'void') && !user.admin) {
+              throw new Error(`Forbidden: Transaction ${op.id} status is locked.`);
+            }
             const safeData = { ...op.data };
             delete safeData.workspaceId;
+            delete safeData.uid;
+
+            const merged = { ...existingTx, ...safeData };
+            if (merged.lines) {
+              DoubleEntryValidator.validateJournalEntry(merged);
+            }
             t.update(txRef, { ...safeData, updatedAt: FieldValue.serverTimestamp() });
           } else if (op.type === 'createTransaction') {
             const txRef = db.collection('transactions').doc(op.id);
@@ -647,7 +676,7 @@ transactionRouter.get('/reconciliation/status', async (req, res) => {
     const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: "Missing workspaceId" });
     const user = (req as any).user;
-    const db = getFirestore();
+    const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
 
@@ -673,7 +702,7 @@ transactionRouter.post('/reconciliation/match', async (req, res) => {
   try {
     const { workspaceId, externalBankLines } = req.body;
     const user = (req as any).user;
-    const db = getFirestore();
+    const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
 
@@ -703,7 +732,7 @@ transactionRouter.post('/reconciliation/clear', async (req, res) => {
       return res.status(400).json({ error: "Batch size exceeds limit of 500 items" });
     }
     const user = (req as any).user;
-    const db = getFirestore();
+    const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
       return res.status(403).json({ error: 'Not a member' });
@@ -755,7 +784,7 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
   try {
     const { workspaceId, targetCurrency } = req.body;
     const user = (req as any).user;
-    const db = getFirestore();
+    const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
 
@@ -875,7 +904,7 @@ transactionRouter.post('/close-year', async (req, res) => {
       return res.status(400).json({ error: 'Missing required parameters: workspaceId and closingDate (YYYY-MM-DD).' });
     }
 
-    const db = getFirestore();
+    const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists) {
       return res.status(404).json({ error: 'Workspace not found.' });
@@ -999,7 +1028,7 @@ transactionRouter.post('/close-month', async (req, res) => {
       return res.status(400).json({ error: 'Missing or invalid parameters: workspaceId and month (YYYY-MM) required.' });
     }
 
-    const db = getFirestore();
+    const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists) {
       return res.status(404).json({ error: 'Workspace not found.' });
@@ -1113,7 +1142,7 @@ transactionRouter.post('/reset', async (req, res) => {
   try {
     const { workspaceId, confirmReset } = req.body;
     const user = (req as any).user;
-    const db = getFirestore();
+    const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     
     // Only the workspace owner or a global admin can completely reset the workspace data

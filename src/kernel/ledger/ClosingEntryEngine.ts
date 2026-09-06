@@ -1,6 +1,7 @@
 import Decimal from 'decimal.js';
 import { ChartAccount, Transaction, TransactionLine } from '../../types';
 import { DoubleEntryValidator } from '../validation/DoubleEntryValidator';
+import { isPostable } from '../../lib/txFilters';
 
 export interface ClosingResult {
   closingTransaction: Transaction;
@@ -69,11 +70,11 @@ export class ClosingEntryEngine {
       expenseBalances.set(id, new Decimal(opening));
     });
 
-    // Replay transactions on or before closing date (excluding void, failed, or prior closing entries)
+    // Replay transactions on or before closing date (excluding void, failed, draft, or soft-deleted entries)
     transactions.forEach(tx => {
       if (!tx || typeof tx !== 'object') return;
       if (tx.workspaceId && tx.workspaceId !== workspaceId) return;
-      if (tx.status === 'void' || tx.status === 'failed' || tx.deletedAt) return;
+      if (!isPostable(tx)) return;
       if (tx.date > closingDate) return;
 
       if (Array.isArray(tx.lines)) {

@@ -153,6 +153,10 @@ service cloud.firestore {
       allow read, write: if false; // Internal server-side idempotency lock only
     }
 
+    match /idempotencyKeys/{keyId} {
+      allow read, write: if false; // Internal server-side idempotency cache only
+    }
+
     match /admins/{docId} {
       allow read: if isSignedIn() && request.auth.token.admin == true;
       allow write: if false; // Server-side admin SDK only

@@ -1,5 +1,5 @@
 import express from 'express';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDb } from '../db/firestore';
 import Stripe from 'stripe';
 
 let stripeClient: Stripe | null = null;
@@ -19,7 +19,7 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
     if (!token || typeof token !== 'string' || !/^pay_[a-zA-Z0-9_-]{10,128}$/.test(token)) {
       return res.status(400).json({ error: 'Invalid token format' });
     }
-    const db = getFirestore();
+    const db = getDb();
     
     // Check top-level collection first, with collectionGroup fallback
     let snapshot = await db.collection('invoices').where('paymentToken', '==', token).limit(1).get();
@@ -86,7 +86,7 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
     if (!token || typeof token !== 'string' || !/^pay_[a-zA-Z0-9_-]{10,128}$/.test(token)) {
       return res.status(400).json({ error: 'Invalid token format' });
     }
-    const db = getFirestore();
+    const db = getDb();
     
     let snapshot = await db.collection('invoices').where('paymentToken', '==', token).limit(1).get();
     if (snapshot.empty) {

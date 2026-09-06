@@ -534,27 +534,8 @@ async function startServer() {
       }
 
       const eventId = event.id;
-      const db = getFirestore();
+      const db = getDb();
       const eventRef = db.collection('stripeProcessedEvents').doc(eventId);
-
-      // Verify and record event idempotency lock to prevent duplicate credit minting or replay attacks
-      const alreadyProcessed = await db.runTransaction(async (t) => {
-        const snap = await t.get(eventRef);
-        if (snap.exists) {
-          return true;
-        }
-        t.set(eventRef, {
-          id: eventId,
-          type: event.type,
-          processedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        return false;
-      });
-
-      if (alreadyProcessed) {
-        console.log(`[Stripe Webhook] Event ${eventId} already processed. Skipping replay.`);
-        return res.json({ received: true, skipped: true });
-      }
 
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object as any;
@@ -568,7 +549,12 @@ async function startServer() {
           // Canonical top-level invoices collection
           const invoiceRef = db.collection('invoices').doc(invoiceId);
           
-          await db.runTransaction(async (t) => {
+          const result = await db.runTransaction(async (t) => {
+            const eventSnap = await t.get(eventRef);
+            if (eventSnap.exists) {
+              return { alreadyProcessed: true };
+            }
+
             let doc = await t.get(invoiceRef);
             let targetRef = invoiceRef;
             
@@ -582,7 +568,15 @@ async function startServer() {
               }
             }
             
-            if (!doc.exists) return;
+            if (!doc.exists) {
+              t.set(eventRef, {
+                id: eventId,
+                type: event.type,
+                processedAt: admin.firestore.FieldValue.serverTimestamp(),
+                note: 'invoice_not_found'
+              });
+              return { notFound: true };
+            }
             
             const inv = doc.data() as any;
             if (inv && inv.status !== "paid") {
@@ -678,7 +672,20 @@ async function startServer() {
                 ]
               });
             }
+
+            t.set(eventRef, {
+              id: eventId,
+              type: event.type,
+              processedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+
+            return { success: true };
           });
+
+          if (result?.alreadyProcessed) {
+            console.log(`[Stripe Webhook] Event ${eventId} already processed. Skipping replay.`);
+            return res.json({ received: true, skipped: true });
+          }
         }
         
         // --- 2. Subscription Upgrade & Credit Provisioning ---
@@ -690,15 +697,35 @@ async function startServer() {
             const creditsToGrant = plan === 'enterprise' ? 10000000 : 1000000;
             const wsRef = db.collection("workspaces").doc(workspaceId);
             
-            await wsRef.set({
-              plan: plan,
-              billingCycle: "monthly",
-              computeCreditBalance: admin.firestore.FieldValue.increment(creditsToGrant),
-              computeLimit: creditsToGrant,
-              stripeCustomerId: session.customer || null,
-              stripeSubscriptionId: session.subscription || null,
-              lastUpgradedAt: new Date().toISOString()
-            }, { merge: true });
+            const subResult = await db.runTransaction(async (t) => {
+              const eventSnap = await t.get(eventRef);
+              if (eventSnap.exists) {
+                return { alreadyProcessed: true };
+              }
+
+              t.set(wsRef, {
+                plan: plan,
+                billingCycle: "monthly",
+                computeCreditBalance: admin.firestore.FieldValue.increment(creditsToGrant),
+                computeLimit: creditsToGrant,
+                stripeCustomerId: session.customer || null,
+                stripeSubscriptionId: session.subscription || null,
+                lastUpgradedAt: new Date().toISOString()
+              }, { merge: true });
+
+              t.set(eventRef, {
+                id: eventId,
+                type: event.type,
+                processedAt: admin.firestore.FieldValue.serverTimestamp()
+              });
+
+              return { success: true };
+            });
+
+            if (subResult?.alreadyProcessed) {
+              console.log(`[Stripe Webhook] Event ${eventId} already processed. Skipping replay.`);
+              return res.json({ received: true, skipped: true });
+            }
             
             console.log(`[Stripe Webhook] Workspace ${workspaceId} upgraded to ${plan} with +${creditsToGrant} compute credits.`);
           }
@@ -706,19 +733,36 @@ async function startServer() {
       } else if (event.type === 'customer.subscription.deleted') {
         const subscription = event.data.object as any;
         const customerId = subscription.customer;
-        const db = getFirestore();
         
-        // Find workspace with this stripeCustomerId or stripeSubscriptionId
-        const wsSnap = await db.collection("workspaces").where("stripeCustomerId", "==", customerId).limit(1).get();
-        if (!wsSnap.empty) {
-          const wsDoc = wsSnap.docs[0];
-          await wsDoc.ref.set({
-            plan: 'starter',
-            billingCycle: 'free',
-            lastDowngradedAt: new Date().toISOString()
-          }, { merge: true });
-          console.log(`[Stripe Webhook] Workspace ${wsDoc.id} downgraded to starter due to subscription cancellation.`);
-        }
+        await db.runTransaction(async (t) => {
+          const eventSnap = await t.get(eventRef);
+          if (eventSnap.exists) {
+            return;
+          }
+
+          const wsSnap = await t.get(db.collection("workspaces").where("stripeCustomerId", "==", customerId).limit(1));
+          if (!wsSnap.empty) {
+            const wsDoc = wsSnap.docs[0];
+            t.set(wsDoc.ref, {
+              plan: 'starter',
+              billingCycle: 'free',
+              lastDowngradedAt: new Date().toISOString()
+            }, { merge: true });
+          }
+
+          t.set(eventRef, {
+            id: eventId,
+            type: event.type,
+            processedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        });
+      } else {
+        // Record event idempotency for other unhandled types
+        await eventRef.set({
+          id: eventId,
+          type: event.type,
+          processedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
       }
 
       res.json({received: true});
