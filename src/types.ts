@@ -338,14 +338,48 @@ export type SelectionState = {
   links: string[];
 };
 
+export type ChartAccountType = 'asset' | 'liability' | 'equity' | 'income' | 'expense' | 'cost_of_goods' | 'revenue';
+
+export type ChartAccountCategory = 
+  | 'Cash'
+  | 'Receivables'
+  | 'Inventory'
+  | 'Deposits'
+  | 'Fixed Assets'
+  | 'Investments'
+  | 'Payables'
+  | 'Debt'
+  | 'Tax'
+  | 'Equity'
+  | 'Sales'
+  | 'Revenue'
+  | 'COGS'
+  | 'Direct Costs'
+  | 'Labor'
+  | 'Operations'
+  | 'Production'
+  | 'Marketing'
+  | 'Overhead'
+  | 'Fees'
+  | 'Travel'
+  | 'Food'
+  | 'Housing'
+  | 'Health'
+  | 'Lifestyle'
+  | 'Education'
+  | 'Insurance'
+  | 'Programs'
+  | 'Subsidies'
+  | (string & {});
+
 export interface ChartAccount {
   id: string;
   uid: string;
   workspaceId: string;
   code: string;
   name: string;
-  type: 'asset' | 'liability' | 'equity' | 'income' | 'expense' | 'cost_of_goods' | 'revenue';
-  category?: string; // e.g. "Cash", "Inventory", "Sales"
+  type: ChartAccountType;
+  category?: ChartAccountCategory;
   subtype?: string;  // e.g. "Credit Card", "Checking"
   taxCategory?: string; // e.g. "Schedule C: Office Expenses"
   currency?: string; // Multi-currency support
@@ -355,6 +389,12 @@ export interface ChartAccount {
   asOfDate?: string;
   parentId?: string;
   description?: string;
+  isContra?: boolean;
+  isArchived?: boolean;
+  archived?: boolean;
+  isSystem?: boolean;
+  classification?: string;
+  isActive?: boolean;
 }
 
 export interface JournalEntry {

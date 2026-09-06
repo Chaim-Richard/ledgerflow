@@ -109,7 +109,14 @@ export default function CashFlowView() {
           const isCashInflow = cents < 0; 
           const moneyFlow = isCashInflow ? absoluteAmount : -absoluteAmount;
 
-          if ((acc.type === 'income' || acc.type === 'revenue') || (acc.type === 'expense' || acc.type === 'cost_of_goods')) {
+          const role = resolveAccountRole(acc);
+          const isWorkingCapital = 
+            role === 'ar' || acc.category === 'Receivables' || acc.category === 'Receivable' ||
+            role === 'ap' || acc.category === 'Payables' || acc.category === 'Payable' ||
+            role === 'inventory' || acc.category === 'Inventory' ||
+            acc.category === 'Tax' || acc.category === 'Deposits';
+
+          if ((acc.type === 'income' || acc.type === 'revenue') || (acc.type === 'expense' || acc.type === 'cost_of_goods') || isWorkingCapital) {
             data.operating.total += moneyFlow;
             isCashInflow ? data.operating.inflow += absoluteAmount : data.operating.outflow += absoluteAmount;
           } else if (acc.type === 'asset') {

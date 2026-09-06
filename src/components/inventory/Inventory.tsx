@@ -23,7 +23,8 @@ import {
   Zap,
   ShieldAlert,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  ShoppingCart
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { 
@@ -37,19 +38,24 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { InventoryItem, Transaction } from '../../types';
+import { InventoryItem } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { isPostable } from '../../lib/txFilters';
+import { resolveAccountRole } from '../../lib/accountUtils';
 
 export default function Inventory() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const uid = useAuthStore(s => s.user?.uid);
   const storeTransactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
   const [items, setItems] = useState<InventoryItem[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showRuleIntel, setShowRuleIntel] = useState(false);
+  const [cogsItem, setCogsItem] = useState<InventoryItem | null>(null);
+  const [cogsQty, setCogsQty] = useState<number>(1);
+  const [isPostingCogs, setIsPostingCogs] = useState(false);
 
   useEffect(() => {
     if (!workspaceId || !uid) {
@@ -69,30 +75,76 @@ export default function Inventory() {
       setLoading(false);
     }, () => setLoading(false));
 
-    const tq = query(
-      collection(db, 'transactions'),
-      where('workspaceId', '==', workspaceId),
-      where('uid', '==', uid)
-    );
-
-    const unsubTransactions = onSnapshot(tq, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-      setTransactions(data);
-    });
-
     return () => {
       unsubInventory();
-      unsubTransactions();
     };
   }, [workspaceId, uid]);
 
-  const activeTransactions = transactions.length > 0 ? transactions : storeTransactions;
+  const activeTransactions = useMemo(() => {
+    return storeTransactions.filter(isPostable);
+  }, [storeTransactions]);
 
   const economicItems = useMemo(() => {
     return StrategicEngine.analyzeUnitEconomics(items, activeTransactions);
   }, [items, activeTransactions]);
 
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+
+  const handleRecognizeCogs = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cogsItem || !workspaceId || cogsQty <= 0) return;
+    if (cogsQty > cogsItem.quantityAtHand) {
+      toast.error(`Cannot sell ${cogsQty} units: only ${cogsItem.quantityAtHand} on hand.`);
+      return;
+    }
+
+    const inventoryAcc = accounts.find(a => resolveAccountRole(a) === 'inventory' || a.category === 'Inventory') || accounts.find(a => a.type === 'asset');
+    const cogsAcc = accounts.find(a => resolveAccountRole(a) === 'cogs' || a.category === 'COGS' || a.category === 'Direct Costs') || accounts.find(a => a.type === 'cost_of_goods' || a.type === 'expense');
+
+    if (!inventoryAcc || !cogsAcc) {
+      toast.error('Could not locate Inventory asset and COGS expense accounts in Chart of Accounts.');
+      return;
+    }
+
+    setIsPostingCogs(true);
+    try {
+      const user = useAuthStore.getState().user;
+      const token = user ? await user.getIdToken() : '';
+      const res = await fetch('/api/v1/inventory/cogs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          workspaceId,
+          itemId: cogsItem.id,
+          quantitySold: cogsQty,
+          inventoryAccountId: inventoryAcc.id,
+          cogsAccountId: cogsAcc.id
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to record COGS');
+      }
+
+      // Update local inventory quantity
+      const newQty = Math.max(0, cogsItem.quantityAtHand - cogsQty);
+      await updateDoc(doc(db, 'inventory', cogsItem.id), {
+        quantityAtHand: newQty,
+        updatedAt: new Date().toISOString()
+      });
+
+      toast.success(`Recognized COGS for ${cogsQty} units (${formatCurrency(data.totalCogsCents)})`);
+      setCogsItem(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to recognize COGS');
+    } finally {
+      setIsPostingCogs(false);
+    }
+  };
 
   const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -256,7 +308,7 @@ export default function Inventory() {
                  </div>
               </div>
               <p className="text-sm text-white/50 leading-relaxed font-medium">
-                 Synthesizing <span className="text-white font-black">{transactions.length}</span> transaction nodes for <span className="text-white font-black">{items.length}</span> SKUs. 
+                 Synthesizing <span className="text-white font-black">{activeTransactions.length}</span> transaction nodes for <span className="text-white font-black">{items.length}</span> SKUs. 
                  The "Core Integrity" engine has cross-referenced historical sourcing, overhead vectors, and market arbitrage with weighted recency bias.
               </p>
            </div>
@@ -472,6 +524,19 @@ export default function Inventory() {
                 </td>
                 <td className="px-8 py-5 text-right">
                   <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    {item.quantityAtHand > 0 && (
+                      <button 
+                        onClick={() => {
+                          setCogsItem(item);
+                          setCogsQty(1);
+                        }}
+                        title="Recognize COGS / Record Sale"
+                        className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                      >
+                        <ShoppingCart size={12} />
+                        <span className="hidden lg:inline">COGS</span>
+                      </button>
+                    )}
                     <button 
                       onClick={() => setEditingItem(item)}
                       className="p-2 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
@@ -630,6 +695,82 @@ export default function Inventory() {
                   >
                     {editingItem ? 'Update Item' : 'Add to Inventory'}
                   </AsyncButton>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {cogsItem && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setCogsItem(null)}
+              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-[var(--surface)] rounded-[32px] shadow-2xl border border-[var(--line)] overflow-hidden"
+            >
+              <div className="p-6 border-b border-[var(--line)] flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-black text-[var(--text)] tracking-tight">
+                    Recognize COGS / Record Sale
+                  </h3>
+                  <p className="text-xs text-slate-500 font-mono mt-0.5">{cogsItem.name} ({cogsItem.sku})</p>
+                </div>
+                <button 
+                  onClick={() => setCogsItem(null)} 
+                  className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
+                >
+                  <X size={18} className="text-zinc-400" />
+                </button>
+              </div>
+              <form onSubmit={handleRecognizeCogs} className="p-6 space-y-4">
+                <div className="p-4 bg-[var(--ink)] rounded-2xl border border-[var(--line)] text-xs space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Available Stock:</span>
+                    <span className="font-bold text-[var(--text)]">{cogsItem.quantityAtHand} units</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Blended Unit Cost:</span>
+                    <span className="font-bold text-[var(--text)]">{formatCurrency(cogsItem.unitCostCents || 5000)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Estimated Total COGS:</span>
+                    <span className="font-bold text-emerald-600 font-mono">
+                      {formatCurrency(cogsQty * (cogsItem.unitCostCents || 5000))}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                    Units Sold / Dispatched
+                  </label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max={cogsItem.quantityAtHand}
+                    value={cogsQty} 
+                    onChange={(e) => setCogsQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    required 
+                    className="w-full px-5 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900 font-bold" 
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button 
+                    type="submit" 
+                    disabled={isPostingCogs}
+                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-50"
+                  >
+                    {isPostingCogs ? 'Posting to Ledger...' : `Post ${cogsQty} Units COGS to Ledger`}
+                  </button>
                 </div>
               </form>
             </motion.div>

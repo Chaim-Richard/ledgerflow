@@ -4,6 +4,8 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { ChartAccount, Transaction } from '../types';
 import { toast } from 'sonner';
+import { isPostable, isOpenInvoice, isOpenBill, lineAmount } from '../lib/txFilters';
+import { resolveAccountRole } from '../lib/accountUtils';
 
 export function useFinancialReporting() {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -43,13 +45,10 @@ export function useFinancialReporting() {
   const fetchAging = useCallback(async (type: 'ar' | 'ap') => {
     if (!currentWorkspaceId) return;
     setLoading(true);
-    // Emulate microtask delay for consistent UX load transition
-    await new Promise(resolve => setTimeout(resolve, 150));
 
     try {
-      const allowedStatuses = ["unpaid", "pending", "overdue", "sent"];
       const rawItems = type === 'ar' ? invoices : bills;
-      const items = rawItems.filter(item => allowedStatuses.includes(item.status));
+      const items = rawItems.filter(item => type === 'ar' ? isOpenInvoice(item) : isOpenBill(item));
       const now = new Date();
       
       const aging = {
@@ -86,8 +85,6 @@ export function useFinancialReporting() {
   const fetchCashFlow = useCallback(async () => {
     if (!currentWorkspaceId) return;
     setLoading(true);
-    // Emulate microtask delay for consistent UX load transition
-    await new Promise(resolve => setTimeout(resolve, 150));
 
     try {
       const cashFlow = {
@@ -97,25 +94,28 @@ export function useFinancialReporting() {
         netChange: 0
       };
 
-      transactions.forEach((tx: any) => {
+      transactions.filter(isPostable).forEach((tx: any) => {
         tx.lines?.forEach((line: any) => {
           const acc = accounts.find(a => a.id === line.accountId);
           if (!acc) return;
 
-          if ((acc.type === 'income' || acc.type === 'revenue')) cashFlow.operating.total -= line.amountCents;
-          if ((acc.type === 'expense' || acc.type === 'cost_of_goods')) cashFlow.operating.total -= line.amountCents;
+          const role = resolveAccountRole(acc);
+          const amt = lineAmount(line, tx);
 
-          if (acc.type === 'asset' && acc.category === 'Receivable') cashFlow.operating.total -= line.amountCents;
-          if (acc.type === 'liability' && acc.category === 'Payable') cashFlow.operating.total += line.amountCents;
+          if (acc.type === 'income' || acc.type === 'revenue') cashFlow.operating.total -= amt;
+          if (acc.type === 'expense' || acc.type === 'cost_of_goods') cashFlow.operating.total -= amt;
 
-          if (acc.type === 'asset' && acc.category === 'Fixed Asset') {
-            cashFlow.investing.total -= line.amountCents;
-            cashFlow.investing.items.push({ name: tx.description, amount: -line.amountCents });
+          if (role === 'ar' || acc.category === 'Receivables' || acc.category === 'Receivable') cashFlow.operating.total -= amt;
+          if (role === 'ap' || acc.category === 'Payables' || acc.category === 'Payable') cashFlow.operating.total += amt;
+
+          if (acc.category === 'Fixed Assets' || acc.category === 'Fixed Asset') {
+            cashFlow.investing.total -= amt;
+            cashFlow.investing.items.push({ name: tx.description, amount: -amt });
           }
 
-          if (acc.type === 'equity' || (acc.type === 'liability' && acc.category === 'Long Term Liability')) {
-            cashFlow.financing.total += line.amountCents;
-            cashFlow.financing.items.push({ name: tx.description, amount: line.amountCents });
+          if (acc.type === 'equity' || acc.category === 'Debt' || acc.category === 'Long Term Liability') {
+            cashFlow.financing.total += amt;
+            cashFlow.financing.items.push({ name: tx.description, amount: amt });
           }
         });
       });
@@ -135,11 +135,11 @@ export function useFinancialReporting() {
     // Local calculation for immediate feedback
     let localIncome = 0;
     let localExpenses = 0;
-    transactions.forEach((t: Transaction) => {
+    transactions.filter(isPostable).forEach((t: Transaction) => {
       t.lines?.forEach((l: any) => {
         const acc = accounts.find((a: ChartAccount) => a.id === l.accountId);
-        if (acc?.type === 'income') localIncome += -l.amountCents;
-        if (acc?.type === 'expense') localExpenses += l.amountCents;
+        if (acc?.type === 'income' || acc?.type === 'revenue') localIncome += -lineAmount(l, t);
+        if (acc?.type === 'expense' || acc?.type === 'cost_of_goods') localExpenses += lineAmount(l, t);
       });
     });
 

@@ -3,14 +3,15 @@ import { Transaction, ChartAccount, AnalyticalMetrics } from '../types';
 import { subDays, format } from 'date-fns';
 import { SpectralAnalyzer, ComplianceEngine, AnomalyDetector, InvariantReconciliation } from '../lib/algorithms';
 import { PerformanceTelemetry } from '../lib/telemetry';
+import { parseLocalDate } from '../lib/utils';
+import { isPostable } from '../lib/txFilters';
+import { resolveAccountRole } from '../lib/accountUtils';
 
 /**
  * High-Performance Single-Pass Financial Telemetry Hook
  * Optimized for maximum efficiency and architectural clarity.
  * Provides real-time financial health monitoring.
  */
-const telemetryCache = new Map<string, AnalyticalMetrics>();
-
 export function useAuditTelemetry(transactions: Transaction[] = [], accounts: ChartAccount[] = [], days = 30, passedMetrics?: AnalyticalMetrics): AnalyticalMetrics {
   const safeTxs = Array.isArray(transactions) ? transactions : [];
   const safeAccs = Array.isArray(accounts) ? accounts : [];
@@ -31,19 +32,6 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
           timeSeries: [], allocations: [], recentActivity: [], anomalies: [], periodicity: [], graphCentrality: [],
           layerStatus: []
        };
-    }
-    
-    const firstTx = safeTxs[0];
-    const lastTx = safeTxs[safeTxs.length - 1];
-    let balanceSum = 0;
-    for (let i = 0; i < safeAccs.length; i++) {
-      balanceSum += (safeAccs[i].balanceCents || 0);
-    }
-    const sig = `${safeTxs.length}_${safeAccs.length}_${days}_${firstTx?.id || ''}_${firstTx?.date || ''}_${lastTx?.id || ''}_${balanceSum}`;
-
-    const cached = telemetryCache.get(sig);
-    if (cached) {
-      return cached;
     }
 
     PerformanceTelemetry.start("useAuditTelemetry:compute");
@@ -87,24 +75,33 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
         const balance = a.balanceCents || 0;
         const nameLower = (a.name || '').toLowerCase();
         const categoryLower = (a.category || '').toLowerCase();
+        const role = resolveAccountRole(a);
         
         let isCash = false;
         let isCogs = false;
         
+        if (role === 'cogs' || a.type === 'cost_of_goods') {
+          isCogs = true;
+        } else if (a.type === 'expense') {
+          isCogs = categoryLower === 'cogs' || categoryLower === 'direct costs' || nameLower.includes('cogs') || nameLower.includes('cost of goods');
+        }
+
         if (a.type === 'asset') {
-          if (a.category === 'Cash' || nameLower.includes('bank')) {
+          const isNonCurrentAsset = a.category === 'Fixed Assets' || categoryLower.includes('fixed') || categoryLower.includes('equipment') || categoryLower.includes('property') || (a.subtype && a.subtype.toLowerCase().includes('fixed'));
+          if (!isNonCurrentAsset) {
+            currentAssets += balance;
+          }
+
+          if (role === 'cash' || a.category === 'Cash' || nameLower.includes('bank')) {
             cashAccountIdSet.add(a.id);
             quickAssets += balance;
             isCash = true;
           }
-          if (a.category === 'Accounts Receivable' || nameLower.includes('receivable')) {
+          if (role === 'ar' || a.category === 'Receivables' || a.category === 'Accounts Receivable' || nameLower.includes('receivable')) {
             quickAssets += balance;
           }
-          currentAssets += balance;
         } else if (a.type === 'liability') {
           currentLiabilities += Math.abs(balance);
-        } else if (a.type === 'expense') {
-          isCogs = categoryLower === 'cogs' || nameLower.includes('cogs') || nameLower.includes('cost of goods');
         }
 
         const enrichedAccount = {
@@ -132,11 +129,11 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
     // Optimized Single Pass
     for (let i = 0; i < safeTxs.length; i++) {
         const t = safeTxs[i];
-        if (t.deletedAt) continue;
+        if (!isPostable(t)) continue;
 
         let tTime = dateCache.get(t.date);
         if (tTime === undefined) {
-          tTime = Date.parse(t.date);
+          tTime = parseLocalDate(t.date).getTime();
           dateCache.set(t.date, tTime);
         }
         const isCurrentPeriod = tTime > cutoffCurrent;
@@ -449,10 +446,6 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
     ];
 
     PerformanceTelemetry.end("useAuditTelemetry:compute");
-    if (telemetryCache.size > 100) {
-      telemetryCache.clear();
-    }
-    telemetryCache.set(sig, metrics);
     return metrics;
   }, [transactions, accounts, days, passedMetrics]);
 }

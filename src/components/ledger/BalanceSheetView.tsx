@@ -150,7 +150,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
 
     // Sum General Journal entries before or on cutoff date
     journalEntries.forEach(entry => {
-      if (entry.deletedAt || entry.date > dateCutoff) return;
+      if (entry.deletedAt || (entry as any).status === 'void' || entry.date > dateCutoff) return;
       entry.lines?.forEach(line => {
         const id = line.accountId;
         const acc = accountMap.get(id) || accountMap.get(line.accountName);

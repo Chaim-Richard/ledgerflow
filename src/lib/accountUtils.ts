@@ -10,30 +10,34 @@ export function resolveAccountRole(account: ChartAccount | undefined | null): Ac
   const name = (account.name || '').toLowerCase();
   const subtype = (account.subtype || '').toLowerCase();
 
+  // Handle COGS first (could be type: cost_of_goods or type: expense with category: cogs / direct costs)
+  if (type === 'cost_of_goods' || category === 'cogs' || category === 'direct costs' || name.includes('cost of goods') || name.includes('cogs')) {
+    return 'cogs';
+  }
+
   if (type === 'asset') {
-    if (category === 'cash' || subtype === 'cash' || subtype === 'checking' || subtype === 'savings') {
+    if (category === 'cash' || subtype === 'cash' || subtype === 'checking' || subtype === 'savings' || name.includes('checking') || name.includes('bank') || name.includes('petty cash')) {
       return 'cash';
     }
-    if (category === 'accounts receivable' || subtype === 'accounts receivable' || name === 'accounts receivable') {
+    if (category === 'receivables' || category === 'accounts receivable' || category === 'receivable' || subtype.includes('receivable') || name.includes('receivable')) {
       return 'ar';
     }
-    if (category === 'inventory' || subtype === 'inventory' || name === 'inventory') {
+    if (category === 'inventory' || subtype === 'inventory' || name.includes('inventory')) {
       return 'inventory';
     }
     return 'asset';
   }
 
   if (type === 'liability') {
-    if (category === 'accounts payable' || subtype === 'accounts payable' || name === 'accounts payable') {
+    if (category === 'payables' || category === 'accounts payable' || category === 'payable' || subtype.includes('payable') || name.includes('payable')) {
       return 'ap';
     }
     return 'liability';
   }
 
-  if (type === 'revenue' || type === 'income') return 'revenue';
-  if (type === 'cost_of_goods') return 'cogs';
+  if (type === 'revenue' || type === 'income' || category === 'sales' || category === 'revenue') return 'revenue';
   if (type === 'expense') return 'expense';
-  if (type === 'equity') return 'equity';
+  if (type === 'equity' || category === 'equity') return 'equity';
 
   return 'unknown';
 }

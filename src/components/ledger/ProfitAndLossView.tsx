@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, 
 import { motion } from 'motion/react';
 import { parseLocalDate, cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
+import { resolveAccountRole } from '../../lib/accountUtils';
 import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -140,6 +141,8 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
 
           const amt = lineAmount(l, t);
 
+          const isCogs = acc.type === 'cost_of_goods' || acc.category === 'COGS' || acc.category === 'Direct Costs' || resolveAccountRole(acc) === 'cogs';
+
           if (acc.type === 'income' || acc.type === 'revenue') {
             const amount = -amt;
             pl.income.total += amount;
@@ -147,7 +150,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
               pl.income.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0 };
             }
             pl.income.accounts[acc.id].balance += amount;
-          } else if (acc.type === 'cost_of_goods') {
+          } else if (isCogs) {
             const amount = amt;
             pl.cogs.total += amount;
             if (!pl.cogs.accounts[acc.id]) {

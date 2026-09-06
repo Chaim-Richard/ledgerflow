@@ -1,4 +1,4 @@
-import { Transaction, TransactionLine } from '../types';
+import { Transaction, TransactionLine, Invoice, Bill } from '../types';
 
 /**
  * Predicate to determine if a transaction is postable / active
@@ -10,6 +10,24 @@ export function isPostable(t: Transaction): boolean {
     return false;
   }
   return true;
+}
+
+/**
+ * Predicate to determine if an invoice is open / active (outstanding receivable)
+ * Excludes draft, paid, rejected, and void invoices.
+ */
+export function isOpenInvoice(item: Invoice | { status?: string } | null | undefined): boolean {
+  if (!item?.status) return false;
+  return ['pending', 'sent', 'approved', 'invoiced', 'overdue', 'partially_paid', 'unpaid'].includes(item.status);
+}
+
+/**
+ * Predicate to determine if a bill is open / active (outstanding payable)
+ * Excludes draft, paid, and void bills.
+ */
+export function isOpenBill(item: Bill | { status?: string } | null | undefined): boolean {
+  if (!item?.status) return false;
+  return ['pending', 'approved', 'overdue', 'unpaid', 'partially_paid'].includes(item.status);
 }
 
 /**

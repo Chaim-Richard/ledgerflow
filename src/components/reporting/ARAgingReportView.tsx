@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
-import { cn, formatCurrency } from '../../lib/utils';
+import { cn, formatCurrency, parseLocalDate } from '../../lib/utils';
+import { isOpenInvoice } from '../../lib/txFilters';
 import DrillDownModal from '../layout/DrillDownModal';
 
 interface CustomerAgingSummary {
@@ -62,7 +63,7 @@ export default function ARAgingReportView() {
       });
     });
 
-    const openInvoices = invoices.filter(inv => inv.status !== 'paid' && inv.status !== 'rejected');
+    const openInvoices = invoices.filter(isOpenInvoice);
 
     openInvoices.forEach(inv => {
       const custId = inv.customerId || 'unknown';
@@ -86,7 +87,7 @@ export default function ARAgingReportView() {
       summary.invoices.push(inv);
 
       const invAmount = inv.totalCents || inv.amountCents || 0;
-      const dueDate = inv.dueDate ? new Date(inv.dueDate) : (inv.date ? new Date(inv.date) : asOfDate);
+      const dueDate = inv.dueDate ? parseLocalDate(inv.dueDate) : (inv.date ? parseLocalDate(inv.date) : asOfDate);
       const diffTime = asOfDate.getTime() - dueDate.getTime();
       const daysOverdue = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
 
