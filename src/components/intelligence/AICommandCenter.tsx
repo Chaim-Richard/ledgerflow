@@ -33,18 +33,24 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
     }
   }, [isOpen]);
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!query.trim() || isProcessing) return;
+  const runQuery = async (queryText: string) => {
+    if (!queryText.trim() || isProcessing) return;
 
     setIsProcessing(true);
+    setQuery(queryText);
     try {
       const { accounts, transactions } = useLedgerStore.getState();
+      const uniqueProjects = Array.from(new Set(
+        transactions
+          .map((t: any) => t.projectId || t.project)
+          .filter(Boolean)
+      )) as string[];
+
       const resolved = await aiService.parseQuery(
-        query, 
+        queryText, 
         businessContext, 
         accounts.map(a => a.name), 
-        transactions.map(t => t.project).filter((v, i, a) => v && a.indexOf(v) === i) as string[]
+        uniqueProjects
       );
       const criteria = resolved || {};
       
@@ -57,9 +63,9 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
       if (criteria.endDate) filter.endDate = criteria.endDate;
       
       onFilter(filter);
-      setHistory(prev => [query, ...prev.slice(0, 4)]);
+      setHistory(prev => [queryText, ...prev.filter(q => q !== queryText).slice(0, 4)]);
       toast.success("Query Processing Complete", {
-        description: `Applied filters based on: "${query}"`
+        description: `Applied filters based on: "${queryText}"`
       });
       onClose();
       setQuery('');
@@ -69,6 +75,11 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    await runQuery(query);
   };
 
   if (!isOpen) return null;
@@ -127,8 +138,22 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
               </button>
               <div className="h-10 w-px bg-[var(--surface)]/10 mx-4" />
               <div className="flex items-center gap-6">
-                 <button type="button" className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors" aria-label="Compare Period">Compare Period</button>
-                 <button type="button" className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors" aria-label="Anomaly Sweep">Anomaly Sweep</button>
+                 <button 
+                   type="button" 
+                   onClick={() => runQuery("Compare current period vs prior period")}
+                   className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors cursor-pointer" 
+                   aria-label="Compare Period"
+                 >
+                   Compare Period
+                 </button>
+                 <button 
+                   type="button" 
+                   onClick={() => runQuery("Scan transactions for anomalies and outliers")}
+                   className="text-[10px] font-black text-white/40 hover:text-indigo-400 uppercase tracking-widest transition-colors cursor-pointer" 
+                   aria-label="Anomaly Sweep"
+                 >
+                   Anomaly Sweep
+                 </button>
               </div>
             </div>
           </form>
@@ -140,8 +165,8 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                 {history.length > 0 ? history.map((h, i) => (
                   <button 
                     key={i}
-                    onClick={() => { setQuery(h); handleSubmit(); }}
-                    className="w-full text-left p-4 rounded-[32px] bg-[var(--surface)]/5 border border-white/5 hover:bg-[var(--surface)]/10 transition-all flex items-center justify-between group"
+                    onClick={() => runQuery(h)}
+                    className="w-full text-left p-4 rounded-[32px] bg-[var(--surface)]/5 border border-white/5 hover:bg-[var(--surface)]/10 transition-all flex items-center justify-between group cursor-pointer"
                   >
                     <span className="text-xs font-bold text-white/60 group-hover:text-white transition-colors">{h}</span>
                     <History size={14} className="text-white/20" />
@@ -160,7 +185,12 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                    { label: "Reconcile Missing Metadata", icon: Filter, color: 'text-amber-400' },
                    { label: "Predict Q3 Growth Matrix", icon: BarChart3, color: 'text-emerald-400' }
                  ].map((item, i) => (
-                   <button key={i} className="flex items-center justify-between p-4 bg-[var(--surface)]/5 rounded-[32px] border border-white/5 hover:border-indigo-500/30 hover:bg-[var(--surface)]/10 transition-all group active:scale-95" aria-label="Arrow Right action">
+                   <button 
+                     key={i} 
+                     onClick={() => runQuery(item.label)}
+                     className="flex items-center justify-between p-4 bg-[var(--surface)]/5 rounded-[32px] border border-white/5 hover:border-indigo-500/30 hover:bg-[var(--surface)]/10 transition-all group active:scale-95 cursor-pointer" 
+                     aria-label={item.label}
+                   >
                      <div className="flex items-center gap-4">
                        <item.icon size={16} className={item.color} />
                        <span className="text-[10px] font-black text-white/80 uppercase tracking-widest">{item.label}</span>

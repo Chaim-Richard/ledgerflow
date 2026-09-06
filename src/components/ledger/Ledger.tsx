@@ -180,11 +180,20 @@ const Ledger = React.memo(() => {
 
   const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentWorkspaceId && !workspaceId) {
+      toast.error('Workspace context required');
+      return;
+    }
     try {
       await addDoc(collection(db, 'chartAccounts'), {
-        ...newAccount,
+        workspaceId: currentWorkspaceId || workspaceId,
         uid: user?.uid || "",
-        balanceCents: Number(newAccount.openingBalanceCents), // Initial balance is opening balance
+        code: newAccount.code,
+        name: newAccount.name,
+        type: newAccount.type,
+        category: newAccount.category || newAccount.type,
+        description: newAccount.description || "",
+        balanceCents: 0,
         createdAt: new Date().toISOString()
       });
       toast.success('System Node Established');
@@ -212,12 +221,14 @@ const Ledger = React.memo(() => {
 
   const handleAddPartner = async (e: React.FormEvent) => {
     e.preventDefault();
-    const name = (e.target as any).name.value;
-    const share = parseFloat((e.target as any).share.value);
-    const initialCapital = TruthEngine.parseAmountToCents((e.target as any).capital.value);
+    const target = e.target as any;
+    const name = target.name.value;
+    const share = parseFloat(target.share.value || '0');
 
     try {
+      const initialCapital = TruthEngine.parseAmountToCents(target.capital.value || '0');
       await addDoc(collection(db, 'partners'), {
+        workspaceId: currentWorkspaceId || workspaceId,
         uid: user?.uid || "",
         name,
         share,
@@ -225,9 +236,9 @@ const Ledger = React.memo(() => {
         createdAt: new Date().toISOString()
       });
       toast.success('Partner added successfully');
-      (e.target as any).reset();
+      target.reset();
     } catch (error) {
-       reportError(error, OperationType.CREATE, 'partners', { name, share, initialCapital });
+      reportError(error, OperationType.CREATE, 'partners', { name, share });
     }
   };
 

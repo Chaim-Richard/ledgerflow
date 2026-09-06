@@ -55,11 +55,26 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
     return account?.openingBalanceCents || account?.balanceCents || 0;
   }, [lastReconciliation, account]);
 
+  const safeParseCents = (val: string): number => {
+    if (!val || !val.trim()) return 0;
+    try {
+      let clean = val.trim();
+      if (clean.startsWith('(') && clean.endsWith(')')) {
+        clean = '-' + clean.slice(1, -1);
+      }
+      clean = clean.replace(/[$,]/g, '');
+      return TruthEngine.parseAmountToCents(clean || '0');
+    } catch {
+      return 0;
+    }
+  };
+
   const filteredTransactions = useMemo(() => {
     if (!selectedAccount || !account) return [];
     return (transactions || []).filter(t => 
       !t.deletedAt &&
       t.status !== 'reconciled' &&
+      t.status !== 'void' &&
       !t.clearedAt &&
       t.date <= statementDate &&
       t.lines?.some(l => l.accountId === account.id || l.accountName === account.name) && 
@@ -76,7 +91,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
       .filter(t => reconciledIds.includes(t.id))
       .reduce((sum, t) => sum + t.relevantAmountCents, 0);
     
-    const targetBalance = TruthEngine.parseAmountToCents(endingBalance);
+    const targetBalance = safeParseCents(endingBalance);
     const currentBalance = beginningBalance + cleared;
     const difference = targetBalance - currentBalance;
 
@@ -90,7 +105,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
   };
 
   const handleAutoMatch = () => {
-    const targetAmountCents = TruthEngine.parseAmountToCents(endingBalance);
+    const targetAmountCents = safeParseCents(endingBalance);
     const needed = targetAmountCents - beginningBalance;
 
     // Greedy matching algorithm for exact amounts

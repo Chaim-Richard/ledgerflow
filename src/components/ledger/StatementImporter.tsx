@@ -73,6 +73,37 @@ export default function StatementImporter({
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [mapping, setMapping] = useState({ date: -1, description: -1, amount: -1, debit: -1, credit: -1, payee: -1, memo: -1, skipRows: 1 });
 
+  const parseCsvText = (text: string): string[][] => {
+    const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+    return lines.map(line => {
+      const result: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"' || char === "'") {
+          inQuotes = !inQuotes;
+        } else if ((char === ',' || char === '\t') && !inQuotes) {
+          result.push(current.trim().replace(/^["']|["']$/g, ''));
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim().replace(/^["']|["']$/g, ''));
+      return result;
+    });
+  };
+
+  const cleanAmountStr = (str: string): string => {
+    if (!str) return '0';
+    let s = str.trim();
+    if (s.startsWith('(') && s.endsWith(')')) {
+      s = '-' + s.slice(1, -1);
+    }
+    return s.replace(/[$,]/g, '');
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -83,8 +114,8 @@ export default function StatementImporter({
     try {
       const labels = accounts.map(a => a.name);
       let results: any[] = [];
-      
       const fileType = file.type;
+      const fileName = file.name.toLowerCase();
       
       if (fileType.startsWith('image/')) {
         const result = await aiService.parseReceipt(file, undefined, patternCache, labels);
@@ -97,15 +128,51 @@ export default function StatementImporter({
             lines: result.lines || []
           }];
         }
+        if (results && results.length > 0) {
+          processResults(results);
+          toast.success(`Analytical Intelligence extracted ${results.length} nodes from ${file.name}`, { id: loader });
+        } else {
+          toast.error('AI was unable to identify fiscal nodes in this file.', { id: loader });
+        }
+      } else if (fileName.endsWith('.csv') || fileName.endsWith('.txt') || fileType.includes('csv') || fileType.includes('text')) {
+        const fileContent = await file.text();
+        const rows = parseCsvText(fileContent);
+        if (rows.length > 0) {
+          setCsvData(rows);
+          // Auto detect headers
+          const header = rows[0].map(h => h.toLowerCase());
+          const dateIdx = header.findIndex(h => h.includes('date') || h.includes('time') || h.includes('posted'));
+          const descIdx = header.findIndex(h => h.includes('desc') || h.includes('narrat') || h.includes('payee') || h.includes('title') || h.includes('name') || h.includes('merchant'));
+          const amtIdx = header.findIndex(h => h.includes('amount') || h.includes('total') || h.includes('net') || h.includes('sum'));
+          const debitIdx = header.findIndex(h => h.includes('debit') || h.includes('withdraw') || h.includes('out'));
+          const creditIdx = header.findIndex(h => h.includes('credit') || h.includes('deposit') || h.includes('in'));
+          const payeeIdx = header.findIndex(h => h.includes('payee') || h.includes('vendor') || h.includes('party'));
+          const memoIdx = header.findIndex(h => h.includes('memo') || h.includes('note') || h.includes('comment'));
+
+          setMapping({
+            date: dateIdx !== -1 ? dateIdx : 0,
+            description: descIdx !== -1 ? descIdx : (rows[0].length > 1 ? 1 : 0),
+            amount: amtIdx !== -1 ? amtIdx : -1,
+            debit: debitIdx !== -1 ? debitIdx : -1,
+            credit: creditIdx !== -1 ? creditIdx : -1,
+            payee: payeeIdx !== -1 ? payeeIdx : -1,
+            memo: memoIdx !== -1 ? memoIdx : -1,
+            skipRows: 1
+          });
+
+          setStep('mapping');
+          toast.success(`Loaded ${rows.length - 1} records from ${file.name}. Verify mapping below.`, { id: loader });
+        } else {
+          toast.error('File appears empty or unreadable.', { id: loader });
+        }
       } else {
         results = await aiService.parseStatement(file, businessContext, undefined, patternCache, labels);
-      }
-      
-      if (results && results.length > 0) {
-        processResults(results);
-        toast.success(`Analytical Intelligence extracted ${results.length} nodes from ${file.name}`, { id: loader });
-      } else {
-        toast.error('AI was unable to identify fiscal nodes in this file.', { id: loader });
+        if (results && results.length > 0) {
+          processResults(results);
+          toast.success(`Analytical Intelligence extracted ${results.length} nodes from ${file.name}`, { id: loader });
+        } else {
+          toast.error('AI was unable to identify fiscal nodes in this file.', { id: loader });
+        }
       }
     } catch (error) {
       toast.error('Parsing failure', { id: loader });
@@ -152,13 +219,13 @@ export default function StatementImporter({
     const results = dataRows.map(row => {
       let amountCents = 0;
       if (hasAmount) {
-        const amountStr = row[mapping.amount]?.replace(/[$,]/g, '');
-        amountCents = TruthEngine.parseAmountToCents(amountStr || '0');
+        const amountStr = cleanAmountStr(row[mapping.amount]);
+        amountCents = TruthEngine.parseAmountToCents(amountStr);
       } else {
-        const debitStr = row[(mapping as any).debit]?.replace(/[$,]/g, '');
-        const creditStr = row[(mapping as any).credit]?.replace(/[$,]/g, '');
-        const debit = TruthEngine.parseAmountToCents(debitStr || '0');
-        const credit = TruthEngine.parseAmountToCents(creditStr || '0');
+        const debitStr = cleanAmountStr(row[(mapping as any).debit]);
+        const creditStr = cleanAmountStr(row[(mapping as any).credit]);
+        const debit = TruthEngine.parseAmountToCents(debitStr);
+        const credit = TruthEngine.parseAmountToCents(creditStr);
         amountCents = credit - debit;
       }
       

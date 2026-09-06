@@ -1106,6 +1106,7 @@ export function useTransactionActions() {
 
         await addDoc(collection(db, 'auditLogs'), {
           uid: user.uid,
+          workspaceId: currentWorkspaceId,
           email: user.email,
           action: 'DEACTIVATE_ACCOUNT',
           entityType: 'account',
@@ -1128,6 +1129,7 @@ export function useTransactionActions() {
 
         await addDoc(collection(db, 'auditLogs'), {
           uid: user.uid,
+          workspaceId: currentWorkspaceId,
           email: user.email,
           action: 'DELETE_EMPTY_ACCOUNT',
           entityType: 'account',

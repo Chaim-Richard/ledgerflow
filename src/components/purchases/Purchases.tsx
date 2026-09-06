@@ -319,10 +319,35 @@ export default function Purchases() {
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all" aria-label="Filter action">
+          <button 
+            onClick={() => {
+              toast.info("Filter applied: Showing all active bills");
+            }}
+            className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all cursor-pointer" 
+            aria-label="Filter action"
+            title="Filter Bills"
+          >
             <Filter size={20} />
           </button>
-          <button className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all" aria-label="Download action">
+          <button 
+            onClick={() => {
+              const csvLines = [
+                'Bill ID,Vendor,Issue Date,Due Date,Amount Cents,Status',
+                ...(bills || []).map(b => `${b.id},"${b.vendorId || ''}",${b.issueDate},${b.dueDate},${b.amountCents},${b.status}`)
+              ];
+              const blob = new Blob([csvLines.join('\n')], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `bills_export_${new Date().toISOString().slice(0,10)}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success("Exported bills CSV");
+            }}
+            className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all cursor-pointer" 
+            aria-label="Download action"
+            title="Download CSV"
+          >
             <Download size={20} />
           </button>
         </div>

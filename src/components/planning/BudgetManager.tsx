@@ -27,6 +27,7 @@ import AsyncButton from '../ui/AsyncButton';
 
 export default function BudgetManager() {
   const user = useAuthStore((s: any) => s.user);
+  const currentWorkspaceId = useLedgerStore((s: any) => s.currentWorkspaceId);
   const budgets = useLedgerStore((s: any) => s.budgets);
   const transactions = useLedgerStore((s: any) => s.transactions);
   const accounts = useLedgerStore((s: any) => s.accounts);
@@ -42,24 +43,38 @@ export default function BudgetManager() {
 
   const handleAddBudget = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentWorkspaceId) {
+      toast.error('Workspace context missing');
+      return;
+    }
     try {
       if (editingBudget) {
         await updateDoc(doc(db, 'budgets', editingBudget), {
-           targetId: newBudget.targetId,
-           amountCents: newBudget.amountCents,
-           period: newBudget.period,
+          targetId: newBudget.targetId,
+          amountCents: newBudget.amountCents,
+          period: newBudget.period,
+          startDate: newBudget.startDate || getLocalDateISO(),
+          updatedAt: new Date().toISOString()
         });
         toast.success('Objective Updated');
       } else {
         await addDoc(collection(db, 'budgets'), {
           ...newBudget,
-          uid: user.uid,
+          workspaceId: currentWorkspaceId,
+          uid: user?.uid || "",
           createdAt: new Date().toISOString()
         });
         toast.success('Objective Synchronized');
       }
       setIsAdding(false);
       setEditingBudget(null);
+      setNewBudget({
+        targetId: '',
+        targetType: 'account',
+        amountCents: 0,
+        period: 'monthly',
+        startDate: getLocalDateISO()
+      });
     } catch (error) {
       toast.error('Could not save budget objective. Please try again.');
     }
@@ -67,13 +82,26 @@ export default function BudgetManager() {
 
   const budgetAnalysis = useMemo(() => {
     return budgets.map((budget: any) => {
+      const targetLower = (budget.targetId || '').toLowerCase();
+      // Find matching account ID or name
+      const matchingAccount = accounts.find((a: any) => 
+        a.id === budget.targetId || 
+        (a.name || '').toLowerCase() === targetLower || 
+        (a.code || '').toLowerCase() === targetLower
+      );
+
       const actualCents = transactions.reduce((sum: number, t: any) => {
-        const lines = t.lines?.filter((l: any) => l.accountId === budget.targetId || l.accountName === budget.targetId) || [];
-        return sum + lines.reduce((s: number, l: any) => s + Math.abs(l.amountCents), 0);
+        if (t.status === 'void' || t.status === 'deleted') return sum;
+        const lines = t.lines?.filter((l: any) => 
+          l.accountId === budget.targetId || 
+          (matchingAccount && l.accountId === matchingAccount.id) ||
+          (l.accountName || '').toLowerCase() === targetLower
+        ) || [];
+        return sum + lines.reduce((s: number, l: any) => s + Math.max(0, l.amountCents || 0), 0);
       }, 0);
       
       const variance = budget.amountCents - actualCents;
-      const percentUsed = (actualCents / budget.amountCents) * 100;
+      const percentUsed = budget.amountCents > 0 ? (actualCents / budget.amountCents) * 100 : 0;
 
       return {
         ...budget,
@@ -82,7 +110,7 @@ export default function BudgetManager() {
         percentUsed
       };
     });
-  }, [budgets, transactions]);
+  }, [budgets, transactions, accounts]);
 
   return (
     <div className="space-y-12">
@@ -147,7 +175,7 @@ export default function BudgetManager() {
                         targetType: b.targetType as 'account',
                         amountCents: b.amountCents,
                         period: b.period,
-                        startDate: b.period
+                        startDate: b.startDate || getLocalDateISO()
                       });
                       setEditingBudget(b.id);
                       setIsAdding(true);
@@ -213,7 +241,21 @@ export default function BudgetManager() {
                     <Layers size={14} className="text-slate-500 opacity-30" />
                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest opacity-30">Analytical Snapshot Matrix</span>
                  </div>
-                 <button className="w-10 h-10 bg-[var(--ink)] rounded-xl flex items-center justify-center text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all border border-[var(--line)] group-hover:scale-110" aria-label="Arrow Up Right action">
+                 <button 
+                   onClick={() => {
+                     setNewBudget({
+                       targetId: b.targetId,
+                       targetType: b.targetType as 'account',
+                       amountCents: b.amountCents,
+                       period: b.period,
+                       startDate: b.startDate || getLocalDateISO()
+                     });
+                     setEditingBudget(b.id);
+                     setIsAdding(true);
+                   }}
+                   className="w-10 h-10 bg-[var(--ink)] rounded-xl flex items-center justify-center text-slate-500 hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all border border-[var(--line)] group-hover:scale-110" 
+                   aria-label="Edit budget objective"
+                 >
                     <ArrowUpRight size={18} />
                  </button>
               </div>
