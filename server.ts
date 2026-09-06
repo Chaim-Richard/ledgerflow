@@ -397,6 +397,36 @@ async function getReportContext(req: AuthenticatedRequest, workspaceId: string) 
   };
 }
 
+/**
+ * Resolves the active Gemini API key for a user (supporting BYOK encrypted key or server fallback)
+ */
+async function resolveUserGeminiApiKey(uid?: string): Promise<{ apiKey: string; isCustom: boolean }> {
+  if (!uid) {
+    return { apiKey: process.env.GEMINI_API_KEY || "", isCustom: false };
+  }
+  try {
+    const db = getDb();
+    const userDoc = await db.collection("users").doc(uid).get();
+    if (userDoc.exists) {
+      const data = userDoc.data();
+      if (data?.geminiApiKeyEncrypted) {
+        try {
+          const decrypted = SecurityService.decryptSensitiveField(data.geminiApiKeyEncrypted);
+          if (decrypted) return { apiKey: decrypted, isCustom: true };
+        } catch (decryptErr) {
+          console.warn("[resolveUserGeminiApiKey] Failed to decrypt user key:", decryptErr);
+        }
+      }
+      if (data?.geminiApiKey) {
+        return { apiKey: data.geminiApiKey, isCustom: true };
+      }
+    }
+  } catch (err: any) {
+    console.warn("[resolveUserGeminiApiKey] Error fetching user API key:", err.message);
+  }
+  return { apiKey: process.env.GEMINI_API_KEY || "", isCustom: false };
+}
+
 async function startServer() {
   const app = express();
   const allowedOriginsEnv = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) : null;
@@ -501,40 +531,56 @@ async function startServer() {
       }
 
       if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
+        const session = event.data.object as any;
+        const db = getFirestore();
         
+        // --- 1. Invoice Payment Fulfillment ---
         if (session.metadata?.invoiceId) {
           const invoiceId = session.metadata.invoiceId;
           const workspaceId = session.metadata.workspaceId;
           const amountTotal = session.amount_total || 0;
           
-          const db = getFirestore();
-          const invoiceRef = db.collection('workspaces').doc(workspaceId).collection('invoices').doc(invoiceId);
+          // Canonical top-level invoices collection
+          const invoiceRef = db.collection('invoices').doc(invoiceId);
           
           await db.runTransaction(async (t) => {
-            const doc = await t.get(invoiceRef);
+            let doc = await t.get(invoiceRef);
+            let targetRef = invoiceRef;
+            
+            // Fallback check for legacy nested collection if top-level does not exist
+            if (!doc.exists && workspaceId) {
+              const legacyRef = db.collection('workspaces').doc(workspaceId).collection('invoices').doc(invoiceId);
+              const legacyDoc = await t.get(legacyRef);
+              if (legacyDoc.exists) {
+                doc = legacyDoc;
+                targetRef = legacyRef;
+              }
+            }
+            
             if (!doc.exists) return;
             
             const inv = doc.data() as any;
             if (inv && inv.status !== "paid") {
               // Admin SDK requires all reads before writes in a transaction
-              const accountsSnap = await t.get(db.collection('chartAccounts').where('workspaceId', '==', workspaceId));
+              const wsId = inv.workspaceId || workspaceId;
+              const accountsSnap = await t.get(db.collection('chartAccounts').where('workspaceId', '==', wsId));
               const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-              t.update(invoiceRef, {
+              t.update(targetRef, {
                 status: 'paid',
                 amountPaidCents: amountTotal,
-                paidAt: new Date().toISOString()
+                paidAt: new Date().toISOString(),
+                isLocked: true
               });
               
               let cashAccount: any = accounts.find((a: any) => 
-                a.subtype === "cash" || a.subtype === "bank" || a.category === "cash" || a.role === "cash" || 
+                a.subtype === "cash" || a.subtype === "bank" || a.category === "Cash" || a.role === "cash" || 
                 (a.type === "asset" && (a.name || '').toLowerCase().includes('cash')) || 
                 (a.type === "asset" && (a.name || '').toLowerCase().includes('bank')) || 
                 (a.type === "asset" && (a.name || '').toLowerCase().includes('stripe'))
               );
               let arAccount: any = accounts.find((a: any) => 
-                a.subtype === "accounts_receivable" || a.category === "accounts_receivable" || a.role === "accounts_receivable" || 
+                a.subtype === "accounts_receivable" || a.category === "Accounts Receivable" || a.role === "accounts_receivable" || 
                 (a.type === "asset" && (a.name || '').toLowerCase().includes('receivable'))
               );
               
@@ -543,12 +589,12 @@ async function startServer() {
                 cashAccount = {
                   id: newCashRef.id,
                   uid: 'system',
-                  workspaceId,
+                  workspaceId: wsId,
                   name: 'Stripe Clearing Account',
                   code: '1010',
                   type: 'asset',
                   subtype: 'cash',
-                  category: 'Current Assets',
+                  category: 'Cash',
                   balanceCents: 0,
                   createdAt: new Date().toISOString()
                 };
@@ -559,12 +605,12 @@ async function startServer() {
                 arAccount = {
                   id: newArRef.id,
                   uid: 'system',
-                  workspaceId,
+                  workspaceId: wsId,
                   name: 'Accounts Receivable',
                   code: '1200',
                   type: 'asset',
                   subtype: 'accounts_receivable',
-                  category: 'Current Assets',
+                  category: 'Accounts Receivable',
                   balanceCents: 0,
                   createdAt: new Date().toISOString()
                 };
@@ -575,7 +621,7 @@ async function startServer() {
               const txRef = db.collection('transactions').doc();
               t.set(txRef, {
                 uid: 'system',
-                workspaceId,
+                workspaceId: wsId,
                 date: new Date().toISOString().split('T')[0],
                 description: `Invoice ${inv?.number || "Unknown"} Payment via Stripe`,
                 totalAmountCents: amountTotal,
@@ -608,6 +654,45 @@ async function startServer() {
               });
             }
           });
+        }
+        
+        // --- 2. Subscription Upgrade & Credit Provisioning ---
+        if (session.mode === 'subscription' || session.metadata?.plan) {
+          const workspaceId = session.metadata?.workspaceId;
+          const plan = session.metadata?.plan || 'pro';
+          
+          if (workspaceId) {
+            const creditsToGrant = plan === 'enterprise' ? 10000000 : 1000000;
+            const wsRef = db.collection("workspaces").doc(workspaceId);
+            
+            await wsRef.set({
+              plan: plan,
+              billingCycle: "monthly",
+              computeCreditBalance: admin.firestore.FieldValue.increment(creditsToGrant),
+              computeLimit: creditsToGrant,
+              stripeCustomerId: session.customer || null,
+              stripeSubscriptionId: session.subscription || null,
+              lastUpgradedAt: new Date().toISOString()
+            }, { merge: true });
+            
+            console.log(`[Stripe Webhook] Workspace ${workspaceId} upgraded to ${plan} with +${creditsToGrant} compute credits.`);
+          }
+        }
+      } else if (event.type === 'customer.subscription.deleted') {
+        const subscription = event.data.object as any;
+        const customerId = subscription.customer;
+        const db = getFirestore();
+        
+        // Find workspace with this stripeCustomerId or stripeSubscriptionId
+        const wsSnap = await db.collection("workspaces").where("stripeCustomerId", "==", customerId).limit(1).get();
+        if (!wsSnap.empty) {
+          const wsDoc = wsSnap.docs[0];
+          await wsDoc.ref.set({
+            plan: 'starter',
+            billingCycle: 'free',
+            lastDowngradedAt: new Date().toISOString()
+          }, { merge: true });
+          console.log(`[Stripe Webhook] Workspace ${wsDoc.id} downgraded to starter due to subscription cancellation.`);
         }
       }
 
@@ -732,21 +817,8 @@ async function startServer() {
         }
       }
 
-      let userApiKey = "";
-      try {
-        if ((req as AuthenticatedRequest).user?.uid) {
-           const userDoc = await db.collection("users").doc((req as AuthenticatedRequest).user.uid).get();
-           userApiKey = userDoc.data()?.geminiApiKey || "";
-         }
-      } catch (err: any) {
-        if (!err.message?.includes("PERMISSION_DENIED")) console.error("[Brain] User API Key DB fetch bypassed", err);
-      }
-      
-      let isCustomKeyUsed = false;
-      const apiKey = userApiKey || process.env.GEMINI_API_KEY;
-      if (userApiKey && userApiKey === apiKey) {
-         isCustomKeyUsed = true;
-      }
+      const uid = (req as AuthenticatedRequest).user?.uid;
+      const { apiKey, isCustom: isCustomKeyUsed } = await resolveUserGeminiApiKey(uid);
 
       if (!apiKey) {
          throw new Error("Missing Gemini API Key. Please configure it in AI Settings.");
@@ -1780,8 +1852,180 @@ async function startServer() {
   });
 
   // --- API Key Management endpoints ---
-  // API key creation and deletion is handled on the client-side directly interacting with Firestore
-  // See src/components/platform/ApiHub.tsx
+  app.post("/api/v1/keys/provision", authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const { name, scopes, expiration, workspaceId } = req.body;
+      if (!workspaceId) {
+        return res.status(400).json({ status: "error", message: "Missing workspaceId in body" });
+      }
+
+      const authReq = req as AuthenticatedRequest;
+      await authorizeWorkspace(authReq, workspaceId);
+
+      const userId = authReq.user.uid;
+      
+      const randomSecret = crypto.randomBytes(32).toString('hex');
+      const randomKeyIdSuffix = crypto.randomBytes(8).toString('hex');
+      const keyId = `lf_id_${workspaceId}_${randomKeyIdSuffix}`;
+      const computedHash = crypto.createHash('sha256').update(randomSecret).digest('hex');
+
+      let expiresAtValue: string | null = null;
+      if (expiration && expiration !== 'never') {
+        const d = new Date();
+        if (expiration === '1h') d.setHours(d.getHours() + 1);
+        else if (expiration === '24h') d.setHours(d.getHours() + 24);
+        else if (expiration === '30d') d.setDate(d.getDate() + 30);
+        else if (expiration === '90d') d.setDate(d.getDate() + 90);
+        expiresAtValue = d.toISOString();
+      }
+
+      const defaultScopes = [
+        'read:transactions',
+        'write:transactions',
+        'read:projects',
+        'write:projects',
+        'read:ledger',
+        'write:ledger',
+        'read:workspaces',
+        'brain:analyze'
+      ];
+
+      const keyPayload = {
+        id: keyId,
+        workspaceId,
+        uid: userId,
+        name: name || 'Production Integration Key',
+        keyHash: computedHash,
+        scopes: Array.isArray(scopes) && scopes.length > 0 ? scopes : defaultScopes,
+        expiresAt: expiresAtValue || 'never',
+        createdAt: new Date().toISOString(),
+        lastUsedAt: null,
+        totalRequests: 0
+      };
+
+      const db = getDb();
+      await db.collection("apiKeys").doc(keyId).set(keyPayload);
+
+      // Return full token signature once
+      const fullKeySecret = `${keyId}.${randomSecret}`;
+      res.status(201).json({
+        status: "success",
+        apiKey: fullKeySecret,
+        key: {
+          id: keyId,
+          name: keyPayload.name,
+          scopes: keyPayload.scopes,
+          expiresAt: keyPayload.expiresAt,
+          createdAt: keyPayload.createdAt
+        }
+      });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
+
+  app.delete("/api/v1/keys/revoke/:keyId", authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const { keyId } = req.params;
+      if (!keyId) {
+        return res.status(400).json({ status: "error", message: "Missing keyId in path" });
+      }
+
+      const authReq = req as AuthenticatedRequest;
+      const db = getDb();
+      const keyDoc = await db.collection("apiKeys").doc(keyId).get();
+
+      if (!keyDoc.exists) {
+        return res.status(404).json({ status: "error", message: "API key not found." });
+      }
+
+      const keyData = keyDoc.data();
+      const workspaceId = keyData?.workspaceId;
+      if (workspaceId) {
+        await authorizeWorkspace(authReq, workspaceId);
+      } else if (keyData?.uid !== authReq.user.uid && !authReq.user.admin) {
+        return res.status(403).json({ status: "error", message: "Forbidden key revocation" });
+      }
+
+      await db.collection("apiKeys").doc(keyId).delete();
+      res.json({ status: "success", message: "API key revoked successfully." });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
+
+  // --- User Custom Gemini AI Key Management ---
+  app.post("/api/v1/user/ai-key", authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { apiKey } = req.body;
+      if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+        return res.status(400).json({ status: "error", message: "A non-empty apiKey string is required." });
+      }
+
+      const cleanKey = apiKey.trim();
+      const encryptedKey = SecurityService.encryptSensitiveField(cleanKey);
+      const suffix = cleanKey.length >= 4 ? cleanKey.slice(-4) : cleanKey;
+
+      const db = getDb();
+      await db.collection("users").doc(authReq.user.uid).set({
+        geminiApiKeyEncrypted: encryptedKey,
+        hasCustomApiKey: true,
+        apiKeySuffix: suffix,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      res.json({
+        status: "success",
+        message: "Gemini API key encrypted and saved securely.",
+        hasCustomApiKey: true,
+        apiKeySuffix: suffix
+      });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
+
+  app.delete("/api/v1/user/ai-key", authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const db = getDb();
+      await db.collection("users").doc(authReq.user.uid).update({
+        geminiApiKeyEncrypted: admin.firestore.FieldValue.delete(),
+        geminiApiKey: admin.firestore.FieldValue.delete(),
+        hasCustomApiKey: false,
+        apiKeySuffix: admin.firestore.FieldValue.delete(),
+        updatedAt: new Date().toISOString()
+      });
+
+      res.json({
+        status: "success",
+        message: "Custom Gemini API key removed.",
+        hasCustomApiKey: false
+      });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
+
+  app.get("/api/v1/user/ai-key-status", authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const db = getDb();
+      const userDoc = await db.collection("users").doc(authReq.user.uid).get();
+      const data = userDoc.data();
+      const hasCustomApiKey = Boolean(data?.geminiApiKeyEncrypted || data?.geminiApiKey);
+      const apiKeySuffix = data?.apiKeySuffix || (data?.geminiApiKey ? data.geminiApiKey.slice(-4) : null);
+
+      res.json({
+        status: "success",
+        hasCustomApiKey,
+        apiKeySuffix
+      });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
 
   // --- Operations / New Modals Endpoints ---
   app.get("/api/v1/ecommerce", apiAuthenticate, async (req: express.Request, res: express.Response) => {
@@ -2399,22 +2643,8 @@ Developer Request: "${prompt}"
 
 Conduct a brilliant, deep, mathematically sound analysis. Address developer's query perfectly. Avoid generic corporate fluff. Always return the report styled with gorgeous markdown layout, clean bullet points, and code block representations if required.`;
 
-      const db = getDb();
-      let userApiKey = "";
-      try {
-        if ((req as AuthenticatedRequest).user?.uid) {
-           const userDoc = await db.collection("users").doc((req as AuthenticatedRequest).user.uid).get();
-           userApiKey = userDoc.data()?.geminiApiKey || "";
-        }
-      } catch (err: any) {
-        if (!err.message?.includes("PERMISSION_DENIED")) console.error("[Brain] User API Key DB fetch bypassed", err);
-      }
-
-      let isCustomKeyUsed = false;
-      const apiKey = userApiKey || process.env.GEMINI_API_KEY;
-      if (userApiKey && userApiKey === apiKey) {
-         isCustomKeyUsed = true;
-      }
+      const uid = (req as AuthenticatedRequest).user?.uid;
+      const { apiKey, isCustom: isCustomKeyUsed } = await resolveUserGeminiApiKey(uid);
 
       if (!apiKey) {
          throw new Error("GEMINI_API_KEY environment variable is missing, and no User API Key was provided in settings.");
@@ -2441,6 +2671,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       let baseWeight = totalTokens;
 
       try {
+        const db = getDb();
         const wsRef = db.collection("workspaces").doc(workspaceId);
         const wsDoc = await wsRef.get();
         if (wsDoc.exists) {
@@ -3595,11 +3826,14 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         netIncome: 0
       };
       accounts.forEach((acc: any) => {
-        if (acc.type === 'income' || acc.type === 'expense') {
-          pl[acc.type].accounts[acc.id] = { name: acc.name, balance: 0, parentId: acc.parentId };
+        if (acc.type === 'income' || acc.type === 'revenue') {
+          pl.income.accounts[acc.id] = { name: acc.name, balance: 0, parentId: acc.parentId };
+        } else if (acc.type === 'expense') {
+          pl.expense.accounts[acc.id] = { name: acc.name, balance: 0, parentId: acc.parentId };
         }
       });
       for (const tx of transactions) {
+        if (tx.status === 'void' || tx.status === 'voided') continue;
         if (tx.date < start || tx.date > end) continue;
         tx.lines?.forEach((line: any) => {
           if (pl.income.accounts[line.accountId]) {
@@ -3620,6 +3854,81 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
       if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
       sendError(res, "Internal Reporting Error", 500, error.message);
+    }
+  });
+
+  app.get("/api/reports/balance-sheet", authenticate, async (req: express.Request, res: express.Response) => {
+    const authReq = req as AuthenticatedRequest;
+    const result = ReportRangeSchema.safeParse(req.query);
+    if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
+    const { workspaceId, endDate } = result.data;
+    try {
+      const { accounts, transactions } = await getReportContext(authReq, workspaceId);
+      const end = endDate || "2099-12-31";
+
+      const balances: Record<string, number> = {};
+      accounts.forEach((acc: any) => {
+        balances[acc.id] = acc.openingBalanceCents || 0;
+      });
+
+      let netIncome = 0;
+
+      for (const tx of transactions) {
+        if (tx.status === 'void' || tx.status === 'voided') continue;
+        if (tx.date > end) continue;
+        tx.lines?.forEach((line: any) => {
+          if (balances[line.accountId] !== undefined) {
+            balances[line.accountId] += line.amountCents;
+          }
+          const acc = accounts.find((a: any) => a.id === line.accountId);
+          if (acc) {
+            if (acc.type === 'revenue' || acc.type === 'income') {
+              netIncome += (-line.amountCents);
+            } else if (acc.type === 'expense') {
+              netIncome -= line.amountCents;
+            }
+          }
+        });
+      }
+
+      const assets: Record<string, { name: string; balance: number; subtype?: string }> = {};
+      const liabilities: Record<string, { name: string; balance: number; subtype?: string }> = {};
+      const equity: Record<string, { name: string; balance: number; subtype?: string }> = {};
+
+      let totalAssets = 0;
+      let totalLiabilities = 0;
+      let totalEquity = 0;
+
+      accounts.forEach((acc: any) => {
+        const bal = balances[acc.id] || 0;
+        if (acc.type === 'asset') {
+          assets[acc.id] = { name: acc.name, balance: bal, subtype: acc.subtype };
+          totalAssets += bal;
+        } else if (acc.type === 'liability') {
+          const val = -bal;
+          liabilities[acc.id] = { name: acc.name, balance: val, subtype: acc.subtype };
+          totalLiabilities += val;
+        } else if (acc.type === 'equity') {
+          const val = -bal;
+          equity[acc.id] = { name: acc.name, balance: val, subtype: acc.subtype };
+          totalEquity += val;
+        }
+      });
+
+      totalEquity += netIncome;
+
+      res.json({
+        assets: { total: totalAssets, accounts: assets },
+        liabilities: { total: totalLiabilities, accounts: liabilities },
+        equity: { total: totalEquity, accounts: equity, currentPeriodNetIncome: netIncome },
+        totalAssets,
+        totalLiabilitiesAndEquity: totalLiabilities + totalEquity,
+        isBalanced: totalAssets === (totalLiabilities + totalEquity)
+      });
+    } catch (error: any) {
+      if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+      if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+      sendError(res, "Balance Sheet Failure", 500, error.message);
     }
   });
 
@@ -3692,6 +4001,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         };
       });
       for (const tx of transactions) {
+        if (tx.status === 'void' || tx.status === 'voided') continue;
         tx.lines?.forEach((line: any) => {
           if (trialBalance[line.accountId]) {
             if (line.amountCents > 0) trialBalance[line.accountId].debit += line.amountCents;

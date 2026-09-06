@@ -21,7 +21,11 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
     }
     const db = getFirestore();
     
-    const snapshot = await db.collectionGroup('invoices').where('paymentToken', '==', token).limit(1).get();
+    // Check top-level collection first, with collectionGroup fallback
+    let snapshot = await db.collection('invoices').where('paymentToken', '==', token).limit(1).get();
+    if (snapshot.empty) {
+      snapshot = await db.collectionGroup('invoices').where('paymentToken', '==', token).limit(1).get();
+    }
     
     if (snapshot.empty) {
       return res.status(404).json({ error: 'Invoice not found' });
@@ -30,6 +34,10 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
     const doc = snapshot.docs[0];
     const invoice = doc.data();
 
+    const lineTotal = Array.isArray(invoice.lines) 
+      ? invoice.lines.reduce((sum: number, l: any) => sum + (l.amountCents || (l.quantity || 1) * (l.unitPriceCents || 0)), 0)
+      : 0;
+
     res.json({
       invoice: {
         id: invoice.id || doc.id,
@@ -37,8 +45,8 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
         date: invoice.date,
         dueDate: invoice.dueDate,
         status: invoice.status,
-        amountCents: invoice.amountCents,
-        totalCents: invoice.totalCents,
+        amountCents: invoice.amountCents ?? lineTotal,
+        totalCents: invoice.totalCents ?? invoice.amountCents ?? lineTotal,
         currency: invoice.currency || 'USD',
         customerName: invoice.customerName,
         paymentToken: invoice.paymentToken,
@@ -65,7 +73,10 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
     }
     const db = getFirestore();
     
-    const snapshot = await db.collectionGroup('invoices').where('paymentToken', '==', token).limit(1).get();
+    let snapshot = await db.collection('invoices').where('paymentToken', '==', token).limit(1).get();
+    if (snapshot.empty) {
+      snapshot = await db.collectionGroup('invoices').where('paymentToken', '==', token).limit(1).get();
+    }
     
     if (snapshot.empty) {
       return res.status(404).json({ error: 'Invoice not found' });
@@ -74,7 +85,7 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
     const doc = snapshot.docs[0];
     const invoice = doc.data();
 
-    const payableStatuses = ['sent', 'unpaid', 'pending', 'overdue'];
+    const payableStatuses = ['sent', 'unpaid', 'pending', 'overdue', 'approved', 'invoiced', 'draft'];
     if (!payableStatuses.includes(invoice.status) || invoice.isLocked === true) {
       return res.status(400).json({ 
         error: `Invoice cannot be paid. Current status: ${invoice.status || 'unknown'}${invoice.isLocked ? ' (locked)' : ''}` 
@@ -82,7 +93,14 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
     }
 
     const stripe = getStripe();
-    const amount = invoice.totalCents || invoice.amountCents;
+    const lineTotal = Array.isArray(invoice.lines)
+      ? invoice.lines.reduce((sum: number, l: any) => sum + (l.amountCents || (l.quantity || 1) * (l.unitPriceCents || 0)), 0)
+      : 0;
+    const amount = invoice.totalCents || invoice.amountCents || lineTotal;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Invoice total amount is invalid or zero.' });
+    }
 
     // Use configured application URL to prevent host-header poisoning
     const hostHeader = (req.get('host') || 'localhost:3000').replace(/[^a-zA-Z0-9.:-]/g, '');
@@ -96,8 +114,8 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
           price_data: {
             currency: (invoice.currency || 'usd').toLowerCase(),
             product_data: {
-              name: `Invoice ${invoice.number}`,
-              description: `Payment for ${invoice.customerName}`
+              name: `Invoice ${invoice.number || 'Payment'}`,
+              description: `Payment for ${invoice.customerName || 'Services'}`
             },
             unit_amount: amount,
           },

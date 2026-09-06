@@ -29,7 +29,16 @@ import { cn, getLocalDateISO } from '../../lib/utils';
 import { db, getIdToken } from '../../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
-const AVAILABLE_SCOPES: any[] = [];
+const AVAILABLE_SCOPES = [
+  { id: 'read:transactions', label: 'Read Transactions', desc: 'Allows querying and reading financial ledger transactions and journal entries.' },
+  { id: 'write:transactions', label: 'Write Transactions', desc: 'Allows creating, modifying, and voiding journal entries.' },
+  { id: 'read:projects', label: 'Read Projects', desc: 'Allows querying project codes, tags, and cost centers.' },
+  { id: 'write:projects', label: 'Write Projects', desc: 'Allows creating and managing project codes and dimensional tags.' },
+  { id: 'read:ledger', label: 'Read Chart of Accounts', desc: 'Allows reading account hierarchies, balances, and classifications.' },
+  { id: 'write:ledger', label: 'Write Chart of Accounts', desc: 'Allows creating and structuring accounts and ledger rules.' },
+  { id: 'read:workspaces', label: 'Read Workspaces', desc: 'Allows accessing workspace metadata, tax profile, and currency settings.' },
+  { id: 'brain:analyze', label: 'Brain / AI Analysis', desc: 'Allows calling Bayesian classification and AI analysis endpoints.' }
+];
 
 export default function ApiHub() {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);

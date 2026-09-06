@@ -52,7 +52,18 @@ export default function AISettings() {
     }
   }, [currentWorkspaceId, workspaces]);
 
-  const MODEL_OPTIONS: any[] = [];
+  const MODEL_OPTIONS = [
+    {
+      name: 'Gemini 2.5 Flash',
+      tier: 'Production Default',
+      desc: 'Optimized high-throughput multimodal intelligence for fast ledger categorization, pattern extraction, and receipt parsing.'
+    },
+    {
+      name: 'Gemini 2.5 Pro',
+      tier: 'Deep Reasoning',
+      desc: 'Advanced reasoning model for complex financial tax profiles, multi-entity consolidation, and strategic audit simulations.'
+    }
+  ];
 
   const handleSelectModel = (modelName: string) => {
     setSelectedModel(modelName);

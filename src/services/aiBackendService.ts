@@ -54,13 +54,10 @@ export class AIBackendService {
   private getModel(payload: any): string {
     const selectedModel = payload?.selectedModel || '';
     const lower = selectedModel.toLowerCase();
-    if (lower.includes('pro') || lower.includes('3.1-pro')) {
-      return 'gemini-3.1-pro-preview';
+    if (lower.includes('pro')) {
+      return 'gemini-2.5-pro';
     }
-    if (lower.includes('lite') || lower.includes('3.1-flash-lite')) {
-      return 'gemini-3.1-flash-lite';
-    }
-    return 'gemini-3.0-flash';
+    return 'gemini-2.5-flash';
   }
 
   /**
