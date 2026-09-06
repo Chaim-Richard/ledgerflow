@@ -237,14 +237,14 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
                 value={resolveAccountName(accounts, tx.lines?.[0]?.accountId, tx.lines?.[0]?.accountName)}
                 type="category"
                 onSave={(v) => {
-                  const targetAcc = accounts.find(a => a.name === v || a.id === v) || { id: tx.lines?.[0]?.accountId || 'unassigned', name: v };
+                  const targetAcc = accounts.find(a => a.name === v || a.id === v) || { id: tx.lines?.[0]?.accountId || '', name: v };
                   const bankAcc = accounts.find(a => isCashAccount(a)) || accounts[0];
                   const updatedLines = tx.lines && tx.lines.length >= 2 ? [
                     { ...tx.lines[0], accountId: targetAcc.id, accountName: targetAcc.name },
                     ...tx.lines.slice(1)
                   ] : [
                     { accountId: targetAcc.id, accountName: targetAcc.name, amountCents: Math.abs(tx.totalAmountCents) },
-                    { accountId: bankAcc?.id || '1010', accountName: bankAcc?.name || 'Main Checking', amountCents: -Math.abs(tx.totalAmountCents) }
+                    { accountId: bankAcc?.id || accounts[0]?.id || '', accountName: bankAcc?.name || 'Main Checking', amountCents: -Math.abs(tx.totalAmountCents) }
                   ];
                   data.onUpdate?.(tx.id, { lines: updatedLines });
                   data.setEditingCell(null);
@@ -650,7 +650,7 @@ export default function TransactionGrid() {
           ...tx.lines.slice(1)
         ] : [
           { accountId: targetAcc.id, accountName: targetAcc.name, amountCents: Math.abs(tx.totalAmountCents), dimensions: suggestion.dimensions || undefined },
-          { accountId: bankAcc?.id || '1010', accountName: bankAcc?.name || 'Main Checking', amountCents: -Math.abs(tx.totalAmountCents) }
+          { accountId: bankAcc?.id || accounts[0]?.id || '', accountName: bankAcc?.name || 'Main Checking', amountCents: -Math.abs(tx.totalAmountCents) }
         ];
         onUpdate?.(id, { lines: updatedLines });
         count++;

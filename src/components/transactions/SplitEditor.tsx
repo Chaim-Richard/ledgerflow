@@ -98,7 +98,7 @@ export default function SplitEditor({
                         value={resolveAccountName(accounts, line.accountId, line.accountName)}
                         onChange={(e) => {
                           const acc = accounts.find(a => a.name === e.target.value || a.id === e.target.value);
-                          updateLine(idx, { accountId: acc ? acc.id : 'unassigned', accountName: acc ? acc.name : e.target.value });
+                          updateLine(idx, { accountId: acc ? acc.id : '', accountName: acc ? acc.name : e.target.value });
                         }}
                         placeholder="Type or select account"
                         className="bg-transparent border-none outline-none font-bold text-sm text-[var(--text)] focus:text-indigo-600 transition-colors"

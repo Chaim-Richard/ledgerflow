@@ -51,7 +51,7 @@ export const MONTE_CARLO_ALGO: AlgorithmDefinition = {
       const dateKey = t.date.split('T')[0];
       if (!dailyNet[dateKey]) dailyNet[dateKey] = 0;
       
-      // Calculate net impact of transaction. Usually totalAmountCents > 0 is inflow if we assume it's revenue, but let's be careful.
+      // Net impact is computed via sum of lines where account is Asset/Bank
       // A more robust way: sum of lines where account is Asset/Bank
       let netImpact = 0;
       t.lines.forEach(l => {

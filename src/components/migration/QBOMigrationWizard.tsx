@@ -418,7 +418,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
         const txList: any[] = [];
 
         for (const row of parsedRows) {
-          const primaryAccId = createdAccountMap[row.account] || cashAccount?.id || 'acc-cash';
+          const primaryAccId = createdAccountMap[row.account] || cashAccount?.id || updatedAccounts[0]?.id || '';
           const primaryAcc = updatedAccounts.find(a => a.id === primaryAccId);
           const primaryAccName = primaryAcc?.name || row.account;
 

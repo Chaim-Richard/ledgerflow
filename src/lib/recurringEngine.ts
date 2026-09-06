@@ -65,9 +65,9 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
       
       let lines = template.lines;
       if (!lines || lines.length === 0) {
-        const primaryAccountId = (template as any).accountId || 'uncategorized';
+        const primaryAccountId = (template as any).accountId || '';
         const primaryAccountName = (template as any).accountName || 'Operating Expense';
-        const offsetAccountId = (template as any).offsetAccountId || 'uncategorized';
+        const offsetAccountId = (template as any).offsetAccountId || '';
         const offsetAccountName = (template as any).offsetAccountName || 'Operating Cash';
 
         lines = [

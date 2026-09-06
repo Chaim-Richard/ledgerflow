@@ -228,8 +228,9 @@ export function useTransactionActions() {
 
             if (targetCategoryResult) {
               const account = accountsByName.get(targetCategoryResult.accountName) || accountsById.get(targetCategoryResult.accountName);
+              const fallbackAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || '';
               lines = [{
-                accountId: account?.id || 'uncategorized',
+                accountId: account?.id || fallbackAccId,
                 accountName: account?.name || targetCategoryResult.accountName,
                 amountCents: tx.amountCents || tx.totalAmountCents || 0,
                 tags: targetCategoryResult.tags || (isSmartTransfer ? ['Auto-Transfer'] : []),
@@ -797,22 +798,26 @@ export function useTransactionActions() {
           taxAmountCents: data.taxAmountCents || 0,
           isCleared: true,
           clearedAt: new Date().toISOString(),
-          lines: data.lines.map((l: any) => ({
-            accountId: l.category ? (accounts.find(a => a.name === l.category)?.id || 'uncategorized') : 'uncategorized',
-            accountName: l.category || 'Uncategorized',
-            amountCents: l.amountCents,
-            description: l.description,
-            quantity: l.quantity,
-            unitPriceCents: l.unitPriceCents,
-            tags: l.tags
-          }))
+          lines: data.lines.map((l: any) => {
+            const fallbackExpenseAcc = accounts.find(a => a.type === 'expense') || accounts[0];
+            return {
+              accountId: l.category ? (accounts.find(a => a.name === l.category)?.id || fallbackExpenseAcc?.id || '') : (fallbackExpenseAcc?.id || ''),
+              accountName: l.category || 'Uncategorized',
+              amountCents: l.amountCents,
+              description: l.description,
+              quantity: l.quantity,
+              unitPriceCents: l.unitPriceCents,
+              tags: l.tags
+            };
+          })
         });
         toast.success(`${file.name} matched and verified with ${data.lines.length} items`, { id: loader });
       } else {
+        const fallbackExpenseAcc = accounts.find(a => a.type === 'expense') || accounts[0];
         const lines = data.lines.map((l: any) => {
           const acc = accounts.find(a => a.name === (l.category || data.categorySuggestion));
           return {
-            accountId: acc?.id || 'uncategorized',
+            accountId: acc?.id || fallbackExpenseAcc?.id || '',
             accountName: acc?.name || l.category || data.categorySuggestion || 'Uncategorized',
             amountCents: l.amountCents,
             description: l.description,

@@ -143,4 +143,20 @@ export function isInflow(t: Transaction, accounts?: ChartAccount[] | Map<string,
   return false;
 }
 
+/**
+ * Predicate to determine if an invoice is open/unpaid
+ */
+export function isOpenInvoice(item: any): boolean {
+  if (!item) return false;
+  return item.status !== 'paid' && item.status !== 'void' && item.status !== 'draft' && item.status !== 'rejected';
+}
+
+/**
+ * Predicate to determine if a bill is open/unpaid
+ */
+export function isOpenBill(item: any): boolean {
+  if (!item) return false;
+  return item.status !== 'paid' && item.status !== 'void' && item.status !== 'draft' && item.status !== 'rejected';
+}
+
 

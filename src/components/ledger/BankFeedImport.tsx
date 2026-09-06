@@ -199,10 +199,10 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
             });
           } else {
             // Put it into Manual Review
-            const uncatAcc = accounts.find(a => a.name === 'Uncategorized');
+            const uncatAcc = accounts.find(a => a.name === 'Uncategorized') || accounts.find(a => a.type === 'expense') || accounts[0];
             aiMapped.push({
               id: t.id,
-              accountId: uncatAcc?.id || 'unassigned',
+              accountId: uncatAcc?.id || '',
               category: uncatAcc?.name || 'Uncategorized',
               confidence: 0,
               matchSource: dbg.layer || 'Classification Insufficient - Manual Review',
@@ -235,7 +235,8 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
     const toImport = mappedTransactions
       .filter((_, idx) => selectedIndices.has(idx))
       .map(t => {
-        const accountId = t.accountId || 'uncategorized';
+        const fallbackAcc = accounts.find(a => a.name === 'Uncategorized') || accounts.find(a => a.type === 'expense') || accounts[0];
+        const accountId = t.accountId || fallbackAcc?.id || '';
         const account = accounts.find(a => a.id === accountId);
         
         return {
