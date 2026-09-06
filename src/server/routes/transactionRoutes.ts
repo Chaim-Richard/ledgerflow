@@ -190,7 +190,8 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
 transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
   try {
     const { id } = req.params;
-    let { transaction, partialUpdate } = req.body;
+    const { partialUpdate } = req.body;
+    let { transaction } = req.body;
     const user = (req as any).user;
     const db = getFirestore();
 
@@ -461,18 +462,73 @@ transactionRouter.post('/batch', async (req, res) => {
 transactionRouter.post('/reconcile', async (req, res) => {
   try {
      const { workspaceId, operations } = req.body;
+     if (!workspaceId || !Array.isArray(operations) || operations.length === 0) {
+       return res.status(400).json({ error: 'Missing workspaceId or operations' });
+     }
+     if (operations.length > 250) {
+       return res.status(400).json({ error: 'Operations batch exceeds 250 operations limit' });
+     }
      const user = (req as any).user;
      const db = getFirestore();
      const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
+     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+       return res.status(403).json({ error: 'Not a member' });
+     }
+     const wsData = wsDoc.data();
      
      await db.runTransaction(async (t: any) => {
         for (const op of operations) {
-          if (op.type === 'updateBankLine') t.update(db.collection('bankLines').doc(op.id), op.data);
-          if (op.type === 'updateTransaction') t.update(db.collection('transactions').doc(op.id), op.data);
-          if (op.type === 'createTransaction') {
-             DoubleEntryValidator.validateJournalEntry(op.data);
-             t.set(db.collection('transactions').doc(op.id), op.data);
+          if (!op.id || typeof op.id !== 'string') {
+            throw new Error('Invalid operation ID');
+          }
+          if (op.type === 'updateBankLine') {
+            const lineRef = db.collection('bankLines').doc(op.id);
+            const lineSnap = await t.get(lineRef);
+            if (!lineSnap.exists || lineSnap.data()?.workspaceId !== workspaceId) {
+              throw new Error(`Bank line ${op.id} does not belong to authorized workspace`);
+            }
+            const safeData = { ...op.data };
+            delete safeData.workspaceId;
+            t.update(lineRef, { ...safeData, updatedAt: FieldValue.serverTimestamp() });
+          } else if (op.type === 'updateTransaction') {
+            const txRef = db.collection('transactions').doc(op.id);
+            const txSnap = await t.get(txRef);
+            if (!txSnap.exists || txSnap.data()?.workspaceId !== workspaceId) {
+              throw new Error(`Transaction ${op.id} does not belong to authorized workspace`);
+            }
+            // Check period lock
+            if (wsData?.lockDate) {
+              if (txSnap.data()?.date <= wsData.lockDate) {
+                throw new Error(`Cannot modify transaction in locked period`);
+              }
+              if (op.data?.date && op.data.date <= wsData.lockDate) {
+                throw new Error(`Cannot move transaction into locked period`);
+              }
+            }
+            const safeData = { ...op.data };
+            delete safeData.workspaceId;
+            t.update(txRef, { ...safeData, updatedAt: FieldValue.serverTimestamp() });
+          } else if (op.type === 'createTransaction') {
+            const txRef = db.collection('transactions').doc(op.id);
+            const txSnap = await t.get(txRef);
+            if (txSnap.exists) {
+              throw new Error(`Transaction ${op.id} already exists`);
+            }
+            if (wsData?.lockDate && op.data?.date <= wsData.lockDate) {
+              throw new Error(`Cannot create transaction in locked period`);
+            }
+            const payload = {
+              ...op.data,
+              id: op.id,
+              workspaceId,
+              uid: user.uid,
+              createdAt: FieldValue.serverTimestamp(),
+              updatedAt: FieldValue.serverTimestamp()
+            };
+            DoubleEntryValidator.validateJournalEntry(payload);
+            t.set(txRef, payload);
+          } else {
+            throw new Error(`Unsupported operation type: ${op.type}`);
           }
         }
      });
@@ -544,14 +600,32 @@ transactionRouter.post('/reconciliation/match', async (req, res) => {
 transactionRouter.post('/reconciliation/clear', async (req, res) => {
   try {
     const { workspaceId, transactionIds } = req.body;
+    if (!workspaceId || !Array.isArray(transactionIds) || transactionIds.length === 0) {
+      return res.status(400).json({ error: "Missing workspaceId or transactionIds" });
+    }
+    if (transactionIds.length > 500) {
+      return res.status(400).json({ error: "Batch size exceeds limit of 500 items" });
+    }
     const user = (req as any).user;
     const db = getFirestore();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
+    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+
+    // Verify all transactions belong to this workspace to prevent cross-tenant IDOR tampering
+    const refs = transactionIds.map((id: string) => db.collection('transactions').doc(id));
+    const snaps = await db.getAll(...refs);
 
     const batch = db.batch();
-    for (const id of transactionIds) {
-      batch.update(db.collection('transactions').doc(id), {
+    for (const snap of snaps) {
+      if (!snap.exists) {
+        return res.status(404).json({ error: `Transaction ${snap.id} not found` });
+      }
+      if (snap.data()?.workspaceId !== workspaceId) {
+        return res.status(403).json({ error: `Transaction ${snap.id} does not belong to authorized workspace` });
+      }
+      batch.update(snap.ref, {
         isCleared: true,
         clearedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp()

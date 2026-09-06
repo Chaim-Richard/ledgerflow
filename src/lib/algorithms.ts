@@ -1400,6 +1400,30 @@ export class BayesianClassifier {
        return;
     }
     
+    // Train the exact category
+    this.trainSingle(description, category, weight);
+
+    // Deep / hierarchical labeling propagation:
+    // If category has hierarchical delimiters ('>', '/', or ':'), also train ancestor tiers with dampened weight
+    // so the classifier can make accurate multi-dimensional and parent inferences
+    let segments: string[] = [];
+    if (category.includes('>')) segments = category.split('>').map(s => s.trim()).filter(Boolean);
+    else if (category.includes('/')) segments = category.split('/').map(s => s.trim()).filter(Boolean);
+    else if (category.includes(':')) segments = category.split(':').map(s => s.trim()).filter(Boolean);
+
+    if (segments.length > 1) {
+      let cumulative = segments[0];
+      const delimiter = category.includes('>') ? ' > ' : (category.includes(':') ? ':' : '/');
+      for (let i = 1; i < segments.length; i++) {
+        // Train intermediate ancestor (e.g. "Marketing / Digital" before "Marketing / Digital / PPC")
+        const ancestorWeight = weight * (0.4 / i);
+        this.trainSingle(description, cumulative, ancestorWeight);
+        cumulative += delimiter + segments[i];
+      }
+    }
+  }
+
+  private trainSingle(description: string, category: string, weight: number) {
     const features = this.tokenizeAndExtractFeatures(description);
     this.categoryCounts[category] = (this.categoryCounts[category] || 0) + weight;
     this.totalDocuments += weight;
@@ -1488,6 +1512,42 @@ export class BayesianClassifier {
     }
 
     return { category: bestCategory, confidence: 0.995 };
+  }
+
+  /**
+   * Classifies input text into a deep multi-dimensional hierarchical label.
+   * Returns root category, nested segments, parent path, and full hierarchical category.
+   */
+  classifyHierarchical(description: string): { 
+    category: string; 
+    confidence: number; 
+    segments: string[]; 
+    rootCategory: string; 
+    depth: number;
+    parentPath: string | null;
+  } | null {
+    const res = this.classify(description);
+    if (!res) return null;
+
+    const cat = res.category;
+    let segments: string[];
+    if (cat.includes('>')) segments = cat.split('>').map(s => s.trim()).filter(Boolean);
+    else if (cat.includes('/')) segments = cat.split('/').map(s => s.trim()).filter(Boolean);
+    else if (cat.includes(':')) segments = cat.split(':').map(s => s.trim()).filter(Boolean);
+    else segments = [cat];
+
+    const rootCategory = segments[0] || cat;
+    const depth = segments.length;
+    const parentPath = depth > 1 ? segments.slice(0, depth - 1).join('/') : null;
+
+    return {
+      category: res.category,
+      confidence: res.confidence,
+      segments,
+      rootCategory,
+      depth,
+      parentPath
+    };
   }
 
   /**

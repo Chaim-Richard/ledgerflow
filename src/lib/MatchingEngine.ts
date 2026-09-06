@@ -1,5 +1,6 @@
 import { AhoCorasick, lexicalSimilarity, optimizedTransactionSimilarity, BayesianClassifier, SpellChecker } from './algorithms';
 import { Transaction, AutoRule, DimensionNode } from '../types';
+import { extractMultiDimensionalLabels, expandDeepLabels, decomposeHierarchicalLabel } from './dimensionUtils';
 
 /**
  * Deterministic Entity Resolution & Matching Engine
@@ -79,19 +80,40 @@ export class MatchingEngine {
 
   /**
    * Resolves category based on description patterns with multi-layer fallback.
+   * Fully supports deep and multi-dimensional labeling (nested tags, coordinate paths, sub-labels).
    */
   resolveCategory(description: string): { accountName: string, tags?: string[], dimensions?: Record<string, string> } | null {
     const lowerDesc = (description || '').toLowerCase().trim();
     if (!lowerDesc) return null;
 
-    const isClient = typeof window !== 'undefined';
-    let baseDimensions: Record<string, string> | undefined = undefined;
+    // Extract deep multi-dimensional coordinates and tags from description (e.g. [Project:Apollo/Phase1] or #dept/eng)
+    const extractedLabels = extractMultiDimensionalLabels(description);
+    const baseDimensions: Record<string, string> = { ...extractedLabels.dimensions };
+    const baseTags: string[] = [...extractedLabels.tags];
+
+    const packageResult = (
+      accountName: string, 
+      extraTags?: string[], 
+      extraDims?: Record<string, string>
+    ) => {
+      const dec = decomposeHierarchicalLabel(accountName);
+      if (dec.depth > 1) {
+        baseDimensions['category'] = dec.fullPath;
+        baseTags.push(dec.fullPath);
+      }
+      const combinedDims = { ...baseDimensions, ...(extraDims || {}) };
+      const combinedTags = expandDeepLabels([...baseTags, ...(extraTags || [])]);
+      return {
+        accountName,
+        tags: combinedTags.length > 0 ? combinedTags : undefined,
+        dimensions: Object.keys(combinedDims).length > 0 ? combinedDims : undefined
+      };
+    };
 
     // LAYER 0.5: Dimension Node resolution
     if (this.dimAc) {
       const dimMatches = this.dimAc.search(description);
       if (dimMatches.length > 0) {
-        baseDimensions = {};
         for (const matchId of dimMatches) {
           const node = this.dimensionNodes.find(n => n.id === matchId);
           if (node && !baseDimensions[node.dimensionId]) {
@@ -107,16 +129,21 @@ export class MatchingEngine {
       if (matches.length > 0) {
         const matchId = matches[0];
         const rule = this.rules.find(r => r.id === matchId);
-        if (rule?.action.targetCategory) return { 
-          accountName: rule.action.targetCategory,
-          dimensions: { ...baseDimensions, ...(rule.action.targetDimensions || {}) }
-        };
+        if (rule?.action.targetCategory) {
+          return packageResult(
+            rule.action.targetCategory,
+            rule.action.targetTags,
+            rule.action.targetDimensions
+          );
+        }
       }
     }
 
     // LAYER 2: Analytical Memory (Exact Match)
     const exactCache = this.analyticalCache[lowerDesc];
-    if (exactCache) return { accountName: exactCache.accountName, tags: exactCache.tags, dimensions: baseDimensions };
+    if (exactCache) {
+      return packageResult(exactCache.accountName, exactCache.tags, exactCache.dimensions);
+    }
 
     // LAYER 3: Analytical Memory (Partial Word Match) - Pick longest matching pattern
     const partialMatches = Object.entries(this.analyticalCache)
@@ -124,12 +151,12 @@ export class MatchingEngine {
       .sort((a, b) => b[0].length - a[0].length);
     if (partialMatches.length > 0) {
       const best = partialMatches[0][1];
-      return { accountName: best.accountName, tags: best.tags, dimensions: baseDimensions };
+      return packageResult(best.accountName, best.tags, best.dimensions);
     }
     
     // LAYER 4: Analytical Similarity (Jaro-Winkler + Semantic Overlap)
     if (lowerDesc.length > 3) {
-      let bestFuzzy = { accountName: null as string | null, tags: [] as string[] | undefined, score: 0 };
+      let bestFuzzy = { accountName: null as string | null, tags: [] as string[] | undefined, dimensions: undefined as Record<string, string> | undefined, score: 0 };
       const descWords = new Set(lowerDesc.split(/\s+/).filter(w => w.length > 2));
 
       for (const [key, val] of Object.entries(this.analyticalCache)) {
@@ -143,18 +170,20 @@ export class MatchingEngine {
         const score = (similarity * 0.7) + (overlapScore * 0.3);
 
         if (score > this.threshold && score > bestFuzzy.score) {
-          bestFuzzy = { accountName: val.accountName, tags: val.tags, score };
+          bestFuzzy = { accountName: val.accountName, tags: val.tags, dimensions: val.dimensions, score };
         }
       }
-      if (bestFuzzy.accountName) return { accountName: bestFuzzy.accountName, tags: bestFuzzy.tags, dimensions: baseDimensions };
+      if (bestFuzzy.accountName) {
+        return packageResult(bestFuzzy.accountName, bestFuzzy.tags, bestFuzzy.dimensions);
+      }
     }
 
-    // LAYER 5: Statistical Inference (Probabilistic Models)
+    // LAYER 5: Statistical Inference (Probabilistic Models with Hierarchical Deep Categories)
     if (lowerDesc.length > 5) {
-      const prediction = this.bayes.classify(lowerDesc);
+      const prediction = this.bayes.classifyHierarchical(lowerDesc);
       // Use configured threshold
       if (prediction && prediction.confidence > this.threshold) {
-        return { accountName: prediction.category, dimensions: baseDimensions };
+        return packageResult(prediction.category);
       }
     }
 
@@ -162,11 +191,11 @@ export class MatchingEngine {
     const typoCorrection = this.spellChecker.findClosest(lowerDesc, 2);
     if (typoCorrection) {
       const match = this.analyticalCache[typoCorrection];
-      if (match) return { accountName: match.accountName, tags: match.tags, dimensions: baseDimensions };
+      if (match) return packageResult(match.accountName, match.tags, match.dimensions);
     }
 
     // LAYER 7: Fail-safe to Manual Review
-    return { accountName: 'Manual Review', tags: ['UNRESOLVED_ENTRY'], dimensions: baseDimensions };
+    return packageResult('Manual Review', ['UNRESOLVED_ENTRY']);
   }
 
   /**
@@ -177,13 +206,16 @@ export class MatchingEngine {
     if (!lowerDesc) return { accountName: 'Manual Review', layer: 'Empty Input' };
 
     let dimensionReason = '';
-    let baseDimensions: Record<string, string> | undefined = undefined;
+    const extractedLabels = extractMultiDimensionalLabels(description);
+    const baseDimensions: Record<string, string> = { ...extractedLabels.dimensions };
+    if (extractedLabels.deepPaths.length > 0) {
+      dimensionReason = ` (Deep Labels: ${extractedLabels.deepPaths.join(', ')})`;
+    }
     
     // LAYER 0.5: Dimension Node resolution
     if (this.dimAc) {
       const dimMatches = this.dimAc.search(description);
       if (dimMatches.length > 0) {
-        baseDimensions = {};
         const foundAliases: string[] = [];
         for (const matchId of dimMatches) {
           const node = this.dimensionNodes.find(n => n.id === matchId);
@@ -197,10 +229,24 @@ export class MatchingEngine {
           }
         }
         if (foundAliases.length > 0) {
-          dimensionReason = ` (Matched alias: ${foundAliases.join(', ')})`;
+          dimensionReason += ` (Matched alias: ${foundAliases.join(', ')})`;
         }
       }
     }
+
+    const packageDebug = (accountName: string, layer: string, confidence?: number, extraDims?: Record<string, string>) => {
+      const dec = decomposeHierarchicalLabel(accountName);
+      if (dec.depth > 1) {
+        baseDimensions['category'] = dec.fullPath;
+      }
+      const combined = { ...baseDimensions, ...(extraDims || {}) };
+      return {
+        accountName,
+        layer: layer + dimensionReason,
+        confidence,
+        dimensions: Object.keys(combined).length > 0 ? combined : undefined
+      };
+    };
 
     // LAYER 1: Hardened Deterministic Rules (Aho-Corasick Trie) - O(N)
     if (this.ac) {
@@ -210,7 +256,7 @@ export class MatchingEngine {
         const rule = this.rules.find(r => r.id === matchId);
         if (rule?.action.targetCategory) {
           const ruleName = rule.condition.vendor || rule.condition.descriptionContains || rule.id;
-          return { accountName: rule.action.targetCategory, layer: 'Rule: ' + ruleName + dimensionReason, confidence: 1.0, dimensions: { ...baseDimensions, ...(rule.action.targetDimensions || {}) } };
+          return packageDebug(rule.action.targetCategory, 'Rule: ' + ruleName, 1.0, rule.action.targetDimensions);
         }
       }
     }
@@ -218,7 +264,7 @@ export class MatchingEngine {
     // LAYER 2: Analytical Memory (Exact Match)
     const exactCache = this.analyticalCache[lowerDesc];
     if (exactCache) {
-      return { accountName: exactCache.accountName, layer: 'Exact Cache Pattern Match' + dimensionReason, confidence: 1.0, dimensions: baseDimensions };
+      return packageDebug(exactCache.accountName, 'Exact Cache Pattern Match', 1.0, exactCache.dimensions);
     }
 
     // LAYER 3: Analytical Memory (Partial Word Match) - Pick longest matching pattern
@@ -227,12 +273,12 @@ export class MatchingEngine {
       .sort((a, b) => b[0].length - a[0].length);
     if (partialMatches.length > 0) {
       const best = partialMatches[0][1];
-      return { accountName: best.accountName, layer: 'Partial Cache Pattern' + dimensionReason, confidence: 0.95, dimensions: baseDimensions };
+      return packageDebug(best.accountName, 'Partial Cache Pattern', 0.95, best.dimensions);
     }
     
     // LAYER 4: Analytical Similarity (Jaro-Winkler + Semantic Overlap)
     if (lowerDesc.length > 3) {
-      let bestFuzzy = { accountName: null as string | null, score: 0 };
+      let bestFuzzy = { accountName: null as string | null, dimensions: undefined as Record<string, string> | undefined, score: 0 };
       const descWords = new Set(lowerDesc.split(/\s+/).filter(w => w.length > 2));
 
       for (const [key, val] of Object.entries(this.analyticalCache)) {
@@ -246,24 +292,19 @@ export class MatchingEngine {
         const score = (similarity * 0.7) + (overlapScore * 0.3);
 
         if (score > this.threshold && score > bestFuzzy.score) {
-          bestFuzzy = { accountName: val.accountName, score };
+          bestFuzzy = { accountName: val.accountName, dimensions: val.dimensions, score };
         }
       }
       if (bestFuzzy.accountName) {
-        return { accountName: bestFuzzy.accountName, layer: 'Fuzzy Jaro-Winkler Metric' + dimensionReason, confidence: Number(bestFuzzy.score.toFixed(2)), dimensions: baseDimensions };
+        return packageDebug(bestFuzzy.accountName, 'Fuzzy Jaro-Winkler Metric', Number(bestFuzzy.score.toFixed(2)), bestFuzzy.dimensions);
       }
     }
 
-    // LAYER 5: Statistical Inference (Probabilistic Models)
+    // LAYER 5: Statistical Inference (Probabilistic Models with Hierarchical Deep Categories)
     if (lowerDesc.length > 5) {
-      const prediction = this.bayes.classify(lowerDesc);
+      const prediction = this.bayes.classifyHierarchical(lowerDesc);
       if (prediction && prediction.confidence > this.threshold) {
-        return { 
-          accountName: prediction.category, 
-          layer: 'Bayesian Auto-Learning Model' + dimensionReason, 
-          confidence: Number(prediction.confidence.toFixed(2)),
-          dimensions: baseDimensions
-        };
+        return packageDebug(prediction.category, 'Bayesian Auto-Learning Model', Number(prediction.confidence.toFixed(2)));
       }
     }
 
@@ -272,11 +313,11 @@ export class MatchingEngine {
     if (typoCorrection) {
       const match = this.analyticalCache[typoCorrection];
       if (match) {
-        return { accountName: match.accountName, layer: `Typo Correction: ${typoCorrection}` + dimensionReason, confidence: 0.8, dimensions: baseDimensions };
+        return packageDebug(match.accountName, `Typo Correction: ${typoCorrection}`, 0.8, match.dimensions);
       }
     }
 
-    return { accountName: 'Manual Review', layer: 'Fallback Manual Intervention' + dimensionReason, dimensions: baseDimensions };
+    return packageDebug('Manual Review', 'Fallback Manual Intervention');
   }
 
   /**

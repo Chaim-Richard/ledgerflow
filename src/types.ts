@@ -434,6 +434,7 @@ export interface Budget {
 export interface AutoRule {
   id: string;
   uid: string;
+  workspaceId?: string;
   condition: {
     vendor?: string;
     project?: string;
@@ -450,10 +451,13 @@ export interface AutoRule {
     targetClass?: string;
     targetLocation?: string;
     targetDimensions?: Record<string, string>;
+    targetTags?: string[];
     flagForReview?: boolean;
   };
   confidence: number; // 0 to 1
   isHardened: boolean; // True if user confirmed
+  priority?: number;
+  isActive?: boolean;
   createdAt: string;
 }
 

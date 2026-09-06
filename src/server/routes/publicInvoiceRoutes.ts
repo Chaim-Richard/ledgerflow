@@ -85,7 +85,7 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
     const doc = snapshot.docs[0];
     const invoice = doc.data();
 
-    const payableStatuses = ['sent', 'unpaid', 'pending', 'overdue', 'approved', 'invoiced', 'draft'];
+    const payableStatuses = ['sent', 'unpaid', 'pending', 'overdue', 'approved', 'invoiced'];
     if (!payableStatuses.includes(invoice.status) || invoice.isLocked === true) {
       return res.status(400).json({ 
         error: `Invoice cannot be paid. Current status: ${invoice.status || 'unknown'}${invoice.isLocked ? ' (locked)' : ''}` 

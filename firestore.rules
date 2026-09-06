@@ -95,7 +95,9 @@ service cloud.firestore {
     match /transactions/{transactionId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") && isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
+        isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date) &&
+        isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date);
       allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId) && isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date);
     }
 
@@ -104,6 +106,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(accountId) &&
         affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "currency", "balanceCents", "openingBalanceCents", "asOfDate", "parentId", "projectAllocations", "isContra", "isArchived", "archived", "createdAt", "updatedAt", "isSystem", "classification"]);
       allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
+        isUnchanged("balanceCents") && isUnchanged("openingBalanceCents") && isUnchanged("isSystem") &&
         affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "currency", "balanceCents", "openingBalanceCents", "asOfDate", "parentId", "projectAllocations", "isContra", "isArchived", "archived", "createdAt", "updatedAt", "isSystem", "classification"]);
       allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
     }

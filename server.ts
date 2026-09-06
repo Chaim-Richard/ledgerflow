@@ -530,9 +530,31 @@ async function startServer() {
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
 
+      const eventId = event.id;
+      const db = getFirestore();
+      const eventRef = db.collection('stripeProcessedEvents').doc(eventId);
+
+      // Verify and record event idempotency lock to prevent duplicate credit minting or replay attacks
+      const alreadyProcessed = await db.runTransaction(async (t) => {
+        const snap = await t.get(eventRef);
+        if (snap.exists) {
+          return true;
+        }
+        t.set(eventRef, {
+          id: eventId,
+          type: event.type,
+          processedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        return false;
+      });
+
+      if (alreadyProcessed) {
+        console.log(`[Stripe Webhook] Event ${eventId} already processed. Skipping replay.`);
+        return res.json({ received: true, skipped: true });
+      }
+
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object as any;
-        const db = getFirestore();
         
         // --- 1. Invoice Payment Fulfillment ---
         if (session.metadata?.invoiceId) {
@@ -1204,6 +1226,9 @@ async function startServer() {
     try {
       const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId parameters in query", 400);
+
+      const authReq = req as AuthenticatedRequest;
+      await authorizeWorkspace(authReq, workspaceId);
 
       let wsName = "Production Workspace";
       let wsCurrency = "USD";
@@ -3424,6 +3449,9 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         wsData = billingFallbackCache.get(workspaceId) || {};
       }
 
+      const sanitizedWeight = Math.max(1, Math.min(1000, Math.floor(Math.abs(Number(weightScore) || 10))));
+      const sanitizedExecutionTime = Math.max(1, Math.min(60000, Math.floor(Math.abs(Number(executionTimeMs) || 50))));
+
       const ledgerEntry = {
         id: `trace-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
         workspaceId,
@@ -3431,10 +3459,10 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         userEmail: authReq.user.email,
         algorithmName,
         complexityFormat,
-        weightScore: Number(weightScore) || 10,
-        executionTimeMs: Number(executionTimeMs) || 50,
+        weightScore: sanitizedWeight,
+        executionTimeMs: sanitizedExecutionTime,
         timestamp: new Date().toISOString(),
-        hash: crypto.createHash('sha256').update(`${workspaceId}-${algorithmName}-${weightScore}-${Date.now()}`).digest('hex')
+        hash: crypto.createHash('sha256').update(`${workspaceId}-${algorithmName}-${sanitizedWeight}-${Date.now()}`).digest('hex')
       };
 
       try {
@@ -3452,10 +3480,10 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const currentValueHardness = wsData.computeHardnessScore !== undefined ? wsData.computeHardnessScore : 0;
       const currentValueCredit = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 1000000;
 
-      const currentQuotaUsed = currentValueQuota + Math.round((Number(weightScore) || 10) * 0.1); // 0.1 cent per complexity score
+      const currentQuotaUsed = currentValueQuota + Math.round(sanitizedWeight * 0.1); // 0.1 cent per complexity score
       const newQueriesCount = currentValueQueries + 1;
-      const newComputeHardness = currentValueHardness + (Number(weightScore) || 10);
-      const newCreditBalance = Math.max(0, currentValueCredit - (Number(weightScore) || 10));
+      const newComputeHardness = currentValueHardness + sanitizedWeight;
+      const newCreditBalance = Math.max(0, currentValueCredit - sanitizedWeight);
 
       const updatedMetrics = {
         apiQuotaTotalCentsUsed: currentQuotaUsed,
