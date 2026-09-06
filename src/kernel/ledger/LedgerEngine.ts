@@ -61,15 +61,13 @@ export class LedgerEngine {
             let accId = typeof line.accountId === 'string' ? line.accountId : '';
             let accData = balances.get(accId);
 
-            // Fallback lookup if accountId is not found directly by ID (e.g. legacy/phantom accountId or name matching)
+            // Fallback lookup if accountId is not found directly by ID (match by code or exact name)
             if (!accData && balances.size > 0) {
               const matchedAcc = accounts.find(a => 
                 a.id === accId || 
                 a.code === accId || 
-                (line.accountName && a.name.toLowerCase() === line.accountName.toLowerCase()) ||
-                a.code === '9999' ||
-                a.type === 'expense'
-              ) || accounts[0];
+                (line.accountName && a.name.toLowerCase() === line.accountName.toLowerCase())
+              );
               if (matchedAcc) {
                 accData = balances.get(matchedAcc.id);
               }

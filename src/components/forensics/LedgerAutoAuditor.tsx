@@ -1,16 +1,27 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 
 export function LedgerAutoAuditor() {
-  const transactions = useLedgerStore(state => state.transactions);
-  const accounts = useLedgerStore(state => state.accounts);
-  const journalEntries = useLedgerStore(state => state.journalEntries);
+  const transactionsLength = useLedgerStore(state => state.transactions.length);
+  const accountsLength = useLedgerStore(state => state.accounts.length);
+  const journalEntriesLength = useLedgerStore(state => state.journalEntries.length);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (transactions.length > 0 && accounts.length > 0) {
-      useLedgerStore.getState().runFullAudit();
+    if (transactionsLength > 0 && accountsLength > 0) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        useLedgerStore.getState().runFullAudit();
+      }, 400);
     }
-  }, [transactions, accounts, journalEntries]);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [transactionsLength, accountsLength, journalEntriesLength]);
 
   return null;
 }

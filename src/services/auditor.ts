@@ -14,6 +14,7 @@ export interface AuditResult {
   hashChainValid: boolean;
   brokenChainIndex: number | null;
   merkleRoot: string;
+  duplicateCheckSkipped?: boolean;
 }
 
 export const DoubleEntryAuditor = {
@@ -36,14 +37,12 @@ export const DoubleEntryAuditor = {
     
     // Google-Scale Similarity Engine (MinHash)
     const minHash = new MinHash(64);
-    const signatures: { id: string; sig: number[] }[] = [];
     
     // Rule Hash Chain Verification
     let hashChainValid = true;
     let brokenChainIndex: number | null = null;
     
     const accountIds = new Set(accounts.map(a => a.id));
-    const accountMap = new Map(accounts.map(a => [a.id, a]));
 
     // Sort transactions by chronological creation to verify the causal chain
     // O(N log N) mapped sort (Schwartzian transform) to prevent millions of native Date parses on 50,000+ inputs
@@ -52,20 +51,18 @@ export const DoubleEntryAuditor = {
       .sort((a, b) => { if (a.time !== b.time) return a.time - b.time; return (a.t && b.t && a.t.id && b.t.id) ? a.t.id.localeCompare(b.t.id) : 0; })
       .map(item => item.t);
 
+    // Filter to active transactions for cryptographic sequence verification
+    const activeTxs = chronosTxs.filter(t => !t.deletedAt && t.status !== 'void' && t.status !== 'failed');
+
     // Optimized Duplicate Detection using Bucketing
-    // Instead of O(N^2), we group by amount to drastically reduce search space
     const signatureBuckets = new Map<number, { id: string; sig: number[] }[]>();
-    
-    // Performance Guard: Skip expensive duplicate check if Ledger is excessive
-    const skipDuplicateCheck = transactions.length > 2000;
+    const skipDuplicateCheck = activeTxs.length > 5000;
 
     // 1. Audit Transactions & Hash Chain
-    chronosTxs.forEach((t, i) => {
-      if (t.deletedAt) return;
-      
+    activeTxs.forEach((t, i) => {
       // Verify Cryptographic Link
       if (i > 0 && t.verification?.previousHash) {
-        const prevTx = chronosTxs[i-1];
+        const prevTx = activeTxs[i - 1];
         if (t.verification.previousHash !== prevTx.verification?.hash) {
           hashChainValid = false;
           if (brokenChainIndex === null) brokenChainIndex = i;
@@ -83,7 +80,7 @@ export const DoubleEntryAuditor = {
       for (let lIdx = 0; lIdx < lines.length; lIdx++) {
         const line = lines[lIdx];
         if (!accountIds.has(line.accountId)) {
-          missingAccounts.push({ id: t.id, accountName: line.accountName, lineIdx: lIdx });
+          missingAccounts.push({ id: t.id, accountName: line.accountName || line.accountId, lineIdx: lIdx });
         }
         
         if (line.amountCents > 0) txDebit += line.amountCents;
@@ -109,12 +106,11 @@ export const DoubleEntryAuditor = {
         const amountKey = t.totalAmountCents;
         
         const bucket = signatureBuckets.get(amountKey) || [];
-        // Only compare with last 10 entries in bucket for performance
         const startIndex = Math.max(0, bucket.length - 10);
         for (let bIdx = startIndex; bIdx < bucket.length; bIdx++) {
           const prev = bucket[bIdx];
           const similarity = minHash.compare(currentSig, prev.sig);
-          if (similarity > 0.95) { // Tightened threshold to reduce false positives and speed up logic
+          if (similarity > 0.95) {
             duplicateCandidates.push({ id: t.id, reason: `Pattern similarity (${Math.round(similarity * 100)}%) with ${prev.id}` });
             break; 
           }
@@ -132,7 +128,7 @@ export const DoubleEntryAuditor = {
 
       entry.lines?.forEach((line, idx) => {
         if (!accountIds.has(line.accountId)) {
-          missingAccounts.push({ id: entry.id, accountName: line.accountName, lineIdx: idx });
+          missingAccounts.push({ id: entry.id, accountName: line.accountName || line.accountId, lineIdx: idx });
         }
         entryDebit += line.debit;
         entryCredit += line.credit;
@@ -148,7 +144,7 @@ export const DoubleEntryAuditor = {
     });
 
     // 3. Construct Merkle Root of Trust
-    const tree = new MerkleTree(chronosTxs.map(t => t.verification?.hash || t.id));
+    const tree = new MerkleTree(activeTxs.map(t => t.verification?.hash || t.id));
 
     PerformanceTelemetry.end("DoubleEntryAuditor:auditLedger");
     return {
@@ -161,20 +157,34 @@ export const DoubleEntryAuditor = {
       missingAccounts,
       hashChainValid,
       brokenChainIndex,
-      merkleRoot: tree.root
+      merkleRoot: tree.root,
+      duplicateCheckSkipped: skipDuplicateCheck
     };
   },
 
   /**
    * Generates a deterministic signature for a transaction.
-   * Leverages cryptographically secure SHA-256 string-hash of all fields.
+   * Cryptographically covers all transaction fields to prevent tampering.
    */
   computeHash: (tx: Transaction, previousHash?: string): string => {
     const payload = JSON.stringify({
       date: tx.date,
       desc: tx.description,
       amount: tx.totalAmountCents,
-      lines: (tx.lines || []).map(l => [l.accountId, l.amountCents]),
+      status: tx.status || 'completed',
+      type: tx.type || 'expense',
+      currency: tx.currency || 'USD',
+      exchangeRate: tx.exchangeRate || 1,
+      payee: tx.payee || '',
+      project: tx.project || '',
+      lines: (tx.lines || []).map(l => [
+        l.accountId, 
+        l.amountCents, 
+        l.accountName || '', 
+        l.description || '', 
+        (l as any).currency || '', 
+        (l as any).exchangeRate || 1
+      ]),
       prev: previousHash || 'genesis'
     });
     
@@ -182,7 +192,7 @@ export const DoubleEntryAuditor = {
   },
 
   /**
-   * Causal Chain Repair: Re-hashes the entire sequence of transactions
+   * Causal Chain Repair: Re-hashes the entire sequence of active transactions
    * to restore cryptographic integrity. This is used when a chain break
    * is detected and the user wants to certify the current state as the 
    * new 'Genesis' state.
@@ -195,6 +205,9 @@ export const DoubleEntryAuditor = {
     let lastHash = 'genesis';
     
     return sorted.map(tx => {
+      if (tx.deletedAt || tx.status === 'void' || tx.status === 'failed') {
+        return tx;
+      }
       const newHash = DoubleEntryAuditor.computeHash(tx, lastHash);
       const updatedTx = {
         ...tx,

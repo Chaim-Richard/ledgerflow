@@ -199,17 +199,17 @@ export async function safeAsync<T>(
 /**
  * Safe confirmation modal dialog helper.
  * Degrades gracefully inside sandboxed browser iframes where window.confirm causes SecurityError.
+ * Fails closed (returns false) to prevent accidental execution of destructive actions.
  */
 export function safeConfirm(message: string): boolean {
   try {
-    // If window is available and confirm exists, use it
     if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
       return window.confirm(message);
     }
-    return true;
+    return false;
   } catch (error) {
-    console.warn('[SANDBOX CAUGHT] window.confirm execution prevented by environment. Auto-approving request.', error);
-    return true;
+    console.warn('[SANDBOX CAUGHT] window.confirm execution prevented by environment. Refusing destructive action for safety.', error);
+    return false;
   }
 }
 

@@ -85,10 +85,24 @@ export function aggregateLedgerToDailySeries(
         if (metric === 'volume') {
           seriesMap[txDay] += tx.totalAmountCents || 0;
         } else if (metric === 'net_flow') {
-          if (tx.lines && tx.lines.length > 0) {
-            for (let j = 0; j < tx.lines.length; j++) txValue += tx.lines[j].amountCents;
+          const type = (tx as any).type;
+          if (type === 'income' || type === 'revenue') {
+            txValue = Math.abs(tx.totalAmountCents || 0);
+          } else if (type === 'expense' || type === 'cost_of_goods') {
+            txValue = -Math.abs(tx.totalAmountCents || 0);
+          } else if (tx.lines && tx.lines.length > 0) {
+            let sumPositive = 0;
+            let sumNegative = 0;
+            for (let j = 0; j < tx.lines.length; j++) {
+              if (tx.lines[j].amountCents > 0) sumPositive += tx.lines[j].amountCents;
+              else sumNegative += Math.abs(tx.lines[j].amountCents);
+            }
+            txValue = sumPositive - sumNegative;
+            if (txValue === 0 && tx.totalAmountCents) {
+              txValue = tx.totalAmountCents;
+            }
           } else {
-            txValue += tx.totalAmountCents || 0;
+            txValue = tx.totalAmountCents || 0;
           }
           seriesMap[txDay] += txValue;
         } else if (metric === 'debit') {

@@ -18,9 +18,12 @@ export default function LedgerInterruptOverlay() {
 
   useEffect(() => {
     // Subscribe to audit exceptions from the global EventBus
-    const unsubscribe = globalEventBus.subscribe('LEDGER_AUDIT_EXCEPTION', (eventData) => {
-      setActiveAlert(eventData);
-      setIsDismissed(false); // Re-open if a new failure is detected
+    const unsubscribe = globalEventBus.subscribe('LEDGER_AUDIT_EXCEPTION', (eventData: any) => {
+      // Only display the high-priority interrupt overlay for critical cryptographic or mathematical imbalances
+      if (eventData && eventData.severity === 'critical') {
+        setActiveAlert(eventData);
+        setIsDismissed(false); // Re-open if a new critical failure is detected
+      }
     });
 
     return () => unsubscribe();

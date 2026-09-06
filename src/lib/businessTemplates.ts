@@ -8,7 +8,30 @@ export interface BusinessTemplate {
   topology: Partial<DashboardSchema>;
 }
 
-export const BUSINESS_TEMPLATES: Record<string, BusinessTemplate> = {
+export const DEFAULT_EQUITY_ACCOUNTS: Partial<ChartAccount>[] = [
+  { code: '3000', name: "Owner's Equity", type: 'equity', category: 'Equity' },
+  { code: '3100', name: 'Retained Earnings', type: 'equity', category: 'Equity' },
+  { code: '3200', name: 'Opening Balance Equity', type: 'equity', category: 'Equity' },
+];
+
+function ensureEquityAccounts(accounts: Partial<ChartAccount>[]): Partial<ChartAccount>[] {
+  const existingCodes = new Set(accounts.map(a => a.code));
+  const hasEquityType = accounts.some(a => a.type === 'equity');
+  
+  const enriched = [...accounts];
+  if (!existingCodes.has('3000')) {
+    enriched.push({ code: '3000', name: "Owner's Equity", type: 'equity', category: 'Equity' });
+  }
+  if (!existingCodes.has('3100')) {
+    enriched.push({ code: '3100', name: 'Retained Earnings', type: 'equity', category: 'Equity' });
+  }
+  if (!existingCodes.has('3200')) {
+    enriched.push({ code: '3200', name: 'Opening Balance Equity', type: 'equity', category: 'Equity' });
+  }
+  return enriched;
+}
+
+const RAW_BUSINESS_TEMPLATES: Record<string, BusinessTemplate> = {
   creative: {
     id: 'creative',
     name: 'Creative Project',
@@ -653,8 +676,9 @@ export const BUSINESS_TEMPLATES: Record<string, BusinessTemplate> = {
       { code: '1100', name: 'Capital Calls Receivable', type: 'asset', category: 'Receivables' },
       { code: '1500', name: 'Portfolio Investments (At Cost)', type: 'asset', category: 'Investments' },
       { code: '1510', name: 'Unrealized Mark-to-Market Gains', type: 'asset', category: 'Investments' },
-      { code: '3000', name: 'LP Capital Contributions', type: 'liability', category: 'Equity' },
-      { code: '3100', name: 'GP Commitments', type: 'liability', category: 'Equity' },
+      { code: '3000', name: 'LP Capital Contributions', type: 'equity', category: 'Equity' },
+      { code: '3100', name: 'GP Commitments', type: 'equity', category: 'Equity' },
+      { code: '3200', name: 'Retained Earnings / Fund Reserves', type: 'equity', category: 'Equity' },
       { code: '4000', name: 'Realized Gains on Exit', type: 'income', category: 'Revenue' },
       { code: '4100', name: 'Dividend / Interest Income', type: 'income', category: 'Revenue' },
       { code: '5000', name: 'Management Fees Paid to GP', type: 'expense', category: 'Operations' },
@@ -711,3 +735,13 @@ export const BUSINESS_TEMPLATES: Record<string, BusinessTemplate> = {
     }
   }
 };
+
+export const BUSINESS_TEMPLATES: Record<string, BusinessTemplate> = Object.fromEntries(
+  Object.entries(RAW_BUSINESS_TEMPLATES).map(([key, template]) => [
+    key,
+    {
+      ...template,
+      accounts: ensureEquityAccounts(template.accounts)
+    }
+  ])
+);
