@@ -35,7 +35,8 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
     const found = Object.values(FINANCIAL_ALGORITHMS).find(
       (a: any) => a.id === toolId || a.id?.replace(/_/g, '-') === toolId || a.id?.replace(/-/g, '_') === toolId
     );
-    return found || FINANCIAL_ALGORITHMS['1'];
+    if (!found) throw new Error(`Unknown algorithm: ${toolId}`);
+    return found;
   }, [toolId]);
   
   // Custom user inputs per algorithm

@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {

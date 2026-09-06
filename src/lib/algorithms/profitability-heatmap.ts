@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 
 export const PROFITABILITY_HEATMAP_ALGO: AlgorithmDefinition = {
   id: 'intelligence_5',

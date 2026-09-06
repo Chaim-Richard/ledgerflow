@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { Transaction, Employee } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { computePeriodPayroll, PAYROLL_DISCLAIMER } from '../../lib/payroll-engine';

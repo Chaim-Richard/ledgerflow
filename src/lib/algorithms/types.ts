@@ -1,5 +1,6 @@
 import { Transaction, ChartAccount } from '../../types';
 import { isPostable } from '../txFilters';
+import { resolveAccountRole } from '../accountUtils';
 
 declare const postable: unique symbol;
 export type PostableTransaction = Transaction & { readonly [postable]: true };
@@ -40,6 +41,17 @@ export interface AlgorithmContext {
     employees?: any[];
     budgets?: any[];
     customers?: any[];
+  };
+  readonly accounting: {
+    isCash: (accountId: string) => boolean;
+    isRevenue: (accountId: string) => boolean;
+    isCOGS: (accountId: string) => boolean;
+    isExpense: (accountId: string) => boolean;
+    isAR: (accountId: string) => boolean;
+    isAP: (accountId: string) => boolean;
+    isEquity: (accountId: string) => boolean;
+    isLiability: (accountId: string) => boolean;
+    isAsset: (accountId: string) => boolean;
   };
 }
 
@@ -86,6 +98,21 @@ export function buildAlgorithmContext(
     days = isNaN(diff) ? 365 : diff;
   }
 
+  const getRole = (accId: string) => resolveAccountRole(accounts.find(a => a.id === accId));
+  const getType = (accId: string) => accounts.find(a => a.id === accId)?.type;
+
+  const accounting = {
+    isCash: (id: string) => getRole(id) === 'cash',
+    isRevenue: (id: string) => getRole(id) === 'revenue' || getType(id) === 'income',
+    isCOGS: (id: string) => getRole(id) === 'cogs' || getType(id) === 'cost_of_goods',
+    isExpense: (id: string) => getRole(id) === 'expense' || getType(id) === 'expense',
+    isAR: (id: string) => getRole(id) === 'ar',
+    isAP: (id: string) => getRole(id) === 'ap',
+    isEquity: (id: string) => getRole(id) === 'equity' || getType(id) === 'equity',
+    isLiability: (id: string) => getRole(id) === 'liability' || getRole(id) === 'ap' || getType(id) === 'liability',
+    isAsset: (id: string) => getRole(id) === 'asset' || getRole(id) === 'cash' || getRole(id) === 'ar' || getType(id) === 'asset'
+  };
+
   return {
     transactions: postableTxs,
     accounts: accounts || [],
@@ -96,7 +123,8 @@ export function buildAlgorithmContext(
       days
     },
     reportingCurrency,
-    entities: entities || {}
+    entities: entities || {},
+    accounting
   };
 }
 
