@@ -19,7 +19,7 @@ export default function PublicInvoicePage() {
       return;
     }
 
-    fetch(`/api/public/invoice/${token}`)
+    fetch(`/api/v1/invoices/public/${token}`)
       .then(res => res.json())
       .then(data => {
         if (data.error) {
@@ -41,7 +41,7 @@ export default function PublicInvoicePage() {
     if (!invoice) return;
     setIsPaying(true);
     try {
-      const res = await fetch(`/api/public/invoice/${invoice.paymentToken}/pay`, {
+      const res = await fetch(`/api/v1/invoices/public/${invoice.paymentToken}/pay`, {
         method: 'POST'
       });
       const data = await res.json();

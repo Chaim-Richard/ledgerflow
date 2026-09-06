@@ -67,7 +67,7 @@ service cloud.firestore {
         (!("plan" in request.resource.data) || request.resource.data.plan == "starter" || request.resource.data.plan == "free") &&
         (!("computeCreditBalance" in request.resource.data) || request.resource.data.computeCreditBalance <= 100) &&
         (!("maxSeats" in request.resource.data) || request.resource.data.maxSeats <= 5) &&
-        affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "status", "adminCount", "admins", "dateFormat", "aiModel", "notifications", "analyticalTopology"]);
+        affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore"]);
       allow update: if isSignedIn() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid && isUnchanged("uid") &&
         request.resource.data.name.size() < 128 &&
         (!("description" in request.resource.data) || request.resource.data.description.size() < 1000) &&
@@ -75,7 +75,7 @@ service cloud.firestore {
         isUnchanged("plan") && isUnchanged("computeCreditBalance") && isUnchanged("apiQuotaMonthlyLimitCents") && isUnchanged("maxSeats") && isUnchanged("concurrentUserLimit") &&
         isUnchanged("apiQuotaTotalCentsUsed") && isUnchanged("stripeCustomerId") && isUnchanged("seatCount") &&
         isUnchanged("billingCycle") && isUnchanged("status") && isUnchanged("lockedUntilDate") &&
-        affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "status", "adminCount", "admins", "dateFormat", "aiModel", "notifications", "analyticalTopology"]);
+        affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore"]);
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 

@@ -152,34 +152,33 @@ export class LedgerPostService {
     const invoiceNum = invoiceData.number || invoiceId;
     const customer = invoiceData.customerName || 'Customer';
 
-    const taxAccount = this.resolveAccount(
+    const taxAmount = roundCents((invoiceData.taxAmountCents || invoiceData.salesTaxCents || (invoiceData.taxRate ? (rawAmount / (1 + invoiceData.taxRate)) * invoiceData.taxRate : 0)) * rate);
+    const discountAmount = roundCents((invoiceData.discountCents || 0) * rate);
+    const retainageAmount = roundCents((invoiceData.retainageCents || 0) * rate);
+
+    const taxAccount = taxAmount > 0 ? this.resolveAccount(
       accounts,
       mappings,
       ['tax payable', 'sales tax', 'tax liability', 'tax'],
       a => a.type === 'liability' && (a.name.toLowerCase().includes('tax') || a.category === 'Taxes'),
       'Sales Tax Payable'
-    );
+    ) : null;
 
-    const discountAccount = this.resolveAccount(
+    const discountAccount = discountAmount > 0 ? this.resolveAccount(
       accounts,
       mappings,
       ['discount', 'sales discount'],
       a => a.type === 'expense' || (a.type === 'income' && a.name.toLowerCase().includes('discount')),
       'Sales Discounts'
-    );
+    ) : null;
     
-    const retainageAccount = this.resolveAccount(
+    const retainageAccount = retainageAmount > 0 ? this.resolveAccount(
       accounts,
       mappings,
       ['retainage', 'retention'],
       a => a.type === 'asset' && a.name.toLowerCase().includes('retainage'),
       'Retainage Receivable'
-    );
-
-    // 2. Transaction 1: Accrual Posting
-    const taxAmount = roundCents((invoiceData.taxAmountCents || invoiceData.salesTaxCents || (invoiceData.taxRate ? (rawAmount / (1 + invoiceData.taxRate)) * invoiceData.taxRate : 0)) * rate);
-    const discountAmount = roundCents((invoiceData.discountCents || 0) * rate);
-    const retainageAmount = roundCents((invoiceData.retainageCents || 0) * rate);
+    ) : null;
     
     const revenueAmount = amount + retainageAmount + discountAmount - taxAmount;
 
@@ -193,7 +192,7 @@ export class LedgerPostService {
       }
     ];
 
-    if (retainageAmount > 0) {
+    if (retainageAmount > 0 && retainageAccount) {
       accrualLines.push({
         accountId: retainageAccount.id,
         accountName: retainageAccount.name,
@@ -202,7 +201,7 @@ export class LedgerPostService {
         exchangeRate: rate
       });
     }
-    if (discountAmount > 0) {
+    if (discountAmount > 0 && discountAccount) {
       accrualLines.push({
         accountId: discountAccount.id,
         accountName: discountAccount.name,
@@ -211,7 +210,7 @@ export class LedgerPostService {
         exchangeRate: rate
       });
     }
-    if (taxAmount > 0) {
+    if (taxAmount > 0 && taxAccount) {
       accrualLines.push({
         accountId: taxAccount.id,
         accountName: taxAccount.name,

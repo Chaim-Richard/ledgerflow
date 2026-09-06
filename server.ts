@@ -3963,6 +3963,41 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 
   app.use("/api/reports", authenticate, reportRouter);
+  app.use("/api/v1/reports", authenticate, reportRouter);
+
+  app.post("/api/v1/forensics/anomaly-scan", authenticate, async (req: express.Request, res: express.Response) => {
+    const authReq = req as AuthenticatedRequest;
+    const { workspaceId } = req.body;
+    if (!workspaceId) return sendError(res, "workspaceId is required", 400);
+    try {
+      await authorizeWorkspace(authReq, workspaceId);
+      const db = getDb();
+      const snapshot = await db.collection("transactions")
+        .where("workspaceId", "==", workspaceId)
+        .limit(200)
+        .get();
+      const txs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+      
+      const amounts = txs.map(t => Math.abs(t.totalAmountCents || 0)).filter(a => a > 0);
+      let anomalies: any[] = [];
+      if (amounts.length >= 5) {
+        const mean = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+        const stdDev = Math.sqrt(amounts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / amounts.length);
+        anomalies = txs.filter(t => {
+          const amt = Math.abs(t.totalAmountCents || 0);
+          return stdDev > 0 && Math.abs(amt - mean) > 2.5 * stdDev;
+        }).map(t => ({
+          id: t.id,
+          description: t.description || 'Transaction',
+          amountCents: t.totalAmountCents,
+          reason: 'Statistically anomalous amount (Z-Score > 2.5)'
+        }));
+      }
+      res.json({ status: "success", anomalies });
+    } catch (error: any) {
+      sendError(res, "Failed to run anomaly scan", 500, error.message);
+    }
+  });
 
 
   app.get("/api/activity-feed", authenticate, async (req: express.Request, res: express.Response) => {
@@ -4215,6 +4250,11 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
   const http = await import('http');
   const httpServer = http.createServer(app);
+
+  // API 404 handler for unmatched /api/* routes
+  app.use('/api/*', (req, res) => {
+    res.status(404).json({ error: `API route not found: ${req.originalUrl}` });
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

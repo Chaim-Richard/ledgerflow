@@ -882,7 +882,7 @@ export function useTransactionActions() {
       const response = await fetch('/api/v1/transactions/reset', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user.getIdToken()}` },
-         body: JSON.stringify({ workspaceId: currentWorkspaceId })
+         body: JSON.stringify({ workspaceId: currentWorkspaceId, confirmReset: true })
       });
 
       if (!response.ok) {
