@@ -5,7 +5,8 @@ import { ALTMAN_Z_SCORE_ALGO } from '../lib/algorithms/altman-z-score.js';
 
 describe('Financial Algorithms Test Suite', () => {
   test('Altman Z-Score computes correctly and avoids division by zero', () => {
-    const resEmpty = ALTMAN_Z_SCORE_ALGO.compute([], [], { publicCompany: 0 }, {});
+    const computeFn = ALTMAN_Z_SCORE_ALGO.compute as any;
+    const resEmpty = computeFn([], [], { publicCompany: 0 }, {});
     assert.equal(resEmpty.metrics[0].value, 'N/A');
 
     const accounts = [
@@ -23,7 +24,7 @@ describe('Financial Algorithms Test Suite', () => {
       ]}
     ];
 
-    const res = ALTMAN_Z_SCORE_ALGO.compute(transactions as any, accounts as any, { publicCompany: 0 });
+    const res = computeFn(transactions as any, accounts as any, { publicCompany: 0 });
     assert.ok(res.metrics.length > 0);
   });
 });

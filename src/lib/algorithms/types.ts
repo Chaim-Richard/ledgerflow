@@ -13,16 +13,54 @@ export interface AlgoResultRow {
 
 export interface AlgoResult {
   metrics: { label: string; value: string | number; trend?: string; color?: string }[];
-  charts: { data: any[]; config: { xKey: string; yKeys: { key: string; color: string; name: string; type?: 'bar' | 'line' }[] } }[];
+  charts: { data: any[]; config: { xKey: string; yKeys: { key: string; color: string; name: string; type?: 'bar' | 'line' | string }[] } }[];
   insights: string[];
   rows?: AlgoResultRow[];
   sourceTransactionIds?: string[];
 }
 
 // SOURCE OF INTEGRITY:
-// All algorithms receive the raw `Transaction[]` and `ChartAccount[]` as the absolute source of integrity.
-// Do NOT fetch data directly inside the algorithm. Only compute based on the provided arrays.
-export type AlgoFn = (transactions: Transaction[], accounts: ChartAccount[], inputs: Record<string, any>, context?: { invoices?: any[], bills?: any[], vendors?: any[], employees?: any[], budgets?: any[], customers?: any[] }) => AlgoResult;
+// All algorithms receive the raw `Transaction[]` and `ChartAccount[]` within AlgorithmContext as the absolute source of integrity.
+// Do NOT fetch data directly inside the algorithm. Only compute based on the provided context.
+
+export interface AlgorithmContext {
+  readonly transactions: readonly Transaction[];
+  readonly accounts: readonly ChartAccount[];
+  readonly period?: { start: string; end: string; days?: number };
+  readonly asOfDate?: string;
+  readonly reportingCurrency?: string;
+  readonly entities?: {
+    invoices?: any[];
+    bills?: any[];
+    vendors?: any[];
+    employees?: any[];
+    budgets?: any[];
+    customers?: any[];
+  };
+}
+
+export type AlgoFn = (ctx: AlgorithmContext, inputs: Record<string, any>) => AlgoResult;
+
+export type LegacyAlgoFn = (
+  transactions: Transaction[],
+  accounts: ChartAccount[],
+  inputs: Record<string, any>,
+  context?: { invoices?: any[]; bills?: any[]; vendors?: any[]; employees?: any[]; budgets?: any[]; customers?: any[] }
+) => AlgoResult;
+
+/**
+ * Adapter enabling legacy algorithms to receive the unified AlgorithmContext.
+ */
+export function adaptLegacy(fn: LegacyAlgoFn): AlgoFn {
+  return (ctx, inputs) => {
+    return fn(
+      [...(ctx.transactions || [])],
+      [...(ctx.accounts || [])],
+      inputs,
+      ctx.entities
+    );
+  };
+}
 
 export interface AlgorithmDefinition {
   domain?: 'finance' | 'operations' | 'forensics' | 'planning' | 'treasury' | 'system' | 'valuation';
@@ -32,7 +70,7 @@ export interface AlgorithmDefinition {
   name: string;
   description: string;
   inputs: AlgoInput[];
-  compute: AlgoFn;
+  compute: LegacyAlgoFn | AlgoFn;
 }
 
-export const buildHelper = (fn: AlgoFn) => fn;
+export const buildHelper = (fn: AlgoFn | LegacyAlgoFn) => fn;

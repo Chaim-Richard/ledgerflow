@@ -82,10 +82,10 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'lookbackMonths', label: 'Lookback Window (Months)', min: 1, max: 12, step: 1, defaultValue: 6 }
   ],
-  compute: (transactions, accounts, inputs: any = {}) => {
+  compute: (transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
     const payeeMap = new Map<string, { count: number; totalCents: number; avgCents: number; lastDate: string }>();
 
-    transactions.forEach(t => {
+    transactions.forEach((t: Transaction) => {
       if (!t || !isOutflow(t, accounts)) return; // Outflows only
       const payee = t.payee || t.description || 'Unknown Vendor';
       const existing = payeeMap.get(payee) || { count: 0, totalCents: 0, avgCents: 0, lastDate: t.date };
@@ -146,12 +146,12 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'taxRate', label: 'Estimated Tax Rate (%)', min: 10, max: 50, step: 1, defaultValue: 25 }
   ],
-  compute: (transactions, accounts, inputs: any = {}) => {
+  compute: (transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
     let deductibleCents = 0;
     const categoryBreakdown: Record<string, number> = {};
     let deductibleCount = 0;
 
-    transactions.forEach(t => {
+    transactions.forEach((t: Transaction) => {
       if (!t || !isOutflow(t, accounts)) return;
       const amt = Math.abs(t.totalAmountCents);
       const desc = (t.description || '').toLowerCase();
@@ -213,10 +213,10 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'targetCapRate', label: 'Target Cap Rate (%)', min: 3, max: 12, step: 0.5, defaultValue: 6.5 }
   ],
-  compute: (transactions, accounts, inputs: any = {}) => {
+  compute: (transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
     const propertyMap = new Map<string, { revCents: number; expCents: number }>();
 
-    transactions.forEach(t => {
+    transactions.forEach((t: Transaction) => {
       if (!t || !t.project) return;
       const prop = t.project;
       const existing = propertyMap.get(prop) || { revCents: 0, expCents: 0 };
@@ -290,10 +290,10 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'warningThreshold', label: 'Warning Burn %', min: 50, max: 95, step: 5, defaultValue: 80 }
   ],
-  compute: (transactions, accounts, inputs: any = {}) => {
+  compute: (transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
     const grantMap = new Map<string, { receivedCents: number; spentCents: number }>();
 
-    transactions.forEach(t => {
+    transactions.forEach((t: Transaction) => {
       if (!t || !t.projectId) return;
       const key = t.project || t.projectId;
       const existing = grantMap.get(key) || { receivedCents: 0, spentCents: 0 };
@@ -365,10 +365,10 @@ export const PROJECT_PROFITABILITY_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'minMargin', label: 'Minimum Target Margin (%)', min: 10, max: 70, step: 5, defaultValue: 30 }
   ],
-  compute: (transactions, accounts, inputs: any = {}) => {
+  compute: (transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
     const projMap = new Map<string, { revCents: number; expCents: number }>();
 
-    transactions.forEach(t => {
+    transactions.forEach((t: Transaction) => {
       if (!t || !t.project) return;
       const p = t.project;
       const existing = projMap.get(p) || { revCents: 0, expCents: 0 };
