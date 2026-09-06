@@ -10,7 +10,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
   tags: ['Valuation', 'NPV', 'IRR', 'WACC', 'Payback'],
   description: 'Computes Weighted Average Cost of Capital (WACC) and evaluates project viability using NPV, IRR, Profitability Index, and Discounted Payback Period.',
   inputs: [
-    { key: 'initialInvestment', label: 'Initial Outlay ($)', min: 0, max: 10000000, step: 5000, defaultValue: 100000 },
+    { key: 'initialInvestment', label: 'Initial Outlay ($)', min: 0, max: 10000000, step: 5000, defaultValue: 0 },
     { key: 'costOfEquityPct', label: 'Cost of Equity (%)', min: 1, max: 30, step: 0.5, defaultValue: 10 },
     { key: 'costOfDebtPct', label: 'Cost of Debt (%)', min: 1, max: 20, step: 0.5, defaultValue: 5 },
     { key: 'taxRatePct', label: 'Corporate Tax Rate (%)', min: 0, max: 50, step: 1, defaultValue: 21 },

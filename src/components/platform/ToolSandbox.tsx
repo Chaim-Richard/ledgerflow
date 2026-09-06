@@ -47,18 +47,23 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
 
   // Re-run anytime params change, using REAL user dataset
   const results = useMemo(() => {
-    const period = params.start && params.end ? { start: params.start, end: params.end } : undefined;
+    const today = new Date().toISOString().slice(0, 10);
+    const asOfDate = params.asOfDate || today;
+    const period = params.start && params.end 
+      ? { start: params.start, end: params.end } 
+      : { start: '1970-01-01', end: asOfDate };
+
     const ctx = buildAlgorithmContext(
       transactions,
       accounts,
-      params.asOfDate,
+      asOfDate,
       period,
       reportingCurrency,
       { invoices, bills, vendors, employees, budgets, customers }
     );
 
     return algorithm.compute(ctx, params);
-  }, [algorithm, transactions, accounts, params, invoices, bills, vendors, employees, budgets, customers]);
+  }, [algorithm, transactions, accounts, params, invoices, bills, vendors, employees, budgets, customers, reportingCurrency]);
 
   // Derive dynamic table columns from rows
   const tableColumns = useMemo(() => {
