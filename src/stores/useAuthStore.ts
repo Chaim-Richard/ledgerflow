@@ -4,6 +4,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Workspace, User as UserProfile } from '../types';
 import { useLedgerStore } from './useLedgerStore';
+import { useSavedViewsStore } from './useSavedViewsStore';
 
 interface AuthState {
   user: FirebaseUser | null;
@@ -54,6 +55,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Clear ledger store data immediately to prevent ghosting between workspaces
     if (get().currentWorkspaceId !== currentWorkspaceId) {
       useLedgerStore.getState().resetStore();
+      useSavedViewsStore.getState().loadViewsForWorkspace(currentWorkspaceId);
     }
     
     set({ currentWorkspaceId });

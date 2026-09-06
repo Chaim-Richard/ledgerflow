@@ -46,8 +46,7 @@ export class DoubleEntryValidator {
       }
     }
     
-    const lines = transaction.lines.filter(l => l.accountId !== 'fx-rounding');
-    const netImpact = lines.reduce((sum, line) => {
+    const netImpact = transaction.lines.reduce((sum, line) => {
       const cents = Math.round(line.amountCents || 0);
       return sum.plus(new Decimal(cents));
     }, new Decimal(0));

@@ -267,10 +267,10 @@ export function useLedgerData() {
         onSnapshot(query(collection(db, 'customers'), ...filter), (snap) => {
           scheduleUpdate('customers', snap.docs.map(d => ({ id: d.id, ...d.data() } as Customer)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'customers')),
-        onSnapshot(query(collection(db, 'invoices'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'invoices'), ...filter, limit(2000)), (snap) => {
           scheduleUpdate('invoices', snap.docs.map(d => ({ id: d.id, ...d.data() } as Invoice)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'invoices')),
-        onSnapshot(query(collection(db, 'bills'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'bills'), ...filter, limit(2000)), (snap) => {
           scheduleUpdate('bills', snap.docs.map(d => ({ id: d.id, ...d.data() } as Bill)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'bills')),
         onSnapshot(query(collection(db, 'inventory'), ...filter), (snap) => {
@@ -294,7 +294,7 @@ export function useLedgerData() {
         onSnapshot(query(collection(db, 'customTemplates'), where('uid', '==', user.uid)), (snap) => {
           scheduleUpdate('customTemplates', snap.docs.map(d => ({ id: d.id, ...d.data() } as CustomTemplate)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'customTemplates')),
-        onSnapshot(query(collection(db, 'auditLogs'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'auditLogs'), ...filter, limit(500)), (snap) => {
           scheduleUpdate('auditLogs', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'auditLogs')),
         onSnapshot(query(collection(db, 'partners'), ...filter), (snap) => {
@@ -306,7 +306,7 @@ export function useLedgerData() {
         onSnapshot(query(collection(db, 'autoRules'), ...filter), (snap) => {
           scheduleUpdate('autoRules', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'autoRules')),
-        onSnapshot(query(collection(db, 'bankLines'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'bankLines'), ...filter, limit(2000)), (snap) => {
           scheduleUpdate('bankLines', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'bankLines')),
       ];

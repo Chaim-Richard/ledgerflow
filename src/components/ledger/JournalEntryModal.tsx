@@ -67,10 +67,16 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   ]);
 
   const handleDimensionChange = (index: number, dimensionId: string, value: string) => {
-    const newLines = [...lines];
-    if (!newLines[index].dimensions) newLines[index].dimensions = {};
-    newLines[index].dimensions![dimensionId.toLowerCase()] = value;
-    setLines(newLines);
+    setLines(prev => prev.map((l, i) => {
+      if (i !== index) return l;
+      return {
+        ...l,
+        dimensions: {
+          ...(l.dimensions || {}),
+          [dimensionId.toLowerCase()]: value
+        }
+      };
+    }));
   };
 
   React.useEffect(() => {
@@ -132,9 +138,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   };
 
   const totals = useMemo(() => {
-    const debit = lines.reduce((sum, l) => sum + l.debit, 0);
-    const credit = lines.reduce((sum, l) => sum + l.credit, 0);
-    return { debit, credit, isBalanced: debit === credit && debit > 0 };
+    const debit = lines.reduce((sum, l) => sum + (l.debit || 0), 0);
+    const credit = lines.reduce((sum, l) => sum + (l.credit || 0), 0);
+    return { debit, credit, isBalanced: debit === credit && (debit > 0 || (lines.length >= 2 && lines.some(l => l.accountId))) };
   }, [lines]);
 
   const handleAddLine = () => {
@@ -147,22 +153,25 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   };
 
   const handleLineChange = (index: number, field: keyof JournalLine, value: any) => {
-    const newLines = [...lines];
-    if (field === 'accountId') {
-      const account = accounts.find(a => a.id === value);
-      newLines[index].accountId = value;
-      newLines[index].accountName = account?.name || '';
-    } else if (field === 'debit' || field === 'credit') {
-      // Convert to cents
-      const cents = TruthEngine.parseAmountToCents(value || '0');
-      newLines[index][field] = cents;
-      // If debit is set, clear credit and vice versa (standard journal entry behavior)
-      if (field === 'debit' && cents > 0) newLines[index].credit = 0;
-      if (field === 'credit' && cents > 0) newLines[index].debit = 0;
-    } else {
-      (newLines[index] as any)[field] = value;
-    }
-    setLines(newLines);
+    setLines(prev => prev.map((lineItem, i) => {
+      if (i !== index) return lineItem;
+      const updated = { ...lineItem };
+      if (field === 'accountId') {
+        const account = accounts.find(a => a.id === value);
+        updated.accountId = value;
+        updated.accountName = account?.name || '';
+      } else if (field === 'debit' || field === 'credit') {
+        // Convert to cents
+        const cents = TruthEngine.parseAmountToCents(value || '0');
+        updated[field] = cents;
+        // If debit is set, clear credit and vice versa (standard journal entry behavior)
+        if (field === 'debit' && cents > 0) updated.credit = 0;
+        if (field === 'credit' && cents > 0) updated.debit = 0;
+      } else {
+        (updated as any)[field] = value;
+      }
+      return updated;
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -180,7 +189,52 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
       const isForeignCurrency = transactionCurrency !== baseCurrency;
       const appliedRate = isForeignCurrency ? exchangeRate : 1.0;
       
-      const totalAmountCents = Math.round(totals.debit * appliedRate);
+      const filteredLines = lines.filter(l => l.accountId && ((l.debit || 0) > 0 || (l.credit || 0) > 0));
+      if (filteredLines.length < 2) {
+        toast.error('At least two lines with account assignments are required for double-entry.');
+        return;
+      }
+
+      const mappedLines = filteredLines.map(l => {
+        const debitCents = l.debit || 0;
+        const creditCents = l.credit || 0;
+        const baseCents = Math.round((debitCents > 0 ? debitCents : -creditCents) * appliedRate);
+        const dims: Record<string, string> = { ...(l.dimensions || {}) };
+        if (l.class && !dims.class) dims.class = l.class;
+        if (l.location && !dims.location) dims.location = l.location;
+        if (l.project && !dims.project) dims.project = l.project;
+        if ((l as any).world && !dims.world) dims.world = (l as any).world;
+        
+        return {
+          accountId: l.accountId,
+          accountName: l.accountName,
+          amountCents: baseCents,
+          class: l.class || undefined,
+          location: l.location || undefined,
+          project: l.project || undefined,
+          dimensions: Object.keys(dims).length > 0 ? dims : undefined
+        };
+      });
+
+      // Absorb any foreign currency rounding difference into the highest value line
+      const netImbalanceCents = mappedLines.reduce((sum, l) => sum + l.amountCents, 0);
+      if (netImbalanceCents !== 0 && mappedLines.length > 0) {
+        let maxIdx = 0;
+        let maxVal = Math.abs(mappedLines[0].amountCents);
+        for (let i = 1; i < mappedLines.length; i++) {
+          const abs = Math.abs(mappedLines[i].amountCents);
+          if (abs > maxVal) {
+            maxVal = abs;
+            maxIdx = i;
+          }
+        }
+        mappedLines[maxIdx].amountCents -= netImbalanceCents;
+      }
+
+      const totalAmountCents = mappedLines
+        .filter(l => l.amountCents > 0)
+        .reduce((sum, l) => sum + l.amountCents, 0) || Math.round(totals.debit * appliedRate);
+
       const payload = {
         uid: user.uid,
         workspaceId,
@@ -193,24 +247,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         exchangeRate: isForeignCurrency ? appliedRate : undefined,
         type: 'journal',
         status: 'completed',
-        lines: lines.filter(l => l.accountId && (l.debit > 0 || l.credit > 0)).map(l => {
-          const baseCents = Math.round((l.debit > 0 ? l.debit : -l.credit) * appliedRate);
-          const dims: Record<string, string> = { ...(l.dimensions || {}) };
-          if (l.class && !dims.class) dims.class = l.class;
-          if (l.location && !dims.location) dims.location = l.location;
-          if (l.project && !dims.project) dims.project = l.project;
-          if ((l as any).world && !dims.world) dims.world = (l as any).world;
-          
-          return {
-            accountId: l.accountId,
-            accountName: l.accountName,
-            amountCents: baseCents,
-            class: l.class || undefined,
-            location: l.location || undefined,
-            project: l.project || undefined,
-            dimensions: Object.keys(dims).length > 0 ? dims : undefined
-          };
-        }),
+        lines: mappedLines,
         isCleared: true
       };
 
@@ -245,7 +282,10 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   };
 
   const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val / 100);
+    new Intl.NumberFormat('en-US', { 
+      style: 'currency', 
+      currency: (transactionCurrency && /^[A-Z]{3}$/.test(transactionCurrency)) ? transactionCurrency : (baseCurrency || 'USD') 
+    }).format((val || 0) / 100);
 
   return (
     <AnimatePresence>

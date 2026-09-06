@@ -122,8 +122,8 @@ export interface Transaction {
   units?: number;
   unitType?: string; 
   
-  status: 'draft' | 'pending' | 'completed' | 'failed' | 'flagged' | 'reconciled' | 'reviewed' | 'overdue' | 'approved' | 'void';
-  type: 'actual' | 'forecast' | 'adjustment' | 'reversal';
+  status: 'draft' | 'pending' | 'certified' | 'completed' | 'failed' | 'flagged' | 'reconciled' | 'reviewed' | 'overdue' | 'approved' | 'void';
+  type: 'actual' | 'forecast' | 'adjustment' | 'reversal' | 'journal' | 'expense' | 'income' | 'bank_import';
   total_impact?: number; // New: Aggregated impact score
   projectId?: string;    // Explicit project reference
   classId?: string;      // Explicit Class tracking

@@ -157,7 +157,10 @@ export const useUIStore = create<UIState>((set) => ({
   })(),
   hiddenTabs: (() => {
     try {
-      const saved = typeof window !== 'undefined' ? localStorage.getItem('lf_hidden_tabs') : null;
+      const wsId = typeof window !== 'undefined' ? localStorage.getItem('ledgerflow_current_workspace') : null;
+      const key = wsId ? `lf_hidden_tabs_${wsId}` : 'lf_hidden_tabs';
+      let saved = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+      if (!saved && wsId) saved = localStorage.getItem('lf_hidden_tabs');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
@@ -201,7 +204,10 @@ export const useUIStore = create<UIState>((set) => ({
     try { return localStorage.getItem('lf_date_format') || 'YYYY-MM-DD'; } catch (e) { return 'YYYY-MM-DD'; }
   })(),
   numberDecimals: (() => {
-    try { return Number(localStorage.getItem('lf_number_decimals')) || 2; } catch (e) { return 2; }
+    try {
+      const val = localStorage.getItem('lf_number_decimals');
+      return val !== null && val !== '' ? Number(val) : 2;
+    } catch (e) { return 2; }
   })(),
 
   // Preference Setters
@@ -360,7 +366,9 @@ export const useUIStore = create<UIState>((set) => ({
       ? state.hiddenTabs.filter(x => x !== id)
       : [...state.hiddenTabs, id];
     try {
-      localStorage.setItem('lf_hidden_tabs', JSON.stringify(nextHidden));
+      const wsId = typeof window !== 'undefined' ? localStorage.getItem('ledgerflow_current_workspace') : null;
+      const key = wsId ? `lf_hidden_tabs_${wsId}` : 'lf_hidden_tabs';
+      localStorage.setItem(key, JSON.stringify(nextHidden));
     } catch (e) {}
     return { hiddenTabs: nextHidden };
   }),

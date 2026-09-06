@@ -143,6 +143,30 @@ const DEFAULT_PRESET_VIEWS: SavedView[] = [
   }
 ];
 
+const getSavedViewsStorageKey = (workspaceId?: string | null): string => {
+  const wsId = workspaceId || (typeof localStorage !== 'undefined' ? localStorage.getItem('ledgerflow_current_workspace') : null);
+  return wsId ? `lf_saved_views_v2_${wsId}` : 'lf_saved_views_v2';
+};
+
+const loadViewsFromStorage = (workspaceId?: string | null): SavedView[] => {
+  try {
+    if (typeof window === 'undefined') return DEFAULT_PRESET_VIEWS;
+    const key = getSavedViewsStorageKey(workspaceId);
+    let stored = localStorage.getItem(key);
+    // Fallback to legacy global key if workspace-specific key not populated yet
+    if (!stored && key !== 'lf_saved_views_v2') {
+      stored = localStorage.getItem('lf_saved_views_v2');
+    }
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Error loading saved views:', e);
+  }
+  return DEFAULT_PRESET_VIEWS;
+};
+
 interface SavedViewsState {
   views: SavedView[];
   activeViewId: string | null;
@@ -155,23 +179,19 @@ interface SavedViewsState {
   setActiveView: (id: string | null) => void;
   resetToDefaultViews: () => void;
   applySavedView: (view: SavedView) => void;
+  loadViewsForWorkspace: (workspaceId?: string | null) => void;
 }
 
 export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
-  views: (() => {
-    try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem('lf_saved_views_v2') : null;
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.error('Error loading saved views:', e);
-    }
-    return DEFAULT_PRESET_VIEWS;
-  })(),
+  views: loadViewsFromStorage(),
   
   activeViewId: 'view-liquid-cash',
+
+  loadViewsForWorkspace: (workspaceId?: string | null) => {
+    const views = loadViewsFromStorage(workspaceId);
+    const activeViewId = views[0]?.id || null;
+    set({ views, activeViewId });
+  },
 
   addSavedView: (newViewData) => {
     const id = `view-custom-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -186,7 +206,7 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
     set((state) => {
       const nextViews = [newView, ...state.views];
       try {
-        localStorage.setItem('lf_saved_views_v2', JSON.stringify(nextViews));
+        localStorage.setItem(getSavedViewsStorageKey(), JSON.stringify(nextViews));
       } catch (e) {}
       return { views: nextViews, activeViewId: id };
     });
@@ -207,7 +227,7 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
           : v
       );
       try {
-        localStorage.setItem('lf_saved_views_v2', JSON.stringify(nextViews));
+        localStorage.setItem(getSavedViewsStorageKey(), JSON.stringify(nextViews));
       } catch (e) {}
       return { views: nextViews };
     });
@@ -217,7 +237,7 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
     set((state) => {
       const nextViews = state.views.filter((v) => v.id !== id);
       try {
-        localStorage.setItem('lf_saved_views_v2', JSON.stringify(nextViews));
+        localStorage.setItem(getSavedViewsStorageKey(), JSON.stringify(nextViews));
       } catch (e) {}
       const nextActive = state.activeViewId === id ? (nextViews[0]?.id || null) : state.activeViewId;
       return { views: nextViews, activeViewId: nextActive };
@@ -229,7 +249,7 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
       // Multiple default views are explicitly supported!
       const nextViews = state.views.map((v) => (v.id === id ? { ...v, isDefault: !v.isDefault } : v));
       try {
-        localStorage.setItem('lf_saved_views_v2', JSON.stringify(nextViews));
+        localStorage.setItem(getSavedViewsStorageKey(), JSON.stringify(nextViews));
       } catch (e) {}
       return { views: nextViews };
     });
@@ -239,7 +259,7 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
     set((state) => {
       const nextViews = state.views.map((v) => (v.id === id ? { ...v, isPinned: !v.isPinned } : v));
       try {
-        localStorage.setItem('lf_saved_views_v2', JSON.stringify(nextViews));
+        localStorage.setItem(getSavedViewsStorageKey(), JSON.stringify(nextViews));
       } catch (e) {}
       return { views: nextViews };
     });
@@ -257,6 +277,7 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
 
   resetToDefaultViews: () => {
     try {
+      localStorage.removeItem(getSavedViewsStorageKey());
       localStorage.removeItem('lf_saved_views_v2');
     } catch (e) {}
     set({ views: DEFAULT_PRESET_VIEWS, activeViewId: 'view-liquid-cash' });

@@ -83,9 +83,6 @@ export default function Dashboard() {
     setActiveFilters(prev => prev.filter(f => f !== filter));
   };
 
-  if (isCompletelyEmpty) {
-    return <OnboardingView />;
-  }
   const activeAccounts = computedAccounts.length > 0 ? computedAccounts : accounts;
 
   // Setup steps status
@@ -199,6 +196,10 @@ export default function Dashboard() {
       color: colors[type] || 'var(--brass)'
     }));
   }, [activeAccounts]);
+
+  if (isCompletelyEmpty) {
+    return <OnboardingView />;
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1360px] mx-auto text-[var(--text)]">

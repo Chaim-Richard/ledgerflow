@@ -3,7 +3,6 @@ import { aiService } from '../../services/aiService';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { parseNaturalLanguageEntry } from '../../lib/algorithms/nl-parser';
 import { Check, Wand2, Receipt, Camera, X, Loader2, Edit2 } from 'lucide-react';
-/* eslint-disable react-hooks/exhaustive-deps */
 import { parseReceiptOCR } from '../../lib/algorithms/receipt-capture';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { toast } from 'sonner';
@@ -18,8 +17,6 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
   const [isEditing, setIsEditing] = useState(false);
   const { handleQuickAdd, handleParseReceipt } = useTransactionActions();
 
-  // If isOpen is provided and is false, don't render. If undefined, render full page.
-  if (isOpen === false) return null;
   const isModal = isOpen !== undefined;
 
   const handleParse = (val: string) => {
@@ -248,6 +245,8 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
       </div>
     </div>
   );
+
+  if (isOpen === false) return null;
 
   if (isModal) {
     return (
