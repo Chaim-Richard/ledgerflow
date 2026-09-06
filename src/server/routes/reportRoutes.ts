@@ -2,7 +2,7 @@ import express from "express";
 import admin from "firebase-admin";
 import { z } from "zod";
 import { getDb, validateWorkspaceMember } from "../db/firestore";
-import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount } from "../../lib/txFilters";
+import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount } from "../../lib/txFilters";
 import { ReportRangeSchema, WorkspaceIdSchema } from "../../schemas";
 
 export const reportRouter = express.Router();
@@ -87,12 +87,13 @@ reportRouter.get("/profit-and-loss", async (req, res) => {
       if (!isPostable(tx)) continue;
       if (tx.date < start || tx.date > end) continue;
       tx.lines?.forEach((line: any) => {
+        const amount = lineAmount(line, tx);
         if (pl.income.accounts[line.accountId]) {
-          const val = -line.amountCents; 
+          const val = -amount; 
           pl.income.accounts[line.accountId].balance += val;
           pl.income.total += val;
         } else if (pl.expense.accounts[line.accountId]) {
-          const val = line.amountCents;
+          const val = amount;
           pl.expense.accounts[line.accountId].balance += val;
           pl.expense.total += val;
         }
@@ -248,9 +249,10 @@ reportRouter.get("/trial-balance", async (req, res) => {
     for (const tx of transactions) {
       if (!isPostable(tx)) continue;
       tx.lines?.forEach((line: any) => {
+        const amount = lineAmount(line, tx);
         if (trialBalance[line.accountId]) {
-          if (line.amountCents > 0) trialBalance[line.accountId].debit += line.amountCents;
-          else trialBalance[line.accountId].credit += Math.abs(line.amountCents);
+          if (amount > 0) trialBalance[line.accountId].debit += amount;
+          else trialBalance[line.accountId].credit += Math.abs(amount);
         }
       });
     }
@@ -300,21 +302,22 @@ reportRouter.get("/cash-flow", async (req, res) => {
       tx.lines?.forEach((line: any) => {
         const acc = accounts.find(a => a.id === line.accountId);
         if (!acc) return;
+        const amount = lineAmount(line, tx);
 
-        if (acc.type === 'income') cashFlow.operating.total -= line.amountCents;
-        if (acc.type === 'expense') cashFlow.operating.total -= line.amountCents;
+        if (acc.type === 'income') cashFlow.operating.total -= amount;
+        if (acc.type === 'expense') cashFlow.operating.total -= amount;
 
-        if (acc.type === 'asset' && acc.category === 'Receivable') cashFlow.operating.total -= line.amountCents;
-        if (acc.type === 'liability' && acc.category === 'Payable') cashFlow.operating.total += line.amountCents;
+        if (acc.type === 'asset' && acc.category === 'Receivable') cashFlow.operating.total -= amount;
+        if (acc.type === 'liability' && acc.category === 'Payable') cashFlow.operating.total += amount;
 
         if (acc.type === 'asset' && acc.category === 'Fixed Asset') {
-          cashFlow.investing.total -= line.amountCents;
-          cashFlow.investing.items.push({ name: tx.description, amount: -line.amountCents });
+          cashFlow.investing.total -= amount;
+          cashFlow.investing.items.push({ name: tx.description, amount: -amount });
         }
 
         if (acc.type === 'equity' || (acc.type === 'liability' && acc.category === 'Long Term Liability')) {
-          cashFlow.financing.total += line.amountCents;
-          cashFlow.financing.items.push({ name: tx.description, amount: line.amountCents });
+          cashFlow.financing.total += amount;
+          cashFlow.financing.items.push({ name: tx.description, amount: amount });
         }
       });
     });
