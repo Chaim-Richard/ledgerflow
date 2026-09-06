@@ -8,17 +8,17 @@ import Header from '../../components/layout/Header';
 import ModuleSubNav from '../../components/layout/ModuleSubNav';
 import BottomNav from '../../components/layout/BottomNav';
 import MainViewSwitcher from '../../components/layout/MainViewSwitcher';
-const CommandPalette = React.lazy(() => import('../../components/layout/CommandPalette'));
-const CommandPortal = React.lazy(() => import('../../components/layout/CommandPortal'));
+import CommandPalette from '../../components/layout/CommandPalette';
+import CommandPortal from '../../components/layout/CommandPortal';
 import StatusBar from '../../components/layout/StatusBar';
-const LedgerInterruptOverlay = React.lazy(() => import('../../components/forensics/LedgerInterruptOverlay'));
+import LedgerInterruptOverlay from '../../components/forensics/LedgerInterruptOverlay';
 
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 
-const ShortcutOverlay = React.lazy(() => import('../../components/layout/ShortcutOverlay'));
-const DiagnosticConsole = React.lazy(() => import('../../components/intelligence/DiagnosticConsole'));
+import ShortcutOverlay from '../../components/layout/ShortcutOverlay';
+import DiagnosticConsole from '../../components/intelligence/DiagnosticConsole';
 
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
