@@ -65,10 +65,12 @@ export function buildAlgorithmContext(
   reportingCurrency: string = 'USD',
   entities?: AlgorithmContext['entities']
 ): AlgorithmContext {
-  const postableTxs = (transactions || []).filter(isPostable) as PostableTransaction[];
-  
   const startDate = period.start;
-  const endDate = period.end;
+  const endDate = period.end || asOfDate;
+  const postableTxs = (transactions || []).filter(isPostable).filter(t => {
+    if (!startDate || !endDate) return true;
+    return t.date >= startDate && t.date <= endDate;
+  }) as PostableTransaction[];
   let days = period.days;
   if (!days) {
     const sTime = new Date(startDate).getTime();
