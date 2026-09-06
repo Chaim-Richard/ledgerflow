@@ -343,10 +343,6 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
     if (err.message && (err.message.includes("FORBIDDEN") || err.message.includes("PAYMENT_REQUIRED") || err.message.includes("QUOTA_EXCEEDED"))) {
       throw err;
     }
-    if (err.message?.includes("PERMISSION_DENIED") || err.message?.includes("permissions") || err.code === 7) {
-      console.warn("[Firebase Admin] Bypassing authorization check on server due to IAM constraints. Falling back to sandbox proxy workspace descriptor.");
-      return { uid: req.user?.uid, name: "Sandbox Workspace", admins: { [req.user?.uid || ""]: true } };
-    }
     throw err;
   }
 }
@@ -1130,16 +1126,7 @@ async function startServer() {
         }
 
         // Action Scope Matching & Authorization Guard
-        const allowedScopes = docData?.scopes || [
-          'read:transactions',
-          'write:transactions',
-          'read:projects',
-          'write:projects',
-          'read:ledger',
-          'write:ledger',
-          'read:workspaces',
-          'brain:analyze'
-        ];
+        const allowedScopes = Array.isArray(docData?.scopes) ? docData.scopes : [];
 
         const getRequiredScope = (method: string, path: string): string => {
           const cleanPath = path.toLowerCase().split("?")[0].replace(/\/$/, "");
