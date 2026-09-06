@@ -701,16 +701,14 @@ transactionRouter.post('/reconciliation/clear', async (req, res) => {
       if (!snap.exists) {
         return res.status(404).json({ error: `Transaction ${snap.id} not found` });
       }
-      const txData = snap.data();
-      if (txData?.workspaceId !== workspaceId) {
-        return res.status(403).json({ error: `Transaction ${snap.id} does not belong to authorized workspace` });
-      }
-      if (wsData?.lockDate && txData?.date && txData.date <= wsData.lockDate) {
-        return res.status(400).json({ error: `Period Locked: Transaction ${snap.id} is in a closed period (${wsData.lockDate}). Clearing is restricted.` });
-      }
-      if (txData?.status === 'void') {
-        return res.status(400).json({ error: `Cannot clear voided transaction ${snap.id}.` });
-      }
+      const txData = snap.data() as Transaction;
+      
+      TransactionValidator.validateTransactionState(txData, {
+        workspaceId,
+        user: { uid: user.uid, admin: user.admin },
+        wsData
+      });
+
       batch.update(snap.ref, {
         isCleared: true,
         clearedAt: FieldValue.serverTimestamp(),

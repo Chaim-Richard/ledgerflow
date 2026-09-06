@@ -11,6 +11,23 @@ export interface ValidationContext {
 
 export class TransactionValidator {
   
+  static validateTransactionState(existingTx: Transaction, context: ValidationContext) {
+    // 1. Period Lock
+    if (context.wsData?.lockDate && existingTx.date && existingTx.date <= context.wsData.lockDate) {
+      throw new Error(`Period Locked: Cannot modify transaction on ${existingTx.date} before lock date ${context.wsData.lockDate}.`);
+    }
+
+    // 2. Status Locks
+    if ((existingTx.status === 'certified' || existingTx.status === 'void') && !context.user.admin) {
+      throw new Error(`Forbidden: Transaction ${existingTx.id} status is locked.`);
+    }
+
+    // 3. Ownership
+    if (existingTx.workspaceId !== context.workspaceId) {
+      throw new Error(`Forbidden: Transaction does not belong to authorized workspace.`);
+    }
+  }
+
   static async validateAndPrepare(
     transaction: Transaction,
     context: ValidationContext,
