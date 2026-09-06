@@ -32,7 +32,7 @@ export class LedgerEngine {
     }
 
     return transactions.map(t => {
-      const cacheKey = `${t.id}-${t.description}-${t.totalAmountCents}-${t.date}-${t.isCleared ? 1 : 0}-${t.tags?.join(',') || ''}-${t.project || ''}-${t.classId || ''}-${t.locationId || ''}-${JSON.stringify(t.dimensions || {})}-${JSON.stringify(t.lines || [])}`;
+      const cacheKey = `${t.id}-${t.description}-${t.totalAmountCents}-${t.date}-${t.isCleared ? 1 : 0}-${t.status || ''}-${t.tags?.join(',') || ''}-${t.project || ''}-${t.lines?.length || 0}-${JSON.stringify(t.dimensions || {})}`;
       
       if (this.normalizationCache.has(cacheKey)) {
         return this.normalizationCache.get(cacheKey);
@@ -110,7 +110,7 @@ export class LedgerEngine {
     if (Array.isArray(transactions)) {
       transactions.forEach(tx => {
         if (!tx || typeof tx !== 'object') return;
-        if (tx.status === 'void' || tx.status === 'failed' || (tx as any).status === 'draft' || (tx as any).deletedAt) return;
+        if (!isPostable(tx)) return;
         
         if (Array.isArray(tx.lines)) {
           const convertedLines = tx.lines.map(line => {

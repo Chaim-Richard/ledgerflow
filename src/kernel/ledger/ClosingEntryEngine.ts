@@ -58,16 +58,13 @@ export class ClosingEntryEngine {
     const incomeBalances = new Map<string, Decimal>();
     const expenseBalances = new Map<string, Decimal>();
 
-    // Opening balances
+    // Initialize temporary accounts at zero for the period (nominal accounts do not carry opening balances forward)
     incomeAccountMap.forEach((acc, id) => {
-      // Opening balance on income: credit nature
-      const opening = acc.openingBalanceCents || 0;
-      incomeBalances.set(id, new Decimal(opening));
+      incomeBalances.set(id, new Decimal(0));
     });
 
     expenseAccountMap.forEach((acc, id) => {
-      const opening = acc.openingBalanceCents || 0;
-      expenseBalances.set(id, new Decimal(opening));
+      expenseBalances.set(id, new Decimal(0));
     });
 
     // Replay transactions on or before closing date (excluding void, failed, draft, or soft-deleted entries)
@@ -122,7 +119,7 @@ export class ClosingEntryEngine {
       retainedEarningsAcc = accounts.find(a => 
         a.workspaceId === workspaceId && 
         a.type === 'equity' && 
-        (a.name.toLowerCase().includes('retained') || a.code === '3000' || a.code === '3900' || a.code === '3200')
+        (a.name.toLowerCase().includes('retained') || a.code === '3100' || a.code === '3900' || a.code === '3200' || a.code === '3000')
       );
     }
 

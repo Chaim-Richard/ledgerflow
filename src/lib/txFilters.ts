@@ -125,7 +125,7 @@ export function isOutflow(t: Transaction, accounts?: ChartAccount[] | Map<string
     });
     if (hasExpenseLine) return true;
   }
-  return true;
+  return false;
 }
 
 /**
