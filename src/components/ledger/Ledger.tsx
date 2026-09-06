@@ -180,13 +180,13 @@ const Ledger = React.memo(() => {
 
   const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentWorkspaceId && !workspaceId) {
+    if (!workspaceId) {
       toast.error('Workspace context required');
       return;
     }
     try {
       await addDoc(collection(db, 'chartAccounts'), {
-        workspaceId: currentWorkspaceId || workspaceId,
+        workspaceId,
         uid: user?.uid || "",
         code: newAccount.code,
         name: newAccount.name,
@@ -228,7 +228,7 @@ const Ledger = React.memo(() => {
     try {
       const initialCapital = TruthEngine.parseAmountToCents(target.capital.value || '0');
       await addDoc(collection(db, 'partners'), {
-        workspaceId: currentWorkspaceId || workspaceId,
+        workspaceId,
         uid: user?.uid || "",
         name,
         share,

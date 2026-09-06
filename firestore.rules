@@ -102,19 +102,18 @@ service cloud.firestore {
     match /chartAccounts/{accountId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(accountId) &&
-        affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "balanceCents", "createdAt", "updatedAt", "isSystem", "classification"]);
+        affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "currency", "balanceCents", "openingBalanceCents", "asOfDate", "parentId", "projectAllocations", "isContra", "isArchived", "archived", "createdAt", "updatedAt", "isSystem", "classification"]);
       allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
-        isUnchanged("balanceCents") &&
-        affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "balanceCents", "createdAt", "updatedAt", "isSystem", "classification"]);
+        affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "currency", "balanceCents", "openingBalanceCents", "asOfDate", "parentId", "projectAllocations", "isContra", "isArchived", "archived", "createdAt", "updatedAt", "isSystem", "classification"]);
       allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
     }
 
     match /projects/{projectId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(projectId) &&
-        affectedKeys(["id", "uid", "workspaceId", "name", "description", "type", "status", "budgetCents", "dimensions", "splitRules", "metadata", "createdAt", "updatedAt"]);
+        affectedKeys(["id", "uid", "workspaceId", "name", "description", "type", "status", "pipelineStage", "budgetCents", "costCodes", "laborBuckets", "materialsBuckets", "subcontractCosts", "dimensions", "tags", "splitRules", "metadata", "createdAt", "updatedAt"]);
       allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") &&
-        affectedKeys(["id", "uid", "workspaceId", "name", "description", "type", "status", "budgetCents", "dimensions", "splitRules", "metadata", "createdAt", "updatedAt"]);
+        affectedKeys(["id", "uid", "workspaceId", "name", "description", "type", "status", "pipelineStage", "budgetCents", "costCodes", "laborBuckets", "materialsBuckets", "subcontractCosts", "dimensions", "tags", "splitRules", "metadata", "createdAt", "updatedAt"]);
       allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
     }
 
@@ -165,9 +164,9 @@ service cloud.firestore {
     match /{collectionName}/{documentId} {
       allow read: if isSignedIn() && !isProtectedCollection(collectionName) && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && !isProtectedCollection(collectionName) && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(documentId) &&
-        request.resource.data.keys().size() < 30; // Denial of Wallet payload protection for fallbacks
+        request.resource.data.keys().size() < 60; // Denial of Wallet payload protection for fallbacks
       allow update: if isSignedIn() && !isProtectedCollection(collectionName) && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
-        request.resource.data.keys().size() < 30; // Denial of Wallet payload protection for fallbacks
+        request.resource.data.keys().size() < 60; // Denial of Wallet payload protection for fallbacks
       allow delete: if isSignedIn() && !isProtectedCollection(collectionName) && isWorkspaceMember(resource.data.workspaceId);
     }
   }

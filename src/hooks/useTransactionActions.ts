@@ -609,51 +609,106 @@ export function useTransactionActions() {
   };
 
   const handleBulkUpdate = async (ids: string[], updates: any) => {
-    if (!user || !currentWorkspaceId) return;
+    if (!user || !currentWorkspaceId || !ids || ids.length === 0) return;
     
     setIsSyncing(true);
     const loader = toast.loading(`Synchronizing ${ids.length} updates...`);
 
     try {
-      const oldStates = new Map<string, any>();
+      const oldStates = new Map<string, Transaction>();
       const currentTransactions = useLedgerStore.getState().transactions;
-      for (const id of ids) {
-         const tx = currentTransactions.find(t => t.id === id);
-         if (tx) {
-           oldStates.set(id, {
-             'dimensions.category': tx.dimensions?.category,
-             'dimensions.project': tx.dimensions?.project,
-             lines: tx.lines
-           });
-         }
-      }
+      const updatesMap = new Map<string, any>();
 
-      await runTransaction(db, async (transaction) => {
-        const { category, accountName, project } = updates;
-        const account = accounts.find(a => a.name === accountName);
-        
-        for (const id of ids) {
-          const txRef = doc(db, 'transactions', id);
-          const updateData: any = {};
-          if (category !== undefined) updateData['dimensions.category'] = category;
-          if (project !== undefined) updateData['dimensions.project'] = project;
-          
-          if (accountName !== undefined) {
-            updateData['lines'] = [
-              { 
-                accountId: account?.id || 'uncategorized', 
-                accountName: accountName,
-                project: project || undefined
-              }
-            ];
+      const targetAccount = accounts.find(a => 
+        (updates.accountId && a.id === updates.accountId) || 
+        (updates.accountName && a.name === updates.accountName)
+      );
+      const accId = targetAccount?.id || updates.accountId;
+      const accName = targetAccount?.name || updates.accountName;
+      const projId = updates.project || updates.projectId;
+
+      for (const id of ids) {
+        const tx = currentTransactions.find(t => t.id === id);
+        if (tx) {
+          oldStates.set(id, { ...tx });
+
+          const updateData: Record<string, any> = {
+            updatedAt: new Date().toISOString()
+          };
+
+          if (updates.isLocked !== undefined) updateData.isLocked = updates.isLocked;
+          if (updates.status !== undefined) updateData.status = updates.status;
+          if (updates.category !== undefined) updateData['dimensions.category'] = updates.category;
+          if (projId !== undefined) {
+            updateData['dimensions.project'] = projId;
+            updateData.projectId = projId;
           }
 
-          transaction.update(txRef, {
-            ...updateData,
-            updatedAt: new Date().toISOString()
-          });
+          // Handle lines preservation: NEVER drop lines or destroy amounts
+          if (accId !== undefined || accName !== undefined || projId !== undefined) {
+            const existingLines = tx.lines && tx.lines.length > 0 ? tx.lines : [];
+            if (existingLines.length > 0) {
+              const newLines = existingLines.map((l: any, idx: number) => {
+                const acc = accounts.find(a => a.id === l.accountId);
+                const role = resolveAccountRole(acc);
+                const isOffsetOrCash = role === 'cash' || (acc?.type === 'asset' && existingLines.length === 2 && idx === 1);
+                
+                // Modify the primary category / expense / revenue line, or line 0
+                if (!isOffsetOrCash || idx === 0) {
+                  return {
+                    ...l,
+                    ...(accId !== undefined ? { accountId: accId } : {}),
+                    ...(accName !== undefined ? { accountName: accName } : {}),
+                    ...(projId !== undefined ? { project: projId || undefined } : {})
+                  };
+                }
+                if (projId !== undefined) {
+                  return { ...l, project: projId || undefined };
+                }
+                return l;
+              });
+              updateData.lines = newLines;
+            } else if (tx.totalAmountCents) {
+              // Balance from scratch if previously unlined
+              updateData.lines = balanceTransactionLines([], tx.totalAmountCents);
+            }
+          }
+
+          updatesMap.set(id, updateData);
         }
-      });
+      }
+
+      // Execute in explicit batches of up to 100 with writeBatch
+      const BATCH_SIZE = 100;
+      for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        const chunkIds = ids.slice(i, i + BATCH_SIZE);
+        for (const id of chunkIds) {
+          const txUpdate = updatesMap.get(id);
+          if (txUpdate) {
+            const txRef = doc(db, 'transactions', id);
+            batch.update(txRef, txUpdate);
+          }
+        }
+        await batch.commit();
+      }
+
+      // Update local state atomically
+      useLedgerStore.setState(state => ({
+        transactions: state.transactions.map(t => {
+          const u = updatesMap.get(t.id);
+          if (!u) return t;
+          const merged = { ...t, ...u };
+          if (u['dimensions.category'] !== undefined || u['dimensions.project'] !== undefined) {
+            merged.dimensions = {
+              ...t.dimensions,
+              ...(u['dimensions.category'] !== undefined ? { category: u['dimensions.category'] } : {}),
+              ...(u['dimensions.project'] !== undefined ? { project: u['dimensions.project'] } : {})
+            };
+          }
+          return merged;
+        })
+      }));
       
       toast.success(`Updated ${ids.length} transactions with atomic finality.`, { 
         id: loader,
@@ -662,20 +717,22 @@ export function useTransactionActions() {
           onClick: async () => {
             const undoLoader = toast.loading('Reverting bulk updates...');
             try {
-              await runTransaction(db, async (transaction) => {
-                for (const [id, oldState] of oldStates.entries()) {
-                   const txRef = doc(db, 'transactions', id);
-                   const updateData: any = {};
-                   if (updates.category !== undefined) updateData['dimensions.category'] = oldState['dimensions.category'] || null;
-                   if (updates.project !== undefined) updateData['dimensions.project'] = oldState['dimensions.project'] || null;
-                   if (updates.accountName !== undefined) updateData['lines'] = oldState.lines || [];
-                   
-                   transaction.update(txRef, {
-                     ...updateData,
-                     updatedAt: new Date().toISOString()
-                   });
+              for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+                const undoBatch = writeBatch(db);
+                const chunkIds = ids.slice(i, i + BATCH_SIZE);
+                for (const id of chunkIds) {
+                  const oldState = oldStates.get(id);
+                  if (oldState) {
+                    const txRef = doc(db, 'transactions', id);
+                    undoBatch.set(txRef, oldState);
+                  }
                 }
-              });
+                await undoBatch.commit();
+              }
+              // Revert store state
+              useLedgerStore.setState(state => ({
+                transactions: state.transactions.map(t => oldStates.get(t.id) || t)
+              }));
               toast.success('Bulk update reverted.', { id: undoLoader });
             } catch (err) {
               toast.error('Failed to revert bulk update.', { id: undoLoader });
@@ -684,13 +741,15 @@ export function useTransactionActions() {
         }
       });
     } catch (error: any) {
-      console.error(error);
+      console.error('Bulk update error:', error);
       const message = error?.message || 'Unknown network error';
       toast.error('Could not complete bulk update.', { 
         id: loader,
         description: `Sequence aborted. (${message})`
       });
       throw error;
+    } finally {
+      setIsSyncing(false);
     }
   };
 

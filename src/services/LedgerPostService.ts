@@ -228,6 +228,7 @@ export class LedgerPostService {
       createdAt: new Date().toISOString(),
       metadata: {
         invoiceId,
+        customerId: invoiceData.customerId,
         type: 'invoice-accrual'
       },
       lines: accrualLines
@@ -252,6 +253,7 @@ export class LedgerPostService {
           createdAt: new Date().toISOString(),
           metadata: {
             invoiceId,
+            customerId: invoiceData.customerId,
             type: 'invoice-payment'
           },
           lines: [
@@ -463,6 +465,7 @@ export class LedgerPostService {
       createdAt: new Date().toISOString(),
       metadata: {
         billId,
+        vendorId: billData.vendorId,
         type: 'bill-accrual'
       },
       lines: accrualLines
@@ -487,6 +490,7 @@ export class LedgerPostService {
           createdAt: new Date().toISOString(),
           metadata: {
             billId,
+            vendorId: billData.vendorId,
             type: 'bill-payment'
           },
           lines: [

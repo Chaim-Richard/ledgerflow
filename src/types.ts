@@ -222,6 +222,8 @@ export interface Bill {
     taxRate?: number;
     description?: string;
   }>;
+  projectId?: string;
+  issueDate?: string;
   date?: string;
   dueDate: string;
   status: 'draft' | 'pending' | 'approved' | 'paid' | 'partially_paid' | 'overdue' | 'unpaid' | 'void';

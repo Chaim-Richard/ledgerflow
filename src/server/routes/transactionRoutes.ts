@@ -390,7 +390,8 @@ transactionRouter.post('/bulk', async (req, res) => {
           const eventRef = db.collection('journalEntries').doc(`${tx.id}-line-${index}`);
           t.set(eventRef, {
             id: eventRef.id,
-            timestamp: new Date().toISOString(),
+            timestamp: tx.date ? new Date(tx.date).toISOString() : new Date().toISOString(),
+            postedAt: new Date().toISOString(),
             accountId: line.accountId,
             amountCents: line.amountCents,
             eventType: 'ACTUAL',
@@ -402,7 +403,7 @@ transactionRouter.post('/bulk', async (req, res) => {
       }
     });
 
-    res.json({ status: 'ok', count: transactions.length });
+    res.json({ status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 });
   } catch (e: any) {
     console.error('[BULK TRANSACTIONS ERROR]', e);
     res.status(400).json({ error: e.message });

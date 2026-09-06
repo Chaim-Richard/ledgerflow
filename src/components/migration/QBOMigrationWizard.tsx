@@ -21,7 +21,8 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { ChartAccount, Transaction } from '../../types';
-import { formatCurrency, parseLocalDate } from '../../lib/utils';
+import { formatCurrency, parseLocalDate, getLocalDateISO } from '../../lib/utils';
+import { resolveAccountRole } from '../../lib/accountUtils';
 import { format } from 'date-fns';
 
 interface ParsedRow {
@@ -123,20 +124,38 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
           continue;
         }
 
-        // Parse Date
+        // Parse Date using local calendar safe formatting
         let rawDate = dateIdx >= 0 ? row[dateIdx] : '';
-        let dateStr = new Date().toISOString().slice(0, 10);
+        let dateStr = getLocalDateISO();
         if (rawDate) {
           if (typeof rawDate === 'number') {
-            // Excel serial date
+            // Excel serial date (days since Dec 30, 1899)
             const jsDate = new Date(Math.round((rawDate - 25569) * 86400 * 1000));
             if (!isNaN(jsDate.getTime())) {
-              dateStr = jsDate.toISOString().slice(0, 10);
+              const y = jsDate.getUTCFullYear();
+              const m = String(jsDate.getUTCMonth() + 1).padStart(2, '0');
+              const d = String(jsDate.getUTCDate()).padStart(2, '0');
+              dateStr = `${y}-${m}-${d}`;
             }
           } else {
-            const parsed = new Date(String(rawDate));
-            if (!isNaN(parsed.getTime())) {
-              dateStr = parsed.toISOString().slice(0, 10);
+            const s = String(rawDate).trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+              dateStr = s;
+            } else if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(s)) {
+              const parts = s.split('/');
+              const m = parts[0].padStart(2, '0');
+              const d = parts[1].padStart(2, '0');
+              let y = parts[2];
+              if (y.length === 2) y = '20' + y;
+              dateStr = `${y}-${m}-${d}`;
+            } else {
+              const parsed = new Date(s);
+              if (!isNaN(parsed.getTime())) {
+                const y = parsed.getFullYear();
+                const m = String(parsed.getMonth() + 1).padStart(2, '0');
+                const d = String(parsed.getDate()).padStart(2, '0');
+                dateStr = `${y}-${m}-${d}`;
+              }
             }
           }
         }
@@ -151,16 +170,27 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
         const cls = classIdx >= 0 ? String(row[classIdx] || '').trim() : undefined;
         const loc = locationIdx >= 0 ? String(row[locationIdx] || '').trim() : undefined;
 
-        // Amounts
+        // Amounts with support for standard accounting negatives (500.00), 500.00 CR, and 500.00 DR
         let debitCents = 0;
         let creditCents = 0;
 
         const parseMoney = (val: any): number => {
           if (typeof val === 'number') return Math.round(val * 100);
           if (!val) return 0;
-          const cleaned = String(val).replace(/[^0-9.-]/g, '');
+          const str = String(val).trim();
+          const isParenNegative = /^\(.*\)$/.test(str);
+          const isCr = /\bcr\b|cr$/i.test(str);
+          const isDr = /\bdr\b|dr$/i.test(str);
+          const cleaned = str.replace(/[^0-9.-]/g, '');
           const numVal = parseFloat(cleaned);
-          return isNaN(numVal) ? 0 : Math.round(numVal * 100);
+          if (isNaN(numVal)) return 0;
+          let cents = Math.round(numVal * 100);
+          if (isParenNegative || isCr) {
+            cents = -Math.abs(cents);
+          } else if (isDr) {
+            cents = Math.abs(cents);
+          }
+          return cents;
         };
 
         if (debitIdx >= 0 || creditIdx >= 0) {
@@ -327,11 +357,36 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
     if (step === 3) {
       setIsProcessing(true);
       try {
-        // 1. Create missing accounts
+        // 1. Create missing accounts in chartAccounts with type-based GAAP numbering
         const createdAccountMap: Record<string, string> = {};
+        const updatedAccounts = [...accounts];
+        const assignedCodes = new Set<string>();
+
+        const getNextCode = (type: string): string => {
+          let base = 5000;
+          if (type === 'asset') base = 1000;
+          else if (type === 'liability') base = 2000;
+          else if (type === 'equity') base = 3000;
+          else if (type === 'income') base = 4000;
+          else base = 5000;
+
+          const used = new Set(
+            updatedAccounts
+              .map(a => parseInt(a.code, 10))
+              .concat(Array.from(assignedCodes).map(c => parseInt(c, 10)))
+              .filter(n => !isNaN(n))
+          );
+          let candidate = base;
+          while (used.has(candidate)) {
+            candidate += 10;
+          }
+          assignedCodes.add(String(candidate));
+          return String(candidate);
+        };
+
         for (const mapping of accountMappings) {
           if (mapping.targetAccountId === '__create_new__') {
-            const newAccCode = String(1000 + Math.floor(Math.random() * 8000));
+            const newAccCode = getNextCode(mapping.detectedType);
             const newAcc: Omit<ChartAccount, 'id'> = {
               uid: user?.uid || 'system',
               workspaceId: currentWorkspaceId,
@@ -340,41 +395,73 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
               type: mapping.detectedType,
               balanceCents: 0
             };
-            const created = await addEntity('accounts', newAcc);
+            const created = await addEntity('chartAccounts', newAcc);
             if (created && created.id) {
               createdAccountMap[mapping.qbAccount] = created.id;
+              updatedAccounts.push({ ...newAcc, id: created.id } as ChartAccount);
             }
           } else {
             createdAccountMap[mapping.qbAccount] = mapping.targetAccountId;
           }
         }
 
-        // 2. Batch import transactions
-        for (const row of parsedRows) {
-          const primaryAccId = createdAccountMap[row.account] || accounts[0]?.id || 'acc-cash';
-          const primaryAccName = accounts.find(a => a.id === primaryAccId)?.name || row.account;
+        // Cache fallback accounts for split offsets
+        const cashAccount = updatedAccounts.find(a => resolveAccountRole(a) === 'cash') || 
+          updatedAccounts.find(a => a.type === 'asset') || 
+          updatedAccounts[0];
+        const defaultRevenueAccount = updatedAccounts.find(a => resolveAccountRole(a) === 'revenue') ||
+          updatedAccounts.find(a => a.type === 'income');
+        const defaultExpenseAccount = updatedAccounts.find(a => resolveAccountRole(a) === 'expense') ||
+          updatedAccounts.find(a => a.type === 'expense');
 
-          const splitAccId = row.split && createdAccountMap[row.split] ? createdAccountMap[row.split] : primaryAccId;
-          const splitAccName = accounts.find(a => a.id === splitAccId)?.name || row.split || primaryAccName;
+        // 2. Prepare atomic double-entry transactions
+        const txList: any[] = [];
+
+        for (const row of parsedRows) {
+          const primaryAccId = createdAccountMap[row.account] || cashAccount?.id || 'acc-cash';
+          const primaryAcc = updatedAccounts.find(a => a.id === primaryAccId);
+          const primaryAccName = primaryAcc?.name || row.account;
+
+          let splitAccId = row.split && createdAccountMap[row.split] ? createdAccountMap[row.split] : undefined;
+
+          // Prevent self-canceling lines: if split is undefined or matches primary account, resolve offset via role
+          if (!splitAccId || splitAccId === primaryAccId) {
+            const primaryRole = resolveAccountRole(primaryAcc);
+            if (primaryRole === 'cash' || primaryAcc?.type === 'asset') {
+              splitAccId = row.netCents >= 0 
+                ? (defaultRevenueAccount?.id || primaryAccId) 
+                : (defaultExpenseAccount?.id || primaryAccId);
+            } else if (primaryRole === 'revenue' || primaryAcc?.type === 'income') {
+              splitAccId = cashAccount?.id || primaryAccId;
+            } else {
+              splitAccId = cashAccount?.id || primaryAccId;
+            }
+          }
+
+          const splitAcc = updatedAccounts.find(a => a.id === splitAccId);
+          const splitAccName = splitAcc?.name || row.split || 'Uncategorized Offset';
 
           const totalAmount = Math.max(row.debitCents, row.creditCents);
+          const primaryAmt = row.netCents >= 0 ? row.debitCents : -row.creditCents;
+          const splitAmt = -primaryAmt;
 
           const lines = [
             {
               accountId: primaryAccId,
               accountName: primaryAccName,
-              amountCents: row.netCents >= 0 ? row.debitCents : -row.creditCents,
+              amountCents: primaryAmt,
               description: row.memo
             },
             {
               accountId: splitAccId,
               accountName: splitAccName,
-              amountCents: row.netCents >= 0 ? -row.debitCents : row.creditCents,
+              amountCents: splitAmt,
               description: row.memo
             }
           ];
 
-          const newTx: Omit<Transaction, 'id'> = {
+          const newTx = {
+            id: `tx-qbo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             uid: user?.uid || 'system',
             workspaceId: currentWorkspaceId,
             date: row.date,
@@ -382,7 +469,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
             payee: row.payee,
             totalAmountCents: totalAmount,
             currency: 'USD',
-            status: 'reconciled',
+            status: 'completed',
             type: 'actual',
             lines,
             classId: row.class,
@@ -394,7 +481,43 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
             }
           };
 
-          await addEntity('transactions', newTx);
+          txList.push(newTx);
+        }
+
+        // 3. Batch import via API endpoint with chunking
+        const token = await user?.getIdToken();
+        const BATCH_SIZE = 50;
+
+        for (let i = 0; i < txList.length; i += BATCH_SIZE) {
+          const chunk = txList.slice(i, i + BATCH_SIZE);
+          let posted = false;
+
+          if (token) {
+            try {
+              const res = await fetch('/api/v1/transactions/bulk', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  transactions: chunk,
+                  workspaceId: currentWorkspaceId
+                })
+              });
+              if (res.ok) {
+                posted = true;
+              }
+            } catch (postErr) {
+              console.warn('Bulk API write deferred to client fallback', postErr);
+            }
+          }
+
+          if (!posted) {
+            for (const tx of chunk) {
+              await addEntity('transactions', tx);
+            }
+          }
         }
 
         toast.success(`Successfully migrated ${parsedRows.length} transactions into LedgerFlow!`);

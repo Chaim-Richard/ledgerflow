@@ -19,11 +19,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, safeConfirm } from '../../lib/utils';
+import { resolveAccountRole } from '../../lib/accountUtils';
 import AsyncButton from '../ui/AsyncButton';
 import { toast } from 'sonner';
 import ProjectPipeline from './ProjectPipeline';
-
-
 
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -34,6 +33,8 @@ export default function Projects() {
   const user = useAuthStore(s => s.user);
   const projects = useLedgerStore(s => s.projects);
   const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
+  const bills = useLedgerStore(s => s.bills);
   const budgets = useLedgerStore(s => s.budgets);
   const vendors = useLedgerStore(s => s.vendors);
   const { handleAction: onAction } = useCommandDispatcher();
@@ -95,12 +96,40 @@ export default function Projects() {
     }
   };
 
+  const isProjectLine = (l: any, p: Project) => {
+    if (!l || !p) return false;
+    return l.project === p.id || 
+           l.project === p.name || 
+           l.dimensions?.project === p.id || 
+           l.dimensions?.project === p.name;
+  };
+
+  const isProjectTx = (t: Transaction, p: Project) => {
+    if (!t || !p) return false;
+    return t.projectId === p.id || 
+           t.project === p.id || 
+           t.project === p.name || 
+           (t.lines && t.lines.some(l => isProjectLine(l, p)));
+  };
+
   const handleDeleteProject = async (id: string) => {
-    if (!onDelete || !safeConfirm('Are you sure you want to delete this project? All associations will remain but will point to a missing entity.')) return;
+    if (!onDelete) return;
+    const project = projects.find(p => p.id === id);
+    if (!project) return;
+
+    const referencingTxs = transactions.filter(t => isProjectTx(t, project));
+    const referencingBills = (bills || []).filter(b => b.projectId === id || b.metadata?.projectId === id);
+
+    let confirmMsg = 'Are you sure you want to delete this project?';
+    if (referencingTxs.length > 0 || referencingBills.length > 0) {
+      confirmMsg = `Warning: ${referencingTxs.length} transaction(s) and ${referencingBills.length} bill(s) reference "${project.name}". Deleting this project will unlink these financial records. Do you still wish to proceed?`;
+    }
+
+    if (!safeConfirm(confirmMsg)) return;
     try {
       await onDelete(id);
       if (selectedProjectId === id) setSelectedProjectId(null);
-      toast.success('Project deep-deleted');
+      toast.success('Project deleted successfully');
     } catch (err) {
       toast.error('Deletion failed');
     }
@@ -117,33 +146,45 @@ export default function Projects() {
 
   const projectStats = useMemo(() => {
     const stats: Record<string, { actualCents: number, budgetCents: number, incomeCents: number, expenseCents: number }> = {};
-    
+    const accountsMap = new Map(accounts.map(a => [a.id, a]));
+
     projects.forEach(p => {
-      const projectTransactions = transactions.filter(t => t.lines?.some(l => l.project === p.id));
+      const projectTransactions = transactions.filter(t => isProjectTx(t, p));
       let income = 0;
       let expense = 0;
 
       projectTransactions.forEach(t => {
-        t.lines?.filter(l => l.project === p.id).forEach(l => {
-          const accName = (l.accountName || '').toLowerCase();
-          if (accName.includes('income') || accName.includes('revenue')) {
-            income += Math.abs(l.amountCents);
-          } else if (accName.includes('expense') || accName.includes('cost')) {
-            expense += Math.abs(l.amountCents);
+        const matchingLines = t.lines?.filter(l => isProjectLine(l, p) || t.projectId === p.id) || [];
+        matchingLines.forEach(l => {
+          const acc = accountsMap.get(l.accountId);
+          const role = resolveAccountRole(acc);
+          const accName = (l.accountName || acc?.name || '').toLowerCase();
+          const amt = l.amountCents || 0;
+
+          if (role === 'revenue' || acc?.type === 'income' || acc?.type === 'revenue') {
+            // Revenue in double-entry is negative (credit)
+            income += amt < 0 ? -amt : amt;
+          } else if (role === 'expense' || role === 'cogs' || acc?.type === 'expense' || acc?.type === 'cost_of_goods') {
+            // Expense in double-entry is positive (debit)
+            expense += amt > 0 ? amt : -amt;
+          } else if (accName.includes('income') || accName.includes('revenue') || accName.includes('sales')) {
+            income += Math.abs(amt);
+          } else if (accName.includes('expense') || accName.includes('cost') || accName.includes('cogs')) {
+            expense += Math.abs(amt);
           }
         });
       });
-      
+
       stats[p.id] = {
         actualCents: income - expense,
-        budgetCents: p.budgetCents,
+        budgetCents: p.budgetCents || 0,
         incomeCents: income,
         expenseCents: expense
       };
     });
-    
+
     return stats;
-  }, [projects, transactions]);
+  }, [projects, transactions, accounts]);
 
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('en-US', { 
@@ -158,14 +199,31 @@ export default function Projects() {
 
   const projectVendors = useMemo(() => {
     if (!selectedProjectId) return [];
-    // In a real app, we'd have a mapping. For now, let's find vendors who have transactions in this project.
-    const vendorIds = new Set(
-      transactions
-        .filter(t => t.lines?.some(l => l.project === selectedProjectId) && t.metadata?.vendorId)
-        .map(t => t.metadata?.vendorId)
-    );
+    const selectedP = projects.find(p => p.id === selectedProjectId);
+    if (!selectedP) return [];
+
+    const vendorIds = new Set<string>();
+
+    transactions.forEach(t => {
+      if (isProjectTx(t, selectedP)) {
+        if (t.metadata?.vendorId) {
+          vendorIds.add(t.metadata.vendorId);
+        }
+        if (t.payee) {
+          const matched = vendors.find(v => v.name.toLowerCase() === t.payee?.toLowerCase());
+          if (matched) vendorIds.add(matched.id);
+        }
+      }
+    });
+
+    (bills || []).forEach(b => {
+      if (b.projectId === selectedProjectId || b.metadata?.projectId === selectedProjectId) {
+        if (b.vendorId) vendorIds.add(b.vendorId);
+      }
+    });
+
     return vendors.filter(v => vendorIds.has(v.id));
-  }, [selectedProjectId, transactions, vendors]);
+  }, [selectedProjectId, projects, transactions, bills, vendors]);
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
@@ -382,7 +440,12 @@ export default function Projects() {
                         </div>
                         <div className="text-right">
                           <p className="text-xs font-bold font-mono text-[var(--text)] col-span-1">
-                            {formatCurrency(transactions.filter(t => t.lines?.some(l => l.project === selectedProjectId) && t.metadata?.vendorId === vendor.id).reduce((sum, t) => sum + Math.abs(t.totalAmountCents), 0))}
+                            {formatCurrency(
+                              transactions.filter(t => 
+                                selectedProject && isProjectTx(t, selectedProject) && 
+                                (t.metadata?.vendorId === vendor.id || t.payee?.toLowerCase() === vendor.name.toLowerCase())
+                              ).reduce((sum, t) => sum + Math.abs(t.totalAmountCents), 0)
+                            )}
                           </p>
                           <p className="text-[8px] text-[var(--muted)] uppercase tracking-wider">Settled</p>
                         </div>

@@ -183,16 +183,16 @@ export default function SplitEditor({
                       <div className="flex-1 space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dimension Attribution</label>
                         <div className="relative">
-                          <input 
-                            list={`split-project-${idx}`}
+                          <select 
                             value={line.project || ''}
                             onChange={(e) => updateLine(idx, { project: e.target.value })}
-                            placeholder="Type or select project"
-                            className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[11px] font-black uppercase tracking-wider text-slate-500 focus:text-indigo-600 outline-none"
-                          />
-                          <datalist id={`split-project-${idx}`}>
-                            {projects.map(p => <option key={p.id} value={p.name} />)}
-                          </datalist>
+                            className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[11px] font-bold uppercase tracking-wider text-slate-500 focus:text-indigo-600 outline-none cursor-pointer"
+                          >
+                            <option value="">No Project Assigned</option>
+                            {projects.map(p => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                       <div className="flex-[0.5] space-y-2">

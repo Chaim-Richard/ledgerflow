@@ -592,13 +592,19 @@ export default function TransactionGrid() {
     toast.success('Ledger Export Matrix Generated');
   };
 
-  const handleBulkUpdate = useCallback((updates: any) => {
-    selectedIds.forEach(id => {
-      onUpdate?.(id, updates);
-    });
-    toast.success(`Successfully updated ${selectedIds.size} transactions`);
+  const handleBulkUpdate = useCallback(async (updates: any) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (txActions?.handleBulkUpdate) {
+      await txActions.handleBulkUpdate(ids, updates);
+    } else {
+      ids.forEach(id => {
+        onUpdate?.(id, updates);
+      });
+      toast.success(`Successfully updated ${ids.length} transactions`);
+    }
     setSelectedIds(new Set());
-  }, [selectedIds, onUpdate]);
+  }, [selectedIds, txActions, onUpdate]);
 
   const handleBulkSweep = useCallback(async () => {
     const loaderId = toast.loading('Initializing rule telemetry bulk resolution...');
