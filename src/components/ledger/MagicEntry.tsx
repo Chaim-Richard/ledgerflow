@@ -7,6 +7,8 @@ import { parseReceiptOCR } from '../../lib/algorithms/receipt-capture';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { toast } from 'sonner';
 import { getLocalDateISO } from '../../lib/utils';
+import { resolveAccountRole } from '../../lib/accountUtils';
+import { isCashAccount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 
 export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
@@ -92,19 +94,33 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
     } else {
        const { accounts } = useLedgerStore.getState();
        const actionType = parsed.action || 'expense';
-       const targetAcc = accounts.find(a => actionType === 'expense' ? (a.type === 'expense' || a.category === 'Operations') : (a.type === 'income' || a.category === 'Sales')) || accounts[0];
-       const targetAccId = targetAcc?.id || 'acc_uncategorized';
+       const isExp = actionType === 'expense';
+       const targetAcc = accounts.find(a => resolveAccountRole(a) === (isExp ? 'expense' : 'revenue')) || accounts.find(a => a.type === (isExp ? 'expense' : 'income')) || accounts[0];
+       const cashAcc = accounts.find(a => resolveAccountRole(a) === 'cash') || accounts.find(a => isCashAccount(a)) || accounts[0];
 
+       if (!targetAcc || !cashAcc) {
+         toast.error('Cannot post transaction: No chart of accounts available.');
+         return;
+       }
+
+       const amt = Math.abs(parsed.amount || 0);
        await handleQuickAdd({
          description: parsed.description || 'Natural Language Entry',
-         totalAmountCents: parsed.amount,
+         totalAmountCents: amt,
          date: parsed.dateStr || getLocalDateISO(),
          type: actionType,
-         lines: [{
-           accountId: targetAccId,
-           accountName: parsed.description || targetAcc?.name || 'General',
-           amountCents: actionType === 'expense' ? -Math.abs(parsed.amount) : Math.abs(parsed.amount)
-         }]
+         lines: [
+           {
+             accountId: targetAcc.id,
+             accountName: parsed.description || targetAcc.name,
+             amountCents: isExp ? amt : -amt
+           },
+           {
+             accountId: cashAcc.id,
+             accountName: cashAcc.name,
+             amountCents: isExp ? -amt : amt
+           }
+         ]
        });
        toast.success('Transaction saved to General Ledger!');
     }

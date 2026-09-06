@@ -13,6 +13,7 @@ import {
   BrainCircuit
 } from 'lucide-react';
 import { parseLocalDate, resolveAccountName, cn } from '../../lib/utils';
+import { isInflow } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
 
@@ -298,7 +299,7 @@ const TransactionRow = React.memo(({
         <div 
           className={cn(
             "px-4 text-right font-black font-mono transition-colors text-sm h-full flex flex-col justify-center relative overflow-hidden border-r border-[var(--line)]/50 items-end",
-            (((tx.type as string) === 'income' || (tx.type as string) === 'revenue') || (tx.type !== 'expense' && (tx.type as string) !== 'cost_of_goods' && tx.totalAmountCents > 0))
+            isInflow(tx, accounts)
               ? "text-emerald-600 group-hover/active:text-emerald-400"
               : "text-rose-600 group-hover/active:text-rose-400",
             isFocused && focusedField === 'amountCents' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
