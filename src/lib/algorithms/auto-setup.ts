@@ -1,8 +1,8 @@
-import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition, adaptLegacy } from './types';
+import { Transaction } from '../../types';
+import { AlgorithmDefinition } from './types';
 import { computeTFIDFWeights } from './tf-idf';
 
-export function fingerprintBusiness(transactions: Transaction[]) {
+export function fingerprintBusiness(transactions: readonly Transaction[]) {
     if (!transactions.length) return { industry: 'Unknown', confidence: 0, clusters: [] };
     
     // 1. Get terms
@@ -47,7 +47,8 @@ export const AUTO_SETUP_ALGO: AlgorithmDefinition = {
   name: 'Zero-Setup Books (Industry Fingerprinting)',
   description: 'Clusters merchant tokens using TF-IDF to fingerprint the business industry and propose a bespoke Chart of Accounts without a setup wizard.',
   inputs: [],
-  compute: adaptLegacy((transactions, accounts, inputs) => {
+  compute: (ctx, inputs) => {
+    const { transactions } = ctx;
     const start = performance.now();
     const result = fingerprintBusiness(transactions);
     const ms = performance.now() - start;
@@ -70,5 +71,5 @@ export const AUTO_SETUP_ALGO: AlgorithmDefinition = {
         'We can automatically construct the optimal chart of accounts for this industry before the user even reaches the dashboard.'
       ]
     };
-  })
+  }
 };

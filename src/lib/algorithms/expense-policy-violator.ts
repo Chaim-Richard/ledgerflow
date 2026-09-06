@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { parseLocalDate } from '../../lib/utils';
 import { isOutflow } from '../txFilters';
 
@@ -18,7 +18,8 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
       defaultValue: 100
     }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts, accounting } = ctx;
     const minRoundAmount = (inputs['minRoundAmount'] ?? 100) * 100; // in cents
     
     let weekendCount = 0;
@@ -32,7 +33,7 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
     
     transactions.forEach(tx => {
       // Look at expense/liability accounts or general spending
-      if (!isOutflow(tx, accounts)) return;
+      if (!isOutflow(tx, accounts as any)) return;
       
       const absAmount = Math.abs(tx.totalAmountCents);
       if (absAmount < 500) return; // Skip tiny transactions
@@ -92,5 +93,5 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
       ],
       insights
     };
-  })
+  }
 };

@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction, Employee } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { computePeriodPayroll, PAYROLL_DISCLAIMER } from '../../lib/payroll-engine';
@@ -23,8 +23,8 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
       defaultValue: '2026'
     }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs, context): AlgoResult => {
-    const employees = context?.employees || [];
+  compute: (ctx, inputs): AlgoResult => {
+    const employees = ctx.entities?.employees || [];
     const year = parseInt(inputs['year'] || '2026', 10);
     
     const activeEmployees = employees.filter((e: any) => e.status === 'Active');
@@ -99,5 +99,5 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
       ],
       rows
     };
-  })
+  }
 };

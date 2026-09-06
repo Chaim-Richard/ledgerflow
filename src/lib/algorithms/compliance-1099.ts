@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction } from '../../types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
 import { isPostable } from '../../lib/txFilters';
@@ -33,9 +33,10 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
       defaultValue: 600
     }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs, context): AlgoResult => {
-    const vendors = context?.vendors || [];
-    const bills = context?.bills || [];
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts, accounting } = ctx;
+    const vendors = ctx.entities?.vendors || [];
+    const bills = ctx.entities?.bills || [];
     
     const year = inputs['year'] || '2026';
     const thresholdCents = (inputs['threshold'] ?? 600) * 100;
@@ -82,10 +83,7 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
         if (isVendorMatch) {
           // Check if tx is cash-out to expense without a bill
           const isCashOut = tx.lines?.some(e => e.amountCents < 0);
-          const hasExpense = tx.lines?.some(e => {
-            const acc = accounts.find(a => a.id === e.accountId);
-            return acc && (acc.type === 'expense' || acc.type === 'cost_of_goods');
-          });
+          const hasExpense = tx.lines?.some(e => accounting.isExpense(e.accountId) || accounting.isCOGS(e.accountId));
 
           if (isCashOut && hasExpense) {
             // Avoid double counting if transaction was generated from a bill
@@ -126,5 +124,5 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
       rows,
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  })
+  }
 };

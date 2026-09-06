@@ -57,27 +57,6 @@ export interface AlgorithmContext {
 
 export type AlgoFn = (ctx: AlgorithmContext, inputs: Record<string, any>) => AlgoResult;
 
-export type LegacyAlgoFn = (
-  transactions: Transaction[],
-  accounts: ChartAccount[],
-  inputs: Record<string, any>,
-  context?: { invoices?: any[]; bills?: any[]; vendors?: any[]; employees?: any[]; budgets?: any[]; customers?: any[] }
-) => AlgoResult;
-
-/**
- * Adapter enabling legacy algorithms to receive the unified AlgorithmContext.
- */
-export function adaptLegacy(fn: LegacyAlgoFn): AlgoFn {
-  return (ctx, inputs) => {
-    return fn(
-      [...(ctx.transactions || [])] as Transaction[],
-      [...(ctx.accounts || [])] as ChartAccount[],
-      inputs,
-      ctx.entities
-    );
-  };
-}
-
 export function buildAlgorithmContext(
   transactions: Transaction[],
   accounts: ChartAccount[],
@@ -138,6 +117,3 @@ export interface AlgorithmDefinition {
   inputs: AlgoInput[];
   compute: AlgoFn;
 }
-
-export const buildLegacyHelper = (fn: LegacyAlgoFn): AlgoFn => adaptLegacy(fn);
-export const buildHelper = (fn: AlgoFn): AlgoFn => fn;

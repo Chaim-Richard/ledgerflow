@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 
 export const heuristicPipeline: AlgorithmDefinition = {
   id: '2',
@@ -9,7 +9,8 @@ export const heuristicPipeline: AlgorithmDefinition = {
   inputs: [
     { key: 'automation', label: 'Confidence Threshold (%)', min: 10, max: 100, step: 5, defaultValue: 85 }
   ],
-  compute: adaptLegacy((txs, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions: txs } = ctx;
     const threshold = inputs.automation ?? 85;
 
     let highConfidenceMatches = 0;
@@ -58,5 +59,5 @@ export const heuristicPipeline: AlgorithmDefinition = {
         roundNumberAnomalies > 5 ? `Detected ${roundNumberAnomalies} round-number transactions, typical of inter-company transfers or standard monthly retainers.` : 'Transaction amounts display standard fractal variance.'
       ]
     };
-  })
+  }
 };

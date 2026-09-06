@@ -1,5 +1,4 @@
-import { resolveAccountRole } from '../accountUtils';
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { calculateNPV, calculateIRR } from './math';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
@@ -16,7 +15,8 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     { key: 'taxRatePct', label: 'Corporate Tax Rate (%)', min: 0, max: 50, step: 1, defaultValue: 21 },
     { key: 'equityDebtRatio', label: 'Equity Weight (%)', min: 0, max: 100, step: 5, defaultValue: 70 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts, accounting } = ctx;
     const ke = (inputs['costOfEquityPct'] ?? 10) / 100;
     const kd = (inputs['costOfDebtPct'] ?? 5) / 100;
     const tax = (inputs['taxRatePct'] ?? 21) / 100;
@@ -40,10 +40,8 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
       let hasCashAccount = false;
 
       tx.lines.forEach(l => {
-         const acc = accounts.find(a => a.id === l.accountId);
-         const role = resolveAccountRole(acc);
          const amt = lineAmount(l, tx);
-         if (acc && role === 'cash') {
+         if (accounting.isCash(l.accountId)) {
              hasCashAccount = true;
              netImpact += amt; // Inflows positive, outflows negative
          }
@@ -52,12 +50,10 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
       // If no explicit cash account was touched, compute Operating Net Income impact
       if (!hasCashAccount) {
         tx.lines.forEach(l => {
-          const acc = accounts.find(a => a.id === l.accountId);
-          const role = resolveAccountRole(acc);
           const amt = lineAmount(l, tx);
-          if (acc && (role === 'revenue' || acc.type === 'income')) {
+          if (accounting.isRevenue(l.accountId)) {
             netImpact += Math.abs(amt);
-          } else if (acc && (role === 'expense' || role === 'cogs' || acc.type === 'expense' || acc.type === 'cost_of_goods')) {
+          } else if (accounting.isExpense(l.accountId) || accounting.isCOGS(l.accountId)) {
             netImpact -= Math.abs(amt);
           }
         });
@@ -181,5 +177,5 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
       ],
       insights
     };
-  })
+  }
 };

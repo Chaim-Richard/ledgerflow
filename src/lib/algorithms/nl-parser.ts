@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, adaptLegacy } from './types';
+import { AlgorithmDefinition } from './types';
 import { getLocalDateISO } from '../utils';
 
 export interface ParsedCommandIntent {
@@ -113,7 +113,7 @@ export const NL_PARSER_ALGO: AlgorithmDefinition = {
   name: 'Deterministic NL Entry Grammar',
   description: 'Parses natural sentences like "paid $40 gas cash yesterday" or "new project: Aspen" using PEG-lite regex slots.',
   inputs: [],
-  compute: adaptLegacy((transactions, accounts, inputs) => {
+  compute: (ctx, inputs) => {
     const start = performance.now();
     const sample = "paid $40 gas cash yesterday";
     const result = parseNaturalLanguageEntry(sample);
@@ -134,6 +134,6 @@ export const NL_PARSER_ALGO: AlgorithmDefinition = {
         'PEG-lite grammar executes instantly and local-first with zero API latency.'
       ]
     };
-  })
+  }
 };
 

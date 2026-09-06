@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
@@ -11,7 +11,8 @@ export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
     { key: 'assumedChurnPct', label: 'Assumed Monthly Churn (%)', min: 1, max: 20, step: 1, defaultValue: 3 },
     { key: 'newCustomers', label: 'New Customers Acquired (Count)', min: 1, max: 1000, step: 10, defaultValue: 50 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts } = ctx;
     const churnRate = (inputs.assumedChurnPct ?? 3) / 100;
     const newCustomers = inputs.newCustomers ?? 50;
 
@@ -128,5 +129,5 @@ export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
       ],
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  })
+  }
 };

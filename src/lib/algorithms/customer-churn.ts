@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { parseLocalDate } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
@@ -11,7 +11,8 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'churnThresholdDays', label: 'Churn Threshold (Days)', min: 30, max: 365, step: 30, defaultValue: 90 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts, accounting } = ctx;
     const thresholdDays = inputs.churnThresholdDays ?? 90;
     
     // Identification of customers from transaction data based on income/revenue
@@ -30,14 +31,9 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
        let isRevenue = false;
        let txAmount = 0;
        tx.lines.forEach(l => {
-          const acc = accounts.find(a => a.id === l.accountId);
-          if (acc) {
-             const typeLower = (acc.type || '').toLowerCase();
-             const catLower = (acc.category || '').toLowerCase();
-             if (typeLower === 'income' || typeLower === 'revenue' || catLower === 'revenue' || catLower === 'sales') {
-                isRevenue = true;
-                txAmount += Math.abs(lineAmount(l, tx));
-             }
+          if (accounting.isRevenue(l.accountId)) {
+             isRevenue = true;
+             txAmount += Math.abs(lineAmount(l, tx));
           }
        });
 
@@ -128,5 +124,5 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
         lostRevenue > 0 ? `The historical lifetime value associated with currently churned customers is $${(lostRevenue/100).toLocaleString()}.` : ''
       ]
     };
-  })
+  }
 };

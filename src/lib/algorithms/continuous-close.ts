@@ -1,7 +1,7 @@
-import { AlgorithmDefinition, adaptLegacy } from './types';
+import { AlgorithmDefinition } from './types';
 import { Transaction } from '../../types';
 
-export function runContinuousCloseCheck(transactions: Transaction[]) {
+export function runContinuousCloseCheck(transactions: readonly Transaction[]) {
   const totalCount = transactions.length;
   const postedCount = transactions.filter(t => t.status === 'completed' || t.status === 'reconciled' || t.status === 'approved').length;
   const pendingCount = totalCount - postedCount;
@@ -41,7 +41,8 @@ export const CONTINUOUS_CLOSE_ALGO: AlgorithmDefinition = {
   name: 'Silent Micro-Close & Nightly Hash Anchor',
   description: 'Reconciles, flags unfiled items, and computes hash-anchored snapshots every night so the books are always closed and audit-ready.',
   inputs: [],
-  compute: adaptLegacy((transactions, accounts, inputs) => {
+  compute: (ctx, inputs) => {
+    const { transactions } = ctx;
     const res = runContinuousCloseCheck(transactions);
 
     return {
@@ -69,5 +70,5 @@ export const CONTINUOUS_CLOSE_ALGO: AlgorithmDefinition = {
         'Zero tax-season crunch — the ledger is verified and closed continuously.'
       ]
     };
-  })
+  }
 };

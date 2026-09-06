@@ -1,9 +1,9 @@
-import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition, adaptLegacy } from './types';
+import { Transaction } from '../../types';
+import { AlgorithmDefinition } from './types';
 import { parseLocalDate } from '../../lib/utils';
 import { isPostable } from '../../lib/txFilters';
 
-export function detectRecurrences(transactions: Transaction[], minOccurrences = 2) {
+export function detectRecurrences(transactions: readonly Transaction[], minOccurrences = 2) {
     // 1. Group by entity/vendor (using description or simple hash)
     const groups: Record<string, Transaction[]> = {};
     transactions.forEach(t => {
@@ -79,7 +79,8 @@ export const RECURRENCE_DETECTION: AlgorithmDefinition = {
   inputs: [
     { key: 'minOccurrences', label: 'Min Occurrences', min: 2, max: 10, step: 1, defaultValue: 3 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs) => {
+  compute: (ctx, inputs) => {
+    const { transactions } = ctx;
     // We will use the live transactions
     const start = performance.now();
     const minOcc = inputs['minOccurrences'] ?? 3;
@@ -129,5 +130,5 @@ export const RECURRENCE_DETECTION: AlgorithmDefinition = {
         'This discrete detection feeds upcoming bill alerts, cash forecasts, and missed-event alarms.'
       ]
     };
-  })
+  }
 };

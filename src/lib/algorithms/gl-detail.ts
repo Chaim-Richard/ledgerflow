@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction } from '../../types';
 import { parseLocalDate, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
@@ -25,7 +25,8 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
       defaultValue: ''
     }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts, accounting } = ctx;
     const period = inputs['period'];
     const accountId = inputs['accountId'];
 
@@ -67,7 +68,7 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
         if (accountId && e.accountId !== accountId) return; // Skip entries not for this account if filtered
         
         const account = accounts.find(a => a.id === e.accountId);
-        const isDebitNormal = account ? ['asset', 'expense', 'cost_of_goods'].includes(account.type) : true;
+        const isDebitNormal = account ? (accounting.isAsset(account.id) || accounting.isExpense(account.id) || accounting.isCOGS(account.id)) : true;
         
         const amt = lineAmount(e, t);
         const debit = amt > 0 ? amt : 0;
@@ -108,5 +109,5 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
       rows,
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  })
+  }
 };

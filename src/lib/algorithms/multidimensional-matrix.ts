@@ -1,9 +1,9 @@
-import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition, adaptLegacy } from './types';
+import { Transaction } from '../../types';
+import { AlgorithmDefinition } from './types';
 
 // The Dimensional Ledger Engine (In-Memory OLAP Cube)
 // Parses "dimension:path/to/node" tags to build dynamic pivot tables.
-export function buildOLAPCube(transactions: Transaction[], rowDim: string, colDim: string) {
+export function buildOLAPCube(transactions: readonly Transaction[], rowDim: string, colDim: string) {
     const matrix = new Map<string, Map<string, number>>();
     const rowTotals = new Map<string, number>();
     const colTotals = new Map<string, number>();
@@ -60,7 +60,8 @@ export const MULTIDIMENSIONAL_MATRIX: AlgorithmDefinition = {
   inputs: [
     { key: 'minVolume', label: 'Minimum Volume Filter ($)', min: 0, max: 10000, step: 100, defaultValue: 500 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs) => {
+  compute: (ctx, inputs) => {
+    const { transactions } = ctx;
     // Process real transactions directly
     const processedTxs = transactions.map(t => {
       // If no explicit tags exist, check project, location, or class as dynamic dimensions
@@ -119,5 +120,5 @@ export const MULTIDIMENSIONAL_MATRIX: AlgorithmDefinition = {
         'Supports infinite dynamic dimensions. Just tag a transaction "campaign:summer25" and pivot by it instantly.'
       ]
     };
-  })
+  }
 };

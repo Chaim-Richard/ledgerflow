@@ -1,13 +1,13 @@
-import { parseLocalDate } from '../utils';
+import { parseLocalDate } from '../../lib/utils';
 import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition, buildLegacyHelper } from './types';
+import { AlgorithmDefinition } from './types';
 
 const BENFORD_EXPECTED: Record<number, number> = {
   1: 0.301, 2: 0.176, 3: 0.125, 4: 0.097, 5: 0.079,
   6: 0.067, 7: 0.058, 8: 0.051, 9: 0.046,
 };
 
-function benfordsLawTest(amountsCents: number[]) {
+function benfordsLawTest(amountsCents: readonly number[]) {
   const leadingDigits = amountsCents
     .map((c) => Math.abs(c))
     .filter((c) => c > 0)
@@ -42,7 +42,7 @@ function daysBetween(a: string, b: string): number {
   return Math.abs(parseLocalDate(a).getTime() - parseLocalDate(b).getTime()) / 86_400_000;
 }
 
-function findDuplicates(transactions: Transaction[], windowDays = 3) {
+function findDuplicates(transactions: readonly Transaction[], windowDays = 3) {
   const groups = new Map<string, Transaction[]>();
   for (const tx of transactions) {
     const key = `${tx.totalAmountCents}|${normalizeDescription(tx.description)}`;
@@ -88,7 +88,7 @@ function median(values: number[]): number {
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
-function findOutliers(transactions: Transaction[], threshold = 3.5) {
+function findOutliers(transactions: readonly Transaction[], threshold = 3.5) {
   if (transactions.length < 5) return [];
   const amounts = transactions.map((t) => t.totalAmountCents);
   const med = median(amounts);
@@ -105,100 +105,6 @@ function findOutliers(transactions: Transaction[], threshold = 3.5) {
     .filter((r) => Number.isFinite(r.zScore) && Math.abs(r.zScore) > threshold);
 }
 
-export const anomalyDetection = buildLegacyHelper((transactions, accounts, inputs) => {
-  const windowDays = inputs['windowDays'] ?? 3;
-  const zScoreThreshold = inputs['zScoreThreshold'] ?? 3.5;
-
-  const duplicates = findDuplicates(transactions, windowDays);
-  
-  // Expenses for Benford's Law
-  const expenseAccounts = new Set(accounts.filter(a => a.type === 'expense').map(a => a.id));
-  
-  // Find outliers by account (deduplicating transaction per account)
-  const byAccount = new Map<string, Transaction[]>();
-  for (const tx of transactions) {
-    const seenAccountInTx = new Set<string>();
-    for (const line of tx.lines) {
-      if (expenseAccounts.has(line.accountId) && !seenAccountInTx.has(line.accountId)) {
-         seenAccountInTx.add(line.accountId);
-         const group = byAccount.get(line.accountId) ?? [];
-         group.push(tx);
-         byAccount.set(line.accountId, group);
-      }
-    }
-  }
-
-  const allOutliers = [];
-  for (const [accountId, txs] of byAccount.entries()) {
-    const accOutliers = findOutliers(txs, zScoreThreshold);
-    if (accOutliers.length > 0) {
-      const accountName = accounts.find(a => a.id === accountId)?.name ?? accountId;
-      allOutliers.push(...accOutliers.map(o => ({ ...o, accountName })));
-    }
-  }
-
-  // Get amounts for Benford's Law (unique expense transactions)
-  const uniqueExpenseTxs = new Set<Transaction>();
-  for (const txs of byAccount.values()) {
-    for (const tx of txs) uniqueExpenseTxs.add(tx);
-  }
-  const expenseAmounts = Array.from(uniqueExpenseTxs).map(tx => tx.totalAmountCents);
-  const benford = benfordsLawTest(expenseAmounts);
-
-  const insights: string[] = [];
-  if (duplicates.length > 0) {
-    insights.push(`Detected ${duplicates.length} cluster(s) of potential duplicate transactions.`);
-  }
-  if (allOutliers.length > 0) {
-    insights.push(`Identified ${allOutliers.length} statistical outlier(s) across expense accounts based on modified Z-score.`);
-  }
-  if (benford) {
-    insights.push(benford.suspicious 
-      ? `Expense amounts deviate significantly from Benford's Law (Chi-Square: ${benford.chiSquare.toFixed(2)}), suggesting potential anomalies.`
-      : `Expense amount leading digits conform to Benford's Law (Chi-Square: ${benford.chiSquare.toFixed(2)}).`);
-  } else {
-    insights.push(`Insufficient expense transactions to run Benford's Law analysis (need at least 30).`);
-  }
-
-  const metrics = [
-    { label: "Possible Duplicates", value: duplicates.length, color: duplicates.length > 0 ? "text-amber-500" : "text-emerald-500" },
-    { label: "Statistical Outliers", value: allOutliers.length, color: allOutliers.length > 0 ? "text-amber-500" : "text-emerald-500" },
-  ];
-
-  if (benford) {
-     metrics.push({
-       label: "Benford Chi-Square",
-       value: Number(benford.chiSquare.toFixed(2)),
-       color: benford.suspicious ? "text-red-500" : "text-emerald-500"
-     });
-  }
-
-  const charts = [];
-  if (benford && benford.sampleSize >= 30) {
-     const data = Object.keys(BENFORD_EXPECTED).map(digit => ({
-        digit: digit,
-        expected: Number((BENFORD_EXPECTED[Number(digit)]! * 100).toFixed(1)),
-        observed: Number(((benford.observed[Number(digit)] ?? 0) * 100).toFixed(1))
-     }));
-     charts.push({
-        data,
-        config: {
-          xKey: 'digit',
-          yKeys: [
-            { key: 'expected', color: '#94a3b8', name: 'Expected %', type: 'line' as const },
-            { key: 'observed', color: '#6366f1', name: 'Observed %', type: 'bar' as const }
-          ]
-        }
-     });
-  }
-
-  return {
-    metrics,
-    charts,
-    insights
-  };
-});
-
 export const ANOMALY_DETECTION_ALGO: AlgorithmDefinition = {
   id: 'forensics_anomaly_detection',
   name: 'Forensic Anomaly Detection',
@@ -209,5 +115,98 @@ export const ANOMALY_DETECTION_ALGO: AlgorithmDefinition = {
     { key: 'windowDays', label: 'Duplicate Window (Days)', min: 1, max: 14, step: 1, defaultValue: 3 },
     { key: 'zScoreThreshold', label: 'Outlier Z-Score Threshold', min: 2.0, max: 5.0, step: 0.1, defaultValue: 3.5 }
   ],
-  compute: anomalyDetection
+  compute: (ctx, inputs) => {
+    const { transactions, accounts } = ctx;
+    const windowDays = inputs['windowDays'] ?? 3;
+    const zScoreThreshold = inputs['zScoreThreshold'] ?? 3.5;
+
+    const duplicates = findDuplicates(transactions, windowDays);
+    
+    // Expenses for Benford's Law
+    const expenseAccounts = new Set(accounts.filter(a => a.type === 'expense').map(a => a.id));
+    
+    // Find outliers by account (deduplicating transaction per account)
+    const byAccount = new Map<string, Transaction[]>();
+    for (const tx of transactions) {
+      const seenAccountInTx = new Set<string>();
+      for (const line of tx.lines) {
+        if (expenseAccounts.has(line.accountId) && !seenAccountInTx.has(line.accountId)) {
+           seenAccountInTx.add(line.accountId);
+           const group = byAccount.get(line.accountId) ?? [];
+           group.push(tx as any);
+           byAccount.set(line.accountId, group);
+        }
+      }
+    }
+
+    const allOutliers: any[] = [];
+    for (const [accountId, txs] of byAccount.entries()) {
+      const accOutliers = findOutliers(txs, zScoreThreshold);
+      if (accOutliers.length > 0) {
+        const accountName = accounts.find(a => a.id === accountId)?.name ?? accountId;
+        allOutliers.push(...accOutliers.map(o => ({ ...o, accountName })));
+      }
+    }
+
+    // Get amounts for Benford's Law (unique expense transactions)
+    const uniqueExpenseTxs = new Set<Transaction>();
+    for (const txs of byAccount.values()) {
+      for (const tx of txs) uniqueExpenseTxs.add(tx);
+    }
+    const expenseAmounts = Array.from(uniqueExpenseTxs).map(tx => tx.totalAmountCents);
+    const benford = benfordsLawTest(expenseAmounts);
+
+    const insights: string[] = [];
+    if (duplicates.length > 0) {
+      insights.push(`Detected ${duplicates.length} cluster(s) of potential duplicate transactions.`);
+    }
+    if (allOutliers.length > 0) {
+      insights.push(`Identified ${allOutliers.length} statistical outlier(s) across expense accounts based on modified Z-score.`);
+    }
+    if (benford) {
+      insights.push(benford.suspicious 
+        ? `Expense amounts deviate significantly from Benford's Law (Chi-Square: ${benford.chiSquare.toFixed(2)}), suggesting potential anomalies.`
+        : `Expense amount leading digits conform to Benford's Law (Chi-Square: ${benford.chiSquare.toFixed(2)}).`);
+    } else {
+      insights.push(`Insufficient expense transactions to run Benford's Law analysis (need at least 30).`);
+    }
+
+    const metrics = [
+      { label: "Possible Duplicates", value: duplicates.length, color: duplicates.length > 0 ? "text-amber-500" : "text-emerald-500" },
+      { label: "Statistical Outliers", value: allOutliers.length, color: allOutliers.length > 0 ? "text-amber-500" : "text-emerald-500" },
+    ];
+
+    if (benford) {
+       metrics.push({
+         label: "Benford Chi-Square",
+         value: Number(benford.chiSquare.toFixed(2)),
+         color: benford.suspicious ? "text-red-500" : "text-emerald-500"
+       });
+    }
+
+    const charts = [];
+    if (benford && benford.sampleSize >= 30) {
+       const data = Object.keys(BENFORD_EXPECTED).map(digit => ({
+          digit: digit,
+          expected: Number((BENFORD_EXPECTED[Number(digit)]! * 100).toFixed(1)),
+          observed: Number(((benford.observed[Number(digit)] ?? 0) * 100).toFixed(1))
+       }));
+       charts.push({
+          data,
+          config: {
+            xKey: 'digit',
+            yKeys: [
+              { key: 'expected', color: '#94a3b8', name: 'Expected %', type: 'line' as const },
+              { key: 'observed', color: '#6366f1', name: 'Observed %', type: 'bar' as const }
+            ]
+          }
+       });
+    }
+
+    return {
+      metrics,
+      charts,
+      insights
+    };
+  }
 };

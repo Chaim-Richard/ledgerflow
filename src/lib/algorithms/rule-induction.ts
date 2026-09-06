@@ -1,8 +1,8 @@
-import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition, adaptLegacy } from './types';
+import { Transaction } from '../../types';
+import { AlgorithmDefinition } from './types';
 
 // Association Rule Mining (Apriori-lite) to convert manual/probabilistic choices into deterministic rules
-export function induceRules(transactions: Transaction[], minSupport: number = 3, minConfidence: number = 0.85) {
+export function induceRules(transactions: readonly Transaction[], minSupport: number = 3, minConfidence: number = 0.85) {
     const patternCounts = new Map<string, number>();
     const patternAccountCounts = new Map<string, Map<string, number>>();
 
@@ -76,7 +76,8 @@ export const RULE_INDUCTION_ALGO: AlgorithmDefinition = {
     { key: 'minSupport', label: 'Minimum Support (Occurrences)', min: 1, max: 20, step: 1, defaultValue: 3 },
     { key: 'minConfidence', label: 'Minimum Confidence (%)', min: 50, max: 100, step: 5, defaultValue: 85 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs) => {
+  compute: (ctx, inputs) => {
+    const { transactions } = ctx;
     const start = performance.now();
     // Check if there are explicitly verified transactions; if so, use them, otherwise evaluate all
     const explicitlyVerified = transactions.filter(t => t.verification?.status === 'verified');
@@ -116,5 +117,5 @@ export const RULE_INDUCTION_ALGO: AlgorithmDefinition = {
         rules[0] ? `Strongest rule: IF description contains "${rules[0].condition}" THEN classify as "${rules[0].targetAccount}" (Confidence: ${Math.round(rules[0].confidence*100)}%, Support: ${rules[0].support})` : 'No rules met the confidence threshold.'
       ]
     };
-  })
+  }
 };

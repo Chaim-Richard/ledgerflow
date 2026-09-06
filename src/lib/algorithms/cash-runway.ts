@@ -1,5 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
-import { resolveAccountRole } from '../accountUtils';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
@@ -18,11 +17,12 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
       defaultValue: 3
     }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts, accounting } = ctx;
     const burnWindowMonths = inputs['burnWindowMonths'] ?? 3;
     
     // 1. Calculate current cash position (sum of all Cash/Bank accounts)
-    const cashAccounts = accounts.filter(a => resolveAccountRole(a) === 'cash');
+    const cashAccounts = accounts.filter(a => accounting.isCash(a.id));
     const cashAccountIds = new Set(cashAccounts.map(a => a.id));
     
     const openingCashCents = cashAccounts.reduce((sum, a) => sum + (a.openingBalanceCents || 0), 0);
@@ -144,5 +144,5 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
       insights,
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  })
+  }
 };

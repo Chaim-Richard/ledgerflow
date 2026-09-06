@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 
 export const assetAmortizer: AlgorithmDefinition = {
   id: '3',
@@ -11,9 +11,10 @@ export const assetAmortizer: AlgorithmDefinition = {
     { key: 'salvageValuePct', label: 'Salvage Value (%)', min: 0, max: 50, step: 5, defaultValue: 10 },
     { key: 'taxRate', label: 'Corporate Tax Rate (%)', min: 0, max: 50, step: 5, defaultValue: 25 }
   ],
-  compute: adaptLegacy((txs, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions: txs, accounts, accounting } = ctx;
     // Attempt to identify capital assets
-    const caAccts = accounts.filter(a => (a.name || '').toLowerCase().includes('asset') || (a.category || '').toLowerCase() === 'asset').map(a => a.id);
+    const caAccts = accounts.filter(a => accounting.isAsset(a.id)).map(a => a.id);
     
     let assetBaseCents = 0;
     
@@ -120,5 +121,5 @@ export const assetAmortizer: AlgorithmDefinition = {
         `At a ${inputs.taxRate}% corporate tax rate, DDB provides a Year 1 cash flow (tax shield) advantage of $${taxShieldAdvantage.toLocaleString()} over Straight-Line.`
       ]
     };
-  })
+  }
 };

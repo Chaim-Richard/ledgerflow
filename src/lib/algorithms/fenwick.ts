@@ -1,5 +1,5 @@
-import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition, adaptLegacy } from './types';
+import { Transaction } from '../../types';
+import { AlgorithmDefinition } from './types';
 
 // A Fenwick Tree (Binary Indexed Tree) for O(log n) prefix sums
 // Allows instant "Balance as of Date" queries even with out-of-order amendments
@@ -32,7 +32,7 @@ export class FenwickTree {
     }
 }
 
-export function buildTimeTravelLedger(transactions: Transaction[], targetAccountId?: string) {
+export function buildTimeTravelLedger(transactions: readonly Transaction[], targetAccountId?: string) {
     // 0. Chronologically sort transactions to prevent out-of-order corruption
     const sortedTxs = [...transactions].sort((a, b) => {
         if (a.date > b.date) return 1;
@@ -87,7 +87,8 @@ export const FENWICK_TIME_TRAVEL_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'targetDayIndex', label: 'Timeline Scrub (Days from Start)', min: 1, max: 365, step: 1, defaultValue: 90 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs) => {
+  compute: (ctx, inputs) => {
+    const { transactions } = ctx;
     const start = performance.now();
     
     // Build tree
@@ -135,5 +136,5 @@ export const FENWICK_TIME_TRAVEL_ALGO: AlgorithmDefinition = {
         'This provides the mathematical engine for the "Git-for-Books" Time Machine.'
       ]
     };
-  })
+  }
 };

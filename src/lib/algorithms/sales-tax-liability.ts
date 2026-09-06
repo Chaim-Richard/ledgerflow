@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
 
 export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
@@ -39,9 +39,9 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
       defaultValue: ''
     }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs, context): AlgoResult => {
-    const invoices = context?.invoices || [];
-    const customers = context?.customers || [];
+  compute: (ctx, inputs): AlgoResult => {
+    const invoices = ctx.entities?.invoices || [];
+    const customers = ctx.entities?.customers || [];
     
     const basis = inputs['accountingBasis'] || 'cash';
     const period = inputs['period'];
@@ -183,5 +183,5 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
       rows,
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  })
+  }
 };

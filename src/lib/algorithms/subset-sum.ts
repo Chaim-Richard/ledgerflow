@@ -1,5 +1,5 @@
-import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition, adaptLegacy } from './types';
+import { Transaction } from '../../types';
+import { AlgorithmDefinition } from './types';
 import { isPostable } from '../txFilters';
 
 // The NP-hard subset sum problem with fee tolerance pruning
@@ -63,7 +63,8 @@ export const SUBSET_SUM_RECONCILIATION: AlgorithmDefinition = {
     { key: 'targetAmount', label: 'Target Bank Deposit', min: 1000, max: 1000000, step: 1000, defaultValue: 481266 },
     { key: 'numInvoices', label: 'Candidate Invoices', min: 5, max: 40, step: 1, defaultValue: 15 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs) => {
+  compute: (ctx, inputs) => {
+    const { transactions } = ctx;
     // Derive candidate items from real transactions if available
     let candidates: { id: string; amountCents: number }[] = [];
     if (transactions && transactions.length > 0) {
@@ -120,5 +121,5 @@ export const SUBSET_SUM_RECONCILIATION: AlgorithmDefinition = {
         'This algorithm explores thousands of nodes in microseconds using sorted branch-and-bound pruning.'
       ]
     };
-  })
+  }
 };

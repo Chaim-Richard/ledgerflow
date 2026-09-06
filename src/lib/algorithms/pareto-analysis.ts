@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
@@ -17,7 +17,8 @@ export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
       defaultValue: 0
     }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts } = ctx;
     const isRevenue = inputs['analyzeRevenue'] === 1;
     
     // 1. Group by entity (Payee / Description)
@@ -143,6 +144,6 @@ export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
       ],
       insights
     };
-  })
+  }
 };
 

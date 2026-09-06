@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction } from '../../types';
 import { parseLocalDate } from '../../lib/utils';
 
@@ -18,7 +18,8 @@ export const DUPLICATE_DETECTION_ALGO: AlgorithmDefinition = {
       defaultValue: 3
     }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions } = ctx;
     const timeWindowDays = inputs['timeWindowDays'] ?? 3;
     const windowMs = timeWindowDays * 24 * 60 * 60 * 1000;
     
@@ -160,5 +161,5 @@ export const DUPLICATE_DETECTION_ALGO: AlgorithmDefinition = {
       rows,
       sourceTransactionIds
     };
-  })
+  }
 };

@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
@@ -10,10 +10,10 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'shockPct', label: 'Simulated FX Shock (%)', min: 1, max: 25, step: 1, defaultValue: 10 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts, accounting } = ctx;
     const shockPct = (inputs.shockPct ?? 10) / 100;
     
-    const accountMap = new Map(accounts.map(a => [a.id, a]));
     const fxNetBalances: Record<string, number> = {};
     const sourceTransactionIds = new Set<string>();
 
@@ -26,13 +26,12 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
        if (rate !== 1 || (currencyCode !== 'USD' && currencyCode !== 'FX')) {
           sourceTransactionIds.add(tx.id);
           tx.lines.forEach(line => {
-             const acc = accountMap.get(line.accountId);
              // Focus on monetary balance sheet items (assets & liabilities) or net lines
              const baseAmt = lineAmount(line, tx);
              
              if (!fxNetBalances[currencyCode]) fxNetBalances[currencyCode] = 0;
              // If account type is known: assets increase exposure with debits, liabilities with credits
-             if (acc?.type === 'liability' || acc?.type === 'equity') {
+             if (accounting.isLiability(line.accountId) || accounting.isEquity(line.accountId)) {
                fxNetBalances[currencyCode] -= baseAmt;
              } else {
                fxNetBalances[currencyCode] += baseAmt;
@@ -86,5 +85,5 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
       ],
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  })
+  }
 };

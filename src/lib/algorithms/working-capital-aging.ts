@@ -1,5 +1,5 @@
 import { parseLocalDate } from '../../lib/utils';
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { resolveAccountRole } from '../accountUtils';
 
 export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
@@ -11,7 +11,8 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'lateThresholdDays', label: 'Overdue Warning (Days)', min: 1, max: 120, step: 5, defaultValue: 30 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs, context): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts } = ctx;
     let arPending = 0;
     let apPending = 0;
     let arOverdue = 0;
@@ -28,8 +29,8 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
     let hasProcessedData = false;
 
     // 1. Process explicit Invoices from context
-    if (context?.invoices && context.invoices.length > 0) {
-      context.invoices.forEach(inv => {
+    if (ctx.entities?.invoices && ctx.entities.invoices.length > 0) {
+      ctx.entities.invoices.forEach(inv => {
         if (inv.status === 'paid' || inv.status === 'void' || inv.status === 'draft') return;
         hasProcessedData = true;
         const dueDateStr = inv.dueDate || inv.date;
@@ -48,8 +49,8 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
     }
 
     // 2. Process explicit Bills from context
-    if (context?.bills && context.bills.length > 0) {
-      context.bills.forEach(bill => {
+    if (ctx.entities?.bills && ctx.entities.bills.length > 0) {
+      ctx.entities.bills.forEach(bill => {
         if (bill.status === 'paid' || bill.status === 'void' || bill.status === 'draft') return;
         hasProcessedData = true;
         const dueDateStr = bill.dueDate || bill.date;
@@ -191,5 +192,5 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
         netPending < 0 ? 'Short-term liquidity crunch: Pending payables exceed pending receivables.' : 'Working capital structure is positive.'
       ]
     };
-  })
+  }
 };

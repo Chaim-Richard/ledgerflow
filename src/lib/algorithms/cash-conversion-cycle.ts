@@ -1,5 +1,4 @@
-import { resolveAccountRole } from '../accountUtils';
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
@@ -11,7 +10,8 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'annualizationDays', label: 'Annualization Factor (Days)', min: 30, max: 365, step: 1, defaultValue: 365 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts, accounting } = ctx;
     const periodDays = inputs.annualizationDays ?? 365;
 
     const accountBalances: Record<string, number> = {};
@@ -30,22 +30,21 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
        if (!isPostable(tx)) return;
        let hasRelevantLine = false;
        tx.lines.forEach(l => {
+          const amt = lineAmount(l, tx);
+          accountBalances[l.accountId] = (accountBalances[l.accountId] || 0) + amt;
+          
+          if (accounting.isCOGS(l.accountId)) {
+            cogs += Math.abs(amt);
+            hasRelevantLine = true;
+          }
+          if (accounting.isRevenue(l.accountId)) {
+            revenue += Math.abs(amt);
+            hasRelevantLine = true;
+          }
           const acc = accounts.find(a => a.id === l.accountId);
-          if (acc) {
-             const amt = lineAmount(l, tx);
-             accountBalances[acc.id] = (accountBalances[acc.id] || 0) + amt;
-             const role = resolveAccountRole(acc);
-             if (role === 'cogs') {
-               cogs += Math.abs(amt);
-               hasRelevantLine = true;
-             }
-             if (role === 'revenue') {
-               revenue += Math.abs(amt);
-               hasRelevantLine = true;
-             }
-             if (role === 'inventory' || role === 'ar' || role === 'ap') {
-               hasRelevantLine = true;
-             }
+          const isInventory = acc && accounting.isAsset(acc.id) && ((acc.category || '').toLowerCase().includes('inventory') || (acc.name || '').toLowerCase().includes('inventory'));
+          if (isInventory || accounting.isAR(l.accountId) || accounting.isAP(l.accountId)) {
+            hasRelevantLine = true;
           }
        });
        if (hasRelevantLine) sourceTransactionIds.add(tx.id);
@@ -57,12 +56,12 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
     let ap = 0;
 
     accounts.forEach(acc => {
-      const role = resolveAccountRole(acc);
       const bal = accountBalances[acc.id] || 0;
+      const isInventory = accounting.isAsset(acc.id) && ((acc.category || '').toLowerCase().includes('inventory') || (acc.name || '').toLowerCase().includes('inventory'));
 
-      if (role === 'inventory') inventory += bal;
-      else if (role === 'ar') ar += bal;
-      else if (role === 'ap') ap += -bal; // Liability balance is credit-normal
+      if (isInventory) inventory += bal;
+      else if (accounting.isAR(acc.id)) ar += bal;
+      else if (accounting.isAP(acc.id)) ap += -bal; // Liability balance is credit-normal
     });
 
     if (cogs === 0 || revenue === 0) {
@@ -123,5 +122,5 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
       ],
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  })
+  }
 };

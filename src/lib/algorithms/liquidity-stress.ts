@@ -1,5 +1,5 @@
 import { resolveAccountRole } from '../accountUtils';
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { parseLocalDate } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
@@ -13,7 +13,8 @@ export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
     { key: 'haircutPct', label: 'Receivables Haircut (%)', min: 0, max: 100, step: 5, defaultValue: 30 },
     { key: 'outflowShockPct', label: 'Unplanned Outflow Shock (%)', min: 0, max: 50, step: 5, defaultValue: 15 }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts } = ctx;
     const haircut = (inputs.haircutPct ?? 30) / 100;
     const shock = (inputs.outflowShockPct ?? 15) / 100;
 
@@ -107,5 +108,5 @@ export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
         lcr >= 100 ? 'Treasury reserves are structurally sound and capable of absorbing severe market disruptions.' : 'CRITICAL: The entity would default on short-term obligations under stressed conditions.'
       ]
     };
-  })
+  }
 };

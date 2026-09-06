@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
+import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction } from '../../types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
 import { isPostable } from '../../lib/txFilters';
@@ -24,8 +24,9 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
       defaultValue: '2026'
     }
   ],
-  compute: adaptLegacy((transactions, accounts, inputs, context): AlgoResult => {
-    const budgets = context?.budgets || [];
+  compute: (ctx, inputs): AlgoResult => {
+    const { transactions, accounts, accounting } = ctx;
+    const budgets = ctx.entities?.budgets || [];
     const targetPeriod = inputs['period'] || '2026';
     
     // Filter budgets for the period
@@ -60,7 +61,7 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
 
         tx.lines.forEach(e => {
           if (e.accountId === accountId) {
-            const isDebitNormal = account ? ['asset', 'expense', 'cost_of_goods'].includes(account.type) : true;
+            const isDebitNormal = account ? (accounting.isAsset(account.id) || accounting.isExpense(account.id) || accounting.isCOGS(account.id)) : true;
             const debit = e.amountCents > 0 ? e.amountCents : 0;
             const credit = e.amountCents < 0 ? Math.abs(e.amountCents) : 0;
             
@@ -119,5 +120,5 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
       rows,
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  })
+  }
 };
