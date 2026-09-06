@@ -4,7 +4,7 @@ import {
   onSnapshot, query, where, writeBatch, DocumentData, QuerySnapshot, DocumentSnapshot,
   orderBy, limit
 } from 'firebase/firestore';
-import { DatabaseAdapter, QueryFilter, BatchOperation, QueryOptions } from './types';
+import { DatabaseAdapter, QueryFilter, BatchOperation, QueryOptions } from '../../services/storage/types';
 
 export class FirebaseAdapter implements DatabaseAdapter {
   async getDoc<T>(collectionPath: string, id: string): Promise<T | null> {

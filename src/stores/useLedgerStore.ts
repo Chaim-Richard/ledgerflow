@@ -550,3 +550,10 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     });
   }
 }));
+
+if (typeof window !== 'undefined') {
+  (window as any).__ledgerBaseCurrency = 'USD';
+  useLedgerStore.subscribe((state) => {
+    (window as any).__ledgerBaseCurrency = state.baseCurrency || 'USD';
+  });
+}

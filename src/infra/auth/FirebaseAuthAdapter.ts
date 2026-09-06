@@ -5,7 +5,7 @@ import {
   GoogleAuthProvider, 
   signOut as firebaseSignOut 
 } from 'firebase/auth';
-import { AuthAdapter, AuthUser } from './types';
+import { AuthAdapter, AuthUser } from '../../services/auth/types';
 
 export class FirebaseAuthAdapter implements AuthAdapter {
   private mapUser(user: any): AuthUser | null {

@@ -165,4 +165,56 @@ export function isOpenBill(item: any): boolean {
   return item.status !== 'paid' && item.status !== 'void' && item.status !== 'draft' && item.status !== 'rejected';
 }
 
+/**
+ * Pure math P&L & Net Income calculator
+ */
+export function calculateNetIncome(
+  transactions: Transaction[],
+  accounts: ChartAccount[],
+  startDate?: string,
+  endDate?: string
+): { income: number; cogs: number; expense: number; grossProfit: number; netIncome: number } {
+  const start = startDate || "1970-01-01";
+  const end = endDate || "2099-12-31";
+
+  let income = 0;
+  let cogs = 0;
+  let expense = 0;
+
+  const accountMap = new Map<string, ChartAccount>();
+  for (let i = 0; i < accounts.length; i++) {
+    accountMap.set(accounts[i].id, accounts[i]);
+  }
+
+  for (let i = 0; i < transactions.length; i++) {
+    const t = transactions[i];
+    if (!isPostable(t)) continue;
+    if (t.date < start || t.date > end) continue;
+
+    const lines = t.lines || [];
+    for (let j = 0; j < lines.length; j++) {
+      const l = lines[j];
+      const acc = accountMap.get(l.accountId);
+      if (!acc) continue;
+
+      const amt = lineAmount(l, t);
+
+      const isCogs = acc.type === 'cost_of_goods' || acc.category === 'COGS' || acc.category === 'Direct Costs' || (acc as any).role === 'cogs';
+
+      if (acc.type === 'income' || acc.type === 'revenue') {
+        income += -amt;
+      } else if (isCogs) {
+        cogs += amt;
+      } else if (acc.type === 'expense') {
+        expense += amt;
+      }
+    }
+  }
+
+  const grossProfit = income - cogs;
+  const netIncome = grossProfit - expense;
+
+  return { income, cogs, expense, grossProfit, netIncome };
+}
+
 

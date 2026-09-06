@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { parseLocalDate, cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isPostable, lineAmount, calculateNetIncome } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -168,8 +168,12 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
         }
       }
 
-      pl.grossProfit = pl.income.total - pl.cogs.total;
-      pl.netIncome = pl.grossProfit - pl.expense.total;
+      const totals = calculateNetIncome(transactions, accounts, start, end);
+      pl.grossProfit = totals.grossProfit;
+      pl.netIncome = totals.netIncome;
+      pl.income.total = totals.income;
+      pl.cogs.total = totals.cogs;
+      pl.expense.total = totals.expense;
       return pl;
     };
 

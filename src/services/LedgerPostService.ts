@@ -6,12 +6,26 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { ChartAccount } from '../types';
 
 export class LedgerPostService {
+  private static getAccounts(context?: any): ChartAccount[] {
+    return context?.accounts || useLedgerStore.getState().accounts || [];
+  }
+  private static getLockDate(context?: any): string | null {
+    if (context && context.lockDate !== undefined) return context.lockDate;
+    return useLedgerStore.getState().lockDate;
+  }
+  private static getTransactions(context?: any): any[] {
+    return context?.transactions || useLedgerStore.getState().transactions || [];
+  }
+  private static getWorkspaces(context?: any): any[] {
+    return context?.workspaces || useAuthStore.getState().workspaces || [];
+  }
+
   /**
    * Period Lock Guard
    */
-  public static verifyLockDate(dateStr: string) {
+  public static verifyLockDate(dateStr: string, context?: any) {
     if (!dateStr) return;
-    const lockDate = useLedgerStore.getState().lockDate;
+    const lockDate = this.getLockDate(context);
     if (lockDate && dateStr <= lockDate) {
       throw new Error(`Period is locked on or before ${lockDate}. Cannot post or modify transaction on ${dateStr}.`);
     }
@@ -48,14 +62,14 @@ export class LedgerPostService {
    * Post standard double-entry journal entries for an invoice.
    * Reverses prior postings instead of deleting them.
    */
-  static async postInvoiceLedger(invoiceId: string, invoiceData: any, workspaceId: string, uid: string, entityMutation?: any) {
+  static async postInvoiceLedger(invoiceId: string, invoiceData: any, workspaceId: string, uid: string, entityMutation?: any, context?: any) {
     if (!workspaceId || !invoiceId) return;
 
     const invoiceDate = invoiceData.date || getLocalDateISO();
-    this.verifyLockDate(invoiceDate);
+    this.verifyLockDate(invoiceDate, context);
 
-    const accounts = useLedgerStore.getState().accounts;
-    const workspaces = useAuthStore.getState().workspaces;
+    const accounts = this.getAccounts(context);
+    const workspaces = this.getWorkspaces(context);
     const currentWs = workspaces.find(w => w.id === workspaceId);
     const mappings = currentWs?.defaultAccountMappings || {};
 
@@ -84,7 +98,7 @@ export class LedgerPostService {
     );
 
     // Find prior active non-reversal postings for this invoice to generate reversing entries
-    const existingTxs = useLedgerStore.getState().transactions.filter(t => 
+    const existingTxs = this.getTransactions(context).filter(t => 
       t.metadata?.invoiceId === invoiceId && 
       t.status !== 'void' && 
       !t.metadata?.isReversal
@@ -323,14 +337,14 @@ export class LedgerPostService {
    * Post standard double-entry journal entries for a bill.
    * Reverses prior postings instead of deleting them.
    */
-  static async postBillLedger(billId: string, billData: any, workspaceId: string, uid: string, entityMutation?: any) {
+  static async postBillLedger(billId: string, billData: any, workspaceId: string, uid: string, entityMutation?: any, context?: any) {
     if (!workspaceId || !billId) return;
 
     const billDate = billData.date || getLocalDateISO();
-    this.verifyLockDate(billDate);
+    this.verifyLockDate(billDate, context);
 
-    const accounts = useLedgerStore.getState().accounts;
-    const workspaces = useAuthStore.getState().workspaces;
+    const accounts = this.getAccounts(context);
+    const workspaces = this.getWorkspaces(context);
     const currentWs = workspaces.find(w => w.id === workspaceId);
     const mappings = currentWs?.defaultAccountMappings || {};
 
@@ -359,7 +373,7 @@ export class LedgerPostService {
     );
 
     // Find prior active non-reversal postings for this bill
-    const existingTxs = useLedgerStore.getState().transactions.filter(t => 
+    const existingTxs = this.getTransactions(context).filter(t => 
       t.metadata?.billId === billId && 
       t.status !== 'void' && 
       !t.metadata?.isReversal
@@ -559,22 +573,22 @@ export class LedgerPostService {
   /**
    * Reverse all postings when an invoice or bill is deleted.
    */
-  static async deletePostings(id: string, keyName: 'invoiceId' | 'billId', workspaceId: string, entityMutation?: any) {
+  static async deletePostings(id: string, keyName: 'invoiceId' | 'billId', workspaceId: string, entityMutation?: any, context?: any) {
     if (!workspaceId || !id) return;
 
-    const existingTxs = useLedgerStore.getState().transactions.filter(t => 
+    const existingTxs = this.getTransactions(context).filter(t => 
       t.metadata?.[keyName] === id && 
       t.status !== 'void' && 
       !t.metadata?.isReversal
     );
 
-    if (existingTxs.length === 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation); } return; }
+    if (existingTxs.length === 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation, context); } return; }
 
     const today = getLocalDateISO();
-    const uid = useAuthStore.getState().user?.uid || 'system';
+    const uid = context?.uid || useAuthStore.getState().user?.uid || 'system';
 
     const reversals = existingTxs.map(prevTx => {
-      this.verifyLockDate(prevTx.date);
+      this.verifyLockDate(prevTx.date, context);
       return {
         uid,
         workspaceId,
@@ -601,21 +615,23 @@ export class LedgerPostService {
       };
     });
 
-    await this.postTxsServerApi(reversals, workspaceId, entityMutation);
+    await this.postTxsServerApi(reversals, workspaceId, entityMutation, context);
   }
 
   /**
    * Send transactions array to Server API endpoint (/api/v1/transactions/bulk) atomically.
    */
-  private static async postTxsServerApi(txs: any[], workspaceId: string, entityMutation?: any) {
+  private static async postTxsServerApi(txs: any[], workspaceId: string, entityMutation?: any, context?: any) {
     if ((!txs || txs.length === 0) && !entityMutation) return;
 
-    const token = await getIdToken();
+    // Server-side bypass: if context has a bypassPost flag or if we are executing server-side,
+    // we can return or process directly. But in default environments:
+    const token = await getIdToken().catch(() => null);
     const response = await fetch('/api/v1/transactions/bulk', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
       body: JSON.stringify({ transactions: txs, workspaceId, entityMutation })
     });
@@ -625,8 +641,15 @@ export class LedgerPostService {
       throw new Error(data.error || 'Server rejected transaction posting');
     }
 
-    // Immediately update client Zustand store state
-    const currentTxs = useLedgerStore.getState().transactions;
-    useLedgerStore.getState().setTransactions([...txs, ...currentTxs]);
+    // Immediately update client Zustand store state if available
+    try {
+      const store = useLedgerStore.getState();
+      if (store && store.setTransactions) {
+        const currentTxs = store.transactions || [];
+        store.setTransactions([...txs, ...currentTxs]);
+      }
+    } catch (e) {
+      // Fallback if useLedgerStore or DOM APIs are unavailable (e.g. Server-Side Execution)
+    }
   }
 }

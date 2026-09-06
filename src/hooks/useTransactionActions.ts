@@ -482,7 +482,9 @@ export function useTransactionActions() {
     // Core App Feature: Billing and Usage limits
     const checkQuota = useBillingStore.getState().checkQuota;
     const incrementTransaction = useBillingStore.getState().incrementTransaction;
-    if (!checkQuota()) {
+    const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
+    const transactions = useLedgerStore.getState().transactions;
+    if (!checkQuota(currentWorkspace?.plan, transactions?.length)) {
       toast.error("Usage Limit Reached: Please upgrade your plan to record more transactions.");
       return;
     }

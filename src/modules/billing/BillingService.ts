@@ -4,9 +4,6 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useAuthStore } from '../../stores/useAuthStore';
-import { useLedgerStore } from '../../stores/useLedgerStore';
-
 export interface BillingState {
   currentPlan: 'free' | 'pro' | 'enterprise';
   transactionCount: number;
@@ -19,7 +16,7 @@ export interface BillingState {
   incrementUserCount: () => void;
   upgradePlan: (plan: 'pro' | 'enterprise') => void;
   fetchSystemCaps: () => Promise<void>;
-  checkQuota: () => boolean; // Enforcement for 'integrity' of usage metrics
+  checkQuota: (plan?: string, txCount?: number) => boolean; // Enforcement for 'integrity' of usage metrics
 }
 
 export const useBillingStore = create<BillingState>()(
@@ -56,20 +53,17 @@ export const useBillingStore = create<BillingState>()(
           }
         }
       },
-      checkQuota: () => {
-        // Get real current workspace and transactions
-        const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
-        const transactions = useLedgerStore.getState().transactions;
-        const txCount = transactions?.length ?? get().transactionCount;
+      checkQuota: (plan?: string, txCount?: number) => {
+        const activePlan = plan || 'free';
+        const activeTxCount = txCount !== undefined ? txCount : get().transactionCount;
         
-        const plan = currentWorkspace?.plan || 'free';
-        const isFree = plan === 'free';
+        const isFree = activePlan === 'free';
         
         if (isFree) {
           const cap = get().freeWorkspaceTxCap ?? 100;
-          if (txCount >= cap) return false;
-        } else if (plan === 'growth') {
-          if (txCount >= 1000) return false;
+          if (activeTxCount >= cap) return false;
+        } else if (activePlan === 'growth') {
+          if (activeTxCount >= 1000) return false;
         }
         return true;
       }

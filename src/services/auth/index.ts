@@ -1,4 +1,4 @@
-import { FirebaseAuthAdapter } from './FirebaseAuthAdapter';
+import { FirebaseAuthAdapter } from '../../infra/auth/FirebaseAuthAdapter';
 import { AuthAdapter } from './types';
 
 // Singleton instance

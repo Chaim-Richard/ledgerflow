@@ -1,4 +1,4 @@
-import { FirebaseAdapter } from './FirebaseAdapter';
+import { FirebaseAdapter } from '../../infra/storage/FirebaseAdapter';
 import { DatabaseAdapter } from './types';
 
 // We export a singleton instance of the chosen adapter.

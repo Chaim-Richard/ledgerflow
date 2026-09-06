@@ -16,7 +16,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { formatDecimal, cn, getLocalDateISO } from '../../lib/utils';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isPostable, lineAmount, calculateNetIncome } from '../../lib/txFilters';
 import { motion } from 'motion/react';
 import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -149,9 +149,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
     const totalAssets = Object.values(assets).reduce((sum, v) => sum + v, 0);
     const totalLiabilities = Object.values(liabilities).reduce((sum, v) => sum + v, 0);
     const totalEquity = Object.values(equity).reduce((sum, v) => sum + v, 0);
-    const totalIncome = Object.values(income).reduce((sum, v) => sum + v, 0);
-    const totalExpenses = Object.values(expense).reduce((sum, v) => sum + v, 0);
-    const netIncome = totalIncome - totalExpenses;
+    const { netIncome } = calculateNetIncome(transactions, accounts, "1970-01-01", dateCutoff);
 
     const totalClaims = totalLiabilities + totalEquity + netIncome;
 

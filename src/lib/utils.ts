@@ -1,7 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { toast } from 'sonner';
-import { useLedgerStore } from '../stores/useLedgerStore';
 
 /**
  * Specialized financial rounding to prevent decimal loss in tax calculations
@@ -19,7 +18,7 @@ export function formatCurrency(cents: number | undefined | null, currency?: stri
   let targetCurrency = currency;
   if (!targetCurrency) {
     try {
-      targetCurrency = useLedgerStore.getState().baseCurrency || 'USD';
+      targetCurrency = (typeof window !== 'undefined' && (window as any).__ledgerBaseCurrency) || 'USD';
     } catch {
       targetCurrency = 'USD';
     }
