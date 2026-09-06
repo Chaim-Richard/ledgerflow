@@ -1,5 +1,5 @@
 import { resolveAccountRole } from '../accountUtils';
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { standardDeviation, mean } from './math';
 
 export const MONTE_CARLO_ALGO: AlgorithmDefinition = {
@@ -26,7 +26,7 @@ export const MONTE_CARLO_ALGO: AlgorithmDefinition = {
       defaultValue: 50 // 5000 iterations
     }
   ],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     const horizon = inputs.simulationDays ?? 90;
     const runs = (inputs.iterations ?? 50) * 100;
     
@@ -157,5 +157,5 @@ export const MONTE_CARLO_ALGO: AlgorithmDefinition = {
         probabilityOfRuin > 20 ? 'URGENT: Structural cash flow deficit detected. High risk of insolvency without intervention.' : 'Cash reserves appear resilient against standard historical volatility shocks.'
       ]
     };
-  }
+  })
 };

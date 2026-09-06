@@ -1,5 +1,5 @@
 import { resolveAccountRole } from '../accountUtils';
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 
 export const INTEREST_RATE_SENSITIVITY_ALGO: AlgorithmDefinition = {
   id: 'treasury_2',
@@ -10,7 +10,7 @@ export const INTEREST_RATE_SENSITIVITY_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'rateShockBps', label: 'Rate Shock (Basis Points)', min: -500, max: 500, step: 25, defaultValue: 100 }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const rateShock = (inputs.rateShockBps ?? 100) / 10000;
 
     // For this simple simulation, we look for accounts that might be rate-sensitive
@@ -73,5 +73,5 @@ export const INTEREST_RATE_SENSITIVITY_ALGO: AlgorithmDefinition = {
         nmiImpact < 0 ? 'Consider entering interest rate swaps or caps to hedge against rising rates on variable debt.' : 'Entity is positioned to benefit from this rate movement.'
       ]
     };
-  }
+  })
 };

@@ -23,7 +23,7 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
       defaultValue: '2026'
     }
   ],
-  compute: (transactions, accounts, inputs, context): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs, context): AlgoResult => {
     const employees = context?.employees || [];
     const year = parseInt(inputs['year'] || '2026', 10);
     
@@ -99,5 +99,5 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
       ],
       rows
     };
-  }
+  })
 };

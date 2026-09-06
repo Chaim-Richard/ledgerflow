@@ -1,4 +1,4 @@
-import { AlgorithmDefinition } from './types';
+import { AlgorithmDefinition, adaptLegacy } from './types';
 import { Transaction } from '../../types';
 
 export interface SharedTransactionPair {
@@ -53,7 +53,7 @@ export const SHARED_TRANSACTION_IDENTITY_ALGO: AlgorithmDefinition = {
   name: 'Shared Transaction Identity & Dual-Sided Elimination',
   description: 'Eliminates two-party reconciliation by replacing separate debit/credit records with a single, permissioned, dual-signed transaction object.',
   inputs: [],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     const start = performance.now();
     const res = computeSharedTransactionIdentity(transactions);
     const ms = performance.now() - start;
@@ -83,5 +83,5 @@ export const SHARED_TRANSACTION_IDENTITY_ALGO: AlgorithmDefinition = {
         '✔ Bilateral dual-signature hash-chain guarantees neither side can unilaterally alter transaction state.'
       ]
     };
-  }
+  })
 };

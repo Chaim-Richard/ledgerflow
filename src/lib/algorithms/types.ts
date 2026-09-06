@@ -1,4 +1,8 @@
 import { Transaction, ChartAccount } from '../../types';
+import { isPostable } from '../txFilters';
+
+declare const postable: unique symbol;
+export type PostableTransaction = Transaction & { readonly [postable]: true };
 
 export type AlgoInput =
   | { kind?: 'number'; key: string; label: string; min: number; max: number; step: number; defaultValue: number }
@@ -24,11 +28,11 @@ export interface AlgoResult {
 // Do NOT fetch data directly inside the algorithm. Only compute based on the provided context.
 
 export interface AlgorithmContext {
-  readonly transactions: readonly Transaction[];
+  readonly transactions: readonly PostableTransaction[];
   readonly accounts: readonly ChartAccount[];
-  readonly period?: { start: string; end: string; days?: number };
-  readonly asOfDate?: string;
-  readonly reportingCurrency?: string;
+  readonly period: { start: string; end: string; days: number };
+  readonly asOfDate: string;
+  readonly reportingCurrency: string;
   readonly entities?: {
     invoices?: any[];
     bills?: any[];
@@ -54,11 +58,47 @@ export type LegacyAlgoFn = (
 export function adaptLegacy(fn: LegacyAlgoFn): AlgoFn {
   return (ctx, inputs) => {
     return fn(
-      [...(ctx.transactions || [])],
-      [...(ctx.accounts || [])],
+      [...(ctx.transactions || [])] as Transaction[],
+      [...(ctx.accounts || [])] as ChartAccount[],
       inputs,
       ctx.entities
     );
+  };
+}
+
+export function buildAlgorithmContext(
+  transactions: Transaction[] = [],
+  accounts: ChartAccount[] = [],
+  asOfDate?: string,
+  period?: { start: string; end: string; days?: number },
+  reportingCurrency: string = 'USD',
+  entities?: AlgorithmContext['entities']
+): AlgorithmContext {
+  const today = new Date().toISOString().slice(0, 10);
+  const effectiveAsOf = asOfDate || today;
+  const postableTxs = (transactions || []).filter(isPostable) as PostableTransaction[];
+  
+  const startDate = period?.start || '1970-01-01';
+  const endDate = period?.end || effectiveAsOf;
+  let days = period?.days;
+  if (!days) {
+    const sTime = new Date(startDate).getTime();
+    const eTime = new Date(endDate).getTime();
+    const diff = Math.max(1, Math.round((eTime - sTime) / (1000 * 60 * 60 * 24)));
+    days = isNaN(diff) ? 365 : diff;
+  }
+
+  return {
+    transactions: postableTxs,
+    accounts: accounts || [],
+    asOfDate: effectiveAsOf,
+    period: {
+      start: startDate,
+      end: endDate,
+      days
+    },
+    reportingCurrency,
+    entities: entities || {}
   };
 }
 
@@ -70,7 +110,10 @@ export interface AlgorithmDefinition {
   name: string;
   description: string;
   inputs: AlgoInput[];
-  compute: LegacyAlgoFn | AlgoFn;
+  compute: AlgoFn;
 }
 
-export const buildHelper = (fn: AlgoFn | LegacyAlgoFn) => fn;
+export const buildHelper = (fn: AlgoFn | LegacyAlgoFn): AlgoFn => {
+  if (fn.length <= 2) return fn as AlgoFn;
+  return adaptLegacy(fn as LegacyAlgoFn);
+};

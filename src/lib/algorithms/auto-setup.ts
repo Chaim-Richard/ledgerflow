@@ -1,5 +1,5 @@
 import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition } from './types';
+import { AlgorithmDefinition, adaptLegacy } from './types';
 import { computeTFIDFWeights } from './tf-idf';
 
 export function fingerprintBusiness(transactions: Transaction[]) {
@@ -47,7 +47,7 @@ export const AUTO_SETUP_ALGO: AlgorithmDefinition = {
   name: 'Zero-Setup Books (Industry Fingerprinting)',
   description: 'Clusters merchant tokens using TF-IDF to fingerprint the business industry and propose a bespoke Chart of Accounts without a setup wizard.',
   inputs: [],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     const start = performance.now();
     const result = fingerprintBusiness(transactions);
     const ms = performance.now() - start;
@@ -70,5 +70,5 @@ export const AUTO_SETUP_ALGO: AlgorithmDefinition = {
         'We can automatically construct the optimal chart of accounts for this industry before the user even reaches the dashboard.'
       ]
     };
-  }
+  })
 };

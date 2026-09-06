@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { parseLocalDate } from '../../lib/utils';
 import { isOutflow } from '../txFilters';
 
@@ -18,7 +18,7 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
       defaultValue: 100
     }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const minRoundAmount = (inputs['minRoundAmount'] ?? 100) * 100; // in cents
     
     let weekendCount = 0;
@@ -92,5 +92,5 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
       ],
       insights
     };
-  }
+  })
 };

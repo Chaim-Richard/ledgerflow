@@ -1,5 +1,5 @@
 import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition } from './types';
+import { AlgorithmDefinition, adaptLegacy } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 // Calculates running safe-to-spend balance based on virtual envelopes
@@ -94,7 +94,7 @@ export const TAX_SET_ASIDE_ALGO: AlgorithmDefinition = {
       defaultValue: 'c_corp'
     }
   ],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     const entityType = inputs['entityType'] || 'c_corp';
     const result = calculateSafeToSpend(transactions, accounts, entityType);
 
@@ -124,5 +124,5 @@ export const TAX_SET_ASIDE_ALGO: AlgorithmDefinition = {
           : 'By surfacing "Safe to Spend" instead of "Cash Balance", structural insolvency anxiety is removed. The books are mathematically clear.'
       ]
     };
-  }
+  })
 };

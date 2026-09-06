@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { parseLocalDate } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
@@ -11,7 +11,7 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'churnThresholdDays', label: 'Churn Threshold (Days)', min: 30, max: 365, step: 30, defaultValue: 90 }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const thresholdDays = inputs.churnThresholdDays ?? 90;
     
     // Identification of customers from transaction data based on income/revenue
@@ -122,5 +122,5 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
         lostRevenue > 0 ? `The historical lifetime value associated with currently churned customers is $${(lostRevenue/100).toLocaleString()}.` : ''
       ]
     };
-  }
+  })
 };

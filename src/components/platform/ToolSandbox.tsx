@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
-import { AlgorithmContext, AlgoFn, LegacyAlgoFn } from '../../lib/algorithms/types';
+import { AlgorithmContext, buildAlgorithmContext } from '../../lib/algorithms/types';
 import { isPostable } from '../../lib/txFilters';
 
 interface ToolSandboxProps {
@@ -45,25 +45,17 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
 
   // Re-run anytime params change, using REAL user dataset
   const results = useMemo(() => {
-    const activeTxs = transactions.filter(isPostable);
-    const ctx: AlgorithmContext = {
-      transactions: activeTxs,
+    const period = params.start && params.end ? { start: params.start, end: params.end } : undefined;
+    const ctx = buildAlgorithmContext(
+      transactions,
       accounts,
-      asOfDate: params.asOfDate || new Date().toISOString().slice(0, 10),
-      period: params.start && params.end ? { start: params.start, end: params.end } : undefined,
-      reportingCurrency: 'USD',
-      entities: { invoices, bills, vendors, employees, budgets, customers }
-    };
-
-    if (algorithm.compute.length === 2) {
-      return (algorithm.compute as AlgoFn)(ctx, params);
-    }
-    return (algorithm.compute as LegacyAlgoFn)(
-      [...ctx.transactions],
-      [...ctx.accounts],
-      params,
-      ctx.entities
+      params.asOfDate,
+      period,
+      'USD',
+      { invoices, bills, vendors, employees, budgets, customers }
     );
+
+    return algorithm.compute(ctx, params);
   }, [algorithm, transactions, accounts, params, invoices, bills, vendors, employees, budgets, customers]);
 
   // Derive dynamic table columns from rows

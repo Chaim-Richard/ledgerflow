@@ -1,5 +1,5 @@
 import { resolveAccountRole } from '../accountUtils';
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { calculateNPV, calculateIRR } from './math';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
@@ -15,7 +15,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     { key: 'taxRatePct', label: 'Corporate Tax Rate (%)', min: 0, max: 50, step: 1, defaultValue: 21 },
     { key: 'equityDebtRatio', label: 'Equity Weight (%)', min: 0, max: 100, step: 5, defaultValue: 70 }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const ke = (inputs['costOfEquityPct'] ?? 10) / 100;
     const kd = (inputs['costOfDebtPct'] ?? 5) / 100;
     const tax = (inputs['taxRatePct'] ?? 21) / 100;
@@ -170,5 +170,5 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
       ],
       insights
     };
-  }
+  })
 };

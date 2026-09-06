@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
@@ -8,7 +8,7 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
   tags: ['Solvency', 'Risk', 'Bankruptcy', 'Z-Score'],
   description: 'Calculates the Altman Z-Score to predict the probability of bankruptcy or severe financial distress based on balance sheet and income statement ratios.',
   inputs: [],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     
     let totalAssets = 0;
     let totalLiabilities = 0;
@@ -116,5 +116,5 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
         `Working capital constitutes ${(t1 * 100).toFixed(1)}% of total assets, which is a key driver of short-term liquidity.`
       ]
     };
-  }
+  })
 };

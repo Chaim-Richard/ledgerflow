@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
@@ -8,7 +8,7 @@ export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
   tags: ['DuPont', 'ROE', 'Profitability', 'Efficiency', 'Leverage'],
   description: 'Deconstructs Return on Equity (ROE) into Profit Margin, Asset Turnover, and Financial Leverage to identify the core drivers of shareholder return.',
   inputs: [],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     let revenue = 0;
     let netIncome = 0;
     let totalAssets = 0;
@@ -97,5 +97,5 @@ export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
         equityMultiplier > 2 ? 'Note: High Equity Multiplier (>2.0x) indicates significant reliance on debt financing to drive ROE.' : 'Leverage is conservative, suggesting ROE is driven primarily by operational efficiency rather than debt.'
       ]
     };
-  }
+  })
 };

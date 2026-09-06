@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 
 export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
   id: 'ops_velocity',
@@ -24,7 +24,7 @@ export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
       defaultValue: 7
     }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const threshold = (inputs['spikeThresholdPct'] ?? 50) / 100;
     const windowDays = Math.max(1, inputs['movingAverageDays'] ?? 7);
     
@@ -119,5 +119,5 @@ export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
       ],
       insights
     };
-  }
+  })
 };

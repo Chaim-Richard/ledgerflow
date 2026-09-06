@@ -1,5 +1,5 @@
 import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition } from './types';
+import { AlgorithmDefinition, adaptLegacy } from './types';
 
 // The "Accountant's Folklore" heuristics encoded into O(1) lookups
 export function findMyError(transactions: Transaction[], discrepancyCents: number) {
@@ -90,7 +90,7 @@ export const FIND_MY_ERROR_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'discrepancyAmount', label: 'Trial Balance Error (Cents)', min: 100, max: 100000, step: 100, defaultValue: 5400 } // $54.00
   ],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     
     // Inject a synthetic error into a copy of the ledger to ensure we find something
     const errorAmt = inputs.discrepancyAmount;
@@ -128,5 +128,5 @@ export const FIND_MY_ERROR_ALGO: AlgorithmDefinition = {
         suspects.length === 0 ? 'No mathematical heuristics triggered. Manual audit required.' : 'Mathematical heuristics successfully identified potential root causes.'
       ]
     };
-  }
+  })
 };

@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { isPostable, isOutflow } from '../../lib/txFilters';
 
 export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
@@ -10,7 +10,7 @@ export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'topN', label: 'Top N Vendors to Analyze', min: 3, max: 20, step: 1, defaultValue: 5 }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const topN = inputs.topN ?? 5;
     const vendorSpend: Record<string, number> = {};
     let totalSpend = 0;
@@ -118,5 +118,5 @@ export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
         `The largest single vendor (${topVendors[0]?.[0] || 'N/A'}) accounts for ${topVendorReliance.toFixed(1)}% of all operating expenditures.`
       ]
     };
-  }
+  })
 };

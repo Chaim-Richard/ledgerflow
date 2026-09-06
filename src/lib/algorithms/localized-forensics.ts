@@ -1,4 +1,4 @@
-import { AlgorithmDefinition } from './types';
+import { AlgorithmDefinition, adaptLegacy } from './types';
 import { Transaction } from '../../types';
 
 export interface LocalizedAnomalyNode {
@@ -112,7 +112,7 @@ export const LOCALIZED_FORENSICS_ALGO: AlgorithmDefinition = {
   name: 'Localized Forensics & Coordinate Anomaly Detective',
   description: 'Runs Benford Law, Z-Score spikes, and round-number density on individual coordinate nodes (projects, vendors, properties) instead of global haystack alerts.',
   inputs: [],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     const start = performance.now();
     const anomalies = computeLocalizedForensics(transactions);
     const ms = performance.now() - start;
@@ -140,5 +140,5 @@ export const LOCALIZED_FORENSICS_ALGO: AlgorithmDefinition = {
         ? anomalies.slice(0, 4).map(a => `⚠︎ ${a.coordinatePath} — Score ${a.score}/100: ${a.flaggedReason}`)
         : ['✔ All coordinate subtrees passed localized Benford and Z-score integrity checks with 0 high-risk nodes.']
     };
-  }
+  })
 };

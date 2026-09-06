@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { Transaction, ChartAccount } from '../../types';
 import { isOutflow, isInflow } from '../txFilters';
 
@@ -14,7 +14,7 @@ export const LOAN_AMORTIZATION_ALGO: AlgorithmDefinition = {
     { key: 'annualRate', label: 'Interest Rate (%)', min: 1, max: 15, step: 0.1, defaultValue: 6.5 },
     { key: 'termYears', label: 'Term (Years)', min: 1, max: 30, step: 1, defaultValue: 30 },
   ],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     const principal = inputs.principal ?? 400000;
     const rate = (inputs.annualRate ?? 6.5) / 100 / 12;
     const numPayments = (inputs.termYears ?? 30) * 12;
@@ -69,7 +69,7 @@ export const LOAN_AMORTIZATION_ALGO: AlgorithmDefinition = {
         `In Year 1, $${schedule[0] ? schedule[0].Interest.toLocaleString() : 0} goes to interest (deductible operating expense) vs $${schedule[0] ? schedule[0].Principal.toLocaleString() : 0} to equity/principal.`
       ]
     };
-  }
+  })
 };
 
 // 2. Subscription & Recurring Spend Audit
@@ -82,7 +82,7 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'lookbackMonths', label: 'Lookback Window (Months)', min: 1, max: 12, step: 1, defaultValue: 6 }
   ],
-  compute: (transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
+  compute: adaptLegacy((transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
     const payeeMap = new Map<string, { count: number; totalCents: number; avgCents: number; lastDate: string }>();
 
     transactions.forEach((t: Transaction) => {
@@ -133,7 +133,7 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
         `Top recurring vendor: ${recurringList[0] ? recurringList[0].payee : 'None'} ($${recurringList[0] ? recurringList[0].AnnualEst.toLocaleString() : 0}/yr).`
       ]
     };
-  }
+  })
 };
 
 // 3. Tax Deduction Finder
@@ -146,7 +146,7 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'taxRate', label: 'Estimated Tax Rate (%)', min: 10, max: 50, step: 1, defaultValue: 25 }
   ],
-  compute: (transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
+  compute: adaptLegacy((transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
     let deductibleCents = 0;
     const categoryBreakdown: Record<string, number> = {};
     let deductibleCount = 0;
@@ -200,7 +200,7 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
         `At a ${inputs.taxRate ?? 25}% tax bracket, this reduces federal/state tax liability by approximately $${estSavings.toLocaleString()}.`
       ]
     };
-  }
+  })
 };
 
 // 4. Property P&L Comparison
@@ -213,7 +213,7 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'targetCapRate', label: 'Target Cap Rate (%)', min: 3, max: 12, step: 0.5, defaultValue: 6.5 }
   ],
-  compute: (transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
+  compute: adaptLegacy((transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
     const propertyMap = new Map<string, { revCents: number; expCents: number }>();
 
     transactions.forEach((t: Transaction) => {
@@ -277,7 +277,7 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
         `At a target ${inputs.targetCapRate ?? 6.5}% cap rate, implied portfolio asset valuation is $${estValuation.toLocaleString()}.`
       ]
     };
-  }
+  })
 };
 
 // 5. Restricted Fund & Grant Tracker
@@ -290,7 +290,7 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'warningThreshold', label: 'Warning Burn %', min: 50, max: 95, step: 5, defaultValue: 80 }
   ],
-  compute: (transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
+  compute: adaptLegacy((transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
     const grantMap = new Map<string, { receivedCents: number; spentCents: number }>();
 
     transactions.forEach((t: Transaction) => {
@@ -352,7 +352,7 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
         `All disbursements are linked to specific ledger dimensions to fulfill 501(c)(3) / audit requirements.`
       ]
     };
-  }
+  })
 };
 
 // 6. Job & Project Profitability Ranking
@@ -365,7 +365,7 @@ export const PROJECT_PROFITABILITY_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'minMargin', label: 'Minimum Target Margin (%)', min: 10, max: 70, step: 5, defaultValue: 30 }
   ],
-  compute: (transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
+  compute: adaptLegacy((transactions: Transaction[], accounts: ChartAccount[], inputs: any = {}) => {
     const projMap = new Map<string, { revCents: number; expCents: number }>();
 
     transactions.forEach((t: Transaction) => {
@@ -427,5 +427,5 @@ export const PROJECT_PROFITABILITY_ALGO: AlgorithmDefinition = {
         `Target margin threshold set to ${inputs.minMargin ?? 30}%.`
       ]
     };
-  }
+  })
 };

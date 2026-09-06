@@ -17,7 +17,7 @@ export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
       defaultValue: 0
     }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const isRevenue = inputs['analyzeRevenue'] === 1;
     
     // 1. Group by entity (Payee / Description)
@@ -143,6 +143,6 @@ export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
       ],
       insights
     };
-  }
+  })
 };
 

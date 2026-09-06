@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { parseLocalDate } from '../../lib/utils';
 
 export const VENDOR_CHURN_ALGO: AlgorithmDefinition = {
@@ -17,7 +17,7 @@ export const VENDOR_CHURN_ALGO: AlgorithmDefinition = {
       defaultValue: 90
     }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const inactivityDays = inputs['inactivityDays'] ?? 90;
     const inactivityMs = inactivityDays * 24 * 60 * 60 * 1000;
     const now = new Date().getTime();
@@ -118,5 +118,5 @@ export const VENDOR_CHURN_ALGO: AlgorithmDefinition = {
       ],
       insights
     };
-  }
+  })
 };

@@ -1,5 +1,5 @@
 import { resolveAccountRole } from '../accountUtils';
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
@@ -11,7 +11,7 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'annualizationDays', label: 'Annualization Factor (Days)', min: 30, max: 365, step: 1, defaultValue: 365 }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const periodDays = inputs.annualizationDays ?? 365;
 
     const accountBalances: Record<string, number> = {};
@@ -123,5 +123,5 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
       ],
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  }
+  })
 };

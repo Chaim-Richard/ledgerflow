@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { Transaction } from '../../types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
 import { isPostable } from '../../lib/txFilters';
@@ -24,7 +24,7 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
       defaultValue: '2026'
     }
   ],
-  compute: (transactions, accounts, inputs, context): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs, context): AlgoResult => {
     const budgets = context?.budgets || [];
     const targetPeriod = inputs['period'] || '2026';
     
@@ -119,5 +119,5 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
       rows,
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  }
+  })
 };

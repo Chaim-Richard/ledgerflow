@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { Transaction } from '../../types';
 
 export const BENFORDS_LAW_ALGO: AlgorithmDefinition = {
@@ -17,7 +17,7 @@ export const BENFORDS_LAW_ALGO: AlgorithmDefinition = {
       defaultValue: 10
     }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const minAmount = inputs['minAmount'] ?? 10;
     
     // 1. Filter and Extract Leading Digits
@@ -131,5 +131,5 @@ export const BENFORDS_LAW_ALGO: AlgorithmDefinition = {
       ],
       insights
     };
-  }
+  })
 };

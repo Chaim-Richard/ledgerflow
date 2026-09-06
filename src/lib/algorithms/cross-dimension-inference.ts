@@ -1,4 +1,4 @@
-import { AlgorithmDefinition } from './types';
+import { AlgorithmDefinition, adaptLegacy } from './types';
 import { Transaction } from '../../types';
 
 export function learnCrossDimensionRules(transactions: Transaction[]) {
@@ -53,7 +53,7 @@ export const CROSS_DIMENSION_INFERENCE_ALGO: AlgorithmDefinition = {
   name: 'Cross-Dimension Co-occurrence Auto-fill',
   description: 'Learns co-occurrence patterns across dimensions (e.g. Vendor "Archival Paper" -> World: BookCo, Phase: Printing) so tagging one coordinate auto-populates the rest.',
   inputs: [],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     const rules = learnCrossDimensionRules(transactions);
 
     return {
@@ -79,5 +79,5 @@ export const CROSS_DIMENSION_INFERENCE_ALGO: AlgorithmDefinition = {
         ? rules.slice(0, 4).map(r => `✦ Vendor "${r.vendor}" → Auto-infers Category "${r.likelyAccount}" & Project "${r.likelyProject}" (${r.confidence}% confidence)`)
         : ['Tagging any vendor auto-infers its full coordinate tree based on past transactions.']
     };
-  }
+  })
 };

@@ -1,5 +1,5 @@
 import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition } from './types';
+import { AlgorithmDefinition, adaptLegacy } from './types';
 import { isPostable, lineAmount, isRevenueAccount, isExpenseAccount } from '../txFilters';
 
 // Takes a number (e.g. net profit) and the transactions that make it up, and generates a natural sentence.
@@ -85,7 +85,7 @@ export const NUMBER_EXPLAINER_ALGO: AlgorithmDefinition = {
   inputs: [
       { key: 'targetMonth', label: 'Month Index (1-12)', min: 1, max: 12, step: 1, defaultValue: new Date().getMonth() + 1 }
   ],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     const start = performance.now();
     
     const year = new Date().getFullYear();
@@ -108,6 +108,6 @@ export const NUMBER_EXPLAINER_ALGO: AlgorithmDefinition = {
         'Adds glossary layers implicitly (e.g. framing money in vs money out).'
       ]
     };
-  }
+  })
 };
 

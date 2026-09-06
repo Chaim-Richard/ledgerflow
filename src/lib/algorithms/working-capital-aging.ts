@@ -1,5 +1,5 @@
 import { parseLocalDate } from '../../lib/utils';
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { resolveAccountRole } from '../accountUtils';
 
 export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
@@ -11,7 +11,7 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'lateThresholdDays', label: 'Overdue Warning (Days)', min: 1, max: 120, step: 5, defaultValue: 30 }
   ],
-  compute: (transactions, accounts, inputs, context): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs, context): AlgoResult => {
     let arPending = 0;
     let apPending = 0;
     let arOverdue = 0;
@@ -191,5 +191,5 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
         netPending < 0 ? 'Short-term liquidity crunch: Pending payables exceed pending receivables.' : 'Working capital structure is positive.'
       ]
     };
-  }
+  })
 };

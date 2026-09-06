@@ -1,5 +1,5 @@
 import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition } from './types';
+import { AlgorithmDefinition, adaptLegacy } from './types';
 import { parseLocalDate } from '../../lib/utils';
 
 export function detectRecurrences(transactions: Transaction[]) {
@@ -77,7 +77,7 @@ export const RECURRENCE_DETECTION: AlgorithmDefinition = {
   inputs: [
     { key: 'minOccurrences', label: 'Min Occurrences', min: 2, max: 10, step: 1, defaultValue: 3 }
   ],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     // We will use the live transactions
     const start = performance.now();
     const recurrences = detectRecurrences(transactions);
@@ -127,5 +127,5 @@ export const RECURRENCE_DETECTION: AlgorithmDefinition = {
         'This discrete detection feeds upcoming bill alerts, cash forecasts, and missed-event alarms.'
       ]
     };
-  }
+  })
 };

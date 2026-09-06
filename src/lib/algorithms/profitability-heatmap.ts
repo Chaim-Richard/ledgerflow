@@ -9,7 +9,7 @@ export const PROFITABILITY_HEATMAP_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'minMarginThreshold', label: 'Warning Margin Threshold (%)', min: 0, max: 50, step: 1, defaultValue: 15 }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const warningThreshold = (inputs.minMarginThreshold ?? 15) / 100;
 
     const projectData: Record<string, { revenue: number, costs: number }> = {};
@@ -92,5 +92,5 @@ export const PROFITABILITY_HEATMAP_ALGO: AlgorithmDefinition = {
         chartData.length > 0 ? `The most profitable segment is ${chartData[0].Project} with a ${chartData[0].MarginPct}% margin.` : ''
       ]
     };
-  }
+  })
 };

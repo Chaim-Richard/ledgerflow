@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { Transaction } from '../../types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
 import { isPostable } from '../../lib/txFilters';
@@ -33,7 +33,7 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
       defaultValue: 600
     }
   ],
-  compute: (transactions, accounts, inputs, context): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs, context): AlgoResult => {
     const vendors = context?.vendors || [];
     const bills = context?.bills || [];
     
@@ -126,5 +126,5 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
       rows,
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  }
+  })
 };

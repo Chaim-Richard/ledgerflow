@@ -1,5 +1,5 @@
 import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition } from './types';
+import { AlgorithmDefinition, adaptLegacy } from './types';
 
 // Computes TF-IDF weights for tokens across all transaction descriptions
 // TF: Term Frequency (in a single description) - mostly 1 in our case
@@ -71,7 +71,7 @@ export const TF_IDF_MATCHER: AlgorithmDefinition = {
   inputs: [
     { key: 'targetIdx', label: 'Sample Transaction Index', min: 0, max: 100, step: 1, defaultValue: 0 }
   ],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     const start = performance.now();
     const idf = computeTFIDFWeights(transactions);
     const ms = performance.now() - start;
@@ -117,5 +117,5 @@ export const TF_IDF_MATCHER: AlgorithmDefinition = {
         'Replaces naive Jaro-Winkler with weighted Jaccard for significantly higher precision.'
       ]
     };
-  }
+  })
 };

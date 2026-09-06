@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
@@ -10,7 +10,7 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'shockPct', label: 'Simulated FX Shock (%)', min: 1, max: 25, step: 1, defaultValue: 10 }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const shockPct = (inputs.shockPct ?? 10) / 100;
     
     const accountMap = new Map(accounts.map(a => [a.id, a]));
@@ -86,5 +86,5 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
       ],
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  }
+  })
 };

@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition, AlgoResult, adaptLegacy } from './types';
 import { Transaction } from '../../types';
 import { parseLocalDate, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
@@ -25,7 +25,7 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
       defaultValue: ''
     }
   ],
-  compute: (transactions, accounts, inputs): AlgoResult => {
+  compute: adaptLegacy((transactions, accounts, inputs): AlgoResult => {
     const period = inputs['period'];
     const accountId = inputs['accountId'];
 
@@ -108,5 +108,5 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
       rows,
       sourceTransactionIds: Array.from(sourceTransactionIds)
     };
-  }
+  })
 };

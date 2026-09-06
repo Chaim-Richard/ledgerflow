@@ -56,7 +56,7 @@ export const RECEIPT_CAPTURE_ALGO: AlgorithmDefinition = {
   name: 'Positional Receipt Capture (No ML)',
   description: 'Parses raw OCR text lines using spatial heuristics to extract Merchant, Date, and Total without a costly vision model.',
   inputs: [],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     const start = performance.now();
     
     // Test OCR lines for algorithm demonstration
@@ -92,5 +92,5 @@ export const RECEIPT_CAPTURE_ALGO: AlgorithmDefinition = {
         'This gets you 90% accuracy instantly and for free. Send only the 10% failures to an LLM.'
       ]
     };
-  }
+  })
 };

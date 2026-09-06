@@ -1,5 +1,5 @@
 import { Transaction, ChartAccount } from '../../types';
-import { AlgorithmDefinition } from './types';
+import { AlgorithmDefinition, adaptLegacy } from './types';
 
 // A Fenwick Tree (Binary Indexed Tree) for O(log n) prefix sums
 // Allows instant "Balance as of Date" queries even with out-of-order amendments
@@ -87,7 +87,7 @@ export const FENWICK_TIME_TRAVEL_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'targetDayIndex', label: 'Timeline Scrub (Days from Start)', min: 1, max: 365, step: 1, defaultValue: 90 }
   ],
-  compute: (transactions, accounts, inputs) => {
+  compute: adaptLegacy((transactions, accounts, inputs) => {
     const start = performance.now();
     
     // Build tree
@@ -135,5 +135,5 @@ export const FENWICK_TIME_TRAVEL_ALGO: AlgorithmDefinition = {
         'This provides the mathematical engine for the "Git-for-Books" Time Machine.'
       ]
     };
-  }
+  })
 };
