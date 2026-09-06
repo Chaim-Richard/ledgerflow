@@ -9,6 +9,19 @@ import { Transaction } from '../../types';
 import { parseLocalDate } from '../../lib/utils';
 import { getDb } from '../db/firestore';
 
+async function validateAccountsBelongToWorkspace(db: any, workspaceId: string, lines: any[]) {
+  const accountIds = Array.from(new Set<string>((lines || []).map((l: any) => String(l.accountId)).filter(Boolean)));
+  if (accountIds.length > 0) {
+    const accRefs = accountIds.map((id: string) => db.collection('chartAccounts').doc(id));
+    const accSnaps = await db.getAll(...accRefs);
+    for (const snap of accSnaps) {
+      if (!snap.exists || snap.data()?.workspaceId !== workspaceId) {
+        throw new Error(`Account ${snap.id} does not exist or does not belong to authorized workspace.`);
+      }
+    }
+  }
+}
+
 export const transactionRouter = express.Router();
 
 export function enforceDoubleEntrySafety(req: Request, res: Response, next: NextFunction) {
@@ -148,16 +161,7 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
       return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
     }
 
-    const accountIds = Array.from(new Set<string>((transactionToSave.lines || []).map((l: any) => String(l.accountId)).filter(Boolean)));
-    if (accountIds.length > 0) {
-      const accRefs = accountIds.map((id: string) => db.collection('chartAccounts').doc(id));
-      const accSnaps = await db.getAll(...accRefs);
-      for (const snap of accSnaps) {
-        if (!snap.exists || snap.data()?.workspaceId !== transactionToSave.workspaceId) {
-          return res.status(400).json({ error: `Account ${snap.id} does not exist or does not belong to authorized workspace.` });
-        }
-      }
-    }
+    await validateAccountsBelongToWorkspace(db, transactionToSave.workspaceId, transactionToSave.lines);
     
     DoubleEntryValidator.validateJournalEntry(transactionToSave);
 
@@ -250,7 +254,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
          t.update(txRef, { ...safePartial, updatedAt: FieldValue.serverTimestamp() });
       });
 
-      const auditId = `audit-${Date.now()}`;
+      const auditId = db.collection('auditLogs').doc().id;
       await db.collection("auditLogs").doc(auditId).set({
         id: auditId,
         workspaceId: authoritativeWsId || "unknown",
@@ -277,6 +281,8 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
     }
 
+    await validateAccountsBelongToWorkspace(db, transaction.workspaceId, transaction.lines);
+
     DoubleEntryValidator.validateJournalEntry(transaction);
 
     await db.runTransaction(async (t: any) => {
@@ -294,7 +300,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       t.update(txRef, { ...transaction, updatedAt: FieldValue.serverTimestamp() });
     });
 
-    const auditId = `audit-${Date.now()}`;
+    const auditId = db.collection('auditLogs').doc().id;
     await db.collection("auditLogs").doc(auditId).set({
       id: auditId,
       workspaceId: transaction.workspaceId,
@@ -352,7 +358,7 @@ transactionRouter.delete('/:id', async (req, res) => {
 
     await txRef.delete();
 
-    const auditId = `audit-${Date.now()}`;
+    const auditId = db.collection('auditLogs').doc().id;
     await db.collection("auditLogs").doc(auditId).set({
       id: auditId,
       workspaceId: transactionWsId,
