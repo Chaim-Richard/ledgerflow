@@ -26,18 +26,12 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
   const [report, setReport] = useState<any>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      runHealthCheck();
-    } else {
-      setReport(null);
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
 
-  const runHealthCheck = () => {
-    setIsScanning(true);
-    setReport(null);
-    
-    setTimeout(() => {
+    const startTimer = setTimeout(() => {
+      setIsScanning(true);
+    }, 0);
+    const timer = setTimeout(() => {
       // 1. Trial Balance Check
       let tbNet = 0;
       transactions.forEach(t => {
@@ -97,9 +91,75 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
         (results.filter(r => r.status === 'pass').length / results.length) * 100
       );
 
-      setReport({ results, score });
+      setReport({ results, score, pending });
       setIsScanning(false);
-    }, 2000);
+    }, 1500);
+
+    return () => {
+      clearTimeout(startTimer);
+      clearTimeout(timer);
+    };
+  }, [isOpen, transactions, bankLines]);
+
+  const handleManualScan = () => {
+    setIsScanning(true);
+    setReport(null);
+    setTimeout(() => {
+      let tbNet = 0;
+      transactions.forEach(t => {
+        t.lines.forEach(l => { tbNet += l.amountCents; });
+      });
+
+      const uncategorized = transactions.filter(t => 
+        t.lines.some(l => !l.accountId || l.accountId === 'uncategorized')
+      ).length;
+
+      const pending = transactions.filter(t => t.status === 'draft' || t.status === 'pending').length;
+      const anomalies = transactions.filter(t => t.isFlagged).length;
+      const unreconciled = bankLines.filter(l => !l.matchedTransactionId).length;
+
+      const results = [
+        {
+          id: 'trial-balance',
+          title: 'Trial Balance',
+          status: Math.abs(tbNet) === 0 ? 'pass' : 'fail',
+          message: Math.abs(tbNet) === 0 
+            ? 'Your books are perfectly balanced. Debits equal credits.'
+            : 'Your books are out of balance! A journal entry is missing a matching side.'
+        },
+        {
+          id: 'uncategorized',
+          title: 'Categorization',
+          status: uncategorized === 0 ? 'pass' : (uncategorized > 10 ? 'fail' : 'warn'),
+          message: uncategorized === 0 
+            ? 'All transactions have been categorized.'
+            : `You have ${uncategorized} uncategorized transactions waiting in your inbox.`
+        },
+        {
+          id: 'reconciliation',
+          title: 'Bank Reconciliation',
+          status: unreconciled === 0 ? 'pass' : 'warn',
+          message: unreconciled === 0 
+            ? 'All bank lines are matched to ledger entries.'
+            : `${unreconciled} bank lines are still waiting to be matched.`
+        },
+        {
+          id: 'anomalies',
+          title: 'Anomaly Detection',
+          status: anomalies === 0 ? 'pass' : 'fail',
+          message: anomalies === 0 
+            ? 'No suspicious patterns detected.'
+            : `${anomalies} transactions were flagged for review due to unusual patterns.`
+        }
+      ];
+
+      const score = Math.round(
+        (results.filter(r => r.status === 'pass').length / results.length) * 100
+      );
+
+      setReport({ results, score, pending });
+      setIsScanning(false);
+    }, 1500);
   };
 
   if (!isOpen) return null;
@@ -201,7 +261,7 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
               Close
             </button>
             <button 
-              onClick={runHealthCheck}
+              onClick={handleManualScan}
               disabled={isScanning}
               className="px-5 py-2 bg-indigo-600 text-white font-medium hover:bg-indigo-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
             >

@@ -94,7 +94,7 @@ export class SecurityService {
       return decrypted;
     } catch (err: any) {
       console.error("[SecurityService] Decryption failed:", err);
-      throw new Error(`Decryption failed: tampered ciphertext or invalid key. ${err?.message || ''}`);
+      throw new Error(`Decryption failed: tampered ciphertext or invalid key. ${err?.message || ''}`, { cause: err });
     }
   }
 }

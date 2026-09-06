@@ -186,12 +186,10 @@ export default function StatementImporter({
     if (!dateStr) return '';
     const s = dateStr.trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const usMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    const usMatch = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
     if (usMatch) {
-      let [_, m, d, y] = usMatch;
-      if (y.length === 2) {
-        y = parseInt(y) > 50 ? '19' + y : '20' + y;
-      }
+      const [_, m, d, rawY] = usMatch;
+      const y = rawY.length === 2 ? (parseInt(rawY, 10) > 50 ? '19' + rawY : '20' + rawY) : rawY;
       return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
     }
     const d = new Date(s);
@@ -217,7 +215,7 @@ export default function StatementImporter({
     let skipped = 0;
     
     const results = dataRows.map(row => {
-      let amountCents = 0;
+      let amountCents: number;
       if (hasAmount) {
         const amountStr = cleanAmountStr(row[mapping.amount]);
         amountCents = TruthEngine.parseAmountToCentsOrZero(amountStr);

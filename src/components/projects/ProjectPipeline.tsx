@@ -52,7 +52,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
     const proj = projects.find(p => p.id === id);
     if (!proj || proj.pipelineStage === stageId) return;
 
-    let newStatus = proj.status;
+    let newStatus: Project['status'];
     if (stageId === 'completed') newStatus = 'completed';
     else if (stageId === 'archived') newStatus = 'archived';
     else newStatus = 'active';

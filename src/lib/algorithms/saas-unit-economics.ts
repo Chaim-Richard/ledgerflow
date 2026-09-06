@@ -100,7 +100,7 @@ export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
        { Metric: 'CAC ($)', Value: cac / 100 }
     ];
 
-    let ratioColor = 'gray';
+    let ratioColor: string;
     if (ltvCacRatio >= 3) ratioColor = 'green';
     else if (ltvCacRatio >= 1) ratioColor = 'orange';
     else ratioColor = 'red';

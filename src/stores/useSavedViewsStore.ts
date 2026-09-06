@@ -208,7 +208,9 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
       const nextViews = [newView, ...state.views];
       try {
         localStorage.setItem(getSavedViewsStorageKey(), JSON.stringify(nextViews));
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Failed to persist saved view to localStorage", e);
+      }
       return { views: nextViews, activeViewId: id };
     });
 
@@ -229,7 +231,9 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
       );
       try {
         localStorage.setItem(getSavedViewsStorageKey(), JSON.stringify(nextViews));
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Failed to update saved view in localStorage", e);
+      }
       return { views: nextViews };
     });
   },
@@ -239,7 +243,9 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
       const nextViews = state.views.filter((v) => v.id !== id);
       try {
         localStorage.setItem(getSavedViewsStorageKey(), JSON.stringify(nextViews));
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Failed to delete saved view from localStorage", e);
+      }
       const nextActive = state.activeViewId === id ? (nextViews[0]?.id || null) : state.activeViewId;
       return { views: nextViews, activeViewId: nextActive };
     });
@@ -251,7 +257,9 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
       const nextViews = state.views.map((v) => (v.id === id ? { ...v, isDefault: !v.isDefault } : v));
       try {
         localStorage.setItem(getSavedViewsStorageKey(), JSON.stringify(nextViews));
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Failed to persist default view in localStorage", e);
+      }
       return { views: nextViews };
     });
   },
@@ -261,7 +269,9 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
       const nextViews = state.views.map((v) => (v.id === id ? { ...v, isPinned: !v.isPinned } : v));
       try {
         localStorage.setItem(getSavedViewsStorageKey(), JSON.stringify(nextViews));
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Failed to persist pinned view in localStorage", e);
+      }
       return { views: nextViews };
     });
   },
@@ -280,7 +290,9 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
     try {
       localStorage.removeItem(getSavedViewsStorageKey());
       localStorage.removeItem('lf_saved_views_v2');
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Failed to reset saved views in localStorage", e);
+    }
     set({ views: DEFAULT_PRESET_VIEWS, activeViewId: 'view-liquid-cash' });
   },
 

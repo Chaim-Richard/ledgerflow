@@ -42,7 +42,7 @@ export function calculateSafeToSpend(transactions: Transaction[], accounts: Char
     const netProfitCents = Math.max(0, revenue - expenses);
     const netProfit = netProfitCents / 100;
 
-    let estimatedTax = 0;
+    let estimatedTax: number;
     if (entityType === 'pass_through') {
         // Individual income + self-employment tax estimate (approx. 25% blended)
         estimatedTax = netProfit * 0.25;

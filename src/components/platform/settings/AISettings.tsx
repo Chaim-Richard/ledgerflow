@@ -47,7 +47,8 @@ export default function AISettings() {
         setTimeout(() => setThreshold(t), 0);
       }
       if (currentWorkspace.aiModel) {
-        setSelectedModel(currentWorkspace.aiModel);
+        const m = currentWorkspace.aiModel;
+        setTimeout(() => setSelectedModel(m), 0);
       }
     }
   }, [currentWorkspaceId, workspaces]);

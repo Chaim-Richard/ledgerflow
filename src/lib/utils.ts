@@ -31,7 +31,9 @@ export function formatCurrency(cents: number | undefined | null, currency?: stri
     if (formatter.resolvedOptions().maximumFractionDigits === 0) {
       divisor = 1;
     }
-  } catch (e) {}
+  } catch (_e) {
+    // Unsupported currency fallback
+  }
 
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
@@ -123,7 +125,7 @@ export function sanitizeCsvCell(value: any): string {
   // Purely formatted numbers (like -1,000.00 or -$50.00) are safe from formula injection
   const isSafeNumber = /^-?\$?\s*\d{1,3}(,?\d{3})*(\.\d+)?$/.test(str);
   
-  if (!isSafeNumber && /^[=\+\-@\t\r]/.test(str)) {
+  if (!isSafeNumber && /^[=+\-@\t\r]/.test(str)) {
     str = "'" + str;
   }
   

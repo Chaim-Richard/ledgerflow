@@ -5,10 +5,9 @@ import { AlgorithmDefinition } from './types';
 export function parseReceiptOCR(ocrLines: string[], existingMerchants: string[]) {
     let total = 0;
     let dateStr = '';
-    let merchant = '';
+    let merchant = ocrLines[0] || 'Unknown';
 
     // 1. Merchant: Top line or existing merchant match
-    merchant = ocrLines[0] || 'Unknown';
     for (const line of ocrLines.slice(0, 5)) {
         const match = existingMerchants.find(m => line.toLowerCase().includes(m.toLowerCase()));
         if (match) {
@@ -19,7 +18,7 @@ export function parseReceiptOCR(ocrLines: string[], existingMerchants: string[])
 
     // 2. Date regex
     for (const line of ocrLines) {
-        const dateMatch = line.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/);
+        const dateMatch = line.match(/\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/);
         if (dateMatch) {
             dateStr = dateMatch[0];
             break;

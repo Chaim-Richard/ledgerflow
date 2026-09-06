@@ -82,9 +82,9 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
     
     const zScore = (6.56 * t1) + (3.26 * t2) + (6.72 * t3) + (1.05 * t4);
 
-    let zone = 'Unknown';
-    let color = 'gray';
-    let trend = 'neutral';
+    let zone: string;
+    let color: string;
+    let trend: string;
     
     if (zScore > 2.9) {
       zone = 'Safe Zone';

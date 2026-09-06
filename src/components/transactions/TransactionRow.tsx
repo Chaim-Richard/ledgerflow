@@ -99,19 +99,17 @@ const TransactionRow = React.memo(({
   const displayTx = tx;
 
   const [isEditingDesc, setIsEditingDesc] = React.useState(false);
-  const [descValue, setDescValue] = React.useState(displayTx.description);
-
-  React.useEffect(() => {
-    setDescValue(displayTx.description);
-  }, [displayTx.description]);
+  const [editDraft, setEditDraft] = React.useState<string | null>(null);
+  const descValue = editDraft !== null ? editDraft : displayTx.description;
 
   const handleDescSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
     setIsEditingDesc(false);
-    if (descValue !== displayTx.description && !isLocked && onUpdate) {
-      onUpdate(tx.id, { description: descValue });
+    if (editDraft !== null && editDraft !== displayTx.description && !isLocked && onUpdate) {
+      onUpdate(tx.id, { description: editDraft });
     }
+    setEditDraft(null);
   };
 
   return (
@@ -172,12 +170,12 @@ const TransactionRow = React.memo(({
               type="text"
               autoFocus
               value={descValue}
-              onChange={(e) => setDescValue(e.target.value)}
+              onChange={(e) => setEditDraft(e.target.value)}
               onBlur={() => handleDescSubmit()}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleDescSubmit();
                 if (e.key === 'Escape') {
-                  setDescValue(displayTx.description);
+                  setEditDraft(null);
                   setIsEditingDesc(false);
                 }
               }}

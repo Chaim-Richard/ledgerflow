@@ -82,7 +82,7 @@ export class LedgerEngine {
                 const calculatedAmounts: number[] = [];
 
                 allocs.forEach((alloc, idx) => {
-                  let allocAmount = 0;
+                  let allocAmount: number;
                   if (idx === allocs.length - 1) {
                     allocAmount = amount - allocatedSum;
                   } else {

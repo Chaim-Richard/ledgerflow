@@ -143,7 +143,7 @@ export class LedgerEngine {
           const allocs = line.splitAllocations;
           let allocatedSum = 0;
           allocs.forEach((alloc, idx) => {
-            let allocCents = 0;
+            let allocCents: number;
             if (idx === allocs.length - 1) {
               allocCents = convertedCents - allocatedSum;
             } else {

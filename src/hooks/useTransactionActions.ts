@@ -13,7 +13,7 @@ import {
   query,
   where
 } from 'firebase/firestore';
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -108,7 +108,18 @@ export function useTransactionActions() {
       toast.success('Transaction voided', {
         action: {
           label: 'Undo',
-          onClick: () => handleUpdateTransaction(id, { status: tx.status, deletedAt: tx.deletedAt || null } as any)
+          onClick: async () => {
+            try {
+              const token = await user?.getIdToken();
+              await fetch(`/api/v1/transactions/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ transaction: { ...tx, status: tx.status, deletedAt: tx.deletedAt || null, updatedAt: new Date().toISOString() } })
+              });
+            } catch (err) {
+              console.warn('Undo void failed', err);
+            }
+          }
         }
       });
     } else {
@@ -452,7 +463,7 @@ export function useTransactionActions() {
     return finalLines;
   };
 
-  const handleQuickAdd = async (data: Partial<Transaction>) => {
+  const handleQuickAdd = useCallback(async (data: Partial<Transaction>) => {
     if (!user || !currentWorkspaceId) return;
     
     // Core App Feature: Integrity Enforcement
@@ -607,7 +618,7 @@ export function useTransactionActions() {
       // Handled by true sync errors
       toast.error('Failed to add transaction. Protocol interrupted.');
     }
-  };
+  }, [user, currentWorkspaceId, isPeriodLocked, recordRulePattern, handleVoidTransaction]);
 
   const handleBulkUpdate = async (ids: string[], updates: any) => {
     if (!user || !currentWorkspaceId || !ids || ids.length === 0) return;

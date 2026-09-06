@@ -247,7 +247,7 @@ export function useLedgerComputation(
     let queryText = lowerSearch;
     
     // Extract key:value filters (e.g., category:Meals, account:Checking, type:expense, status:pending, payee:Apple, is:pending, min:100, max:500)
-    const kvRegex = /\b(category|account|project|type|status|class|location|payee|vendor|customer|tag|code|id|min|max|is):\s*([a-zA-Z0-9_\-\.]+)/gi;
+    const kvRegex = /\b(category|account|project|type|status|class|location|payee|vendor|customer|tag|code|id|min|max|is):\s*([a-zA-Z0-9_.-]+)/gi;
     let kvMatch;
     while ((kvMatch = kvRegex.exec(lowerSearch)) !== null) {
       const key = kvMatch[1].toLowerCase();
@@ -321,7 +321,7 @@ export function useLedgerComputation(
 
     // 4. Negative Terms (-term or NOT term)
     const negativeTerms: string[] = [];
-    const negRegex = /(?:^|\s)-(?:[a-zA-Z0-9_\-\.]+)|(?:^|\s)NOT\s+([a-zA-Z0-9_\-\.]+)/gi;
+    const negRegex = /(?:^|\s)-(?:[a-zA-Z0-9_.-]+)|(?:^|\s)NOT\s+([a-zA-Z0-9_.-]+)/gi;
     let negMatch;
     while ((negMatch = negRegex.exec(queryText)) !== null) {
       const rawMatch = negMatch[0].trim();

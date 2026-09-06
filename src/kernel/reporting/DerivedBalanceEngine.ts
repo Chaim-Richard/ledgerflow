@@ -48,7 +48,7 @@ export class DerivedBalanceEngine {
     const snapshot = [...workspaceSnapshots].reverse().find(s => s.date <= targetDate);
     
     let baseBalance = 0;
-    let eventsToReplay = allEvents;
+    let eventsToReplay: LedgerEvent[];
 
     if (snapshot) {
       baseBalance = snapshot.balancesByAccount[accountId] || 0;

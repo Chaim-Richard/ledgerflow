@@ -55,7 +55,7 @@ export const ChartAccountSchema = z.object({
   uid: z.string(),
   workspaceId: z.string(),
   name: z.string().min(2).max(100),
-  code: z.string().regex(/^[a-zA-Z0-9_\-]+$/),
+  code: z.string().regex(/^[a-zA-Z0-9_-]+$/),
   type: z.enum(['asset', 'liability', 'equity', 'income', 'expense', 'cost_of_goods', 'revenue']),
   category: z.string().max(100).optional(),
   subtype: z.string().optional(),

@@ -36,7 +36,9 @@ class AIService {
           } else {
             message = `HTTP Error ${response.status} ${response.statusText}`;
           }
-        } catch (textErr) {}
+        } catch (_textErr) {
+          // Ignore text parsing fallback error
+        }
       }
       throw new Error(message);
     }
@@ -44,7 +46,7 @@ class AIService {
     try {
       return await response.json();
     } catch (e) {
-      throw new Error("Failed to parse response from AI processing engine");
+      throw new Error("Failed to parse response from AI processing engine", { cause: e });
     }
   }
 

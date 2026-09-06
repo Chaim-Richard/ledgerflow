@@ -358,14 +358,19 @@ export default function SystemCommandCenter() {
     };
 
   useEffect(() => {
-    fetchTelemetry();
-    setTimeout(() => fetchGlobalConfig(), 0);
-    fetchUsersData();
+    const timer = setTimeout(() => {
+      fetchTelemetry();
+      fetchGlobalConfig();
+      fetchUsersData();
+    }, 0);
     const interval = setInterval(() => {
       fetchTelemetry();
       fetchUsersData();
     }, 6000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
   }, []);
 
   const allLogsCombined = [...simulatedLogs, ...(telemetry?.liveLogs || [])];

@@ -212,50 +212,50 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Preference Setters
   setFontSizeScale: (fontSizeScale) => {
-    try { localStorage.setItem('lf_font_size_scale', String(fontSizeScale)); } catch (e) {}
+    try { localStorage.setItem('lf_font_size_scale', String(fontSizeScale)); } catch (_e) { /* ignore storage error */ }
     set({ fontSizeScale });
   },
   setFontSizePreset: (fontSizePreset) => {
-    try { localStorage.setItem('lf_font_size_preset', fontSizePreset); } catch (e) {}
+    try { localStorage.setItem('lf_font_size_preset', fontSizePreset); } catch (_e) { /* ignore storage error */ }
     let scale = 100;
     if (fontSizePreset === 'small') scale = 90;
     if (fontSizePreset === 'normal') scale = 100;
     if (fontSizePreset === 'medium') scale = 110;
     if (fontSizePreset === 'large') scale = 120;
     if (fontSizePreset === 'xlarge') scale = 130;
-    try { localStorage.setItem('lf_font_size_scale', String(scale)); } catch (e) {}
+    try { localStorage.setItem('lf_font_size_scale', String(scale)); } catch (_e) { /* ignore storage error */ }
     set({ fontSizePreset, fontSizeScale: scale });
   },
   setFontFamily: (fontFamily) => {
-    try { localStorage.setItem('lf_font_family', fontFamily); } catch (e) {}
+    try { localStorage.setItem('lf_font_family', fontFamily); } catch (_e) { /* ignore storage error */ }
     set({ fontFamily });
   },
   setRowDensity: (rowDensity) => {
-    try { localStorage.setItem('lf_row_density', rowDensity); } catch (e) {}
+    try { localStorage.setItem('lf_row_density', rowDensity); } catch (_e) { /* ignore storage error */ }
     set({ rowDensity });
   },
   setAccentColor: (accentColor) => {
-    try { localStorage.setItem('lf_accent_color', accentColor); } catch (e) {}
+    try { localStorage.setItem('lf_accent_color', accentColor); } catch (_e) { /* ignore storage error */ }
     set({ accentColor });
   },
   setHighContrast: (highContrast) => {
-    try { localStorage.setItem('lf_high_contrast', String(highContrast)); } catch (e) {}
+    try { localStorage.setItem('lf_high_contrast', String(highContrast)); } catch (_e) { /* ignore storage error */ }
     set({ highContrast });
   },
   setReduceMotion: (reduceMotion) => {
-    try { localStorage.setItem('lf_reduce_motion', String(reduceMotion)); } catch (e) {}
+    try { localStorage.setItem('lf_reduce_motion', String(reduceMotion)); } catch (_e) { /* ignore storage error */ }
     set({ reduceMotion });
   },
   setDefaultLandingTab: (defaultLandingTab) => {
-    try { localStorage.setItem('lf_default_landing', defaultLandingTab); } catch (e) {}
+    try { localStorage.setItem('lf_default_landing', defaultLandingTab); } catch (_e) { /* ignore storage error */ }
     set({ defaultLandingTab });
   },
   setDateFormatPref: (dateFormatPref) => {
-    try { localStorage.setItem('lf_date_format', dateFormatPref); } catch (e) {}
+    try { localStorage.setItem('lf_date_format', dateFormatPref); } catch (_e) { /* ignore storage error */ }
     set({ dateFormatPref });
   },
   setNumberDecimals: (numberDecimals) => {
-    try { localStorage.setItem('lf_number_decimals', String(numberDecimals)); } catch (e) {}
+    try { localStorage.setItem('lf_number_decimals', String(numberDecimals)); } catch (_e) { /* ignore storage error */ }
     set({ numberDecimals });
   },
 
@@ -337,7 +337,9 @@ export const useUIStore = create<UIState>((set) => ({
   setTheme: (theme) => {
     try {
       localStorage.setItem('lf_theme', theme);
-    } catch (e) {}
+    } catch (_e) {
+      // Ignore storage error
+    }
     set({ theme });
   },
   setLexiconOverride: (key, lang, value) => set((state) => {
@@ -351,13 +353,17 @@ export const useUIStore = create<UIState>((set) => ({
     };
     try {
       localStorage.setItem('lf_lexicon_overrides', JSON.stringify(nextOverrides));
-    } catch (e) {}
+    } catch (_e) {
+      // Ignore storage error
+    }
     return { lexiconOverrides: nextOverrides };
   }),
   resetLexiconOverrides: () => set(() => {
     try {
       localStorage.removeItem('lf_lexicon_overrides');
-    } catch (e) {}
+    } catch (_e) {
+      // Ignore storage error
+    }
     return { lexiconOverrides: {} };
   }),
   toggleTabVisibility: (id) => set((state) => {
@@ -369,21 +375,27 @@ export const useUIStore = create<UIState>((set) => ({
       const wsId = typeof window !== 'undefined' ? localStorage.getItem('ledgerflow_current_workspace') : null;
       const key = wsId ? `lf_hidden_tabs_${wsId}` : 'lf_hidden_tabs';
       localStorage.setItem(key, JSON.stringify(nextHidden));
-    } catch (e) {}
+    } catch (_e) {
+      // Ignore storage error
+    }
     return { hiddenTabs: nextHidden };
   }),
   setSpeedDial: (key, tabId) => set((state) => {
     const nextSpeedDials = { ...state.speedDials, [key]: tabId };
     try {
       localStorage.setItem('lf_speed_dials', JSON.stringify(nextSpeedDials));
-    } catch (e) {}
+    } catch (_e) {
+      // Ignore storage error
+    }
     return { speedDials: nextSpeedDials };
   }),
   removeSpeedDial: (key) => set((state) => {
     const { [key]: _, ...nextSpeedDials } = state.speedDials;
     try {
       localStorage.setItem('lf_speed_dials', JSON.stringify(nextSpeedDials));
-    } catch (e) {}
+    } catch (_e) {
+      // Ignore storage error
+    }
     return { speedDials: nextSpeedDials };
   })
 }));

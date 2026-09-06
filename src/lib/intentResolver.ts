@@ -171,7 +171,7 @@ export class IntentResolver {
         }
         
         // 1. Check for Split Patterns: "Walmart $100 ($40 Groceries, $60 Electronics)"
-        const splitMatch = lowerInput.match(/([a-zA-Z0-9\s\.]+)\s*\$?([\d,]+(?:\.\d+)?[km]?)\s*\(([^)]+)\)/i);
+        const splitMatch = lowerInput.match(/([a-zA-Z0-9\s.]+)\s*\$?([\d,]+(?:\.\d+)?[km]?)\s*\(([^)]+)\)/i);
         
         if (splitMatch) {
             const store = splitMatch[1].trim();
@@ -219,8 +219,8 @@ export class IntentResolver {
         }
 
         // 2. Standard Pattern Matching
-        const amountRegex = /(?:spent|paid|received|deposited)?\s*\$?([\d,]+(?:\.\d+)?[km]?)\s*(?:for|on|at|from)?\s*([a-zA-Z0-9\s\.]+)/i;
-        const amountSuffixRegex = /([a-zA-Z0-9\s\.]+)\s*\$?([\d,]+(?:\.\d+)?[km]?)/i;
+        const amountRegex = /(?:spent|paid|received|deposited)?\s*\$?([\d,]+(?:\.\d+)?[km]?)\s*(?:for|on|at|from)?\s*([a-zA-Z0-9\s.]+)/i;
+        const amountSuffixRegex = /([a-zA-Z0-9\s.]+)\s*\$?([\d,]+(?:\.\d+)?[km]?)/i;
 
         let match = lowerInput.match(amountRegex);
         let desc = '';

@@ -99,7 +99,7 @@ export class TruthEngine {
       if (isDR) val = Math.abs(val);
       return val;
     } catch (e) {
-      throw new Error(`Integrity Violation: Invalid amount format: ${amountString}`);
+      throw new Error(`Integrity Violation: Invalid amount format: ${amountString}`, { cause: e });
     }
   }
 

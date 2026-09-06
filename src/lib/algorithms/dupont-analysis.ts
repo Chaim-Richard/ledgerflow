@@ -69,7 +69,7 @@ export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
        { Component: 'Equity Multiplier', Value: parseFloat((equityMultiplier * 100).toFixed(2)) }
     ];
 
-    let roeColor = 'text-gray-500';
+    let roeColor: string;
     let roeTrend = 'neutral';
     if (roe > 0.15) { roeColor = 'text-green-500'; roeTrend = 'positive'; }
     else if (roe < 0.05) { roeColor = 'text-red-500'; roeTrend = 'negative'; }

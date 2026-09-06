@@ -20,7 +20,6 @@ export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
     let cash = 0;
     let receivables = 0;
     let currentLiabilities = 0;
-    let averageMonthlyOutflow = 0;
 
     // Accounts
     accounts.forEach(acc => {
@@ -60,7 +59,7 @@ export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
 
     const msDiff = maxDate.getTime() - minDate.getTime();
     const months = msDiff > 0 ? (msDiff / (1000 * 60 * 60 * 24 * 30)) : 1;
-    averageMonthlyOutflow = (totalOutflow / Math.max(1, months));
+    const averageMonthlyOutflow = (totalOutflow / Math.max(1, months));
 
     // Stress Test Math
     const hqla = cash + (receivables * (1 - haircut)); // High Quality Liquid Assets
