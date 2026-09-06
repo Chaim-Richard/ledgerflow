@@ -64,6 +64,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@firebase/eslint-plugin-security-rules": "^0.0.2",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
     "@types/d3": "^7.4.3",
