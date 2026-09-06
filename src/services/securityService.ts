@@ -1,12 +1,23 @@
 import crypto from "crypto";
 
 export class SecurityService {
+  private static deterministicStringify(obj: any): string {
+    if (obj === null || typeof obj !== 'object') {
+      return JSON.stringify(obj);
+    }
+    if (Array.isArray(obj)) {
+      return '[' + obj.map(this.deterministicStringify.bind(this)).join(',') + ']';
+    }
+    const keys = Object.keys(obj).sort();
+    return '{' + keys.map(k => JSON.stringify(k) + ':' + this.deterministicStringify(obj[k])).join(',') + '}';
+  }
+
   /**
    * Generates a forensic hash for an entity state
    * Used for "Vault" integrity and "Audit Trail" verification
    */
   static generateForensicHash(data: any): string {
-    const serialized = JSON.stringify(data);
+    const serialized = this.deterministicStringify(data);
     const salt = process.env.SYSTEM_SALT;
     if (!salt) {
       throw new Error("SYSTEM_SALT environment variable is not set. Refusing to generate a forensic hash with a fallback.");

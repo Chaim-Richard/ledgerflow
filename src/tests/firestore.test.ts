@@ -9,18 +9,14 @@ describe('Firestore Security Rules Unit Tests', () => {
   let testEnv: RulesTestEnvironment | null = null;
 
   before(async () => {
-    try {
-      testEnv = await initializeTestEnvironment({
-        projectId: 'demo-ledgerflow',
-        firestore: {
-          rules,
-          host: '127.0.0.1',
-          port: 8080,
-        },
-      });
-    } catch (err) {
-      console.warn('Could not initialize rules-unit-testing environment. Local firestore emulator may not be running:', err);
-    }
+    testEnv = await initializeTestEnvironment({
+      projectId: 'demo-ledgerflow',
+      firestore: {
+        rules,
+        host: '127.0.0.1',
+        port: 8080,
+      },
+    });
   });
 
   after(async () => {
