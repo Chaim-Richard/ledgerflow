@@ -48,7 +48,7 @@ revenueRouter.post('/recognize', async (req, res) => {
       description: `ASC 606 Revenue Recognition for Contract ${contractId || 'Unknown'} (Period ${periodId || 'N/A'})`,
       totalAmountCents: amountCents,
       type: 'journal',
-      status: 'posted',
+      status: 'approved',
       isCleared: true,
       lines: [
         {

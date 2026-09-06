@@ -48,7 +48,7 @@ leaseRouter.post('/capitalize', async (req, res) => {
       description: `ASC 842 Initial Recognition: ${leaseName || 'Operating Lease'}`,
       totalAmountCents: pvAmountCents,
       type: 'journal',
-      status: 'posted',
+      status: 'approved',
       isCleared: true,
       lines: [
         {

@@ -53,6 +53,10 @@ inventoryRouter.post('/cogs', async (req, res) => {
     if (typeof itemData.unitCostCents !== 'number' || itemData.unitCostCents <= 0) {
       return res.status(400).json({ error: `Inventory item ${itemId} has no valid unitCostCents configured.` });
     }
+    const currentQty = typeof itemData.quantityOnHand === 'number' ? itemData.quantityOnHand : 0;
+    if (quantitySold > currentQty) {
+      return res.status(400).json({ error: `Insufficient inventory stock. Requested ${quantitySold}, available ${currentQty}.` });
+    }
     const unitCostCents = itemData.unitCostCents;
     const totalCogsCents = Math.round(quantitySold * unitCostCents);
     const itemName = itemData.name || itemData.sku || itemId;
@@ -65,7 +69,7 @@ inventoryRouter.post('/cogs', async (req, res) => {
       description: `Inventory COGS Recognition: ${itemName} (Qty: ${quantitySold})`,
       totalAmountCents: totalCogsCents,
       type: 'journal',
-      status: 'posted',
+      status: 'approved',
       isCleared: true,
       lines: [
         {
