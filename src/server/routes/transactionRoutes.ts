@@ -5,7 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { ClosingEntryEngine } from '../../kernel/ledger/ClosingEntryEngine';
-import { TransactionSchema } from '../../schemas';
+import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchema } from '../../schemas';
 import { Transaction } from '../../types';
 import { parseLocalDate } from '../../lib/utils';
 import { getDb } from '../db/firestore';
@@ -125,6 +125,13 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
     } as Transaction;
     const transactionToSave = finalTxToSave;
     
+    // Authorization Check
+    const wsDoc = await db.collection('workspaces').doc(transactionToSave.workspaceId).get();
+    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+    const wsData = wsDoc.data();
+
     // Namespace idempotency key by workspaceId to prevent cross-workspace key collisions
     const scopedIdempotencyKey = idempotencyKey ? `${transactionToSave.workspaceId}_${idempotencyKey}` : null;
     
@@ -136,12 +143,6 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
           return res.status(data?.code || 409).json(data?.body || { error: 'Duplicate request processing' });
        }
     }
-
-    const wsDoc = await db.collection('workspaces').doc(transactionToSave.workspaceId).get();
-    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
-      return res.status(403).json({ error: 'Not a member' });
-    }
-    const wsData = wsDoc.data();
 
     await TransactionValidator.validateAndPrepare(transactionToSave, {
       workspaceId: transactionToSave.workspaceId,
@@ -431,7 +432,14 @@ transactionRouter.post('/bulk', async (req, res) => {
           if (existingDoc.exists && existingDoc.data()?.workspaceId !== wsId) {
             throw new Error(`Forbidden: Entity ${entityMutation.docId} does not belong to authorized workspace.`);
           }
-          const safeData = { ...entityMutation.data, workspaceId: wsId, uid: user.uid, updatedAt: FieldValue.serverTimestamp() };
+          
+          const schemaMap: any = { invoices: InvoiceSchema, bills: BillSchema, orders: OrderSchema, projects: ProjectSchema };
+          const schema = schemaMap[entityMutation.collection];
+          
+          if (!schema) throw new Error(`Forbidden: No schema for entityMutation collection '${entityMutation.collection}'.`);
+          
+          const validatedData = schema.parse({ ...entityMutation.data, workspaceId: wsId });
+          const safeData = { ...validatedData, uid: user.uid, updatedAt: FieldValue.serverTimestamp() };
           t.set(ref, safeData, { merge: true });
         } else if (entityMutation.action === "delete") {
           const existingDoc = await t.get(ref);

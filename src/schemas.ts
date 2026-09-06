@@ -181,6 +181,43 @@ export const InventoryEOQRequestSchema = z.object({
   holdingCostPerUnitCents: z.number().int().nonnegative()
 });
 
+export const InvoiceSchema = z.object({
+  id: z.string().optional(),
+  workspaceId: z.string(),
+  vendorId: z.string(),
+  amountCents: z.number().int().nonnegative(),
+  status: z.enum(['draft', 'pending', 'paid', 'void']),
+  date: z.string(),
+  dueDate: z.string(),
+});
+
+export const BillSchema = z.object({
+  id: z.string().optional(),
+  workspaceId: z.string(),
+  vendorId: z.string(),
+  amountCents: z.number().int().nonnegative(),
+  status: z.enum(['draft', 'pending', 'paid', 'void']),
+  date: z.string(),
+  dueDate: z.string(),
+});
+
+export const OrderSchema = z.object({
+  id: z.string().optional(),
+  workspaceId: z.string(),
+  customerId: z.string(),
+  amountCents: z.number().int().nonnegative(),
+  status: z.enum(['draft', 'pending', 'shipped', 'cancelled']),
+  date: z.string(),
+});
+
+export const ProjectSchema = z.object({
+  id: z.string().optional(),
+  workspaceId: z.string(),
+  name: z.string().min(1),
+  status: z.enum(['active', 'completed', 'archived']),
+  budgetCents: z.number().int().nonnegative().optional(),
+});
+
 export type ValidatedTransaction = z.infer<typeof TransactionSchema>;
 export type ValidatedChartAccount = z.infer<typeof ChartAccountSchema>;
 export type ValidatedWorkspace = z.infer<typeof WorkspaceSchema>;
