@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import express from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
+import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { ClosingEntryEngine } from '../../kernel/ledger/ClosingEntryEngine';
 import { TransactionSchema } from '../../schemas';
 import { Transaction } from '../../types';
@@ -142,22 +143,11 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
     }
     const wsData = wsDoc.data();
 
-    if (wsData?.lockDate && transactionToSave.date && transactionToSave.date <= wsData.lockDate) {
-      return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
-    }
-
-    const accountIds = Array.from(new Set<string>((transactionToSave.lines || []).map((l: any) => String(l.accountId)).filter(Boolean)));
-    if (accountIds.length > 0) {
-      const accRefs = accountIds.map((id: string) => db.collection('chartAccounts').doc(id));
-      const accSnaps = await db.getAll(...accRefs);
-      for (const snap of accSnaps) {
-        if (!snap.exists || snap.data()?.workspaceId !== transactionToSave.workspaceId) {
-          return res.status(400).json({ error: `Account ${snap.id} does not exist or does not belong to authorized workspace.` });
-        }
-      }
-    }
-    
-    DoubleEntryValidator.validateJournalEntry(transactionToSave);
+    await TransactionValidator.validateAndPrepare(transactionToSave, {
+      workspaceId: transactionToSave.workspaceId,
+      user: { uid: user.uid, admin: user.admin },
+      wsData
+    });
 
     await db.runTransaction(async (t: any) => {
       if (scopedIdempotencyKey) {
@@ -271,11 +261,15 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       return res.status(403).json({ error: 'Not a member' });
     }
 
-    if (wsData?.lockDate && transaction.date && transaction.date <= wsData.lockDate) {
-      return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
-    }
+    // Load existing tx to pass to validator
+    const existingTxSnap = await db.collection('transactions').doc(id).get();
+    const existingTx = existingTxSnap.exists ? existingTxSnap.data() as Transaction : undefined;
 
-    DoubleEntryValidator.validateJournalEntry(transaction);
+    await TransactionValidator.validateAndPrepare(transaction, {
+      workspaceId: transaction.workspaceId,
+      user: { uid: user.uid, admin: user.admin },
+      wsData
+    }, existingTx);
 
     await db.runTransaction(async (t: any) => {
       const txRef = db.collection('transactions').doc(id);
@@ -411,13 +405,12 @@ transactionRouter.post('/bulk', async (req, res) => {
       }
       tx.uid = user.uid;
       tx.workspaceId = wsId;
-      if (wsData?.lockDate && tx.date && tx.date <= wsData.lockDate) {
-        return res.status(400).json({ error: `Period Locked: Cannot post transaction on ${tx.date} before lock date ${wsData.lockDate}.` });
-      }
-      (tx.lines || []).forEach((l: any) => {
-        if (l.accountId) accountIdsToVerify.add(l.accountId);
+      
+      await TransactionValidator.validateAndPrepare(tx, {
+        workspaceId: wsId,
+        user: { uid: user.uid, admin: user.admin },
+        wsData
       });
-      DoubleEntryValidator.validateJournalEntry(tx);
     }
 
     if (accountIdsToVerify.size > 0) {
@@ -567,37 +560,19 @@ transactionRouter.post('/reconcile', async (req, res) => {
             if (!txSnap.exists || txSnap.data()?.workspaceId !== workspaceId) {
               throw new Error(`Transaction ${op.id} does not belong to authorized workspace`);
             }
-            const existingTx = txSnap.data() || {};
-            // Check period lock
-            if (wsData?.lockDate) {
-              if (existingTx.date && existingTx.date <= wsData.lockDate) {
-                throw new Error(`Cannot modify transaction in locked period`);
-              }
-              if (op.data?.date && op.data.date <= wsData.lockDate) {
-                throw new Error(`Cannot move transaction into locked period`);
-              }
-            }
-            if ((existingTx.status === 'certified' || existingTx.status === 'void') && !user.admin) {
-              throw new Error(`Forbidden: Transaction ${op.id} status is locked.`);
-            }
+            const existingTxData = txSnap.data() as Transaction;
+            
             const safeData = { ...op.data };
             delete safeData.workspaceId;
             delete safeData.uid;
 
-            const merged = { ...existingTx, ...safeData };
-            if (merged.lines) {
-              const accountIds = Array.from(new Set<string>(merged.lines.map((l: any) => l.accountId).filter(Boolean)));
-              if (accountIds.length > 0) {
-                const accRefs = accountIds.map(id => db.collection('chartAccounts').doc(id));
-                const accSnaps = await t.getAll(...accRefs);
-                for (const snap of accSnaps) {
-                  if (!snap.exists || snap.data()?.workspaceId !== workspaceId) {
-                    throw new Error(`Account ${snap.id} does not belong to authorized workspace`);
-                  }
-                }
-              }
-              DoubleEntryValidator.validateJournalEntry(merged);
-            }
+            const merged = { ...existingTxData, ...safeData };
+            
+            await TransactionValidator.validateAndPrepare(merged, {
+                workspaceId: workspaceId,
+                user: { uid: user.uid, admin: user.admin },
+                wsData
+            }, existingTxData, t);
             t.update(txRef, { ...safeData, updatedAt: FieldValue.serverTimestamp() });
           } else if (op.type === 'createTransaction') {
             const txRef = db.collection('transactions').doc(op.id);
