@@ -223,11 +223,16 @@ export class TruthEngine {
     const totalCapital = e.plus(d);
     if (totalCapital.lessThanOrEqualTo(0)) return 0;
     
+    // Normalize percentage inputs (> 1 assumed to be e.g. 21% or 10%)
+    const normKe = costOfEquity > 1 ? new Decimal(costOfEquity).div(100) : new Decimal(costOfEquity);
+    const normKd = costOfDebt > 1 ? new Decimal(costOfDebt).div(100) : new Decimal(costOfDebt);
+    const normTax = corporateTaxRate > 1 ? new Decimal(corporateTaxRate).div(100) : new Decimal(corporateTaxRate);
+
     const equityWeight = e.div(totalCapital);
     const debtWeight = d.div(totalCapital);
     
-    const equityComponent = equityWeight.mul(costOfEquity);
-    const debtComponent = debtWeight.mul(costOfDebt).mul(new Decimal(1).minus(corporateTaxRate));
+    const equityComponent = equityWeight.mul(normKe);
+    const debtComponent = debtWeight.mul(normKd).mul(new Decimal(1).minus(normTax));
     
     return equityComponent.plus(debtComponent).toNumber();
   }

@@ -28,8 +28,7 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
           tx.lines.forEach(line => {
              const acc = accountMap.get(line.accountId);
              // Focus on monetary balance sheet items (assets & liabilities) or net lines
-             const amt = lineAmount(line, tx);
-             const baseAmt = Math.round(amt * rate);
+             const baseAmt = lineAmount(line, tx);
              
              if (!fxNetBalances[currencyCode]) fxNetBalances[currencyCode] = 0;
              // If account type is known: assets increase exposure with debits, liabilities with credits

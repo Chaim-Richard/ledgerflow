@@ -96,7 +96,18 @@ inventoryRouter.post('/cogs', async (req, res) => {
       totalCogsCents
     };
 
+    let resultResponse = responsePayload;
+
     await db.runTransaction(async (t: any) => {
+      if (idempotencyKey) {
+        const idempRef = db.collection('idempotencyKeys').doc(`${workspaceId}_inv_${idempotencyKey}`);
+        const idempSnap = await t.get(idempRef);
+        if (idempSnap.exists) {
+          resultResponse = idempSnap.data()?.response || responsePayload;
+          return;
+        }
+      }
+
       const txRef = db.collection('transactions').doc(tx.id);
       t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       
@@ -131,7 +142,7 @@ inventoryRouter.post('/cogs', async (req, res) => {
       }
     });
 
-    res.json(responsePayload);
+    res.json(resultResponse);
   } catch (e: any) {
     res.status(e.message?.includes('Unauthorized') ? 403 : 400).json({ error: e.message });
   }

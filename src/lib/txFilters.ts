@@ -47,17 +47,23 @@ export function isExpenseAccount(account?: ChartAccount): boolean {
 export function isCashAccount(account?: ChartAccount): boolean {
   if (!account) return false;
   const category = (account.category || '').toLowerCase();
-  const subType = ((account as any).subType || '').toLowerCase();
+  const subType = (account.subtype || (account as any).subType || '').toLowerCase();
   const name = (account.name || '').toLowerCase();
+  const role = ((account as any).role || '').toLowerCase();
   return (
+    role === 'cash' ||
     category.includes('cash') ||
     category.includes('bank') ||
     subType.includes('cash') ||
     subType.includes('bank') ||
+    subType.includes('checking') ||
+    subType.includes('savings') ||
     name.includes('checking') ||
     name.includes('savings') ||
     name.includes('operating cash') ||
-    name.includes('petty cash')
+    name.includes('petty cash') ||
+    name.includes('cash') ||
+    name.includes('bank')
   );
 }
 
@@ -137,7 +143,7 @@ export function isInflow(t: Transaction, accounts?: ChartAccount[] | Map<string,
   if (t.lines && t.lines.length > 0) {
     return t.lines.some(l => {
       const acc = map?.get(l.accountId);
-      return acc ? isRevenueAccount(acc) : false;
+      return acc ? (isRevenueAccount(acc) && (l.amountCents || 0) < 0) : false;
     });
   }
   return false;

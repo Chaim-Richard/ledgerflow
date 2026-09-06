@@ -34,24 +34,34 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
       const year = tx.date.substring(0, 4);
       if (!yearlyFlows[year]) yearlyFlows[year] = 0;
       
-      // Calculate net P&L/Cash impact
+      // Calculate net cash flow impact based on cash accounts
       let netImpact = 0;
+      let hasCashAccount = false;
+
       tx.lines.forEach(l => {
          const acc = accounts.find(a => a.id === l.accountId);
          const role = resolveAccountRole(acc);
          const amt = lineAmount(l, tx);
-         const catLower = (acc?.category || '').toLowerCase();
-         if (acc && (role === 'revenue' || role === 'cash' || acc.type === 'income' || catLower === 'revenue')) {
-             netImpact += amt;
-         } else if (acc && (role === 'expense' || acc.type === 'expense' || acc.type === 'cost_of_goods' || catLower === 'expense' || catLower === 'cogs' || acc.type === 'liability' || catLower === 'liability')) {
-             netImpact -= amt;
+         if (acc && role === 'cash') {
+             hasCashAccount = true;
+             netImpact += amt; // Debit is positive cash inflow, credit is negative outflow
          }
       });
-      // Fallback if accounts aren't mapped
-      if (netImpact === 0) {
-        const rate = tx.exchangeRate || 1;
-        netImpact = Math.round(tx.totalAmountCents * rate); 
+
+      // If no explicit cash account was touched, compute Operating Net Income impact
+      if (!hasCashAccount) {
+        tx.lines.forEach(l => {
+          const acc = accounts.find(a => a.id === l.accountId);
+          const role = resolveAccountRole(acc);
+          const amt = lineAmount(l, tx);
+          if (acc && (role === 'revenue' || acc.type === 'income')) {
+            netImpact += Math.abs(amt);
+          } else if (acc && (role === 'expense' || role === 'cogs' || acc.type === 'expense' || acc.type === 'cost_of_goods')) {
+            netImpact -= Math.abs(amt);
+          }
+        });
       }
+
       yearlyFlows[year] += (netImpact / 100);
     });
     
@@ -64,7 +74,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     }
     
     // Determine Initial Investment (Capex) - assume the largest negative outflow or a simulated baseline
-    let initialInvestment = 0;
+    let initialInvestment: number;
     if (cashFlowArray[0] < 0) {
        initialInvestment = Math.abs(cashFlowArray[0]);
        cashFlowArray = cashFlowArray.slice(1);

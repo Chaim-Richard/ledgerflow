@@ -23,15 +23,10 @@ if (admin.apps.length === 0 && activeFirebaseProjectId) {
 
 export const getDb = (): Firestore => {
   const dbId = process.env.FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)';
-  try {
-    if (dbId && dbId !== '(default)') {
-      return getFirestore(admin.app(), dbId);
-    }
-    return getFirestore(admin.app());
-  } catch (error) {
-    console.error(`[Firebase Admin] Failed getFirestore for: ${dbId}`, error);
-    return getFirestore(admin.app());
+  if (dbId && dbId !== '(default)') {
+    return getFirestore(admin.app(), dbId);
   }
+  return getFirestore(admin.app());
 };
 
 export async function validateWorkspaceMember(db: Firestore, workspaceId: string, user: { uid: string; admin?: boolean }) {

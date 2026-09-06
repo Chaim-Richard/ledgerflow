@@ -537,8 +537,9 @@ async function startServer() {
       const db = getDb();
       const eventRef = db.collection('stripeProcessedEvents').doc(eventId);
 
-      if (event.type === 'checkout.session.completed') {
+      if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
         const session = event.data.object as any;
+        const isPaid = session.payment_status === 'paid';
         
         // --- 1. Invoice Payment Fulfillment ---
         if (session.metadata?.invoiceId) {
@@ -580,102 +581,111 @@ async function startServer() {
             
             const inv = doc.data() as any;
             if (inv && inv.status !== "paid") {
-              // Admin SDK requires all reads before writes in a transaction
-              const wsId = inv.workspaceId || workspaceId;
-              const accountsSnap = await t.get(db.collection('chartAccounts').where('workspaceId', '==', wsId));
-              const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+              if (isPaid) {
+                // Admin SDK requires all reads before writes in a transaction
+                const wsId = inv.workspaceId || workspaceId;
+                const accountsSnap = await t.get(db.collection('chartAccounts').where('workspaceId', '==', wsId));
+                const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-              t.update(targetRef, {
-                status: 'paid',
-                amountPaidCents: amountTotal,
-                paidAt: new Date().toISOString(),
-                isLocked: true
-              });
-              
-              let cashAccount: any = accounts.find((a: any) => 
-                a.subtype === "cash" || a.subtype === "bank" || a.category === "Cash" || a.role === "cash" || 
-                (a.type === "asset" && (a.name || '').toLowerCase().includes('cash')) || 
-                (a.type === "asset" && (a.name || '').toLowerCase().includes('bank')) || 
-                (a.type === "asset" && (a.name || '').toLowerCase().includes('stripe'))
-              );
-              let arAccount: any = accounts.find((a: any) => 
-                a.subtype === "accounts_receivable" || a.category === "Accounts Receivable" || a.role === "accounts_receivable" || 
-                (a.type === "asset" && (a.name || '').toLowerCase().includes('receivable'))
-              );
-              
-              if (!cashAccount) {
-                const newCashRef = db.collection('chartAccounts').doc();
-                cashAccount = {
-                  id: newCashRef.id,
+                t.update(targetRef, {
+                  status: 'paid',
+                  amountPaidCents: amountTotal,
+                  paidAt: new Date().toISOString(),
+                  isLocked: true
+                });
+                
+                let cashAccount: any = accounts.find((a: any) => 
+                  a.subtype === "cash" || a.subtype === "bank" || a.category === "Cash" || a.role === "cash" || 
+                  (a.type === "asset" && (a.name || '').toLowerCase().includes('cash')) || 
+                  (a.type === "asset" && (a.name || '').toLowerCase().includes('bank')) || 
+                  (a.type === "asset" && (a.name || '').toLowerCase().includes('stripe'))
+                );
+                let arAccount: any = accounts.find((a: any) => 
+                  a.subtype === "accounts_receivable" || a.category === "Accounts Receivable" || a.role === "accounts_receivable" || 
+                  (a.type === "asset" && (a.name || '').toLowerCase().includes('receivable'))
+                );
+                
+                if (!cashAccount) {
+                  const newCashRef = db.collection('chartAccounts').doc();
+                  cashAccount = {
+                    id: newCashRef.id,
+                    uid: 'system',
+                    workspaceId: wsId,
+                    name: 'Stripe Clearing Account',
+                    code: '1010',
+                    type: 'asset',
+                    subtype: 'cash',
+                    category: 'Cash',
+                    balanceCents: 0,
+                    createdAt: new Date().toISOString()
+                  };
+                  t.set(newCashRef, cashAccount);
+                }
+                if (!arAccount) {
+                  const newArRef = db.collection('chartAccounts').doc();
+                  arAccount = {
+                    id: newArRef.id,
+                    uid: 'system',
+                    workspaceId: wsId,
+                    name: 'Accounts Receivable',
+                    code: '1200',
+                    type: 'asset',
+                    subtype: 'accounts_receivable',
+                    category: 'Accounts Receivable',
+                    balanceCents: 0,
+                    createdAt: new Date().toISOString()
+                  };
+                  t.set(newArRef, arAccount);
+                }
+                
+                const exchangeRate = typeof inv?.exchangeRate === 'number' && inv.exchangeRate > 0 ? inv.exchangeRate : 1;
+                const txRef = db.collection('transactions').doc();
+                t.set(txRef, {
                   uid: 'system',
                   workspaceId: wsId,
-                  name: 'Stripe Clearing Account',
-                  code: '1010',
-                  type: 'asset',
-                  subtype: 'cash',
-                  category: 'Cash',
-                  balanceCents: 0,
-                  createdAt: new Date().toISOString()
-                };
-                t.set(newCashRef, cashAccount);
-              }
-              if (!arAccount) {
-                const newArRef = db.collection('chartAccounts').doc();
-                arAccount = {
-                  id: newArRef.id,
-                  uid: 'system',
-                  workspaceId: wsId,
-                  name: 'Accounts Receivable',
-                  code: '1200',
-                  type: 'asset',
-                  subtype: 'accounts_receivable',
-                  category: 'Accounts Receivable',
-                  balanceCents: 0,
-                  createdAt: new Date().toISOString()
-                };
-                t.set(newArRef, arAccount);
-              }
-              
-              const exchangeRate = typeof inv?.exchangeRate === 'number' && inv.exchangeRate > 0 ? inv.exchangeRate : 1;
-              const txRef = db.collection('transactions').doc();
-              t.set(txRef, {
-                uid: 'system',
-                workspaceId: wsId,
-                date: new Date().toISOString().split('T')[0],
-                description: `Invoice ${inv?.number || "Unknown"} Payment via Stripe`,
-                totalAmountCents: amountTotal,
-                currency: inv?.currency || 'USD',
-                exchangeRate: exchangeRate,
-                status: 'completed',
-                type: 'actual',
-                createdAt: new Date().toISOString(),
-                metadata: {
-                  invoiceId,
-                  stripeSessionId: session.id,
-                  type: 'invoice-payment'
-                },
-                lines: [
-                  {
-                    accountId: cashAccount.id,
-                    accountName: cashAccount.name,
-                    amountCents: amountTotal, // Debit Cash
-                    description: `Stripe Payment for Invoice ${inv?.number || "Unknown"}`,
-                    exchangeRate: exchangeRate
+                  date: new Date().toISOString().split('T')[0],
+                  description: `Invoice ${inv?.number || "Unknown"} Payment via Stripe`,
+                  totalAmountCents: amountTotal,
+                  currency: inv?.currency || 'USD',
+                  exchangeRate: exchangeRate,
+                  status: 'completed',
+                  type: 'actual',
+                  createdAt: new Date().toISOString(),
+                  metadata: {
+                    invoiceId,
+                    stripeSessionId: session.id,
+                    type: 'invoice-payment'
                   },
-                  {
-                    accountId: arAccount.id,
-                    accountName: arAccount.name,
-                    amountCents: -amountTotal, // Credit AR
-                    description: `A/R Clearance for Invoice ${inv?.number || "Unknown"}`,
-                    exchangeRate: exchangeRate
-                  }
-                ]
-              });
+                  lines: [
+                    {
+                      accountId: cashAccount.id,
+                      accountName: cashAccount.name,
+                      amountCents: amountTotal, // Debit Cash
+                      description: `Stripe Payment for Invoice ${inv?.number || "Unknown"}`,
+                      exchangeRate: exchangeRate
+                    },
+                    {
+                      accountId: arAccount.id,
+                      accountName: arAccount.name,
+                      amountCents: -amountTotal, // Credit AR
+                      description: `A/R Clearance for Invoice ${inv?.number || "Unknown"}`,
+                      exchangeRate: exchangeRate
+                    }
+                  ]
+                });
+              } else {
+                // Async payment pending (e.g. ACH clearing)
+                t.update(targetRef, {
+                  paymentStatus: 'pending_settlement',
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+              }
             }
 
             t.set(eventRef, {
               id: eventId,
               type: event.type,
+              paymentStatus: session.payment_status,
               processedAt: admin.firestore.FieldValue.serverTimestamp()
             });
 
@@ -689,7 +699,7 @@ async function startServer() {
         }
         
         // --- 2. Subscription Upgrade & Credit Provisioning ---
-        if (session.mode === 'subscription' || session.metadata?.plan) {
+        if (isPaid && (session.mode === 'subscription' || session.metadata?.plan)) {
           const workspaceId = session.metadata?.workspaceId;
           const plan = session.metadata?.plan || 'pro';
           
@@ -703,15 +713,27 @@ async function startServer() {
                 return { alreadyProcessed: true };
               }
 
-              t.set(wsRef, {
+              const wsSnap = await t.get(wsRef);
+              const wsData = wsSnap.data() || {};
+              const currentSubId = wsData.stripeSubscriptionId;
+              const incomingSubId = session.subscription || null;
+
+              // Only increment compute credits if this is a fresh upgrade or distinct subscription
+              const isNewSubscription = incomingSubId && incomingSubId !== currentSubId;
+              const updatePayload: Record<string, any> = {
                 plan: plan,
                 billingCycle: "monthly",
-                computeCreditBalance: admin.firestore.FieldValue.increment(creditsToGrant),
                 computeLimit: creditsToGrant,
                 stripeCustomerId: session.customer || null,
-                stripeSubscriptionId: session.subscription || null,
+                stripeSubscriptionId: incomingSubId,
                 lastUpgradedAt: new Date().toISOString()
-              }, { merge: true });
+              };
+
+              if (isNewSubscription || wsData.computeCreditBalance === undefined) {
+                updatePayload.computeCreditBalance = admin.firestore.FieldValue.increment(creditsToGrant);
+              }
+
+              t.set(wsRef, updatePayload, { merge: true });
 
               t.set(eventRef, {
                 id: eventId,
@@ -733,6 +755,7 @@ async function startServer() {
       } else if (event.type === 'customer.subscription.deleted') {
         const subscription = event.data.object as any;
         const customerId = subscription.customer;
+        const subscriptionId = subscription.id;
         
         await db.runTransaction(async (t) => {
           const eventSnap = await t.get(eventRef);
@@ -740,12 +763,17 @@ async function startServer() {
             return;
           }
 
-          const wsSnap = await t.get(db.collection("workspaces").where("stripeCustomerId", "==", customerId).limit(1));
+          let wsSnap = await t.get(db.collection("workspaces").where("stripeSubscriptionId", "==", subscriptionId).limit(1));
+          if (wsSnap.empty && customerId) {
+            wsSnap = await t.get(db.collection("workspaces").where("stripeCustomerId", "==", customerId).limit(1));
+          }
+
           if (!wsSnap.empty) {
             const wsDoc = wsSnap.docs[0];
             t.set(wsDoc.ref, {
               plan: 'starter',
               billingCycle: 'free',
+              stripeSubscriptionId: null,
               lastDowngradedAt: new Date().toISOString()
             }, { merge: true });
           }
@@ -924,25 +952,28 @@ async function startServer() {
 
         try {
           const wsRef = db.collection("workspaces").doc(workspaceId);
-          const wsDoc = await wsRef.get();
-          if (wsDoc.exists) {
+          let chargedWeightScore = 0;
+          await db.runTransaction(async (t) => {
+            const wsDoc = await t.get(wsRef);
+            if (!wsDoc.exists) return;
             const wsData = wsDoc.data() || {};
             
             // Centralized dynamic multiplier calculation
             const { credits: weightScore, cents: deltaCents } = calculateWorkspaceCharges(wsData, baseWeight, baseCents, isCustomKeyUsed);
+            chargedWeightScore = weightScore;
 
-            const currentCents = wsData.apiQuotaTotalCentsUsed || 0;
-            const currentQueries = wsData.totalQueriesThisMonth || 0;
-            const currentHardness = wsData.computeHardnessScore || 0;
             const currentCredit = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000;
+            const newCredit = Math.max(0, currentCredit - weightScore);
 
-            await wsRef.update({
-              apiQuotaTotalCentsUsed: currentCents + deltaCents,
-              totalQueriesThisMonth: currentQueries + 1,
-              computeHardnessScore: currentHardness + weightScore,
-              computeCreditBalance: Math.max(0, currentCredit - weightScore)
+            t.update(wsRef, {
+              apiQuotaTotalCentsUsed: admin.firestore.FieldValue.increment(deltaCents),
+              totalQueriesThisMonth: admin.firestore.FieldValue.increment(1),
+              computeHardnessScore: admin.firestore.FieldValue.increment(weightScore),
+              computeCreditBalance: newCredit
             });
+          });
 
+          if (chargedWeightScore > 0) {
             // Log trace audit record
             const traceId = `trace-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
             await db.collection("billingLedgerTraces").doc(traceId).set({
@@ -952,7 +983,7 @@ async function startServer() {
               userEmail: (req as AuthenticatedRequest).user.email || 'developer@ledgerflow.io',
               algorithmName: `AI_${task.toUpperCase().replace(/-/g, '_')}`,
               complexityFormat: 'O(Tokens)',
-              weightScore,
+              weightScore: chargedWeightScore,
               isSelfFunded: isCustomKeyUsed,
               executionTimeMs: 1500,
               timestamp: new Date().toISOString()

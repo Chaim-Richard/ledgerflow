@@ -16,7 +16,21 @@ export function resolveAccountRole(account: ChartAccount | undefined | null): Ac
   }
 
   if (type === 'asset') {
-    if (category === 'cash' || subtype === 'cash' || subtype === 'checking' || subtype === 'savings' || name.includes('checking') || name.includes('bank') || name.includes('petty cash')) {
+    if (
+      category === 'cash' ||
+      category.includes('cash') ||
+      category.includes('bank') ||
+      subtype === 'cash' ||
+      subtype === 'bank' ||
+      subtype === 'checking' ||
+      subtype === 'savings' ||
+      name.includes('checking') ||
+      name.includes('bank') ||
+      name.includes('petty cash') ||
+      name.includes('operating cash') ||
+      name.includes('cash') ||
+      (account as any).role === 'cash'
+    ) {
       return 'cash';
     }
     if (category === 'receivables' || category === 'accounts receivable' || category === 'receivable' || subtype.includes('receivable') || name.includes('receivable')) {

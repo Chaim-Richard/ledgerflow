@@ -43,7 +43,7 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
              customerLastSeen[payee] = txDate;
           }
           if (!customerValue[payee]) customerValue[payee] = 0;
-          customerValue[payee] += Math.round(txAmount * (tx.exchangeRate || 1));
+          customerValue[payee] += txAmount;
        }
     });
 

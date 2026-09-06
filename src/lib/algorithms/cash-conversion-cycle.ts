@@ -15,8 +15,9 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
     const periodDays = inputs.annualizationDays ?? 365;
 
     const accountBalances: Record<string, number> = {};
+    const hasTransactions = transactions.some(tx => isPostable(tx));
     accounts.forEach(acc => {
-      accountBalances[acc.id] = acc.openingBalanceCents || (accounts.some(a => a.openingBalanceCents) ? 0 : (acc.balanceCents || 0));
+      accountBalances[acc.id] = hasTransactions ? (acc.openingBalanceCents || 0) : (acc.balanceCents ?? acc.openingBalanceCents ?? 0);
     });
 
     const sourceTransactionIds = new Set<string>();

@@ -1,5 +1,6 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { resolveAccountRole } from '../accountUtils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
   id: 'planning_runway',
@@ -32,13 +33,13 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
     const monthlyNet: Record<string, number> = {};
     
     transactions.forEach(tx => {
-      if ((tx.status as any) === 'void' || (tx.status as any) === 'voided') return;
+      if (!isPostable(tx)) return;
       let netCashImpact = 0;
       let hasCashLine = false;
       if (tx.lines && tx.lines.length > 0) {
         tx.lines.forEach(l => {
           if (cashAccountIds.has(l.accountId)) {
-            netCashImpact += l.amountCents;
+            netCashImpact += lineAmount(l, tx);
             hasCashLine = true;
           }
         });
@@ -55,7 +56,10 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
       }
     });
 
-    const currentCashCents = openingCashCents + netTxCashFlow;
+    // Check if live balanceCents is already computed and nonzero, or reconstruct
+    const computedStoreCash = cashAccounts.reduce((sum, a) => sum + (a.balanceCents || 0), 0);
+    const reconstructedCash = openingCashCents + netTxCashFlow;
+    const currentCashCents = computedStoreCash !== 0 && netTxCashFlow === 0 ? computedStoreCash : reconstructedCash;
     
     // 2. Calculate average burn over the requested window across all months in the window
     const sortedMonths = Object.keys(monthlyNet).sort();
@@ -85,7 +89,10 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
     let runwayText = 'Infinite (Profitable)';
     let runwayColor = 'text-emerald-500';
     
-    if (runwayMonths !== -1) {
+    if (burnMonthsCount === 0 && currentCashCents === 0) {
+      runwayText = 'No Data';
+      runwayColor = 'text-slate-400';
+    } else if (runwayMonths !== -1) {
       runwayText = `${runwayMonths.toFixed(1)} Months`;
       if (runwayMonths < 3) runwayColor = 'text-rose-500';
       else if (runwayMonths < 6) runwayColor = 'text-amber-500';
