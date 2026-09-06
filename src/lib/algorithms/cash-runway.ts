@@ -61,20 +61,54 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
     const reconstructedCash = openingCashCents + netTxCashFlow;
     const currentCashCents = computedStoreCash !== 0 && netTxCashFlow === 0 ? computedStoreCash : reconstructedCash;
     
-    // 2. Calculate average burn over the requested window across all months in the window
-    const sortedMonths = Object.keys(monthlyNet).sort();
-    const recentMonths = sortedMonths.slice(-burnWindowMonths);
+    // 2. Calculate average burn over the requested window across trailing calendar months (Bug 3)
+    const referenceDate = new Date();
+    let latestTxMonth = '';
+    transactions.forEach(tx => {
+      if (tx.date && tx.date > latestTxMonth) {
+        latestTxMonth = tx.date.substring(0, 7);
+      }
+    });
+
+    let endYear = referenceDate.getFullYear();
+    let endMonth = referenceDate.getMonth(); // 0-indexed
+
+    if (latestTxMonth) {
+      const [ly, lm] = latestTxMonth.split('-').map(Number);
+      if (ly && lm) {
+        const latestTxDateObj = new Date(ly, lm - 1, 1);
+        if (latestTxDateObj.getTime() > referenceDate.getTime()) {
+          endYear = ly;
+          endMonth = lm - 1;
+        }
+      }
+    }
+
+    const recentMonths: string[] = [];
+    for (let i = 0; i < burnWindowMonths; i++) {
+      let m = endMonth - i;
+      let y = endYear;
+      while (m < 0) {
+        m += 12;
+        y -= 1;
+      }
+      const monthStr = String(m + 1).padStart(2, '0');
+      recentMonths.unshift(`${y}-${monthStr}`);
+    }
     
     let totalBurn = 0;
     let burnMonthsCount = 0;
     
     recentMonths.forEach(m => {
-      const netFlow = monthlyNet[m];
-      totalBurn -= netFlow;
+      const netFlow = monthlyNet[m] || 0;
+      // Only count net outflows as contributing to the burn (Bug 2 - one good month doesn't erase the burn)
+      if (netFlow < 0) {
+        totalBurn += Math.abs(netFlow);
+      }
       burnMonthsCount++;
     });
     
-    const avgMonthlyBurnCents = (burnMonthsCount > 0 && totalBurn > 0) ? (totalBurn / burnMonthsCount) : 0;
+    const avgMonthlyBurnCents = burnMonthsCount > 0 ? (totalBurn / burnMonthsCount) : 0;
     
     // 3. Compute Runway
     let runwayMonths = -1; // -1 means infinite/profitable
@@ -89,7 +123,8 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
     let runwayText = 'Infinite (Profitable)';
     let runwayColor = 'text-emerald-500';
     
-    if (burnMonthsCount === 0 && currentCashCents === 0) {
+    // Bug 1 - robust check for empty workspace
+    if (accounts.length === 0 || transactions.length === 0 || cashAccounts.length === 0) {
       runwayText = 'No Data';
       runwayColor = 'text-slate-400';
     } else if (runwayMonths !== -1) {
@@ -101,14 +136,14 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
       runwayText = 'Out of Cash';
       runwayColor = 'text-rose-500';
     }
-
+    
     const insights = [];
     insights.push(`Current liquid cash position is ${cashFormatted} across ${cashAccounts.length} cash accounts.`);
-    if (burnMonthsCount > 0) {
+    if (accounts.length > 0 && transactions.length > 0 && cashAccounts.length > 0) {
       if (avgMonthlyBurnCents > 0) {
-        insights.push(`Based on the last ${burnMonthsCount} month(s) in the evaluation window, the average net monthly burn rate is ${burnFormatted}.`);
+        insights.push(`Based on the last ${burnMonthsCount} calendar month(s), the average net monthly burn rate is ${burnFormatted}.`);
       } else {
-        insights.push(`The company has generated net positive cash flow overall across the last ${burnMonthsCount} month(s). No active net burn rate.`);
+        insights.push(`The company has generated net positive cash flow overall across the last ${burnMonthsCount} calendar month(s). No active net burn rate.`);
       }
     } else {
       insights.push(`No transaction history found in the evaluation window.`);

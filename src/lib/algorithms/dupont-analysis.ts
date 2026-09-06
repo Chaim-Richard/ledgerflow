@@ -22,7 +22,7 @@ export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
       if (accounting.isAsset(acc.id)) {
         totalAssets += bal;
       } else if (accounting.isEquity(acc.id)) {
-        equity += Math.abs(bal);
+        equity -= bal;
       }
     });
 
