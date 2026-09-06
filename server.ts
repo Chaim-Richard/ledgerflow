@@ -228,7 +228,7 @@ async function verifyLockDate(workspaceId: string, date: string) {
     if (err.message?.includes("Period Locked") || err.message === "Workspace not found") {
       throw err;
     }
-    throw new Error(`Failed to verify period lock status: ${err.message}`);
+    throw new Error(`Failed to verify period lock status: ${err.message}`, { cause: err });
   }
 }
 
@@ -2930,7 +2930,9 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         try {
           const userDoc = await db.collection("users").doc(authReq.user.uid).get();
           isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch(e) {}
+        } catch (e) {
+          /* ignore */
+        }
       }
 
       if (!isSystemAdmin && !isRoleAdmin) {
@@ -3050,7 +3052,9 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         try {
           const userDoc = await db.collection("users").doc(authReq.user.uid).get();
           isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch(e) {}
+        } catch (e) {
+          /* ignore */
+        }
       }
 
       if (!isSystemAdmin && !isRoleAdmin) {
@@ -3076,7 +3080,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
           plan: plan || "sandbox",
           concurrentUserLimit: Number(concurrentUserLimit) || 50,
           maxSeats: Number(maxSeats) || 3,
-          computeCreditBalance: Number(computeCreditBalance) !== undefined ? Number(computeCreditBalance) : 100000,
+          computeCreditBalance: computeCreditBalance !== undefined ? Number(computeCreditBalance) : 100000,
           apiQuotaMonthlyLimitCents: Number(apiQuotaMonthlyLimitCents) || 0,
           creditCostMultiplier: creditCostMultiplier !== undefined ? Number(creditCostMultiplier) : 1.0,
           quotaCentsMultiplier: quotaCentsMultiplier !== undefined ? Number(quotaCentsMultiplier) : 1.0,
@@ -3096,7 +3100,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         plan: plan || "sandbox",
         concurrentUserLimit: Number(concurrentUserLimit) || 50,
         maxSeats: Number(maxSeats) || 3,
-        computeCreditBalance: Number(computeCreditBalance) !== undefined ? Number(computeCreditBalance) : 100000,
+        computeCreditBalance: computeCreditBalance !== undefined ? Number(computeCreditBalance) : 100000,
         apiQuotaMonthlyLimitCents: Number(apiQuotaMonthlyLimitCents) || 0,
         creditCostMultiplier: creditCostMultiplier !== undefined ? Number(creditCostMultiplier) : 1.0,
         quotaCentsMultiplier: quotaCentsMultiplier !== undefined ? Number(quotaCentsMultiplier) : 1.0,
@@ -3127,7 +3131,9 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         try {
           const userDoc = await db.collection("users").doc(authReq.user.uid).get();
           isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch(e) {}
+        } catch (e) {
+          /* ignore */
+        }
       }
 
       if (!isSystemAdmin && !isRoleAdmin) {
@@ -3159,7 +3165,9 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         try {
           const userDoc = await db.collection("users").doc(authReq.user.uid).get();
           isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch(e) {}
+        } catch (e) {
+          /* ignore */
+        }
       }
 
       if (!isSystemAdmin && !isRoleAdmin) {
@@ -3200,7 +3208,9 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         try {
           const userDoc = await db.collection("users").doc(authReq.user.uid).get();
           isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch(e) {}
+        } catch (e) {
+          /* ignore */
+        }
       }
 
       if (!isSystemAdmin && !isRoleAdmin) {
@@ -3226,7 +3236,9 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         try {
           const userDoc = await db.collection("users").doc(authReq.user.uid).get();
           isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch(e) {}
+        } catch (e) {
+          /* ignore */
+        }
       }
 
       if (!isSystemAdmin && !isRoleAdmin) {
@@ -3703,9 +3715,10 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         if (!rawDate) return new Date().toISOString().split('T')[0];
         const s = rawDate.trim();
         if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-        const usMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        const usMatch = s.match(/^(\d{1,2})[/|-](\d{1,2})[/|-](\d{2,4})$/);
         if (usMatch) {
-          let [_, m, d, y] = usMatch;
+          const [, m, d, yRaw] = usMatch;
+          let y = yRaw;
           if (y.length === 2) {
             y = parseInt(y, 10) > 50 ? '19' + y : '20' + y;
           }
@@ -4592,7 +4605,9 @@ async function trainClassifierWithWorkspaceData(classifier: import("./src/lib/al
         }
       }
     });
-  } catch (err: any) {}
+  } catch (err: any) {
+    /* ignore */
+  }
 
   try {
     const activeKeyId = apiKeyId || "human_web_console";
@@ -4612,7 +4627,9 @@ async function trainClassifierWithWorkspaceData(classifier: import("./src/lib/al
         }
       });
     });
-  } catch (err: any) {}
+  } catch (err: any) {
+    /* ignore */
+  }
   
   return trainedCount;
 }

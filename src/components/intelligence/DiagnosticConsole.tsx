@@ -146,14 +146,14 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
         });
         if (transactions.length > 25) newHistory.push(`  ... and ${transactions.length - 25} more transactions.`);
         break;
-      case 'audit':
+      case 'audit': {
         setIsProcessing(true);
         newHistory.push('Running comprehensive cryptographic integrity audit...');
         setHistory([...newHistory]);
         
         // Execute real auditor logic
-        const { accounts: allAccounts, journalEntries } = useLedgerStore.getState();
-        const auditResult = DoubleEntryAuditor.auditLedger(transactions, allAccounts, journalEntries);
+        const { accounts: allAccounts } = useLedgerStore.getState();
+        const auditResult = DoubleEntryAuditor.auditLedger(transactions, allAccounts);
         
         newHistory.push(`Audit complete: ${auditResult.isBalanced ? 'System is Balanced.' : 'Imbalance Detected.'}`);
         newHistory.push(`> Total Debits: $${(auditResult.totalDebits / 100).toLocaleString()}`);
@@ -163,7 +163,8 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
         }
         setIsProcessing(false);
         break;
-      case 'perf':
+      }
+      case 'perf': {
         const start = performance.now();
         // Trigger a recomputation to measure engine efficiency
         useLedgerStore.getState().recomputeBalances();
@@ -171,6 +172,7 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
         newHistory.push(`> Engine Recomputation: ${(end-start).toFixed(2)}ms`);
         newHistory.push(`> Record Density: ${transactions.length} txs / ${accounts.length} accounts`);
         break;
+      }
       case 'status':
         newHistory.push(
           'System Status:',

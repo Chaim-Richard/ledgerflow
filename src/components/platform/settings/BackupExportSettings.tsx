@@ -17,7 +17,6 @@ export default function BackupExportSettings() {
         transactions: state.transactions,
         accounts: state.accounts,
         projects: state.projects,
-        journalEntries: state.journalEntries,
         budgets: state.budgets,
         vendors: state.vendors,
         customers: state.customers,

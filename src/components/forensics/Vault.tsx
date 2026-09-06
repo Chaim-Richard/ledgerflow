@@ -52,7 +52,7 @@ export default function Vault() {
 
   useEffect(() => {
     if (!workspaceId || !uid) {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 0);
       return;
     }
 

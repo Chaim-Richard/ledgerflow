@@ -8,7 +8,7 @@ export class LedgerEngine {
   static computeDimensionalBalances(
     accounts: ChartAccount[],
     transactions: Transaction[],
-    journalEntries: JournalEntry[]
+    journalEntries: JournalEntry[] = []
   ): Map<string, { total: number, projects: Map<string, number> }> {
     const balances = new Map<string, { total: number, projects: Map<string, number> }>();
     

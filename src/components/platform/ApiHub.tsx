@@ -47,6 +47,7 @@ export default function ApiHub() {
   const workspaces = useAuthStore(s => s.workspaces);
   const setCurrentWorkspaceId = useAuthStore(s => s.setCurrentWorkspaceId);
   const currentWorkspace = getCurrentWorkspace();
+  const [nowMs] = useState(() => Date.now());
   const [apiKey, setApiKey] = useState('');
   const [apiLogs, setApiLogs] = useState<any[]>([]);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -255,26 +256,68 @@ export default function ApiHub() {
     }
   };
 
+  const loadWorkspaceKeys = async () => {
+    if (!currentWorkspace?.id || !user) return;
+    try {
+      const q = query(
+        collection(db, 'apiKeys'), 
+        where('workspaceId', '==', currentWorkspace.id),
+        where('uid', '==', user.uid)
+      );
+      const snap = await getDocs(q);
+      const keys = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name || 'Unnamed Key',
+          scopes: data.scopes || [],
+          expiresAt: data.expiresAt || 'never',
+          lastUsedAt: data.lastUsedAt || null,
+          totalRequests: data.totalRequests || 0,
+          createdAt: data.createdAt
+        };
+      });
+      setPublicKeys(keys);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchLogs = async () => {
+    if (!currentWorkspace?.id) return;
+    try {
+      const token = user ? await getIdToken() : '';
+      const authHeader = `Bearer ${(apiKey || token)}`;
+      const res = await fetch(`/api/v1/logs?workspaceId=${currentWorkspace.id}`, {
+        headers: {
+          'Authorization': authHeader
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setApiLogs(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch logs", e);
+    }
+  };
+
   useEffect(() => {
-    if (currentWorkspace?.id) {
+    if (!currentWorkspace?.id) return;
+    const timer = setTimeout(() => {
       loadBillingStatus();
-    }
-  }, [currentWorkspace?.id, activeTab]);
-
-  useEffect(() => {
-    if (currentWorkspace?.id && activeTab === 'billing') {
-      loadBillingLedger();
-    }
-  }, [currentWorkspace?.id, activeTab]);
-
-  useEffect(() => {
-    if (currentWorkspace?.id) {
+      if (activeTab === 'billing') {
+        loadBillingLedger();
+      }
       loadWorkspaceKeys();
       fetchLogs();
-      const interval = setInterval(fetchLogs, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [currentWorkspace?.id]);
+    }, 0);
+    const interval = setInterval(fetchLogs, 5000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [currentWorkspace?.id, activeTab]);
 
   const sha256 = async (message: string) => {
     try {
@@ -395,52 +438,6 @@ export default function ApiHub() {
       arr.push(val.toString(16).padStart(2, '0'));
     }
     return arr.join('');
-  };
-
-  const loadWorkspaceKeys = async () => {
-    if (!currentWorkspace?.id || !user) return;
-    try {
-      const q = query(
-        collection(db, 'apiKeys'), 
-        where('workspaceId', '==', currentWorkspace.id),
-        where('uid', '==', user.uid)
-      );
-      const snap = await getDocs(q);
-      const keys = snap.docs.map(d => {
-        const data = d.data();
-        return {
-          id: d.id,
-          name: data.name || 'Unnamed Key',
-          scopes: data.scopes || [],
-          expiresAt: data.expiresAt || 'never',
-          lastUsedAt: data.lastUsedAt || null,
-          totalRequests: data.totalRequests || 0,
-          createdAt: data.createdAt
-        };
-      });
-      setPublicKeys(keys);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const fetchLogs = async () => {
-    if (!currentWorkspace?.id) return;
-    try {
-      const token = user ? await getIdToken() : '';
-      const authHeader = `Bearer ${(apiKey || token)}`;
-      const res = await fetch(`/api/v1/logs?workspaceId=${currentWorkspace.id}`, {
-        headers: {
-          'Authorization': authHeader
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setApiLogs(data);
-      }
-    } catch (e) {
-      console.error("Failed to fetch logs", e);
-    }
   };
 
   const generateNewKey = async () => {
@@ -1053,7 +1050,7 @@ export default function ApiHub() {
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-[var(--surface)]">
                            {publicKeys.map((k: any) => {
-                             const isExpired = k.expiresAt !== 'never' && new Date(k.expiresAt).getTime() < Date.now();
+                             const isExpired = k.expiresAt !== 'never' && new Date(k.expiresAt).getTime() < nowMs;
                              return (
                                <tr key={k.id} className="hover:bg-[var(--ink)]/40 transition-colors">
                                   <td className="p-4">

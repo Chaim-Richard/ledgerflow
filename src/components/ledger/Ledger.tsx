@@ -99,7 +99,22 @@ const Ledger = React.memo(() => {
   const accounts = React.useMemo(() => {
     return computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
   }, [computedAccounts, rawAccounts]);
-  const journalEntries = useLedgerStore(s => s.journalEntries);
+  const journalEntries = React.useMemo<JournalEntry[]>(() => (transactions || []).map(tx => ({
+    id: tx.id,
+    uid: tx.uid || 'system',
+    workspaceId: tx.workspaceId || '',
+    date: tx.date || '',
+    description: tx.description || '',
+    reference: (tx as any).reference || tx.id,
+    lines: (tx.lines || []).map(l => ({
+      accountId: l.accountId,
+      accountName: l.accountName || '',
+      debit: l.amountCents > 0 ? l.amountCents : 0,
+      credit: l.amountCents < 0 ? Math.abs(l.amountCents) : 0,
+      description: l.description
+    })),
+    createdAt: tx.createdAt || new Date().toISOString()
+  })), [transactions]);
   const reconciliations = useLedgerStore(s => s.reconciliations);
   const bankLines = useLedgerStore(s => s.bankLines || []);
   const partners = useLedgerStore(s => s.partners);

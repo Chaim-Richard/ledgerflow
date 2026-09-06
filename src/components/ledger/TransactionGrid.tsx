@@ -74,7 +74,9 @@ const GridEditor = ({
           onSave(parsed);
           return;
         }
-      } catch (_e) {}
+      } catch (_e) {
+        // Fallback to saving raw input
+      }
     }
     onSave(input);
   };

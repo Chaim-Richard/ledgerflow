@@ -363,7 +363,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
         const assignedCodes = new Set<string>();
 
         const getNextCode = (type: string): string => {
-          let base = 5000;
+          let base: number;
           if (type === 'asset') base = 1000;
           else if (type === 'liability') base = 2000;
           else if (type === 'equity') base = 3000;

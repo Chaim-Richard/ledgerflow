@@ -169,21 +169,6 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
       }
 
       t.set(txRef, { ...transaction, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-      
-      // Fix Event Sourcing Disconnect by making IDs deterministic
-      transaction.lines.forEach((line: any, index: number) => {
-         const eventRef = db.collection('journalEntries').doc(`${transaction.id}-line-${index}`);
-         t.set(eventRef, {
-            id: eventRef.id,
-            timestamp: new Date().toISOString(),
-            accountId: line.accountId,
-            amountCents: line.amountCents,
-            eventType: 'ACTUAL',
-            transactionId: transaction.id,
-            workspaceId: transaction.workspaceId,
-            description: line.description || transaction.description
-         });
-      });
 
       if (idempotencyKey) {
          const idempotencyRef = db.collection('idempotencyKeys').doc(idempotencyKey);
@@ -299,26 +284,6 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       }
 
       t.update(txRef, { ...transaction, updatedAt: FieldValue.serverTimestamp() });
-
-      // Clean up prior journal entries projection to prevent orphaned entries if lines count changed
-      const oldJes = await t.get(db.collection('journalEntries').where('transactionId', '==', id));
-      oldJes.docs.forEach((d: any) => t.delete(d.ref));
-
-      // Synchronize journalEntries projection
-      (transaction.lines || []).forEach((line: any, index: number) => {
-        const eventRef = db.collection('journalEntries').doc(`${id}-line-${index}`);
-        t.set(eventRef, {
-          id: eventRef.id,
-          timestamp: transaction.date ? new Date(transaction.date).toISOString() : new Date().toISOString(),
-          postedAt: new Date().toISOString(),
-          accountId: line.accountId,
-          amountCents: line.amountCents,
-          eventType: 'ACTUAL',
-          transactionId: id,
-          workspaceId: transaction.workspaceId,
-          description: line.description || transaction.description
-        });
-      });
     });
 
     const auditId = `audit-${Date.now()}`;
@@ -377,12 +342,7 @@ transactionRouter.delete('/:id', async (req, res) => {
       return res.status(403).json({ error: `Forbidden: Transaction status is audited, cleared, or locked (${data?.status}). Destructive actions are restricted to administrators.` });
     }
 
-    // Clean up corresponding journalEntries projection documents to prevent orphaned ledger records
-    const jeSnaps = await db.collection('journalEntries').where('transactionId', '==', id).get();
-    const batch = db.batch();
-    batch.delete(txRef);
-    jeSnaps.docs.forEach(d => batch.delete(d.ref));
-    await batch.commit();
+    await txRef.delete();
 
     const auditId = `audit-${Date.now()}`;
     await db.collection("auditLogs").doc(auditId).set({
@@ -487,21 +447,6 @@ transactionRouter.post('/bulk', async (req, res) => {
 
         const txRef = db.collection('transactions').doc(tx.id);
         t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-
-        (tx.lines || []).forEach((line: any, index: number) => {
-          const eventRef = db.collection('journalEntries').doc(`${tx.id}-line-${index}`);
-          t.set(eventRef, {
-            id: eventRef.id,
-            timestamp: tx.date ? new Date(tx.date).toISOString() : new Date().toISOString(),
-            postedAt: new Date().toISOString(),
-            accountId: line.accountId,
-            amountCents: line.amountCents,
-            eventType: 'ACTUAL',
-            transactionId: tx.id,
-            workspaceId: wsId,
-            description: line.description || tx.description
-          });
-        });
       }
     });
 
@@ -870,20 +815,6 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
     await db.runTransaction(async (t: any) => {
       const txRef = db.collection('transactions').doc(revalTx.id);
       t.set(txRef, { ...revalTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-      
-      revalTx.lines.forEach((line: any, index: number) => {
-         const eventRef = db.collection('journalEntries').doc(`${revalTx.id}-line-${index}`);
-         t.set(eventRef, {
-            id: eventRef.id,
-            timestamp: new Date().toISOString(),
-            accountId: line.accountId,
-            amountCents: line.amountCents,
-            eventType: 'ACTUAL',
-            transactionId: revalTx.id,
-            workspaceId: revalTx.workspaceId,
-            description: line.description || revalTx.description
-         });
-      });
     });
 
     res.json({
@@ -957,22 +888,6 @@ transactionRouter.post('/close-year', async (req, res) => {
     const txRef = db.collection('transactions').doc(result.closingTransaction.id);
     const batch = db.batch();
     batch.set(txRef, result.closingTransaction);
-
-    // Synchronize journalEntries projection for closing transaction
-    (result.closingTransaction.lines || []).forEach((line: any, index: number) => {
-      const eventRef = db.collection('journalEntries').doc(`${result.closingTransaction.id}-line-${index}`);
-      batch.set(eventRef, {
-        id: eventRef.id,
-        timestamp: new Date(closingDate).toISOString(),
-        postedAt: new Date().toISOString(),
-        accountId: line.accountId,
-        amountCents: line.amountCents,
-        eventType: 'CLOSING',
-        transactionId: result.closingTransaction.id,
-        workspaceId,
-        description: line.description || 'Fiscal Year Close Entry'
-      });
-    });
 
     // If synthetic account was generated, persist it
     if (result.generatedRetainedEarningsAccount) {
@@ -1086,22 +1001,6 @@ transactionRouter.post('/close-month', async (req, res) => {
       const txRef = db.collection('transactions').doc(closingTxResult.closingTransaction.id);
       batch.set(txRef, closingTxResult.closingTransaction);
 
-      // Synchronize journalEntries projection
-      (closingTxResult.closingTransaction.lines || []).forEach((line: any, index: number) => {
-        const eventRef = db.collection('journalEntries').doc(`${closingTxResult.closingTransaction.id}-line-${index}`);
-        batch.set(eventRef, {
-          id: eventRef.id,
-          timestamp: new Date(closingDate).toISOString(),
-          postedAt: new Date().toISOString(),
-          accountId: line.accountId,
-          amountCents: line.amountCents,
-          eventType: 'CLOSING',
-          transactionId: closingTxResult.closingTransaction.id,
-          workspaceId,
-          description: line.description || 'Year-End Closing Entry'
-        });
-      });
-
       if (closingTxResult.generatedRetainedEarningsAccount) {
         const accRef = db.collection('chartAccounts').doc(closingTxResult.generatedRetainedEarningsAccount.id);
         batch.set(accRef, closingTxResult.generatedRetainedEarningsAccount);
@@ -1156,7 +1055,7 @@ transactionRouter.post('/reset', async (req, res) => {
 
     // Never wipe auditLogs - the audit trail must be preserved
     const collections = [
-      'transactions', 'chartAccounts', 'journalEntries', 'projects', 'budgets', 
+      'transactions', 'chartAccounts', 'projects', 'budgets', 
       'vendors', 'customers', 'invoices', 'bills', 
       'inventory', 'assets', 'recurring', 'employees', 'payRuns', 
       'taxRates', 'partners', 'autoRules', 'bankLines'

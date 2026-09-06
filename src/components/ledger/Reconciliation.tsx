@@ -172,7 +172,7 @@ export default function Reconciliation() {
           state[btx.id] = true;
         }
       });
-      setSelectedBatchIds(state);
+      setTimeout(() => setSelectedBatchIds(state), 0);
     }
   }, [showAutoConfirm, unmatchedBankLines, optimizedMatches]);
 

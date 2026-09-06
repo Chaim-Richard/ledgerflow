@@ -24,6 +24,7 @@ export default function MonthEndCloseView() {
   const currency = currentWorkspace?.currency || 'USD';
 
   // State
+  const [nowMs] = useState(() => Date.now());
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date();
     d.setMonth(d.getMonth() - 1);
@@ -59,7 +60,7 @@ export default function MonthEndCloseView() {
     const flaggedTx = periodTx.filter(t => t.status === 'flagged').length;
 
     // Invoices and Bills over 60 days overdue
-    const aged60Ms = Date.now() - 60 * 24 * 60 * 60 * 1000;
+    const aged60Ms = nowMs - 60 * 24 * 60 * 60 * 1000;
     const oldInvoices = invoices.filter(inv => inv.status !== 'paid' && inv.status !== 'void' && inv.dueDate && new Date(inv.dueDate).getTime() < aged60Ms).length;
     const oldBills = bills.filter(b => b.status !== 'paid' && b.status !== 'void' && b.dueDate && new Date(b.dueDate).getTime() < aged60Ms).length;
     const oldUnpaid = oldInvoices + oldBills;

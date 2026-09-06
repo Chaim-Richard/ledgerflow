@@ -118,13 +118,25 @@ export default function CashFlowView() {
 
           if ((acc.type === 'income' || acc.type === 'revenue') || (acc.type === 'expense' || acc.type === 'cost_of_goods') || isWorkingCapital) {
             data.operating.total += moneyFlow;
-            isCashInflow ? data.operating.inflow += absoluteAmount : data.operating.outflow += absoluteAmount;
+            if (isCashInflow) {
+              data.operating.inflow += absoluteAmount;
+            } else {
+              data.operating.outflow += absoluteAmount;
+            }
           } else if (acc.type === 'asset') {
             data.investing.total += moneyFlow;
-            isCashInflow ? data.investing.inflow += absoluteAmount : data.investing.outflow += absoluteAmount;
+            if (isCashInflow) {
+              data.investing.inflow += absoluteAmount;
+            } else {
+              data.investing.outflow += absoluteAmount;
+            }
           } else if (acc.type === 'liability' || acc.type === 'equity') {
             data.financing.total += moneyFlow;
-            isCashInflow ? data.financing.inflow += absoluteAmount : data.financing.outflow += absoluteAmount;
+            if (isCashInflow) {
+              data.financing.inflow += absoluteAmount;
+            } else {
+              data.financing.outflow += absoluteAmount;
+            }
           }
         });
       });

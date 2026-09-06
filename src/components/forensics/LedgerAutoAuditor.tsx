@@ -4,7 +4,6 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 export function LedgerAutoAuditor() {
   const transactionsLength = useLedgerStore(state => state.transactions.length);
   const accountsLength = useLedgerStore(state => state.accounts.length);
-  const journalEntriesLength = useLedgerStore(state => state.journalEntries.length);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -21,7 +20,7 @@ export function LedgerAutoAuditor() {
         clearTimeout(timerRef.current);
       }
     };
-  }, [transactionsLength, accountsLength, journalEntriesLength]);
+  }, [transactionsLength, accountsLength]);
 
   return null;
 }

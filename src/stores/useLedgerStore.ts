@@ -204,10 +204,10 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         clearTimeout((window as any)._recomputeTimer);
       }
       (window as any)._recomputeTimer = setTimeout(() => {
-      const { accounts, transactions, journalEntries, computedAccounts: currentComputed } = get();
+      const { accounts, transactions, computedAccounts: currentComputed } = get();
       if (!accounts.length) return;
 
-      const balances = LedgerEngine.computeDimensionalBalances(accounts, transactions, journalEntries);
+      const balances = LedgerEngine.computeDimensionalBalances(accounts, transactions);
       let totalBal = 0;
       let changed = false;
       
@@ -478,9 +478,9 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   }),
   setActivityFeed: (activityFeed) => set({ activityFeed }),
   runFullAudit: () => {
-    const { transactions, accounts, journalEntries } = get();
+    const { transactions, accounts } = get();
     if (!transactions.length || !accounts.length) return;
-    const auditResult = DoubleEntryAuditor.auditLedger(transactions, accounts, journalEntries);
+    const auditResult = DoubleEntryAuditor.auditLedger(transactions, accounts);
     set({ auditResult });
 
     const hasIssues = !auditResult.isBalanced || 

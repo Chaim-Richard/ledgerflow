@@ -25,7 +25,9 @@ export default function PlaidConnectButton({ onSuccessSync }: { onSuccessSync?: 
   }, []);
 
   useEffect(() => {
-    generateToken();
+    setTimeout(() => {
+      generateToken();
+    }, 0);
   }, [generateToken]);
 
   const onSuccess = useCallback(

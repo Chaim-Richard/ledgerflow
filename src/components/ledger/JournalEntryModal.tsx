@@ -84,12 +84,13 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
       try {
         const series = getTemporalRatesFor(transactionCurrency);
         const rate = TruthEngine.resolveEffectiveValue(series, date);
-        setExchangeRate(Number(rate.toFixed(6)));
+        const fixedRate = Number(rate.toFixed(6));
+        setTimeout(() => setExchangeRate(fixedRate), 0);
       } catch (err) {
-        setExchangeRate(1.0);
+        setTimeout(() => setExchangeRate(1.0), 0);
       }
     } else {
-      setExchangeRate(1.0);
+      setTimeout(() => setExchangeRate(1.0), 0);
     }
   }, [transactionCurrency, date, baseCurrency]);
 

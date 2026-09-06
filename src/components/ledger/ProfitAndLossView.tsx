@@ -437,7 +437,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(data.income?.accounts || {})
                 .sort(([idA, a]: [string, any], [idB, b]: [string, any]) => {
-                  let comp = 0;
+                  let comp: number;
                   if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
                   else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
                   else comp = (a.balance || 0) - (b.balance || 0);
@@ -517,7 +517,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(data.expense?.accounts || {})
                 .sort(([idA, a]: [string, any], [idB, b]: [string, any]) => {
-                  let comp = 0;
+                  let comp: number;
                   if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
                   else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
                   else comp = (a.balance || 0) - (b.balance || 0);

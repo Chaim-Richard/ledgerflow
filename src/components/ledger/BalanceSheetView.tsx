@@ -24,12 +24,10 @@ import DrillDownModal from '../layout/DrillDownModal';
 
 interface BalanceSheetViewProps {
   accounts: ChartAccount[];
-  
-  journalEntries: JournalEntry[];
   formatCurrency: (val: number) => string;
 }
 
-export default function BalanceSheetView({ accounts = [], journalEntries = [], formatCurrency }: BalanceSheetViewProps) {
+export default function BalanceSheetView({ accounts = [], formatCurrency }: BalanceSheetViewProps) {
   const transactions = useLedgerStore(state => state.transactions || []);
   
   const [asOfDate, setAsOfDate] = useState<string>(getLocalDateISO());
@@ -148,29 +146,6 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
       });
     });
 
-    // Sum General Journal entries before or on cutoff date
-    journalEntries.forEach(entry => {
-      if (entry.deletedAt || (entry as any).status === 'void' || entry.date > dateCutoff) return;
-      entry.lines?.forEach(line => {
-        const id = line.accountId;
-        const acc = accountMap.get(id) || accountMap.get(line.accountName);
-        if (!acc) return;
-        const accId = acc.id;
-
-        const debit = typeof line.debit === 'number' ? line.debit : ((line as any).debitCents || 0);
-        const credit = typeof line.credit === 'number' ? line.credit : ((line as any).creditCents || 0);
-        const netAmount = debit - credit;
-        const isDebitNature = acc.type === 'asset' || acc.type === 'expense' || acc.type === 'cost_of_goods';
-        const delta = isDebitNature ? netAmount : -netAmount;
-
-        if (acc.type === 'asset') assets[accId] = (assets[accId] || 0) + delta;
-        else if (acc.type === 'liability') liabilities[accId] = (liabilities[accId] || 0) + delta;
-        else if (acc.type === 'equity') equity[accId] = (equity[accId] || 0) + delta;
-        else if ((acc.type === 'income' || acc.type === 'revenue')) income[accId] = (income[accId] || 0) + delta;
-        else if ((acc.type === 'expense' || acc.type === 'cost_of_goods')) expense[accId] = (expense[accId] || 0) + delta;
-      });
-    });
-
     const totalAssets = Object.values(assets).reduce((sum, v) => sum + v, 0);
     const totalLiabilities = Object.values(liabilities).reduce((sum, v) => sum + v, 0);
     const totalEquity = Object.values(equity).reduce((sum, v) => sum + v, 0);
@@ -197,7 +172,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
     const currentData = getPeriodBalances(asOfDate);
     const prevData = isComparative ? getPeriodBalances(priorDate) : currentData;
     return { currentData, prevData };
-  }, [transactions, accounts, journalEntries, asOfDate, priorDate, isComparative]);
+  }, [transactions, accounts, asOfDate, priorDate, isComparative]);
 
   const exportBalanceSheet = () => {
     const rows = [
@@ -451,7 +426,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
             <div className="space-y-2">
               {accounts.filter(a => a.type === 'asset')
                 .sort((a, b) => {
-                  let comp = 0;
+                  let comp: number;
                   if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
                   else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
                   else comp = (currentData.assets[a.id] || 0) - (currentData.assets[b.id] || 0);
@@ -540,7 +515,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                 <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider truncate border-b border-[var(--line)] pb-2">{labels.liabilitiesLabel}</p>
                 {accounts.filter(a => a.type === 'liability')
                   .sort((a, b) => {
-                    let comp = 0;
+                    let comp: number;
                     if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
                     else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
                     else comp = (currentData.liabilities[a.id] || 0) - (currentData.liabilities[b.id] || 0);
@@ -600,7 +575,7 @@ export default function BalanceSheetView({ accounts = [], journalEntries = [], f
                 <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider truncate border-b border-[var(--line)] pb-2">{labels.equityLabel}</p>
                 {accounts.filter(a => a.type === 'equity')
                   .sort((a, b) => {
-                    let comp = 0;
+                    let comp: number;
                     if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
                     else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
                     else comp = (currentData.equity[a.id] || 0) - (currentData.equity[b.id] || 0);

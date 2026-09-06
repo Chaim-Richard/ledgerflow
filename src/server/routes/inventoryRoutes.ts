@@ -118,20 +118,6 @@ inventoryRouter.post('/cogs', async (req, res) => {
         updatedAt: FieldValue.serverTimestamp()
       });
 
-      tx.lines.forEach((line: any, index: number) => {
-         const eventRef = db.collection('journalEntries').doc(`${tx.id}-line-${index}`);
-         t.set(eventRef, {
-            id: eventRef.id,
-            timestamp: new Date().toISOString(),
-            accountId: line.accountId,
-            amountCents: line.amountCents,
-            eventType: 'ACTUAL',
-            transactionId: tx.id,
-            workspaceId: tx.workspaceId,
-            description: line.description || tx.description
-         });
-      });
-
       if (idempotencyKey) {
         const idempRef = db.collection('idempotencyKeys').doc(`${workspaceId}_inv_${idempotencyKey}`);
         t.set(idempRef, {

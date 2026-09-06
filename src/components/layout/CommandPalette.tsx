@@ -315,8 +315,10 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
   useEffect(() => {
     if (!isOpen) {
-      setQuery('');
-      setIsExecuting(false);
+      setTimeout(() => {
+        setQuery('');
+        setIsExecuting(false);
+      }, 0);
     }
   }, [isOpen]);
 

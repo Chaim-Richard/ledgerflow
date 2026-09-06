@@ -59,7 +59,7 @@ export default function Inventory() {
 
   useEffect(() => {
     if (!workspaceId || !uid) {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 0);
       return;
     }
 

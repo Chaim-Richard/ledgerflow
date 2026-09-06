@@ -25,7 +25,7 @@ export const DoubleEntryAuditor = {
   auditLedger: (
     transactions: Transaction[], 
     accounts: ChartAccount[], 
-    journalEntries: JournalEntry[]
+    journalEntries: JournalEntry[] = []
   ): AuditResult => {
     PerformanceTelemetry.start("DoubleEntryAuditor:auditLedger");
     let totalDebits = 0;

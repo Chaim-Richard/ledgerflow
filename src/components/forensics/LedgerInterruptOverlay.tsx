@@ -12,7 +12,6 @@ export default function LedgerInterruptOverlay() {
   const setActiveTab = useUIStore(s => s.setActiveTab);
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
-  const journalEntries = useLedgerStore(s => s.journalEntries);
   const recomputeBalances = useLedgerStore(s => s.recomputeBalances);
   const runFullAudit = useLedgerStore(s => s.runFullAudit);
 

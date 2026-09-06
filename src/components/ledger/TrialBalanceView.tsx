@@ -23,7 +23,6 @@ type SortDir = 'asc' | 'desc';
 
 export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown }: TrialBalanceViewProps) {
   const transactions = useLedgerStore(s => s.transactions || []);
-  const journalEntries = useLedgerStore(s => s.journalEntries || []);
   
   const [asOfDate, setAsOfDate] = useState<string>(() => format(new Date(), 'yyyy-MM-dd'));
   const [sortField, setSortField] = useState<SortField>('code');
@@ -96,31 +95,6 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       });
     });
 
-    // Accumulate journal entries
-    journalEntries.forEach(entry => {
-      const entryDate = entry.date || entry.createdAt?.substring(0, 10) || '';
-      if (entryDate > asOfDate) return;
-      entry.lines?.forEach(line => {
-        const acc = accountById.get(line.accountId) || accountByName.get(line.accountName || '');
-        if (!acc) return;
-        
-        if (!accountTotals[acc.id]) {
-          accountTotals[acc.id] = { debitCents: 0, creditCents: 0, netSigned: 0 };
-        }
-        
-        const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
-        const debit = typeof line.debit === 'number' ? line.debit : ((line as any).debitCents || 0);
-        const credit = typeof line.credit === 'number' ? line.credit : ((line as any).creditCents || 0);
-        
-        accountTotals[acc.id].debitCents += debit;
-        accountTotals[acc.id].creditCents += credit;
-        accountTotals[acc.id].netSigned += isDebitNature ? (debit - credit) : (credit - debit);
-      });
-    });
-
-    let totalDebits = 0;
-    let totalCredits = 0;
-
     const lines = accounts.map(acc => {
       const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
       const totals = accountTotals[acc.id];
@@ -151,9 +125,6 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
         }
       }
 
-      totalDebits += debit;
-      totalCredits += credit;
-
       return {
         ...acc,
         debit,
@@ -161,6 +132,9 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
         netBalance: isDebitNature ? (debit - credit) : (credit - debit)
       };
     });
+
+    const totalDebits = lines.reduce((sum, l) => sum + l.debit, 0);
+    const totalCredits = lines.reduce((sum, l) => sum + l.credit, 0);
 
     // Apply Sorting
     lines.sort((a, b) => {
@@ -177,7 +151,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
     const isBalanced = Math.abs(totalDebits - totalCredits) < 1; // within 1 cent tolerance
 
     return { lines, totalDebits, totalCredits, isBalanced };
-  }, [accounts, transactions, journalEntries, asOfDate, sortField, sortDir]);
+  }, [accounts, transactions, asOfDate, sortField, sortDir]);
 
   const handleExportCSV = () => {
     const headers = ['Account Code', 'Account Name', 'Classification', 'Debit ($)', 'Credit ($)'];
