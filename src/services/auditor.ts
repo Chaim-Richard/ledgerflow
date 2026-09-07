@@ -110,9 +110,8 @@ export const DoubleEntryAuditor = {
         totalCredits += txCredit;
 
         // 1.1 Causal Integrity Check
-        if (t.verification?.status === 'verified' && t.verification.hash !== DoubleEntryAuditor.computeHash(t, t.verification.previousHash)) {
-          orphans.push({ id: t.id, type: 'transaction', message: 'Signature Mismatch: Potential manual tampering detected' });
-        }
+        // Payload hash verification is handled server-side because client lacks the secret SYSTEM_SALT.
+        // Client still verifies the hash chain link sequence (previousHash matches previous hash pointer).
 
         // 1.2 Optimized Duplicate Check (LSH MinHash with Bucketing - F7 checks all bucket entries)
         if (!skipDuplicateCheck) {

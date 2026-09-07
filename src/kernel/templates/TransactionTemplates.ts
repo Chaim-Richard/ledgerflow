@@ -35,6 +35,16 @@ export interface BillTemplateParams {
   retainageAccount?: AccountRef | null;
 }
 
+export interface PaymentTemplateParams {
+  documentNumber: string;
+  entityName: string;
+  amountCents: number;
+  exchangeRate?: number;
+  cashAccount: AccountRef;
+  offsetAccount: AccountRef;
+  isReceipt: boolean; // true = customer payment (DR Cash, CR A/R), false = vendor payment (DR A/P, CR Cash)
+}
+
 export class TransactionTemplates {
   /**
    * Generates balanced double-entry lines for an Invoice.
@@ -173,5 +183,51 @@ export class TransactionTemplates {
       amountCents: -l.amountCents,
       description: `Reversal: ${l.description || txDescription}`
     }));
+  }
+
+  /**
+   * Generates balanced double-entry lines for a Payment (Receipt or Outflow).
+   */
+  public static buildPaymentLines(params: PaymentTemplateParams): TransactionLine[] {
+    const rate = params.exchangeRate || 1;
+    const amount = params.amountCents;
+
+    if (params.isReceipt) {
+      // DR Cash, CR offset (e.g. A/R)
+      return [
+        {
+          accountId: params.cashAccount.id,
+          accountName: params.cashAccount.name,
+          amountCents: amount, // Debit
+          description: `Cash collection for Invoice ${params.documentNumber}`,
+          exchangeRate: rate
+        },
+        {
+          accountId: params.offsetAccount.id,
+          accountName: params.offsetAccount.name,
+          amountCents: -amount, // Credit
+          description: `A/R clearance for Invoice ${params.documentNumber}`,
+          exchangeRate: rate
+        }
+      ];
+    } else {
+      // DR offset (e.g. A/P), CR Cash
+      return [
+        {
+          accountId: params.offsetAccount.id,
+          accountName: params.offsetAccount.name,
+          amountCents: amount, // Debit
+          description: `Accounts Payable clearance for Bill ${params.documentNumber}`,
+          exchangeRate: rate
+        },
+        {
+          accountId: params.cashAccount.id,
+          accountName: params.cashAccount.name,
+          amountCents: -amount, // Credit
+          description: `Cash payment for Bill ${params.documentNumber}`,
+          exchangeRate: rate
+        }
+      ];
+    }
   }
 }

@@ -237,22 +237,15 @@ export class LedgerPostService {
             customerId: invoiceData.customerId,
             type: 'invoice-payment'
           },
-          lines: [
-            {
-              accountId: cashAccount.id,
-              accountName: cashAccount.name,
-              amountCents: paidAmtCents, // Debit
-              description: `Cash collection for Invoice ${invoiceNum}`,
-              exchangeRate: rate
-            },
-            {
-              accountId: arAccount.id,
-              accountName: arAccount.name,
-              amountCents: -paidAmtCents, // Credit
-              description: `A/R clearance for Invoice ${invoiceNum}`,
-              exchangeRate: rate
-            }
-          ]
+          lines: TransactionTemplates.buildPaymentLines({
+            documentNumber: String(invoiceNum),
+            entityName: customer,
+            amountCents: paidAmtCents,
+            exchangeRate: rate,
+            cashAccount,
+            offsetAccount: arAccount,
+            isReceipt: true
+          })
         };
         txsToPost.push(paymentTx);
       }
@@ -417,22 +410,15 @@ export class LedgerPostService {
             vendorId: billData.vendorId,
             type: 'bill-payment'
           },
-          lines: [
-            {
-              accountId: apAccount.id,
-              accountName: apAccount.name,
-              amountCents: paidAmtCents, // Debit
-              description: `Accounts Payable clearance for Bill ${billNum}`,
-              exchangeRate: rate
-            },
-            {
-              accountId: cashAccount.id,
-              accountName: cashAccount.name,
-              amountCents: -paidAmtCents, // Credit
-              description: `Cash payment for Bill ${billNum}`,
-              exchangeRate: rate
-            }
-          ]
+          lines: TransactionTemplates.buildPaymentLines({
+            documentNumber: String(billNum),
+            entityName: vendor,
+            amountCents: paidAmtCents,
+            exchangeRate: rate,
+            cashAccount,
+            offsetAccount: apAccount,
+            isReceipt: false
+          })
         };
         txsToPost.push(paymentTx);
       }
@@ -481,12 +467,7 @@ export class LedgerPostService {
           reversesTxId: prevTx.id,
           isReversal: true
         },
-        lines: (prevTx.lines || []).map((l: any) => ({
-          ...l,
-          amountCents: -l.amountCents,
-          description: `Reversal: ${l.description || prevTx.description}`,
-          exchangeRate: l.exchangeRate || prevTx.exchangeRate || 1
-        }))
+        lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
       };
     });
 
