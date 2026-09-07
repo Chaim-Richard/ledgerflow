@@ -153,7 +153,7 @@ export class LedgerPostService {
     const invoiceNum = invoiceData.number || invoiceId;
     const customer = invoiceData.customerName || 'Customer';
 
-    const taxAmount = roundCents((invoiceData.taxAmountCents || invoiceData.salesTaxCents || (invoiceData.taxRate ? (rawAmount / (1 + invoiceData.taxRate)) * invoiceData.taxRate : 0)) * rate);
+    const taxAmount = roundCents((invoiceData.taxAmountCents || invoiceData.salesTaxCents || (invoiceData.taxRate ? (rawAmount / (1 + invoiceData.taxRate / 100)) * (invoiceData.taxRate / 100) : 0)) * rate);
     const discountAmount = roundCents((invoiceData.discountCents || 0) * rate);
     const retainageAmount = roundCents((invoiceData.retainageCents || 0) * rate);
 
@@ -356,7 +356,7 @@ export class LedgerPostService {
     );
 
     // 2. Transaction 1: Accrual Posting
-    const taxAmount = roundCents((billData.taxAmountCents || (billData.taxRate ? (rawAmount / (1 + billData.taxRate)) * billData.taxRate : 0)) * rate);
+    const taxAmount = roundCents((billData.taxAmountCents || (billData.taxRate ? (rawAmount / (1 + billData.taxRate / 100)) * (billData.taxRate / 100) : 0)) * rate);
 
     const accrualLines = TransactionTemplates.buildBillLines({
       billNumber: String(billNum),

@@ -12,12 +12,19 @@ export class SecurityService {
     return '{' + keys.map(k => JSON.stringify(k) + ':' + this.deterministicStringify(obj[k])).join(',') + '}';
   }
 
+  static canonicalForensicPayload(data: any): any {
+    if (data === null || typeof data !== 'object') return data;
+    const { verification, ...rest } = data;
+    return rest;
+  }
+
   /**
    * Generates a forensic hash for an entity state
    * Used for "Vault" integrity and "Audit Trail" verification
    */
   static generateForensicHash(data: any): string {
-    const serialized = this.deterministicStringify(data);
+    const payload = this.canonicalForensicPayload(data);
+    const serialized = this.deterministicStringify(payload);
     const salt = process.env.SYSTEM_SALT;
     if (!salt) {
       throw new Error("SYSTEM_SALT environment variable is not set. Refusing to generate a forensic hash with a fallback.");

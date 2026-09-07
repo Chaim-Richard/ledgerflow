@@ -122,21 +122,18 @@ export class TransactionValidator {
     DoubleEntryValidator.validateJournalEntry(validatedTx);
     
     // 6. Server-Authoritative Forensic Hash Stamping
-    if (process.env.SYSTEM_SALT) {
-      try {
-        const forensicHash = SecurityService.generateForensicHash(validatedTx);
-        validatedTx.verification = {
-          ...validatedTx.verification,
-          status: 'verified',
-          verifiedAt: new Date().toISOString(),
-          verifiedBy: 'server-vault',
-          timestamp: new Date().toISOString(),
-          hash: forensicHash
-        };
-      } catch (_e) {
-        // Fallback gracefully if salt error in non-prod test harness
-      }
+    if (!process.env.SYSTEM_SALT && process.env.NODE_ENV !== 'test') {
+      throw new Error("SYSTEM_SALT environment variable is required for forensic stamping.");
     }
+    const forensicHash = SecurityService.generateForensicHash(validatedTx);
+    validatedTx.verification = {
+      ...validatedTx.verification,
+      status: 'verified',
+      verifiedAt: new Date().toISOString(),
+      verifiedBy: 'server-vault',
+      timestamp: new Date().toISOString(),
+      hash: forensicHash
+    };
 
     return validatedTx;
   }

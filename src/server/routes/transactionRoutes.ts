@@ -154,7 +154,7 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
        }
     }
 
-    await TransactionValidator.validateAndPrepare(transactionToSave, {
+    const validatedTx = await TransactionValidator.validateAndPrepare(transactionToSave, {
       workspaceId: transactionToSave.workspaceId,
       user: { uid: user.uid, admin: user.admin },
       wsData
@@ -175,7 +175,7 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
          throw new Error('Duplicate request processing');
       }
 
-      t.set(txRef, { ...transactionToSave, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      t.create(txRef, { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
 
       if (scopedIdempotencyKey) {
          const idempotencyRef = db.collection('idempotencyKeys').doc(scopedIdempotencyKey);
@@ -184,7 +184,7 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
       }
     });
 
-    res.status(200).json({ status: 'ok', transactionId: transactionToSave.id, data: transactionToSave });
+    res.status(200).json({ status: 'ok', transactionId: validatedTx.id, data: validatedTx });
   } catch (e: any) {
     if (e.message === 'Duplicate request processing') {
        return res.status(409).json({ error: e.message });
@@ -276,7 +276,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
     const existingTxSnap = await db.collection('transactions').doc(id).get();
     const existingTx = existingTxSnap.exists ? existingTxSnap.data() as Transaction : undefined;
 
-    await TransactionValidator.validateAndPrepare(transaction, {
+    const validatedTx = await TransactionValidator.validateAndPrepare(transaction, {
       workspaceId: transaction.workspaceId,
       user: { uid: user.uid, admin: user.admin },
       wsData
@@ -294,7 +294,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
         throw new Error(`Period Locked: Cannot modify a transaction originally dated before ${wsData.lockDate}`);
       }
 
-      t.update(txRef, { ...transaction, updatedAt: FieldValue.serverTimestamp() });
+      t.update(txRef, { ...validatedTx, updatedAt: FieldValue.serverTimestamp() });
     });
 
     const auditId = crypto.randomUUID();
@@ -701,7 +701,7 @@ transactionRouter.post('/reconcile', async (req, res) => {
             }, undefined, t);
 
             const txRef = db.collection('transactions').doc(op.id);
-            writes.push(() => t.set(txRef, { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }));
+            writes.push(() => t.create(txRef, { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }));
           }
         }
 

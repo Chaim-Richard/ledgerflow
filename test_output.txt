@@ -1,0 +1,670 @@
+
+> ledgerflow@0.1.0 test
+> NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test "src/tests/!(firestore).test.ts"
+
+TAP version 13
+# Subtest: Financial Algorithms & Platform Semantics Test Suite
+    # Subtest: Altman Z-Score computes correctly and avoids division by zero
+    ok 1 - Altman Z-Score computes correctly and avoids division by zero
+      ---
+      duration_ms: 3.142259
+      type: 'test'
+      ...
+    # Subtest: Expense Velocity isolates true expenses and calculates trailing spikes
+    ok 2 - Expense Velocity isolates true expenses and calculates trailing spikes
+      ---
+      duration_ms: 50.64871
+      type: 'test'
+      ...
+    # Subtest: Monte Carlo strictly isolates cash accounts and ignores non-cash transactions
+    ok 3 - Monte Carlo strictly isolates cash accounts and ignores non-cash transactions
+      ---
+      duration_ms: 24.011228
+      type: 'test'
+      ...
+    # Subtest: Fixed Asset Amortizer strictly filters out liquid cash/AR and models half-year convention
+    ok 4 - Fixed Asset Amortizer strictly filters out liquid cash/AR and models half-year convention
+      ---
+      duration_ms: 0.878699
+      type: 'test'
+      ...
+    # Subtest: Simulation / Ghost Transaction Isolation protects real reports
+    ok 5 - Simulation / Ghost Transaction Isolation protects real reports
+      ---
+      duration_ms: 0.233379
+      type: 'test'
+      ...
+    # Subtest: Deterministic NL Parser correctly resolves transaction, project, and query intents
+    ok 6 - Deterministic NL Parser correctly resolves transaction, project, and query intents
+      ---
+      duration_ms: 2.12311
+      type: 'test'
+      ...
+    1..6
+ok 1 - Financial Algorithms & Platform Semantics Test Suite
+  ---
+  duration_ms: 82.941124
+  type: 'suite'
+  ...
+# Subtest: Canonical Money Allocation (Largest Remainder Method)
+    # Subtest: conserves exact total cents when dividing 10000 cents across 3 equal 33.33% weights
+    ok 1 - conserves exact total cents when dividing 10000 cents across 3 equal 33.33% weights
+      ---
+      duration_ms: 2.571813
+      type: 'test'
+      ...
+    # Subtest: handles 50/25/25 distribution cleanly
+    ok 2 - handles 50/25/25 distribution cleanly
+      ---
+      duration_ms: 0.205301
+      type: 'test'
+      ...
+    # Subtest: fallback handles zero weights safely
+    not ok 3 - fallback handles zero weights safely
+      ---
+      duration_ms: 0.184271
+      type: 'test'
+      location: '/app/applet/src/tests/allocation.test.ts:1:922'
+      failureType: 'testCodeFailure'
+      error: 'allocateCents: totalWeight must be > 0.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        allocateCents (/app/applet/src/kernel/money/Allocation.ts:28:11)
+        TestContext.<anonymous> (/app/applet/src/tests/allocation.test.ts:31:20)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: property: sum of allocateCents strictly equals total cents under any weights
+    not ok 4 - property: sum of allocateCents strictly equals total cents under any weights
+      ---
+      duration_ms: 7.166882
+      type: 'test'
+      location: '/app/applet/src/tests/allocation.test.ts:1:1147'
+      failureType: 'testCodeFailure'
+      error: |-
+        Property failed after 4 tests
+        { seed: -234159910, path: "3:0:1:64:1", endOnFailure: true }
+        Counterexample: [0,[0,0]]
+        Shrunk 4 time(s)
+        
+        Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        buildError (file:///app/applet/node_modules/fast-check/lib/fast-check.js:2462:16)
+        throwIfFailed (file:///app/applet/node_modules/fast-check/lib/fast-check.js:2469:8)
+        reportRunDetails (file:///app/applet/node_modules/fast-check/lib/fast-check.js:2485:14)
+        Module.assert (file:///app/applet/node_modules/fast-check/lib/fast-check.js:2542:7)
+        TestContext.<anonymous> (/app/applet/src/tests/allocation.test.ts:38:8)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+      ...
+    # Subtest: property: validateSplitAllocations behavior invariants
+    ok 5 - property: validateSplitAllocations behavior invariants
+      ---
+      duration_ms: 8.979987
+      type: 'test'
+      ...
+    1..5
+not ok 2 - Canonical Money Allocation (Largest Remainder Method)
+  ---
+  duration_ms: 21.655885
+  type: 'suite'
+  location: '/app/applet/src/tests/allocation.test.ts:1:218'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: Checkpoint 2 Regression & Security Hardening Suite (N1 - N18)
+    # Subtest: N1 & N14: TransactionValidator enforces period lock and user ownership
+    ok 1 - N1 & N14: TransactionValidator enforces period lock and user ownership
+      ---
+      duration_ms: 8.434183
+      type: 'test'
+      ...
+    # Subtest: N9: TransactionValidator strictly rejects ghost simulation IDs for persistent writes
+    ok 2 - N9: TransactionValidator strictly rejects ghost simulation IDs for persistent writes
+      ---
+      duration_ms: 0.341609
+      type: 'test'
+      ...
+    # Subtest: N15 & \#88: getAbsoluteTotal correctly computes absolute transaction total with FX support
+    ok 3 - N15 & \#88: getAbsoluteTotal correctly computes absolute transaction total with FX support
+      ---
+      duration_ms: 0.130576
+      type: 'test'
+      ...
+    # Subtest: N6: getTrustedAppUrl rejects open shared cloud domains and protects against Host header poisoning
+    ok 4 - N6: getTrustedAppUrl rejects open shared cloud domains and protects against Host header poisoning
+      ---
+      duration_ms: 0.388137
+      type: 'test'
+      ...
+    # Subtest: N7 & N8: calculateNetIncome correctly accounts for COGS and revenue with isPostable filtering
+    ok 5 - N7 & N8: calculateNetIncome correctly accounts for COGS and revenue with isPostable filtering
+      ---
+      duration_ms: 0.408187
+      type: 'test'
+      ...
+    1..5
+ok 3 - Checkpoint 2 Regression & Security Hardening Suite (N1 - N18)
+  ---
+  duration_ms: 10.904656
+  type: 'suite'
+  ...
+# Subtest: Deep and Multi-Dimensional Labeling Engine
+    # Subtest: correctly decomposes deep hierarchical labels with slashes, arrows, or colons
+    ok 1 - correctly decomposes deep hierarchical labels with slashes, arrows, or colons
+      ---
+      duration_ms: 2.644161
+      type: 'test'
+      ...
+    # Subtest: accurately matches deep labels and subtree hierarchies
+    ok 2 - accurately matches deep labels and subtree hierarchies
+      ---
+      duration_ms: 0.307504
+      type: 'test'
+      ...
+    # Subtest: expands multi-tiered tags across every hierarchical level
+    ok 3 - expands multi-tiered tags across every hierarchical level
+      ---
+      duration_ms: 0.308453
+      type: 'test'
+      ...
+    # Subtest: extracts multi-dimensional coordinates and hashtags from memo descriptions
+    ok 4 - extracts multi-dimensional coordinates and hashtags from memo descriptions
+      ---
+      duration_ms: 0.500783
+      type: 'test'
+      ...
+    # Subtest: Bayesian classifier trains hierarchical categories and predicts deep labels
+    ok 5 - Bayesian classifier trains hierarchical categories and predicts deep labels
+      ---
+      duration_ms: 1.272917
+      type: 'test'
+      ...
+    # Subtest: MatchingEngine automatically assigns deep multi-dimensional tags and dimensions
+    ok 6 - MatchingEngine automatically assigns deep multi-dimensional tags and dimensions
+      ---
+      duration_ms: 1.61885
+      type: 'test'
+      ...
+    1..6
+ok 4 - Deep and Multi-Dimensional Labeling Engine
+  ---
+  duration_ms: 8.012373
+  type: 'suite'
+  ...
+# Subtest: Financial Accounting Golden-Path Test Suite
+    # Subtest: Local ISO Date helper generates YYYY-MM-DD in local time
+    ok 1 - Local ISO Date helper generates YYYY-MM-DD in local time
+      ---
+      duration_ms: 1.424993
+      type: 'test'
+      ...
+    # Subtest: DerivedBalanceEngine isolates snapshots by workspace
+    ok 2 - DerivedBalanceEngine isolates snapshots by workspace
+      ---
+      duration_ms: 0.399017
+      type: 'test'
+      ...
+    # Subtest: Currency formatting produces clean Intl representations
+    ok 3 - Currency formatting produces clean Intl representations
+      ---
+      duration_ms: 41.159248
+      type: 'test'
+      ...
+    # Subtest: Financial rounding prevents sub-cent rounding errors
+    ok 4 - Financial rounding prevents sub-cent rounding errors
+      ---
+      duration_ms: 0.415084
+      type: 'test'
+      ...
+    # Subtest: Double-Entry Ledger Balancing: Debits must equal Credits
+    ok 5 - Double-Entry Ledger Balancing: Debits must equal Credits
+      ---
+      duration_ms: 0.19607
+      type: 'test'
+      ...
+    # Subtest: Trial Balance Ties Out To Zero
+    ok 6 - Trial Balance Ties Out To Zero
+      ---
+      duration_ms: 0.148109
+      type: 'test'
+      ...
+    # Subtest: P&L & Balance Sheet Reconciliation Equation: Assets = Liabilities + Equity + Net Income
+    ok 7 - P&L & Balance Sheet Reconciliation Equation: Assets = Liabilities + Equity + Net Income
+      ---
+      duration_ms: 0.189346
+      type: 'test'
+      ...
+    1..7
+ok 5 - Financial Accounting Golden-Path Test Suite
+  ---
+  duration_ms: 45.180359
+  type: 'suite'
+  ...
+# Subtest: formatDecimal tests
+    # Subtest: formats positive cents
+    ok 1 - formats positive cents
+      ---
+      duration_ms: 1.336103
+      type: 'test'
+      ...
+    # Subtest: formats negative cents
+    ok 2 - formats negative cents
+      ---
+      duration_ms: 0.492472
+      type: 'test'
+      ...
+    # Subtest: formats zero
+    ok 3 - formats zero
+      ---
+      duration_ms: 0.218199
+      type: 'test'
+      ...
+    # Subtest: formats single digit cents
+    ok 4 - formats single digit cents
+      ---
+      duration_ms: 0.20026
+      type: 'test'
+      ...
+    # Subtest: formats invalid
+    ok 5 - formats invalid
+      ---
+      duration_ms: 0.204436
+      type: 'test'
+      ...
+    1..5
+ok 6 - formatDecimal tests
+  ---
+  duration_ms: 4.245853
+  type: 'suite'
+  ...
+# Subtest: Golden-Path Ledger Verification & Invariants
+    # Subtest: 1. Double-Entry Invariants & Zero-Drift Math
+        # Subtest: Rejects unbalanced transactions with exact net error
+        ok 1 - Rejects unbalanced transactions with exact net error
+          ---
+          duration_ms: 4.016771
+          type: 'test'
+          ...
+        # Subtest: Accepts multi-leg balanced transactions
+        ok 2 - Accepts multi-leg balanced transactions
+          ---
+          duration_ms: 0.548881
+          type: 'test'
+          ...
+        # Subtest: Decimal split allocations preserve exact weight and penny integrity
+        ok 3 - Decimal split allocations preserve exact weight and penny integrity
+          ---
+          duration_ms: 0.330106
+          type: 'test'
+          ...
+        # Subtest: FX conversion absorbed without penny loss
+        ok 4 - FX conversion absorbed without penny loss
+          ---
+          duration_ms: 0.191112
+          type: 'test'
+          ...
+        1..4
+    ok 1 - 1. Double-Entry Invariants & Zero-Drift Math
+      ---
+      duration_ms: 6.146414
+      type: 'suite'
+      ...
+    # Subtest: 2. Transaction Lifecycle & Void Exclusion
+        # Subtest: Voided transactions are excluded from active ledger balance calculations
+        ok 1 - Voided transactions are excluded from active ledger balance calculations
+          ---
+          duration_ms: 0.381768
+          type: 'test'
+          ...
+        1..1
+    ok 2 - 2. Transaction Lifecycle & Void Exclusion
+      ---
+      duration_ms: 0.488944
+      type: 'suite'
+      ...
+    # Subtest: 3. Fiscal Year-End Close (ClosingEntryEngine)
+        # Subtest: Fiscal Year Close zeroes revenue and expenses and transfers Net Profit to Retained Earnings
+        ok 1 - Fiscal Year Close zeroes revenue and expenses and transfers Net Profit to Retained Earnings
+          ---
+          duration_ms: 2.008353
+          type: 'test'
+          ...
+        # Subtest: Fiscal Year Close handles Net Loss correctly (debits Retained Earnings)
+        ok 2 - Fiscal Year Close handles Net Loss correctly (debits Retained Earnings)
+          ---
+          duration_ms: 0.724394
+          type: 'test'
+          ...
+        1..2
+    ok 3 - 3. Fiscal Year-End Close (ClosingEntryEngine)
+      ---
+      duration_ms: 3.186223
+      type: 'suite'
+      ...
+    # Subtest: 4. Tenant Isolation & IDOR Verification
+        # Subtest: Cross-tenant data is never aggregated into account closures
+        ok 1 - Cross-tenant data is never aggregated into account closures
+          ---
+          duration_ms: 0.376113
+          type: 'test'
+          ...
+        1..1
+    ok 4 - 4. Tenant Isolation & IDOR Verification
+      ---
+      duration_ms: 0.481563
+      type: 'suite'
+      ...
+    1..4
+ok 7 - Golden-Path Ledger Verification & Invariants
+  ---
+  duration_ms: 11.372965
+  type: 'suite'
+  ...
+# Subtest: Closing Entry Idempotency
+    # Subtest: Should not double-count if run twice on the same date
+    ok 1 - Should not double-count if run twice on the same date
+      ---
+      duration_ms: 3.788614
+      type: 'test'
+      ...
+    1..1
+ok 8 - Closing Entry Idempotency
+  ---
+  duration_ms: 4.712573
+  type: 'suite'
+  ...
+# Subtest: End-to-End Accounting Engine Integration
+    # Subtest: correctly calculates computed accounts and verifies double-entry balance
+    ok 1 - correctly calculates computed accounts and verifies double-entry balance
+      ---
+      duration_ms: 1.695847
+      type: 'test'
+      ...
+    # Subtest: correctly ties Balance Sheet Assets to Liabilities + Equity + Net Income
+    ok 2 - correctly ties Balance Sheet Assets to Liabilities + Equity + Net Income
+      ---
+      duration_ms: 0.369039
+      type: 'test'
+      ...
+    1..2
+ok 9 - End-to-End Accounting Engine Integration
+  ---
+  duration_ms: 3.032662
+  type: 'suite'
+  ...
+# Subtest: Payroll Engine Mathematical Tie-Out & Cap Verification
+    # Subtest: Tax configuration loads statutory limits for 2026
+    ok 1 - Tax configuration loads statutory limits for 2026
+      ---
+      duration_ms: 1.025409
+      type: 'test'
+      ...
+    # Subtest: FUTA is capped at $7,000 wage base (maximum $42/yr)
+    ok 2 - FUTA is capped at $7,000 wage base (maximum $42/yr)
+      ---
+      duration_ms: 1.62382
+      type: 'test'
+      ...
+    # Subtest: Social Security is capped at annual wage limit
+    ok 3 - Social Security is capped at annual wage limit
+      ---
+      duration_ms: 0.366996
+      type: 'test'
+      ...
+    # Subtest: Additional Medicare Tax applies only to high earners over threshold and is not matched by employer
+    ok 4 - Additional Medicare Tax applies only to high earners over threshold and is not matched by employer
+      ---
+      duration_ms: 0.280184
+      type: 'test'
+      ...
+    # Subtest: Pre-tax deductions reduce taxable income and net pay correctly
+    ok 5 - Pre-tax deductions reduce taxable income and net pay correctly
+      ---
+      duration_ms: 0.241895
+      type: 'test'
+      ...
+    # Subtest: Total enterprise liability ties out: Gross Pay + Total Employer Taxes
+    ok 6 - Total enterprise liability ties out: Gross Pay + Total Employer Taxes
+      ---
+      duration_ms: 0.208309
+      type: 'test'
+      ...
+    1..6
+ok 10 - Payroll Engine Mathematical Tie-Out & Cap Verification
+  ---
+  duration_ms: 5.130936
+  type: 'suite'
+  ...
+# Subtest: Master Repair Board Verification Suite (\#90, \#78, \#94, \#95, \#100, \#99, \#84, \#102)
+    # Subtest: \#90: FX conversion fails closed and throws on unsafe integer overflow
+    ok 1 - \#90: FX conversion fails closed and throws on unsafe integer overflow
+      ---
+      duration_ms: 1.785563
+      type: 'test'
+      ...
+    # Subtest: \#78: BankLineUpdateSchema strictly accepts allowed fields and rejects protected/unknown fields
+    ok 2 - \#78: BankLineUpdateSchema strictly accepts allowed fields and rejects protected/unknown fields
+      ---
+      duration_ms: 2.495817
+      type: 'test'
+      ...
+    # Subtest: \#94: Sales tax rate normalization handles percentage and decimal representations accurately
+    ok 3 - \#94: Sales tax rate normalization handles percentage and decimal representations accurately
+      ---
+      duration_ms: 0.195263
+      type: 'test'
+      ...
+    # Subtest: \#94: Sales tax liability compute supports exclusive and inclusive tax across rates
+    ok 4 - \#94: Sales tax liability compute supports exclusive and inclusive tax across rates
+      ---
+      duration_ms: 18.426566
+      type: 'test'
+      ...
+    # Subtest: \#95: Asset Amortizer fails safely with Insufficient Data if no fixed assets exist
+    ok 5 - \#95: Asset Amortizer fails safely with Insufficient Data if no fixed assets exist
+      ---
+      duration_ms: 0.903404
+      type: 'test'
+      ...
+    # Subtest: \#99 & \#100: TransactionQueryEngine correctly executes all supported query operators and isolates simulations
+    ok 6 - \#99 & \#100: TransactionQueryEngine correctly executes all supported query operators and isolates simulations
+      ---
+      duration_ms: 11.231899
+      type: 'test'
+      ...
+    # Subtest: \#84: Invoice email delivery fails closed with explicit error when unconfigured
+    ok 7 - \#84: Invoice email delivery fails closed with explicit error when unconfigured
+      ---
+      duration_ms: 0.665465
+      type: 'test'
+      ...
+    # Subtest: \#102: Canonical validators enforce absolute totals, lock dates, status immutability, and double entry
+    ok 8 - \#102: Canonical validators enforce absolute totals, lock dates, status immutability, and double entry
+      ---
+      duration_ms: 0.990265
+      type: 'test'
+      ...
+    1..8
+ok 11 - Master Repair Board Verification Suite (\#90, \#78, \#94, \#95, \#100, \#99, \#84, \#102)
+  ---
+  duration_ms: 38.331364
+  type: 'suite'
+  ...
+# Subtest: Repair Board Verification: Phase 2-4 Accounting, Security & Algorithms
+    # Subtest: \#37 / \#38: Retainage revenue posting does not inflate revenue
+    ok 1 - \#37 / \#38: Retainage revenue posting does not inflate revenue
+      ---
+      duration_ms: 0.933433
+      type: 'test'
+      ...
+    # Subtest: \#44: Cash Flow Financing sign convention and categories
+    ok 2 - \#44: Cash Flow Financing sign convention and categories
+      ---
+      duration_ms: 0.347294
+      type: 'test'
+      ...
+    # Subtest: \#45 & \#46: AR Aging reduces amountPaidCents and parses dates safely
+    ok 3 - \#45 & \#46: AR Aging reduces amountPaidCents and parses dates safely
+      ---
+      duration_ms: 1.570228
+      type: 'test'
+      ...
+    # Subtest: \#47: Intercompany Elimination preserves signed debit/credit polarity
+    ok 4 - \#47: Intercompany Elimination preserves signed debit/credit polarity
+      ---
+      duration_ms: 1.286261
+      type: 'test'
+      ...
+    # Subtest: \#51: Dynamic activeMonths calculation scales with date span
+    ok 5 - \#51: Dynamic activeMonths calculation scales with date span
+      ---
+      duration_ms: 3.20299
+      type: 'test'
+      ...
+    # Subtest: \#40: Transaction similarity matching matches bank lines with high accuracy
+    ok 6 - \#40: Transaction similarity matching matches bank lines with high accuracy
+      ---
+      duration_ms: 1.267008
+      type: 'test'
+      ...
+    1..6
+ok 12 - Repair Board Verification: Phase 2-4 Accounting, Security & Algorithms
+  ---
+  duration_ms: 9.92652
+  type: 'suite'
+  ...
+# Subtest: Schema Drift & Index Consistency Structural Automated Guard
+    # Subtest: workspaces rule allowlist strictly matches Workspace interface fields with no unexpected extras
+    ok 1 - workspaces rule allowlist strictly matches Workspace interface fields with no unexpected extras
+      ---
+      duration_ms: 1.317387
+      type: 'test'
+      ...
+    # Subtest: transactions rule allowlist strictly matches Transaction interface fields with no unexpected extras
+    ok 2 - transactions rule allowlist strictly matches Transaction interface fields with no unexpected extras
+      ---
+      duration_ms: 0.425594
+      type: 'test'
+      ...
+    # Subtest: chartAccounts rule allowlist includes isActive field
+    ok 3 - chartAccounts rule allowlist includes isActive field
+      ---
+      duration_ms: 0.297602
+      type: 'test'
+      ...
+    # Subtest: firestore.indexes.json includes composite indexes for workspaceId + order field queries
+    ok 4 - firestore.indexes.json includes composite indexes for workspaceId + order field queries
+      ---
+      duration_ms: 0.210338
+      type: 'test'
+      ...
+    1..4
+ok 13 - Schema Drift & Index Consistency Structural Automated Guard
+  ---
+  duration_ms: 3.42234
+  type: 'suite'
+  ...
+# [SecurityService] Decryption failed: Error: Unsupported state or unable to authenticate data
+#     at Decipheriv.final (node:internal/crypto/cipher:184:29)
+#     at Function.decryptSensitiveField (/app/applet/src/services/securityService.ts:111:29)
+#     at <anonymous> (/app/applet/src/tests/security-audit.test.ts:32:23)
+#     at getActual (node:assert:609:5)
+#     at Function.throws (node:assert:757:24)
+#     at TestContext.<anonymous> (/app/applet/src/tests/security-audit.test.ts:31:12)
+#     at Test.runInAsyncScope (node:async_hooks:214:14)
+#     at Test.run (node:internal/test_runner/test:1047:25)
+#     at Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+#     at Test.postRun (node:internal/test_runner/test:1173:19)
+# Subtest: Security and Integrity Deep Audit Test Suite
+    # Subtest: AES-256-GCM encryption & decryption round-trip works accurately
+    ok 1 - AES-256-GCM encryption & decryption round-trip works accurately
+      ---
+      duration_ms: 2.241726
+      type: 'test'
+      ...
+    # Subtest: AES-256-GCM decryption rejects tampered ciphertext or auth tag
+    ok 2 - AES-256-GCM decryption rejects tampered ciphertext or auth tag
+      ---
+      duration_ms: 5.72737
+      type: 'test'
+      ...
+    # Subtest: PII Scrubber sanitizes SSNs, credit cards, emails, and API keys
+    ok 3 - PII Scrubber sanitizes SSNs, credit cards, emails, and API keys
+      ---
+      duration_ms: 1.301429
+      type: 'test'
+      ...
+    # Subtest: DoubleEntryValidator strictly enforces zero net balance
+    ok 4 - DoubleEntryValidator strictly enforces zero net balance
+      ---
+      duration_ms: 1.380524
+      type: 'test'
+      ...
+    # Subtest: DoubleEntryValidator rejects single-legged entries
+    ok 5 - DoubleEntryValidator rejects single-legged entries
+      ---
+      duration_ms: 0.207831
+      type: 'test'
+      ...
+    # Subtest: Payment token regex strictly validates format and prevents injection
+    ok 6 - Payment token regex strictly validates format and prevents injection
+      ---
+      duration_ms: 0.343934
+      type: 'test'
+      ...
+    # Subtest: Forensic hash generation and integrity verification works deterministically
+    ok 7 - Forensic hash generation and integrity verification works deterministically
+      ---
+      duration_ms: 0.758388
+      type: 'test'
+      ...
+    1..7
+ok 14 - Security and Integrity Deep Audit Test Suite
+  ---
+  duration_ms: 13.231379
+  type: 'suite'
+  ...
+# Subtest: TransactionTemplates Double-Entry Generation
+    # Subtest: buildInvoiceLines creates perfectly balanced lines for invoice with tax, discount, retainage
+    ok 1 - buildInvoiceLines creates perfectly balanced lines for invoice with tax, discount, retainage
+      ---
+      duration_ms: 0.988633
+      type: 'test'
+      ...
+    # Subtest: buildBillLines creates perfectly balanced lines for bill with tax
+    ok 2 - buildBillLines creates perfectly balanced lines for bill with tax
+      ---
+      duration_ms: 0.312498
+      type: 'test'
+      ...
+    # Subtest: buildReversalLines reverses all line amounts
+    ok 3 - buildReversalLines reverses all line amounts
+      ---
+      duration_ms: 0.178226
+      type: 'test'
+      ...
+    1..3
+ok 15 - TransactionTemplates Double-Entry Generation
+  ---
+  duration_ms: 2.586929
+  type: 'suite'
+  ...
+1..15
+# tests 79
+# suites 19
+# pass 77
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9432.382601

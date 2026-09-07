@@ -25,20 +25,19 @@ describe('Canonical Money Allocation (Largest Remainder Method)', () => {
     assert.deepEqual(result, [2500, 1250, 1250]);
   });
 
-  test('fallback handles zero weights safely', () => {
+  test('rejects zero weights safely', () => {
     const totalCents = 100;
     const weights = [0, 0];
-    const result = allocateCents(totalCents, weights);
-
-    assert.equal(result.reduce((a, b) => a + b, 0), totalCents);
-    assert.deepEqual(result, [50, 50]);
+    assert.throws(() => {
+      allocateCents(totalCents, weights);
+    }, /allocateCents: totalWeight must be > 0/);
   });
 
   test('property: sum of allocateCents strictly equals total cents under any weights', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: -10000000, max: 10000000 }),
-        fc.array(fc.double({ min: 0, max: 100000 }), { minLength: 1, maxLength: 50 }),
+        fc.array(fc.double({ min: 0.0001, max: 100000 }), { minLength: 1, maxLength: 50 }),
         (totalCents, weights) => {
           const result = allocateCents(totalCents, weights);
           assert.equal(result.length, weights.length);

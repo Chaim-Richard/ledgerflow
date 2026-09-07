@@ -5,24 +5,32 @@
  */
 
 export function allocateCents(totalCents: number, weights: number[]): number[] {
+  if (!Number.isSafeInteger(totalCents)) {
+    throw new Error('allocateCents: totalCents must be a safe integer.');
+  }
   if (weights.length === 0) return [];
-  if (weights.length === 1) return [Math.round(totalCents)];
-
-  const totalWeight = weights.reduce((acc, w) => acc + (w || 0), 0);
-  if (totalWeight <= 0) {
-    // Equal distribution fallback if weights sum to <= 0
-    const equalShare = Math.floor(totalCents / weights.length);
-    const result = new Array(weights.length).fill(equalShare);
-    const remainder = Math.round(totalCents) - (equalShare * weights.length);
-    for (let i = 0; i < remainder; i++) {
-      result[i] += 1;
+  if (weights.length === 1) {
+    if (typeof weights[0] !== 'number' || isNaN(weights[0]) || weights[0] < 0) {
+      throw new Error('allocateCents: invalid weight.');
     }
-    return result;
+    return [Math.round(totalCents)];
+  }
+
+  let totalWeight = 0;
+  for (const w of weights) {
+    if (typeof w !== 'number' || isNaN(w) || w < 0 || !isFinite(w)) {
+      throw new Error('allocateCents: weights must be positive finite numbers.');
+    }
+    totalWeight += w;
+  }
+
+  if (totalWeight <= 0) {
+    throw new Error('allocateCents: totalWeight must be > 0.');
   }
 
   // Calculate unrounded exact allocations and integer floors
   const allocations = weights.map((w) => {
-    const exact = (totalCents * (w || 0)) / totalWeight;
+    const exact = (totalCents * w) / totalWeight;
     const floor = Math.floor(exact);
     const remainder = exact - floor;
     return { floor, remainder };

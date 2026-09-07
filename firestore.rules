@@ -66,6 +66,7 @@ service cloud.firestore {
         (!("description" in request.resource.data) || request.resource.data.description.size() < 1000) &&
         (!("plan" in request.resource.data) || request.resource.data.plan == "starter" || request.resource.data.plan == "free") &&
         (!("computeCreditBalance" in request.resource.data) || request.resource.data.computeCreditBalance <= 100) &&
+        (!("bypassBilling" in request.resource.data) || request.resource.data.bypassBilling == false) &&
         (!("maxSeats" in request.resource.data) || request.resource.data.maxSeats <= 5) &&
         affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore", "defaultAccountMappings", "dimensions", "dimensionNodes", "allowedWorldPaths", "bypassBilling", "members"]);
       allow update: if isSignedIn() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid && isUnchanged("uid") &&

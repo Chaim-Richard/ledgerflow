@@ -1,5 +1,6 @@
 import { ChartAccount, Transaction, JournalEntry } from '../../types';
 import { isPostable } from '../../lib/txFilters';
+import { allocateCents } from '../money/Allocation';
 
 export class LedgerEngine {
   /**
@@ -162,19 +163,8 @@ export class LedgerEngine {
               
               if (line.splitAllocations && Array.isArray(line.splitAllocations) && line.splitAllocations.length > 0) {
                 const allocs = line.splitAllocations;
-                let allocatedSum = 0;
-                const calculatedAmounts: number[] = [];
-
-                allocs.forEach((alloc, idx) => {
-                  let allocAmount: number;
-                  if (idx === allocs.length - 1) {
-                    allocAmount = amount - allocatedSum;
-                  } else {
-                    allocAmount = Math.round(amount * (alloc.weight || 0));
-                    allocatedSum += allocAmount;
-                  }
-                  calculatedAmounts.push(allocAmount);
-                });
+                const weights = allocs.map(a => a.weight || 0);
+                const calculatedAmounts = allocateCents(amount, weights);
 
                 allocs.forEach((alloc, idx) => {
                   const allocAmount = calculatedAmounts[idx];
