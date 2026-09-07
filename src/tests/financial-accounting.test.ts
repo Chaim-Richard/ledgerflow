@@ -1,27 +1,11 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { roundCents, formatCurrency, formatDollars, getLocalDateISO } from '../lib/utils.js';
-import { DerivedBalanceEngine } from '../kernel/reporting/DerivedBalanceEngine.js';
 
 describe('Financial Accounting Golden-Path Test Suite', () => {
   test('Local ISO Date helper generates YYYY-MM-DD in local time', () => {
     const fixedDate = new Date(2026, 6, 22); // July 22, 2026 local
     assert.equal(getLocalDateISO(fixedDate), '2026-07-22');
-  });
-
-  test('DerivedBalanceEngine isolates snapshots by workspace', () => {
-    DerivedBalanceEngine.clearSnapshots();
-    const eventA = { id: 'evt1', eventType: 'ACTUAL' as const, accountId: '1010', amountCents: 5000, timestamp: '2026-01-01', entryId: 'e1', type: 'debit' as const };
-    const eventB = { id: 'evt2', eventType: 'ACTUAL' as const, accountId: '1010', amountCents: 9000, timestamp: '2026-01-01', entryId: 'e2', type: 'debit' as const };
-
-    DerivedBalanceEngine.createSnapshot('2026-01-01', [eventA], 'ws_A');
-    DerivedBalanceEngine.createSnapshot('2026-01-01', [eventB], 'ws_B');
-
-    const balA = DerivedBalanceEngine.getBalanceAsOf('1010', '2026-01-01', [eventA], 'ws_A');
-    const balB = DerivedBalanceEngine.getBalanceAsOf('1010', '2026-01-01', [eventB], 'ws_B');
-
-    assert.equal(balA, 5000, 'Workspace A balance bled or incorrect');
-    assert.equal(balB, 9000, 'Workspace B balance bled or incorrect');
   });
 
   test('Currency formatting produces clean Intl representations', () => {

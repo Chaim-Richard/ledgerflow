@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-import { allocateCents } from '../kernel/money/Allocation';
+import { allocateCents } from '../lib/Allocation';
 import { validateSplitAllocations } from '../lib/dimensionUtils';
 import fc from 'fast-check';
 
@@ -37,7 +37,7 @@ describe('Canonical Money Allocation (Largest Remainder Method)', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: -10000000, max: 10000000 }),
-        fc.array(fc.double({ min: 0.0001, max: 100000 }), { minLength: 1, maxLength: 50 }),
+        fc.array(fc.double({ min: 0.0001, max: 100000, noNaN: true }), { minLength: 1, maxLength: 50 }),
         (totalCents, weights) => {
           const result = allocateCents(totalCents, weights);
           assert.equal(result.length, weights.length);
@@ -46,6 +46,14 @@ describe('Canonical Money Allocation (Largest Remainder Method)', () => {
         }
       )
     );
+  });
+
+  test('property: allocateCents rejects invalid weights instead of coercing', () => {
+    fc.assert(fc.property(
+      fc.integer({ min: -1000000, max: 1000000 }),
+      fc.array(fc.oneof(fc.constant(NaN), fc.constant(Infinity), fc.double({ min: -1000, max: -0.001, noNaN: true })), { minLength: 2, maxLength: 10 }),
+      (total, badWeights) => { assert.throws(() => allocateCents(total, badWeights)); }
+    ));
   });
 
   test('property: validateSplitAllocations behavior invariants', () => {

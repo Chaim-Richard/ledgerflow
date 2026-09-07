@@ -458,6 +458,14 @@ transactionRouter.post('/bulk', async (req, res) => {
         }
       }
 
+      const refs = validatedTransactions.map(tx => db.collection('transactions').doc(tx.id));
+      if (refs.length > 0) {
+        const snaps = await t.getAll(...refs);
+        for (const s of snaps) {
+          if (s.exists) throw new Error(`Transaction ${s.id} already exists`);
+        }
+      }
+
       if (entityMutation) {
         const ref = db.collection(entityMutation.collection).doc(entityMutation.docId);
         if (entityMutation.action === "create" || entityMutation.action === "update") {
@@ -484,9 +492,9 @@ transactionRouter.post('/bulk', async (req, res) => {
           }
         }
       }
-      for (const tx of validatedTransactions) {
-        const txRef = db.collection('transactions').doc(tx.id);
-        t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      for (let i = 0; i < validatedTransactions.length; i++) {
+        const tx = validatedTransactions[i];
+        t.create(refs[i], { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       }
 
       if (scopedIdempotencyKey) {

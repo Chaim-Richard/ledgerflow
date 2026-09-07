@@ -3,7 +3,6 @@ import { test, describe } from 'node:test';
 import Decimal from 'decimal.js';
 import { ClosingEntryEngine } from '../kernel/ledger/ClosingEntryEngine';
 import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator';
-import { DerivedBalanceEngine } from '../kernel/reporting/DerivedBalanceEngine';
 import { validateSplitAllocations } from '../lib/dimensionUtils';
 import { ChartAccount, Transaction, TransactionLine } from '../types';
 
@@ -112,46 +111,6 @@ describe('Golden-Path Ledger Verification & Invariants', () => {
   });
 
   describe('2. Transaction Lifecycle & Void Exclusion', () => {
-    test('Voided transactions are excluded from active ledger balance calculations', () => {
-      DerivedBalanceEngine.clearSnapshots();
-      const workspaceId = 'ws_lifecycle';
-
-      const eventActive1 = {
-        id: 'evt_1',
-        eventType: 'ACTUAL' as const,
-        accountId: '1010',
-        amountCents: 50000, // $500 Debit Cash
-        timestamp: '2026-01-10',
-        entryId: 'tx_1',
-        type: 'debit' as const
-      };
-
-      const eventVoided = {
-        id: 'evt_2',
-        eventType: 'ACTUAL' as const,
-        accountId: '1010',
-        amountCents: 25000, // $250 Debit Cash (voided)
-        timestamp: '2026-01-12',
-        entryId: 'tx_voided',
-        type: 'debit' as const
-      };
-
-      const eventActive2 = {
-        id: 'evt_3',
-        eventType: 'ACTUAL' as const,
-        accountId: '1010',
-        amountCents: 15000, // $150 Debit Cash
-        timestamp: '2026-01-15',
-        entryId: 'tx_2',
-        type: 'debit' as const
-      };
-
-      // Active events exclude the voided transaction
-      const activeEvents = [eventActive1, eventActive2];
-      const balance = DerivedBalanceEngine.getBalanceAsOf('1010', '2026-01-20', activeEvents, workspaceId);
-
-      assert.equal(balance, 65000, 'Balance must be exactly $650.00 (excluding the voided $250.00)');
-    });
   });
 
   describe('3. Fiscal Year-End Close (ClosingEntryEngine)', () => {

@@ -1,6 +1,6 @@
 import { ChartAccount, Transaction, JournalEntry } from '../../types';
 import { isPostable } from '../../lib/txFilters';
-import { allocateCents } from '../money/Allocation';
+import { allocateCents } from '../../lib/Allocation';
 
 export class LedgerEngine {
   /**
