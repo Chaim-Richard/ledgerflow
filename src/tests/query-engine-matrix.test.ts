@@ -5,9 +5,12 @@ import { normalizeTaxRate, SALES_TAX_LIABILITY_ALGO } from '../lib/algorithms/sa
 import { assetAmortizer } from '../lib/algorithms/asset-amortizer.js';
 import { BankLineUpdateSchema } from '../schemas.js';
 import { LedgerEngine } from '../kernel/ledger/LedgerEngine.js';
+import { TransactionValidator } from '../kernel/validation/TransactionValidator.js';
+import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator.js';
+import { deliverInvoiceEmail } from '../server/services/emailService.js';
 import { buildAlgorithmContext } from '../lib/algorithms/types.js';
 
-describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99)', () => {
+describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99, #84, #102)', () => {
   
   // =========================================================================
   // #90: FX Safe Integer Handling (FAIL CLOSED)
@@ -314,5 +317,103 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99)
     const negRes = TransactionQueryEngine.query({ ...baseOptions, searchTerm: '-stripe' });
     assert.equal(negRes.some(t => t.id === 'tx-1'), false);
     assert.equal(negRes.length, 3);
+  });
+
+  // =========================================================================
+  // #84: Honest Invoice Email Delivery
+  // =========================================================================
+  test('#84: Invoice email delivery fails closed with explicit error when unconfigured', async () => {
+    // When no provider keys are set, deliverInvoiceEmail must throw NO_EMAIL_SERVICE_CONFIGURED
+    const originalResend = process.env.RESEND_API_KEY;
+    const originalPostmark = process.env.POSTMARK_SERVER_TOKEN;
+    const originalSendgrid = process.env.SENDGRID_API_KEY;
+    delete process.env.RESEND_API_KEY;
+    delete process.env.POSTMARK_SERVER_TOKEN;
+    delete process.env.SENDGRID_API_KEY;
+
+    try {
+      await assert.rejects(
+        async () => {
+          await deliverInvoiceEmail({
+            toEmail: 'client@example.com',
+            subject: 'Test Invoice',
+            invoiceUrl: 'http://localhost:3000/i/pay_123'
+          });
+        },
+        /NO_EMAIL_SERVICE_CONFIGURED/
+      );
+    } finally {
+      if (originalResend) process.env.RESEND_API_KEY = originalResend;
+      if (originalPostmark) process.env.POSTMARK_SERVER_TOKEN = originalPostmark;
+      if (originalSendgrid) process.env.SENDGRID_API_KEY = originalSendgrid;
+    }
+  });
+
+  // =========================================================================
+  // #102: Canonical Transaction Validation
+  // =========================================================================
+  test('#102: Canonical validators enforce absolute totals, lock dates, status immutability, and double entry', () => {
+    // 1. Valid balanced transaction
+    const validTx: any = {
+      id: 'tx-valid-stripe',
+      uid: 'user-1',
+      workspaceId: 'ws-1',
+      date: '2026-09-01',
+      description: 'Stripe Payment',
+      totalAmountCents: 5000,
+      currency: 'USD',
+      status: 'completed',
+      type: 'actual',
+      lines: [
+        { accountId: 'acc-cash', amountCents: 5000 },
+        { accountId: 'acc-ar', amountCents: -5000 }
+      ]
+    };
+
+    assert.equal(DoubleEntryValidator.validateJournalEntry(validTx), true);
+
+    // 2. Unbalanced transaction rejected
+    const unbalancedTx: any = {
+      id: 'tx-unbalanced',
+      uid: 'user-1',
+      workspaceId: 'ws-1',
+      date: '2026-09-01',
+      description: 'Unbalanced payment',
+      totalAmountCents: 5000,
+      currency: 'USD',
+      status: 'completed',
+      type: 'actual',
+      lines: [
+        { accountId: 'acc-cash', amountCents: 5000 },
+        { accountId: 'acc-ar', amountCents: -3000 }
+      ]
+    };
+    assert.throws(() => {
+      DoubleEntryValidator.validateJournalEntry(unbalancedTx);
+    }, /Debits must exactly equal Credits/);
+
+    // 3. Period Lock rejected by TransactionValidator
+    const periodLockedContext = {
+      workspaceId: 'ws-1',
+      user: { uid: 'user-1' },
+      wsData: { lockDate: '2026-09-15' }
+    };
+    assert.throws(() => {
+      TransactionValidator.validateTransactionState(validTx, periodLockedContext);
+    }, /Period Locked/);
+
+    // 4. Status Lock rejected for non-admin
+    const certifiedTx: any = {
+      ...validTx,
+      date: '2026-10-01',
+      status: 'certified'
+    };
+    assert.throws(() => {
+      TransactionValidator.validateTransactionState(certifiedTx, {
+        workspaceId: 'ws-1',
+        user: { uid: 'user-1', admin: false },
+        wsData: { lockDate: '2026-08-01' }
+      });
+    }, /status is locked/);
   });
 });

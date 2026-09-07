@@ -1,7 +1,7 @@
 import { Request } from 'express';
 
 /**
- * Safely determines the application base URL, strictly preventing Host-header poisoning (#85).
+ * Safely determines the application base URL, strictly preventing Host-header poisoning (#85, #85-R).
  */
 export function getTrustedAppUrl(req?: Request): string {
   if (process.env.APP_URL) {
@@ -15,14 +15,18 @@ export function getTrustedAppUrl(req?: Request): string {
     const rawHost = req.get('x-forwarded-host') || req.get('host') || '';
     const cleanHost = rawHost.split(',')[0].trim().toLowerCase();
     
-    // Strict hostname validation: only allow local and known platform hosts
+    // Strict hostname validation: allow local in non-production, and trusted cloud platforms
     const isLocal = /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanHost);
-    const isTrustedCloud = /^[a-z0-9-.]+\.(aistudio-hub\.google\.com|run\.app|web\.app|firebaseapp\.com)(:\d+)?$/.test(cleanHost);
+    const isTrustedCloud = /^[a-z0-9-.]+\.(aistudio-hub\.google\.com|run\.app|web\.app|firebaseapp\.com|ledgerflow\.app)(:\d+)?$/.test(cleanHost);
     
-    if (isLocal || isTrustedCloud) {
+    if (isTrustedCloud || (isLocal && process.env.NODE_ENV !== 'production')) {
       const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
       return `${protocol}://${cleanHost}`;
     }
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('[urlHelper] Production environment missing explicit APP_URL or trusted Host header.');
   }
 
   // Safe fallback default

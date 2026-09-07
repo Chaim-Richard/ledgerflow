@@ -43,6 +43,7 @@ import { BayesianClassifier, sha256Sync } from "./src/lib/algorithms.ts";
 import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
 import { TruthEngine } from "./src/modules/integrity/TruthEngine.ts";
 import { calculateNetIncome } from "./src/lib/txFilters.ts";
+import { TransactionValidator } from "./src/kernel/validation/TransactionValidator.ts";
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 
 dotenv.config();
@@ -582,7 +583,11 @@ async function startServer() {
               if (isPaid) {
                 // Admin SDK requires all reads before writes in a transaction
                 const wsId = inv.workspaceId || workspaceId;
-                const accountsSnap = await t.get(db.collection('chartAccounts').where('workspaceId', '==', wsId));
+                const [wsDoc, accountsSnap] = await Promise.all([
+                  t.get(db.collection('workspaces').doc(wsId)),
+                  t.get(db.collection('chartAccounts').where('workspaceId', '==', wsId))
+                ]);
+                const wsData = wsDoc.exists ? wsDoc.data() : {};
                 const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
                 const currentPaidCents = inv.amountPaidCents || 0;
@@ -641,8 +646,8 @@ async function startServer() {
                 }
                 
                 const exchangeRate = typeof inv?.exchangeRate === 'number' && inv.exchangeRate > 0 ? inv.exchangeRate : 1;
-                const txRef = db.collection('transactions').doc();
-                t.set(txRef, {
+                const rawTx: any = {
+                  id: db.collection('transactions').doc().id,
                   uid: 'system',
                   workspaceId: wsId,
                   date: new Date().toISOString().split('T')[0],
@@ -674,7 +679,21 @@ async function startServer() {
                       exchangeRate: exchangeRate
                     }
                   ]
-                });
+                };
+
+                const validatedTx = await TransactionValidator.validateAndPrepare(
+                  rawTx,
+                  {
+                    workspaceId: wsId,
+                    user: { uid: 'system', admin: true },
+                    wsData
+                  },
+                  undefined,
+                  t
+                );
+
+                const txRef = db.collection('transactions').doc(validatedTx.id);
+                t.set(txRef, validatedTx);
               } else {
                 // Async payment pending (e.g. ACH clearing)
                 t.update(targetRef, {

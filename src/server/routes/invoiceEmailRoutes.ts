@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import { getDb } from '../db/firestore';
 import { getTrustedAppUrl } from '../utils/urlHelper';
+import { deliverInvoiceEmail } from '../services/emailService';
 
 export const invoiceEmailRouter = express.Router();
 
@@ -55,7 +56,7 @@ invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
     const invoiceUrl = `${baseUrl}/i/${paymentToken}`;
 
     // #84 - Honest email delivery: check if an actual email service provider is configured
-    const hasEmailService = Boolean(process.env.RESEND_API_KEY || process.env.POSTMARK_SERVER_TOKEN || process.env.SENDGRID_API_KEY || process.env.SMTP_HOST);
+    const hasEmailService = Boolean(process.env.RESEND_API_KEY || process.env.POSTMARK_SERVER_TOKEN || process.env.SENDGRID_API_KEY);
 
     if (!hasEmailService) {
       return res.status(503).json({
@@ -68,17 +69,55 @@ invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
       });
     }
 
-    // Update invoice status to 'sent' ONLY upon actual delivery
+    // Format amount for display if cents available
+    const totalAmount = typeof invoice.totalCents === 'number'
+      ? `$${(invoice.totalCents / 100).toFixed(2)}`
+      : (typeof invoice.amountCents === 'number' ? `$${(invoice.amountCents / 100).toFixed(2)}` : undefined);
+
+    // Dispatch real email delivery
+    let deliveryResult;
+    try {
+      deliveryResult = await deliverInvoiceEmail({
+        toEmail,
+        subject: subject || `Invoice ${invoice.invoiceNumber || invoice.number || invoiceId} from ${wsData?.name || 'LedgerFlow'}`,
+        invoiceNumber: invoice.invoiceNumber || invoice.number || invoiceId,
+        customerName: invoice.customerName || invoice.customer?.name,
+        totalFormatted: totalAmount,
+        invoiceUrl,
+        customBody: body
+      });
+    } catch (deliveryError: any) {
+      console.error('[InvoiceEmail] Provider delivery failure:', deliveryError);
+      return res.status(502).json({
+        success: false,
+        delivered: false,
+        error: 'EMAIL_DELIVERY_FAILED',
+        message: deliveryError.message || 'External email service rejected the dispatch request.',
+        paymentToken,
+        invoiceUrl
+      });
+    }
+
+    // Update invoice status to 'sent' ONLY upon verified delivery success
     await invoiceRef.update({
       status: invoice.status === 'draft' || invoice.status === 'pending' ? 'sent' : invoice.status,
       metadata: {
         ...invoice.metadata,
         lastSentAt: new Date().toISOString(),
-        sentTo: toEmail
+        sentTo: toEmail,
+        emailProvider: deliveryResult.provider,
+        emailMessageId: deliveryResult.messageId
       }
     });
 
-    res.json({ success: true, delivered: true, paymentToken, invoiceUrl });
+    res.json({
+      success: true,
+      delivered: true,
+      provider: deliveryResult.provider,
+      messageId: deliveryResult.messageId,
+      paymentToken,
+      invoiceUrl
+    });
   } catch (err) {
     console.error('Error sending invoice email:', err);
     res.status(500).json({ error: 'Internal server error' });
