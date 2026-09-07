@@ -66,9 +66,9 @@ export default function Reconciliation() {
   // Granular checkable state for the smart auto-alignment bulk modal
   const [selectedBatchIds, setSelectedBatchIds] = useState<Record<string, boolean>>({});
 
-  const safeBankLines = Array.isArray(bankLines) ? bankLines : [];
-  const safeTransactions = Array.isArray(transactions) ? transactions : [];
-  const safeAccounts = Array.isArray(accounts) ? accounts : [];
+  const safeBankLines = useMemo(() => Array.isArray(bankLines) ? bankLines : [], [bankLines]);
+  const safeTransactions = useMemo(() => Array.isArray(transactions) ? transactions : [], [transactions]);
+  const safeAccounts = useMemo(() => Array.isArray(accounts) ? accounts : [], [accounts]);
 
   const cashAccounts = useMemo(() => safeAccounts.filter(a => resolveAccountRole(a) === 'cash'), [safeAccounts]);
 

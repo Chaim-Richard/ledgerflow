@@ -13,7 +13,9 @@
     "test": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test \"src/tests/!(firestore).test.ts\"",
     "test:rules": "firebase emulators:exec --only firestore \"tsx --test src/tests/firestore.test.ts\"",
     "preview": "vite preview",
-    "start": "node dist/server.cjs"
+    "start": "node dist/server.cjs",
+    "prepare": "husky",
+    "test:cov": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test --experimental-test-coverage --test-coverage-lines=75 --test-coverage-branches=65 \"src/tests/!(firestore).test.ts\""
   },
   "dependencies": {
     "@google/genai": "^1.51.0",
@@ -80,6 +82,9 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "fast-check": "^4.9.0",
     "globals": "^17.8.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.5.0",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4.1.14",
     "ts-node": "^10.9.2",
     "typescript": "~5.8.2",
@@ -91,5 +96,14 @@
     "lodash": "^4.17.21",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
+    ]
   }
 }

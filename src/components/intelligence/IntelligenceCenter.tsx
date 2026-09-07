@@ -9,7 +9,11 @@ import { BarChart3, ShieldCheck, Target, Download, Maximize2, Minimize2, BrainCi
 import { cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuditTelemetry } from '../../hooks/useAuditTelemetry';
-import * as d3 from 'd3';
+import { select } from 'd3-selection';
+import { scaleBand, scaleLinear } from 'd3-scale';
+import { max } from 'd3-array';
+import { axisBottom, axisLeft } from 'd3-axis';
+import { area, line, curveMonotoneX } from 'd3-shape';
 import { Transaction, ChartAccount, Project, Bill, Invoice } from '../../types';
 import { useUIStore } from '../../stores/useUIStore';
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
@@ -56,7 +60,7 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
   useEffect(() => {
     if (!svgRef.current || !data.length) return;
 
-    const svg = d3.select(svgRef.current);
+    const svg = select(svgRef.current);
     svg.selectAll("*").remove();
 
     const { width, height } = dimensions;
@@ -73,30 +77,30 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
       index: i
     }));
     
-    const x = d3.scaleBand()
+    const x = scaleBand()
       .range([margin.left, width - margin.right])
       .padding(0.28);
 
-    const y = d3.scaleLinear()
+    const y = scaleLinear()
       .range([height - margin.bottom, margin.top]);
 
     x.domain(processed.map(d => d.label));
     
-    const maxVal = d3.max(processed, d => d.value) || 100;
+    const maxVal = max(processed, d => d.value) || 100;
     y.domain([0, maxVal * 1.05]);
 
     // Add continuous background gridlines
     svg.append("g")
       .attr("class", "grid")
       .attr("transform", `translate(0, ${height - margin.bottom})`)
-      .call(d3.axisBottom(x).tickSize(-height + margin.top + margin.bottom).tickFormat(() => ""))
+      .call(axisBottom(x).tickSize(-height + margin.top + margin.bottom).tickFormat(() => ""))
       .call(g => g.select(".domain").remove())
       .call(g => g.selectAll(".tick line").attr("stroke", "#f1f5f9").attr("stroke-opacity", 0.8));
 
     svg.append("g")
       .attr("class", "grid")
       .attr("transform", `translate(${margin.left}, 0)`)
-      .call(d3.axisLeft(y).tickSize(-width + margin.left + margin.right).ticks(4).tickFormat(() => ""))
+      .call(axisLeft(y).tickSize(-width + margin.left + margin.right).ticks(4).tickFormat(() => ""))
       .call(g => g.select(".domain").remove())
       .call(g => g.selectAll(".tick line").attr("stroke", "#f1f5f9").attr("stroke-opacity", 0.8));
 
@@ -127,11 +131,11 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
     svg.append("path")
       .datum(processed)
       .attr("fill", "url(#areaTrendGradient)")
-      .attr("d", d3.area()
+      .attr("d", area()
         .x((d: any) => (x(d.label) || 0) + x.bandwidth() / 2)
         .y0(height - margin.bottom)
         .y1((d: any) => y(d.value))
-        .curve(d3.curveMonotoneX) as any
+        .curve(curveMonotoneX) as any
       );
 
     // 2. Bars
@@ -155,10 +159,10 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
       .attr("stroke", "#10b981")
       .attr("stroke-width", 1.8)
       .attr("stroke-opacity", 0.8)
-      .attr("d", d3.line()
+      .attr("d", line()
         .x((d: any) => (x(d.label) || 0) + x.bandwidth() / 2)
         .y((d: any) => y(d.value))
-        .curve(d3.curveMonotoneX) as any
+        .curve(curveMonotoneX) as any
       );
 
     // 4. Glowing trend points
@@ -202,7 +206,7 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
     // 6. X-Axis rendering
     svg.append("g")
       .attr("transform", `translate(0, ${height - margin.bottom})`)
-      .call(d3.axisBottom(x).tickSize(0).tickPadding(6))
+      .call(axisBottom(x).tickSize(0).tickPadding(6))
       .call(g => g.select(".domain").attr("stroke", "#e2e8f0"))
       .call(g => g.selectAll(".tick text")
         .attr("fill", "#64748b")
@@ -212,7 +216,7 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
     // 7. Y-Axis rendering
     svg.append("g")
       .attr("transform", `translate(${margin.left}, 0)`)
-      .call(d3.axisLeft(y).ticks(4).tickFormat(d => `$${d}`))
+      .call(axisLeft(y).ticks(4).tickFormat(d => `$${d}`))
       .call(g => g.select(".domain").remove())
       .call(g => g.selectAll(".tick text")
         .attr("fill", "#64748b")

@@ -14,7 +14,7 @@ import {
   Filter,
   CheckCircle2
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+
 import { toast } from 'sonner';
 import { cn, formatCurrency, parseLocalDate } from '../../lib/utils';
 import DrillDownModal from '../layout/DrillDownModal';
@@ -32,8 +32,8 @@ interface CustomerAgingSummary {
 }
 
 export default function ARAgingReportView() {
-  const invoices = useLedgerStore(s => s.invoices) || [];
-  const customers = useLedgerStore(s => s.customers) || [];
+  const invoices = useLedgerStore(s => s.invoices);
+  const customers = useLedgerStore(s => s.customers);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'customerName' | 'totalCents' | 'days90PlusCents' | 'oldestInvoiceDays'>('totalCents');
@@ -149,7 +149,8 @@ export default function ARAgingReportView() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import('xlsx');
     const headers = ['Customer Name', 'Current (0-30d)', '31-60 Days', '61-90 Days', '90+ Days Overdue', 'Total Outstanding', 'Max Days Overdue'];
     const rows = filteredData.map(c => [
       c.customerName,

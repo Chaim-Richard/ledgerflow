@@ -15,7 +15,7 @@ import {
   CreditCard,
   Zap
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+
 import { toast } from 'sonner';
 import { cn, formatCurrency, parseLocalDate } from '../../lib/utils';
 
@@ -33,8 +33,8 @@ interface VendorAgingSummary {
 }
 
 export default function APAgingReportView() {
-  const bills = useLedgerStore(s => s.bills) || [];
-  const vendors = useLedgerStore(s => s.vendors) || [];
+  const bills = useLedgerStore(s => s.bills);
+  const vendors = useLedgerStore(s => s.vendors);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [payThisWeekOnly, setPayThisWeekOnly] = useState(false);
@@ -163,7 +163,8 @@ export default function APAgingReportView() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import('xlsx');
     const headers = ['Vendor Name', 'Current (0-30d)', '31-60 Days', '61-90 Days', '90+ Days', 'Due This Week', 'Total Due'];
     const rows = filteredData.map(v => [
       v.vendorName,
