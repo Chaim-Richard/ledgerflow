@@ -33,6 +33,25 @@ export function isPostable(t: Transaction, options?: any): boolean {
 }
 
 /**
+ * Normalizes a ledger date to its calendar-day representation. Transactions may
+ * be stored as either `YYYY-MM-DD` or a full ISO timestamp, while report
+ * controls use date-only values. Comparing those strings directly excludes
+ * timestamped transactions that occur on an inclusive end date.
+ */
+export function transactionDate(t: Pick<Transaction, 'date'>): string {
+  return typeof t.date === 'string' ? t.date.slice(0, 10) : '';
+}
+
+/** Returns true when a transaction falls within an inclusive calendar-date range. */
+export function isTransactionInDateRange(t: Pick<Transaction, 'date'>, start?: string, end?: string): boolean {
+  const date = transactionDate(t);
+  if (!date) return false;
+  const startDate = start?.slice(0, 10);
+  const endDate = end?.slice(0, 10);
+  return (!startDate || date >= startDate) && (!endDate || date <= endDate);
+}
+
+/**
  * Calculates the base-currency amount in cents for a line item,
  * incorporating line or transaction-level FX exchange rates.
  */
@@ -234,7 +253,7 @@ export function calculateNetIncome(
   for (let i = 0; i < transactions.length; i++) {
     const t = transactions[i];
     if (!isPostable(t)) continue;
-    if (t.date < start || t.date > end) continue;
+    if (!isTransactionInDateRange(t, start, end)) continue;
 
     const lines = t.lines || [];
     for (let j = 0; j < lines.length; j++) {

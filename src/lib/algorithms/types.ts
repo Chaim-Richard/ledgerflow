@@ -1,5 +1,5 @@
 import { Transaction, ChartAccount } from '../../types';
-import { isPostable } from '../txFilters';
+import { isPostable, isTransactionInDateRange } from '../txFilters';
 import { resolveAccountRole } from '../accountUtils';
 
 declare const postable: unique symbol;
@@ -69,7 +69,7 @@ export function buildAlgorithmContext(
   const endDate = period.end || asOfDate;
   const postableTxs = (transactions || []).filter(isPostable).filter(t => {
     if (!startDate || !endDate) return true;
-    return t.date >= startDate && t.date <= endDate;
+    return isTransactionInDateRange(t, startDate, endDate);
   }) as PostableTransaction[];
   let days = period.days;
   if (!days) {

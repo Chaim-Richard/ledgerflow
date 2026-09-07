@@ -16,7 +16,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { formatDecimal, cn, getLocalDateISO } from '../../lib/utils';
-import { isPostable, lineAmount, calculateNetIncome } from '../../lib/txFilters';
+import { isPostable, isTransactionInDateRange, lineAmount, calculateNetIncome } from '../../lib/txFilters';
 import { motion } from 'motion/react';
 import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -127,7 +127,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
 
     // Sum transactions before or on cutoff date
     transactions.forEach(tx => {
-      if (!isPostable(tx) || tx.date > dateCutoff) return;
+      if (!isPostable(tx) || !isTransactionInDateRange(tx, undefined, dateCutoff)) return;
       tx.lines?.forEach(line => {
         const id = line.accountId;
         const acc = accountMap.get(id) || accountMap.get(line.accountName);
@@ -439,7 +439,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
                   <div 
                     key={acc.id} 
                     onClick={() => {
-                      const matchedTxs = transactions.filter(t => !t.deletedAt && t.date <= asOfDate && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
+                      const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
                       setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
                     }}
                     title={`Click to drill down into ${acc.name}`}
@@ -528,7 +528,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
                     <div 
                       key={acc.id} 
                       onClick={() => {
-                        const matchedTxs = transactions.filter(t => !t.deletedAt && t.date <= asOfDate && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
+                        const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
                         setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
                       }}
                       title={`Click to drill down into ${acc.name}`}
@@ -588,7 +588,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
                     <div 
                       key={acc.id} 
                       onClick={() => {
-                        const matchedTxs = transactions.filter(t => !t.deletedAt && t.date <= asOfDate && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
+                        const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
                         setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
                       }}
                       title={`Click to drill down into ${acc.name}`}
@@ -626,7 +626,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
                 {/* Retained Earnings Line Item */}
                 <div 
                   onClick={() => {
-                    const matchedTxs = transactions.filter(t => !t.deletedAt && t.date <= asOfDate && t.lines?.some(l => {
+                    const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => {
                       const account = accounts.find(a => a.id === l.accountId);
                       return account && (account.type === 'income' || account.type === 'revenue' || account.type === 'expense' || account.type === 'cost_of_goods');
                     }));
