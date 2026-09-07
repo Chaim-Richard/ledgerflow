@@ -10,7 +10,7 @@
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "lint": "tsc --noEmit && eslint .",
-    "test": "tsx --test \"src/tests/!(firestore).test.ts\"",
+    "test": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test \"src/tests/!(firestore).test.ts\"",
     "test:rules": "firebase emulators:exec --only firestore \"tsx --test src/tests/firestore.test.ts\"",
     "preview": "vite preview",
     "start": "node dist/server.cjs"

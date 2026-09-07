@@ -485,7 +485,7 @@ async function startServer() {
   // Port Resolution:
   // In AI Studio preview containers, Nginx reverse proxy listens on NGINX_PORT (8080) and routes to DEFAULT_APP_PORT (3000).
   // In standalone deployments (Cloud Run, Heroku, Render, local Docker), Node listens directly on process.env.PORT.
-  const isAiStudioProxy = Boolean(process.env.APPLET_ID || process.env.NGINX_PORT);
+  const isAiStudioProxy = Boolean(process.env.APPLET_ID || process.env.NGINX_PORT || process.env.IS_AI_STUDIO_PREVIEW);
   const PORT = isAiStudioProxy
     ? Number(process.env.DEFAULT_APP_PORT || 3000)
     : (Number(process.env.PORT) || 3000);
@@ -494,20 +494,21 @@ async function startServer() {
   app.set("trust proxy", 1); 
   app.use(compression());
   app.use(helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === 'production' && !process.env.IS_AI_STUDIO_PREVIEW ? {
+    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "blob:", "https:"],
         connectSrc: ["'self'", "https://firebasestorage.googleapis.com", "https://*.googleapis.com"],
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-        frameSrc: ["'self'", "https://*.stripe.com", "https://cdn.plaid.com"]
+        frameSrc: ["'self'", "https://*.stripe.com", "https://cdn.plaid.com"],
+        frameAncestors: isAiStudioProxy ? ["*"] : ["'self'"]
       }
-    } : false, // Disabled to prevent blocking iframe scripts / web-bundler in preview
+    } : false,
     crossOriginEmbedderPolicy: false,
-    frameguard: false, // Required for preview environment iframe embed
-    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }, // Harden transport security
+    frameguard: isAiStudioProxy ? false : { action: 'sameorigin' },
+    hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   }));
   app.use(morgan("tiny"));
@@ -1238,7 +1239,8 @@ async function startServer() {
 
         return next();
       } catch (err: any) {
-        return res.status(500).json({ status: "error", message: "Decryption / Verification failure within LedgerFlow core.", details: err.message });
+        console.error("[Deep Auth] Token verification failure:", err);
+        return res.status(500).json({ status: "error", message: "Authentication / Verification failure within LedgerFlow core." });
       }
     }
 
@@ -3031,29 +3033,8 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         liveLogs: apiLogs
       });
     } catch (err: any) {
-      if (err.message?.includes("NOT_FOUND") || err.message?.includes("PERMISSION_DENIED") || err.message?.includes("permissions") || err.code === 7) {
-          const tenantsFromCache = typeof billingFallbackCache !== "undefined" ? Array.from(billingFallbackCache.entries()).map(([id, cacheVal]) => ({
-             id,
-             name: cacheVal.name || "Default Workspace",
-             plan: cacheVal.plan || "sandbox",
-             concurrentUserLimit: cacheVal.concurrentUserLimit || 50,
-             activeUserCount: cacheVal.activeUserCount || 1,
-             seatCount: cacheVal.seatCount || 1,
-             maxSeats: cacheVal.maxSeats || 3,
-             computeCreditBalance: cacheVal.computeCreditBalance !== undefined ? cacheVal.computeCreditBalance : 100000,
-             apiQuotaMonthlyLimitCents: cacheVal.apiQuotaMonthlyLimitCents || 0,
-             creditCostMultiplier: cacheVal.creditCostMultiplier !== undefined ? cacheVal.creditCostMultiplier : 1.0,
-             quotaCentsMultiplier: cacheVal.quotaCentsMultiplier !== undefined ? cacheVal.quotaCentsMultiplier : 1.0,
-             bypassBilling: cacheVal.bypassBilling === true,
-             customKeyCreditCharge: cacheVal.customKeyCreditCharge !== undefined ? cacheVal.customKeyCreditCharge : 10,
-             customKeyCentsCharge: cacheVal.customKeyCentsCharge !== undefined ? cacheVal.customKeyCentsCharge : 0,
-             txCount: 12,
-             requestCount: 45,
-             errorCount: 0
-          })) : [];
-          return res.json({ status: "success", tenants: tenantsFromCache, liveLogs: apiLogs || [] });
-      }
-      sendError(res, err.message, 500);
+      console.error("[Admin Telemetry] Failed to fetch telemetry data:", err);
+      sendError(res, "Failed to retrieve telemetry data", 500);
     }
   });
 
@@ -3420,85 +3401,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       }
     } catch (err: any) {
        console.error("[Stripe Verify] Error:", err);
-       res.status(500).json({ status: "error", message: err.message });
-    }
-  });
-
-  app.post("/api/v1/keys/provision", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    try {
-      const { name, scopes, expiration, workspaceId } = req.body;
-      if (!workspaceId) {
-        return res.status(400).json({ status: "error", message: "Missing workspaceId in body" });
-      }
-
-      const authReq = req as AuthenticatedRequest;
-      await authorizeWorkspace(authReq, workspaceId);
-
-      const userId = authReq.user.uid;
-      
-      const randomSecret = crypto.randomBytes(32).toString('hex');
-      const randomKeyIdSuffix = crypto.randomBytes(8).toString('hex');
-      const keyId = `lf_id_${workspaceId}_${randomKeyIdSuffix}`;
-      const computedHash = crypto.createHash('sha256').update(randomSecret).digest('hex');
-
-      let expiresAtValue: string | null = null;
-      if (expiration && expiration !== 'never') {
-        const d = new Date();
-        if (expiration === '1h') d.setHours(d.getHours() + 1);
-        else if (expiration === '24h') d.setHours(d.getHours() + 24);
-        else if (expiration === '30d') d.setDate(d.getDate() + 30);
-        else if (expiration === '90d') d.setDate(d.getDate() + 90);
-        expiresAtValue = d.toISOString();
-      }
-
-      const newKeyData = {
-         workspaceId,
-         name: name || 'Production Integration Key',
-         keyHash: computedHash,
-         uid: userId,
-         createdAt: new Date().toISOString(),
-         scopes: scopes || [],
-         expiresAt: expiresAtValue || 'never',
-         lastUsedAt: null,
-         totalRequests: 0
-      };
-
-      const db = getDb();
-      await db.collection("apiKeys").doc(keyId).set(newKeyData);
-
-      res.status(200).json({
-        status: "success",
-        apiKey: `${keyId}.${randomSecret}`,
-        keyId,
-        message: "Developer credential provisioned successfully"
-      });
-    } catch (err: any) {
-      console.error("[Keys Provisioning Error]: ", err);
-      res.status(500).json({ status: "error", message: "Failed to generate security key on server.", details: err.message });
-    }
-  });
-
-  app.delete("/api/v1/keys/revoke/:keyId", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    try {
-      const { keyId } = req.params;
-      const authReq = req as AuthenticatedRequest;
-      const db = getDb();
-      
-      const keySnap = await db.collection("apiKeys").doc(keyId).get();
-      if (!keySnap.exists) {
-        return res.status(404).json({ status: "error", message: "Key not found" });
-      }
-      
-      const keyData = keySnap.data();
-      if (keyData?.uid !== authReq.user.uid) {
-        return res.status(403).json({ status: "error", message: "Forbidden: You do not own this credential." });
-      }
-      
-      await db.collection("apiKeys").doc(keyId).delete();
-      res.json({ status: "success", message: "API key successfully revoked." });
-    } catch (err: any) {
-      console.error("[Keys Revoke Error]: ", err);
-      res.status(500).json({ status: "error", message: "Failed to revoke key on server.", details: err.message });
+       res.status(500).json({ status: "error", message: "Stripe verification failed" });
     }
   });
 

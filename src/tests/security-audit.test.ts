@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
+import crypto from 'node:crypto';
+
+// Ensure test execution has deterministic salt even if running without env wrappers
+process.env.NODE_ENV = process.env.NODE_ENV || 'test';
+process.env.SYSTEM_SALT = process.env.SYSTEM_SALT || 'test-audit-salt-hex-32-chars-at-least-1234';
+
 import { SecurityService } from '../services/securityService.js';
 import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator.js';
-import crypto from 'node:crypto';
 
 describe('Security and Integrity Deep Audit Test Suite', () => {
   test('AES-256-GCM encryption & decryption round-trip works accurately', () => {
@@ -97,5 +102,17 @@ describe('Security and Integrity Deep Audit Test Suite', () => {
     assert.equal(tokenRegex.test('invalid_prefix_1234567890'), false);
     assert.equal(tokenRegex.test('pay_short'), false);
     assert.equal(tokenRegex.test('pay_' + 'a'.repeat(200)), false);
+  });
+
+  test('Forensic hash generation and integrity verification works deterministically', () => {
+    const payloadA = { amountCents: 10000, description: 'Audit verification', accountId: 'acc-1' };
+    const payloadB = { accountId: 'acc-1', description: 'Audit verification', amountCents: 10000 };
+    
+    const hashA = SecurityService.generateForensicHash(payloadA);
+    const hashB = SecurityService.generateForensicHash(payloadB);
+
+    assert.equal(hashA, hashB, 'Deterministic stringify must produce matching hashes regardless of key insertion order');
+    assert.equal(SecurityService.verifyIntegrity(payloadA, hashA), true);
+    assert.equal(SecurityService.verifyIntegrity({ ...payloadA, amountCents: 10001 }, hashA), false);
   });
 });

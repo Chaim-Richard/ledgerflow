@@ -57,7 +57,15 @@ export function calculateSafeToSpend(transactions: readonly Transaction[], accou
     const effectiveTaxRate = netProfit > 0 ? (estimatedTax / netProfit) * 100 : 0;
     
     // Operating Reserve Policy (2 months of average expenses)
-    const activeMonths = 3;
+    const monthKeys = new Set<string>();
+    transactions.forEach(t => {
+        if (!isPostable(t)) return;
+        if (t.date && typeof t.date === 'string') {
+            const m = t.date.slice(0, 7);
+            if (/^\d{4}-\d{2}$/.test(m)) monthKeys.add(m);
+        }
+    });
+    const activeMonths = Math.max(1, monthKeys.size);
     const averageMonthlyExpenseCents = expenses / activeMonths;
     const recommendedReserveCents = Math.round(averageMonthlyExpenseCents * 2);
 

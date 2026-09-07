@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb, validateWorkspaceMember } from "../db/firestore";
 import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount } from "../../lib/txFilters";
 import { ReportRangeSchema, WorkspaceIdSchema } from "../../schemas";
+import { parseLocalDate, getLocalDateISO } from "../../lib/utils";
 
 export const reportRouter = express.Router();
 
@@ -195,9 +196,9 @@ reportRouter.get("/aging", async (req, res) => {
 
     let items = snap.docs.map((doc: any) => doc.data());
     
-    const allowedStatuses = ["unpaid", "pending", "overdue", "sent"];
+    const allowedStatuses = ["unpaid", "pending", "overdue", "sent", "partially_paid"];
     items = items.filter(item => allowedStatuses.includes(item.status));
-    const now = new Date();
+    const today = parseLocalDate(getLocalDateISO());
     
     const aging = {
       current: 0,
@@ -209,17 +210,31 @@ reportRouter.get("/aging", async (req, res) => {
     };
 
     items.forEach((item: any) => {
-      const dueDate = new Date(item.dueDate);
-      const diffDays = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-      const amount = item.amountCents || item.totalCents || 0;
+      const rawTotal = item.amountCents || item.totalCents || item.amountTotalCents || 0;
+      const rawPaid = item.amountPaidCents || item.paidAmountCents || 0;
+      const outstanding = Math.max(0, rawTotal - rawPaid);
+      if (outstanding <= 0) return;
 
-      if (diffDays <= 0) aging.current += amount;
-      else if (diffDays <= 30) aging["1-30"] += amount;
-      else if (diffDays <= 60) aging["31-60"] += amount;
-      else if (diffDays <= 90) aging["61-90"] += amount;
-      else aging["90+"] += amount;
+      let diffDays = 0;
+      const dateStr = item.dueDate || item.date;
+      if (dateStr && typeof dateStr === 'string') {
+        try {
+          const parsed = parseLocalDate(dateStr);
+          if (!isNaN(parsed.getTime())) {
+            diffDays = Math.floor((today.getTime() - parsed.getTime()) / (1000 * 60 * 60 * 24));
+          }
+        } catch {
+          diffDays = 0;
+        }
+      }
 
-      aging.total += amount;
+      if (diffDays <= 0) aging.current += outstanding;
+      else if (diffDays <= 30) aging["1-30"] += outstanding;
+      else if (diffDays <= 60) aging["31-60"] += outstanding;
+      else if (diffDays <= 90) aging["61-90"] += outstanding;
+      else aging["90+"] += outstanding;
+
+      aging.total += outstanding;
     });
 
     res.json(aging);
@@ -307,17 +322,17 @@ reportRouter.get("/cash-flow", async (req, res) => {
         if (acc.type === 'income') cashFlow.operating.total -= amount;
         if (acc.type === 'expense') cashFlow.operating.total -= amount;
 
-        if (acc.type === 'asset' && acc.category === 'Receivable') cashFlow.operating.total -= amount;
-        if (acc.type === 'liability' && acc.category === 'Payable') cashFlow.operating.total += amount;
+        if (acc.type === 'asset' && (acc.category === 'Receivables' || acc.category === 'Receivable' || acc.category === 'Accounts Receivable')) cashFlow.operating.total -= amount;
+        if (acc.type === 'liability' && (acc.category === 'Payables' || acc.category === 'Payable' || acc.category === 'Accounts Payable')) cashFlow.operating.total -= amount;
 
-        if (acc.type === 'asset' && acc.category === 'Fixed Asset') {
+        if (acc.type === 'asset' && (acc.category === 'Fixed Assets' || acc.category === 'Fixed Asset')) {
           cashFlow.investing.total -= amount;
           cashFlow.investing.items.push({ name: tx.description, amount: -amount });
         }
 
-        if (acc.type === 'equity' || (acc.type === 'liability' && acc.category === 'Long Term Liability')) {
-          cashFlow.financing.total += amount;
-          cashFlow.financing.items.push({ name: tx.description, amount: amount });
+        if (acc.type === 'equity' || (acc.type === 'liability' && (acc.category === 'Long Term Liabilities' || acc.category === 'Long Term Liability'))) {
+          cashFlow.financing.total -= amount;
+          cashFlow.financing.items.push({ name: tx.description, amount: -amount });
         }
       });
     });

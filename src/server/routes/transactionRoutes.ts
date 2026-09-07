@@ -10,6 +10,7 @@ import { Transaction } from '../../types';
 import { parseLocalDate } from '../../lib/utils';
 import { getDb } from '../db/firestore';
 import { isPostable, getAbsoluteTotal } from '../../lib/txFilters';
+import { optimizedTransactionSimilarity } from '../../lib/algorithms';
 
 export const transactionRouter = express.Router();
 
@@ -72,7 +73,8 @@ transactionRouter.get('/', async (req, res) => {
     if (endDate) queryFn = queryFn.where("date", "<=", endDate as string);
     
     const maxLimit = parseInt(limit as string, 10) || 100;
-    queryFn = queryFn.limit(Math.min(maxLimit, 1000));
+    const fetchLimit = accountId ? 1000 : Math.min(maxLimit, 1000);
+    queryFn = queryFn.limit(fetchLimit);
 
     const transactionsSnap = await queryFn.get();
     let transactions = transactionsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
@@ -82,6 +84,10 @@ transactionRouter.get('/', async (req, res) => {
     }
 
     transactions.sort((a: any, b: any) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
+
+    if (transactions.length > maxLimit) {
+      transactions = transactions.slice(0, maxLimit);
+    }
 
     res.json({
       status: "success",
@@ -659,13 +665,17 @@ transactionRouter.get('/reconciliation/status', async (req, res) => {
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
 
-    // Fetch uncleared transactions
+    // Fetch transactions and count uncleared (accounting for unset / false / null isCleared)
     const snapshot = await db.collection('transactions')
       .where('workspaceId', '==', workspaceId)
-      .where('isCleared', '==', false)
       .get();
       
-    const unclearedCount = snapshot.size;
+    const unclearedDocs = snapshot.docs.filter(doc => {
+      const data = doc.data();
+      return !data.isCleared && isPostable(data as any);
+    });
+
+    const unclearedCount = unclearedDocs.length;
     res.json({
       status: 'ok',
       workspaceId,
@@ -680,21 +690,88 @@ transactionRouter.get('/reconciliation/status', async (req, res) => {
 transactionRouter.post('/reconciliation/match', async (req, res) => {
   try {
     const { workspaceId, externalBankLines } = req.body;
+    if (!workspaceId || !Array.isArray(externalBankLines)) {
+      return res.status(400).json({ error: "Missing workspaceId or externalBankLines array" });
+    }
     const user = (req as any).user;
     const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
 
-    // Auto-match external bank lines against uncleared internal transactions
-    // (A real production system would do fuzzy matching here)
+    // Fetch uncleared transactions for this workspace
+    const snapshot = await db.collection('transactions')
+      .where('workspaceId', '==', workspaceId)
+      .get();
+
+    const unclearedTxs = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() } as any))
+      .filter(tx => !tx.isCleared && isPostable(tx));
+
+    const suggestions = externalBankLines.map((bankLine: any) => {
+      const lineAmt = Math.abs(bankLine.amountCents || Math.round((bankLine.amount || 0) * 100));
+      const lineDesc = bankLine.description || bankLine.merchant || '';
+      let lineTime: number | null = null;
+      if (bankLine.date) {
+        try {
+          lineTime = parseLocalDate(bankLine.date).getTime();
+        } catch {
+          lineTime = null;
+        }
+      }
+
+      let bestMatchId: string | null = null;
+      let highestConfidence = 0;
+
+      for (const tx of unclearedTxs) {
+        const txAmt = Math.abs(getAbsoluteTotal(tx));
+        const amtMatch = txAmt === lineAmt;
+        const amtClose = Math.abs(txAmt - lineAmt) <= 100;
+
+        let dateProximity = 0.5;
+        if (lineTime && tx.date) {
+          try {
+            const txTime = parseLocalDate(tx.date).getTime();
+            const diffDays = Math.abs(lineTime - txTime) / (1000 * 60 * 60 * 24);
+            if (diffDays === 0) dateProximity = 1.0;
+            else if (diffDays <= 3) dateProximity = 0.9;
+            else if (diffDays <= 7) dateProximity = 0.7;
+            else if (diffDays <= 30) dateProximity = 0.4;
+            else dateProximity = 0.1;
+          } catch {
+            dateProximity = 0.5;
+          }
+        }
+
+        const textSim = optimizedTransactionSimilarity(lineDesc, tx.description || '');
+
+        let confidence = 0;
+        if (amtMatch) {
+          confidence = 0.5 + (dateProximity * 0.3) + (textSim * 0.2);
+        } else if (amtClose) {
+          confidence = 0.3 + (dateProximity * 0.3) + (textSim * 0.3);
+        } else if (textSim > 0.8) {
+          confidence = textSim * 0.4;
+        }
+
+        if (confidence > highestConfidence && confidence >= 0.5) {
+          highestConfidence = Math.min(1, Math.round(confidence * 100) / 100);
+          bestMatchId = tx.id;
+        }
+      }
+
+      return {
+        externalId: bankLine.id,
+        suggestedInternalId: bestMatchId,
+        confidence: highestConfidence
+      };
+    });
+
+    const matchedCount = suggestions.filter(s => s.suggestedInternalId !== null).length;
+
     res.json({
       status: 'ok',
-      matchedCount: externalBankLines.length,
-      suggestions: externalBankLines.map((line: any) => ({
-        externalId: line.id,
-        suggestedInternalId: null,
-        confidence: 0
-      }))
+      matchedCount,
+      suggestions
     });
   } catch (e: any) {
     res.status(500).json({ error: e.message });

@@ -73,16 +73,20 @@ export class IntercompanyEliminationEngine {
         const record = worldMap.get(worldKey)!;
         record.txIds.add(tx.id);
 
-        const amt = Math.abs(line.amountCents || 0);
+        const rawAmt = line.amountCents || 0;
         if (isIncomeLine(line)) {
-          record.revenue += amt;
+          // Credit is negative in double-entry. For revenue, negative credit increases revenue.
+          const revAmt = rawAmt < 0 ? -rawAmt : rawAmt;
+          record.revenue += revAmt;
         } else if (isExpenseLine(line)) {
-          record.expense += amt;
+          // Debit is positive in double-entry. Positive debit increases expense.
+          const expAmt = rawAmt > 0 ? rawAmt : -rawAmt;
+          record.expense += expAmt;
         }
 
         // Track eliminated intercompany transfer amounts
         if (isIntercompanyTx) {
-          eliminatedTransferCents += amt / 2; // eliminate balancing pairs
+          eliminatedTransferCents += Math.abs(rawAmt) / 2; // eliminate balancing pairs
         }
       });
     });

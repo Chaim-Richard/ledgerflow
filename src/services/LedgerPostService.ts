@@ -185,13 +185,14 @@ export class LedgerPostService {
       'Retainage Receivable'
     ) : null;
     
-    const revenueAmount = amount + retainageAmount + discountAmount - taxAmount;
+    const revenueAmount = amount + discountAmount - taxAmount;
+    const arAmount = amount - retainageAmount;
 
     const accrualLines: any[] = [
       {
         accountId: arAccount.id,
         accountName: arAccount.name,
-        amountCents: amount, // Debit
+        amountCents: arAmount, // Debit (net of retainage withheld)
         description: `Accounts Receivable posting for Invoice ${invoiceNum}`,
         exchangeRate: rate
       }
