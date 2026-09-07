@@ -5,6 +5,7 @@ import { useLedgerStore } from '../stores/useLedgerStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { ChartAccount } from '../types';
 import { isPostable } from '../lib/txFilters';
+import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
 
 export class LedgerPostService {
   private static getAccounts(context?: any): ChartAccount[] {
@@ -131,12 +132,7 @@ export class LedgerPostService {
           reversesTxId: prevTx.id,
           isReversal: true
         },
-        lines: (prevTx.lines || []).map((l: any) => ({
-          ...l,
-          amountCents: -l.amountCents,
-          description: `Reversal: ${l.description || prevTx.description}`,
-          exchangeRate: l.exchangeRate || prevTx.exchangeRate || 1
-        }))
+        lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
       });
     }
 
@@ -185,53 +181,19 @@ export class LedgerPostService {
       'Retainage Receivable'
     ) : null;
     
-    const revenueAmount = amount + discountAmount - taxAmount;
-    const arAmount = amount - retainageAmount;
-
-    const accrualLines: any[] = [
-      {
-        accountId: arAccount.id,
-        accountName: arAccount.name,
-        amountCents: arAmount, // Debit (net of retainage withheld)
-        description: `Accounts Receivable posting for Invoice ${invoiceNum}`,
-        exchangeRate: rate
-      }
-    ];
-
-    if (retainageAmount > 0 && retainageAccount) {
-      accrualLines.push({
-        accountId: retainageAccount.id,
-        accountName: retainageAccount.name,
-        amountCents: retainageAmount, // Debit
-        description: `Retainage withheld for Invoice ${invoiceNum}`,
-        exchangeRate: rate
-      });
-    }
-    if (discountAmount > 0 && discountAccount) {
-      accrualLines.push({
-        accountId: discountAccount.id,
-        accountName: discountAccount.name,
-        amountCents: discountAmount, // Debit
-        description: `Discount applied to Invoice ${invoiceNum}`,
-        exchangeRate: rate
-      });
-    }
-    if (taxAmount > 0 && taxAccount) {
-      accrualLines.push({
-        accountId: taxAccount.id,
-        accountName: taxAccount.name,
-        amountCents: -taxAmount, // Credit
-        description: `Sales Tax collected for Invoice ${invoiceNum}`,
-        exchangeRate: rate
-      });
-    }
-
-    accrualLines.push({
-      accountId: revenueAccount.id,
-      accountName: revenueAccount.name,
-      amountCents: -revenueAmount, // Credit
-      description: `Revenue posting for Invoice ${invoiceNum}`,
-      exchangeRate: rate
+    const accrualLines = TransactionTemplates.buildInvoiceLines({
+      invoiceNumber: String(invoiceNum),
+      customerName: customer,
+      totalCents: amount,
+      taxCents: taxAmount,
+      discountCents: discountAmount,
+      retainageCents: retainageAmount,
+      exchangeRate: rate,
+      arAccount,
+      revenueAccount,
+      taxAccount,
+      discountAccount,
+      retainageAccount
     });
 
     const accrualTx = {
@@ -372,12 +334,7 @@ export class LedgerPostService {
           reversesTxId: prevTx.id,
           isReversal: true
         },
-        lines: (prevTx.lines || []).map((l: any) => ({
-          ...l,
-          amountCents: -l.amountCents,
-          description: `Reversal: ${l.description || prevTx.description}`,
-          exchangeRate: l.exchangeRate || prevTx.exchangeRate || 1
-        }))
+        lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
       });
     }
 
@@ -407,34 +364,16 @@ export class LedgerPostService {
 
     // 2. Transaction 1: Accrual Posting
     const taxAmount = roundCents((billData.taxAmountCents || (billData.taxRate ? (rawAmount / (1 + billData.taxRate)) * billData.taxRate : 0)) * rate);
-    const expenseAmount = amount - taxAmount;
 
-    const accrualLines: any[] = [];
-    
-    if (expenseAmount !== 0) {
-      accrualLines.push({
-        accountId: expenseAccount.id,
-        accountName: expenseAccount.name,
-        amountCents: expenseAmount, // Debit
-        description: `Expense posting for Bill ${billNum}`,
-        exchangeRate: rate
-      });
-    }
-    if (taxAmount > 0) {
-      accrualLines.push({
-        accountId: taxAccount.id,
-        accountName: taxAccount.name,
-        amountCents: taxAmount, // Debit
-        description: `Tax on Bill ${billNum}`,
-        exchangeRate: rate
-      });
-    }
-    accrualLines.push({
-      accountId: apAccount.id,
-      accountName: apAccount.name,
-      amountCents: -amount, // Credit
-      description: `Accounts Payable posting for Bill ${billNum}`,
-      exchangeRate: rate
+    const accrualLines = TransactionTemplates.buildBillLines({
+      billNumber: String(billNum),
+      vendorName: vendor,
+      totalCents: amount,
+      taxCents: taxAmount,
+      exchangeRate: rate,
+      apAccount,
+      expenseAccount,
+      taxAccount
     });
 
     const accrualTx = {

@@ -2,6 +2,19 @@ import { AhoCorasick, lexicalSimilarity, optimizedTransactionSimilarity, Bayesia
 import { Transaction, AutoRule, DimensionNode } from '../types';
 import { extractMultiDimensionalLabels, expandDeepLabels, decomposeHierarchicalLabel } from './dimensionUtils';
 
+export interface MatchingClaim {
+  accountName: string;
+  confidence: number;
+  status: 'AUTO_POSTED' | 'REVIEW_REQUIRED';
+  provenance: {
+    layer: string;
+    description: string;
+    evidence: string;
+  };
+  tags?: string[];
+  dimensions?: Record<string, string>;
+}
+
 /**
  * Deterministic Entity Resolution & Matching Engine
  * Implements Layer 2 of the LedgerFlow Architecture.
@@ -404,6 +417,27 @@ export class MatchingEngine {
     }
 
     return suggestions;
+  }
+
+  /**
+   * Evaluates input description and returns an explicit AI Claim carrying provenance and evidence.
+   */
+  resolveClaim(description: string): MatchingClaim {
+    const debug = this.debugResolveCategory(description);
+    const confidence = debug.confidence ?? (debug.layer.startsWith('Rule') || debug.layer.startsWith('Exact') ? 1.0 : 0.7);
+    const isHighConfidence = confidence >= this.threshold && (debug.layer.startsWith('Rule') || debug.layer.startsWith('Exact'));
+
+    return {
+      accountName: debug.accountName,
+      confidence,
+      status: isHighConfidence ? 'AUTO_POSTED' : 'REVIEW_REQUIRED',
+      provenance: {
+        layer: debug.layer,
+        description,
+        evidence: `Matched via ${debug.layer} (confidence: ${(confidence * 100).toFixed(0)}%)`
+      },
+      dimensions: debug.dimensions
+    };
   }
 
   /**
