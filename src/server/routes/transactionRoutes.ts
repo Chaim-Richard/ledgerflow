@@ -613,6 +613,38 @@ transactionRouter.post('/reconcile', async (req, res) => {
   }
 });
 
+transactionRouter.patch('/bank-lines/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { workspaceId, ...updatePayload } = req.body;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Missing workspaceId' });
+    }
+    const user = (req as any).user;
+    const db = getDb();
+    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+    if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+
+    const lineRef = db.collection('bankLines').doc(id);
+    const lineSnap = await lineRef.get();
+    if (!lineSnap.exists || lineSnap.data()?.workspaceId !== workspaceId) {
+      return res.status(404).json({ error: `Bank line ${id} not found in workspace` });
+    }
+
+    // Strict allowlist validation (#78) - rejects any unknown or protected properties
+    const validatedData = BankLineUpdateSchema.parse(updatePayload);
+    await lineRef.update({ ...validatedData, updatedAt: FieldValue.serverTimestamp() });
+    res.json({ status: 'ok', id, data: validatedData });
+  } catch (e: any) {
+    if (e.name === 'ZodError') {
+      return res.status(400).json({ error: 'Schema validation failed', details: e.issues });
+    }
+    res.status(400).json({ error: e.message });
+  }
+});
+
 
 // ==========================================
 // PROGRAMMATIC RECONCILIATION API (B2B)

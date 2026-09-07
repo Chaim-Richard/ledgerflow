@@ -1,6 +1,18 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
 
+/**
+ * Normalizes taxRate input into a canonical decimal fraction (e.g. 8.25% -> 0.0825).
+ * Accepts percentage numbers (e.g. 5, 8.25, 10, 100) or decimal fractions (0.05, 0.0825, 1.0).
+ */
+export function normalizeTaxRate(rate: any): number {
+  if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) return 0;
+  if (rate > 1) {
+    return rate / 100;
+  }
+  return rate;
+}
+
 export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
   id: 'sales-tax-liability',
   name: 'Sales Tax Liability',
@@ -98,20 +110,15 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
 
     relevantInvoices.forEach((inv: any) => {
       const customer = customers.find((c: any) => c.id === inv.customerId);
-      let jurisdiction = 'Unknown';
-
-      if (sourcingRule === 'origin') {
-        jurisdiction = inv.originState || (ctx as any).workspace?.state || 'Origin State';
-      } else {
-        // Destination sourcing priority: Ship-to state -> Tax jurisdiction -> Customer shipping/billing state
-        jurisdiction = inv.shippingAddress?.state || 
-                       inv.taxJurisdiction || 
-                       customer?.shippingAddress?.state || 
-                       customer?.state || 
-                       inv.billingAddress?.state || 
-                       customer?.billingAddress?.state || 
-                       (inv.taxRate && inv.taxRate > 0 ? 'Taxable Region (Unknown)' : 'Exempt / Non-Taxable');
-      }
+      const jurisdiction = sourcingRule === 'origin'
+        ? (inv.originState || (ctx as any).workspace?.state || 'Origin State')
+        : (inv.shippingAddress?.state || 
+           inv.taxJurisdiction || 
+           customer?.shippingAddress?.state || 
+           customer?.state || 
+           inv.billingAddress?.state || 
+           customer?.billingAddress?.state || 
+           (inv.taxRate && inv.taxRate > 0 ? 'Taxable Region (Unknown)' : 'Exempt / Non-Taxable'));
 
       if (selectedJurisdiction && jurisdiction !== selectedJurisdiction && jurisdiction !== 'Unknown') {
         return;
@@ -134,9 +141,9 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
         inv.paymentTransactionIds.forEach((ptId: string) => sourceTransactionIds.add(ptId));
       }
 
-      const taxRate = inv.taxRate || 0;
-      let taxCents = 0;
-      let taxableSalesCents = 0;
+      const taxRate = normalizeTaxRate(inv.taxRate);
+      let taxCents: number;
+      let taxableSalesCents: number;
 
       // Prefer exact recorded taxAmountCents if present on invoice
       if (typeof inv.taxAmountCents === 'number' && inv.taxAmountCents > 0) {
@@ -152,6 +159,9 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
           taxableSalesCents = salesCents;
           taxCents = Math.round(salesCents * taxRate);
         }
+      } else {
+        taxableSalesCents = salesCents;
+        taxCents = 0;
       }
 
       totalSales += salesCents;

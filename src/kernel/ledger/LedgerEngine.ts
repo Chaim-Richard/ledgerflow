@@ -123,9 +123,12 @@ export class LedgerEngine {
               ? (line as any).exchangeRate
               : ((typeof tx.exchangeRate === 'number' && tx.exchangeRate > 0 && Number.isFinite(tx.exchangeRate)) ? tx.exchangeRate : 1);
             
-            // #90: Enforce Number.isSafeInteger after FX conversion
+            // #90: Enforce Number.isSafeInteger after FX conversion - fail closed on overflow
             const rawConverted = Math.round(rawAmount * rate);
-            const amount = Number.isSafeInteger(rawConverted) ? rawConverted : (rawConverted > 0 ? Number.MAX_SAFE_INTEGER : -Number.MAX_SAFE_INTEGER);
+            if (!Number.isSafeInteger(rawConverted)) {
+              throw new Error(`Monetary overflow: Converted FX amount ${rawConverted} exceeds safe integer bounds for transaction ${tx.id || 'unknown'}.`);
+            }
+            const amount = rawConverted;
             return { line, amount, rawAmount, rate };
           });
 

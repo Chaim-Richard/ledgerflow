@@ -610,6 +610,7 @@ export interface FilterCriteria {
   selectedTypes?: string[];
   selectedClasses?: string[];
   selectedLocations?: string[];
+  includeSimulations?: boolean;
 }
 
 export interface User {

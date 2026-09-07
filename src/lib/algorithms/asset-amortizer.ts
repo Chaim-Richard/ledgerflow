@@ -55,7 +55,6 @@ export const assetAmortizer: AlgorithmDefinition = {
 
     const caAccts = accounts.filter(isFixedAssetAccount).map(a => a.id);
     let assetBaseCents = 0;
-    let usingFallback = false;
     
     txs.forEach(t => {
       if (!isPostable(t)) return;
@@ -75,15 +74,19 @@ export const assetAmortizer: AlgorithmDefinition = {
       });
     }
 
-    // Fallback only if no fixed asset accounts exist at all
-    if (assetBaseCents === 0 && caAccts.length === 0 && txs.length > 0) {
-      usingFallback = true;
-      txs.forEach(t => {
-        if (!isPostable(t)) return;
-        if (t.totalAmountCents >= 200000 && (t.type === 'adjustment' || t.type === 'journal')) {
-          assetBaseCents += t.totalAmountCents;
-        }
-      });
+    // Explicit classification required - fail safe if no fixed asset base is identified (#95)
+    if (assetBaseCents === 0) {
+      return {
+        metrics: [
+          { label: 'Identified Capital Base', value: '$0', color: 'gray' },
+          { label: 'Status', value: 'Insufficient Data', color: 'amber' }
+        ],
+        charts: [],
+        insights: [
+          'No fixed or depreciable asset accounts (equipment, machinery, vehicles, buildings, leasehold) identified in the ledger.',
+          'Please configure fixed asset accounts in the Chart of Accounts or record asset additions to model depreciation schedules.'
+        ]
+      };
     }
 
     const assetBase = assetBaseCents / 100;
@@ -167,9 +170,7 @@ export const assetAmortizer: AlgorithmDefinition = {
         }
       ],
       insights: [
-        usingFallback 
-          ? `Could not definitively isolate 'Asset' accounts. Approximated capital base using transactions over $2,000.`
-          : `Isolated $${assetBase.toLocaleString()} in gross fixed assets from the ledger.`,
+        `Isolated $${assetBase.toLocaleString()} in gross fixed assets from the ledger.`,
         `Employing a Double-Declining Balance (DDB) method front-loads depreciation, creating an additional $${earlyYearAdvantage.toLocaleString()} in Year 1 expenses.`,
         `At a ${inputs.taxRate}% corporate tax rate, DDB provides a Year 1 cash flow (tax shield) advantage of $${taxShieldAdvantage.toLocaleString()} over Straight-Line.`
       ]

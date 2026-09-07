@@ -40,18 +40,20 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
   }, [toolId]);
   
   // Custom user inputs per algorithm
+  const [prevAlgoId, setPrevAlgoId] = useState(algorithm.id);
   const [params, setParams] = useState<Record<string, any>>(() => {
     const init: Record<string, any> = {};
     algorithm.inputs.forEach((i: any) => init[i.key] = i.defaultValue);
     return init;
   });
 
-  // Automatically reset parameters when switching active algorithm
-  useEffect(() => {
+  // Automatically reset parameters during render when switching active algorithm
+  if (prevAlgoId !== algorithm.id) {
+    setPrevAlgoId(algorithm.id);
     const init: Record<string, any> = {};
     algorithm.inputs.forEach((i: any) => init[i.key] = i.defaultValue);
     setParams(init);
-  }, [algorithm]);
+  }
 
   // Re-run anytime params change, using REAL user dataset
   const results = useMemo(() => {

@@ -4,12 +4,13 @@ import { jaroWinklerSimilarity } from '../lib/algorithms';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { format } from 'date-fns';
 import { parseLocalDate, resolveAccountName } from '../lib/utils';
+import { isSimulationTransaction } from './txFilters';
 
 // RULES PATTERN ENGINE: Pre-compiled static regex for maximum pipeline throughput
 export const PATTERNS = {
-  OP: /([><=])\s*([\d,]+(\.\d+)?)/,
-  TEXT_OP: /(greater than|more than|over|above|less than|under|below|at least|at most|around|about|approx|approximately)\s*([\d,]+(\.\d+)?)/,
-  RANGE: /between\s*([\d,]+(\.\d+)?)\s*and\s*([\d,]+(\.\d+)?)/,
+  OP: /(>=|<=|[><=])\s*([\d,]+(?:\.\d+)?)/,
+  TEXT_OP: /(greater than|more than|over|above|less than|under|below|at least|at most|around|about|approx|approximately)\s*([\d,]+(?:\.\d+)?)/,
+  RANGE: /between\s*([\d,]+(?:\.\d+)?)\s*and\s*([\d,]+(?:\.\d+)?)/,
   PERCENTILE: /\b(top|bottom)\s*(10|25|50)\s*%?\b/,
   MONTH: /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/,
   YEAR: /\b(20\d{2})\b/,
@@ -72,7 +73,10 @@ export class TransactionQueryEngine {
       : (viewSearch || '');
     const hasSearch = effectiveSearchTerm.trim().length > 0;
     
-    if (!hasFilter && !hasSearch && !activeView) return normalized;
+    const allowSimulations = Boolean(filterCriteria?.includeSimulations || (activeView?.filter as any)?.includeSimulations);
+    if (!hasFilter && !hasSearch && !activeView) {
+      return allowSimulations ? normalized : normalized.filter(t => !isSimulationTransaction(t));
+    }
 
     const lowerSearch = effectiveSearchTerm.toLowerCase().trim();
     
@@ -261,7 +265,7 @@ export class TransactionQueryEngine {
 
     // Precalculate parsed parameters for Range Logic
     const rangeMin = rangeMatch ? TruthEngine.parseAmountToCents(rangeMatch[1]) / 100 : 0;
-    const rangeMax = rangeMatch ? TruthEngine.parseAmountToCents(rangeMatch[4]) / 100 : 0;
+    const rangeMax = rangeMatch ? TruthEngine.parseAmountToCents(rangeMatch[2]) / 100 : 0;
 
     // Precalculate Month Logic
     const parsedMonthIdx = (() => {
@@ -291,6 +295,12 @@ export class TransactionQueryEngine {
     return normalized.filter(t => {
       // Identity Consistency Guard
       if (!t.id || !t._normalized) return false;
+
+      // #100: Ghost / simulation / forecast isolation from normal queries unless explicitly requested
+      const allowSimulations = Boolean(filterCriteria?.includeSimulations || (activeView?.filter as any)?.includeSimulations);
+      if (!allowSimulations && isSimulationTransaction(t)) {
+        return false;
+      }
 
       // Active View (Saved Search & Filters)
       if (activeView) {
@@ -456,13 +466,17 @@ export class TransactionQueryEngine {
         if (isMatch && opVal) {
           const amt = t._normalized.absAmount;
           if (opVal.op === '>' && !(amt > opVal.val)) isMatch = false;
+          else if (opVal.op === '>=' && !(amt >= opVal.val)) isMatch = false;
           else if (opVal.op === '<' && !(amt < opVal.val)) isMatch = false;
+          else if (opVal.op === '<=' && !(amt <= opVal.val)) isMatch = false;
           else if (opVal.op === '=' && !(Math.abs(amt - opVal.val) < 0.01)) isMatch = false;
         } 
         else if (isMatch && textOp) {
           const actualAmt = t._normalized.absAmount;
           if (textOp.op === '>') { if (!(actualAmt > textOp.val)) isMatch = false; }
+          else if (textOp.op === '>=') { if (!(actualAmt >= textOp.val)) isMatch = false; }
           else if (textOp.op === '<') { if (!(actualAmt < textOp.val)) isMatch = false; }
+          else if (textOp.op === '<=') { if (!(actualAmt <= textOp.val)) isMatch = false; }
           else if (textOp.op === '~') { if (!(actualAmt >= textOp.val * 0.9 && actualAmt <= textOp.val * 1.1)) isMatch = false; }
         }
         else if (isMatch && rangeMatch) {
