@@ -22,7 +22,7 @@ function extractAffectedKeys(rulesContent: string, matchBlockName: string): stri
 }
 
 describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
-  test('workspaces rule allowlist includes all Workspace interface fields', () => {
+  test('workspaces rule allowlist strictly matches Workspace interface fields with no unexpected extras', () => {
     const keys = extractAffectedKeys(rulesText, 'workspaces');
     assert.ok(keys.length > 0, 'Should find affectedKeys for workspaces in firestore.rules');
 
@@ -43,9 +43,12 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
         `firestore.rules workspaces allowlist missing key '${key}'`
       );
     }
+
+    const extra = keys.filter(k => !expectedWorkspaceKeys.includes(k));
+    assert.equal(extra.length, 0, `workspaces rules permit fields absent from expected model: ${extra.join(', ')}`);
   });
 
-  test('transactions rule allowlist includes all Transaction interface fields', () => {
+  test('transactions rule allowlist strictly matches Transaction interface fields with no unexpected extras', () => {
     const keys = extractAffectedKeys(rulesText, 'transactions');
     assert.ok(keys.length > 0, 'Should find affectedKeys for transactions in firestore.rules');
 
@@ -68,6 +71,9 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
         `firestore.rules transactions allowlist missing key '${key}'`
       );
     }
+
+    const extra = keys.filter(k => !expectedTransactionKeys.includes(k));
+    assert.equal(extra.length, 0, `transactions rules permit fields absent from expected model: ${extra.join(', ')}`);
   });
 
   test('chartAccounts rule allowlist includes isActive field', () => {

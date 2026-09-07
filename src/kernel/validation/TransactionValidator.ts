@@ -3,6 +3,7 @@ import { DoubleEntryValidator } from './DoubleEntryValidator';
 import { getDb } from '../../server/db/firestore';
 import { TransactionSchema } from '../../schemas';
 import { getAbsoluteTotal } from '../../lib/txFilters';
+import { SecurityService } from '../../services/securityService';
 
 export interface ValidationContext {
   workspaceId: string;
@@ -120,6 +121,23 @@ export class TransactionValidator {
     // 5. Double Entry
     DoubleEntryValidator.validateJournalEntry(validatedTx);
     
+    // 6. Server-Authoritative Forensic Hash Stamping
+    if (process.env.SYSTEM_SALT) {
+      try {
+        const forensicHash = SecurityService.generateForensicHash(validatedTx);
+        validatedTx.verification = {
+          ...validatedTx.verification,
+          status: 'verified',
+          verifiedAt: new Date().toISOString(),
+          verifiedBy: 'server-vault',
+          timestamp: new Date().toISOString(),
+          hash: forensicHash
+        };
+      } catch (_e) {
+        // Fallback gracefully if salt error in non-prod test harness
+      }
+    }
+
     return validatedTx;
   }
 }

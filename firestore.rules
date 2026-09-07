@@ -75,6 +75,7 @@ service cloud.firestore {
         isUnchanged("plan") && isUnchanged("computeCreditBalance") && isUnchanged("apiQuotaMonthlyLimitCents") && isUnchanged("maxSeats") && isUnchanged("concurrentUserLimit") &&
         isUnchanged("apiQuotaTotalCentsUsed") && isUnchanged("stripeCustomerId") && isUnchanged("seatCount") &&
         isUnchanged("billingCycle") && isUnchanged("status") && isUnchanged("lockedUntilDate") &&
+        isUnchanged("bypassBilling") && isUnchanged("stripeSubscriptionId") &&
         affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore", "defaultAccountMappings", "dimensions", "dimensionNodes", "allowedWorldPaths", "bypassBilling", "members"]);
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
