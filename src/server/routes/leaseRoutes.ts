@@ -1,7 +1,7 @@
 import express from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
-import { getDb, validateWorkspaceMember, assertPeriodOpen } from '../db/firestore';
+import { getDb, assertPeriodOpen } from '../db/firestore';
 import { Transaction } from '../../types';
 
 export const leaseRouter = express.Router();
@@ -20,6 +20,14 @@ leaseRouter.post('/capitalize', async (req, res) => {
       return res.status(400).json({ error: "pvAmountCents must be a positive integer." });
     }
 
+    // 1. Authorize workspace membership FIRST before checking idempotency (#82)
+    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+    const wsData = wsDoc.data();
+    if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+
+    // 2. Check idempotency record AFTER authorization (#82)
     const idempotencyKey = (req.headers['idempotency-key'] as string) || (leaseName ? `lease_${leaseName.toLowerCase().replace(/[^a-z0-9]/g, '_')}` : undefined);
     if (idempotencyKey) {
       const idempDoc = await db.collection('idempotencyKeys').doc(`${workspaceId}_lease_${idempotencyKey}`).get();
@@ -30,16 +38,8 @@ leaseRouter.post('/capitalize', async (req, res) => {
 
     const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
 
-    // 1. Validate workspace membership
-    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-    const wsData = wsDoc.data();
-    if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
-      return res.status(403).json({ error: 'Not a member' });
-    }
-
-    // 2. Validate period lock
+    // 3. Validate period lock
     await assertPeriodOpen(db, workspaceId, txDate);
-
 
     const tx = {
       id: db.collection("transactions").doc().id,
@@ -48,39 +48,38 @@ leaseRouter.post('/capitalize', async (req, res) => {
       date: txDate,
       description: `ASC 842 Initial Recognition: ${leaseName || 'Operating Lease'}`,
       totalAmountCents: pvAmountCents,
-      type: 'journal',
-      status: 'approved',
+      currency: 'USD',
+      type: 'journal' as const,
+      status: 'approved' as const,
       isCleared: true,
+      createdAt: new Date().toISOString(),
       lines: [
         {
-          id: `line-1`,
+          id: 'line-1',
           accountId: rouAssetAccountId,
-          accountName: rouAcc.name,
           amountCents: pvAmountCents, // Debit Asset
           description: 'Capitalize PV of lease payments'
         },
         {
-          id: `line-2`,
+          id: 'line-2',
           accountId: leaseLiabilityAccountId,
-          accountName: liabilityAcc.name,
           amountCents: -pvAmountCents, // Credit Liability
           description: 'Recognize lease liability'
         }
       ]
     };
 
-    // Double entry check
-    // DoubleEntryValidator.validateJournalEntry(tx as any);
-    await TransactionValidator.validateAndPrepare(tx as Transaction, {
-        workspaceId,
-        user: { uid: user.uid, admin: user.admin },
-        wsData
+    // 4. Validate through canonical validator (#102-R)
+    const validatedTx = await TransactionValidator.validateAndPrepare(tx, {
+      workspaceId,
+      user: { uid: user.uid, admin: user.admin },
+      wsData
     });
 
     const responsePayload = {
       status: 'ok',
       message: 'ASC 842 Lease capitalized successfully.',
-      transactionId: tx.id
+      transactionId: validatedTx.id
     };
 
     let resultResponse = responsePayload;
@@ -95,8 +94,8 @@ leaseRouter.post('/capitalize', async (req, res) => {
         }
       }
 
-      const txRef = db.collection('transactions').doc(tx.id);
-      t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      const txRef = db.collection('transactions').doc(validatedTx.id);
+      t.set(txRef, { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
 
       if (idempotencyKey) {
         const idempRef = db.collection('idempotencyKeys').doc(`${workspaceId}_lease_${idempotencyKey}`);
@@ -110,7 +109,6 @@ leaseRouter.post('/capitalize', async (req, res) => {
 
     res.json(resultResponse);
   } catch (e: any) {
-    res.status(e.message?.includes('Unauthorized') ? 403 : 400).json({ error: e.message });
+    res.status(e.message?.includes('Unauthorized') || e.message?.includes('Forbidden') ? 403 : 400).json({ error: e.message });
   }
 });
-

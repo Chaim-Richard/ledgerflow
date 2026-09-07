@@ -1,7 +1,7 @@
 import express from 'express';
-import { getFirestore } from 'firebase-admin/firestore';
 import crypto from 'crypto';
-import { z } from 'zod';
+import { getDb } from '../db/firestore';
+import { getTrustedAppUrl } from '../utils/urlHelper';
 
 export const invoiceEmailRouter = express.Router();
 
@@ -15,7 +15,7 @@ invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const db = getFirestore();
+    const db = getDb();
     
     // Verify user is a member of the workspace
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
@@ -43,37 +43,42 @@ invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
       paymentToken = `pay_${crypto.randomBytes(32).toString('hex')}`;
       await invoiceRef.update({
         paymentToken,
-        status: invoice.status === 'draft' || invoice.status === 'pending' ? 'sent' : invoice.status,
         metadata: {
           ...invoice.metadata,
-          lastSentAt: new Date().toISOString(),
-          sentTo: toEmail
-        }
-      });
-    } else {
-      await invoiceRef.update({
-        status: invoice.status === 'pending' || invoice.status === 'draft' ? 'sent' : invoice.status,
-        metadata: {
-          ...invoice.metadata,
-          lastSentAt: new Date().toISOString(),
-          sentTo: toEmail
+          tokenCreatedAt: new Date().toISOString()
         }
       });
     }
 
-    const host = (req.get('host') || 'localhost:3000').replace(/[^a-zA-Z0-9.:-]/g, '');
-    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
-    const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+    // Resolve trusted URL without host-header poisoning (#85)
+    const baseUrl = getTrustedAppUrl(req);
     const invoiceUrl = `${baseUrl}/i/${paymentToken}`;
 
-    // Here we would normally use Resend or Postmark.
-    // e.g. await resend.emails.send({ ... })
-    console.log(`[Email Service Mock] Sending invoice ${invoice.number} to ${toEmail}`);
-    console.log(`[Email Service Mock] Subject: ${subject}`);
-    console.log(`[Email Service Mock] Payment Link: ${invoiceUrl}`);
-    console.log(`[Email Service Mock] Body: ${body}`);
+    // #84 - Honest email delivery: check if an actual email service provider is configured
+    const hasEmailService = Boolean(process.env.RESEND_API_KEY || process.env.POSTMARK_SERVER_TOKEN || process.env.SENDGRID_API_KEY || process.env.SMTP_HOST);
 
-    res.json({ success: true, paymentToken, invoiceUrl });
+    if (!hasEmailService) {
+      return res.status(503).json({
+        success: false,
+        delivered: false,
+        error: 'EMAIL_SERVICE_NOT_CONFIGURED',
+        message: 'No external email delivery service (RESEND_API_KEY, POSTMARK_SERVER_TOKEN, or SENDGRID_API_KEY) is configured on this server.',
+        paymentToken,
+        invoiceUrl
+      });
+    }
+
+    // Update invoice status to 'sent' ONLY upon actual delivery
+    await invoiceRef.update({
+      status: invoice.status === 'draft' || invoice.status === 'pending' ? 'sent' : invoice.status,
+      metadata: {
+        ...invoice.metadata,
+        lastSentAt: new Date().toISOString(),
+        sentTo: toEmail
+      }
+    });
+
+    res.json({ success: true, delivered: true, paymentToken, invoiceUrl });
   } catch (err) {
     console.error('Error sending invoice email:', err);
     res.status(500).json({ error: 'Internal server error' });

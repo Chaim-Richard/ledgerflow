@@ -144,12 +144,13 @@ export default function Dashboard() {
         workspaceId: 'ghost-workspace',
         date: g.date,
         description: g.description,
-        totalAmountCents: g.amountCents,
+        totalAmountCents: Math.abs(g.amountCents || 0),
         currency: 'USD',
         status: 'completed' as const,
         type: 'forecast' as const,
         schemaVersion: '1.1',
         tags: ['scenario', 'ghost'],
+        metadata: { isGhost: true },
         lines: [
           {
             accountId: isExpense ? 'expense-acc' : 'asset-acc',

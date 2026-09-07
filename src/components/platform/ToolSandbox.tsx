@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, Play, CheckCircle2, BarChart3, ListFilter, ArrowUpRight, Download, FileSpreadsheet } from 'lucide-react';
+import { X, Play, CheckCircle2, BarChart3, ListFilter, ArrowUpRight, Download, FileSpreadsheet, RotateCcw } from 'lucide-react';
 import { LineChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
 import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -45,6 +45,13 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
     algorithm.inputs.forEach((i: any) => init[i.key] = i.defaultValue);
     return init;
   });
+
+  // Automatically reset parameters when switching active algorithm
+  useEffect(() => {
+    const init: Record<string, any> = {};
+    algorithm.inputs.forEach((i: any) => init[i.key] = i.defaultValue);
+    setParams(init);
+  }, [algorithm]);
 
   // Re-run anytime params change, using REAL user dataset
   const results = useMemo(() => {
@@ -137,11 +144,25 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
            {/* Parameters Pane */}
            <div className="w-full md:w-80 border-b md:border-r md:border-b-0 border-[var(--line)] bg-[var(--surface)] dark:bg-[#1b1c1d] flex flex-col shrink-0">
-              <div className="p-6 border-b border-[var(--line)]">
-                 <h3 className="text-xs font-black uppercase tracking-wider text-[var(--text)] dark:text-white flex items-center gap-2">
-                    <Play size={14} className="text-indigo-600" /> Analysis Parameters
-                 </h3>
-                 <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1 opacity-60">Tune computational vectors</p>
+              <div className="p-6 border-b border-[var(--line)] flex items-center justify-between">
+                 <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-[var(--text)] dark:text-white flex items-center gap-2">
+                       <Play size={14} className="text-indigo-600" /> Analysis Parameters
+                    </h3>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1 opacity-60">Tune computational vectors</p>
+                 </div>
+                 <button
+                    type="button"
+                    title="Reset to defaults"
+                    onClick={() => {
+                      const init: Record<string, any> = {};
+                      algorithm.inputs.forEach((i: any) => init[i.key] = i.defaultValue);
+                      setParams(init);
+                    }}
+                    className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--line)] text-slate-400 hover:text-[var(--text)] transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
+                 >
+                    <RotateCcw size={12} /> Reset
+                 </button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                  {algorithm.inputs.map((inp: any) => {

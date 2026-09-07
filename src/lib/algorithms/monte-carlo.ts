@@ -1,6 +1,7 @@
 import { resolveAccountRole } from '../accountUtils';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { standardDeviation, mean } from './math';
+import { isPostable, isCashAccount, lineAmount } from '../txFilters';
 
 export const MONTE_CARLO_ALGO: AlgorithmDefinition = {
   id: 'planning_4',
@@ -35,39 +36,33 @@ export const MONTE_CARLO_ALGO: AlgorithmDefinition = {
     const dailyNet: Record<string, number> = {};
     let currentCashCents = 0;
 
-    // We assume asset/bank accounts indicate current cash
+    // Isolate authentic Cash and Cash Equivalent accounts
     accounts.forEach(acc => {
-      if (resolveAccountRole(acc) === 'cash') {
+      if (resolveAccountRole(acc) === 'cash' || isCashAccount(acc)) {
         currentCashCents += acc.balanceCents || 0;
       }
     });
 
-    // Fallback if no cash accounts identified clearly
-    if (currentCashCents === 0 && accounts.length > 0) {
-      currentCashCents = accounts.reduce((sum, a) => sum + (a.balanceCents || 0), 0);
-    }
-
     transactions.forEach(t => {
-      if (t.status === 'void' || t.status === 'pending') return;
+      if (!isPostable(t)) return;
       const dateKey = t.date.split('T')[0];
-      if (!dailyNet[dateKey]) dailyNet[dateKey] = 0;
       
-      // Net impact is computed via sum of lines where account is Asset/Bank
-      // A more robust way: sum of lines where account is Asset/Bank
+      // Net cash flow is strictly the movement in Cash accounts
       let netImpact = 0;
+      let hasCashMovement = false;
       t.lines.forEach(l => {
         const acc = accounts.find(a => a.id === l.accountId);
-        if (acc && resolveAccountRole(acc) === 'cash') {
-           netImpact += l.amountCents;
+        if (acc && (resolveAccountRole(acc) === 'cash' || isCashAccount(acc))) {
+          hasCashMovement = true;
+          netImpact += lineAmount(l, t); // Debits increase cash (positive), credits decrease cash (negative)
         }
       });
-      if (netImpact === 0) {
-        // Fallback: use totalAmountCents but guess direction
-        // In a double-entry ledger, totalAmountCents is just the absolute sum / 2.
-        // We will just use the first line's sign if no bank account is identified.
-        netImpact = t.lines[0]?.amountCents || 0;
+      
+      // Non-cash transactions (e.g. depreciation, equity swaps) have exactly zero cash impact
+      if (hasCashMovement) {
+        if (dailyNet[dateKey] === undefined) dailyNet[dateKey] = 0;
+        dailyNet[dateKey] += netImpact;
       }
-      dailyNet[dateKey] += netImpact;
     });
 
     const historicalDailyFlows = Object.values(dailyNet);

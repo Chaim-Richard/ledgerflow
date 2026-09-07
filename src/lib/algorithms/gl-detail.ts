@@ -58,13 +58,35 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
 
     // 3. Flatten into rows (one row per matching entry)
     let runningBalance = 0;
+    
+    // If filtered to a specific account and period has a start date, calculate starting balance
+    if (accountId && startDate) {
+      transactions.forEach(t => {
+        if (!isPostable(t)) return;
+        const txDate = parseLocalDate(t.date);
+        if (txDate < (startDate as Date)) {
+          t.lines.forEach(e => {
+            if (e.accountId === accountId) {
+              const account = accounts.find(a => a.id === e.accountId);
+              const isDebitNormal = account ? (accounting.isAsset(account.id) || accounting.isExpense(account.id) || accounting.isCOGS(account.id)) : true;
+              const amt = lineAmount(e, t);
+              const debit = amt > 0 ? amt : 0;
+              const credit = amt < 0 ? Math.abs(amt) : 0;
+              const impact = isDebitNormal ? (debit - credit) : (credit - debit);
+              runningBalance += impact;
+            }
+          });
+        }
+      });
+    }
+
     const rows: any[] = [];
     const sourceTransactionIds = new Set<string>();
     let totalDebits = 0;
     let totalCredits = 0;
 
     relevantTxs.forEach(t => {
-      t.lines.forEach(e => {
+      t.lines.forEach((e, idx) => {
         if (accountId && e.accountId !== accountId) return; // Skip entries not for this account if filtered
         
         const account = accounts.find(a => a.id === e.accountId);
@@ -81,13 +103,13 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
         runningBalance += impact;
 
         rows.push({
-          id: `${t.id}_${e.accountId}`,
+          id: `${t.id}_${(e as any).id || idx}`,
           date: t.date,
-          account: account ? `${account.code} - ${account.name}` : e.accountId,
-          description: t.description || 'No description',
+          account: account ? `${account.code ? `${account.code} - ` : ''}${account.name}` : e.accountId,
+          description: e.description || t.description || 'No description',
           debit: debit > 0 ? formatCurrency(debit) : '',
           credit: credit > 0 ? formatCurrency(credit) : '',
-          balance: formatCurrency(runningBalance),
+          balance: accountId ? formatCurrency(runningBalance) : '-',
           sourceIds: [t.id]
         });
         sourceTransactionIds.add(t.id);

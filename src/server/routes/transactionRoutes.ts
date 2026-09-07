@@ -5,7 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { ClosingEntryEngine } from '../../kernel/ledger/ClosingEntryEngine';
-import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchema } from '../../schemas';
+import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchema, BankLineUpdateSchema } from '../../schemas';
 import { Transaction } from '../../types';
 import { parseLocalDate } from '../../lib/utils';
 import { getDb } from '../db/firestore';
@@ -397,6 +397,7 @@ transactionRouter.post('/bulk', async (req, res) => {
     const accountIdsToVerify = new Set<string>();
     const seenTxIds = new Set<string>();
 
+    const validatedTransactions: any[] = [];
     for (const tx of (transactions || [])) {
       if (tx.id) {
         if (seenTxIds.has(tx.id)) {
@@ -407,11 +408,12 @@ transactionRouter.post('/bulk', async (req, res) => {
       tx.uid = user.uid;
       tx.workspaceId = wsId;
       
-      await TransactionValidator.validateAndPrepare(tx, {
+      const validatedTx = await TransactionValidator.validateAndPrepare(tx, {
         workspaceId: wsId,
         user: { uid: user.uid, admin: user.admin },
         wsData
       });
+      validatedTransactions.push(validatedTx);
     }
 
     if (accountIdsToVerify.size > 0) {
@@ -451,12 +453,7 @@ transactionRouter.post('/bulk', async (req, res) => {
           }
         }
       }
-      for (const tx of (transactions || [])) {
-        if (!tx.id) tx.id = crypto.randomUUID();
-        if (!tx.totalAmountCents) {
-          tx.totalAmountCents = getAbsoluteTotal(tx);
-        }
-
+      for (const tx of validatedTransactions) {
         const txRef = db.collection('transactions').doc(tx.id);
         t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       }
@@ -559,9 +556,9 @@ transactionRouter.post('/reconcile', async (req, res) => {
             if (!lineSnap.exists || lineSnap.data()?.workspaceId !== workspaceId) {
               throw new Error(`Bank line ${op.id} does not belong to authorized workspace`);
             }
-            const safeData = { ...op.data };
-            delete safeData.workspaceId;
-            t.update(lineRef, { ...safeData, updatedAt: FieldValue.serverTimestamp() });
+            // Strict allowlist validation (#78)
+            const validatedData = BankLineUpdateSchema.parse(op.data);
+            t.update(lineRef, { ...validatedData, updatedAt: FieldValue.serverTimestamp() });
           } else if (op.type === 'updateTransaction') {
             const txRef = db.collection('transactions').doc(op.id);
             const txSnap = await t.get(txRef);
@@ -588,31 +585,20 @@ transactionRouter.post('/reconcile', async (req, res) => {
             if (txSnap.exists) {
               throw new Error(`Transaction ${op.id} already exists`);
             }
-            if (wsData?.lockDate && op.data?.date <= wsData.lockDate) {
-              throw new Error(`Cannot create transaction in locked period`);
-            }
             
-            const accountIds = Array.from(new Set<string>((op.data?.lines || []).map((l: any) => l.accountId).filter(Boolean)));
-            if (accountIds.length > 0) {
-              const accRefs = accountIds.map(id => db.collection('chartAccounts').doc(id));
-              const accSnaps = await t.getAll(...accRefs);
-              for (const snap of accSnaps) {
-                if (!snap.exists || snap.data()?.workspaceId !== workspaceId) {
-                  throw new Error(`Account ${snap.id} does not belong to authorized workspace`);
-                }
-              }
-            }
-
             const payload = {
               ...op.data,
               id: op.id,
               workspaceId,
               uid: user.uid,
-              createdAt: FieldValue.serverTimestamp(),
-              updatedAt: FieldValue.serverTimestamp()
+              createdAt: op.data?.createdAt || new Date().toISOString()
             };
-            DoubleEntryValidator.validateJournalEntry(payload);
-            t.set(txRef, payload);
+            const validatedTx = await TransactionValidator.validateAndPrepare(payload, {
+              workspaceId,
+              user: { uid: user.uid, admin: user.admin },
+              wsData
+            }, undefined, t);
+            t.set(txRef, { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
           } else {
             throw new Error(`Unsupported operation type: ${op.type}`);
           }
@@ -859,9 +845,11 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
       date: today,
       description: `Month-End FX Revaluation to ${targetCurr}`,
       totalAmountCents: Math.abs(totalAdjustmentCents),
-      type: 'journal',
-      status: 'completed',
+      currency: baseCurrency,
+      type: 'journal' as const,
+      status: 'approved' as const,
       isCleared: true,
+      createdAt: new Date().toISOString(),
       lines: [
         ...revalLines,
         {
@@ -874,9 +862,15 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
       ]
     };
 
+    const validatedRevalTx = await TransactionValidator.validateAndPrepare(revalTx, {
+      workspaceId,
+      user: { uid: user.uid, admin: user.admin },
+      wsData
+    });
+
     await db.runTransaction(async (t: any) => {
-      const txRef = db.collection('transactions').doc(revalTx.id);
-      t.set(txRef, { ...revalTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      const txRef = db.collection('transactions').doc(validatedRevalTx.id);
+      t.set(txRef, { ...validatedRevalTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     });
 
     res.json({

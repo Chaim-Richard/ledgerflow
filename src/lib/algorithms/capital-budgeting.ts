@@ -65,9 +65,9 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     const sortedYears = Object.keys(yearlyFlows).sort();
     let cashFlowArray = sortedYears.map(y => yearlyFlows[y]);
     
-    // Determine Initial Investment (Capex) from input or first negative year flow
+    // Determine Initial Investment (Capex): User explicit input takes strict precedence
     let initialInvestment = inputs['initialInvestment'] ?? 0;
-    if (cashFlowArray.length > 0 && cashFlowArray[0] < 0) {
+    if (initialInvestment === 0 && cashFlowArray.length > 0 && cashFlowArray[0] < 0) {
       initialInvestment = Math.abs(cashFlowArray[0]);
       cashFlowArray = cashFlowArray.slice(1);
     }

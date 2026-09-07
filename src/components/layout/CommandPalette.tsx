@@ -93,6 +93,12 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       }, `✨ Created project "${parsedIntent.projectName}"`);
       setQuery('');
       onClose();
+    } else if (parsedIntent.type === 'query' && parsedIntent.queryText) {
+      useUIStore.getState().setFilterCriteria({ search: parsedIntent.queryText });
+      useUIStore.getState().setActiveTab('transactions');
+      toast.info(`Filtered ledger for "${parsedIntent.queryText}"`);
+      setQuery('');
+      onClose();
     }
   };
 

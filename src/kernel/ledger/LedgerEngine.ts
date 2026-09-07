@@ -119,10 +119,14 @@ export class LedgerEngine {
           const convertedLines = tx.lines.map(line => {
             if (!line || typeof line !== 'object') return { line, amount: 0, rawAmount: 0, rate: 1 };
             const rawAmount = typeof line.amountCents === 'number' && Number.isSafeInteger(line.amountCents) ? line.amountCents : 0;
-            const rate = (typeof (line as any).exchangeRate === 'number' && (line as any).exchangeRate > 0)
+            const rate = (typeof (line as any).exchangeRate === 'number' && (line as any).exchangeRate > 0 && Number.isFinite((line as any).exchangeRate))
               ? (line as any).exchangeRate
-              : ((typeof tx.exchangeRate === 'number' && tx.exchangeRate > 0) ? tx.exchangeRate : 1);
-            return { line, amount: Math.round(rawAmount * rate), rawAmount, rate };
+              : ((typeof tx.exchangeRate === 'number' && tx.exchangeRate > 0 && Number.isFinite(tx.exchangeRate)) ? tx.exchangeRate : 1);
+            
+            // #90: Enforce Number.isSafeInteger after FX conversion
+            const rawConverted = Math.round(rawAmount * rate);
+            const amount = Number.isSafeInteger(rawConverted) ? rawConverted : (rawConverted > 0 ? Number.MAX_SAFE_INTEGER : -Number.MAX_SAFE_INTEGER);
+            return { line, amount, rawAmount, rate };
           });
 
           // Fix rounding errors for balanced transactions
@@ -147,19 +151,8 @@ export class LedgerEngine {
           convertedLines.forEach(({ line, amount }) => {
             if (!line || typeof line !== 'object') return;
             const accId = typeof line.accountId === 'string' ? line.accountId : '';
-            let accData = balances.get(accId);
-
-            // Fallback lookup if accountId is not found directly by ID (match by code or exact name)
-            if (!accData && balances.size > 0) {
-              const matchedAcc = accounts.find(a => 
-                a.id === accId || 
-                a.code === accId || 
-                (line.accountName && a.name.toLowerCase() === line.accountName.toLowerCase())
-              );
-              if (matchedAcc) {
-                accData = balances.get(matchedAcc.id);
-              }
-            }
+            // #89: Strict ID resolution - no silent guessing by code or name fallback
+            const accData = balances.get(accId);
 
             if (accData) {
               accData.total += amount;

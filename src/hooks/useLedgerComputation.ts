@@ -48,7 +48,7 @@ export function useLedgerComputation(
           workspaceId: 'simulation',
           date: format(date, 'yyyy-MM-dd'),
           description: `[GHOST] ${ghost.description}`,
-          totalAmountCents: ghost.type === 'income' ? ghost.amountCents : -ghost.amountCents,
+          totalAmountCents: Math.abs(ghost.amountCents || 0),
           currency: 'USD',
           status: 'pending',
           type: 'forecast',

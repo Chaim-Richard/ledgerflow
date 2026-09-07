@@ -1,7 +1,7 @@
 import express from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
-import { getDb, validateWorkspaceMember, assertPeriodOpen } from '../db/firestore';
+import { getDb, assertPeriodOpen } from '../db/firestore';
 import { Transaction } from '../../types';
 
 export const revenueRouter = express.Router();
@@ -20,6 +20,14 @@ revenueRouter.post('/recognize', async (req, res) => {
       return res.status(400).json({ error: "amountCents must be a positive integer." });
     }
 
+    // 1. Authorize workspace membership FIRST before checking idempotency (#82)
+    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+    const wsData = wsDoc.data();
+    if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
+      return res.status(403).json({ error: 'Not a member' });
+    }
+
+    // 2. Check idempotency record AFTER authorization (#82)
     const idempotencyKey = (req.headers['idempotency-key'] as string) || (contractId && periodId ? `${contractId}_${periodId}` : undefined);
     if (idempotencyKey) {
       const idempDoc = await db.collection('idempotencyKeys').doc(`${workspaceId}_rev_${idempotencyKey}`).get();
@@ -30,20 +38,8 @@ revenueRouter.post('/recognize', async (req, res) => {
 
     const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
 
-    // 1. Validate workspace membership
-    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-    const wsData = wsDoc.data();
-    if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
-      return res.status(403).json({ error: 'Not a member' });
-    }
-
-    // 2. Validate period lock
+    // 3. Validate period lock
     await assertPeriodOpen(db, workspaceId, txDate);
-
-    // 3. Validate accounts exist and belong to workspace
-    const accountMap = await validateWorkspaceAccounts(db, workspaceId, [deferredAccountId, revenueAccountId]);
-    const deferredAcc = accountMap.get(deferredAccountId)!;
-    const revenueAcc = accountMap.get(revenueAccountId)!;
 
     const tx = {
       id: db.collection("transactions").doc().id,
@@ -52,34 +48,38 @@ revenueRouter.post('/recognize', async (req, res) => {
       date: txDate,
       description: `ASC 606 Revenue Recognition for Contract ${contractId || 'Unknown'} (Period ${periodId || 'N/A'})`,
       totalAmountCents: amountCents,
-      type: 'journal',
-      status: 'approved',
+      currency: 'USD',
+      type: 'journal' as const,
+      status: 'approved' as const,
       isCleared: true,
+      createdAt: new Date().toISOString(),
       lines: [
         {
-          id: `line-1`,
+          id: 'line-1',
           accountId: deferredAccountId,
-          accountName: deferredAcc.name,
           amountCents: amountCents, // Debit Liability
           description: 'Recognized revenue - reducing liability'
         },
         {
-          id: `line-2`,
+          id: 'line-2',
           accountId: revenueAccountId,
-          accountName: revenueAcc.name,
           amountCents: -amountCents, // Credit Revenue
           description: 'Recognized revenue - increasing income'
         }
       ]
     };
 
-    // Double entry check
-    DoubleEntryValidator.validateJournalEntry(tx as any);
+    // 4. Validate through canonical validator (#102-R)
+    const validatedTx = await TransactionValidator.validateAndPrepare(tx, {
+      workspaceId,
+      user: { uid: user.uid, admin: user.admin },
+      wsData
+    });
 
     const responsePayload = {
       status: 'ok',
       message: 'Revenue recognized successfully (ASC 606 compliance).',
-      transactionId: tx.id
+      transactionId: validatedTx.id
     };
 
     let resultResponse = responsePayload;
@@ -94,8 +94,8 @@ revenueRouter.post('/recognize', async (req, res) => {
         }
       }
 
-      const txRef = db.collection('transactions').doc(tx.id);
-      t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      const txRef = db.collection('transactions').doc(validatedTx.id);
+      t.set(txRef, { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
 
       if (idempotencyKey) {
         const idempRef = db.collection('idempotencyKeys').doc(`${workspaceId}_rev_${idempotencyKey}`);
@@ -109,7 +109,6 @@ revenueRouter.post('/recognize', async (req, res) => {
 
     res.json(resultResponse);
   } catch (e: any) {
-    res.status(e.message?.includes('Unauthorized') ? 403 : 400).json({ error: e.message });
+    res.status(e.message?.includes('Unauthorized') || e.message?.includes('Forbidden') ? 403 : 400).json({ error: e.message });
   }
 });
-

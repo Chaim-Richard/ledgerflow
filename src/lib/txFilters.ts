@@ -1,12 +1,32 @@
 import { Transaction, TransactionLine, ChartAccount } from '../types';
 
 /**
- * Predicate to determine if a transaction is postable / active
- * Filters out void, failed, draft, and soft-deleted transactions.
+ * Checks if a transaction is a simulation/ghost transaction created for scenario forecasting
  */
-export function isPostable(t: Transaction): boolean {
+export function isSimulationTransaction(t: Transaction): boolean {
+  if (!t) return false;
+  return Boolean(
+    t.metadata?.isGhost || 
+    t.type === 'forecast' || 
+    (typeof t.id === 'string' && t.id.startsWith('ghost-')) || 
+    t.workspaceId === 'simulation' ||
+    t.workspaceId === 'ghost-workspace'
+  );
+}
+
+/**
+ * Predicate to determine if a transaction is postable / active
+ * Filters out void, failed, draft, soft-deleted, and by default simulation/ghost transactions.
+ */
+export function isPostable(t: Transaction): boolean;
+export function isPostable(t: Transaction, options: { includeSimulations?: boolean }): boolean;
+export function isPostable(t: Transaction, options?: any): boolean {
   if (!t) return false;
   if (t.status === 'void' || t.status === 'failed' || (t as any).status === 'draft' || t.deletedAt) {
+    return false;
+  }
+  const includeSimulations = typeof options === 'object' && options !== null && Boolean(options.includeSimulations);
+  if (!includeSimulations && isSimulationTransaction(t)) {
     return false;
   }
   return true;

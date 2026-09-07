@@ -2,6 +2,7 @@ import express from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import Decimal from 'decimal.js';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
+import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { getDb, validateWorkspaceMember, assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
 
 export const inventoryRouter = express.Router();
@@ -23,6 +24,9 @@ inventoryRouter.post('/cogs', async (req, res) => {
       return res.status(400).json({ error: "quantitySold must be a positive integer." });
     }
 
+    // 1. Validate workspace membership FIRST (#82)
+    const { data: wsData } = await validateWorkspaceMember(db, workspaceId, user);
+
     const idempotencyKey = req.headers['idempotency-key'] as string;
     if (idempotencyKey) {
       const idempDoc = await db.collection('idempotencyKeys').doc(`${workspaceId}_inv_${idempotencyKey}`).get();
@@ -32,9 +36,6 @@ inventoryRouter.post('/cogs', async (req, res) => {
     }
 
     const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
-
-    // 1. Validate workspace membership
-    await validateWorkspaceMember(db, workspaceId, user);
 
     // 2. Validate period lock
     await assertPeriodOpen(db, workspaceId, txDate);
@@ -74,9 +75,11 @@ inventoryRouter.post('/cogs', async (req, res) => {
       date: txDate,
       description: `Inventory COGS Recognition: ${itemName} (Qty: ${quantitySold})`,
       totalAmountCents: totalCogsCents,
-      type: 'journal',
-      status: 'approved',
+      currency: 'USD',
+      type: 'journal' as const,
+      status: 'approved' as const,
       isCleared: true,
+      createdAt: new Date().toISOString(),
       lines: [
         {
           id: `line-1`,
@@ -95,13 +98,17 @@ inventoryRouter.post('/cogs', async (req, res) => {
       ]
     };
 
-    // Double entry check
-    DoubleEntryValidator.validateJournalEntry(tx as any);
+    // Validate through canonical transaction validator (#102-R)
+    const validatedTx = await TransactionValidator.validateAndPrepare(tx, {
+      workspaceId,
+      user: { uid: user.uid, admin: user.admin },
+      wsData
+    });
 
     const responsePayload = {
       status: 'ok',
       message: 'Inventory COGS recorded successfully.',
-      transactionId: tx.id,
+      transactionId: validatedTx.id,
       unitCostCents: itemData.unitCostCents,
       totalCogsCents
     };
@@ -127,8 +134,8 @@ inventoryRouter.post('/cogs', async (req, res) => {
         }
       }
 
-      const txRef = db.collection('transactions').doc(tx.id);
-      t.set(txRef, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      const txRef = db.collection('transactions').doc(validatedTx.id);
+      t.set(txRef, { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       
       // Reduce on-hand inventory quantity
       const itemRef = db.collection('inventory').doc(itemId);
@@ -167,7 +174,7 @@ inventoryRouter.post('/adjust', async (req, res) => {
       return res.status(400).json({ error: "Missing required fields." });
     }
 
-    await validateWorkspaceMember(db, workspaceId, user);
+    const { data: wsData } = await validateWorkspaceMember(db, workspaceId, user);
     const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
     await assertPeriodOpen(db, workspaceId, txDate);
 
@@ -215,9 +222,11 @@ inventoryRouter.post('/adjust', async (req, res) => {
         date: txDate,
         description: `Inventory ${type || 'Adjustment'}: ${itemData.name || itemId} (Qty Δ: ${quantityChange})`,
         totalAmountCents: Math.abs(totalAdjustmentValue),
-        type: 'journal',
-        status: 'approved',
+        currency: 'USD',
+        type: 'journal' as const,
+        status: 'approved' as const,
         isCleared: true,
+        createdAt: new Date().toISOString(),
         lines: [
           {
             id: `line-1`,
@@ -236,7 +245,13 @@ inventoryRouter.post('/adjust', async (req, res) => {
         ]
       };
 
-      t.set(db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      const validatedTx = await TransactionValidator.validateAndPrepare(tx, {
+        workspaceId,
+        user: { uid: user.uid, admin: user.admin },
+        wsData
+      }, undefined, t);
+
+      t.set(db.collection('transactions').doc(validatedTx.id), { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       
       t.update(itemRef, {
         quantityOnHand: newQty.toNumber(),

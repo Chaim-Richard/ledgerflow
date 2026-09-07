@@ -1,5 +1,6 @@
 import express from 'express';
 import { getDb } from '../db/firestore';
+import { getTrustedAppUrl } from '../utils/urlHelper';
 import Stripe from 'stripe';
 
 let stripeClient: Stripe | null = null;
@@ -129,10 +130,8 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
       return res.status(400).json({ error: 'Invoice has no outstanding unpaid balance or is already paid.' });
     }
 
-    // Use configured application URL to prevent host-header poisoning
-    const hostHeader = (req.get('host') || 'localhost:3000').replace(/[^a-zA-Z0-9.:-]/g, '');
-    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
-    const origin = process.env.APP_URL || process.env.VITE_APP_URL || `${protocol}://${hostHeader}`;
+    // Use configured trusted application URL to prevent host-header poisoning (#85)
+    const origin = getTrustedAppUrl(req);
 
     const idempotencyKey = `checkout_${doc.id}_${remainingBalance}_${token.slice(-16)}`;
 
