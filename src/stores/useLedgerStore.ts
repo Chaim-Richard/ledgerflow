@@ -206,7 +206,12 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       }
       (window as any)._recomputeTimer = setTimeout(() => {
       const { accounts, transactions, computedAccounts: currentComputed } = get();
-      if (!accounts.length) return;
+      if (!accounts.length) {
+        if (currentComputed.length > 0 || get().totalLedgerBalance !== 0) {
+          set({ computedAccounts: [], totalLedgerBalance: 0 });
+        }
+        return;
+      }
 
       const balances = LedgerEngine.computeDimensionalBalances(accounts, transactions);
       let totalBal = 0;
@@ -359,7 +364,12 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       throw new Error("Validation Failed: Transactions payload must be an array.");
     }
     
-    const validTxs = transactions.filter(tx => tx && typeof tx === 'object' && Array.isArray(tx.lines));
+    const validTxs = transactions
+      .filter((tx): tx is Transaction => Boolean(tx && typeof tx === 'object'))
+      .map(tx => ({
+        ...tx,
+        lines: Array.isArray(tx.lines) ? tx.lines : []
+      }));
     
     const { recomputeBalances } = get();
     const allTxs = validTxs.sort((a, b) => {

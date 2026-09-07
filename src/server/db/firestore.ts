@@ -29,8 +29,11 @@ export const getDb = (): Firestore => {
   return getFirestore(admin.app());
 };
 
-export async function validateWorkspaceMember(db: Firestore, workspaceId: string, user: { uid: string; admin?: boolean }) {
+export async function validateWorkspaceMember(db: Firestore, workspaceId: string, user: { uid: string; admin?: boolean; developerWorkspaceId?: string }) {
   if (!workspaceId) throw new Error('Workspace ID is required.');
+  if (user.developerWorkspaceId && user.developerWorkspaceId !== workspaceId) {
+    throw new Error(`Unauthorized: API key is scoped strictly to workspace ${user.developerWorkspaceId}`);
+  }
   const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
   if (!wsDoc.exists) throw new Error('Workspace not found.');
   const data = wsDoc.data() || {};

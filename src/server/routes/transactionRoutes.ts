@@ -55,10 +55,14 @@ export function enforceDoubleEntrySafety(req: Request, res: Response, next: Next
 
 transactionRouter.get('/', async (req, res) => {
   try {
-    const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
+    const user = (req as any).user;
+    const workspaceId = (req.query.workspaceId as string) || user.developerWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: "Missing workspaceId query parameters" });
 
-    const user = (req as any).user;
+    if (user.developerWorkspaceId && user.developerWorkspaceId !== workspaceId) {
+      return res.status(403).json({ error: `Forbidden: API key is scoped strictly to workspace ${user.developerWorkspaceId}` });
+    }
+
     const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
@@ -377,6 +381,14 @@ transactionRouter.post('/bulk', async (req, res) => {
     const wsId = workspaceId || transactions?.[0]?.workspaceId;
     if (!wsId) return res.status(400).json({ error: 'Missing workspaceId' });
 
+    if (user.developerWorkspaceId && user.developerWorkspaceId !== wsId) {
+      return res.status(403).json({ error: `Forbidden: API key is scoped strictly to workspace ${user.developerWorkspaceId}` });
+    }
+
+    if (Array.isArray(transactions) && transactions.length > 500) {
+      return res.status(400).json({ error: 'Bulk transaction limit exceeded. Maximum allowed per request is 500 transactions.' });
+    }
+
     const wsDoc = await db.collection('workspaces').doc(wsId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
       return res.status(403).json({ error: 'Not a member' });
@@ -658,9 +670,14 @@ transactionRouter.patch('/bank-lines/:id', async (req, res) => {
 
 transactionRouter.get('/reconciliation/status', async (req, res) => {
   try {
-    const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
-    if (!workspaceId) return res.status(400).json({ error: "Missing workspaceId" });
     const user = (req as any).user;
+    const workspaceId = (req.query.workspaceId as string) || user.developerWorkspaceId;
+    if (!workspaceId) return res.status(400).json({ error: "Missing workspaceId" });
+
+    if (user.developerWorkspaceId && user.developerWorkspaceId !== workspaceId) {
+      return res.status(403).json({ error: `Forbidden: API key is scoped strictly to workspace ${user.developerWorkspaceId}` });
+    }
+
     const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
@@ -694,6 +711,9 @@ transactionRouter.post('/reconciliation/match', async (req, res) => {
       return res.status(400).json({ error: "Missing workspaceId or externalBankLines array" });
     }
     const user = (req as any).user;
+    if (user.developerWorkspaceId && user.developerWorkspaceId !== workspaceId) {
+      return res.status(403).json({ error: `Forbidden: API key is scoped strictly to workspace ${user.developerWorkspaceId}` });
+    }
     const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });

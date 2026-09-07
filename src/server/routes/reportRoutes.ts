@@ -30,6 +30,9 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
   if (!workspaceId || typeof workspaceId !== 'string') {
     throw new Error("NOT_FOUND: Invalid workspace identifier provided.");
   }
+  if (req.user?.developerWorkspaceId && req.user.developerWorkspaceId !== workspaceId) {
+    throw new Error("FORBIDDEN");
+  }
   const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
   if (!wsDoc.exists) {
     throw new Error(`NOT_FOUND: Workspace with ID ${workspaceId} not found in database.`);

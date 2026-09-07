@@ -10,6 +10,11 @@ export interface LedgerEvent {
   metadata?: Record<string, any>;
 }
 
+function normalizeDatePrefix(d: string): string {
+  if (!d) return '';
+  return d.length >= 10 ? d.slice(0, 10) : d;
+}
+
 export class EventLedger {
   // Append-only log of events
   private static events: LedgerEvent[] = [];
@@ -24,20 +29,39 @@ export class EventLedger {
   }
 
   static getEvents(): LedgerEvent[] {
-    return this.events;
+    return this.events.map(e => ({
+      ...e,
+      metadata: e.metadata ? { ...e.metadata } : undefined
+    }));
   }
 
   static getEventsByDateRange(startDate: string, endDate: string): LedgerEvent[] {
-    return this.events.filter(e => e.timestamp >= startDate && e.timestamp <= endDate);
+    const start = normalizeDatePrefix(startDate);
+    const end = normalizeDatePrefix(endDate);
+    return this.events
+      .filter(e => {
+        const d = normalizeDatePrefix(e.timestamp);
+        return d >= start && d <= end;
+      })
+      .map(e => ({
+        ...e,
+        metadata: e.metadata ? { ...e.metadata } : undefined
+      }));
   }
 
   static getEventsByType(eventType: LedgerEvent['eventType']): LedgerEvent[] {
-    return this.events.filter(e => e.eventType === eventType);
+    return this.events
+      .filter(e => e.eventType === eventType)
+      .map(e => ({
+        ...e,
+        metadata: e.metadata ? { ...e.metadata } : undefined
+      }));
   }
 
   static getAccountBalance(accountId: string, asOfDate?: string): number {
+    const cutoff = asOfDate ? normalizeDatePrefix(asOfDate) : null;
     return this.events
-      .filter(e => e.accountId === accountId && (!asOfDate || e.timestamp <= asOfDate))
+      .filter(e => e.accountId === accountId && (!cutoff || normalizeDatePrefix(e.timestamp) <= cutoff))
       .reduce((sum, e) => sum + e.amountCents, 0);
   }
 

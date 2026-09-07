@@ -37,7 +37,10 @@ import {
   KPIRequestSchema,
   AmortizationRequestSchema,
   InventoryWACRequestSchema,
-  InventoryEOQRequestSchema
+  InventoryEOQRequestSchema,
+  ChartAccountSchema,
+  WorkspaceSchema,
+  BankMappingRequestSchema
 } from "./src/schemas.ts";
 import { BayesianClassifier, sha256Sync } from "./src/lib/algorithms.ts";
 import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
@@ -285,6 +288,11 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
   // Validate basic workspaceId structure (e.g., must be a non-empty string)
   if (!workspaceId || typeof workspaceId !== 'string') {
     throw new Error("NOT_FOUND: Invalid workspace identifier provided.");
+  }
+
+  // Developer API Key Workspace Scope Boundary
+  if (req.user?.developerWorkspaceId && req.user.developerWorkspaceId !== workspaceId) {
+    throw new Error(`FORBIDDEN: API Key is scoped strictly to workspace ${req.user.developerWorkspaceId} and cannot access workspace ${workspaceId}`);
   }
   
   try {
@@ -1632,6 +1640,70 @@ async function startServer() {
     }
   });
 
+  app.post("/api/v1/workspaces", apiAuthenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const uid = (req as AuthenticatedRequest).user.uid;
+      const validation = WorkspaceSchema.safeParse({
+        ...req.body,
+        uid
+      });
+      if (!validation.success) {
+        return sendError(res, "Validation Error: " + validation.error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', '), 400);
+      }
+      const db = getDb();
+      const newId = validation.data.id || `ws_${crypto.randomUUID().replace(/-/g, '')}`;
+      const newWorkspace = {
+        ...validation.data,
+        id: newId,
+        uid,
+        createdAt: validation.data.createdAt || new Date().toISOString()
+      };
+      await db.collection("workspaces").doc(newId).set(newWorkspace);
+      res.status(201).json({
+        status: "success",
+        message: "Workspace created successfully.",
+        workspace: newWorkspace
+      });
+    } catch (err: any) {
+      sendError(res, err.message, 500);
+    }
+  });
+
+  app.post("/api/v1/bank/map", apiAuthenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const validation = BankMappingRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return sendError(res, "Validation Error: " + validation.error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', '), 400);
+      }
+      const authReq = req as AuthenticatedRequest;
+      await authorizeWorkspace(authReq, validation.data.workspaceId);
+
+      const db = getDb();
+      const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", validation.data.workspaceId).get();
+      const accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const mapped = validation.data.transactions.map(tx => {
+        const bestAccount = (accounts.find(a => (a as any).name?.toLowerCase().includes(tx.description.toLowerCase())) || accounts[0]) as any;
+        return {
+          id: tx.id,
+          description: tx.description,
+          amountCents: tx.amountCents,
+          suggestedAccountId: bestAccount?.id || null,
+          suggestedAccountName: bestAccount?.name || 'Uncategorized',
+          confidence: 0.85
+        };
+      });
+
+      res.json({
+        status: "success",
+        workspaceId: validation.data.workspaceId,
+        mappedTransactions: mapped
+      });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
+
   app.get("/api/v1/projects", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
       const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
@@ -1720,21 +1792,25 @@ async function startServer() {
   app.post("/api/v1/ledger", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
       const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
-      if (!workspaceId) return sendError(res, "Missing workspaceId query parameter", 400);
+      if (!workspaceId) return sendError(res, "Missing workspaceId parameter", 400);
 
       const authReq = req as AuthenticatedRequest;
       await authorizeWorkspace(authReq, workspaceId);
 
-      const { name, type, code, parentId, isActive, tags } = req.body;
-      if (!name || !type) return sendError(res, "Missing required fields: 'name' and 'type'", 400);
+      const validation = ChartAccountSchema.safeParse({
+        ...req.body,
+        workspaceId,
+        uid: authReq.user?.uid
+      });
 
-      const allowedTypes = ['asset', 'liability', 'equity', 'revenue', 'expense', 'other_income', 'other_expense'];
-      if (!allowedTypes.includes(type)) {
-        return sendError(res, `Invalid account type '${type}'. Allowed types: ${allowedTypes.join(', ')}`, 400);
+      if (!validation.success) {
+        return sendError(res, "Validation Error: " + validation.error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', '), 400);
       }
 
+      const { name, type, code, parentId, isActive, tags } = validation.data;
+
       const db = getDb();
-      const newId = `acc_${crypto.randomUUID().replace(/-/g, '')}`;
+      const newId = validation.data.id || `acc_${crypto.randomUUID().replace(/-/g, '')}`;
       const newAccount = {
         id: newId,
         workspaceId,

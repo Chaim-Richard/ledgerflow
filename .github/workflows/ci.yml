@@ -30,3 +30,13 @@ jobs:
 
       - name: Run Accounting & Security Test Suites
         run: npm test
+
+      - name: Setup Java (for Firestore Emulator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Run Firestore Security Rules Tests (Emulator)
+        run: npm run test:rules
+

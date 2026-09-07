@@ -52,20 +52,21 @@ export const TransactionSchema = z.object({
 
 export const ChartAccountSchema = z.object({
   id: z.string().optional(),
-  uid: z.string(),
+  uid: z.string().optional(),
   workspaceId: z.string(),
   name: z.string().min(2).max(100),
-  code: z.string().regex(/^[a-zA-Z0-9_-]+$/),
-  type: z.enum(['asset', 'liability', 'equity', 'income', 'expense', 'cost_of_goods', 'revenue']),
+  code: z.string().regex(/^[a-zA-Z0-9_.-]+$/).optional(),
+  type: z.enum(['asset', 'liability', 'equity', 'income', 'expense', 'cost_of_goods', 'revenue', 'other_income', 'other_expense']),
   category: z.string().max(100).optional(),
   subtype: z.string().optional(),
   taxCategory: z.string().optional(),
   currency: z.string().optional(),
   balanceCents: z.number().int().default(0),
   description: z.string().max(500).optional(),
-  parentId: z.string().optional(),
+  parentId: z.string().nullable().optional(),
   openingBalanceCents: z.number().int().default(0),
   isActive: z.boolean().optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 export const WorkspaceSchema = z.object({
