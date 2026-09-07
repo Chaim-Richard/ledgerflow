@@ -396,17 +396,8 @@ transactionRouter.post('/bulk', async (req, res) => {
 
     const wsData = wsDoc.data();
 
-    // Idempotency check for bulk route
     const idempotencyKey = req.headers['idempotency-key'] as string;
     const scopedIdempotencyKey = idempotencyKey ? `${wsId}_${idempotencyKey}` : null;
-    if (scopedIdempotencyKey) {
-      const idempotencyRef = db.collection('idempotencyKeys').doc(scopedIdempotencyKey);
-      const idempotencyDoc = await idempotencyRef.get();
-      if (idempotencyDoc.exists) {
-        const data = idempotencyDoc.data();
-        return res.status(data?.code || 200).json(data?.body || { status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 });
-      }
-    }
 
     if ((!Array.isArray(transactions) || transactions.length === 0) && !entityMutation) {
       return res.json({ status: 'ok', count: 0 });
@@ -456,7 +447,17 @@ transactionRouter.post('/bulk', async (req, res) => {
       }
     }
 
+    let cachedResult: any = null;
     await db.runTransaction(async (t: any) => {
+      if (scopedIdempotencyKey) {
+        const idempotencyRef = db.collection('idempotencyKeys').doc(scopedIdempotencyKey);
+        const idempotencyDoc = await t.get(idempotencyRef);
+        if (idempotencyDoc.exists) {
+          cachedResult = idempotencyDoc.data()?.body || { status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 };
+          return;
+        }
+      }
+
       if (entityMutation) {
         const ref = db.collection(entityMutation.collection).doc(entityMutation.docId);
         if (entityMutation.action === "create" || entityMutation.action === "update") {
@@ -497,6 +498,10 @@ transactionRouter.post('/bulk', async (req, res) => {
         });
       }
     });
+
+    if (cachedResult) {
+      return res.json(cachedResult);
+    }
 
     res.json({ status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 });
   } catch (e: any) {
