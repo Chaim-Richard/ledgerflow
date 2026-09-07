@@ -57,19 +57,21 @@ export async function assertPeriodOpen(db: Firestore, workspaceId: string, date:
 
 export async function validateWorkspaceAccounts(db: Firestore, workspaceId: string, accountIds: string[]): Promise<Map<string, { id: string; name: string; type: string; category?: string }>> {
   const accountMap = new Map<string, { id: string; name: string; type: string; category?: string }>();
-  for (const accId of accountIds) {
-    if (!accId) {
-      throw new Error('Invalid account ID: missing account identifier.');
-    }
-    const accDoc = await db.collection('chartAccounts').doc(accId).get();
+  const validIds = Array.from(new Set(accountIds.filter(Boolean)));
+  if (validIds.length === 0) return accountMap;
+
+  const refs = validIds.map(id => db.collection('chartAccounts').doc(id));
+  const docs = await db.getAll(...refs);
+
+  for (const accDoc of docs) {
     if (!accDoc.exists) {
-      throw new Error(`Account ${accId} not found in chart of accounts.`);
+      throw new Error(`Account ${accDoc.id} not found in chart of accounts.`);
     }
     const accData = accDoc.data() || {};
     if (accData.workspaceId !== workspaceId) {
-      throw new Error(`Security Violation: Account ${accId} (${accData.name || 'unnamed'}) belongs to another workspace (${accData.workspaceId}). Cross-workspace ledger references are forbidden.`);
+      throw new Error(`Security Violation: Account ${accDoc.id} (${accData.name || 'unnamed'}) belongs to another workspace (${accData.workspaceId}). Cross-workspace ledger references are forbidden.`);
     }
-    accountMap.set(accId, {
+    accountMap.set(accDoc.id, {
       id: accDoc.id,
       name: accData.name || 'Account',
       type: accData.type || 'asset',

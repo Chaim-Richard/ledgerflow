@@ -27,24 +27,7 @@ function sendError(res: express.Response, message: string, status: number = 500,
 
 async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string) {
   const db = getDb();
-  if (!workspaceId || typeof workspaceId !== 'string') {
-    throw new Error("NOT_FOUND: Invalid workspace identifier provided.");
-  }
-  if (req.user?.developerWorkspaceId && req.user.developerWorkspaceId !== workspaceId) {
-    throw new Error("FORBIDDEN");
-  }
-  const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
-  if (!wsDoc.exists) {
-    throw new Error(`NOT_FOUND: Workspace with ID ${workspaceId} not found in database.`);
-  }
-  const data = wsDoc.data();
-  const isOwner = data?.uid === req.user.uid;
-  const isMember = Array.isArray(data?.members) && data.members.includes(req.user.uid);
-  const isAdmin = data?.admins?.[req.user.uid] === true || req.user.admin;
-
-  if (!isOwner && !isMember && !isAdmin) {
-    throw new Error("FORBIDDEN");
-  }
+  await validateWorkspaceMember(db, workspaceId, req.user);
 }
 
 async function getReportContext(req: AuthenticatedRequest, workspaceId: string) {

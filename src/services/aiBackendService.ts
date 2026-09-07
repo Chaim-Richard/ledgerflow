@@ -18,20 +18,20 @@ export class AIBackendService {
     this.genAI = new GoogleGenAI({ apiKey });
   }
 
-  public static getCachedResponse(task: string, payload: any): any | null {
+  public static getCachedResponse(task: string, payload: any, authenticatedUid?: string): any | null {
     const wsId = payload?.workspaceId || 'no-ws';
-    const uid = payload?.uid || 'no-uid';
+    const uid = authenticatedUid || payload?.uid || 'no-uid';
     const key = `${task}-${wsId}-${uid}-${sha256Sync(JSON.stringify(payload || {}))}`;
     return this.apiCache.get(key) || null;
   }
 
-  public static hasCachedResponse(task: string, payload: any): boolean {
-    return this.getCachedResponse(task, payload) !== null;
+  public static hasCachedResponse(task: string, payload: any, authenticatedUid?: string): boolean {
+    return this.getCachedResponse(task, payload, authenticatedUid) !== null;
   }
 
-  public static setCachedResponse(task: string, payload: any, response: any): void {
+  public static setCachedResponse(task: string, payload: any, response: any, authenticatedUid?: string): void {
     const wsId = payload?.workspaceId || 'no-ws';
-    const uid = payload?.uid || 'no-uid';
+    const uid = authenticatedUid || payload?.uid || 'no-uid';
     const key = `${task}-${wsId}-${uid}-${sha256Sync(JSON.stringify(payload || {}))}`;
     if (this.apiCache.size >= 1000) {
       const firstKey = this.apiCache.keys().next().value;

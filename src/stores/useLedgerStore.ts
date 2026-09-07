@@ -126,6 +126,10 @@ export interface LedgerState {
   resetStore: () => void;
 }
 
+export const getPostableTransactions = (state: LedgerState): Transaction[] => {
+  return state.transactions.filter(isPostable);
+};
+
 export const useLedgerStore = create<LedgerState>((set, get) => ({
   _version: 0,
   _lastSync: Date.now(),

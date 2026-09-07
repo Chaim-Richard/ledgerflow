@@ -80,6 +80,16 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   };
 
   React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  React.useEffect(() => {
     if (transactionCurrency !== baseCurrency) {
       try {
         const series = getTemporalRatesFor(transactionCurrency);
@@ -300,6 +310,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
             className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
           />
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="journal-entry-modal-title"
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
