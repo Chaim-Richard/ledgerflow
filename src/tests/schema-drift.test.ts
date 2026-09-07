@@ -3,6 +3,7 @@ import { test, describe } from 'node:test';
 import { readFileSync } from 'node:fs';
 
 const rulesText = readFileSync('firestore.rules', 'utf8');
+const indexesJson = JSON.parse(readFileSync('firestore.indexes.json', 'utf8'));
 
 function extractAffectedKeys(rulesContent: string, matchBlockName: string): string[] {
   const blockRegex = new RegExp(`match\\s+/${matchBlockName}/{[a-zA-Z0-9]+}\\s*{([\\s\\S]*?)(?=match\\s+|}$)`, 'g');
@@ -20,7 +21,7 @@ function extractAffectedKeys(rulesContent: string, matchBlockName: string): stri
     .filter(Boolean);
 }
 
-describe('Schema Drift Structural Automated Guard', () => {
+describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
   test('workspaces rule allowlist includes all Workspace interface fields', () => {
     const keys = extractAffectedKeys(rulesText, 'workspaces');
     assert.ok(keys.length > 0, 'Should find affectedKeys for workspaces in firestore.rules');
@@ -65,6 +66,40 @@ describe('Schema Drift Structural Automated Guard', () => {
       assert.ok(
         keys.includes(key),
         `firestore.rules transactions allowlist missing key '${key}'`
+      );
+    }
+  });
+
+  test('chartAccounts rule allowlist includes isActive field', () => {
+    const keys = extractAffectedKeys(rulesText, 'chartAccounts');
+    assert.ok(keys.length > 0, 'Should find affectedKeys for chartAccounts in firestore.rules');
+    assert.ok(keys.includes('isActive'), 'firestore.rules chartAccounts allowlist missing key "isActive"');
+  });
+
+  test('firestore.indexes.json includes composite indexes for workspaceId + order field queries', () => {
+    const requiredIndexes = [
+      { collectionGroup: 'transactions', field: 'date' },
+      { collectionGroup: 'invoices', field: 'date' },
+      { collectionGroup: 'bills', field: 'date' },
+      { collectionGroup: 'bankLines', field: 'date' },
+      { collectionGroup: 'auditLogs', field: 'timestamp' }
+    ];
+
+    for (const req of requiredIndexes) {
+      const matchFound = indexesJson.indexes.some((idx: any) => {
+        return (
+          idx.collectionGroup === req.collectionGroup &&
+          idx.fields.length === 2 &&
+          idx.fields[0].fieldPath === 'workspaceId' &&
+          idx.fields[0].order === 'ASCENDING' &&
+          idx.fields[1].fieldPath === req.field &&
+          idx.fields[1].order === 'DESCENDING'
+        );
+      });
+
+      assert.ok(
+        matchFound,
+        `firestore.indexes.json missing composite index for ${req.collectionGroup} (workspaceId ASC, ${req.field} DESC)`
       );
     }
   });

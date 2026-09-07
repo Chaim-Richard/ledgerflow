@@ -228,7 +228,10 @@ export const DoubleEntryAuditor = {
       workspaceId: tx.workspaceId || ''
     };
     
-    return sha256Sync(JSON.stringify(canonical));
+    const salt = (typeof process !== 'undefined' && process.env?.SYSTEM_SALT) 
+      || (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SYSTEM_SALT) 
+      || 'ledgerflow-forensic-vault-v1';
+    return sha256Sync(JSON.stringify(canonical) + `:${salt}`);
   },
 
   /**

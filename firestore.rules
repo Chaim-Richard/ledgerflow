@@ -113,11 +113,11 @@ service cloud.firestore {
     match /chartAccounts/{accountId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(accountId) &&
-        affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "currency", "balanceCents", "openingBalanceCents", "asOfDate", "parentId", "projectAllocations", "isContra", "isArchived", "archived", "createdAt", "updatedAt", "isSystem", "classification"]);
+        affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "currency", "balanceCents", "openingBalanceCents", "asOfDate", "parentId", "projectAllocations", "isContra", "isArchived", "archived", "isActive", "createdAt", "updatedAt", "isSystem", "classification"]);
       allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
         isUnchanged("balanceCents") && isUnchanged("openingBalanceCents") && isUnchanged("isSystem") &&
         (resource.data.isSystem != true || (isUnchanged("type") && isUnchanged("code") && isUnchanged("classification"))) &&
-        affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "currency", "balanceCents", "openingBalanceCents", "asOfDate", "parentId", "projectAllocations", "isContra", "isArchived", "archived", "createdAt", "updatedAt", "isSystem", "classification"]);
+        affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "currency", "balanceCents", "openingBalanceCents", "asOfDate", "parentId", "projectAllocations", "isContra", "isArchived", "archived", "isActive", "createdAt", "updatedAt", "isSystem", "classification"]);
       allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId) && (resource.data.isSystem == null || resource.data.isSystem == false);
     }
 
