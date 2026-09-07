@@ -12,8 +12,20 @@ invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
     const invoiceId = req.params.invoiceId;
     const user = (req as any).user;
 
-    if (!workspaceId || !toEmail) {
+    if (!workspaceId || !toEmail || typeof toEmail !== 'string') {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(toEmail.trim())) {
+      return res.status(400).json({ error: 'Invalid recipient email format' });
+    }
+
+    if (subject && (typeof subject !== 'string' || subject.length > 200)) {
+      return res.status(400).json({ error: 'Subject must be under 200 characters' });
+    }
+    if (body && (typeof body !== 'string' || body.length > 5000)) {
+      return res.status(400).json({ error: 'Body must be under 5000 characters' });
     }
 
     const db = getDb();

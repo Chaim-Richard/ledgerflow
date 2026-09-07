@@ -562,25 +562,79 @@ transactionRouter.post('/reconcile', async (req, res) => {
        return res.status(403).json({ error: 'Not a member' });
      }
      const wsData = wsDoc.data();
+
+     // Pre-collect all doc IDs and account IDs
+     const bankLineIds = new Set<string>();
+     const txIds = new Set<string>();
+     const accountIds = new Set<string>();
+
+     for (const op of operations) {
+       if (!op.id || typeof op.id !== 'string') {
+         throw new Error('Invalid operation ID');
+       }
+       if (op.type === 'updateBankLine') {
+         bankLineIds.add(op.id);
+       } else if (op.type === 'updateTransaction' || op.type === 'createTransaction') {
+         txIds.add(op.id);
+         if (Array.isArray(op.data?.lines)) {
+           for (const line of op.data.lines) {
+             if (line?.accountId) accountIds.add(line.accountId);
+           }
+         }
+       } else {
+         throw new Error(`Unsupported operation type: ${op.type}`);
+       }
+     }
      
      await db.runTransaction(async (t: any) => {
-        for (const op of operations) {
-          if (!op.id || typeof op.id !== 'string') {
-            throw new Error('Invalid operation ID');
+        // STEP 1: ALL READS UPFRONT (Guarantees zero read-after-write violations)
+        const bankLineSnaps = new Map<string, any>();
+        for (const id of bankLineIds) {
+          const snap = await t.get(db.collection('bankLines').doc(id));
+          bankLineSnaps.set(id, snap);
+        }
+
+        const txSnaps = new Map<string, any>();
+        for (const id of txIds) {
+          const snap = await t.get(db.collection('transactions').doc(id));
+          txSnaps.set(id, snap);
+        }
+
+        // Also gather any account IDs from existing transactions that might be updated
+        for (const snap of txSnaps.values()) {
+          if (snap.exists && Array.isArray(snap.data()?.lines)) {
+            for (const l of snap.data().lines) {
+              if (l?.accountId) accountIds.add(l.accountId);
+            }
           }
+        }
+
+        const accMap = new Map<string, any>();
+        if (accountIds.size > 0) {
+          const accRefs = Array.from(accountIds).map(id => db.collection('chartAccounts').doc(id));
+          const accSnaps = await t.getAll(...accRefs);
+          for (const snap of accSnaps) {
+            if (snap.exists) {
+              accMap.set(snap.id, snap.data());
+            }
+          }
+        }
+
+        // STEP 2: IN-MEMORY VALIDATION AND WRITE PREPARATION
+        const writes: Array<() => void> = [];
+
+        for (const op of operations) {
           if (op.type === 'updateBankLine') {
-            const lineRef = db.collection('bankLines').doc(op.id);
-            const lineSnap = await t.get(lineRef);
-            if (!lineSnap.exists || lineSnap.data()?.workspaceId !== workspaceId) {
+            const lineSnap = bankLineSnaps.get(op.id);
+            if (!lineSnap || !lineSnap.exists || lineSnap.data()?.workspaceId !== workspaceId) {
               throw new Error(`Bank line ${op.id} does not belong to authorized workspace`);
             }
-            // Strict allowlist validation (#78)
+            const lineRef = db.collection('bankLines').doc(op.id);
             const validatedData = BankLineUpdateSchema.parse(op.data);
-            t.update(lineRef, { ...validatedData, updatedAt: FieldValue.serverTimestamp() });
+            writes.push(() => t.update(lineRef, { ...validatedData, updatedAt: FieldValue.serverTimestamp() }));
           } else if (op.type === 'updateTransaction') {
-            const txRef = db.collection('transactions').doc(op.id);
-            const txSnap = await t.get(txRef);
-            if (!txSnap.exists || txSnap.data()?.workspaceId !== workspaceId) {
+            const txSnap = txSnaps.get(op.id);
+            if (!txSnap || !txSnap.exists || txSnap.data()?.workspaceId !== workspaceId) {
               throw new Error(`Transaction ${op.id} does not belong to authorized workspace`);
             }
             const existingTxData = txSnap.data() as Transaction;
@@ -591,16 +645,18 @@ transactionRouter.post('/reconcile', async (req, res) => {
 
             const merged = { ...existingTxData, ...safeData };
             
-            await TransactionValidator.validateAndPrepare(merged, {
+            const validatedTx = await TransactionValidator.validateAndPrepare(merged, {
                 workspaceId: workspaceId,
                 user: { uid: user.uid, admin: user.admin },
-                wsData
+                wsData,
+                accountsMap: accMap
             }, existingTxData, t);
-            t.update(txRef, { ...safeData, updatedAt: FieldValue.serverTimestamp() });
-          } else if (op.type === 'createTransaction') {
+
             const txRef = db.collection('transactions').doc(op.id);
-            const txSnap = await t.get(txRef);
-            if (txSnap.exists) {
+            writes.push(() => t.update(txRef, { ...validatedTx, updatedAt: FieldValue.serverTimestamp() }));
+          } else if (op.type === 'createTransaction') {
+            const txSnap = txSnaps.get(op.id);
+            if (txSnap && txSnap.exists) {
               throw new Error(`Transaction ${op.id} already exists`);
             }
             
@@ -614,12 +670,18 @@ transactionRouter.post('/reconcile', async (req, res) => {
             const validatedTx = await TransactionValidator.validateAndPrepare(payload, {
               workspaceId,
               user: { uid: user.uid, admin: user.admin },
-              wsData
+              wsData,
+              accountsMap: accMap
             }, undefined, t);
-            t.set(txRef, { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-          } else {
-            throw new Error(`Unsupported operation type: ${op.type}`);
+
+            const txRef = db.collection('transactions').doc(op.id);
+            writes.push(() => t.set(txRef, { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }));
           }
+        }
+
+        // STEP 3: EXECUTE ALL WRITES
+        for (const writeOp of writes) {
+          writeOp();
         }
      });
      res.json({ status: 'ok' });

@@ -2,11 +2,13 @@ import { Transaction } from '../../types';
 import { DoubleEntryValidator } from './DoubleEntryValidator';
 import { getDb } from '../../server/db/firestore';
 import { TransactionSchema } from '../../schemas';
+import { getAbsoluteTotal } from '../../lib/txFilters';
 
 export interface ValidationContext {
   workspaceId: string;
   user: { uid: string; admin?: boolean };
   wsData: any;
+  accountsMap?: Map<string, any>;
 }
 
 export class TransactionValidator {
@@ -36,24 +38,28 @@ export class TransactionValidator {
   ): Promise<Transaction> {
     const db = getDb();
     
-    // Ensure ownership & workspace
+    // Ensure ownership & workspace (N14: Unconditionally enforce ownership)
     transaction.workspaceId = context.workspaceId;
-    if (!transaction.uid) {
-      transaction.uid = context.user.uid;
+    transaction.uid = context.user.uid;
+
+    // N9: Prevent ghost simulation IDs from persisting as regular ledger transactions
+    if (transaction.id && typeof transaction.id === 'string' && transaction.id.startsWith('ghost-') && transaction.type !== 'forecast') {
+      throw new Error("Invalid transaction ID: 'ghost-' prefix is reserved for ephemeral client simulations.");
     }
 
-    // #88 - Semantic contract: totalAmountCents is ALWAYS absolute positive safe integer
-    if (transaction.totalAmountCents !== undefined && transaction.totalAmountCents !== null) {
+    // #88 & N15 - Semantic contract: totalAmountCents is ALWAYS absolute positive safe integer, using FX-aware line amounts
+    if (Array.isArray(transaction.lines) && transaction.lines.length > 0) {
+      const calculatedTotal = getAbsoluteTotal(transaction);
+      if (!Number.isSafeInteger(calculatedTotal)) {
+        throw new Error(`Validation Failed: totalAmountCents exceeds safe integer bounds.`);
+      }
+      transaction.totalAmountCents = calculatedTotal;
+    } else if (transaction.totalAmountCents !== undefined && transaction.totalAmountCents !== null) {
       const absVal = Math.abs(Math.round(transaction.totalAmountCents));
       if (!Number.isSafeInteger(absVal)) {
         throw new Error(`Validation Failed: totalAmountCents exceeds safe integer bounds.`);
       }
       transaction.totalAmountCents = absVal;
-    } else if (Array.isArray(transaction.lines)) {
-      const positiveSum = transaction.lines
-        .filter((l: any) => (l.amountCents || 0) > 0)
-        .reduce((sum: number, l: any) => sum + Math.round(l.amountCents || 0), 0);
-      transaction.totalAmountCents = Math.abs(positiveSum);
     }
 
     // Full Schema Validation
@@ -88,14 +94,20 @@ export class TransactionValidator {
     if (validatedTx.lines) {
       const accountIds = Array.from(new Set<string>(validatedTx.lines.map((l: any) => l.accountId).filter(Boolean)));
       if (accountIds.length > 0) {
-        const accRefs = accountIds.map(id => db.collection('chartAccounts').doc(id));
-        const accSnaps = t ? await t.getAll(...accRefs) : await db.getAll(...accRefs);
-        const accMap = new Map<string, any>();
-        for (const snap of accSnaps) {
-          if (!snap.exists || snap.data()?.workspaceId !== context.workspaceId) {
-            throw new Error(`Account ${snap.id} does not exist or does not belong to authorized workspace.`);
+        let accMap = context.accountsMap;
+        if (!accMap) {
+          const accRefs = accountIds.map(id => db.collection('chartAccounts').doc(id));
+          const accSnaps = t ? await t.getAll(...accRefs) : await db.getAll(...accRefs);
+          accMap = new Map<string, any>();
+          for (const snap of accSnaps) {
+            accMap.set(snap.id, snap.data());
           }
-          accMap.set(snap.id, snap.data());
+        }
+        for (const id of accountIds) {
+          const accData = accMap.get(id);
+          if (!accData || accData.workspaceId !== context.workspaceId) {
+            throw new Error(`Account ${id} does not exist or does not belong to authorized workspace.`);
+          }
         }
         for (const line of validatedTx.lines) {
           if (!line.accountName && accMap.has(line.accountId)) {

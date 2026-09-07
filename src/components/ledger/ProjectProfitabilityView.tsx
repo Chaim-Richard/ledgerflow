@@ -3,6 +3,7 @@ import { Transaction } from '../../types';
 import { TrendingUp, Filter, Maximize2, Download, Zap, Compass, Activity, BrainCircuit } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 interface ProjectProfitabilityViewProps {
   transactions: Transaction[];
@@ -17,19 +18,29 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
     const projectData: Record<string, { income: number, expense: number, net: number, name: string, transactionsCount: number }> = {};
     
     transactions.forEach(t => {
+      if (!isPostable(t)) return;
+      
       t.lines?.forEach(l => {
-        const pId = l.project || 'General Topology';
+        const pId = l.project || t.projectId || 'General Topology';
         if (!projectData[pId]) {
           projectData[pId] = { income: 0, expense: 0, net: 0, name: pId, transactionsCount: 0 };
         }
+        const amt = lineAmount(l, t);
         const accName = (l.accountName || '').toLowerCase();
-        if (accName.includes('income') || accName.includes('revenue')) {
-          projectData[pId].income += Math.abs(l.amountCents);
-          projectData[pId].net += Math.abs(l.amountCents);
+        const catName = (typeof l.category === 'string' ? l.category : '').toLowerCase();
+        
+        const isRev = accName.includes('income') || accName.includes('revenue') || catName.includes('revenue') || catName.includes('income');
+        const isExp = accName.includes('expense') || accName.includes('cost') || accName.includes('cogs') || catName.includes('expense') || catName.includes('cost');
+        
+        if (isRev) {
+          const incomeDelta = -amt; // Revenue is credit normal
+          projectData[pId].income += incomeDelta;
+          projectData[pId].net += incomeDelta;
           projectData[pId].transactionsCount += 1;
-        } else if (accName.includes('expense') || accName.includes('cost')) {
-          projectData[pId].expense += Math.abs(l.amountCents);
-          projectData[pId].net -= Math.abs(l.amountCents);
+        } else if (isExp) {
+          const expDelta = amt; // Expense is debit normal
+          projectData[pId].expense += expDelta;
+          projectData[pId].net -= expDelta;
           projectData[pId].transactionsCount += 1;
         }
       });

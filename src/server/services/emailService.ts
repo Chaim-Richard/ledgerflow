@@ -15,27 +15,43 @@ export interface EmailDeliveryResult {
   responseSummary?: string;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 /**
- * Executes real email delivery through an externally configured delivery provider (#84).
- * Throws an explicit error if the provider rejects the payload or is unreachable.
+ * Executes real email delivery through an externally configured delivery provider (#84, N5).
+ * All user-supplied inputs are HTML-escaped to prevent email template injection.
  */
 export async function deliverInvoiceEmail(params: SendInvoiceEmailParams): Promise<EmailDeliveryResult> {
   const fromEmail = process.env.EMAIL_FROM || 'invoices@ledgerflow.app';
+  
+  const safeInvoiceNumber = params.invoiceNumber ? escapeHtml(params.invoiceNumber) : '';
+  const safeCustomerName = params.customerName ? escapeHtml(params.customerName) : '';
+  const safeCustomBody = params.customBody ? escapeHtml(params.customBody) : '';
+  const safeTotalFormatted = params.totalFormatted ? escapeHtml(params.totalFormatted) : '';
+  const safeInvoiceUrl = encodeURI(params.invoiceUrl);
+
   const htmlContent = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px;">
-      <h2 style="color: #0f172a; margin-top: 0;">Invoice ${params.invoiceNumber || ''}</h2>
-      ${params.customerName ? `<p>Dear <strong>${params.customerName}</strong>,</p>` : ''}
-      ${params.customBody ? `<p>${params.customBody}</p>` : `<p>Your invoice has been generated and is ready for payment.</p>`}
-      ${params.totalFormatted ? `<p style="font-size: 18px; margin: 20px 0;"><strong>Amount Due: ${params.totalFormatted}</strong></p>` : ''}
+      <h2 style="color: #0f172a; margin-top: 0;">Invoice ${safeInvoiceNumber}</h2>
+      ${safeCustomerName ? `<p>Dear <strong>${safeCustomerName}</strong>,</p>` : ''}
+      ${safeCustomBody ? `<p>${safeCustomBody}</p>` : `<p>Your invoice has been generated and is ready for payment.</p>`}
+      ${safeTotalFormatted ? `<p style="font-size: 18px; margin: 20px 0;"><strong>Amount Due: ${safeTotalFormatted}</strong></p>` : ''}
       <div style="margin: 32px 0;">
-        <a href="${params.invoiceUrl}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        <a href="${safeInvoiceUrl}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
           View &amp; Pay Invoice
         </a>
       </div>
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
       <p style="font-size: 12px; color: #64748b; word-break: break-all;">
         If the button above does not work, copy and paste this link into your browser:<br />
-        <a href="${params.invoiceUrl}" style="color: #2563eb;">${params.invoiceUrl}</a>
+        <a href="${safeInvoiceUrl}" style="color: #2563eb;">${safeInvoiceUrl}</a>
       </p>
     </div>
   `;

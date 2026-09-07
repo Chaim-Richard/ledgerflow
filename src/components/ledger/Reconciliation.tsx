@@ -31,6 +31,7 @@ import {
   findGlobalOptimalMatch 
 } from '../../lib/algorithms';
 import { toast } from 'sonner';
+import { isPostable } from '../../lib/txFilters';
 
 
 
@@ -84,7 +85,7 @@ export default function Reconciliation() {
   // Uncleared internal ledger transactions (excluding void and reconciled)
   const unclearedLedgerTransactions = useMemo(() => {
     return safeTransactions.filter(tx => {
-      if (tx.status === 'reconciled' || tx.status === 'void' || tx.deletedAt) return false;
+      if (!isPostable(tx) || tx.status === 'reconciled') return false;
       if (selectedAccountId !== 'all') {
         const touchesAccount = tx.lines?.some((l: any) => l.accountId === selectedAccountId);
         if (!touchesAccount) return false;
