@@ -47,6 +47,7 @@ import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
 import { TruthEngine } from "./src/modules/integrity/TruthEngine.ts";
 import { calculateNetIncome } from "./src/lib/txFilters.ts";
 import { TransactionValidator } from "./src/kernel/validation/TransactionValidator.ts";
+import { assertWorkspaceAccess } from "./src/server/db/firestore.ts";
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 
 dotenv.config();
@@ -285,39 +286,15 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
   console.debug("[DEBUG] authorizeWorkspace - workspaceId:", workspaceId);
   const db = getDb();
   
-  // Validate basic workspaceId structure (e.g., must be a non-empty string)
   if (!workspaceId || typeof workspaceId !== 'string') {
     throw new Error("NOT_FOUND: Invalid workspace identifier provided.");
   }
 
-  // Developer API Key Workspace Scope Boundary
-  if (req.user?.developerWorkspaceId && req.user.developerWorkspaceId !== workspaceId) {
-    throw new Error(`FORBIDDEN: API Key is scoped strictly to workspace ${req.user.developerWorkspaceId} and cannot access workspace ${workspaceId}`);
-  }
-  
   try {
-    const docRef = db.collection("workspaces").doc(workspaceId);
-    
-    const workspaceSnap = await docRef.get();
-    
-    if (!workspaceSnap.exists) {
-      throw new Error(`NOT_FOUND: Workspace with ID ${workspaceId} not found in database.`);
-    }
-    
-    const data = workspaceSnap.data();
-    const isOwner = data?.uid === req.user.uid;
-    const isMember = Array.isArray(data?.members) && data.members.includes(req.user.uid);
-    const isAdmin = data?.admins?.[req.user.uid] === true || 
-                    (Array.isArray(data?.admins) && data.admins.includes(req.user.uid)) || 
-                    req.user.admin === true;
-    
-    if (!isOwner && !isMember && !isAdmin) {
-      console.error("[DEBUG] authorizeWorkspace - Forbidden access for user:", req.user.uid, "to workspace:", workspaceId);
-      throw new Error("FORBIDDEN: You do not have permission to access workspace " + workspaceId);
-    }
+    const { data } = await assertWorkspaceAccess(db, workspaceId, req.user);
     
     // Administrative Policy Enforcement & Access Matrix Checks
-    const url = req.originalUrl || req.url || "";
+  const url = req.originalUrl || req.url || "";
     const isBillingOrMetadataRoute = url.includes("/billing/status") || url.includes("/billing/record-compute");
     const isSystemAdmin = req.user?.admin === true;
 

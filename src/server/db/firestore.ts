@@ -44,6 +44,8 @@ export async function validateWorkspaceMember(db: Firestore, workspaceId: string
   return { wsDoc, data };
 }
 
+export const assertWorkspaceAccess = validateWorkspaceMember;
+
 export async function assertPeriodOpen(db: Firestore, workspaceId: string, date: string) {
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw new Error(`Invalid transaction date format: ${date}. Expected YYYY-MM-DD.`);
