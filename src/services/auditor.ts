@@ -55,6 +55,10 @@ export const DoubleEntryAuditor = {
     // Causal Integrity Check: All transactions with a verification block are part of the cryptographic sequence.
     // We do NOT filter to isPostable() because void/deleted transactions still exist in the immutable chain.
     const chainTxs = chronosTxs.filter(t => t.verification?.hash || t.verification?.previousHash);
+    const chainTxIndexMap = new Map<string, number>();
+    chainTxs.forEach((ct, idx) => {
+      if (ct.id) chainTxIndexMap.set(ct.id, idx);
+    });
 
     // Optimized Duplicate Detection using Bucketing
     const signatureBuckets = new Map<number, { id: string; sig: number[] }[]>();
@@ -64,10 +68,10 @@ export const DoubleEntryAuditor = {
     chronosTxs.forEach((t, i) => {
       const isActive = isPostable(t);
       
-      // Verify Cryptographic Link (using chainTxs context for index lookup)
-      if (t.verification?.hash) {
-        const chainIdx = chainTxs.findIndex(ct => ct.id === t.id);
-        if (chainIdx > 0) {
+      // Verify Cryptographic Link (O(1) map lookup to eliminate O(N^2) inner loop - F6)
+      if (t.verification?.hash && t.id) {
+        const chainIdx = chainTxIndexMap.get(t.id);
+        if (chainIdx !== undefined && chainIdx > 0) {
           const prevTx = chainTxs[chainIdx - 1];
           if (t.verification.previousHash !== prevTx.verification?.hash) {
             hashChainValid = false;
@@ -92,8 +96,9 @@ export const DoubleEntryAuditor = {
             missingAccounts.push({ id: t.id, accountName: line.accountName || line.accountId, lineIdx: lIdx });
           }
           
-          if (line.amountCents > 0) txDebit += line.amountCents;
-          else txCredit += Math.abs(line.amountCents);
+          const amt = Number(line.amountCents) || 0;
+          if (amt > 0) txDebit += amt;
+          else txCredit += Math.abs(amt);
         }
 
         const diff = txDebit - txCredit;
@@ -109,14 +114,13 @@ export const DoubleEntryAuditor = {
           orphans.push({ id: t.id, type: 'transaction', message: 'Signature Mismatch: Potential manual tampering detected' });
         }
 
-        // 1.2 Optimized Duplicate Check (LSH MinHash with Bucketing)
+        // 1.2 Optimized Duplicate Check (LSH MinHash with Bucketing - F7 checks all bucket entries)
         if (!skipDuplicateCheck) {
-          const currentSig = minHash.createSignature(`${t.description} ${t.totalAmountCents} ${t.date}`);
+          const currentSig = minHash.createSignature(`${t.description || ''} ${t.totalAmountCents} ${t.date}`);
           const amountKey = t.totalAmountCents;
           
           const bucket = signatureBuckets.get(amountKey) || [];
-          const startIndex = Math.max(0, bucket.length - 10);
-          for (let bIdx = startIndex; bIdx < bucket.length; bIdx++) {
+          for (let bIdx = 0; bIdx < bucket.length; bIdx++) {
             const prev = bucket[bIdx];
             const similarity = minHash.compare(currentSig, prev.sig);
             if (similarity > 0.95) {
@@ -131,7 +135,7 @@ export const DoubleEntryAuditor = {
       }
     });
 
-    // 2. Audit Journal Entries
+    // 2. Audit Journal Entries (F5: Defensive NaN guards)
     journalEntries.forEach(entry => {
       let entryDebit = 0;
       let entryCredit = 0;
@@ -140,8 +144,10 @@ export const DoubleEntryAuditor = {
         if (!accountIds.has(line.accountId)) {
           missingAccounts.push({ id: entry.id, accountName: line.accountName || line.accountId, lineIdx: idx });
         }
-        entryDebit += line.debit;
-        entryCredit += line.credit;
+        const deb = Number(line.debit) || 0;
+        const cred = Number(line.credit) || 0;
+        entryDebit += deb;
+        entryCredit += cred;
       });
 
       const diff = entryDebit - entryCredit;
@@ -174,42 +180,54 @@ export const DoubleEntryAuditor = {
 
   /**
    * Generates a deterministic signature for a transaction.
-   * Cryptographically covers all transaction fields to prevent tampering.
+   * Cryptographically covers all transaction fields to prevent tampering (F3).
    * Uses a canonical string representation (sorted keys) to ensure order-independence.
    */
   computeHash: (tx: Transaction, previousHash?: string): string => {
-    // Canonical Object construction (Sorted Keys)
+    // Canonical Object construction (Sorted Keys) - comprehensive coverage
     const canonical = {
       amount: tx.totalAmountCents,
       currency: tx.currency || 'USD',
       date: tx.date,
-      desc: tx.description,
+      desc: tx.description || '',
+      dimensions: tx.dimensions || {},
+      dueDate: tx.dueDate || '',
       exchangeRate: tx.exchangeRate || 1,
+      id: tx.id || '',
+      isCleared: Boolean(tx.isCleared),
       lines: (tx.lines || []).map(l => ({
-        accountId: l.accountId,
-        amountCents: l.amountCents,
+        accountId: l.accountId || '',
+        accountName: l.accountName || '',
+        amountCents: l.amountCents || 0,
         class: l.class || '',
         desc: l.description || '',
+        dimensions: l.dimensions || {},
         loc: l.location || '',
-        proj: l.project || ''
+        proj: l.project || '',
+        quantity: l.quantity ?? null,
+        splitAllocations: l.splitAllocations || [],
+        unitPriceCents: l.unitPriceCents ?? null
       })).sort((a, b) => a.accountId.localeCompare(b.accountId) || a.amountCents - b.amountCents),
+      metadata: tx.metadata || {},
       payee: tx.payee || '',
       prev: previousHash || 'genesis',
-      project: tx.project || '',
+      project: tx.project || tx.projectId || '',
       status: tx.status || 'completed',
-      type: tx.type || 'expense'
+      tags: tx.tags || [],
+      taxAmountCents: tx.taxAmountCents ?? 0,
+      type: tx.type || 'expense',
+      uid: tx.uid || '',
+      workspaceId: tx.workspaceId || ''
     };
     
     return sha256Sync(JSON.stringify(canonical));
   },
 
   /**
-   * Causal Chain Repair: Re-hashes the entire sequence of active transactions
-   * to restore cryptographic integrity. This is used when a chain break
-   * is detected and the user wants to certify the current state as the 
-   * new 'Genesis' state.
+   * Causal Chain Repair: Re-hashes the sequence of active transactions
+   * to establish an explicit audited recovery checkpoint.
    */
-  repairChain: (transactions: Transaction[]): Transaction[] => {
+  repairChain: (transactions: Transaction[], auditorUid?: string): Transaction[] => {
     const sorted = transactions
       .map(tx => ({ tx, time: tx.createdAt ? new Date(tx.createdAt).getTime() : (tx.date ? parseLocalDate(tx.date).getTime() : 0) }))
       .sort((a, b) => { if (a.time !== b.time) return a.time - b.time; return (a.tx && b.tx && a.tx.id && b.tx.id) ? a.tx.id.localeCompare(b.tx.id) : 0; })
@@ -229,7 +247,9 @@ export const DoubleEntryAuditor = {
           hash: newHash,
           previousHash: lastHash,
           verifiedAt: new Date().toISOString(),
-          timestamp: tx.verification?.timestamp || new Date().toISOString()
+          timestamp: tx.verification?.timestamp || new Date().toISOString(),
+          repairedAt: new Date().toISOString(),
+          repairedBy: auditorUid || tx.uid || 'system'
         }
       };
       lastHash = newHash;

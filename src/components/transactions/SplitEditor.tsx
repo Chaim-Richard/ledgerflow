@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Transaction, TransactionLine, ChartAccount, Project } from '../../types';
 import { Plus, Trash2, Save, X, AlertCircle, Layers } from 'lucide-react';
 import { motion } from 'motion/react';
-import { resolveAccountName, cn } from '../../lib/utils';
+import { resolveAccountName, cn, parseAmountToCents } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 
 interface SplitEditorProps {
@@ -143,8 +143,7 @@ export default function SplitEditor({
                       step="0.01"
                       value={line.amountCents / 100}
                       onChange={(e) => {
-                        const val = parseFloat(e.target.value || '0');
-                        updateLine(idx, { amountCents: Math.round(val * 100) });
+                        updateLine(idx, { amountCents: parseAmountToCents(e.target.value) });
                       }}
                       className="w-full pl-6 pr-3 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-sm font-mono text-right text-[var(--text)] focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none transition-all"
                     />

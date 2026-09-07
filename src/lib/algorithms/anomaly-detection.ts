@@ -35,8 +35,8 @@ function benfordsLawTest(amountsCents: readonly number[]) {
   return { chiSquare, sampleSize, suspicious: chiSquare > 15.51, observed, expected: BENFORD_EXPECTED };
 }
 
-function normalizeDescription(description: string): string {
-  return description.toUpperCase().replace(/[^A-Z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+function normalizeDescription(description?: string): string {
+  return (description || "").toUpperCase().replace(/[^A-Z0-9\s]/g, "").replace(/\s+/g, " ").trim();
 }
 
 function daysBetween(a: string, b: string): number {

@@ -88,7 +88,7 @@ export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
     const arpu = newCustomers > 0 ? (mrr / newCustomers) : 0; // Normalized Monthly ARPU
     
     // CAC = Monthly Marketing Spend / Monthly New Customers
-    const cac = avgMarketingSpend / newCustomers;
+    const cac = newCustomers > 0 ? (avgMarketingSpend / newCustomers) : 0;
 
     // LTV = (Monthly ARPU * Gross Margin) / Churn Rate
     const ltv = churnRate > 0 ? ((arpu * grossMarginPct) / churnRate) : 0;

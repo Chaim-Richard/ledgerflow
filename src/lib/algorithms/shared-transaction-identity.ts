@@ -16,8 +16,9 @@ export function computeSharedTransactionIdentity(transactions: readonly Transact
   let eliminatedCents = 0;
 
   transactions.forEach((tx, idx) => {
-    const isInterEntity = tx.description.toLowerCase().includes('transfer') || 
-                          tx.description.toLowerCase().includes('inter') ||
+    const desc = (tx.description || '').toLowerCase();
+    const isInterEntity = desc.includes('transfer') || 
+                          desc.includes('inter') ||
                           tx.payee ||
                           tx.projectId;
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, doc, onSnapshot, setDoc, serverTimestamp, query, deleteDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, serverTimestamp, query, where, deleteDoc } from 'firebase/firestore';
 import { useAuthStore } from '../stores/useAuthStore';
 
 export interface Collaborator {
@@ -10,6 +10,7 @@ export interface Collaborator {
   lastActive: any;
   color: string;
   cursor?: { x: number; y: number };
+  currentWorkspaceId?: string;
 }
 
 const COLORS = [
@@ -19,21 +20,23 @@ const COLORS = [
 
 export function useCollaborators() {
   const userProfile = useAuthStore(s => s.userProfile);
+  const activeWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
 
   useEffect(() => {
-    if (!userProfile) return;
+    if (!userProfile || !activeWorkspaceId) return;
 
     const userDocRef = doc(db, 'presence', userProfile.uid);
     const userColor = COLORS[userProfile.uid.charCodeAt(0) % COLORS.length];
 
-    // Mark current user as active
+    // Mark current user as active in this workspace
     const updatePresence = async () => {
       try {
         await setDoc(userDocRef, {
           uid: userProfile.uid,
           name: userProfile.displayName || userProfile.email?.split('@')[0] || 'Anonymous',
           email: userProfile.email,
+          currentWorkspaceId: activeWorkspaceId,
           lastActive: serverTimestamp(),
           color: userColor
         }, { merge: true });
@@ -45,8 +48,11 @@ export function useCollaborators() {
     updatePresence();
     const interval = setInterval(updatePresence, 30000); // Pulse every 30s
 
-    // Listen to all active users
-    const q = query(collection(db, 'presence'));
+    // F1: Scoped query by currentWorkspaceId to prevent cross-tenant presence leaking
+    const q = query(
+      collection(db, 'presence'),
+      where('currentWorkspaceId', '==', activeWorkspaceId)
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const now = Date.now();
       const activeThreshold = 60000; // 1 minute
@@ -60,19 +66,23 @@ export function useCollaborators() {
         });
 
       setCollaborators(active);
+    }, (err) => {
+      console.warn('Presence subscription warning:', err);
     });
 
-    // Cleanup presence on unmount
-    window.addEventListener('beforeunload', () => {
+    // F29: Properly store handler reference and remove on unmount
+    const handleUnload = () => {
       deleteDoc(userDocRef).catch(() => {});
-    });
+    };
+    window.addEventListener('beforeunload', handleUnload);
 
     return () => {
       clearInterval(interval);
       unsubscribe();
+      window.removeEventListener('beforeunload', handleUnload);
       deleteDoc(userDocRef).catch(() => {});
     };
-  }, [userProfile]);
+  }, [userProfile, activeWorkspaceId]);
 
   return collaborators;
 }

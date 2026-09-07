@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
-import { cn, formatCurrency } from '../../lib/utils';
+import { cn, formatCurrency, parseLocalDate } from '../../lib/utils';
 
 interface VendorAgingSummary {
   vendorId: string;
@@ -93,7 +93,7 @@ export default function APAgingReportView() {
       summary.bills.push(bill);
 
       const billAmount = bill.amountCents || 0;
-      const dueDate = bill.dueDate ? new Date(bill.dueDate) : (bill.date ? new Date(bill.date) : asOfDate);
+      const dueDate = bill.dueDate ? parseLocalDate(bill.dueDate) : (bill.date ? parseLocalDate(bill.date) : asOfDate);
       const diffTime = asOfDate.getTime() - dueDate.getTime();
       const daysOverdue = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
 

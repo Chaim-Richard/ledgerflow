@@ -10,6 +10,21 @@ export function roundCents(cents: number): number {
 }
 
 /**
+ * Safely parses string or numeric monetary inputs into integer cents without floating point precision errors.
+ */
+export function parseAmountToCents(val: string | number | undefined | null): number {
+  if (val === undefined || val === null || val === '') return 0;
+  if (typeof val === 'number') {
+    if (isNaN(val)) return 0;
+    return Math.round(val * 100);
+  }
+  const cleanStr = String(val).replace(/[^0-9.-]/g, '');
+  const parsed = parseFloat(cleanStr);
+  if (isNaN(parsed)) return 0;
+  return Math.round(parsed * 100);
+}
+
+/**
  * Safe currency formatter with fallback
  */
 export function formatCurrency(cents: number | undefined | null, currency?: string): string {

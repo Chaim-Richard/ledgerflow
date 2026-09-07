@@ -94,7 +94,7 @@ export const FIND_MY_ERROR_ALGO: AlgorithmDefinition = {
     const { transactions } = ctx;
     
     // Inject a synthetic error into a copy of the ledger to ensure we find something
-    const errorAmt = inputs.discrepancyAmount;
+    const errorAmt = typeof inputs?.discrepancyAmount === 'number' ? inputs.discrepancyAmount : 5400;
     
     const start = performance.now();
     const suspects = findMyError(transactions, errorAmt);

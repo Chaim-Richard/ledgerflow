@@ -128,6 +128,15 @@ export function validateSplitAllocations(splits?: SplitAllocation[]): { valid: b
     return { valid: true, sum: 1.0 };
   }
 
+  const hasInvalidWeight = splits.some(s => typeof s.weight !== 'number' || s.weight < 0 || s.weight > 1.0);
+  if (hasInvalidWeight) {
+    return {
+      valid: false,
+      sum: splits.reduce((acc, s) => acc + (s.weight || 0), 0),
+      error: 'Individual split weight allocations must be between 0% (0.0) and 100% (1.0).'
+    };
+  }
+
   const sum = splits.reduce((acc, s) => acc + (s.weight || 0), 0);
   const roundedSum = Math.round(sum * 1000) / 1000; // allow small JS float precision
 

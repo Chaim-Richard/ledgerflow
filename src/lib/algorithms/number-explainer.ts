@@ -90,7 +90,8 @@ export const NUMBER_EXPLAINER_ALGO: AlgorithmDefinition = {
     const start = performance.now();
     
     const year = new Date().getFullYear();
-    const monthStr = `${year}-${inputs.targetMonth.toString().padStart(2, '0')}`;
+    const targetMonth = Number(inputs?.targetMonth) || (new Date().getMonth() + 1);
+    const monthStr = `${year}-${targetMonth.toString().padStart(2, '0')}`;
     
     const result = explainNetProfit(transactions, monthStr, accounts);
     const ms = performance.now() - start;

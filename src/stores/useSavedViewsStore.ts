@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Transaction, ChartAccount } from '../types';
 import { useUIStore } from './useUIStore';
-import { isPostable, isIncomeTransaction, isExpenseTransaction } from '../lib/txFilters';
+import { isPostable, isIncomeTransaction, isExpenseTransaction, lineAmount, getAbsoluteTotal } from '../lib/txFilters';
 
 export interface SavedViewFilter {
   searchTerm?: string;
@@ -370,18 +370,21 @@ export function computeSavedViewMetrics(
     }
 
     if (filter.accountTypes && filter.accountTypes.length > 0) {
-      const mainLineAcc = tx.lines?.[0]?.accountId;
-      const acc = mainLineAcc ? accountMap.get(mainLineAcc) : null;
-      if (acc && !filter.accountTypes.includes(acc.type)) return;
+      const touchesAccountType = tx.lines?.some((l) => {
+        const acc = l.accountId ? accountMap.get(l.accountId) : null;
+        return acc && filter.accountTypes!.includes(acc.type);
+      });
+      if (!touchesAccountType) return;
     }
 
     if (filter.isTaxDeductibleOnly) {
       const isTaxTag = tx.lines?.some((l) => l.tags?.some((t) => t.toLowerCase().includes('tax')));
       const isTaxDesc = (tx.description || '').toLowerCase().includes('tax');
-      if (!isTaxTag && !isTaxDesc && !(tx as any).isReconciled) return;
+      const isClearedOrReconciled = tx.status === 'reconciled' || Boolean(tx.isCleared);
+      if (!isTaxTag && !isTaxDesc && !isClearedOrReconciled) return;
     }
 
-    if (filter.projectId && tx.projectId !== filter.projectId) return;
+    if (filter.projectId && tx.projectId !== filter.projectId && tx.project !== filter.projectId) return;
 
     if (searchLower) {
       const matchDesc = (tx.description || '').toLowerCase().includes(searchLower);
@@ -394,27 +397,41 @@ export function computeSavedViewMetrics(
     }
 
     matchingCount++;
-    if (isInc) {
-      moneyInCents += absAmt;
-      totalSumCents += absAmt;
-    } else if (isExp) {
-      moneyOutCents += absAmt;
-      totalSumCents -= absAmt;
+
+    // Calculate line-level income and expense impacts (F13)
+    let txIncomeCents = 0;
+    let txExpenseCents = 0;
+
+    tx.lines?.forEach((l) => {
+      const acc = l.accountId ? accountMap.get(l.accountId) : null;
+      const amt = lineAmount(l, tx);
+      if (acc?.type === 'revenue') {
+        txIncomeCents += (-amt); // Revenue is credit normal
+      } else if (acc?.type === 'expense' || acc?.type === 'cost_of_goods') {
+        txExpenseCents += amt; // Expense is debit normal
+      }
+    });
+
+    if (txIncomeCents > 0 || txExpenseCents > 0) {
+      moneyInCents += txIncomeCents;
+      moneyOutCents += txExpenseCents;
+      totalSumCents += (txIncomeCents - txExpenseCents);
     } else {
-      if (tx.type === 'income') {
-        moneyInCents += absAmt;
-        totalSumCents += absAmt;
-      } else if (tx.type === 'expense') {
-        moneyOutCents += absAmt;
-        totalSumCents -= absAmt;
+      const txMagnitude = getAbsoluteTotal(tx);
+      if (isInc || tx.type === 'income') {
+        moneyInCents += txMagnitude;
+        totalSumCents += txMagnitude;
+      } else if (isExp || tx.type === 'expense') {
+        moneyOutCents += txMagnitude;
+        totalSumCents -= txMagnitude;
       } else {
-        totalSumCents += absAmt;
+        totalSumCents += txMagnitude;
       }
     }
   });
 
   const netBalanceCents = moneyInCents - moneyOutCents;
-  const averageAmountCents = matchingCount > 0 ? Math.round(totalSumCents / matchingCount) : 0;
+  const averageAmountCents = matchingCount > 0 ? Math.round(Math.abs(totalSumCents) / matchingCount) : 0;
 
   return {
     totalMoneyCents: Math.abs(totalSumCents),

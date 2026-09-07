@@ -96,9 +96,10 @@ export const FENWICK_TIME_TRAVEL_ALGO: AlgorithmDefinition = {
     
     // Query
     const maxIdx = sortedDates.length;
-    const queryIdx = Math.min(Math.max(1, inputs.targetDayIndex), maxIdx);
+    const targetDayIndex = typeof inputs?.targetDayIndex === 'number' ? inputs.targetDayIndex : Math.max(1, Math.floor(maxIdx / 2));
+    const queryIdx = maxIdx > 0 ? Math.min(Math.max(1, targetDayIndex), maxIdx) : 0;
     
-    const balanceAsOf = tree.query(queryIdx);
+    const balanceAsOf = maxIdx > 0 ? tree.query(queryIdx) : 0;
     
     const ms = performance.now() - start;
 

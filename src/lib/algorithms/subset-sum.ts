@@ -65,22 +65,24 @@ export const SUBSET_SUM_RECONCILIATION: AlgorithmDefinition = {
   ],
   compute: (ctx, inputs) => {
     const { transactions } = ctx;
+    const numInvoices = Number(inputs?.numInvoices) || 15;
+    const target = typeof inputs?.targetAmount === 'number' ? inputs.targetAmount : 481266;
+
     // Derive candidate items from real transactions if available
     let candidates: { id: string; amountCents: number }[] = [];
     if (transactions && transactions.length > 0) {
       candidates = transactions
         .filter(t => isPostable(t) && Math.abs(t.totalAmountCents) > 0)
-        .slice(0, inputs.numInvoices)
+        .slice(0, numInvoices)
         .map(t => ({ id: t.id || `TX-${t.date}`, amountCents: Math.abs(t.totalAmountCents) }));
     }
 
-    const target = inputs.targetAmount;
     if (candidates.length < 3) {
       // Fallback candidates centered on actual transaction scale or target
-      const subsetSize = Math.floor(inputs.numInvoices / 3) || 1;
+      const subsetSize = Math.floor(numInvoices / 3) || 1;
       candidates = [];
       let subsetSum = 0;
-      for (let i = 0; i < inputs.numInvoices; i++) {
+      for (let i = 0; i < numInvoices; i++) {
         const amt = Math.floor(Math.random() * (target / 2)) + 1000;
         candidates.push({ id: `INV-${i + 1}`, amountCents: amt });
         if (i < subsetSize) subsetSum += amt;

@@ -15,7 +15,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { auth } from '../../firebase';
-import { formatDecimal, getLocalDateISO } from '../../lib/utils';
+import { formatDecimal, getLocalDateISO, parseAmountToCents } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import TagInput from './TagInput';
@@ -482,8 +482,7 @@ export default function TransactionEditModal({
                           disabled={isLocked}
                           value={line.amountCents === 0 ? '' : formatDecimal(line.amountCents)}
                           onChange={(e) => {
-                            const val = parseFloat(e.target.value || '0');
-                            handleLineChange(idx, { amountCents: Math.round(val * 100) });
+                            handleLineChange(idx, { amountCents: parseAmountToCents(e.target.value) });
                           }}
                           className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl pl-6 pr-2.5 py-1.5 text-xs text-right text-[var(--text)] font-mono font-bold outline-none"
                         />

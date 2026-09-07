@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useSavedViewsStore, computeSavedViewMetrics, SavedView, SavedViewFilter } from '../../stores/useSavedViewsStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, parseAmountToCents, cn } from '../../lib/utils';
 import { 
   X, Plus, Star, Check, Trash2, Edit3, Copy, Search, Filter, Eye,
   Wallet, TrendingUp, TrendingDown, Tag, Clock, ShieldAlert, Building, FolderKanban, DollarSign, Sparkles, AlertCircle
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 
 const AVAILABLE_ICONS = [
@@ -387,7 +386,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                           ...prev,
                           filter: { 
                             ...prev.filter, 
-                            minAmountCents: e.target.value ? Math.round(Number(e.target.value) * 100) : undefined 
+                            minAmountCents: e.target.value ? parseAmountToCents(e.target.value) : undefined 
                           }
                         }))}
                         placeholder="0.00"
@@ -406,7 +405,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                           ...prev,
                           filter: { 
                             ...prev.filter, 
-                            maxAmountCents: e.target.value ? Math.round(Number(e.target.value) * 100) : undefined 
+                            maxAmountCents: e.target.value ? parseAmountToCents(e.target.value) : undefined 
                           }
                         }))}
                         placeholder="Unlimited"

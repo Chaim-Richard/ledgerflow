@@ -70,7 +70,7 @@ export const PROFITABILITY_HEATMAP_ALGO: AlgorithmDefinition = {
 
     chartData.sort((a, b) => b.MarginPct - a.MarginPct);
 
-    const overallMargin = (totalRevenue - totalCosts) / totalRevenue;
+    const overallMargin = totalRevenue > 0 ? (totalRevenue - totalCosts) / totalRevenue : 0;
 
     return {
       metrics: [

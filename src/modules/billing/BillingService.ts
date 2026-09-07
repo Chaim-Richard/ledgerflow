@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 export interface BillingState {
-  currentPlan: 'free' | 'pro' | 'enterprise';
+  currentPlan: 'free' | 'growth' | 'pro' | 'enterprise';
   transactionCount: number;
   userCount: number; // Tracks registered collaborative users
   freeWorkspaceTxCap: number;
@@ -14,7 +14,7 @@ export interface BillingState {
   registrationAllowed: boolean;
   incrementTransaction: () => void;
   incrementUserCount: () => void;
-  upgradePlan: (plan: 'pro' | 'enterprise') => void;
+  upgradePlan: (plan: 'growth' | 'pro' | 'enterprise') => void;
   fetchSystemCaps: () => Promise<void>;
   checkQuota: (plan?: string, txCount?: number) => boolean; // Enforcement for 'integrity' of usage metrics
 }
@@ -54,16 +54,18 @@ export const useBillingStore = create<BillingState>()(
         }
       },
       checkQuota: (plan?: string, txCount?: number) => {
-        const activePlan = plan || 'free';
+        const activePlan = (plan || get().currentPlan || 'free').toLowerCase();
         const activeTxCount = txCount !== undefined ? txCount : get().transactionCount;
         
-        const isFree = activePlan === 'free';
-        
-        if (isFree) {
+        if (activePlan === 'free') {
           const cap = get().freeWorkspaceTxCap ?? 100;
-          if (activeTxCount >= cap) return false;
+          return activeTxCount < cap;
         } else if (activePlan === 'growth') {
-          if (activeTxCount >= 1000) return false;
+          return activeTxCount < 1000;
+        } else if (activePlan === 'pro') {
+          return activeTxCount < 10000;
+        } else if (activePlan === 'enterprise') {
+          return true;
         }
         return true;
       }

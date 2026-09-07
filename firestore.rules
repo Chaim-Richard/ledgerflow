@@ -81,7 +81,10 @@ service cloud.firestore {
 
     // Presence collection rules for multi-user collaboration
     match /presence/{userId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId ||
+        (resource != null && resource.data.currentWorkspaceId != null && isWorkspaceMember(resource.data.currentWorkspaceId))
+      );
       allow write: if isSignedIn() && request.auth.uid == userId && isValidId(userId) &&
         affectedKeys(["uid", "email", "displayName", "photoURL", "lastActive", "activeTab", "state", "currentWorkspaceId"]);
     }

@@ -18,7 +18,7 @@ import {
   List
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, safeConfirm } from '../../lib/utils';
+import { cn, safeConfirm, parseAmountToCents } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import AsyncButton from '../ui/AsyncButton';
 import { toast } from 'sonner';
@@ -691,7 +691,7 @@ export default function Projects() {
                     <input 
                       type="number"
                       value={editingProject.budgetCents / 100}
-                      onChange={(e) => setEditingProject({ ...editingProject, budgetCents: Math.round(Number(e.target.value) * 100) })}
+                      onChange={(e) => setEditingProject({ ...editingProject, budgetCents: parseAmountToCents(e.target.value) })}
                       className="w-full pl-10 pr-4 py-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all"
                     />
                   </div>
