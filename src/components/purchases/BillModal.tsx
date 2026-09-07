@@ -33,8 +33,8 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     amountCents: 0
   }));
 
-  const [splits, setSplits] = useState<Array<{ amountCents: number, accountId: string, description: string }>>([
-    { amountCents: 0, accountId: '', description: '' }
+  const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string }>>([
+    { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }
   ]);
 
   const [memo, setMemo] = useState('');
@@ -228,7 +228,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <h4 className="micro-label">Expense Allocation</h4>
               <button 
                 type="button"
-                onClick={() => setSplits([...splits, { amountCents: 0, accountId: '', description: '' }])}
+                onClick={() => setSplits([...splits, { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }])}
                 className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all"
               >
                 <Plus size={14} />
@@ -238,7 +238,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
             
             <div className="space-y-3">
               {splits.map((split, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
+                <div key={split.id} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
                   <div className="col-span-5 space-y-1">
                     <label className="text-[10px] font-bold text-zinc-400 uppercase">Description</label>
                     <input 

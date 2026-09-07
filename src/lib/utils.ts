@@ -28,8 +28,6 @@ export function parseAmountToCents(val: string | number | undefined | null): num
  * Safe currency formatter with fallback
  */
 export function formatCurrency(cents: number | undefined | null, currency?: string): string {
-  if (cents === undefined || cents === null || isNaN(cents)) return '$0.00';
-  
   let targetCurrency = currency;
   if (!targetCurrency) {
     try {
@@ -38,6 +36,8 @@ export function formatCurrency(cents: number | undefined | null, currency?: stri
       targetCurrency = 'USD';
     }
   }
+
+  const safeCents = (cents === undefined || cents === null || isNaN(cents)) ? 0 : cents;
 
   let divisor = 100;
   try {
@@ -52,15 +52,15 @@ export function formatCurrency(cents: number | undefined | null, currency?: stri
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: targetCurrency,
-  }).format(cents / divisor);
+  }).format(safeCents / divisor);
 }
 
 /**
  * Safe currency formatter for amounts already in dollars
  */
 export function formatDollars(dollars: number | undefined | null, currency?: string): string {
-  if (dollars === undefined || dollars === null || isNaN(dollars)) return '$0.00';
-  return formatCurrency(dollars * 100, currency);
+  const safeDollars = (dollars === undefined || dollars === null || isNaN(dollars)) ? 0 : dollars;
+  return formatCurrency(safeDollars * 100, currency);
 }
 
 /**

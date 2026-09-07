@@ -563,10 +563,12 @@ export class LedgerPostService {
     // Server-side bypass: if context has a bypassPost flag or if we are executing server-side,
     // we can return or process directly. But in default environments:
     const token = await getIdToken().catch(() => null);
+    const idempotencyKey = context?.idempotencyKey || (txs && txs.length > 0 ? txs[0].id : null) || crypto.randomUUID();
     const response = await fetch('/api/v1/transactions/bulk', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
       body: JSON.stringify({ transactions: txs, workspaceId, entityMutation })

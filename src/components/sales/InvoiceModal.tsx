@@ -29,20 +29,22 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     totalCents: 0
   }));
 
-  const [items, setItems] = useState<Array<{ description: string, quantity: number, rateCents: number, amountCents: number, accountId: string }>>([
-    { description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }
+  const [items, setItems] = useState<Array<{ id: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string }>>([
+    { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }
   ]);
 
   const [memo, setMemo] = useState('');
   const [terms, setTerms] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
 
   const total = items.reduce((sum, item) => sum + item.amountCents, 0);
 
   const handleAction = async (e: React.FormEvent, actionStatus: string) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!invoice.customerId) {
       toast.error('Please select a customer');
       return;
@@ -53,19 +55,24 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       toast.success(`${attachments.length} file(s) attached`);
     }
 
-    await onSave({
-      ...invoice,
-      status: actionStatus as any,
-      totalCents: total,
-      amountCents: total,
-      metadata: {
-        memo,
-        terms,
-        emailSubject,
-        emailBody,
-        hasAttachments: attachments.length > 0
-      }
-    });
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        ...invoice,
+        status: actionStatus as any,
+        totalCents: total,
+        amountCents: total,
+        metadata: {
+          memo,
+          terms,
+          emailSubject,
+          emailBody,
+          hasAttachments: attachments.length > 0
+        }
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => handleAction(e, invoice.status || 'pending');
@@ -294,7 +301,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               <h4 className="micro-label">Line Items</h4>
               <button 
                 type="button"
-                onClick={() => setItems([...items, { description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }])}
+                onClick={() => setItems([...items, { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }])}
                 className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all"
               >
                 <Plus size={14} />
@@ -304,7 +311,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             
             <div className="space-y-3">
               {items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
+                <div key={item.id} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
                   <div className="col-span-12 md:col-span-4 space-y-1">
                     <label className="text-[10px] font-bold text-zinc-400 uppercase">Description</label>
                     <input 

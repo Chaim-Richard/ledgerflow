@@ -179,8 +179,7 @@ export function useLedgerData() {
     });
 
     const filter = [
-      where('workspaceId', '==', currentWorkspaceId),
-      where('uid', '==', user.uid)
+      where('workspaceId', '==', currentWorkspaceId)
     ];
     const { setIsSyncing } = useUIStore.getState();
     

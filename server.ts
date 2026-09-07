@@ -969,7 +969,7 @@ async function startServer() {
           const totalTokens = usage.totalTokenCount || (promptTokens + outputTokens);
           
           // Gemini 2.5 Flash Pricing Model True Alignment ($0.075 / 1M input, $0.30 / 1M output)
-          baseCents = (promptTokens * 7.5 / 1000000) + (outputTokens * 30 / 1000000);
+          baseCents = Math.round((promptTokens * 7.5 / 1000000) + (outputTokens * 30 / 1000000));
           baseWeight = totalTokens > 0 ? totalTokens : 15;
         } else {
           if (task === 'parse-personal-tax-profile') baseWeight = 1500;
@@ -4290,7 +4290,26 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     console.debug(`🚀 [Server] Production Ready: http://localhost:${PORT}`);
     console.debug(`📂 [Server] Serving static assets from: ${process.env.NODE_ENV === "production" ? "dist" : "Vite Dev Server"}`);
   });
+
+  const gracefulShutdown = (signal: string) => {
+    console.debug(`🛑 [Server] Received ${signal}. Shutting down gracefully...`);
+    httpServer.close(() => {
+      console.debug('👋 [Server] Closed remaining connections. Exiting process.');
+      process.exit(0);
+    });
+    setTimeout(() => {
+      console.error('💥 [Server] Forced shutdown due to timeout.');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('⚠️ [Server] Unhandled Promise Rejection caught at:', promise, 'reason:', reason);
+});
 
 console.debug("🌀 [Server] Booting LedgerFlow Backend...");
 startServer().catch(err => {
