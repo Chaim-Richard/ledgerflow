@@ -1,1 +1,6 @@
+if git diff --cached --name-only | grep -q '^package\.json$'; then
+  npm install --package-lock-only
+  git add package-lock.json
+fi
+
 npx lint-staged

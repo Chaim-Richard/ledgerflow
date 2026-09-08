@@ -57,6 +57,7 @@ import { assertWorkspaceAccess } from "./src/server/db/firestore.ts";
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 
 import { processAllRecurring } from "./src/server/services/recurringService.ts";
+import { processErrorDigest } from "./src/server/services/errorDigestService.ts";
 import { executeCommand } from "./src/server/utils/commandExecutor.ts";
 import { 
   executeIdempotent, 
@@ -3392,6 +3393,50 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
+  // System Telemetry Error Digest Endpoint (Scheduled cron or admin manual trigger)
+  app.post("/api/v1/system/telemetry/errors/digest", async (req: express.Request, res: express.Response) => {
+    try {
+      const cronSecret = process.env.CRON_SECRET;
+      const providedSecret = req.headers['x-cron-secret'];
+      const authHeader = req.headers.authorization;
+
+      let authorized = false;
+
+      if (cronSecret && providedSecret && cronSecret === providedSecret) {
+        authorized = true;
+      } else if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split('Bearer ')[1];
+        if (token) {
+          try {
+            const decoded = await admin.auth().verifyIdToken(token);
+            if (decoded && (decoded.admin === true || decoded.role === 'admin')) {
+              authorized = true;
+            }
+          } catch {
+            authorized = false;
+          }
+        }
+      }
+
+      if (!authorized) {
+        return res.status(403).json({ 
+          status: "error", 
+          message: "Forbidden: Requires admin authorization or valid cron secret." 
+        });
+      }
+
+      const hoursBack = req.body?.hoursBack ? Number(req.body.hoursBack) : 24;
+      const recipientEmail = req.body?.recipientEmail ? String(req.body.recipientEmail) : undefined;
+      const forceSendZero = Boolean(req.body?.forceSendZero);
+
+      const result = await processErrorDigest({ hoursBack, recipientEmail, forceSendZero });
+      res.json({ status: "success", data: result });
+    } catch (err: any) {
+      console.error("[System Cron] Error digest job failed:", err);
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
   app.get("/api/v1/admin/global-config", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
       res.json({
@@ -4410,6 +4455,13 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     // Single boot check for due recurring items with idempotency protection.
     // Ongoing processing runs through the authenticated /api/v1/system/recurring/process endpoint.
     processAllRecurring().catch(err => console.error('[RecurringService] Initial boot run failed:', err));
+
+    // Daily error telemetry digest schedule (24h cadence).
+    // Can also be triggered on-demand via POST /api/v1/system/telemetry/errors/digest.
+    const ERROR_DIGEST_INTERVAL_MS = 24 * 60 * 60 * 1000;
+    setInterval(() => {
+      processErrorDigest().catch(err => console.warn('[ErrorDigestService] Scheduled digest run failed:', err));
+    }, ERROR_DIGEST_INTERVAL_MS);
   });
 
   const gracefulShutdown = (signal: string) => {
