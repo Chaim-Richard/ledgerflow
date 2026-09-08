@@ -134,7 +134,7 @@ describe('Firestore Security Rules Unit Tests', () => {
   });
 
   test('Role field on users collection cannot be changed by the client', async () => {
-    const aliceDb = getFirestoreContext({ uid: 'alice' });
+    const aliceDb = getFirestoreContext({ uid: 'alice', token: { email: 'alice@example.com' } });
 
     const userRef = aliceDb.doc('users/alice');
     
@@ -153,6 +153,22 @@ describe('Firestore Security Rules Unit Tests', () => {
     await assert.rejects(async () => {
       await userRef.update({
         role: 'admin',
+        updatedAt: new Date().toISOString(),
+      });
+    }, /permission-denied/i);
+  });
+
+  test('User profile creation denies email mismatch with auth token', async () => {
+    const aliceDb = getFirestoreContext({ uid: 'alice', token: { email: 'alice@example.com' } });
+    const userRef = aliceDb.doc('users/alice');
+
+    // Mismatched email attempt
+    await assert.rejects(async () => {
+      await userRef.set({
+        uid: 'alice',
+        email: 'attacker@example.com',
+        role: 'client',
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
     }, /permission-denied/i);

@@ -317,7 +317,7 @@ export function useTransactionActions() {
           if (finalTx.lines && finalTx.lines.length > 0) {
             finalTx.lines.forEach((line: any) => {
               if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
-                const searchDesc = line.description || finalTx.description;
+                const searchDesc = line.description || (finalTx.lines.length === 1 ? finalTx.description : undefined);
                 if (searchDesc) {
                   recordRulePattern(searchDesc, line.accountId || 'uncategorized', line.accountName, line.tags, line.dimensions);
                 }
@@ -590,7 +590,7 @@ export function useTransactionActions() {
     if (optimisticTx.description && optimisticTx.lines && optimisticTx.lines.length > 0) {
       optimisticTx.lines.forEach((line: any) => {
         if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
-          const searchDesc = line.description || optimisticTx.description;
+          const searchDesc = line.description || (optimisticTx.lines.length === 1 ? optimisticTx.description : undefined);
           if (searchDesc) {
             recordRulePattern(searchDesc, line.accountId || 'unassigned', line.accountName, line.tags, line.dimensions);
           }
@@ -1214,7 +1214,7 @@ export function useTransactionActions() {
         // Push to autonomous cache for immediate "soft" learning across all lines
         updates.lines.forEach((line: any) => {
           if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
-            const searchDesc = line.description || description;
+            const searchDesc = line.description || (updates.lines?.length === 1 ? description : undefined);
             if (searchDesc && line.accountId) {
               recordRulePattern(searchDesc, line.accountId, line.accountName, line.tags, line.dimensions);
             }
