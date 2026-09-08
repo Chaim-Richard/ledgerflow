@@ -245,4 +245,76 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
     assert.strictEqual(itemLine.dimensions?.category, 'Unobtanium/Relic');
     assert.strictEqual(itemLine.dimensions?.location, 'Unknown Boutique');
   });
+
+  it('rejects invalid/negative amounts or non-finite numbers', () => {
+    const negativeTotal: ParsedReceiptData = {
+      vendorName: 'Bad Vendor',
+      totalAmountCents: -500,
+      lines: [{ description: 'Item 1', amountCents: -500 }]
+    };
+    const res1 = validateReceiptPayload(negativeTotal);
+    assert.strictEqual(res1.valid, false);
+    assert.ok(res1.error?.includes('Invalid receipt total amount'));
+
+    const negativeTax: ParsedReceiptData = {
+      vendorName: 'Bad Vendor',
+      totalAmountCents: 500,
+      taxAmountCents: -50,
+      lines: [{ description: 'Item 1', amountCents: 550 }]
+    };
+    const res2 = validateReceiptPayload(negativeTax);
+    assert.strictEqual(res2.valid, false);
+    assert.ok(res2.error?.includes('Invalid receipt tax amount'));
+
+    const negativeLine: ParsedReceiptData = {
+      vendorName: 'Bad Vendor',
+      totalAmountCents: 500,
+      lines: [{ description: 'Item 1', amountCents: -500 }]
+    };
+    const res3 = validateReceiptPayload(negativeLine);
+    assert.strictEqual(res3.valid, false);
+    assert.ok(res3.error?.includes('invalid amountCents'));
+  });
+
+  it('enforces per-item semantic arithmetic between quantity, unitPriceCents, and amountCents', () => {
+    // Correct item math: 3 * 400 = 1200 + tax 100 = 1300
+    const validItemMath: ParsedReceiptData = {
+      vendorName: 'Office Depot',
+      totalAmountCents: 1300,
+      taxAmountCents: 100,
+      lines: [
+        {
+          description: 'Gel Pens 12-pack',
+          amountCents: 1200,
+          quantity: 3,
+          unitPriceCents: 400,
+          category: 'Office/Supplies/Pens'
+        }
+      ]
+    };
+    const validRes = validateReceiptPayload(validItemMath);
+    assert.strictEqual(validRes.valid, true);
+
+    // Contradictory item math: quantity 3 * unit price $4.00 = $12.00, but amountCents claims $20.00
+    const corruptedItemMath: ParsedReceiptData = {
+      vendorName: 'Office Depot',
+      totalAmountCents: 2100,
+      taxAmountCents: 100,
+      lines: [
+        {
+          description: 'Gel Pens 12-pack',
+          amountCents: 2000, // Contradicts 3 * 400 = 1200
+          quantity: 3,
+          unitPriceCents: 400,
+          category: 'Office/Supplies/Pens'
+        }
+      ]
+    };
+    const invalidRes = validateReceiptPayload(corruptedItemMath);
+    assert.strictEqual(invalidRes.valid, false);
+    assert.ok(
+      invalidRes.error?.includes('Receipt item arithmetic mismatch on "Gel Pens 12-pack"'),
+      `Error should specifically report item arithmetic mismatch: ${invalidRes.error}`
+    );
+  });
 });

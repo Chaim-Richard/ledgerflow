@@ -54,33 +54,107 @@ export function isReceiptAggregateRow(description: string): boolean {
 }
 
 /**
- * Validates a parsed receipt payload for mathematical consistency and absence of summary rows.
- * Rejects payloads containing SUBTOTAL/TAX/TOTAL rows in `lines`, or whose itemized sums
- * deviate from totalAmountCents by more than 1 cent.
+ * Validates a parsed receipt payload for mathematical consistency, absence of summary rows,
+ * and individual line item arithmetic integrity.
+ * 
+ * Rejects payloads containing:
+ * 1. Non-finite or negative total, tax, tip, or line amounts.
+ * 2. SUBTOTAL/TAX/TOTAL/CHANGE summary rows in `lines`.
+ * 3. Individual line items whose quantity × unitPriceCents deviates from amountCents.
+ * 4. Overall reconciliation mismatch between item sum + tax + tip and totalAmountCents.
  */
 export function validateReceiptPayload(data: ParsedReceiptData): { valid: boolean; error?: string } {
   if (!data) {
     return { valid: false, error: 'Receipt data is null or empty.' };
   }
 
+  const totalCents = data.totalAmountCents;
+  if (typeof totalCents !== 'number' || !Number.isFinite(totalCents) || totalCents < 0) {
+    return {
+      valid: false,
+      error: `Invalid receipt total amount: ${totalCents}. Must be a finite non-negative number of cents.`
+    };
+  }
+
+  const taxCents = data.taxAmountCents ?? 0;
+  if (typeof taxCents !== 'number' || !Number.isFinite(taxCents) || taxCents < 0) {
+    return {
+      valid: false,
+      error: `Invalid receipt tax amount: ${taxCents}. Must be a finite non-negative number of cents.`
+    };
+  }
+
+  const tipCents = data.tipAmountCents ?? 0;
+  if (typeof tipCents !== 'number' || !Number.isFinite(tipCents) || tipCents < 0) {
+    return {
+      valid: false,
+      error: `Invalid receipt tip amount: ${tipCents}. Must be a finite non-negative number of cents.`
+    };
+  }
+
   const lines = data.lines || [];
 
-  // 1. Detect and reject summary rows in line items
-  for (const line of lines) {
-    if (isReceiptAggregateRow(line.description)) {
+  // 1. Detect summary rows and enforce per-item quantity / unit-price arithmetic
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const desc = line.description?.trim() || '';
+
+    if (!desc) {
       return {
         valid: false,
-        error: `Receipt rejected: Line items contain summary row "${line.description}". Lines must only contain itemized purchasable products.`
+        error: `Receipt rejected: Line item #${i + 1} has an empty description.`
       };
+    }
+
+    if (isReceiptAggregateRow(desc)) {
+      return {
+        valid: false,
+        error: `Receipt rejected: Line items contain summary row "${desc}". Lines must only contain itemized purchasable products.`
+      };
+    }
+
+    if (typeof line.amountCents !== 'number' || !Number.isFinite(line.amountCents) || line.amountCents < 0) {
+      return {
+        valid: false,
+        error: `Receipt rejected: Line item "${desc}" has invalid amountCents (${line.amountCents}). Must be a finite non-negative number.`
+      };
+    }
+
+    if (line.quantity !== undefined && line.quantity !== null) {
+      if (typeof line.quantity !== 'number' || !Number.isFinite(line.quantity) || line.quantity <= 0) {
+        return {
+          valid: false,
+          error: `Receipt rejected: Line item "${desc}" has invalid quantity (${line.quantity}). Must be a positive finite number.`
+        };
+      }
+    }
+
+    if (line.unitPriceCents !== undefined && line.unitPriceCents !== null) {
+      if (typeof line.unitPriceCents !== 'number' || !Number.isFinite(line.unitPriceCents) || line.unitPriceCents < 0) {
+        return {
+          valid: false,
+          error: `Receipt rejected: Line item "${desc}" has invalid unitPriceCents (${line.unitPriceCents}). Must be a non-negative finite number.`
+        };
+      }
+    }
+
+    // If both quantity and unitPriceCents are specified, check internal arithmetic consistency
+    if (line.quantity !== undefined && line.quantity !== null && line.quantity > 0 &&
+        line.unitPriceCents !== undefined && line.unitPriceCents !== null && line.unitPriceCents >= 0) {
+      const calculatedAmount = Math.round(line.quantity * line.unitPriceCents);
+      // Allow up to 2 cents rounding discrepancy for fractional item tax/unit calculations
+      if (Math.abs(calculatedAmount - line.amountCents) > 2) {
+        return {
+          valid: false,
+          error: `Receipt item arithmetic mismatch on "${desc}": quantity (${line.quantity}) × unit price ($${(line.unitPriceCents / 100).toFixed(2)}) = $${(calculatedAmount / 100).toFixed(2)}, which deviates from item amount ($${(line.amountCents / 100).toFixed(2)}).`
+        };
+      }
     }
   }
 
   // 2. Enforce scalar math: sum(lines.amountCents) + tax + tip === totalAmountCents
   if (lines.length > 0) {
     const itemsSum = lines.reduce((acc, l) => acc + (l.amountCents || 0), 0);
-    const taxCents = data.taxAmountCents || 0;
-    const tipCents = data.tipAmountCents || 0;
-    const totalCents = data.totalAmountCents || 0;
     const expectedSum = itemsSum + taxCents + tipCents;
 
     if (Math.abs(expectedSum - totalCents) > 1) {

@@ -226,7 +226,26 @@ export class AIBackendService {
   private async parseReceipt(data: any) {
     const { base64Data, mimeType, context } = data;
     const source: any = { inlineData: { data: base64Data, mimeType } };
-    const prompt = `Extract receipt data. Context: ${context}. Return vendorName, date, totalAmountCents, taxAmountCents, tipAmountCents, categorySuggestion, and an array of 'lines' with {description, amountCents, category, quantity, unitPriceCents}. Lines MUST contain ONLY purchasable item rows — explicitly exclude SUBTOTAL, TAX, TIP, TOTAL, CHANGE, and payment rows. taxAmountCents, tipAmountCents, and totalAmountCents must be returned as separate scalar fields. Ensure sum(lines[].amountCents) + taxAmountCents + tipAmountCents equals totalAmountCents.`;
+    const prompt = `Extract structured receipt data from the document. Context / Chart of Accounts: ${context}.
+Return a JSON object with:
+- vendorName: Merchant / store name.
+- date: Transaction date in YYYY-MM-DD format.
+- totalAmountCents: Total settlement amount in integer cents.
+- taxAmountCents: Total sales tax in integer cents (or 0 if none/included).
+- tipAmountCents: Total gratuity / tip in integer cents (or 0).
+- categorySuggestion: Top-level hierarchical category coordinate path (e.g. "Meals/Dining", "Office/Supplies", "Groceries/Food").
+- lines: Array of individual purchasable line items. Each line item MUST contain:
+  * description: Exact product or service name.
+  * amountCents: Integer line total in cents.
+  * quantity: Numeric quantity (default 1).
+  * unitPriceCents: Integer unit price in cents.
+  * category: Full hierarchical multi-level coordinate path separated by slashes (e.g. "Groceries/Food/Dairy/Milk", "Office/Supplies/Paper", "Operations/Software/Hosting", "Meals/Dining/Lunch").
+
+STRICT ARCHITECTURAL INVARIANTS:
+1. Lines MUST contain ONLY itemized purchasable product/service rows. Explicitly EXCLUDE summary rows such as SUBTOTAL, TAX, TIP, TOTAL, CHANGE, and payment/tender rows.
+2. For each line item: amountCents must equal Math.round(quantity * unitPriceCents).
+3. Total reconciliation constraint: sum(lines[].amountCents) + taxAmountCents + tipAmountCents MUST equal totalAmountCents.`;
+
     const result = await this.generateContent({
       model: this.getModel(data),
       contents: [{
@@ -238,6 +257,32 @@ export class AIBackendService {
       }],
       config: { 
         responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            vendorName: { type: Type.STRING },
+            date: { type: Type.STRING },
+            totalAmountCents: { type: Type.INTEGER },
+            taxAmountCents: { type: Type.INTEGER },
+            tipAmountCents: { type: Type.INTEGER },
+            categorySuggestion: { type: Type.STRING },
+            lines: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  description: { type: Type.STRING },
+                  amountCents: { type: Type.INTEGER },
+                  quantity: { type: Type.NUMBER },
+                  unitPriceCents: { type: Type.INTEGER },
+                  category: { type: Type.STRING }
+                },
+                required: ["description", "amountCents"]
+              }
+            }
+          },
+          required: ["vendorName", "totalAmountCents", "lines"]
+        },
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
       }
     });
