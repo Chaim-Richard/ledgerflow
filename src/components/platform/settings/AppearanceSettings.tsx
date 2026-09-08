@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Type, 
   Sliders, 
@@ -6,30 +6,14 @@ import {
   Moon, 
   Monitor, 
   Palette, 
-  ShieldCheck, 
-  UserCheck, 
-  Sparkles, 
   Check, 
-  Eye, 
-  Maximize2, 
   Grid, 
-  Calendar, 
-  Hash, 
-  Lock,
-  Crown,
-  KeyRound
+  Calendar 
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useUIStore } from '../../../stores/useUIStore';
-import { useAuthStore } from '../../../stores/useAuthStore';
-import { toast } from 'sonner';
 
 export default function AppearanceSettings() {
-  const user = useAuthStore(state => state.user);
-  const userProfile = useAuthStore(state => state.userProfile);
-  const setUserProfile = useAuthStore(state => state.setUserProfile);
-  const updateUserRole = useAuthStore(state => state.updateUserRole);
-
   const theme = useUIStore(state => state.theme);
   const setTheme = useUIStore(state => state.setTheme);
   const fontSizeScale = useUIStore(state => state.fontSizeScale);
@@ -50,23 +34,6 @@ export default function AppearanceSettings() {
   const setDateFormatPref = useUIStore(state => state.setDateFormatPref);
   const numberDecimals = useUIStore(state => state.numberDecimals);
   const setNumberDecimals = useUIStore(state => state.setNumberDecimals);
-
-  const [selectedRole, setSelectedRole] = useState<'admin' | 'client'>(
-    userProfile?.role || 'admin'
-  );
-
-  const ownerEmail = user?.email || 'shmuelbiller@gmail.com';
-  const isOwner = ownerEmail.toLowerCase() === 'shmuelbiller@gmail.com' || ownerEmail.toLowerCase().includes('shmuel') || userProfile?.role === 'admin';
-
-  const handleSaveRole = async () => {
-    try {
-      await updateUserRole(selectedRole);
-      toast.success(`Role updated to ${selectedRole.toUpperCase()}. Saved to profile.`);
-    } catch (err) {
-      console.error('Failed to update role:', err);
-      toast.error('Failed to update role.');
-    }
-  };
 
   const fontPresets = [
     { id: 'small', label: 'Small', scale: 90, desc: 'Compact data view (90%)' },
@@ -96,99 +63,7 @@ export default function AppearanceSettings() {
 
   return (
     <div className="space-y-10">
-      {/* 1. Admin & Owner Governance Card */}
-      <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--brass-soft)] rounded-full blur-3xl pointer-events-none opacity-20" />
-        
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 border-b border-[var(--line)] pb-8">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-[var(--brass)] text-black rounded-2xl flex items-center justify-center shadow-lg font-black text-xl shrink-0">
-              <Crown size={28} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Admin & System Owner</h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase tracking-wider flex items-center gap-1">
-                  <ShieldCheck size={12} /> Master Owner
-                </span>
-              </div>
-              <p className="text-xs text-[var(--muted)] font-medium mt-1">
-                Primary Account: <span className="font-mono text-[var(--text)] font-bold">{ownerEmail}</span>
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleSaveRole}
-            className="px-5 py-2.5 bg-[var(--brass)] text-black font-bold text-xs rounded-xl shadow-md hover:opacity-90 transition-all flex items-center gap-2 cursor-pointer shrink-0"
-           aria-label="Confirm Role Rights">
-            <KeyRound size={14} />
-            <span>Confirm Role Rights</span>
-          </button>
-        </div>
-
-        {/* Role & Access Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-6 bg-[var(--panel)] border border-[var(--line)] rounded-xl space-y-4">
-            <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider flex items-center gap-2">
-              <UserCheck size={16} className="text-[var(--brass)]" />
-              <span>Assigned System Role</span>
-            </h4>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setSelectedRole('admin')}
-                className={cn(
-                  "flex-1 p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1",
-                  selectedRole === 'admin' 
-                    ? "bg-[var(--brass-soft)] border-[var(--brass)] text-[var(--text)] ring-1 ring-[var(--brass)]" 
-                    : "bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)]"
-                )}
-              >
-                <span className="font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <Crown size={13} className="text-[var(--brass)]" /> Admin / Owner
-                </span>
-                <span className="text-[10px] opacity-75">Full access to settings, users, and audit logs.</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedRole('client')}
-                className={cn(
-                  "flex-1 p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1",
-                  selectedRole === 'client' 
-                    ? "bg-[var(--brass-soft)] border-[var(--brass)] text-[var(--text)] ring-1 ring-[var(--brass)]" 
-                    : "bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)]"
-                )}
-              >
-                <span className="font-bold text-xs uppercase tracking-wider">Standard Member</span>
-                <span className="text-[10px] opacity-75">View & edit ledger data without system admin rights.</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="p-6 bg-[var(--panel)] border border-[var(--line)] rounded-xl space-y-3">
-            <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider flex items-center gap-2">
-              <Lock size={16} className="text-[var(--pos)]" />
-              <span>Active Privilege Matrix</span>
-            </h4>
-            <div className="space-y-2 text-[11px] font-medium text-[var(--muted)]">
-              <div className="flex items-center justify-between py-1 border-b border-[var(--line)]/50">
-                <span>System Administration Panel</span>
-                <span className="text-[var(--pos)] font-bold">AUTHORIZED</span>
-              </div>
-              <div className="flex items-center justify-between py-1 border-b border-[var(--line)]/50">
-                <span>Fiscal Lock & Period Closing</span>
-                <span className="text-[var(--pos)] font-bold">AUTHORIZED</span>
-              </div>
-              <div className="flex items-center justify-between py-1">
-                <span>Custom Rules & AI Engine Control</span>
-                <span className="text-[var(--pos)] font-bold">AUTHORIZED</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Text Sizing & Font Scaling */}
+      {/* Text Sizing & Font Scaling */}
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl space-y-8">
         <div className="flex items-center justify-between flex-wrap gap-4 border-b border-[var(--line)] pb-6">
           <div className="flex items-center gap-4">

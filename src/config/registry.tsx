@@ -298,7 +298,7 @@ export const REPORT_TABS_REGISTRY = [
 ];
 
 export const SETTINGS_TABS_REGISTRY = [
-  { id: 'appearance', label: { en: 'Appearance & Admin Access', he: 'מראה והרשאות ניהול' }, componentName: 'AppearanceSettingsView', icon: Sliders },
+  { id: 'appearance', label: { en: 'Appearance & Display', he: 'מראה ותצוגה' }, componentName: 'AppearanceSettingsView', icon: Sliders },
   { id: 'billing', label: { en: 'Billing & Plan', he: 'תוכניות וחיוב' }, componentName: 'BillingView', icon: CreditCard },
   { id: 'templates', label: { en: 'Custom Templates', he: 'תבניות' }, componentName: 'TemplatesView', icon: FileText },
   { id: 'security', label: { en: 'Security', he: 'אבטחה' }, componentName: 'SecurityView', icon: ShieldCheck },
