@@ -76,6 +76,33 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
     assert.equal(extra.length, 0, `transactions rules permit fields absent from expected model: ${extra.join(', ')}`);
   });
 
+  test('supportTickets rule allowlist strictly matches SupportTicket interface fields', () => {
+    const keys = extractAffectedKeys(rulesText, 'supportTickets');
+    assert.ok(keys.length > 0, 'Should find affectedKeys for supportTickets in firestore.rules');
+
+    const expectedSupportTicketKeys = [
+      'id', 'workspaceId', 'uid', 'subject', 'status', 'priority', 'createdAt', 'updatedAt',
+      'lastMessageAt', 'lastMessageBy', 'unreadForUser', 'unreadForAdmin'
+    ];
+
+    for (const key of expectedSupportTicketKeys) {
+      assert.ok(keys.includes(key), `firestore.rules supportTickets missing key '${key}'`);
+    }
+  });
+
+  test('supportMessages rule allowlist strictly matches SupportMessage interface fields', () => {
+    const keys = extractAffectedKeys(rulesText, 'supportMessages');
+    assert.ok(keys.length > 0, 'Should find affectedKeys for supportMessages in firestore.rules');
+
+    const expectedSupportMessageKeys = [
+      'id', 'ticketId', 'workspaceId', 'authorUid', 'authorRole', 'body', 'createdAt'
+    ];
+
+    for (const key of expectedSupportMessageKeys) {
+      assert.ok(keys.includes(key), `firestore.rules supportMessages missing key '${key}'`);
+    }
+  });
+
   test('chartAccounts rule allowlist includes isActive field', () => {
     const keys = extractAffectedKeys(rulesText, 'chartAccounts');
     assert.ok(keys.length > 0, 'Should find affectedKeys for chartAccounts in firestore.rules');
@@ -88,7 +115,8 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
       { collectionGroup: 'invoices', field: 'date' },
       { collectionGroup: 'bills', field: 'date' },
       { collectionGroup: 'bankLines', field: 'date' },
-      { collectionGroup: 'auditLogs', field: 'timestamp' }
+      { collectionGroup: 'auditLogs', field: 'timestamp' },
+      { collectionGroup: 'supportTickets', field: 'lastMessageAt' }
     ];
 
     for (const req of requiredIndexes) {
@@ -96,7 +124,7 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
         return (
           idx.collectionGroup === req.collectionGroup &&
           idx.fields.length === 2 &&
-          idx.fields[0].fieldPath === 'workspaceId' &&
+          (idx.fields[0].fieldPath === 'workspaceId' || idx.fields[0].fieldPath === 'status') &&
           idx.fields[0].order === 'ASCENDING' &&
           idx.fields[1].fieldPath === req.field &&
           idx.fields[1].order === 'DESCENDING'

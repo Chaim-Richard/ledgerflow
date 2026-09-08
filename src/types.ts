@@ -777,13 +777,15 @@ export interface ExpenseClaim {
   createdAt: string;
 }
 
+export type Priority = 'low' | 'normal' | 'high';
+
 export interface SupportTicket {
   id: string;
   workspaceId: string;
   uid: string;
   subject: string;
   status: 'open' | 'pending_user' | 'pending_support' | 'resolved' | 'closed';
-  priority: 'low' | 'normal' | 'high';
+  priority: Priority;
   createdAt: string;
   updatedAt: string;
   lastMessageAt: string;

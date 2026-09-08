@@ -76,6 +76,7 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'system-command-center': lazy(() => import('../components/platform/SystemCommandCenter')),
   'consolidation': lazy(() => import('../components/finance/Consolidation')),
   'taxes': lazy(() => import('../components/finance/TaxManager')),
+  'support': lazy(() => import('../components/support/SupportView')),
 };
 
 export interface AppTabDefinition {
@@ -109,6 +110,7 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'intelligence', label: { en: 'Insights', he: 'תובנות' }, icon: BarChart3, groupId: 'reports' },
 
   { id: 'settings', label: { en: 'Preferences', he: 'הגדרות' }, icon: Settings, groupId: 'settings' },
+  { id: 'support', label: { en: 'Support', he: 'תמיכה' }, icon: Headphones, groupId: 'settings' },
   { id: 'vault', label: { en: 'Documents', he: 'מסמכים' }, icon: ShieldCheck, groupId: 'settings' },
   { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'settings' },
   { id: 'system-command-center', label: { en: 'Admin Panel', he: 'ניהול' }, icon: Building, groupId: 'settings', requiresOwner: true }

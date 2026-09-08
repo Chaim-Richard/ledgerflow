@@ -219,13 +219,17 @@ service cloud.firestore {
         && isWorkspaceMember(request.resource.data.workspaceId)
         && isValidId(ticketId)
         && request.resource.data.subject is string && request.resource.data.subject.size() <= 200
-        && request.resource.data.status == 'open';
+        && request.resource.data.status == 'open'
+        && affectedKeys(['id', 'workspaceId', 'uid', 'subject', 'status', 'priority', 'createdAt', 'updatedAt', 'lastMessageAt', 'lastMessageBy', 'unreadForUser', 'unreadForAdmin']);
       allow update: if isSignedIn() && (
         request.auth.token.admin == true ||
         (isWorkspaceMember(resource.data.workspaceId)
           && isUnchanged("workspaceId") && isUnchanged("uid")
-          && isUnchanged("createdAt"))
-      );
+          && isUnchanged("createdAt")
+          // Users can only close/resolve or update unread flags/metadata during normal flow
+          && (request.resource.data.status == 'closed' || request.resource.data.status == 'resolved' || request.resource.data.status == resource.data.status)
+        )
+      ) && affectedKeys(['id', 'workspaceId', 'uid', 'subject', 'status', 'priority', 'createdAt', 'updatedAt', 'lastMessageAt', 'lastMessageBy', 'unreadForUser', 'unreadForAdmin']);
       allow delete: if false;
     }
 
@@ -241,7 +245,8 @@ service cloud.firestore {
         && (request.auth.token.admin == true
             ? request.resource.data.authorRole == 'admin'
             : (isWorkspaceMember(request.resource.data.workspaceId)
-               && request.resource.data.authorRole == 'user'));
+               && request.resource.data.authorRole == 'user'))
+        && affectedKeys(['id', 'ticketId', 'workspaceId', 'authorUid', 'authorRole', 'body', 'createdAt']);
       allow update, delete: if false;
     }
 

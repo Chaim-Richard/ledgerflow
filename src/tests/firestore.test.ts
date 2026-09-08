@@ -275,4 +275,104 @@ describe('Firestore Security Rules Unit Tests', () => {
       await adminRef.get();
     }, /permission-denied/i);
   });
+
+  test('Support tickets and messages respect workspace boundaries and role constraints', async () => {
+    if (!testEnv) return;
+    const aliceDb = getFirestoreContext({ uid: 'alice' });
+    const bobDb = getFirestoreContext({ uid: 'bob' });
+    const adminDb = getFirestoreContext({ uid: 'admin', token: { admin: true } });
+    if (!aliceDb || !bobDb || !adminDb) return;
+
+    // Alice creates her workspace
+    await aliceDb.doc('workspaces/ws-alice').set({
+      id: 'ws-alice',
+      uid: 'alice',
+      name: 'Alice Corp',
+      createdAt: new Date().toISOString(),
+    });
+
+    // Alice creates a ticket
+    const ticketId = 'ticket-1';
+    await assert.doesNotReject(async () => {
+      await aliceDb.doc(`supportTickets/${ticketId}`).set({
+        id: ticketId,
+        workspaceId: 'ws-alice',
+        uid: 'alice',
+        subject: 'Help me',
+        status: 'open',
+        priority: 'normal',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastMessageAt: new Date().toISOString(),
+        lastMessageBy: 'alice',
+        unreadForUser: false,
+        unreadForAdmin: true
+      });
+    });
+
+    // Bob tries to read Alice's ticket
+    await assert.rejects(async () => {
+      await bobDb.doc(`supportTickets/${ticketId}`).get();
+    }, /permission-denied/i);
+
+    // Admin can read Alice's ticket
+    await assert.doesNotReject(async () => {
+      await adminDb.doc(`supportTickets/${ticketId}`).get();
+    });
+
+    // Alice creates a message
+    const msgId = 'msg-1';
+    await assert.doesNotReject(async () => {
+      await aliceDb.doc(`supportMessages/${msgId}`).set({
+        id: msgId,
+        ticketId,
+        workspaceId: 'ws-alice',
+        authorUid: 'alice',
+        authorRole: 'user',
+        body: 'Hello',
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    // Bob tries to read Alice's message
+    await assert.rejects(async () => {
+      await bobDb.doc(`supportMessages/${msgId}`).get();
+    }, /permission-denied/i);
+
+    // Alice tries to create a message as admin (spoofing)
+    await assert.rejects(async () => {
+      await aliceDb.doc('supportMessages/msg-2').set({
+        id: 'msg-2',
+        ticketId,
+        workspaceId: 'ws-alice',
+        authorUid: 'alice',
+        authorRole: 'admin',
+        body: 'I am admin',
+        createdAt: new Date().toISOString()
+      });
+    }, /permission-denied/i);
+
+    // Admin creates a message
+    await assert.doesNotReject(async () => {
+      await adminDb.doc('supportMessages/msg-admin').set({
+        id: 'msg-admin',
+        ticketId,
+        workspaceId: 'ws-alice',
+        authorUid: 'admin',
+        authorRole: 'admin',
+        body: 'I am the real admin',
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    // Nobody can delete a ticket
+    await assert.rejects(async () => {
+      await adminDb.doc(`supportTickets/${ticketId}`).delete();
+    }, /permission-denied/i);
+
+    // Nobody can edit a message
+    await assert.rejects(async () => {
+      await adminDb.doc(`supportMessages/${msgId}`).update({ body: 'hacked' });
+    }, /permission-denied/i);
+  });
 });
