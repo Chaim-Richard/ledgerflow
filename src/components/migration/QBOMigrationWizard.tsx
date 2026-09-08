@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
@@ -60,15 +59,53 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
   const { addEntity } = useEntityOperations();
 
   // Helper to parse file into rows
-  const parseSpreadsheetData = (data: ArrayBuffer | string, fileName: string) => {
+  const parseSpreadsheetData = async (data: ArrayBuffer | string, fileName: string) => {
     try {
-      const workbook = typeof data === 'string' 
-        ? XLSX.read(data, { type: 'string' })
-        : XLSX.read(data, { type: 'array' });
+      let json: any[][] = [];
 
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      const json: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      if (typeof data === 'string') {
+        // Simple CSV parser supporting quotes
+        const lines = data.split(/\r?\n/);
+        json = lines.filter(l => l.trim()).map(line => {
+          const row: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') inQuotes = !inQuotes;
+            else if (char === ',' && !inQuotes) {
+              row.push(current.trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          row.push(current.trim());
+          return row;
+        });
+      } else {
+        const ExcelJS = await import('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(data as ArrayBuffer);
+        const worksheet = workbook.worksheets[0];
+        if (worksheet) {
+          worksheet.eachRow((row) => {
+            const rowData: any[] = [];
+            if (Array.isArray(row.values)) {
+              // row.values is 1-indexed in ExcelJS
+              for (let i = 1; i < row.values.length; i++) {
+                let val = row.values[i];
+                if (val && typeof val === 'object') {
+                  if ('result' in val) val = val.result;
+                  else if (val instanceof Date) val = val.toISOString().split('T')[0];
+                }
+                rowData.push(val || '');
+              }
+            }
+            json.push(rowData);
+          });
+        }
+      }
 
       if (json.length === 0) {
         toast.error('The selected file appears to be empty.');

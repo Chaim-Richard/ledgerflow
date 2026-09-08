@@ -29,6 +29,7 @@ import { rateLimit as expressRateLimit } from "express-rate-limit";
 import { SecurityService } from "./src/services/securityService.ts";
 import { AIBackendService } from "./src/services/aiBackendService.ts";
 import { GoogleGenAI } from "@google/genai";
+import { getTrustedAppUrl } from "./src/server/utils/urlHelper.ts";
 import { 
   ReportRangeSchema, 
   WorkspaceIdSchema,
@@ -975,10 +976,10 @@ async function startServer() {
       }
 
       // Check whether payload and task are cached via our unified caching base BEFORE triggering AI!
-      const isCached = AIBackendService.hasCachedResponse(task, payload);
+      const isCached = AIBackendService.hasCachedResponse(task, payload, uid);
 
       const aiService = new AIBackendService(apiKey);
-      const result = await aiService.process(task, payload);
+      const result = await aiService.process(task, payload, uid);
 
       // Charge credits and log audit traces only if it's NOT a cache hit!
       if (workspaceId && !isCached) {
@@ -1060,24 +1061,15 @@ async function startServer() {
     console.warn("[Client Telemetry Error]:", sanitized);
     res.json({ ok: true });
   });
-  app.get("/api/health", async (req, res) => {
+  app.get("/api/health", authenticate, async (req, res) => {
     res.json({ 
       status: "ok", 
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      env: process.env.NODE_ENV,
-      version: "2.0.0-PROXIMA",
-      clusterStatus: "BALANCED",
-      layers: {
-        fiscal: "ACTIVE",
-        rule: "SYNCHRONIZED",
-        integrity: "VERIFIED"
-      }
+      version: "2.0.0-PROXIMA"
     });
   });
 
-  app.get("/api/v1/public/registration-status", async (req, res) => {
+  app.get("/api/v1/public/registration-status", authenticate, async (req, res) => {
     try {
       const db = getDb();
       const usersSnap = await db.collection("users").count().get();
@@ -3402,10 +3394,8 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
          };
       }
 
-      // Generate the host URL dynamically based on where the applet is running
-      const host = req.headers.host || "localhost:3000";
-      const protocol = req.headers['x-forwarded-proto'] || "http";
-      const baseUrl = `${protocol}://${host}`;
+      // Use trusted app URL helper to prevent Host-header poisoning (#85-R, N6)
+      const baseUrl = getTrustedAppUrl(req);
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -3414,7 +3404,14 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         success_url: `${baseUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/?checkout=canceled`,
         metadata: {
-          workspaceId
+          workspaceId,
+          plan: plan || 'pro'
+        },
+        subscription_data: {
+          metadata: {
+            workspaceId,
+            plan: plan || 'pro'
+          }
         }
       });
 
@@ -4236,7 +4233,11 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.use("/api/v1/lease", apiAuthenticate, leaseRouter);
   app.use("/api/v1/inventory", apiAuthenticate, inventoryRouter);
   app.use("/api/v1/support", authenticate, supportRouter);
-  app.use("/api/v1/invoices/public", publicInvoiceRouter);
+  app.use("/api/v1/invoices/public", expressRateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 50,
+    message: "Too many requests to public invoice endpoints."
+  }), publicInvoiceRouter);
   app.use("/api/v1/invoices/email", apiAuthenticate, invoiceEmailRouter);
 
   const http = await import('http');

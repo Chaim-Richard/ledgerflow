@@ -15,10 +15,9 @@ import {
   ArrowDown,
   ExternalLink
 } from 'lucide-react';
-import { formatDecimal, cn, getLocalDateISO } from '../../lib/utils';
+import { formatDecimal, cn, getLocalDateISO, formatCurrency as utilsFormatCurrency } from '../../lib/utils';
 import { isPostable, isTransactionInDateRange, lineAmount, calculateNetIncome } from '../../lib/txFilters';
 import { motion } from 'motion/react';
-import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
 import DrillDownModal from '../layout/DrillDownModal';
 
@@ -172,97 +171,117 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
     return { currentData, prevData };
   }, [getPeriodBalances, asOfDate, priorDate, isComparative]);
 
-  const exportBalanceSheet = () => {
-    const rows = [
-      ['Balance Sheet Statement', ''],
-      [`Reporting Date: As of ${asOfDate}`, isComparative ? `Prior Reference: As of ${priorDate}` : ''],
-      [],
-      ['Account Name', 'Code', 'Current Balance', isComparative ? 'Prior Balance' : '', isComparative ? 'Variance' : '', isComparative ? 'Variance %' : ''],
-      [],
-      [labels.assetsLabel.toUpperCase()],
+  const exportBalanceSheet = async () => {
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Balance Sheet');
+
+    worksheet.columns = [
+      { header: 'Account Name', key: 'name', width: 30 },
+      { header: 'Code', key: 'code', width: 10 },
+      { header: 'Current Balance', key: 'balance', width: 20 },
+      { header: isComparative ? 'Prior Balance' : '', key: 'prior', width: 20 },
+      { header: isComparative ? 'Variance' : '', key: 'variance', width: 20 },
+      { header: isComparative ? 'Variance %' : '', key: 'variancePct', width: 15 },
     ];
 
-    const currentAssetsAccs = accounts.filter(a => a.type === 'asset');
-    currentAssetsAccs.forEach(acc => {
+    worksheet.addRow(['Balance Sheet Statement']);
+    worksheet.addRow([`Reporting Date: As of ${asOfDate}`, isComparative ? `Prior Reference: As of ${priorDate}` : '']);
+    worksheet.addRow([]);
+
+    worksheet.addRow([labels.assetsLabel.toUpperCase()]);
+    accounts.filter(a => a.type === 'asset').forEach(acc => {
       const curBal = currentData.assets[acc.id] || 0;
       const prvBal = isComparative ? prevData.assets[acc.id] || 0 : 0;
       const variance = curBal - prvBal;
       const variancePct = prvBal !== 0 ? (variance / Math.abs(prvBal)) * 100 : 0;
-
-      rows.push([
-        acc.name,
-        acc.code,
-        formatDecimal(curBal),
-        isComparative ? formatDecimal(prvBal) : '',
-        isComparative ? formatDecimal(variance) : '',
-        isComparative && prvBal !== 0 ? variancePct.toFixed(1) + '%' : ''
-      ]);
+      worksheet.addRow({
+        name: acc.name,
+        code: acc.code,
+        balance: curBal / 100,
+        prior: isComparative ? prvBal / 100 : null,
+        variance: isComparative ? variance / 100 : null,
+        variancePct: isComparative && prvBal !== 0 ? variancePct.toFixed(1) + '%' : null
+      });
     });
+    worksheet.addRow({
+      name: `Total ${labels.assetsLabel}`,
+      balance: currentData.totalAssets / 100,
+      prior: isComparative ? prevData.totalAssets / 100 : null
+    });
+    worksheet.addRow([]);
 
-    rows.push([`Total ${labels.assetsLabel}`, '', formatDecimal(currentData.totalAssets), isComparative ? formatDecimal(prevData.totalAssets) : '', '', '']);
-    rows.push([]);
-
-    rows.push([labels.liabilitiesLabel.toUpperCase()]);
-    const currentLiabilitiesAccs = accounts.filter(a => a.type === 'liability');
-    currentLiabilitiesAccs.forEach(acc => {
+    worksheet.addRow([labels.liabilitiesLabel.toUpperCase()]);
+    accounts.filter(a => a.type === 'liability').forEach(acc => {
       const curBal = currentData.liabilities[acc.id] || 0;
       const prvBal = isComparative ? prevData.liabilities[acc.id] || 0 : 0;
       const variance = curBal - prvBal;
       const variancePct = prvBal !== 0 ? (variance / Math.abs(prvBal)) * 100 : 0;
-
-      rows.push([
-        acc.name,
-        acc.code,
-        formatDecimal(curBal),
-        isComparative ? formatDecimal(prvBal) : '',
-        isComparative ? formatDecimal(variance) : '',
-        isComparative && prvBal !== 0 ? variancePct.toFixed(1) + '%' : ''
-      ]);
+      worksheet.addRow({
+        name: acc.name,
+        code: acc.code,
+        balance: curBal / 100,
+        prior: isComparative ? prvBal / 100 : null,
+        variance: isComparative ? variance / 100 : null,
+        variancePct: isComparative && prvBal !== 0 ? variancePct.toFixed(1) + '%' : null
+      });
     });
+    worksheet.addRow({
+      name: `Total ${labels.liabilitiesLabel}`,
+      balance: currentData.totalLiabilities / 100,
+      prior: isComparative ? prevData.totalLiabilities / 100 : null
+    });
+    worksheet.addRow([]);
 
-    rows.push([`Total ${labels.liabilitiesLabel}`, '', formatDecimal(currentData.totalLiabilities), isComparative ? formatDecimal(prevData.totalLiabilities) : '', '', '']);
-    rows.push([]);
-
-    rows.push([labels.equityLabel.toUpperCase()]);
-    const currentEquityAccs = accounts.filter(a => a.type === 'equity');
-    currentEquityAccs.forEach(acc => {
+    worksheet.addRow([labels.equityLabel.toUpperCase()]);
+    accounts.filter(a => a.type === 'equity').forEach(acc => {
       const curBal = currentData.equity[acc.id] || 0;
       const prvBal = isComparative ? prevData.equity[acc.id] || 0 : 0;
       const variance = curBal - prvBal;
       const variancePct = prvBal !== 0 ? (variance / Math.abs(prvBal)) * 100 : 0;
-
-      rows.push([
-        acc.name,
-        acc.code,
-        formatDecimal(curBal),
-        isComparative ? formatDecimal(prvBal) : '',
-        isComparative ? formatDecimal(variance) : '',
-        isComparative && prvBal !== 0 ? variancePct.toFixed(1) + '%' : ''
-      ]);
+      worksheet.addRow({
+        name: acc.name,
+        code: acc.code,
+        balance: curBal / 100,
+        prior: isComparative ? prvBal / 100 : null,
+        variance: isComparative ? variance / 100 : null,
+        variancePct: isComparative && prvBal !== 0 ? variancePct.toFixed(1) + '%' : null
+      });
     });
 
-    // Retained Earnings row
     const curRetEarn = currentData.netIncome;
     const prvRetEarn = isComparative ? prevData.netIncome : 0;
     const reVariance = curRetEarn - prvRetEarn;
     const reVariancePct = prvRetEarn !== 0 ? (reVariance / Math.abs(prvRetEarn)) * 100 : 0;
-    rows.push([
-      labels.retainedEarningsLabel,
-      'INC',
-      formatDecimal(curRetEarn),
-      isComparative ? formatDecimal(prvRetEarn) : '',
-      isComparative ? formatDecimal(reVariance) : '',
-      isComparative && prvRetEarn !== 0 ? reVariancePct.toFixed(1) + '%' : ''
-    ]);
+    worksheet.addRow({
+      name: labels.retainedEarningsLabel,
+      code: 'INC',
+      balance: curRetEarn / 100,
+      prior: isComparative ? prvRetEarn / 100 : null,
+      variance: isComparative ? reVariance / 100 : null,
+      variancePct: isComparative && prvRetEarn !== 0 ? reVariancePct.toFixed(1) + '%' : null
+    });
 
-    rows.push([`Total ${labels.equityLabel}`, '', ((currentData.totalEquity + currentData.netIncome) / 100).toFixed(2), isComparative ? ((prevData.totalEquity + prevData.netIncome) / 100).toFixed(2) : '', '', '']);
-    rows.push([]);
-    rows.push([labels.totalClaimsLabel, '', formatDecimal(currentData.totalClaims), isComparative ? formatDecimal(prevData.totalClaims) : '', '', '']);
+    worksheet.addRow({
+      name: `Total ${labels.equityLabel}`,
+      balance: (currentData.totalEquity + currentData.netIncome) / 100,
+      prior: isComparative ? (prevData.totalEquity + prevData.netIncome) / 100 : null
+    });
+    worksheet.addRow([]);
+    worksheet.addRow({
+      name: labels.totalClaimsLabel,
+      balance: currentData.totalClaims / 100,
+      prior: isComparative ? prevData.totalClaims / 100 : null
+    });
 
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Balance Sheet");
-    XLSX.writeFile(wb, `Balance_Sheet_As_Of_${asOfDate}.xlsx`);
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `Balance_Sheet_As_Of_${asOfDate}.xlsx`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const getVarianceAndPct = (curVal: number, prVal: number) => {

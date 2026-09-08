@@ -10,7 +10,6 @@ import { formatDecimal, sanitizeCsvCell, cn } from '../../lib/utils';
 import { motion } from 'motion/react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
-import * as XLSX from 'xlsx';
 
 interface TrialBalanceViewProps {
   accounts: ChartAccount[];
@@ -180,24 +179,45 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
     document.body.removeChild(link);
   };
 
-  const handleExportExcel = () => {
-    const headers = ['Account Code', 'Account Name', 'Classification', 'Debit ($)', 'Credit ($)'];
-    const rows = trialBalance.lines.map(line => [
-      line.code || '',
-      line.name || '',
-      line.type || '',
-      line.debit / 100,
-      line.credit / 100
-    ]);
-    rows.push(['TOTAL', '', '', trialBalance.totalDebits / 100, trialBalance.totalCredits / 100]);
+  const handleExportExcel = async () => {
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Trial Balance');
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    worksheet.columns = [
+      { header: 'Account Code', key: 'code', width: 15 },
+      { header: 'Account Name', key: 'name', width: 35 },
+      { header: 'Classification', key: 'type', width: 18 },
+      { header: 'Debit ($)', key: 'debit', width: 16 },
+      { header: 'Credit ($)', key: 'credit', width: 16 },
+    ];
 
-    // Format columns widths
-    ws['!cols'] = [{ wch: 15 }, { wch: 35 }, { wch: 18 }, { wch: 16 }, { wch: 16 }];
-    XLSX.utils.book_append_sheet(wb, ws, `Trial Balance`);
-    XLSX.writeFile(wb, `trial_balance_as_of_${asOfDate}.xlsx`);
+    trialBalance.lines.forEach(line => {
+      worksheet.addRow({
+        code: line.code || '',
+        name: line.name || '',
+        type: line.type || '',
+        debit: line.debit / 100,
+        credit: line.credit / 100
+      });
+    });
+
+    worksheet.addRow({
+      code: 'TOTAL',
+      name: '',
+      type: '',
+      debit: trialBalance.totalDebits / 100,
+      credit: trialBalance.totalCredits / 100
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `trial_balance_as_of_${asOfDate}.xlsx`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const renderSortIcon = (field: SortField) => {

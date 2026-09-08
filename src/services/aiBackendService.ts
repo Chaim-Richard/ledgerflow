@@ -63,8 +63,8 @@ export class AIBackendService {
   /**
    * Universal AI Resolver for Financial Intelligence
    */
-  async process(task: string, payload: any): Promise<any> {
-    const cached = AIBackendService.getCachedResponse(task, payload);
+  async process(task: string, payload: any, authenticatedUid?: string): Promise<any> {
+    const cached = AIBackendService.getCachedResponse(task, payload, authenticatedUid);
     if (cached) {
       console.debug(`[AI Cache Hit] Task: ${task} resolved from static memory cache.`);
       return cached;
@@ -103,7 +103,7 @@ export class AIBackendService {
         throw new Error(`Unsupported AI task: ${task}`);
     }
 
-    AIBackendService.setCachedResponse(task, payload, result);
+    AIBackendService.setCachedResponse(task, payload, result, authenticatedUid);
     return result;
   }
 

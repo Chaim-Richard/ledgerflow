@@ -4,7 +4,6 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { parseLocalDate, formatDecimal, formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
 import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 export default function CashFlowView() {
@@ -161,23 +160,54 @@ export default function CashFlowView() {
     return { currentData, prevData };
   }, [transactions, accounts, dateRange, isComparative]);
 
-  const exportCashFlow = () => {
+  const exportCashFlow = async () => {
     const isComp = isComparative;
-    const rows = [
-      [labels.title, '', ''],
-      [`Period: ${dateRange.start} to ${dateRange.end}`, isComp ? 'Prior Period' : '', isComp ? 'Variance %' : ''],
-      ['', '', '', ''],
-      [`CASH FLOWS FROM ${labels.operating.toUpperCase()}`, formatDecimal(currentData.operating.total), isComp ? formatDecimal(prevData.operating.total) : '', ''],
-      [`CASH FLOWS FROM ${labels.investing.toUpperCase()}`, formatDecimal(currentData.investing.total), isComp ? formatDecimal(prevData.investing.total) : '', ''],
-      [`CASH FLOWS FROM ${labels.financing.toUpperCase()}`, formatDecimal(currentData.financing.total), isComp ? formatDecimal(prevData.financing.total) : '', ''],
-      ['', '', '', ''],
-      [labels.netChange.toUpperCase(), formatDecimal(currentData.netChange), isComp ? formatDecimal(prevData.netChange) : '', '']
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Cash Flows');
+
+    worksheet.columns = [
+      { header: 'Metric', key: 'metric', width: 40 },
+      { header: 'Amount ($)', key: 'amount', width: 20 },
+      { header: isComp ? 'Prior Period ($)' : '', key: 'prior', width: 20 },
+      { header: isComp ? 'Variance %' : '', key: 'variance', width: 15 },
     ];
 
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Cash_Flows");
-    XLSX.writeFile(wb, `Cash_Flow_Statement_${dateRange.start}_${dateRange.end}.xlsx`);
+    worksheet.addRow([labels.title]);
+    worksheet.addRow([`Period: ${dateRange.start} to ${dateRange.end}`]);
+    worksheet.addRow([]);
+
+    worksheet.addRow({
+      metric: `CASH FLOWS FROM ${labels.operating.toUpperCase()}`,
+      amount: currentData.operating.total / 100,
+      prior: isComp ? prevData.operating.total / 100 : null
+    });
+    worksheet.addRow({
+      metric: `CASH FLOWS FROM ${labels.investing.toUpperCase()}`,
+      amount: currentData.investing.total / 100,
+      prior: isComp ? prevData.investing.total / 100 : null
+    });
+    worksheet.addRow({
+      metric: `CASH FLOWS FROM ${labels.financing.toUpperCase()}`,
+      amount: currentData.financing.total / 100,
+      prior: isComp ? prevData.financing.total / 100 : null
+    });
+
+    worksheet.addRow([]);
+    worksheet.addRow({
+      metric: labels.netChange.toUpperCase(),
+      amount: currentData.netChange / 100,
+      prior: isComp ? prevData.netChange / 100 : null
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `Cash_Flow_Statement_${dateRange.start}_${dateRange.end}.xlsx`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (

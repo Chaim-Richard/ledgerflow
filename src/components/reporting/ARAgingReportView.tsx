@@ -150,32 +150,51 @@ export default function ARAgingReportView() {
   };
 
   const handleExport = async () => {
-    const XLSX = await import('xlsx');
-    const headers = ['Customer Name', 'Current (0-30d)', '31-60 Days', '61-90 Days', '90+ Days Overdue', 'Total Outstanding', 'Max Days Overdue'];
-    const rows = filteredData.map(c => [
-      c.customerName,
-      (c.currentCents / 100).toFixed(2),
-      (c.days31To60Cents / 100).toFixed(2),
-      (c.days61To90Cents / 100).toFixed(2),
-      (c.days90PlusCents / 100).toFixed(2),
-      (c.totalCents / 100).toFixed(2),
-      c.oldestInvoiceDays
-    ]);
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('AR Aging Summary');
 
-    rows.push([
-      'TOTAL ACCOUNTS RECEIVABLE',
-      (overallTotals.current / 100).toFixed(2),
-      (overallTotals.days31To60 / 100).toFixed(2),
-      (overallTotals.days61To90 / 100).toFixed(2),
-      (overallTotals.days90Plus / 100).toFixed(2),
-      (overallTotals.total / 100).toFixed(2),
-      '-'
-    ]);
+    worksheet.columns = [
+      { header: 'Customer Name', key: 'customerName', width: 30 },
+      { header: 'Current (0-30d)', key: 'current', width: 20 },
+      { header: '31-60 Days', key: 'days31To60', width: 20 },
+      { header: '61-90 Days', key: 'days61To90', width: 20 },
+      { header: '90+ Days Overdue', key: 'days90Plus', width: 20 },
+      { header: 'Total Outstanding', key: 'total', width: 20 },
+      { header: 'Max Days Overdue', key: 'oldestDays', width: 20 },
+    ];
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "AR Aging Summary");
-    XLSX.writeFile(wb, `AR_Aging_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    filteredData.forEach(c => {
+      worksheet.addRow({
+        customerName: c.customerName,
+        current: (c.currentCents / 100).toFixed(2),
+        days31To60: (c.days31To60Cents / 100).toFixed(2),
+        days61To90: (c.days61To90Cents / 100).toFixed(2),
+        days90Plus: (c.days90PlusCents / 100).toFixed(2),
+        total: (c.totalCents / 100).toFixed(2),
+        oldestDays: c.oldestInvoiceDays
+      });
+    });
+
+    worksheet.addRow({
+      customerName: 'TOTAL ACCOUNTS RECEIVABLE',
+      current: (overallTotals.current / 100).toFixed(2),
+      days31To60: (overallTotals.days31To60 / 100).toFixed(2),
+      days61To90: (overallTotals.days61To90 / 100).toFixed(2),
+      days90Plus: (overallTotals.days90Plus / 100).toFixed(2),
+      total: (overallTotals.total / 100).toFixed(2),
+      oldestDays: '-'
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `AR_Aging_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
+    
     toast.success('A/R Aging report exported successfully');
   };
 

@@ -66,27 +66,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user, userProfile } = get();
     if (!user) return;
 
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        geminiApiKey: key
+    if (userProfile) {
+      set({ userProfile: { ...userProfile, geminiApiKey: key } });
+    } else {
+      set({ 
+        userProfile: { 
+          uid: user.uid, 
+          email: user.email || '', 
+          role: 'client', 
+          geminiApiKey: key 
+        } as UserProfile 
       });
-      if (userProfile) {
-        set({ userProfile: { ...userProfile, geminiApiKey: key } });
-      } else {
-        // We shouldn't really be here without a profile, but if so, we create a skeleton
-        set({ 
-          userProfile: { 
-            uid: user.uid, 
-            email: user.email || '', 
-            role: 'client', 
-            geminiApiKey: key 
-          } as UserProfile 
-        });
-      }
-    } catch (error) {
-      console.error("Failed to update API key:", error);
-      throw error;
     }
   },
 

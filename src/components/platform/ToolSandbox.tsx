@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { X, Play, CheckCircle2, BarChart3, ListFilter, ArrowUpRight, Download, FileSpreadsheet, RotateCcw } from 'lucide-react';
 import { LineChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
-import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
@@ -89,19 +88,46 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
     }));
   }, [results.rows]);
 
-  const handleExportXLSX = () => {
+  const handleExportXLSX = async () => {
     if (!results.rows || results.rows.length === 0) return;
-    const ws = XLSX.utils.json_to_sheet(results.rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Report');
+
+    const columns = Object.keys(results.rows[0])
+      .filter(k => k !== 'id' && k !== 'sourceIds')
+      .map(key => ({
+        header: key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase()).trim(),
+        key,
+        width: 20
+      }));
+
+    worksheet.columns = columns;
+    results.rows.forEach(row => worksheet.addRow(row));
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
     const sanitizedName = algorithm.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-    XLSX.writeFile(wb, `${sanitizedName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    anchor.download = `${sanitizedName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const handleExportCSV = () => {
     if (!results.rows || results.rows.length === 0) return;
-    const ws = XLSX.utils.json_to_sheet(results.rows);
-    const csv = XLSX.utils.sheet_to_csv(ws);
+    const columns = Object.keys(results.rows[0]).filter(k => k !== 'id' && k !== 'sourceIds');
+    const headers = columns.join(',');
+    const rows = results.rows.map(row => 
+      columns.map(col => {
+        const val = row[col];
+        const str = val !== undefined && val !== null ? String(val) : '';
+        return str.includes(',') ? `"${str.replace(/"/g, '""')}"` : str;
+      }).join(',')
+    );
+    const csv = [headers, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

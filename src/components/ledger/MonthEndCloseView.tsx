@@ -6,8 +6,6 @@ import { motion } from 'motion/react';
 import { formatCurrency } from '../../lib/utils';
 import { Transaction } from '../../types';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
-
 import AsyncButton from '../ui/AsyncButton';
 
 export default function MonthEndCloseView() {
@@ -119,16 +117,26 @@ export default function MonthEndCloseView() {
   const completedSteps = checklist.filter(c => c.status === 'done').length;
   const isReady = completedSteps === totalSteps;
 
-  const handleExportAccountantPackage = () => {
+  const handleExportAccountantPackage = async () => {
     try {
       const toastId = toast.loading('Compiling accountant package workbook...');
-      
+      const ExcelJS = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+
       const periodTx = transactions.filter(t => !t.deletedAt && t.status !== 'void' && (t.date || '').startsWith(selectedMonth));
       const cumulativeTx = transactions.filter(t => !t.deletedAt && t.status !== 'void' && (t.date || '') <= `${selectedMonth}-31`);
 
-      const wb = XLSX.utils.book_new();
-
       // 1. Cumulative Trial Balance Sheet
+      const worksheetTB = workbook.addWorksheet('Trial Balance');
+      worksheetTB.columns = [
+        { header: 'Account Code', key: 'code', width: 15 },
+        { header: 'Account Name', key: 'name', width: 30 },
+        { header: 'Type', key: 'type', width: 15 },
+        { header: 'Cumulative Debits ($)', key: 'debit', width: 25 },
+        { header: 'Cumulative Credits ($)', key: 'credit', width: 25 },
+        { header: 'Net Balance ($)', key: 'net', width: 20 },
+      ];
+
       const accountMap: Record<string, { code: string; name: string; type: string; debitCents: number; creditCents: number }> = {};
       accounts.forEach(a => {
         accountMap[a.id] = {
@@ -158,63 +166,97 @@ export default function MonthEndCloseView() {
         });
       });
 
-      const tbHeaders = ['Account Code', 'Account Name', 'Type', 'Cumulative Debits ($)', 'Cumulative Credits ($)', 'Net Balance ($)'];
-      const tbRows = Object.values(accountMap).map(a => [
-        a.code,
-        a.name,
-        a.type.toUpperCase(),
-        (a.debitCents / 100).toFixed(2),
-        (a.creditCents / 100).toFixed(2),
-        ((a.debitCents - a.creditCents) / 100).toFixed(2)
-      ]);
-      const wsTB = XLSX.utils.aoa_to_sheet([tbHeaders, ...tbRows]);
-      XLSX.utils.book_append_sheet(wb, wsTB, "Trial Balance");
+      Object.values(accountMap).forEach(a => {
+        worksheetTB.addRow({
+          code: a.code,
+          name: a.name,
+          type: a.type.toUpperCase(),
+          debit: (a.debitCents / 100).toFixed(2),
+          credit: (a.creditCents / 100).toFixed(2),
+          net: ((a.debitCents - a.creditCents) / 100).toFixed(2)
+        });
+      });
 
       // 2. General Ledger / Transactions
-      const glHeaders = ['Date', 'Transaction ID', 'Description', 'Account Name', 'Type', 'Status', 'Amount ($)'];
-      const glRows = periodTx.flatMap(t => 
-        (t.lines && t.lines.length > 0 ? t.lines : [{ accountName: 'General', accountId: '', amountCents: t.totalAmountCents }]).map(l => [
-          t.date,
-          t.id,
-          t.description,
-          l.accountName || l.accountId || 'General',
-          t.type || 'actual',
-          t.status,
-          ((l.amountCents || t.totalAmountCents || 0) / 100).toFixed(2)
-        ])
-      );
-      const wsGL = XLSX.utils.aoa_to_sheet([glHeaders, ...glRows]);
-      XLSX.utils.book_append_sheet(wb, wsGL, "General Ledger");
+      const worksheetGL = workbook.addWorksheet('General Ledger');
+      worksheetGL.columns = [
+        { header: 'Date', key: 'date', width: 15 },
+        { header: 'Transaction ID', key: 'id', width: 20 },
+        { header: 'Description', key: 'desc', width: 30 },
+        { header: 'Account Name', key: 'account', width: 25 },
+        { header: 'Type', key: 'type', width: 15 },
+        { header: 'Status', key: 'status', width: 15 },
+        { header: 'Amount ($)', key: 'amount', width: 15 },
+      ];
+
+      periodTx.forEach(t => {
+        const lines = (t.lines && t.lines.length > 0 ? t.lines : [{ accountName: 'General', accountId: '', amountCents: t.totalAmountCents }]);
+        lines.forEach(l => {
+          worksheetGL.addRow({
+            date: t.date,
+            id: t.id,
+            desc: t.description,
+            account: l.accountName || l.accountId || 'General',
+            type: t.type || 'actual',
+            status: t.status,
+            amount: ((l.amountCents || t.totalAmountCents || 0) / 100).toFixed(2)
+          });
+        });
+      });
 
       // 3. Open Invoices (A/R)
-      const invHeaders = ['Invoice #', 'Customer Name', 'Issue Date', 'Due Date', 'Status', 'Total ($)'];
-      const invRows = invoices.map(i => [
-        i.number,
-        i.customerName,
-        i.date,
-        i.dueDate,
-        i.status,
-        ((i.totalCents || i.amountCents || 0) / 100).toFixed(2)
-      ]);
-      const wsInv = XLSX.utils.aoa_to_sheet([invHeaders, ...invRows]);
-      XLSX.utils.book_append_sheet(wb, wsInv, "Invoices (AR)");
+      const worksheetInv = workbook.addWorksheet('Invoices (AR)');
+      worksheetInv.columns = [
+        { header: 'Invoice #', key: 'number', width: 15 },
+        { header: 'Customer Name', key: 'customer', width: 25 },
+        { header: 'Issue Date', key: 'date', width: 15 },
+        { header: 'Due Date', key: 'dueDate', width: 15 },
+        { header: 'Status', key: 'status', width: 15 },
+        { header: 'Total ($)', key: 'total', width: 15 },
+      ];
+      invoices.forEach(i => {
+        worksheetInv.addRow({
+          number: i.number,
+          customer: i.customerName,
+          date: i.date,
+          dueDate: i.dueDate,
+          status: i.status,
+          total: ((i.totalCents || i.amountCents || 0) / 100).toFixed(2)
+        });
+      });
 
       // 4. Open Bills (A/P)
-      const billHeaders = ['Bill #', 'Vendor Name', 'Issue Date', 'Due Date', 'Status', 'Amount ($)'];
-      const billRows = bills.map(b => [
-        b.number,
-        b.vendorName,
-        b.date,
-        b.dueDate,
-        b.status,
-        ((b.amountCents || 0) / 100).toFixed(2)
-      ]);
-      const wsBills = XLSX.utils.aoa_to_sheet([billHeaders, ...billRows]);
-      XLSX.utils.book_append_sheet(wb, wsBills, "Bills (AP)");
+      const worksheetBills = workbook.addWorksheet('Bills (AP)');
+      worksheetBills.columns = [
+        { header: 'Bill #', key: 'number', width: 15 },
+        { header: 'Vendor Name', key: 'vendor', width: 25 },
+        { header: 'Issue Date', key: 'date', width: 15 },
+        { header: 'Due Date', key: 'dueDate', width: 15 },
+        { header: 'Status', key: 'status', width: 15 },
+        { header: 'Amount ($)', key: 'amount', width: 15 },
+      ];
+      bills.forEach(b => {
+        worksheetBills.addRow({
+          number: b.number,
+          vendor: b.vendorName,
+          date: b.date,
+          dueDate: b.dueDate,
+          status: b.status,
+          amount: ((b.amountCents || 0) / 100).toFixed(2)
+        });
+      });
 
       // Write file
       const fileName = `Accountant_Package_${selectedMonth}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = fileName;
+      anchor.click();
+      window.URL.revokeObjectURL(url);
+      
       toast.success(`Accountant Package exported: ${fileName}`, { id: toastId });
     } catch (err: any) {
       console.error('Failed to export accountant package:', err);

@@ -47,13 +47,13 @@ service cloud.firestore {
       allow get: if isSignedIn() && request.auth.uid == userId;
       allow list: if isSignedIn() && request.auth.uid == userId;
       allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) &&
-        affectedKeys(["uid", "email", "role", "createdAt", "geminiApiKey", "updatedAt", "customLimit", "computeCreditLimit"]) &&
+        affectedKeys(["uid", "email", "role", "createdAt", "updatedAt", "customLimit", "computeCreditLimit"]) &&
         (request.resource.data.role == "client" || (request.resource.data.role == "admin" && request.auth.token.admin == true)) &&
         request.resource.data.email == request.auth.token.email;
       allow update: if isSignedIn() && request.auth.uid == userId && 
         isUnchanged("role") && 
         isUnchanged("email") &&
-        affectedKeys(["uid", "email", "role", "createdAt", "geminiApiKey", "updatedAt", "customLimit", "computeCreditLimit"]);
+        affectedKeys(["uid", "email", "role", "createdAt", "updatedAt", "customLimit", "computeCreditLimit"]);
       allow delete: if false;
     }
 
@@ -206,7 +206,7 @@ service cloud.firestore {
     }
 
     function isProtectedCollection(name) {
-      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages"];
+      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages", "invoices", "inventory", "recurring", "budgets", "autoRules", "fixedAssets", "taxRates", "vendors", "customers"];
     }
 
     match /supportTickets/{ticketId} {
@@ -257,7 +257,7 @@ service cloud.firestore {
         request.resource.data.keys().size() < 60; // Denial of Wallet payload protection for fallbacks
       allow update: if isSignedIn() && !isProtectedCollection(collectionName) && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
         request.resource.data.keys().size() < 60; // Denial of Wallet payload protection for fallbacks
-      allow delete: if isSignedIn() && !isProtectedCollection(collectionName) && isWorkspaceMember(resource.data.workspaceId);
+      allow delete: if false; // Prohibit destructive wildcard fallback deletes for unmodelled collections
     }
   }
 }
