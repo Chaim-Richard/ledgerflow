@@ -1,4 +1,4 @@
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp, Transaction as FirestoreTransaction } from 'firebase-admin/firestore';
 
 export interface IdempotencyRecord {
   id: string;
@@ -6,6 +6,7 @@ export interface IdempotencyRecord {
   workspaceId: string;
   operationType: string;
   createdAt: string;
+  updatedAt?: string;
   status: 'pending' | 'success' | 'failed';
   result?: any;
   error?: string;
@@ -13,72 +14,95 @@ export interface IdempotencyRecord {
 }
 
 /**
- * Ensures an operation is executed exactly once using a deterministic ID.
- * @param operationId The unique ID for this operation (e.g., "recurring:templateId:2024-01-01")
+ * Derives the canonical scoped operation key: workspace:operationType:operationId
+ */
+export function deriveScopedOperationKey(workspaceId: string, operationType: string, operationId: string): string {
+  const sanitizedWs = workspaceId || 'system';
+  return `${sanitizedWs}:${operationType}:${operationId}`;
+}
+
+/**
+ * Extracts a canonical operation ID from request headers or body.
+ * Sources in priority order:
+ * 1. 'x-operation-id' header
+ * 2. 'idempotency-key' header
+ * 3. req.body.operationId
+ * 4. req.query.operationId
+ */
+export function extractCanonicalOperationId(req: any): string | undefined {
+  if (!req) return undefined;
+  const headerOpId = req.headers?.['x-operation-id'] || req.headers?.['idempotency-key'];
+  if (typeof headerOpId === 'string' && headerOpId.trim()) return headerOpId.trim();
+  if (req.body && typeof req.body.operationId === 'string' && req.body.operationId.trim()) return req.body.operationId.trim();
+  if (req.query && typeof req.query.operationId === 'string' && req.query.operationId.trim()) return req.query.operationId.trim();
+  return undefined;
+}
+
+/**
+ * Ensures an operation is executed exactly once using ONE atomic Firestore transaction.
+ *
+ * Canonical Architecture:
+ * Command -> Idempotency record -> ONE Firestore transaction:
+ *   ├─ read idempotency key
+ *   ├─ read/validate relevant documents (via transactionHandler)
+ *   ├─ write ledger mutation / audit writes (via transactionHandler)
+ *   └─ write idempotency success record
+ *
+ * @param scopedOperationId The canonical scoped key (e.g., "workspace1:TRANSACTION_CREATE:op123")
  * @param metadata Contextual info about the operation
- * @param action The function to execute if the operation hasn't succeeded yet
+ * @param transactionHandler Callback receiving the active Firestore transaction
  */
 export async function executeIdempotent<T>(
-  operationId: string,
+  scopedOperationId: string,
   metadata: {
     actor: string;
     workspaceId: string;
     operationType: string;
   },
-  action: () => Promise<T>
+  transactionHandler: (t: FirestoreTransaction) => Promise<T>
 ): Promise<T> {
   const db = getFirestore();
-  const keyRef = db.collection('idempotencyKeys').doc(operationId);
+  const keyRef = db.collection('idempotencyKeys').doc(scopedOperationId);
 
-  return await db.runTransaction(async (transaction) => {
-    const doc = await transaction.get(keyRef);
+  return await db.runTransaction(async (t) => {
+    // 1. Read idempotency record (must happen before any writes)
+    const doc = await t.get(keyRef);
 
     if (doc.exists) {
       const data = doc.data() as IdempotencyRecord;
       if (data.status === 'success') {
-        console.log(`[Idempotency] Operation ${operationId} already succeeded. Returning cached result.`);
         return data.result as T;
       }
       if (data.status === 'pending') {
-        // If it's been pending for more than 5 minutes, we might want to allow a retry
         const createdAt = new Date(data.createdAt).getTime();
         const now = Date.now();
+        // Allow retry if stuck in pending for > 5 minutes
         if (now - createdAt < 5 * 60 * 1000) {
-          throw new Error(`Operation ${operationId} is currently in progress.`);
+          const err = new Error(`Operation ${scopedOperationId} is currently in progress.`);
+          (err as any).status = 409;
+          throw err;
         }
-        console.warn(`[Idempotency] Operation ${operationId} was stuck in pending. Retrying...`);
       }
     }
 
-    // Mark as pending
+    // 2. Execute transactionHandler within the same transaction context
+    const result = await transactionHandler(t);
+
+    // 3. Write idempotency success record inside the same transaction
     const record: IdempotencyRecord = {
-      id: operationId,
+      id: scopedOperationId,
       actor: metadata.actor,
       workspaceId: metadata.workspaceId,
       operationType: metadata.operationType,
-      createdAt: new Date().toISOString(),
-      status: 'pending',
-      // Expire in 30 days
+      createdAt: doc.exists ? (doc.data()?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'success',
+      result: result !== undefined ? result : null,
       expiresAt: Timestamp.fromMillis(Date.now() + 30 * 24 * 60 * 60 * 1000)
     };
 
-    transaction.set(keyRef, record);
+    t.set(keyRef, record, { merge: true });
 
-    try {
-      const result = await action();
-      transaction.update(keyRef, {
-        status: 'success',
-        result,
-        updatedAt: new Date().toISOString()
-      });
-      return result;
-    } catch (error: any) {
-      transaction.update(keyRef, {
-        status: 'failed',
-        error: error.message || 'Unknown error',
-        updatedAt: new Date().toISOString()
-      });
-      throw error;
-    }
+    return result;
   });
 }

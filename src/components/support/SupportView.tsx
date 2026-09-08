@@ -8,14 +8,20 @@ import {
   AlertCircle, 
   User, 
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   MessageSquare,
-  ArrowLeft
+  ArrowLeft,
+  Bug,
+  Copy,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useSupportStore } from '../../stores/useSupportStore';
 import { useSupportData } from '../../hooks/useSupportData';
-import { SupportTicket, SupportMessage, Priority } from '../../types';
+import { SupportTicket, Priority } from '../../types';
+import { getLatestErrorDiagnostic } from '../../lib/errorTracker';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 
@@ -39,6 +45,11 @@ export default function SupportView() {
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [adminFilter, setAdminFilter] = useState<'all' | 'open' | 'pending_support' | 'resolved'>('all');
+  const [attachDiagnostics, setAttachDiagnostics] = useState(true);
+  const [showDiagnosticsDetail, setShowDiagnosticsDetail] = useState(false);
+  const [copiedTrace, setCopiedTrace] = useState(false);
+
+  const latestError = getLatestErrorDiagnostic();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -89,7 +100,11 @@ export default function SupportView() {
         lastMessageAt: createdAt,
         lastMessageBy: user?.uid || '',
         unreadForUser: false,
-        unreadForAdmin: true
+        unreadForAdmin: true,
+        ...(attachDiagnostics && latestError ? {
+          errorLogId: latestError.errorLogId,
+          errorDiagnostics: latestError.diagnostics
+        } : {})
       };
 
       const { getFirestore, doc, setDoc } = await import('firebase/firestore');
@@ -173,6 +188,13 @@ export default function SupportView() {
     }
   };
 
+  const copyDiagnostics = () => {
+    if (!selectedTicket?.errorDiagnostics?.stack) return;
+    navigator.clipboard.writeText(selectedTicket.errorDiagnostics.stack);
+    setCopiedTrace(true);
+    setTimeout(() => setCopiedTrace(false), 2000);
+  };
+
   return (
     <div className="flex h-full bg-slate-50 overflow-hidden">
       {/* Sidebar: Ticket List */}
@@ -242,6 +264,11 @@ export default function SupportView() {
                 <div className="flex items-center text-xs text-slate-500 gap-2">
                   <Clock className="w-3 h-3" />
                   {format(new Date(ticket.lastMessageAt), 'MMM d, HH:mm')}
+                  {ticket.errorDiagnostics && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-rose-600 font-medium bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                      <Bug className="w-2.5 h-2.5" /> Stack
+                    </span>
+                  )}
                 </div>
                 {((!isAdmin && ticket.unreadForUser) || (isAdmin && ticket.unreadForAdmin)) && (
                   <div className="absolute top-4 right-4 w-2 h-2 bg-blue-600 rounded-full" />
@@ -284,7 +311,7 @@ export default function SupportView() {
                       value={newTicketSubject}
                       onChange={e => setNewTicketSubject(e.target.value)}
                       className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="e.g. Question about billing"
+                      placeholder="e.g. Encountered error during bank reconcile"
                     />
                   </div>
 
@@ -309,6 +336,27 @@ export default function SupportView() {
                     </div>
                   </div>
 
+                  {latestError && (
+                    <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-sm">
+                      <div className="flex items-start gap-3">
+                        <Bug className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="font-semibold text-amber-900">Recent application error detected</p>
+                          <p className="text-xs text-amber-800 mt-1 font-mono truncate">{latestError.diagnostics.message}</p>
+                          <label className="flex items-center gap-2 mt-3 cursor-pointer text-xs font-medium text-amber-900">
+                            <input 
+                              type="checkbox"
+                              checked={attachDiagnostics}
+                              onChange={e => setAttachDiagnostics(e.target.checked)}
+                              className="rounded border-amber-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            Attach error stack trace and release diagnostics to this report
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Message</label>
                     <textarea
@@ -318,7 +366,7 @@ export default function SupportView() {
                       onChange={e => setInitialMessage(e.target.value)}
                       rows={5}
                       className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                      placeholder="Describe your issue in detail..."
+                      placeholder="Describe what happened, steps to reproduce, or what you were trying to accomplish..."
                     />
                   </div>
 
@@ -375,9 +423,60 @@ export default function SupportView() {
                 )}
               </div>
 
+              {/* Diagnostic Error Panel if attached */}
+              {selectedTicket.errorDiagnostics && (
+                <div className="bg-slate-900 text-slate-100 border-b border-slate-800 text-xs px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-mono">
+                      <Bug className="w-4 h-4 text-rose-400" />
+                      <span className="text-rose-300 font-semibold">Diagnostic Trace:</span>
+                      <span className="truncate max-w-md text-slate-300">{selectedTicket.errorDiagnostics.message}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono text-[10px]">
+                        {selectedTicket.errorDiagnostics.release || 'v1.0.0'}
+                      </span>
+                      <button 
+                        onClick={() => setShowDiagnosticsDetail(!showDiagnosticsDetail)}
+                        className="text-slate-400 hover:text-white flex items-center gap-1 py-0.5 px-1.5 rounded hover:bg-slate-800"
+                      >
+                        {showDiagnosticsDetail ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        {showDiagnosticsDetail ? 'Hide' : 'Details'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {showDiagnosticsDetail && (
+                    <div className="mt-3 pt-3 border-t border-slate-800 font-mono space-y-2">
+                      <div>
+                        <span className="text-slate-500">URL: </span>
+                        <span className="text-slate-300">{selectedTicket.errorDiagnostics.url || '/'}</span>
+                      </div>
+                      {selectedTicket.errorDiagnostics.stack && (
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-slate-500">Stack trace:</span>
+                            <button 
+                              onClick={copyDiagnostics}
+                              className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                            >
+                              {copiedTrace ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                              {copiedTrace ? 'Copied' : 'Copy'}
+                            </button>
+                          </div>
+                          <pre className="p-2.5 bg-black/60 rounded text-[11px] text-rose-200 overflow-x-auto max-h-40 whitespace-pre-wrap">
+                            {selectedTicket.errorDiagnostics.stack}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Chat Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {activeMessages.map((msg, idx) => {
+                {activeMessages.map((msg) => {
                   const isOwn = msg.authorUid === user?.uid;
                   return (
                     <div key={msg.id} className={cn(
@@ -465,3 +564,4 @@ export default function SupportView() {
     </div>
   );
 }
+

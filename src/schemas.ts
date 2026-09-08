@@ -316,6 +316,25 @@ export const AdminGlobalConfigSchema = z.object({
   freeWorkspaceTxCap: z.number().nonnegative(),
 }).strict();
 
+export const ErrorTelemetrySchema = z.object({
+  id: z.string().optional(),
+  workspaceId: z.string().max(128).default('unassigned'),
+  userId: z.string().max(128).optional(),
+  userEmail: z.string().max(256).optional(),
+  message: z.string().max(2000),
+  stack: z.string().max(4000).optional(),
+  componentStack: z.string().max(2000).optional(),
+  url: z.string().max(1000).optional(),
+  userAgent: z.string().max(500).optional(),
+  appVersion: z.string().max(50).optional(),
+  release: z.string().max(50).optional(),
+  source: z.enum(['frontend', 'backend', 'api']).default('frontend'),
+  severity: z.enum(['error', 'warning', 'fatal']).default('error'),
+  metadata: z.record(z.string(), z.any()).optional(),
+  ticketId: z.string().max(128).optional(),
+  createdAt: z.string().optional()
+});
+
 export type ValidatedTransaction = z.infer<typeof TransactionSchema>;
 export type ValidatedChartAccount = z.infer<typeof ChartAccountSchema>;
 export type ValidatedWorkspace = z.infer<typeof WorkspaceSchema>;

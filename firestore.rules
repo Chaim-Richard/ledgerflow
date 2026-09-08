@@ -206,7 +206,7 @@ service cloud.firestore {
     }
 
     function isProtectedCollection(name) {
-      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages", "invoices", "inventory", "recurring", "budgets", "autoRules", "fixedAssets", "taxRates", "vendors", "customers"];
+      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages", "invoices", "inventory", "recurring", "budgets", "autoRules", "fixedAssets", "taxRates", "vendors", "customers", "errorLogs"];
     }
 
     match /supportTickets/{ticketId} {
@@ -220,7 +220,7 @@ service cloud.firestore {
         && isValidId(ticketId)
         && request.resource.data.subject is string && request.resource.data.subject.size() <= 200
         && request.resource.data.status == 'open'
-        && affectedKeys(['id', 'workspaceId', 'uid', 'subject', 'status', 'priority', 'createdAt', 'updatedAt', 'lastMessageAt', 'lastMessageBy', 'unreadForUser', 'unreadForAdmin']);
+        && affectedKeys(['id', 'workspaceId', 'uid', 'subject', 'status', 'priority', 'createdAt', 'updatedAt', 'lastMessageAt', 'lastMessageBy', 'unreadForUser', 'unreadForAdmin', 'errorLogId', 'errorDiagnostics']);
       allow update: if isSignedIn() && (
         request.auth.token.admin == true ||
         (isWorkspaceMember(resource.data.workspaceId)
@@ -229,8 +229,21 @@ service cloud.firestore {
           // Users can only close/resolve or update unread flags/metadata during normal flow
           && (request.resource.data.status == 'closed' || request.resource.data.status == 'resolved' || request.resource.data.status == resource.data.status)
         )
-      ) && affectedKeys(['id', 'workspaceId', 'uid', 'subject', 'status', 'priority', 'createdAt', 'updatedAt', 'lastMessageAt', 'lastMessageBy', 'unreadForUser', 'unreadForAdmin']);
+      ) && affectedKeys(['id', 'workspaceId', 'uid', 'subject', 'status', 'priority', 'createdAt', 'updatedAt', 'lastMessageAt', 'lastMessageBy', 'unreadForUser', 'unreadForAdmin', 'errorLogId', 'errorDiagnostics']);
       allow delete: if false;
+    }
+
+    match /errorLogs/{logId} {
+      allow read: if isSignedIn() && (
+        request.auth.token.admin == true ||
+        (resource != null && isWorkspaceMember(resource.data.workspaceId))
+      );
+      allow create: if isSignedIn()
+        && isWorkspaceMember(request.resource.data.workspaceId)
+        && isValidId(logId)
+        && request.resource.data.message is string && request.resource.data.message.size() <= 2000
+        && affectedKeys(['id', 'workspaceId', 'userId', 'userEmail', 'message', 'stack', 'componentStack', 'url', 'userAgent', 'appVersion', 'release', 'source', 'severity', 'metadata', 'ticketId', 'createdAt']);
+      allow update, delete: if false; // Immutable forensic error telemetry
     }
 
     match /supportMessages/{messageId} {

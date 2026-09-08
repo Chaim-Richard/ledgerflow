@@ -45,7 +45,8 @@ import {
   BankMappingRequestSchema,
   AdminUserUpdateSchema,
   AdminWorkspaceUpdateSchema,
-  AdminGlobalConfigSchema
+  AdminGlobalConfigSchema,
+  ErrorTelemetrySchema
 } from "./src/schemas.ts";
 import { BayesianClassifier, sha256Sync } from "./src/lib/algorithms.ts";
 import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
@@ -57,6 +58,11 @@ import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 
 import { processAllRecurring } from "./src/server/services/recurringService.ts";
 import { executeCommand } from "./src/server/utils/commandExecutor.ts";
+import { 
+  executeIdempotent, 
+  extractCanonicalOperationId, 
+  deriveScopedOperationKey 
+} from "./src/server/utils/idempotency.ts";
 
 dotenv.config();
 
@@ -1055,10 +1061,58 @@ async function startServer() {
   });
 
   // API routes
-  app.post("/api/health", expressRateLimit({ windowMs: 60 * 1000, max: 30 }), (req, res) => {
+  // Telemetry and Error Tracking API
+  app.post("/api/v1/telemetry/errors", expressRateLimit({ windowMs: 60 * 1000, max: 60 }), async (req: express.Request, res: express.Response) => {
+    try {
+      const parsed = ErrorTelemetrySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ status: "error", message: "Invalid error payload", issues: parsed.error.issues });
+      }
+
+      const db = getDb();
+      const rawData = parsed.data;
+      const errorId = rawData.id || `err_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+      const sanitizedMessage = SecurityService.scrubPII(rawData.message).slice(0, 2000);
+      const sanitizedStack = rawData.stack ? SecurityService.scrubPII(rawData.stack).slice(0, 4000) : undefined;
+      const sanitizedComponentStack = rawData.componentStack ? SecurityService.scrubPII(rawData.componentStack).slice(0, 2000) : undefined;
+
+      const record = {
+        ...rawData,
+        id: errorId,
+        message: sanitizedMessage,
+        stack: sanitizedStack,
+        componentStack: sanitizedComponentStack,
+        createdAt: rawData.createdAt || new Date().toISOString()
+      };
+
+      await db.collection("errorLogs").doc(errorId).set(record);
+      res.json({ status: "success", errorId });
+    } catch (err: any) {
+      console.warn("[Telemetry] Failed to record error log:", err);
+      res.status(500).json({ status: "error", message: "Failed to persist error telemetry" });
+    }
+  });
+
+  app.post("/api/health", expressRateLimit({ windowMs: 60 * 1000, max: 30 }), async (req, res) => {
     const errorString = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
-    const sanitized = SecurityService.scrubPII(errorString).slice(0, 1024);
+    const sanitized = SecurityService.scrubPII(errorString).slice(0, 2048);
     console.warn("[Client Telemetry Error]:", sanitized);
+    try {
+      const db = getDb();
+      const errorId = `err_health_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      await db.collection("errorLogs").doc(errorId).set({
+        id: errorId,
+        workspaceId: req.body?.workspaceId || 'unassigned',
+        message: sanitized.slice(0, 1000),
+        source: 'frontend',
+        severity: 'error',
+        url: req.body?.url || '',
+        createdAt: new Date().toISOString()
+      });
+    } catch {
+      // Non-blocking telemetry fallback
+    }
     res.json({ ok: true });
   });
   app.get("/api/health", authenticate, async (req, res) => {
@@ -3116,18 +3170,15 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.put("/api/v1/admin/workspaces/:workspaceId", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
       const { workspaceId } = req.params;
-      const { operationId, ...body } = req.body;
-      const validated = AdminWorkspaceUpdateSchema.parse(body);
+      const validated = AdminWorkspaceUpdateSchema.parse(req.body);
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
+      const rawOpId = extractCanonicalOperationId(req);
+      const scopedKey = rawOpId 
+        ? deriveScopedOperationKey(workspaceId, 'ADMIN_WORKSPACE_UPDATED', rawOpId)
+        : undefined;
 
-      const result = await db.runTransaction(async (t) => {
-        if (operationId) {
-          const idempRef = db.collection("idempotencyKeys").doc(`admin_${operationId}`);
-          const idempSnap = await t.get(idempRef);
-          if (idempSnap.exists) return idempSnap.data()?.result;
-        }
-
+      const performMutation = async (t: any) => {
         const wsRef = db.collection("workspaces").doc(workspaceId);
         const wsSnap = await t.get(wsRef);
         if (!wsSnap.exists) throw new Error("Workspace not found");
@@ -3153,15 +3204,19 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
           t
         );
 
-        if (operationId) {
-          t.set(db.collection("idempotencyKeys").doc(`admin_${operationId}`), {
-            result: auditResult,
-            createdAt: new Date().toISOString()
-          });
-        }
-
         return auditResult;
-      });
+      };
+
+      let result;
+      if (scopedKey) {
+        result = await executeIdempotent(scopedKey, {
+          actor: authReq.user.uid,
+          workspaceId,
+          operationType: 'ADMIN_WORKSPACE_UPDATED'
+        }, performMutation);
+      } else {
+        result = await db.runTransaction(performMutation);
+      }
 
       if (typeof billingFallbackCache !== "undefined") {
         billingFallbackCache.set(workspaceId, result);
@@ -3192,19 +3247,21 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.put("/api/v1/admin/users/:userId", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
       const { userId } = req.params;
-      const { operationId, ...body } = req.body;
-      const validated = AdminUserUpdateSchema.parse(body);
+      const { role } = req.body;
+      const ALLOWED_ROLES = ['client', 'admin'];
+      if (role !== undefined && !ALLOWED_ROLES.includes(role)) {
+        return sendError(res, 'Invalid role', 400);
+      }
+
+      const validated = AdminUserUpdateSchema.parse(req.body);
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
+      const rawOpId = extractCanonicalOperationId(req);
+      const scopedKey = rawOpId 
+        ? deriveScopedOperationKey('system', 'ADMIN_USER_UPDATED', `${userId}:${rawOpId}`)
+        : undefined;
 
-      const result = await db.runTransaction(async (t) => {
-        // Idempotency check
-        if (operationId) {
-          const idempRef = db.collection("idempotencyKeys").doc(`admin_${operationId}`);
-          const idempSnap = await t.get(idempRef);
-          if (idempSnap.exists) return idempSnap.data()?.result;
-        }
-
+      const performMutation = async (t: any) => {
         const userRef = db.collection("users").doc(userId);
         const userSnap = await t.get(userRef);
         if (!userSnap.exists) throw new Error("User not found");
@@ -3237,15 +3294,19 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
           t
         );
 
-        if (operationId) {
-          t.set(db.collection("idempotencyKeys").doc(`admin_${operationId}`), {
-            result: auditResult,
-            createdAt: new Date().toISOString()
-          });
-        }
-
         return auditResult;
-      });
+      };
+
+      let result;
+      if (scopedKey) {
+        result = await executeIdempotent(scopedKey, {
+          actor: authReq.user.uid,
+          workspaceId: 'system',
+          operationType: 'ADMIN_USER_UPDATED'
+        }, performMutation);
+      } else {
+        result = await db.runTransaction(performMutation);
+      }
 
       res.json({ status: "success", data: result });
     } catch (err: any) {
@@ -3275,6 +3336,62 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
+  app.get("/api/v1/admin/error-logs", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
+    try {
+      const db = getDb();
+      const { workspaceId, severity, limit = 50 } = req.query;
+      
+      let query = db.collection("errorLogs").orderBy("createdAt", "desc");
+      if (workspaceId) query = query.where("workspaceId", "==", workspaceId);
+      if (severity) query = query.where("severity", "==", severity);
+      
+      const snap = await query.limit(Number(limit)).get();
+      const logs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      res.json({ status: "success", logs });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
+
+  // Scheduled Recurring Processing Endpoint (Authenticated via Admin or System Secret)
+  app.post("/api/v1/system/recurring/process", async (req: express.Request, res: express.Response) => {
+    try {
+      const systemCronSecret = process.env.CRON_SECRET || process.env.SESSION_SECRET || "ledgerflow-system-cron-secret";
+      const providedSecret = req.headers["x-cron-secret"] as string;
+
+      let authorized = false;
+      if (providedSecret && providedSecret === systemCronSecret) {
+        authorized = true;
+      } else {
+        const authHeader = req.headers.authorization;
+        if (authHeader?.startsWith("Bearer ")) {
+          const token = authHeader.split("Bearer ")[1];
+          try {
+            const decoded = await admin.auth().verifyIdToken(token);
+            if (decoded && (decoded.admin === true || decoded.role === 'admin')) {
+              authorized = true;
+            }
+          } catch {
+            authorized = false;
+          }
+        }
+      }
+
+      if (!authorized) {
+        return res.status(403).json({ 
+          status: "error", 
+          message: "Forbidden: Requires admin authorization or valid cron secret." 
+        });
+      }
+
+      const result = await processAllRecurring();
+      res.json({ status: "success", data: result });
+    } catch (err: any) {
+      console.error("[System Cron] Recurring processing failed:", err);
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
   app.get("/api/v1/admin/global-config", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
       res.json({
@@ -3288,18 +3405,15 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
   app.put("/api/v1/admin/global-config", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
-      const { operationId, ...body } = req.body;
-      const validated = AdminGlobalConfigSchema.parse(body);
+      const validated = AdminGlobalConfigSchema.parse(req.body);
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
+      const rawOpId = extractCanonicalOperationId(req);
+      const scopedKey = rawOpId 
+        ? deriveScopedOperationKey('system', 'ADMIN_GLOBAL_CONFIG_UPDATED', rawOpId)
+        : undefined;
 
-      const result = await db.runTransaction(async (t) => {
-        if (operationId) {
-          const idempRef = db.collection("idempotencyKeys").doc(`admin_${operationId}`);
-          const idempSnap = await t.get(idempRef);
-          if (idempSnap.exists) return idempSnap.data()?.result;
-        }
-
+      const performMutation = async (t: any) => {
         const configRef = db.collection("admins").doc("globalConfig");
         const configSnap = await t.get(configRef);
         
@@ -3322,15 +3436,19 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
           t
         );
 
-        if (operationId) {
-          t.set(db.collection("idempotencyKeys").doc(`admin_${operationId}`), {
-            result: newConfig,
-            createdAt: new Date().toISOString()
-          });
-        }
-
         return newConfig;
-      });
+      };
+
+      let result;
+      if (scopedKey) {
+        result = await executeIdempotent(scopedKey, {
+          actor: authReq.user.uid,
+          workspaceId: 'system',
+          operationType: 'ADMIN_GLOBAL_CONFIG_UPDATED'
+        }, performMutation);
+      } else {
+        result = await db.runTransaction(performMutation);
+      }
 
       globalAdminConfig = result as any;
       res.json({ status: "success", data: result });
@@ -4289,12 +4407,9 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     console.debug(`🚀 [Server] Production Ready: http://localhost:${PORT}`);
     console.debug(`📂 [Server] Serving static assets from: ${process.env.NODE_ENV === "production" ? "dist" : "Vite Dev Server"}`);
 
-    // Start background processing for recurring transactions (Runs every 12 hours)
-    // We run it once immediately on boot
-    processAllRecurring().catch(err => console.error('[RecurringService] Initial run failed:', err));
-    setInterval(() => {
-      processAllRecurring().catch(err => console.error('[RecurringService] Interval run failed:', err));
-    }, 12 * 60 * 60 * 1000); 
+    // Single boot check for due recurring items with idempotency protection.
+    // Ongoing processing runs through the authenticated /api/v1/system/recurring/process endpoint.
+    processAllRecurring().catch(err => console.error('[RecurringService] Initial boot run failed:', err));
   });
 
   const gracefulShutdown = (signal: string) => {

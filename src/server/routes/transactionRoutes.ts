@@ -108,7 +108,7 @@ transactionRouter.get('/', async (req, res) => {
 });
 
 transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
-  return executeCommand(req, res, 'TRANSACTION_CREATE', async (ctx) => {
+  return executeCommand(req, res, 'TRANSACTION_CREATE', async (ctx, t) => {
     const { transaction } = req.body;
     const user = (req as any).user;
     
@@ -152,18 +152,17 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
       wsData
     });
 
-    await db.runTransaction(async (t: any) => {
-      const txRef = db.collection('transactions').doc(transactionToSave.id);
-      const doc = await t.get(txRef);
-      if (doc.exists) {
-         throw new Error('Duplicate request processing: Transaction ID already exists');
-      }
+    // Execute atomic validation and create inside the single command transaction boundary
+    const txRef = db.collection('transactions').doc(transactionToSave.id);
+    const doc = await t.get(txRef);
+    if (doc.exists) {
+       throw new Error('Duplicate request processing: Transaction ID already exists');
+    }
 
-      t.create(txRef, { 
-        ...validatedTx, 
-        createdAt: FieldValue.serverTimestamp(), 
-        updatedAt: FieldValue.serverTimestamp() 
-      });
+    t.create(txRef, { 
+      ...validatedTx, 
+      createdAt: FieldValue.serverTimestamp(), 
+      updatedAt: FieldValue.serverTimestamp() 
     });
 
     return validatedTx;

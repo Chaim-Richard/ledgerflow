@@ -792,6 +792,13 @@ export interface SupportTicket {
   lastMessageBy: string;
   unreadForUser: boolean;
   unreadForAdmin: boolean;
+  errorLogId?: string;
+  errorDiagnostics?: {
+    message?: string;
+    stack?: string;
+    url?: string;
+    release?: string;
+  };
 }
 
 export interface SupportMessage {
@@ -801,6 +808,25 @@ export interface SupportMessage {
   authorUid: string;
   authorRole: 'user' | 'admin';
   body: string;
+  createdAt: string;
+}
+
+export interface ErrorLogRecord {
+  id: string;
+  workspaceId: string;
+  userId?: string;
+  userEmail?: string;
+  message: string;
+  stack?: string;
+  componentStack?: string;
+  url: string;
+  userAgent?: string;
+  appVersion?: string;
+  release?: string;
+  source: 'frontend' | 'backend' | 'api';
+  severity: 'error' | 'warning' | 'fatal';
+  metadata?: Record<string, any>;
+  ticketId?: string;
   createdAt: string;
 }
 
