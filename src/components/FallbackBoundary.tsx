@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
+import { reportClientError } from '../lib/errorTracker';
 
 interface Props {
   children: React.ReactNode;
@@ -23,6 +24,10 @@ export class FallbackBoundary extends React.Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
     console.debug("CRASH_DUMP:", error.stack || error.message);
+    reportClientError(error, {
+      severity: 'fatal',
+      componentStack: errorInfo.componentStack || undefined
+    }).catch(() => {});
     fetch("/api/health", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ error: error.message, stack: error.stack, info: errorInfo }) }).catch(() => {});
   }
 
