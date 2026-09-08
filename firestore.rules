@@ -12,6 +12,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Helper to check if user has admin custom claim
+    function isPlatformAdmin() {
+      return isSignedIn() && request.auth.token.get('admin', false) == true;
+    }
+
     // ID Validation Guard (prevents large string payload poisoning and ID injection)
     function isValidId(id) {
       return id is string && id.size() < 128 && !id.matches(".*[\\s\\x00-\\x1F\\x7F].*");
@@ -24,7 +29,7 @@ service cloud.firestore {
 
     // Workspace Access Helper - ensures users can only read/write data in workspaces they own or admin
     function isWorkspaceMember(workspaceId) {
-      return isSignedIn() && (request.auth.token.admin == true || 
+      return isSignedIn() && (isPlatformAdmin() || 
         get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.uid == request.auth.uid ||
         (get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.admins != null && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.admins[request.auth.uid] == true)
       );
@@ -48,8 +53,8 @@ service cloud.firestore {
       allow list: if isSignedIn() && request.auth.uid == userId;
       allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) &&
         affectedKeys(["uid", "email", "role", "createdAt", "updatedAt", "customLimit", "computeCreditLimit"]) &&
-        (request.resource.data.role == "client" || (request.resource.data.role == "admin" && request.auth.token.admin == true)) &&
-        request.resource.data.email == request.auth.token.email;
+        (request.resource.data.role == "client" || (request.resource.data.role == "admin" && isPlatformAdmin())) &&
+        request.resource.data.email == request.auth.token.get('email', '');
       allow update: if isSignedIn() && request.auth.uid == userId && 
         isUnchanged("role") && 
         isUnchanged("email") &&
@@ -159,7 +164,7 @@ service cloud.firestore {
     }
 
     match /admins/{docId} {
-      allow read: if isSignedIn() && request.auth.token.admin == true;
+      allow read: if isPlatformAdmin();
       allow write: if false; // Server-side admin SDK only
     }
 
@@ -202,7 +207,7 @@ service cloud.firestore {
 
     match /supportTickets/{ticketId} {
       allow read: if isSignedIn() && (
-        request.auth.token.admin == true ||
+        isPlatformAdmin() ||
         isWorkspaceMember(resource.data.workspaceId)
       );
       allow create: if isSignedIn()
@@ -213,7 +218,7 @@ service cloud.firestore {
         && request.resource.data.status == 'open'
         && affectedKeys(['id', 'workspaceId', 'uid', 'subject', 'status', 'priority', 'createdAt', 'updatedAt', 'lastMessageAt', 'lastMessageBy', 'unreadForUser', 'unreadForAdmin', 'errorLogId', 'errorDiagnostics']);
       allow update: if isSignedIn() && (
-        request.auth.token.admin == true ||
+        isPlatformAdmin() ||
         (isWorkspaceMember(resource.data.workspaceId)
           && isUnchanged("workspaceId") && isUnchanged("uid")
           && isUnchanged("createdAt")
@@ -226,7 +231,7 @@ service cloud.firestore {
 
     match /errorLogs/{logId} {
       allow read: if isSignedIn() && (
-        request.auth.token.admin == true ||
+        isPlatformAdmin() ||
         (resource != null && isWorkspaceMember(resource.data.workspaceId))
       );
       allow create: if isSignedIn()
@@ -239,14 +244,14 @@ service cloud.firestore {
 
     match /supportMessages/{messageId} {
       allow read: if isSignedIn() && (
-        request.auth.token.admin == true ||
+        isPlatformAdmin() ||
         isWorkspaceMember(resource.data.workspaceId)
       );
       allow create: if isSignedIn()
         && request.resource.data.authorUid == request.auth.uid
         && isValidId(messageId)
         && request.resource.data.body is string && request.resource.data.body.size() <= 5000
-        && (request.auth.token.admin == true
+        && (isPlatformAdmin()
             ? request.resource.data.authorRole == 'admin'
             : (isWorkspaceMember(request.resource.data.workspaceId)
                && request.resource.data.authorRole == 'user'))
