@@ -71,7 +71,7 @@ export function TaxReserveWidget() {
   // 2. Math: Tax Reserve
   const taxReserveResult = useMemo(() => {
     return calculateSafeToSpend(transactions, accounts);
-  }, [transactions, accounts, taxRate]);
+  }, [transactions, accounts]);
 
   // 3. Math: Upcoming Bills before next payday
   const upcomingBillsList = useMemo(() => {

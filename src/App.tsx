@@ -203,7 +203,10 @@ const shortcutMap = useMemo(() => {
     return base;
   }, [
     isCommandPaletteOpen, isQuickEntryOpen, isDiagnosticConsoleOpen,
-    isShortcutOverlayOpen, isArchitectureOpen, speedDials, navigateTool
+    isShortcutOverlayOpen, isArchitectureOpen, speedDials, navigateTool,
+    handleAction, setActiveTab, setArchitectureOpen, setCommandPaletteOpen,
+    setDiagnosticConsoleOpen, setImporterOpen, setQuickEntryOpen,
+    setShortcutOverlayOpen, toggleFocusMode
   ]);
   
   useKeyboardShortcuts(shortcutMap);

@@ -1,5 +1,5 @@
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { ChartAccount, Transaction, JournalEntry } from '../../types';
 import { 
   AlertCircle, 
@@ -102,7 +102,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
     }
   }, [businessType]);
 
-  const getPeriodBalances = (dateCutoff: string) => {
+  const getPeriodBalances = useCallback((dateCutoff: string) => {
     const assets: { [id: string]: number } = {};
     const liabilities: { [id: string]: number } = {};
     const equity: { [id: string]: number } = {};
@@ -164,13 +164,13 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
       totalClaims,
       isBalanced: Math.abs(totalAssets - totalClaims) < 1 // check for integer equality
     };
-  };
+  }, [transactions, accounts]);
 
   const { currentData, prevData } = useMemo(() => {
     const currentData = getPeriodBalances(asOfDate);
     const prevData = isComparative ? getPeriodBalances(priorDate) : currentData;
     return { currentData, prevData };
-  }, [transactions, accounts, asOfDate, priorDate, isComparative]);
+  }, [getPeriodBalances, asOfDate, priorDate, isComparative]);
 
   const exportBalanceSheet = () => {
     const rows = [

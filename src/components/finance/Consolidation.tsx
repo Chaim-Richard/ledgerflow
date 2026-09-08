@@ -8,13 +8,13 @@ export default function Consolidation() {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   
-  const incomeAccountIds = new Set(accounts.filter(a => a.type === 'income').map(a => a.id));
-  const expenseAccountIds = new Set(accounts.filter(a => a.type === 'expense').map(a => a.id));
-
-  const isIncomeLine = (l: any) => incomeAccountIds.has(l.accountId) || l.category?.toLowerCase().includes('income') || l.category?.toLowerCase().includes('revenue');
-  const isExpenseLine = (l: any) => expenseAccountIds.has(l.accountId) || l.category?.toLowerCase().includes('expense') || l.category?.toLowerCase().includes('cogs');
-
   const summary = useMemo(() => {
+    const incomeAccountIds = new Set(accounts.filter(a => a.type === 'income').map(a => a.id));
+    const expenseAccountIds = new Set(accounts.filter(a => a.type === 'expense').map(a => a.id));
+
+    const isIncomeLine = (l: any) => incomeAccountIds.has(l.accountId) || l.category?.toLowerCase().includes('income') || l.category?.toLowerCase().includes('revenue');
+    const isExpenseLine = (l: any) => expenseAccountIds.has(l.accountId) || l.category?.toLowerCase().includes('expense') || l.category?.toLowerCase().includes('cogs');
+
     return IntercompanyEliminationEngine.generateConsolidatedSummary(transactions, isIncomeLine, isExpenseLine);
   }, [transactions, accounts]);
 
