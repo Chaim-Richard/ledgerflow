@@ -11,6 +11,7 @@ import { parseLocalDate } from '../../lib/utils';
 import { getDb } from '../db/firestore';
 import { isPostable, getAbsoluteTotal, isTransactionInDateRange } from '../../lib/txFilters';
 import { optimizedTransactionSimilarity } from '../../lib/algorithms';
+import { executeCommand } from '../utils/commandExecutor';
 
 export const transactionRouter = express.Router();
 
@@ -107,52 +108,43 @@ transactionRouter.get('/', async (req, res) => {
 });
 
 transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
-  try {
+  return executeCommand(req, res, 'TRANSACTION_CREATE', async (ctx) => {
     const { transaction } = req.body;
-    const idempotencyKey = req.headers['idempotency-key'] as string;
     const user = (req as any).user;
     
     if (!transaction || !transaction.workspaceId) {
-      return res.status(400).json({ error: 'Invalid payload' });
+      const err = new Error('Invalid payload') as any;
+      err.status = 400;
+      throw err;
     }
     
-    transaction.uid = user.uid; // Security fix: enforce ownership
+    transaction.uid = user.uid;
 
-    // Standardize totalAmountCents prior to schema parsing if omitted
     if (!transaction.totalAmountCents) {
        transaction.totalAmountCents = getAbsoluteTotal(transaction);
     }
 
     const parsed = TransactionSchema.safeParse(transaction);
     if (!parsed.success) {
-      return res.status(400).json({ error: 'Schema validation failed', details: parsed.error.issues });
+      const err = new Error('Schema validation failed') as any;
+      err.status = 400;
+      err.details = parsed.error.issues;
+      throw err;
     }
 
     const db = getDb();
-    const finalTxToSave: Transaction = {
+    const transactionToSave: Transaction = {
       ...parsed.data,
       id: parsed.data.id || db.collection("transactions").doc().id,
     } as Transaction;
-    const transactionToSave = finalTxToSave;
     
-    // Authorization Check
     const wsDoc = await db.collection('workspaces').doc(transactionToSave.workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
-      return res.status(403).json({ error: 'Not a member' });
+      const err = new Error('Not a member') as any;
+      err.status = 403;
+      throw err;
     }
     const wsData = wsDoc.data();
-
-    // Namespace idempotency key by workspaceId to prevent cross-workspace key collisions
-    const scopedIdempotencyKey = idempotencyKey ? `${transactionToSave.workspaceId}_${idempotencyKey}` : null;
-    
-    if (scopedIdempotencyKey) {
-       const idempotencyRef = db.collection('idempotencyKeys').doc(scopedIdempotencyKey);
-       const idempotencyDoc = await idempotencyRef.get();
-       if (idempotencyDoc.exists) {
-          const data = idempotencyDoc.data();
-          return res.status(data?.code || 409).json(data?.body || { error: 'Duplicate request processing' });
-       }
-    }
 
     const validatedTx = await TransactionValidator.validateAndPrepare(transactionToSave, {
       workspaceId: transactionToSave.workspaceId,
@@ -161,39 +153,21 @@ transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
     });
 
     await db.runTransaction(async (t: any) => {
-      if (scopedIdempotencyKey) {
-         const idempotencyRef = db.collection('idempotencyKeys').doc(scopedIdempotencyKey);
-         const idempotencyDoc = await t.get(idempotencyRef);
-         if (idempotencyDoc.exists) {
-            throw new Error('Duplicate request processing');
-         }
-      }
-
       const txRef = db.collection('transactions').doc(transactionToSave.id);
       const doc = await t.get(txRef);
       if (doc.exists) {
-         throw new Error('Duplicate request processing');
+         throw new Error('Duplicate request processing: Transaction ID already exists');
       }
 
-      t.create(txRef, { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-
-      if (scopedIdempotencyKey) {
-         const idempotencyRef = db.collection('idempotencyKeys').doc(scopedIdempotencyKey);
-         const responseBody = { status: 'ok', transactionId: transactionToSave.id };
-         t.set(idempotencyRef, { code: 200, body: responseBody, createdAt: FieldValue.serverTimestamp() });
-      }
+      t.create(txRef, { 
+        ...validatedTx, 
+        createdAt: FieldValue.serverTimestamp(), 
+        updatedAt: FieldValue.serverTimestamp() 
+      });
     });
 
-    res.status(200).json({ status: 'ok', transactionId: validatedTx.id, data: validatedTx });
-  } catch (e: any) {
-    if (e.message === 'Duplicate request processing') {
-       return res.status(409).json({ error: e.message });
-    }
-    if (e.message === 'Not a member') {
-       return res.status(403).json({ error: e.message });
-    }
-    res.status(400).json({ error: e.message });
-  }
+    return validatedTx;
+  });
 });
 
 transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {

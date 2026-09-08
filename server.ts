@@ -51,6 +51,7 @@ import { assertWorkspaceAccess } from "./src/server/db/firestore.ts";
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 
 import { processAllRecurring } from "./src/server/services/recurringService.ts";
+import { executeCommand } from "./src/server/utils/commandExecutor.ts";
 
 dotenv.config();
 
@@ -3016,24 +3017,8 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
   app.get("/api/v1/admin/telemetry", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
-      const authReq = req as AuthenticatedRequest;
       const db = getDb();
       
-      const isSystemAdmin = authReq.user.admin === true;
-      let isRoleAdmin = false;
-      if (!isSystemAdmin) {
-        try {
-          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch (e) {
-          /* ignore */
-        }
-      }
-
-      if (!isSystemAdmin && !isRoleAdmin) {
-        return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
-      }
-
       const workspacesSnap = await db.collection("workspaces").limit(100).get();
       const wsIds = workspacesSnap.docs.map(d => d.id).slice(0, 30);
       let transactionsSnap: { docs: any[] } = { docs: [] };
@@ -3116,48 +3101,16 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 
   app.put("/api/v1/admin/workspaces/:workspaceId", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
-    try {
+    return executeCommand(req, res, "ADMIN_WORKSPACE_UPDATE", async (ctx) => {
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
-      
       const { workspaceId } = req.params;
       const { 
-        plan, 
-        concurrentUserLimit, 
-        maxSeats, 
-        computeCreditBalance, 
-        apiQuotaMonthlyLimitCents,
-        creditCostMultiplier,
-        quotaCentsMultiplier,
-        bypassBilling,
-        customKeyCreditCharge,
-        customKeyCentsCharge
+        plan, concurrentUserLimit, maxSeats, computeCreditBalance, apiQuotaMonthlyLimitCents,
+        creditCostMultiplier, quotaCentsMultiplier, bypassBilling, customKeyCreditCharge, customKeyCentsCharge
       } = req.body;
 
-      try {
-        await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_WORKSPACE_UPDATED", `Updated workspace ${workspaceId}: plan=${plan}, seats=${maxSeats}`, workspaceId);
-        
-        await db.collection("workspaces").doc(workspaceId).set({
-          plan: plan || "sandbox",
-          concurrentUserLimit: Number(concurrentUserLimit) || 50,
-          maxSeats: Number(maxSeats) || 3,
-          computeCreditBalance: computeCreditBalance !== undefined ? Number(computeCreditBalance) : 100000,
-          apiQuotaMonthlyLimitCents: Number(apiQuotaMonthlyLimitCents) || 0,
-          creditCostMultiplier: creditCostMultiplier !== undefined ? Number(creditCostMultiplier) : 1.0,
-          quotaCentsMultiplier: quotaCentsMultiplier !== undefined ? Number(quotaCentsMultiplier) : 1.0,
-          bypassBilling: bypassBilling === true,
-          customKeyCreditCharge: customKeyCreditCharge !== undefined ? Number(customKeyCreditCharge) : 10,
-          customKeyCentsCharge: customKeyCentsCharge !== undefined ? Number(customKeyCentsCharge) : 0,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (dbErr) {
-        console.warn("[Firebase Admin] Failed to save updated workspace metadata to DB. Bypassing to inline fallback caching store.");
-      }
-
-      const existingCacheValue = typeof billingFallbackCache !== "undefined" ? (billingFallbackCache.get(workspaceId) || {}) : {};
-      const updatedCacheValue = {
-        ...existingCacheValue,
-        workspaceId,
+      const updateData = {
         plan: plan || "sandbox",
         concurrentUserLimit: Number(concurrentUserLimit) || 50,
         maxSeats: Number(maxSeats) || 3,
@@ -3168,16 +3121,20 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         bypassBilling: bypassBilling === true,
         customKeyCreditCharge: customKeyCreditCharge !== undefined ? Number(customKeyCreditCharge) : 10,
         customKeyCentsCharge: customKeyCentsCharge !== undefined ? Number(customKeyCentsCharge) : 0,
+        updatedAt: new Date().toISOString()
       };
-      
+
+      await db.collection("workspaces").doc(workspaceId).set(updateData, { merge: true });
+      await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_WORKSPACE_UPDATED", `Updated workspace ${workspaceId}: plan=${plan}, seats=${maxSeats}`, workspaceId);
+
+      const existingCacheValue = typeof billingFallbackCache !== "undefined" ? (billingFallbackCache.get(workspaceId) || {}) : {};
+      const updatedCacheValue = { ...existingCacheValue, workspaceId, ...updateData };
       if (typeof billingFallbackCache !== "undefined") {
         billingFallbackCache.set(workspaceId, updatedCacheValue);
       }
 
-      res.json({ status: "success", message: "Workspace settings optimized successfully.", data: updatedCacheValue });
-    } catch (err: any) {
-      res.status(500).json({ status: "error", message: err.message });
-    }
+      return updatedCacheValue;
+    });
   });
 
   // --- Global Default Pricing and Billing Overrides ---
@@ -3199,34 +3156,24 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 
   app.put("/api/v1/admin/users/:userId", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
-    try {
+    return executeCommand(req, res, "ADMIN_USER_UPDATE", async (ctx) => {
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
-      
       const { userId } = req.params;
       const { role, customLimit, computeCreditLimit } = req.body;
 
-      await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_USER_UPDATED", `Updated user ${userId}: role=${role}, limit=${customLimit}`);
-      
       const updateData: Record<string, any> = {
         updatedAt: new Date().toISOString()
       };
-      if (role !== undefined && typeof role === 'string') {
-        updateData.role = role;
-      }
-      if (customLimit !== undefined) {
-        updateData.customLimit = customLimit === null || customLimit === '' ? null : Number(customLimit);
-      }
-      if (computeCreditLimit !== undefined) {
-        updateData.computeCreditLimit = computeCreditLimit === null || computeCreditLimit === '' ? null : Number(computeCreditLimit);
-      }
+      if (role !== undefined && typeof role === 'string') updateData.role = role;
+      if (customLimit !== undefined) updateData.customLimit = customLimit === null || customLimit === '' ? null : Number(customLimit);
+      if (computeCreditLimit !== undefined) updateData.computeCreditLimit = computeCreditLimit === null || computeCreditLimit === '' ? null : Number(computeCreditLimit);
 
       await db.collection("users").doc(userId).set(updateData, { merge: true });
+      await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_USER_UPDATED", `Updated user ${userId}: role=${role}, limit=${customLimit}`);
 
-      res.json({ status: "success", message: "User privileges updated" });
-    } catch (err: any) {
-      sendError(res, err.message, 500);
-    }
+      return { userId, ...updateData };
+    });
   });
 
   app.get("/api/v1/admin/global-config", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
@@ -3241,23 +3188,15 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 
   app.put("/api/v1/admin/global-config", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
-    try {
+    return executeCommand(req, res, "ADMIN_GLOBAL_CONFIG_UPDATE", async (ctx) => {
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
-      
       const { 
-        creditCostMultiplier, 
-        quotaCentsMultiplier, 
-        bypassBilling, 
-        customKeyCreditCharge, 
-        customKeyCentsCharge,
-        maxRegistrationLimit,
-        freeWorkspaceTxCap
+        creditCostMultiplier, quotaCentsMultiplier, bypassBilling, 
+        customKeyCreditCharge, customKeyCentsCharge, maxRegistrationLimit, freeWorkspaceTxCap
       } = req.body;
 
-      await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_GLOBAL_CONFIG_UPDATED", `Updated global config: credits=${creditCostMultiplier}`);
-
-      globalAdminConfig = {
+      const newConfig = {
         creditCostMultiplier: creditCostMultiplier !== undefined ? Number(creditCostMultiplier) : 1.0,
         quotaCentsMultiplier: quotaCentsMultiplier !== undefined ? Number(quotaCentsMultiplier) : 1.0,
         bypassBilling: bypassBilling === true,
@@ -3267,16 +3206,13 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         freeWorkspaceTxCap: freeWorkspaceTxCap !== undefined ? Number(freeWorkspaceTxCap) : 100,
       };
 
-      try {
-        await db.collection("admins").doc("globalConfig").set(globalAdminConfig, { merge: true });
-      } catch (dbErr) {
-        console.warn("[Global Config Save] Failed to persist options. Using runtime memory.");
-      }
+      globalAdminConfig = newConfig;
 
-      res.json({ status: "success", message: "Global standard billing configurations updated perfectly.", globalAdminConfig });
-    } catch (err: any) {
-      res.status(500).json({ status: "error", message: err.message });
-    }
+      await db.collection("admins").doc("globalConfig").set(globalAdminConfig, { merge: true });
+      await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_GLOBAL_CONFIG_UPDATED", `Updated global config: credits=${creditCostMultiplier}`);
+
+      return globalAdminConfig;
+    });
   });
 
   app.post("/api/v1/billing/checkout", authenticate, async (req: express.Request, res: express.Response) => {

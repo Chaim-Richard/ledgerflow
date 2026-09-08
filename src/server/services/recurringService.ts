@@ -1,6 +1,7 @@
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { RecurringTransaction, Transaction } from '../../types';
 import { findDueRecurring } from '../../lib/recurringEngine';
+import { executeIdempotent } from '../utils/idempotency';
 import crypto from 'crypto';
 
 export async function processAllRecurring() {
@@ -33,35 +34,56 @@ export async function processAllRecurring() {
 
     console.log(`[RecurringService] Found ${generatedTransactions.length} transactions to generate.`);
 
-    // 3. Process each generated transaction
+    // 3. Process each generated transaction with idempotency
     for (const item of generatedTransactions) {
       const { transaction, templateId, updatedNextOccurrence } = item;
-      const txId = crypto.randomUUID();
-      
-      await db.runTransaction(async (t) => {
-        const recurringRef = db.collection('recurring').doc(templateId);
-        const txRef = db.collection('transactions').doc(txId);
+      const txDate = transaction.date || 'unknown_date';
+      const operationId = `recurring:${templateId}:${txDate}`;
 
-        // Verify template still exists and is active
-        const recDoc = await t.get(recurringRef);
-        if (!recDoc.exists || !recDoc.data()?.isActive) return;
+      try {
+        await executeIdempotent(operationId, {
+          actor: 'system:recurring_engine',
+          workspaceId: transaction.workspaceId || 'unknown',
+          operationType: 'RECURRING_TX_GENERATION'
+        }, async () => {
+          const txId = crypto.randomUUID();
+          
+          await db.runTransaction(async (t) => {
+            const recurringRef = db.collection('recurring').doc(templateId);
+            const txRef = db.collection('transactions').doc(txId);
 
-        // Create the transaction
-        t.set(txRef, {
-          ...transaction,
-          id: txId,
-          createdAt: new Date().toISOString(),
-          updatedAt: FieldValue.serverTimestamp()
+            // Verify template still exists and is active
+            const recDoc = await t.get(recurringRef);
+            if (!recDoc.exists || !recDoc.data()?.isActive) {
+              throw new Error(`Template ${templateId} is no longer active.`);
+            }
+
+            // Create the transaction
+            t.set(txRef, {
+              ...transaction,
+              id: txId,
+              createdAt: new Date().toISOString(),
+              updatedAt: FieldValue.serverTimestamp()
+            });
+
+            // Update the template's next occurrence
+            t.update(recurringRef, {
+              nextOccurrence: updatedNextOccurrence,
+              updatedAt: FieldValue.serverTimestamp()
+            });
+          });
+
+          return { txId, templateId, date: txDate };
         });
 
-        // Update the template's next occurrence
-        t.update(recurringRef, {
-          nextOccurrence: updatedNextOccurrence,
-          updatedAt: FieldValue.serverTimestamp()
-        });
-      });
-
-      console.log(`[RecurringService] Generated transaction ${txId} for template ${templateId}`);
+        console.log(`[RecurringService] Successfully processed ${operationId}`);
+      } catch (err: any) {
+        if (err.message?.includes('already succeeded')) {
+          console.log(`[RecurringService] Skipping ${operationId} - already processed.`);
+        } else {
+          console.error(`[RecurringService] Failed to process ${operationId}:`, err);
+        }
+      }
     }
 
     console.log('[RecurringService] Background process completed.');
