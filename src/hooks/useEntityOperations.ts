@@ -160,7 +160,7 @@ export function useEntityOperations() {
     }
 
     try {
-      const res = await fetch(`/api/v1/invoices/${id}/send`, {
+      const res = await fetch(`/api/v1/invoices/email/${id}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
