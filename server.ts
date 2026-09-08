@@ -41,7 +41,10 @@ import {
   InventoryEOQRequestSchema,
   ChartAccountSchema,
   WorkspaceSchema,
-  BankMappingRequestSchema
+  BankMappingRequestSchema,
+  AdminUserUpdateSchema,
+  AdminWorkspaceUpdateSchema,
+  AdminGlobalConfigSchema
 } from "./src/schemas.ts";
 import { BayesianClassifier, sha256Sync } from "./src/lib/algorithms.ts";
 import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
@@ -374,18 +377,35 @@ const requireAdmin = (req: express.Request, res: express.Response, next: express
   next();
 };
 
-async function writeAuditLog(userId: string, email: string, action: string, details: string, workspaceId: string = 'system') {
+async function writeAuditLog(
+  userId: string, 
+  email: string, 
+  action: string, 
+  details: string, 
+  workspaceId: string = 'system',
+  before?: any,
+  after?: any,
+  transaction?: admin.firestore.Transaction
+) {
   const db = getFirestore();
   const auditId = crypto.randomUUID();
-  await db.collection("auditLogs").doc(auditId).set({
+  const auditData = {
     id: auditId,
     workspaceId,
     timestamp: new Date().toISOString(),
     userId,
     userEmail: email,
     action,
-    details
-  });
+    details,
+    before: before || null,
+    after: after || null
+  };
+  
+  if (transaction) {
+    transaction.set(db.collection("auditLogs").doc(auditId), auditData);
+  } else {
+    await db.collection("auditLogs").doc(auditId).set(auditData);
+  }
 }
 
 /**
@@ -3102,40 +3122,63 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 
   app.put("/api/v1/admin/workspaces/:workspaceId", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
-    return executeCommand(req, res, "ADMIN_WORKSPACE_UPDATE", async (ctx) => {
+    try {
+      const { workspaceId } = req.params;
+      const { operationId, ...body } = req.body;
+      const validated = AdminWorkspaceUpdateSchema.parse(body);
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
-      const { workspaceId } = req.params;
-      const { 
-        plan, concurrentUserLimit, maxSeats, computeCreditBalance, apiQuotaMonthlyLimitCents,
-        creditCostMultiplier, quotaCentsMultiplier, bypassBilling, customKeyCreditCharge, customKeyCentsCharge
-      } = req.body;
 
-      const updateData = {
-        plan: plan || "sandbox",
-        concurrentUserLimit: Number(concurrentUserLimit) || 50,
-        maxSeats: Number(maxSeats) || 3,
-        computeCreditBalance: computeCreditBalance !== undefined ? Number(computeCreditBalance) : 100000,
-        apiQuotaMonthlyLimitCents: Number(apiQuotaMonthlyLimitCents) || 0,
-        creditCostMultiplier: creditCostMultiplier !== undefined ? Number(creditCostMultiplier) : 1.0,
-        quotaCentsMultiplier: quotaCentsMultiplier !== undefined ? Number(quotaCentsMultiplier) : 1.0,
-        bypassBilling: bypassBilling === true,
-        customKeyCreditCharge: customKeyCreditCharge !== undefined ? Number(customKeyCreditCharge) : 10,
-        customKeyCentsCharge: customKeyCentsCharge !== undefined ? Number(customKeyCentsCharge) : 0,
-        updatedAt: new Date().toISOString()
-      };
+      const result = await db.runTransaction(async (t) => {
+        if (operationId) {
+          const idempRef = db.collection("idempotencyKeys").doc(`admin_${operationId}`);
+          const idempSnap = await t.get(idempRef);
+          if (idempSnap.exists) return idempSnap.data()?.result;
+        }
 
-      await db.collection("workspaces").doc(workspaceId).set(updateData, { merge: true });
-      await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_WORKSPACE_UPDATED", `Updated workspace ${workspaceId}: plan=${plan}, seats=${maxSeats}`, workspaceId);
+        const wsRef = db.collection("workspaces").doc(workspaceId);
+        const wsSnap = await t.get(wsRef);
+        if (!wsSnap.exists) throw new Error("Workspace not found");
+        
+        const before = wsSnap.data()!;
+        const updateData = {
+          ...validated,
+          updatedAt: new Date().toISOString()
+        };
+        
+        t.update(wsRef, updateData);
+        
+        const auditResult = { ...before, ...updateData };
 
-      const existingCacheValue = typeof billingFallbackCache !== "undefined" ? (billingFallbackCache.get(workspaceId) || {}) : {};
-      const updatedCacheValue = { ...existingCacheValue, workspaceId, ...updateData };
+        await writeAuditLog(
+          authReq.user.uid, 
+          authReq.user.email!, 
+          "ADMIN_WORKSPACE_UPDATED", 
+          `Updated workspace ${workspaceId}`, 
+          workspaceId,
+          before,
+          auditResult,
+          t
+        );
+
+        if (operationId) {
+          t.set(db.collection("idempotencyKeys").doc(`admin_${operationId}`), {
+            result: auditResult,
+            createdAt: new Date().toISOString()
+          });
+        }
+
+        return auditResult;
+      });
+
       if (typeof billingFallbackCache !== "undefined") {
-        billingFallbackCache.set(workspaceId, updatedCacheValue);
+        billingFallbackCache.set(workspaceId, result);
       }
 
-      return updatedCacheValue;
-    });
+      res.json({ status: "success", data: result });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
   });
 
   // --- Global Default Pricing and Billing Overrides ---
@@ -3143,8 +3186,6 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     try {
       const db = getDb();
       const usersSnap = await db.collection("users").limit(100).get();
-      const countSnap = await db.collection("users").count().get();
-      const totalCount = countSnap.data().count;
       const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() as any }));
       
       res.json({
@@ -3157,24 +3198,89 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 
   app.put("/api/v1/admin/users/:userId", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
-    return executeCommand(req, res, "ADMIN_USER_UPDATE", async (ctx) => {
+    try {
+      const { userId } = req.params;
+      const { operationId, ...body } = req.body;
+      const validated = AdminUserUpdateSchema.parse(body);
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
-      const { userId } = req.params;
-      const { role, customLimit, computeCreditLimit } = req.body;
 
-      const updateData: Record<string, any> = {
-        updatedAt: new Date().toISOString()
-      };
-      if (role !== undefined && typeof role === 'string') updateData.role = role;
-      if (customLimit !== undefined) updateData.customLimit = customLimit === null || customLimit === '' ? null : Number(customLimit);
-      if (computeCreditLimit !== undefined) updateData.computeCreditLimit = computeCreditLimit === null || computeCreditLimit === '' ? null : Number(computeCreditLimit);
+      const result = await db.runTransaction(async (t) => {
+        // Idempotency check
+        if (operationId) {
+          const idempRef = db.collection("idempotencyKeys").doc(`admin_${operationId}`);
+          const idempSnap = await t.get(idempRef);
+          if (idempSnap.exists) return idempSnap.data()?.result;
+        }
 
-      await db.collection("users").doc(userId).set(updateData, { merge: true });
-      await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_USER_UPDATED", `Updated user ${userId}: role=${role}, limit=${customLimit}`);
+        const userRef = db.collection("users").doc(userId);
+        const userSnap = await t.get(userRef);
+        if (!userSnap.exists) throw new Error("User not found");
+        
+        const before = userSnap.data()!;
+        const updateData = {
+          ...validated,
+          updatedAt: new Date().toISOString()
+        };
+        
+        t.update(userRef, updateData);
 
-      return { userId, ...updateData };
-    });
+        // Update custom claims if role changed to admin or from admin
+        if (validated.role && validated.role !== before.role) {
+          await admin.auth().setCustomUserClaims(userId, {
+            admin: validated.role === 'admin'
+          });
+        }
+        
+        const auditResult = { userId, ...before, ...updateData };
+
+        await writeAuditLog(
+          authReq.user.uid, 
+          authReq.user.email!, 
+          "ADMIN_USER_UPDATED", 
+          `Updated user ${userId}`, 
+          'system',
+          before,
+          { ...before, ...updateData },
+          t
+        );
+
+        if (operationId) {
+          t.set(db.collection("idempotencyKeys").doc(`admin_${operationId}`), {
+            result: auditResult,
+            createdAt: new Date().toISOString()
+          });
+        }
+
+        return auditResult;
+      });
+
+      res.json({ status: "success", data: result });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
+
+  app.get("/api/v1/admin/audit-logs", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
+    try {
+      const db = getDb();
+      const { userId, workspaceId, action, startDate, endDate, limit = 50 } = req.query;
+      
+      let query = db.collection("auditLogs").orderBy("timestamp", "desc");
+      
+      if (userId) query = query.where("userId", "==", userId);
+      if (workspaceId) query = query.where("workspaceId", "==", workspaceId);
+      if (action) query = query.where("action", "==", action);
+      if (startDate) query = query.where("timestamp", ">=", startDate);
+      if (endDate) query = query.where("timestamp", "<=", endDate);
+      
+      const snap = await query.limit(Number(limit)).get();
+      const logs = snap.docs.map(doc => doc.data());
+      
+      res.json({ status: "success", logs });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
   });
 
   app.get("/api/v1/admin/global-config", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
@@ -3189,31 +3295,56 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 
   app.put("/api/v1/admin/global-config", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
-    return executeCommand(req, res, "ADMIN_GLOBAL_CONFIG_UPDATE", async (ctx) => {
+    try {
+      const { operationId, ...body } = req.body;
+      const validated = AdminGlobalConfigSchema.parse(body);
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
-      const { 
-        creditCostMultiplier, quotaCentsMultiplier, bypassBilling, 
-        customKeyCreditCharge, customKeyCentsCharge, maxRegistrationLimit, freeWorkspaceTxCap
-      } = req.body;
 
-      const newConfig = {
-        creditCostMultiplier: creditCostMultiplier !== undefined ? Number(creditCostMultiplier) : 1.0,
-        quotaCentsMultiplier: quotaCentsMultiplier !== undefined ? Number(quotaCentsMultiplier) : 1.0,
-        bypassBilling: bypassBilling === true,
-        customKeyCreditCharge: customKeyCreditCharge !== undefined ? Number(customKeyCreditCharge) : 10,
-        customKeyCentsCharge: customKeyCentsCharge !== undefined ? Number(customKeyCentsCharge) : 0,
-        maxRegistrationLimit: maxRegistrationLimit !== undefined ? Number(maxRegistrationLimit) : 100,
-        freeWorkspaceTxCap: freeWorkspaceTxCap !== undefined ? Number(freeWorkspaceTxCap) : 100,
-      };
+      const result = await db.runTransaction(async (t) => {
+        if (operationId) {
+          const idempRef = db.collection("idempotencyKeys").doc(`admin_${operationId}`);
+          const idempSnap = await t.get(idempRef);
+          if (idempSnap.exists) return idempSnap.data()?.result;
+        }
 
-      globalAdminConfig = newConfig;
+        const configRef = db.collection("admins").doc("globalConfig");
+        const configSnap = await t.get(configRef);
+        
+        const before = configSnap.exists ? configSnap.data() : globalAdminConfig;
+        const newConfig = {
+          ...validated,
+          updatedAt: new Date().toISOString()
+        };
+        
+        t.set(configRef, newConfig, { merge: true });
+        
+        await writeAuditLog(
+          authReq.user.uid, 
+          authReq.user.email!, 
+          "ADMIN_GLOBAL_CONFIG_UPDATED", 
+          `Updated global admin config`, 
+          'system',
+          before,
+          newConfig,
+          t
+        );
 
-      await db.collection("admins").doc("globalConfig").set(globalAdminConfig, { merge: true });
-      await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_GLOBAL_CONFIG_UPDATED", `Updated global config: credits=${creditCostMultiplier}`);
+        if (operationId) {
+          t.set(db.collection("idempotencyKeys").doc(`admin_${operationId}`), {
+            result: newConfig,
+            createdAt: new Date().toISOString()
+          });
+        }
 
-      return globalAdminConfig;
-    });
+        return newConfig;
+      });
+
+      globalAdminConfig = result as any;
+      res.json({ status: "success", data: result });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
   });
 
   app.post("/api/v1/billing/checkout", authenticate, async (req: express.Request, res: express.Response) => {

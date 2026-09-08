@@ -42,7 +42,7 @@ export function useSupportData() {
       );
     }
 
-    setIsSyncing(true);
+    setTimeout(() => setIsSyncing(true), 0);
     const unsub = onSnapshot(q, (snap) => {
       const tickets = snap.docs.map(d => ({ id: d.id, ...d.data() } as SupportTicket));
       setTickets(tickets);
@@ -58,7 +58,7 @@ export function useSupportData() {
   // 2. Listen for Messages in Selected Ticket
   useEffect(() => {
     if (!selectedTicketId) {
-      setMessages([]);
+      setTimeout(() => setMessages([]), 0);
       return;
     }
 

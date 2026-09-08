@@ -286,6 +286,36 @@ export const ProjectSchema = z.object({
   splitRules: z.array(z.record(z.string(), z.any())).optional(),
 });
 
+export const AdminUserUpdateSchema = z.object({
+  role: z.enum(["client", "admin"]).optional(),
+  customLimit: z.number().nonnegative().nullable().optional(),
+  computeCreditLimit: z.number().nonnegative().nullable().optional()
+}).strict();
+
+export const AdminWorkspaceUpdateSchema = z.object({
+  plan: z.enum(["sandbox", "starter", "pro", "enterprise"]).optional(),
+  concurrentUserLimit: z.number().nonnegative().optional(),
+  maxSeats: z.number().nonnegative().optional(),
+  computeCreditBalance: z.number().nonnegative().optional(),
+  apiQuotaMonthlyLimitCents: z.number().nonnegative().optional(),
+  creditCostMultiplier: z.number().positive().optional(),
+  quotaCentsMultiplier: z.number().positive().optional(),
+  bypassBilling: z.boolean().optional(),
+  customKeyCreditCharge: z.number().nonnegative().optional(),
+  customKeyCentsCharge: z.number().nonnegative().optional(),
+  freeWorkspaceTxCap: z.number().nonnegative().optional(),
+}).strict();
+
+export const AdminGlobalConfigSchema = z.object({
+  creditCostMultiplier: z.number().positive(),
+  quotaCentsMultiplier: z.number().positive(),
+  bypassBilling: z.boolean(),
+  customKeyCreditCharge: z.number().nonnegative(),
+  customKeyCentsCharge: z.number().nonnegative(),
+  maxRegistrationLimit: z.number().nonnegative(),
+  freeWorkspaceTxCap: z.number().nonnegative(),
+}).strict();
+
 export type ValidatedTransaction = z.infer<typeof TransactionSchema>;
 export type ValidatedChartAccount = z.infer<typeof ChartAccountSchema>;
 export type ValidatedWorkspace = z.infer<typeof WorkspaceSchema>;

@@ -19,8 +19,10 @@ import {
   Sliders,
   Calculator,
   Wrench,
-  Play
+  Play,
+  History
 } from 'lucide-react';
+import AuditLogViewer from '../admin/AuditLogViewer';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
@@ -66,7 +68,7 @@ export default function SystemCommandCenter() {
   // User Management Engine
   const [usersList, setUsersList] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [activeMainTab, setActiveMainTab] = useState<'workspaces' | 'users' | 'global' | 'lexicon'>('workspaces');
+  const [activeMainTab, setActiveMainTab] = useState<'workspaces' | 'users' | 'global' | 'lexicon' | 'audit'>('workspaces');
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [savingUser, setSavingUser] = useState(false);
   const [userFormState, setUserFormState] = useState({
@@ -224,22 +226,27 @@ export default function SystemCommandCenter() {
     if (!editingUser) return;
     setSavingUser(true);
     try {
-      const roleToSave = userFormState.role || editingUser.role || "client";
-      const customLimitVal = Number(userFormState.customLimit) || 0;
-      const computeLimitVal = Number(userFormState.computeCreditLimit) || 0;
+      const payload = {
+        role: userFormState.role as 'client' | 'admin',
+        customLimit: userFormState.customLimit ? Number(userFormState.customLimit) : null,
+        computeCreditLimit: userFormState.computeCreditLimit ? Number(userFormState.computeCreditLimit) : null
+      };
 
-      await setDoc(doc(db, "users", editingUser.uid), {
-        role: roleToSave,
-        customLimit: customLimitVal,
-        computeCreditLimit: computeLimitVal,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      const res = await fetchWithAuth(`/api/v1/admin/users/${editingUser.uid}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-      // Re-fetch users instantly
-      const usersSnap = await getDocs(collection(db, "users"));
-      const usersData = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
-      setUsersList(usersData as any);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || 'Failed to update user');
+      }
+
+      toast.success('User updated successfully');
       
+      // Re-fetch users instantly
+      await fetchUsersData();
       setEditingUser(null);
     } catch (err: any) {
       toast.error(err.message);
@@ -451,9 +458,21 @@ export default function SystemCommandCenter() {
               <BookA className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
               Site Lexicon Control
             </button>
+            <button
+              onClick={() => setActiveMainTab('audit')}
+              className={cn(
+                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                activeMainTab === 'audit' ? "bg-[var(--brass)] text-black shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
+              )}
+            >
+              <History className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
+              Institutional Audit Trail
+            </button>
           </div>
 
-          {activeMainTab === 'lexicon' ? (
+          {activeMainTab === 'audit' ? (
+            <AuditLogViewer />
+          ) : activeMainTab === 'lexicon' ? (
             <div className="space-y-8">
               <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-3xs overflow-hidden">
                 <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]">
