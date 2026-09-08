@@ -14,80 +14,73 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
   const mockAccounts: ChartAccount[] = [
     {
       id: 'acc-cash',
+      uid: 'user-1',
       workspaceId: 'ws-1',
       name: 'Checking Operating Cash',
-      accountNumber: '1000',
+      code: '1000',
       type: 'asset',
       category: 'Cash',
-      balance: 100000,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z'
+      balanceCents: 100000
     },
     {
       id: 'acc-groceries',
+      uid: 'user-1',
       workspaceId: 'ws-1',
       name: 'Groceries',
-      accountNumber: '5100',
+      code: '5100',
       type: 'expense',
       category: 'Operating Expense',
-      balance: 0,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z'
+      balanceCents: 0
     },
     {
       id: 'acc-dairy',
+      uid: 'user-1',
       workspaceId: 'ws-1',
       name: 'Dairy',
-      accountNumber: '5110',
+      code: '5110',
       type: 'expense',
       category: 'Groceries',
-      balance: 0,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z'
+      balanceCents: 0
     },
     {
       id: 'acc-bakery',
+      uid: 'user-1',
       workspaceId: 'ws-1',
       name: 'Bakery',
-      accountNumber: '5120',
+      code: '5120',
       type: 'expense',
       category: 'Groceries',
-      balance: 0,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z'
+      balanceCents: 0
     },
     {
       id: 'acc-produce',
+      uid: 'user-1',
       workspaceId: 'ws-1',
       name: 'Produce',
-      accountNumber: '5130',
+      code: '5130',
       type: 'expense',
       category: 'Groceries',
-      balance: 0,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z'
+      balanceCents: 0
     },
     {
       id: 'acc-tax',
+      uid: 'user-1',
       workspaceId: 'ws-1',
       name: 'Sales Tax Expense',
-      accountNumber: '5800',
+      code: '5800',
       type: 'expense',
       category: 'Taxes',
-      balance: 0,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z'
+      balanceCents: 0
     },
     {
       id: 'acc-review',
+      uid: 'user-1',
       workspaceId: 'ws-1',
       name: 'Manual Review',
-      accountNumber: '9999',
+      code: '9999',
       type: 'expense',
       category: 'Suspense',
-      balance: 0,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z'
+      balanceCents: 0
     }
   ];
 

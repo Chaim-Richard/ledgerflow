@@ -250,7 +250,6 @@ export function mapReceiptToCoordinates(
   if (taxCents > 0) {
     const taxAccount = accounts.find(a =>
       (a as any).role === 'tax' ||
-      resolveAccountRole(a) === 'tax' ||
       ((a.type === 'expense' || a.type === 'liability') && (a.name.toLowerCase().includes('tax') || (a.category && a.category.toLowerCase().includes('tax'))))
     ) || accounts.find(a => a.name.toLowerCase().includes('tax')) || fallbackReviewAccount;
 

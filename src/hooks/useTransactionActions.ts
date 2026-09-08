@@ -827,7 +827,8 @@ export function useTransactionActions() {
     
     try {
       updateParsingItem(parsingId, { status: 'parsing' });
-      const { analyticalPatternCache, accounts } = useLedgerStore.getState();
+      const { analyticalPatternCache, accounts, autoRules, transactions: existingTransactions } = useLedgerStore.getState();
+      const currentWorkspace = getCurrentWorkspace();
       const labels = accounts.map(a => a.name);
       const data = await aiService.parseReceipt(file, userKey, analyticalPatternCache, labels);
       
@@ -852,13 +853,13 @@ export function useTransactionActions() {
         analyticalPatternCache || {},
         user?.uid || '',
         matchingThreshold || 0.85,
-        existingTransactions,
-        currentWorkspace?.dimensionNodes
+        existingTransactions || [],
+        (currentWorkspace as any)?.dimensionNodes
       );
 
       const headerDimensions: { world?: string; class?: string; project?: string } = {};
-      if (currentWorkspace?.dimensions) {
-        const worldDim = currentWorkspace.dimensions.find(d => d.isWorld || d.id === 'world');
+      if ((currentWorkspace as any)?.dimensions) {
+        const worldDim = (currentWorkspace as any).dimensions.find((d: any) => d.isWorld || d.id === 'world');
         if (worldDim) headerDimensions.world = worldDim.id;
       }
 
