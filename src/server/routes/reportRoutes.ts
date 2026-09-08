@@ -2,7 +2,7 @@ import express from "express";
 import admin from "firebase-admin";
 import { z } from "zod";
 import { getDb, validateWorkspaceMember } from "../db/firestore";
-import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount } from "../../lib/txFilters";
+import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount, isTransactionInDateRange } from "../../lib/txFilters";
 import { ReportRangeSchema, WorkspaceIdSchema } from "../../schemas";
 import { parseLocalDate, getLocalDateISO } from "../../lib/utils";
 
@@ -72,7 +72,7 @@ reportRouter.get("/profit-and-loss", async (req, res) => {
     });
     for (const tx of transactions) {
       if (!isPostable(tx)) continue;
-      if (tx.date < start || tx.date > end) continue;
+      if (!isTransactionInDateRange(tx, start, end)) continue;
       tx.lines?.forEach((line: any) => {
         const amount = lineAmount(line, tx);
         if (pl.income.accounts[line.accountId]) {
@@ -115,7 +115,7 @@ reportRouter.get("/balance-sheet", async (req, res) => {
 
     for (const tx of transactions) {
       if (!isPostable(tx)) continue;
-      if (tx.date > end) continue;
+      if (!isTransactionInDateRange(tx, undefined, end)) continue;
       tx.lines?.forEach((line: any) => {
         if (balances[line.accountId] !== undefined) {
           balances[line.accountId] += lineAmount(line, tx);
@@ -288,7 +288,7 @@ reportRouter.get("/cash-flow", async (req, res) => {
     if (startDate || endDate) {
       const start = startDate ? String(startDate) : "1970-01-01";
       const end = endDate ? String(endDate) : "2099-12-31";
-      transactions = transactions.filter((tx: any) => tx.date >= start && tx.date <= end);
+      transactions = transactions.filter((tx: any) => isTransactionInDateRange(tx, start, end));
     }
 
     const cashFlow = {

@@ -777,4 +777,29 @@ export interface ExpenseClaim {
   createdAt: string;
 }
 
+export interface SupportTicket {
+  id: string;
+  workspaceId: string;
+  uid: string;
+  subject: string;
+  status: 'open' | 'pending_user' | 'pending_support' | 'resolved' | 'closed';
+  priority: 'low' | 'normal' | 'high';
+  createdAt: string;
+  updatedAt: string;
+  lastMessageAt: string;
+  lastMessageBy: string;
+  unreadForUser: boolean;
+  unreadForAdmin: boolean;
+}
+
+export interface SupportMessage {
+  id: string;
+  ticketId: string;
+  workspaceId: string;
+  authorUid: string;
+  authorRole: 'user' | 'admin';
+  body: string;
+  createdAt: string;
+}
+
 export type AppTab = string;

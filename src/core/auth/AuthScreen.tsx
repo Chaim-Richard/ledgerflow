@@ -4,16 +4,18 @@ import { LogIn, ShieldCheck, Mail, UserPlus, FileText } from 'lucide-react';
 import { useBillingStore } from '../../modules/billing/BillingService';
 import LegalModal from '../../components/legal/LegalModal';
 import AsyncButton from '../../components/ui/AsyncButton';
+import { toast } from 'sonner';
 
 interface AuthScreenProps {
   onLogin: () => void;
   onEmailLogin: (email: string, pass: string) => Promise<void>;
   onEmailSignup: (email: string, pass: string) => Promise<void>;
+  onPasswordReset: (email: string) => Promise<void>;
   onGuest: () => void;
   language: string;
 }
 
-export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onGuest, language }: AuthScreenProps) {
+export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onPasswordReset, onGuest, language }: AuthScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,6 +46,19 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onGuest, lang
       } else {
         await onEmailLogin(email, password);
       }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!email) {
+      toast.error('Please enter your email address first.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await onPasswordReset(email);
     } finally {
       setIsSubmitting(false);
     }
@@ -161,6 +176,17 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onGuest, lang
                   {isRegistering ? <UserPlus size={18} aria-hidden="true" /> : <Mail size={18} aria-hidden="true" />}
                   {isRegistering ? 'Sign up with Email' : 'Sign in with Email'}
                 </AsyncButton>
+
+                {!isRegistering && (
+                  <button
+                    type="button"
+                    onClick={handlePasswordReset}
+                    disabled={isSubmitting}
+                    className="mt-4 text-xs font-semibold text-[#737373] hover:text-[#0A0A0A] transition-colors focus:outline-none"
+                  >
+                    Forgot your password?
+                  </button>
+                )}
               </form>
 
               <div className="relative my-6 text-center" aria-hidden="true">

@@ -1,3 +1,4 @@
+import { isTransactionInDateRange } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React,
@@ -76,7 +77,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
       t.status !== 'reconciled' &&
       t.status !== 'void' &&
       !t.clearedAt &&
-      t.date <= statementDate &&
+      isTransactionInDateRange(t, undefined, statementDate) &&
       t.lines?.some(l => l.accountId === account.id || l.accountName === account.name) && 
       (t.description.toLowerCase().includes(searchTerm.toLowerCase()) || t.totalAmountCents.toString().includes(searchTerm))
     ).map(t => ({

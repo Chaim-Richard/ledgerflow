@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import { usePerformanceTrace } from './hooks/usePerformanceTrace';
 import { auth, db } from './firebase';
-import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from 'firebase/auth';
 import { collection, doc, addDoc, writeBatch, setDoc } from 'firebase/firestore';
 import { Toaster, toast } from 'sonner';
 import { motion } from 'motion/react';
@@ -249,6 +249,32 @@ const shortcutMap = useMemo(() => {
     }
   };
 
+  const handleEmailSignup = async (email: string, pass: string) => {
+    localStorage.removeItem('ledgerflow_use_sandbox_mode');
+    localStorage.removeItem('ledgerflow_identity_email');
+    localStorage.removeItem('ledgerflow_identity_name');
+    
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      await sendEmailVerification(cred.user);
+      setIsGuest(false);
+      toast.success('Account created! Please check your email for a verification link.');
+    } catch (e: any) {
+      console.error("Signup failed:", e);
+      toast.error(e.message || 'Signup failed');
+      throw e;
+    }
+  };
+
+  const handlePasswordReset = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast.success('Password reset email sent! Please check your inbox.');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to send reset email');
+    }
+  };
+
   const handleEmailLogin = async (email: string, pass: string) => {
     localStorage.removeItem('ledgerflow_use_sandbox_mode');
     localStorage.removeItem('ledgerflow_identity_email');
@@ -261,22 +287,6 @@ const shortcutMap = useMemo(() => {
     } catch (e: any) {
       console.error("Login failed:", e);
       toast.error('Login failed: ' + e.message);
-      throw e;
-    }
-  };
-
-  const handleEmailSignup = async (email: string, pass: string) => {
-    localStorage.removeItem('ledgerflow_use_sandbox_mode');
-    localStorage.removeItem('ledgerflow_identity_email');
-    localStorage.removeItem('ledgerflow_identity_name');
-    
-    try {
-      await createUserWithEmailAndPassword(auth, email, pass);
-      setIsGuest(false);
-      toast.success('ACCOUNT CREATED SUCCESSFULLY');
-    } catch (e: any) {
-      console.error("Signup failed:", e);
-      toast.error('Signup failed: ' + e.message);
       throw e;
     }
   };
@@ -304,7 +314,7 @@ const shortcutMap = useMemo(() => {
   }
 
   if (!user && !isGuest) {
-    return <AuthScreen onLogin={handleLogin} onEmailLogin={handleEmailLogin} onEmailSignup={handleEmailSignup} onGuest={handleGuest} language={language} />;
+    return <AuthScreen onLogin={handleLogin} onEmailLogin={handleEmailLogin} onEmailSignup={handleEmailSignup} onPasswordReset={handlePasswordReset} onGuest={handleGuest} language={language} />;
   }
 
   return (

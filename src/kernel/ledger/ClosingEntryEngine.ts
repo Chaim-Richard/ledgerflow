@@ -1,7 +1,7 @@
 import Decimal from 'decimal.js';
 import { ChartAccount, Transaction, TransactionLine } from '../../types';
 import { DoubleEntryValidator } from '../validation/DoubleEntryValidator';
-import { isPostable, isRevenueAccount, isExpenseAccount } from '../../lib/txFilters';
+import { isPostable, isRevenueAccount, isExpenseAccount, isTransactionInDateRange } from '../../lib/txFilters';
 
 export interface ClosingResult {
   closingTransaction: Transaction;
@@ -72,7 +72,7 @@ export class ClosingEntryEngine {
       if (!tx || typeof tx !== 'object') return;
       if (tx.workspaceId && tx.workspaceId !== workspaceId) return;
       if (!isPostable(tx)) return;
-      if (tx.date > closingDate) return;
+      if (!isTransactionInDateRange(tx, undefined, closingDate)) return;
 
       if (Array.isArray(tx.lines)) {
         tx.lines.forEach(line => {

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { parseLocalDate, cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
-import { isPostable, lineAmount, calculateNetIncome } from '../../lib/txFilters';
+import { isPostable, lineAmount, calculateNetIncome, isTransactionInDateRange } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import * as XLSX from 'xlsx';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -129,7 +129,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
       const accountMap = new Map();
       for (let i = 0; i < accounts.length; i++) accountMap.set(accounts[i].id, accounts[i]);
 
-      const filtered = transactions.filter(t => isPostable(t) && t.date >= start && t.date <= end);
+      const filtered = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, start, end));
 
       for (let i = 0; i < filtered.length; i++) {
         const t = filtered[i];
@@ -458,8 +458,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
                     key={id} 
                     onClick={() => {
                       const matchedTxs = transactions.filter(t => 
-                        t.date >= dateRange.start && 
-                        t.date <= dateRange.end && 
+                        isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
                         t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
                       );
                       setDrillDownTarget({
@@ -538,8 +537,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
                     key={id} 
                     onClick={() => {
                       const matchedTxs = transactions.filter(t => 
-                        t.date >= dateRange.start && 
-                        t.date <= dateRange.end && 
+                        isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
                         t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
                       );
                       setDrillDownTarget({

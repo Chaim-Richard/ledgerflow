@@ -13,7 +13,7 @@ import {
   BrainCircuit
 } from 'lucide-react';
 import { parseLocalDate, resolveAccountName, cn } from '../../lib/utils';
-import { isInflow } from '../../lib/txFilters';
+import { isInflow, isTransactionInDateRange } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
 
@@ -95,7 +95,7 @@ const TransactionRow = React.memo(({
   const isPrivacyMode = useLedgerStore(state => state.isPrivacyMode);
   const accounts = useLedgerStore(state => state.accounts);
   const lockDate = useLedgerStore(state => state.lockDate);
-  const isLocked = !!(lockDate && tx.date <= lockDate) || !!tx.isLocked;
+  const isLocked = !!(lockDate && isTransactionInDateRange(tx, undefined, lockDate)) || !!tx.isLocked;
   const displayTx = tx;
 
   const [isEditingDesc, setIsEditingDesc] = React.useState(false);

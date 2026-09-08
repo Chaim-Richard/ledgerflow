@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Transaction, ChartAccount } from '../types';
 import { useUIStore } from './useUIStore';
-import { isPostable, isIncomeTransaction, isExpenseTransaction, lineAmount, getAbsoluteTotal } from '../lib/txFilters';
+import { isPostable, isIncomeTransaction, isExpenseTransaction, lineAmount, getAbsoluteTotal, isTransactionInDateRange } from '../lib/txFilters';
 
 export interface SavedViewFilter {
   searchTerm?: string;
@@ -352,8 +352,7 @@ export function computeSavedViewMetrics(
     if (filter.minAmountCents !== undefined && absAmt < filter.minAmountCents) return;
     if (filter.maxAmountCents !== undefined && absAmt > filter.maxAmountCents) return;
 
-    if (filter.startDate && tx.date < filter.startDate) return;
-    if (filter.endDate && tx.date > filter.endDate) return;
+    if (!isTransactionInDateRange(tx, filter.startDate, filter.endDate)) return;
 
     const isInc = isIncomeTransaction(tx, accountMap);
     const isExp = isExpenseTransaction(tx, accountMap);

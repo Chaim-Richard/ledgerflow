@@ -1,6 +1,6 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction, ChartAccount } from '../../types';
-import { isOutflow, isInflow } from '../txFilters';
+import { isOutflow, isInflow, transactionDate } from '../txFilters';
 
 // 1. Mortgage / Loan Amortization Schedule
 export const LOAN_AMORTIZATION_ALGO: AlgorithmDefinition = {
@@ -89,10 +89,11 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
     transactions.forEach((t: any) => {
       if (!t || !isOutflow(t, accounts as any)) return; // Outflows only
       const payee = t.payee || t.description || 'Unknown Vendor';
-      const existing = payeeMap.get(payee) || { count: 0, totalCents: 0, avgCents: 0, lastDate: t.date };
+      const tDate = transactionDate(t);
+      const existing = payeeMap.get(payee) || { count: 0, totalCents: 0, avgCents: 0, lastDate: tDate };
       existing.count += 1;
       existing.totalCents += Math.abs(t.totalAmountCents);
-      existing.lastDate = t.date > existing.lastDate ? t.date : existing.lastDate;
+      existing.lastDate = tDate > existing.lastDate ? tDate : existing.lastDate;
       payeeMap.set(payee, existing);
     });
 

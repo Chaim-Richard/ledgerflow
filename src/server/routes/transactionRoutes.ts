@@ -9,7 +9,7 @@ import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchem
 import { Transaction } from '../../types';
 import { parseLocalDate } from '../../lib/utils';
 import { getDb } from '../db/firestore';
-import { isPostable, getAbsoluteTotal } from '../../lib/txFilters';
+import { isPostable, getAbsoluteTotal, isTransactionInDateRange } from '../../lib/txFilters';
 import { optimizedTransactionSimilarity } from '../../lib/algorithms';
 
 export const transactionRouter = express.Router();
@@ -225,7 +225,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
          if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
            throw new Error('Not a member');
          }
-         if (wsData?.lockDate && txData?.date && txData.date <= wsData.lockDate) {
+         if (wsData?.lockDate && txData?.date && isTransactionInDateRange(txData as any, undefined, wsData.lockDate)) {
            throw new Error(`Period Locked: Data mutation forbidden before ${wsData.lockDate}`);
          }
          if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) {
@@ -290,7 +290,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       if ((doc.data()?.status === 'certified' || doc.data()?.status === 'void' || doc.data()?.isCleared === true) && !user.admin) {
         throw new Error('Cannot modify certified, cleared, or voided transactions');
       }
-      if (wsData?.lockDate && doc.data()?.date && doc.data()?.date <= wsData.lockDate) {
+      if (wsData?.lockDate && doc.data()?.date && !isTransactionInDateRange(doc.data() as any, wsData.lockDate)) {
         throw new Error(`Period Locked: Cannot modify a transaction originally dated before ${wsData.lockDate}`);
       }
 
@@ -345,7 +345,7 @@ transactionRouter.delete('/:id', async (req, res) => {
       return res.status(403).json({ error: 'Not a member' });
     }
 
-    if (wsData?.lockDate && data?.date && data.date <= wsData.lockDate) {
+    if (wsData?.lockDate && data?.date && !isTransactionInDateRange(data as any, wsData.lockDate)) {
       return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
     }
 
@@ -554,7 +554,7 @@ transactionRouter.post('/batch', async (req, res) => {
        if (txData?.workspaceId !== workspaceId) throw new Error(`Transaction ${updates[i].id} does not belong to this workspace`);
        
        const wsData = wsDoc.data();
-       if (wsData?.lockDate && txData?.date && txData.date <= wsData.lockDate) throw new Error(`Period Locked: Transaction ${updates[i].id} is locked.`);
+       if (wsData?.lockDate && txData?.date && isTransactionInDateRange(txData as any, undefined, wsData.lockDate)) throw new Error(`Period Locked: Transaction ${updates[i].id} is locked.`);
        if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) throw new Error(`Forbidden: Transaction ${updates[i].id} status is locked.`);
        
        const updateData = updates[i].data;

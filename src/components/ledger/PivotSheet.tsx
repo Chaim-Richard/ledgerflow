@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDecimal, cn, formatCurrency, sanitizeCsvCell, resolveAccountName } from '../../lib/utils';
-import { isPostable } from '../../lib/txFilters';
+import { isPostable, isTransactionInDateRange } from '../../lib/txFilters';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -102,9 +102,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
   const scopedTransactions = useMemo(() => {
     return transactions.filter(t => {
       if (!isPostable(t)) return false;
-      if (startDate && t.date < startDate) return false;
-      if (endDate && t.date > endDate) return false;
-      return true;
+      return isTransactionInDateRange(t, startDate || undefined, endDate || undefined);
     });
   }, [transactions, startDate, endDate]);
 

@@ -9,7 +9,7 @@ import {
 import { formatDecimal, sanitizeCsvCell, cn } from '../../lib/utils';
 import { motion } from 'motion/react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
 import * as XLSX from 'xlsx';
 
 interface TrialBalanceViewProps {
@@ -72,7 +72,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
 
     // Accumulate standard transactions
     transactions.forEach(tx => {
-      if (!isPostable(tx) || tx.date > asOfDate) return;
+      if (!isPostable(tx) || !isTransactionInDateRange(tx, undefined, asOfDate)) return;
       tx.lines?.forEach(line => {
         const acc = accountById.get(line.accountId) || accountByName.get(line.accountName || '');
         if (!acc) return;

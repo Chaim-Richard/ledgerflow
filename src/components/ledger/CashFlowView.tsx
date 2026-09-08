@@ -2,7 +2,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { parseLocalDate, formatDecimal, formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
 import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -91,7 +91,7 @@ export default function CashFlowView() {
         netChange: 0,
       };
 
-      const periodTxs = transactions.filter(t => isPostable(t) && t.date >= start && t.date <= end);
+      const periodTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, start, end));
       const cashAccounts = accounts.filter(a => resolveAccountRole(a) === 'cash' || (a.type === 'asset' && a.code?.startsWith('10')));
 
       periodTxs.forEach(tx => {

@@ -50,6 +50,8 @@ import { TransactionValidator } from "./src/kernel/validation/TransactionValidat
 import { assertWorkspaceAccess } from "./src/server/db/firestore.ts";
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 
+import { processAllRecurring } from "./src/server/services/recurringService.ts";
+
 dotenv.config();
 
 // --- Plaid Client Setup ---
@@ -361,6 +363,28 @@ const authenticate = async (req: express.Request, res: express.Response, next: e
     sendError(res, "Unauthorized: Invalid token", 401, error);
   }
 };
+
+const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const user = (req as AuthenticatedRequest).user;
+  if (!user || user.admin !== true) {
+    return res.status(403).json({ status: "error", message: "Forbidden: Admin privileges required." });
+  }
+  next();
+};
+
+async function writeAuditLog(userId: string, email: string, action: string, details: string, workspaceId: string = 'system') {
+  const db = getFirestore();
+  const auditId = crypto.randomUUID();
+  await db.collection("auditLogs").doc(auditId).set({
+    id: auditId,
+    workspaceId,
+    timestamp: new Date().toISOString(),
+    userId,
+    userEmail: email,
+    action,
+    details
+  });
+}
 
 /**
  * Shared data fetcher for reports to ensure consistent auth and efficiency
@@ -2990,7 +3014,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
-  app.get("/api/v1/admin/telemetry", authenticate, async (req: express.Request, res: express.Response) => {
+  app.get("/api/v1/admin/telemetry", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
@@ -3091,26 +3115,11 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
-  app.put("/api/v1/admin/workspaces/:workspaceId", authenticate, async (req: express.Request, res: express.Response) => {
+  app.put("/api/v1/admin/workspaces/:workspaceId", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
       
-      const isSystemAdmin = authReq.user.admin === true;
-      let isRoleAdmin = false;
-      if (!isSystemAdmin) {
-        try {
-          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch (e) {
-          /* ignore */
-        }
-      }
-
-      if (!isSystemAdmin && !isRoleAdmin) {
-        return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
-      }
-
       const { workspaceId } = req.params;
       const { 
         plan, 
@@ -3126,6 +3135,8 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       } = req.body;
 
       try {
+        await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_WORKSPACE_UPDATED", `Updated workspace ${workspaceId}: plan=${plan}, seats=${maxSeats}`, workspaceId);
+        
         await db.collection("workspaces").doc(workspaceId).set({
           plan: plan || "sandbox",
           concurrentUserLimit: Number(concurrentUserLimit) || 50,
@@ -3170,26 +3181,9 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   });
 
   // --- Global Default Pricing and Billing Overrides ---
-  app.get("/api/v1/admin/users", authenticate, async (req: express.Request, res: express.Response) => {
+  app.get("/api/v1/admin/users", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
-      const authReq = req as AuthenticatedRequest;
       const db = getDb();
-      
-      const isSystemAdmin = authReq.user.admin === true;
-      let isRoleAdmin = false;
-      if (!isSystemAdmin) {
-        try {
-          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch (e) {
-          /* ignore */
-        }
-      }
-
-      if (!isSystemAdmin && !isRoleAdmin) {
-        return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
-      }
-
       const usersSnap = await db.collection("users").limit(100).get();
       const countSnap = await db.collection("users").count().get();
       const totalCount = countSnap.data().count;
@@ -3204,29 +3198,16 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
-  app.put("/api/v1/admin/users/:userId", authenticate, async (req: express.Request, res: express.Response) => {
+  app.put("/api/v1/admin/users/:userId", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
       
-      const isSystemAdmin = authReq.user.admin === true;
-      let isRoleAdmin = false;
-      if (!isSystemAdmin) {
-        try {
-          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch (e) {
-          /* ignore */
-        }
-      }
-
-      if (!isSystemAdmin && !isRoleAdmin) {
-        return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
-      }
-
       const { userId } = req.params;
       const { role, customLimit, computeCreditLimit } = req.body;
 
+      await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_USER_UPDATED", `Updated user ${userId}: role=${role}, limit=${customLimit}`);
+      
       const updateData: Record<string, any> = {
         updatedAt: new Date().toISOString()
       };
@@ -3248,25 +3229,8 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
-  app.get("/api/v1/admin/global-config", authenticate, async (req: express.Request, res: express.Response) => {
+  app.get("/api/v1/admin/global-config", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const isSystemAdmin = authReq.user.admin === true;
-      const db = getDb();
-      let isRoleAdmin = false;
-      if (!isSystemAdmin) {
-        try {
-          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch (e) {
-          /* ignore */
-        }
-      }
-
-      if (!isSystemAdmin && !isRoleAdmin) {
-        return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
-      }
-
       res.json({
         status: "success",
         globalAdminConfig
@@ -3276,25 +3240,11 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
-  app.put("/api/v1/admin/global-config", authenticate, async (req: express.Request, res: express.Response) => {
+  app.put("/api/v1/admin/global-config", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const isSystemAdmin = authReq.user.admin === true;
       const db = getDb();
-      let isRoleAdmin = false;
-      if (!isSystemAdmin) {
-        try {
-          const userDoc = await db.collection("users").doc(authReq.user.uid).get();
-          isRoleAdmin = userDoc.exists && userDoc.data()?.role === "admin";
-        } catch (e) {
-          /* ignore */
-        }
-      }
-
-      if (!isSystemAdmin && !isRoleAdmin) {
-        return res.status(403).json({ status: "error", message: "Forbidden: Administrative privileges required." });
-      }
-
+      
       const { 
         creditCostMultiplier, 
         quotaCentsMultiplier, 
@@ -3304,6 +3254,8 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         maxRegistrationLimit,
         freeWorkspaceTxCap
       } = req.body;
+
+      await writeAuditLog(authReq.user.uid, authReq.user.email!, "ADMIN_GLOBAL_CONFIG_UPDATED", `Updated global config: credits=${creditCostMultiplier}`);
 
       globalAdminConfig = {
         creditCostMultiplier: creditCostMultiplier !== undefined ? Number(creditCostMultiplier) : 1.0,
@@ -4266,6 +4218,13 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.debug(`🚀 [Server] Production Ready: http://localhost:${PORT}`);
     console.debug(`📂 [Server] Serving static assets from: ${process.env.NODE_ENV === "production" ? "dist" : "Vite Dev Server"}`);
+
+    // Start background processing for recurring transactions (Runs every 12 hours)
+    // We run it once immediately on boot
+    processAllRecurring().catch(err => console.error('[RecurringService] Initial run failed:', err));
+    setInterval(() => {
+      processAllRecurring().catch(err => console.error('[RecurringService] Interval run failed:', err));
+    }, 12 * 60 * 60 * 1000); 
   });
 
   const gracefulShutdown = (signal: string) => {

@@ -1,5 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isPostable, lineAmount, transactionDate } from '../../lib/txFilters';
 
 export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
   id: 'planning_runway',
@@ -65,8 +65,9 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
     const referenceDate = new Date();
     let latestTxMonth = '';
     transactions.forEach(tx => {
-      if (tx.date && tx.date > latestTxMonth) {
-        latestTxMonth = tx.date.substring(0, 7);
+      const tDate = transactionDate(tx);
+      if (tDate && tDate > latestTxMonth) {
+        latestTxMonth = tDate.substring(0, 7);
       }
     });
 

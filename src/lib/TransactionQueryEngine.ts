@@ -4,7 +4,7 @@ import { jaroWinklerSimilarity } from '../lib/algorithms';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { format } from 'date-fns';
 import { parseLocalDate, resolveAccountName } from '../lib/utils';
-import { isSimulationTransaction } from './txFilters';
+import { isSimulationTransaction, isTransactionInDateRange } from './txFilters';
 
 // RULES PATTERN ENGINE: Pre-compiled static regex for maximum pipeline throughput
 export const PATTERNS = {
@@ -347,8 +347,7 @@ export class TransactionQueryEngine {
         if (filterCriteria.project && filterCriteria.project !== 'All' && t.project !== filterCriteria.project) return false;
         if (filterCriteria.type && filterCriteria.type !== 'All' && t.type !== filterCriteria.type) return false;
         
-        if (filterCriteria.startDate && t.date < filterCriteria.startDate) return false;
-        if (filterCriteria.endDate && t.date > filterCriteria.endDate) return false;
+        if (!isTransactionInDateRange(t, filterCriteria.startDate, filterCriteria.endDate)) return false;
         if (filterCriteria.minAmount !== undefined && t._normalized.absAmount < filterCriteria.minAmount) return false;
         if (filterCriteria.maxAmount !== undefined && t._normalized.absAmount > filterCriteria.maxAmount) return false;
 
@@ -576,15 +575,15 @@ export class TransactionQueryEngine {
         if (isMatch && dateRangeMatch) {
           const start = dateRangeMatch[1];
           const end = dateRangeMatch[2];
-          if (t.date < start || t.date > end) isMatch = false;
+          if (!isTransactionInDateRange(t, start, end)) isMatch = false;
         }
         if (isMatch && sinceDateMatch) {
           const start = sinceDateMatch[2];
-          if (t.date < start) isMatch = false;
+          if (!isTransactionInDateRange(t, start, undefined)) isMatch = false;
         }
         if (isMatch && beforeDateMatch) {
           const end = beforeDateMatch[2];
-          if (t.date > end) isMatch = false;
+          if (!isTransactionInDateRange(t, undefined, end)) isMatch = false;
         }
 
         // E. String Directives
