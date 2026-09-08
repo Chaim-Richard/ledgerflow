@@ -74,7 +74,7 @@ export default function MonthEndCloseView() {
       oldUnpaid,
       periodBankLinesCount: periodBankLines.length
     };
-  }, [transactions, bankLines, invoices, bills, selectedMonth]);
+  }, [transactions, bankLines, invoices, bills, selectedMonth, nowMs]);
 
   const checklist = [
     {
