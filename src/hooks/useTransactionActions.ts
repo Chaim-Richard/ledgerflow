@@ -316,10 +316,10 @@ export function useTransactionActions() {
           // LEARN: Record as a seen pattern for every line item
           if (finalTx.lines && finalTx.lines.length > 0) {
             finalTx.lines.forEach((line: any) => {
-              if (line.accountName && line.accountName !== 'Uncategorized') {
+              if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
                 const searchDesc = line.description || finalTx.description;
                 if (searchDesc) {
-                  recordRulePattern(searchDesc, line.accountId || 'uncategorized', line.accountName, line.tags);
+                  recordRulePattern(searchDesc, line.accountId || 'uncategorized', line.accountName, line.tags, line.dimensions);
                 }
               }
             });
@@ -373,7 +373,7 @@ export function useTransactionActions() {
     }
   };
 
-  const recordRulePattern = async (description: string, accountId: string, accountName: string, tags?: string[]) => {
+  const recordRulePattern = async (description: string, accountId: string, accountName: string, tags?: string[], dimensions?: Record<string, string>) => {
     if (!user || !currentWorkspaceId || !description) return;
     
     // Normalize to extract the core merchant/pattern (strip dates, long numbers, transaction IDs)
@@ -392,8 +392,9 @@ export function useTransactionActions() {
       const existingPattern = analyticalPatternCache[cleanDesc] as any;
       const newCount = (existingPattern?.count || 0) + 1;
 
-      // Merge tags conservatively
+      // Merge tags and dimensions conservatively
       const combinedTags = Array.from(new Set([...(existingPattern?.tags || []), ...(tags || [])])).slice(0, 5);
+      const combinedDimensions = { ...(existingPattern?.dimensions || {}), ...(dimensions || {}) };
 
       await setDoc(patternRef, {
         uid: user.uid,
@@ -402,9 +403,20 @@ export function useTransactionActions() {
         accountId,
         accountName,
         tags: combinedTags,
+        dimensions: Object.keys(combinedDimensions).length > 0 ? combinedDimensions : undefined,
         count: newCount,
         lastUpdated: new Date().toISOString()
       }, { merge: true });
+
+      useLedgerStore.getState().updateAnalyticalMatchCache(
+        cleanDesc,
+        accountId,
+        accountName,
+        combinedTags,
+        undefined,
+        undefined,
+        combinedDimensions
+      );
 
       // PROMOTION LOGIC: Auto-create a deterministic rule after 3 occurrences
       if (newCount >= 3) {
@@ -576,10 +588,14 @@ export function useTransactionActions() {
 
     // --- Persistent Rule Learning ---
     if (optimisticTx.description && optimisticTx.lines && optimisticTx.lines.length > 0) {
-      const mainLine = optimisticTx.lines[0];
-      if (mainLine.accountName && mainLine.accountName !== 'Uncategorized') {
-        recordRulePattern(optimisticTx.description, mainLine.accountId || 'unassigned', mainLine.accountName);
-      }
+      optimisticTx.lines.forEach((line: any) => {
+        if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
+          const searchDesc = line.description || optimisticTx.description;
+          if (searchDesc) {
+            recordRulePattern(searchDesc, line.accountId || 'unassigned', line.accountName, line.tags, line.dimensions);
+          }
+        }
+      });
     }
 
     // Double-Entry Integrity Check
@@ -1195,10 +1211,15 @@ export function useTransactionActions() {
         const mainLine = updates.lines[0];
         const description = tx.description;
         
-        // Push to autonomous cache for immediate "soft" learning
-        if (mainLine.accountId && mainLine.accountName) {
-          recordRulePattern(description, mainLine.accountId, mainLine.accountName);
-        }
+        // Push to autonomous cache for immediate "soft" learning across all lines
+        updates.lines.forEach((line: any) => {
+          if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
+            const searchDesc = line.description || description;
+            if (searchDesc && line.accountId) {
+              recordRulePattern(searchDesc, line.accountId, line.accountName, line.tags, line.dimensions);
+            }
+          }
+        });
         
         const existingRule = Array.isArray(autoRules) ? autoRules.find(r => 
           r.condition.descriptionContains?.toLowerCase() === (description || '').toLowerCase() ||

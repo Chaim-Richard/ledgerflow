@@ -17,6 +17,13 @@ import { toast } from 'sonner';
 import { auth } from '../../firebase';
 import { formatDecimal, getLocalDateISO, parseAmountToCents } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { 
+  DEFAULT_WORKSPACE_DIMENSIONS, 
+  getLineDimension, 
+  setLineDimension, 
+  extractUniqueDimensionPaths 
+} from '../../lib/dimensionUtils';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import TagInput from './TagInput';
 import AsyncButton from '../ui/AsyncButton';
@@ -54,6 +61,10 @@ export default function TransactionEditModal({
   const classes = useLedgerStore(s => s.classes);
   const locations = useLedgerStore(s => s.locations);
   const projects = useLedgerStore(s => s.projects);
+  const transactions = useLedgerStore(s => s.transactions);
+  const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
+  const currentWorkspace = getCurrentWorkspace();
+  const activeDimensions = currentWorkspace?.dimensions || DEFAULT_WORKSPACE_DIMENSIONS;
   
   // Manage lines for splitting and multiple assignments
   const [lines, setLines] = useState<TransactionLine[]>(() => transaction?.lines ? transaction.lines.map(l => ({ ...l })) : []);
@@ -503,56 +514,32 @@ export default function TransactionEditModal({
                     </div>
 
                     {/* Bottom Row: Additional Dimensions */}
-                    <div className="md:col-span-2 space-y-1">
-                      <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Class</div>
-                      <div className="relative">
-                        <input
-                          list={`class-list-${idx}`}
-                          value={line.class || ''}
-                          disabled={isLocked}
-                          onChange={(e) => handleLineChange(idx, { class: e.target.value })}
-                          placeholder="Type or select class"
-                          className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--text)] outline-none focus:border-zinc-400"
-                        />
-                        <datalist id={`class-list-${idx}`}>
-                          {classes.map(c => <option key={c} value={c}>{c}</option>)}
-                        </datalist>
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-2 space-y-1">
-                      <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Location</div>
-                      <div className="relative">
-                        <input
-                          list={`location-list-${idx}`}
-                          value={line.location || ''}
-                          disabled={isLocked}
-                          onChange={(e) => handleLineChange(idx, { location: e.target.value })}
-                          placeholder="Type or select location"
-                          className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--text)] outline-none focus:border-zinc-400"
-                        />
-                        <datalist id={`location-list-${idx}`}>
-                          {locations.map(c => <option key={c} value={c}>{c}</option>)}
-                        </datalist>
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-2 space-y-1">
-                      <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Project</div>
-                      <div className="relative">
-                        <input
-                          list={`project-list-${idx}`}
-                          value={line.project || ''}
-                          disabled={isLocked}
-                          onChange={(e) => handleLineChange(idx, { project: e.target.value })}
-                          placeholder="Type or select project"
-                          className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--text)] outline-none focus:border-zinc-400"
-                        />
-                        <datalist id={`project-list-${idx}`}>
-                          {projects.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                        </datalist>
-                      </div>
-                    </div>
+                    {activeDimensions.filter(d => d.id !== 'category').map(dim => {
+                      const dimVal = getLineDimension(line, transaction, dim.id);
+                      const displayVal = dimVal === 'Unassigned' ? '' : dimVal;
+                      const pathOptions = extractUniqueDimensionPaths(transactions, dim.id);
+                      return (
+                        <div key={dim.id} className="md:col-span-2 space-y-1">
+                          <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">{dim.name}</div>
+                          <div className="relative">
+                            <input
+                              list={`dim-list-${idx}-${dim.id}`}
+                              value={displayVal}
+                              disabled={isLocked}
+                              onChange={(e) => {
+                                const updatedLine = setLineDimension(line, dim.id, e.target.value);
+                                handleLineChange(idx, updatedLine);
+                              }}
+                              placeholder={`Type or select ${dim.name.toLowerCase()}`}
+                              className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--text)] outline-none focus:border-zinc-400"
+                            />
+                            <datalist id={`dim-list-${idx}-${dim.id}`}>
+                              {pathOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                            </datalist>
+                          </div>
+                        </div>
+                      );
+                    })}
 
                     <div className="md:col-span-3 space-y-1">
                       <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Tags</div>

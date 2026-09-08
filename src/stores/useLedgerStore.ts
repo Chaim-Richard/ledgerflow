@@ -62,7 +62,7 @@ export interface LedgerState {
   };
   projectedBalanceCents: number;
   lastActivity: string;
-  analyticalPatternCache: Record<string, { accountId: string, accountName: string, projectId?: string, projectName?: string, count: number, tags?: string[] }>;
+  analyticalPatternCache: Record<string, { accountId: string, accountName: string, projectId?: string, projectName?: string, count: number, tags?: string[], dimensions?: Record<string, string> }>;
   activityFeed: any[];
   auditResult: AuditResult | null;
   optimisticIds: Set<string>;
@@ -119,7 +119,7 @@ export interface LedgerState {
   setCustomTemplates: (data: CustomTemplate[]) => void;
   setAutoRules: (data: any[]) => void;
   setAnalyticalPatternCache: (data: Record<string, any>) => void;
-  updateAnalyticalMatchCache: (description: string, accountId: string, accountName: string, tags?: string[], projectId?: string, projectName?: string) => void;
+  updateAnalyticalMatchCache: (description: string, accountId: string, accountName: string, tags?: string[], projectId?: string, projectName?: string, dimensions?: Record<string, string>) => void;
   setActivityFeed: (data: any[]) => void;
   runFullAudit: () => void;
   recomputeBalances: () => void;
@@ -484,13 +484,14 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   setCustomTemplates: (customTemplates) => set({ customTemplates }),
   setAutoRules: (autoRules) => set({ autoRules }),
   setAnalyticalPatternCache: (analyticalPatternCache) => set({ analyticalPatternCache }),
-  updateAnalyticalMatchCache: (description, accountId, accountName, tags, projectId, projectName) => set((state) => {
+  updateAnalyticalMatchCache: (description, accountId, accountName, tags, projectId, projectName, dimensions) => set((state) => {
     const cleanDesc = (description || '').toLowerCase().trim();
     // Index by vendor + project for precision
     const key = projectId ? `${cleanDesc}::${projectId}` : cleanDesc;
     
     const existing = state.analyticalPatternCache[key];
     const combinedTags = Array.from(new Set([...(existing?.tags || []), ...(tags || [])])).slice(0, 5);
+    const combinedDimensions = { ...(existing?.dimensions || {}), ...(dimensions || {}) };
     return {
       analyticalPatternCache: {
         ...state.analyticalPatternCache,
@@ -500,6 +501,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           projectId,
           projectName,
           tags: combinedTags,
+          dimensions: Object.keys(combinedDimensions).length > 0 ? combinedDimensions : undefined,
           count: (existing?.count || 0) + 1
         }
       }

@@ -83,7 +83,10 @@ export class MatchingEngine {
         if (!t.deletedAt && t.status !== 'void' && t.lines && t.lines.length > 0) {
           t.lines.forEach(line => {
             if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
-              this.bayes.train(t.description, line.accountName);
+              const descToTrain = line.description || (t.lines.length === 1 ? t.description : undefined);
+              if (descToTrain) {
+                this.bayes.train(descToTrain, line.accountName);
+              }
             }
           });
         }

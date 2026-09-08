@@ -37,8 +37,8 @@ service cloud.firestore {
 
     // Immutability Guard - ensures immutable variables cannot be altered
     function isUnchanged(field) {
-      return !(field in request.resource.data) || 
-        (resource == null || request.resource.data[field] == resource.data[field]);
+      return resource == null ||
+        request.resource.data.get(field, null) == resource.data.get(field, null);
     }
 
     match /apiKeys/{keyId} {
