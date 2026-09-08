@@ -29,7 +29,7 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
       name: 'Groceries',
       code: '5100',
       type: 'expense',
-      category: 'Operating Expense',
+      category: 'Operations',
       balanceCents: 0
     },
     {
@@ -39,7 +39,7 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
       name: 'Dairy',
       code: '5110',
       type: 'expense',
-      category: 'Groceries',
+      category: 'Food',
       balanceCents: 0
     },
     {
@@ -49,7 +49,7 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
       name: 'Bakery',
       code: '5120',
       type: 'expense',
-      category: 'Groceries',
+      category: 'Food',
       balanceCents: 0
     },
     {
@@ -59,7 +59,7 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
       name: 'Produce',
       code: '5130',
       type: 'expense',
-      category: 'Groceries',
+      category: 'Food',
       balanceCents: 0
     },
     {
@@ -69,7 +69,7 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
       name: 'Sales Tax Expense',
       code: '5800',
       type: 'expense',
-      category: 'Taxes',
+      category: 'Tax',
       balanceCents: 0
     },
     {
@@ -79,7 +79,7 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
       name: 'Manual Review',
       code: '9999',
       type: 'expense',
-      category: 'Suspense',
+      category: 'Overhead',
       balanceCents: 0
     }
   ];

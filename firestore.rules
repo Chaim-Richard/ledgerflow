@@ -100,16 +100,7 @@ service cloud.firestore {
     // Specific rules for all tenant-scoped ledger resources to eliminate the general pattern loophole
     match /transactions/{transactionId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date) &&
-        isValidId(transactionId) &&
-        (request.resource.data.lines is list && request.resource.data.lines.size() >= 2) &&
-        affectedKeys(["id", "uid", "workspaceId", "date", "dueDate", "description", "payee", "lines", "totalAmountCents", "taxAmountCents", "currency", "originalCurrency", "exchangeRate", "schemaVersion", "fileUrls", "isCleared", "clearedAt", "bankTransactionId", "units", "unitType", "status", "type", "total_impact", "projectId", "classId", "locationId", "employeeId", "tags", "metadata", "verification", "notes", "attachments", "referenceNumber", "category", "recurringRuleId", "bankFeedLineId", "paymentToken", "certifiedAt", "certifiedBy", "voidedAt", "voidedBy", "deletedAt", "entityId", "customerId", "vendorId", "reconciliationId", "createdAt", "updatedAt", "parentEventId", "eventId", "reversalEventId", "project", "dimensions", "isIntercompany", "isFlagged", "isLocked", "lockedAt"]);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
-        isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date) &&
-        isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date) &&
-        (request.resource.data.lines is list && request.resource.data.lines.size() >= 2) &&
-        affectedKeys(["id", "uid", "workspaceId", "date", "dueDate", "description", "payee", "lines", "totalAmountCents", "taxAmountCents", "currency", "originalCurrency", "exchangeRate", "schemaVersion", "fileUrls", "isCleared", "clearedAt", "bankTransactionId", "units", "unitType", "status", "type", "total_impact", "projectId", "classId", "locationId", "employeeId", "tags", "metadata", "verification", "notes", "attachments", "referenceNumber", "category", "recurringRuleId", "bankFeedLineId", "paymentToken", "certifiedAt", "certifiedBy", "voidedAt", "voidedBy", "deletedAt", "entityId", "customerId", "vendorId", "reconciliationId", "createdAt", "updatedAt", "parentEventId", "eventId", "reversalEventId", "project", "dimensions", "isIntercompany", "isFlagged", "isLocked", "lockedAt"]);
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId) && isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date);
+      allow create, update, delete: if false;
     }
 
     match /chartAccounts/{accountId} {

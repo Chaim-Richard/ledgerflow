@@ -148,200 +148,223 @@ export function useTransactionActions() {
     try {
       const txsToMatch = newTransactions.filter(tx => !existingIds.has(tx.bankTransactionId) && !existingIds.has(tx.id) && !isPeriodLocked(tx.date));
 
-      await runTransaction(db, async (transaction) => {
-        // Fetch rules once for the import batch
-        const qRules = query(
-          collection(db, 'autoRules'), 
-          where('workspaceId', '==', currentWorkspaceId),
-          where('uid', '==', user.uid)
-        );
-        const rulesSnap = await getDocs(qRules);
-        const activeRules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
-        const engine = new MatchingEngine(activeRules, analyticalPatternCache, user.uid, matchingThreshold, existingTransactions, currentWorkspace?.dimensionNodes);
+      // Fetch rules once for the import batch
+      const qRules = query(
+        collection(db, 'autoRules'), 
+        where('workspaceId', '==', currentWorkspaceId),
+        where('uid', '==', user.uid)
+      );
+      const rulesSnap = await getDocs(qRules);
+      const activeRules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
+      const engine = new MatchingEngine(activeRules, analyticalPatternCache, user.uid, matchingThreshold, existingTransactions, currentWorkspace?.dimensionNodes);
 
-        const accountsByName = new Map<string, any>();
-        const accountsById = new Map<string, any>();
-        accounts.forEach(a => {
-          accountsByName.set(a.name, a);
-          accountsById.set(a.id, a);
-        });
-        let ccAccountPrecomputed = accounts.find(a => (a.type === 'liability' || a.type === 'asset') && (a.subtype === 'Credit Card' || (a.name || '').toLowerCase().includes('card')));
+      const accountsByName = new Map<string, any>();
+      const accountsById = new Map<string, any>();
+      accounts.forEach(a => {
+        accountsByName.set(a.name, a);
+        accountsById.set(a.id, a);
+      });
+      let ccAccountPrecomputed = accounts.find(a => (a.type === 'liability' || a.type === 'asset') && (a.subtype === 'Credit Card' || (a.name || '').toLowerCase().includes('card')));
 
-        const processedTxs: Transaction[] = [];
+      const processedTxs: Transaction[] = [];
+      const bankLineRecords: any[] = [];
 
-        newTransactions
-          .filter(tx => !existingIds.has(tx.bankTransactionId) && !existingIds.has(tx.id) && !isPeriodLocked(tx.date))
-          .forEach(tx => {
-          const defaultAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || '';
-          let lines = tx.lines && tx.lines.length > 0 ? tx.lines : [{ accountId: defaultAccId, accountName: 'Uncategorized Expense', amountCents: tx.amountCents }];
-          
-          const isPreCategorized = lines.length > 0 && 
-            Boolean(lines[0].accountId) &&
-            lines[0].accountId !== 'uncategorized' && 
-            lines[0].accountId !== 'unassigned' &&
-            lines[0].accountName !== 'Uncategorized' && 
-            lines[0].accountName !== 'Manual Review';
+      txsToMatch.forEach(tx => {
+        const defaultAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || '';
+        let lines = tx.lines && tx.lines.length > 0 ? tx.lines : [{ accountId: defaultAccId, accountName: 'Uncategorized Expense', amountCents: tx.amountCents }];
+        
+        const isPreCategorized = lines.length > 0 && 
+          Boolean(lines[0].accountId) &&
+          lines[0].accountId !== 'uncategorized' && 
+          lines[0].accountId !== 'unassigned' &&
+          lines[0].accountName !== 'Uncategorized' && 
+          lines[0].accountName !== 'Manual Review';
 
-          if (!isPreCategorized) {
-            // Priority 1: Deterministic Integrity (Rules and Local Engine) over AI
-            let targetCategoryResult = engine.resolveCategory(tx.description);
-            let usedAI = false;
-            let isSmartTransfer = false;
+        if (!isPreCategorized) {
+          // Priority 1: Deterministic Integrity (Rules and Local Engine) over AI
+          let targetCategoryResult = engine.resolveCategory(tx.description);
+          let usedAI = false;
+          let isSmartTransfer = false;
 
-            // Priority 1.5: Deep Economic Transfer/Payment Detection
-            // If the user pays a credit card, it isn't an expense, it's a transfer to a liability account.
-            const descLower = (tx.description || '').toLowerCase();
-            if (!targetCategoryResult && (
-                descLower.includes('payment to credit card') || 
-                descLower.includes('thank you for your payment') ||
-                descLower.includes('payment thank you') ||
-                descLower.includes('tfr to') ||
-                descLower.includes('transfer to') ||
-                descLower.match(/to\s+.*card/) ||
-                descLower.match(/from\s+checking/) ||
-                (descLower.includes('payment') && descLower.includes('card'))
-            )) {
-                // Find a liability account (credit card)
-                let ccAccount = ccAccountPrecomputed;
-                if (!ccAccount) {
-                   // Deep economic self-healing: create the liability account automatically!
-                   // Note: we just generate a random ID for it.
-                   const newAccId = 'auto_cc_' + crypto.randomUUID().split('-')[0];
-                   ccAccount = {
-                     id: newAccId,
-                     uid: user.uid,
-                     workspaceId: currentWorkspaceId,
-                     code: '2100',
-                     name: 'Corporate Credit Card',
-                     type: 'liability',
-                     category: 'Credit Card',
-                     subtype: 'Credit Card',
-                     balanceCents: 0
-                   } as any;
-                   // Use setAccounts instead of direct mutation
-                   if (ccAccount) {
-                      setAccounts([...accounts, ccAccount]);
-                      accountsByName.set(ccAccount.name, ccAccount);
-                      accountsById.set(ccAccount.id, ccAccount);
-                      ccAccountPrecomputed = ccAccount;
-                   }
-                   // In a real flow, we should persist this to DB immediately, but optimistic local works for transaction labeling.
-                }
-                
-                if (ccAccount) {
-                    targetCategoryResult = { accountName: ccAccount.name };
-                    isSmartTransfer = true;
-                }
-            }
-
-            // If we didn't find a match through the deterministic algorithm or smart transfer, it uses Manual Review.
-            if (!targetCategoryResult) {
-              usedAI = false;
-            }
-
-            if (targetCategoryResult) {
-              const account = accountsByName.get(targetCategoryResult.accountName) || accountsById.get(targetCategoryResult.accountName);
-              const fallbackAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || '';
-              lines = [{
-                accountId: account?.id || fallbackAccId,
-                accountName: account?.name || targetCategoryResult.accountName,
-                amountCents: tx.amountCents || tx.totalAmountCents || 0,
-                tags: targetCategoryResult.tags || (isSmartTransfer ? ['Auto-Transfer'] : []),
-                dimensions: targetCategoryResult.dimensions || undefined,
-                description: isSmartTransfer ? 'Auto-Transfer Detection' : (usedAI ? 'Auto-categorized by AI' : 'Auto-categorized by Rule Engine')
-              }];
-            }
+          // Priority 1.5: Deep Economic Transfer/Payment Detection
+          // If the user pays a credit card, it isn't an expense, it's a transfer to a liability account.
+          const descLower = (tx.description || '').toLowerCase();
+          if (!targetCategoryResult && (
+              descLower.includes('payment to credit card') || 
+              descLower.includes('thank you for your payment') ||
+              descLower.includes('payment thank you') ||
+              descLower.includes('tfr to') ||
+              descLower.includes('transfer to') ||
+              descLower.match(/to\s+.*card/) ||
+              descLower.match(/from\s+checking/) ||
+              (descLower.includes('payment') && descLower.includes('card'))
+          )) {
+              // Find a liability account (credit card)
+              let ccAccount = ccAccountPrecomputed;
+              if (!ccAccount) {
+                 const newAccId = 'auto_cc_' + crypto.randomUUID().split('-')[0];
+                 ccAccount = {
+                   id: newAccId,
+                   uid: user.uid,
+                   workspaceId: currentWorkspaceId,
+                   code: '2100',
+                   name: 'Corporate Credit Card',
+                   type: 'liability',
+                   category: 'Credit Card',
+                   subtype: 'Credit Card',
+                   balanceCents: 0
+                 } as any;
+                 if (ccAccount) {
+                    setAccounts([...accounts, ccAccount]);
+                    accountsByName.set(ccAccount.name, ccAccount);
+                    accountsById.set(ccAccount.id, ccAccount);
+                    ccAccountPrecomputed = ccAccount;
+                 }
+              }
+              
+              if (ccAccount) {
+                  targetCategoryResult = { accountName: ccAccount.name };
+                  isSmartTransfer = true;
+              }
           }
 
-          const balancedLines = balanceTransactionLines(lines, tx.amountCents || tx.totalAmountCents || 0);
-
-          let isResolvedCategory = false;
-          if (balancedLines[0].accountId !== 'uncategorized' && balancedLines[0].accountName !== 'Uncategorized' && balancedLines[0].accountName !== 'Manual Review') {
-            isResolvedCategory = true;
+          // If we didn't find a match through the deterministic algorithm or smart transfer, it uses Manual Review.
+          if (!targetCategoryResult) {
+            usedAI = false;
           }
 
-          // 1. ALWAYS inject into the BankLines validation layer
-          const bankLineRef = doc(collection(db, 'bankLines'));
-          const bankLineRecord = {
-            id: bankLineRef.id,
-            workspaceId: currentWorkspaceId,
+          if (targetCategoryResult) {
+            const account = accountsByName.get(targetCategoryResult.accountName) || accountsById.get(targetCategoryResult.accountName);
+            const fallbackAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || '';
+            lines = [{
+              accountId: account?.id || fallbackAccId,
+              accountName: account?.name || targetCategoryResult.accountName,
+              amountCents: tx.amountCents || tx.totalAmountCents || 0,
+              tags: targetCategoryResult.tags || (isSmartTransfer ? ['Auto-Transfer'] : []),
+              dimensions: targetCategoryResult.dimensions || undefined,
+              description: isSmartTransfer ? 'Auto-Transfer Detection' : (usedAI ? 'Auto-categorized by AI' : 'Auto-categorized by Rule Engine')
+            }];
+          }
+        }
+
+        const balancedLines = balanceTransactionLines(lines, tx.amountCents || tx.totalAmountCents || 0);
+
+        let isResolvedCategory = false;
+        if (balancedLines[0].accountId !== 'uncategorized' && balancedLines[0].accountName !== 'Uncategorized' && balancedLines[0].accountName !== 'Manual Review') {
+          isResolvedCategory = true;
+        }
+
+        // 1. ALWAYS inject into the BankLines validation layer
+        const bankLineRef = doc(collection(db, 'bankLines'));
+        const bankLineRecord = {
+          id: bankLineRef.id,
+          workspaceId: currentWorkspaceId,
+          uid: user.uid,
+          date: tx.date,
+          description: tx.description,
+          amountCents: tx.amountCents || tx.totalAmountCents || 0,
+          status: isResolvedCategory ? 'matched' : 'pending',
+          matchedTransactionId: null as string | null,
+          createdAt: new Date().toISOString()
+        };
+
+        // 2. ONLY synthesize actual atomic transaction if category was resolved
+        if (isResolvedCategory) {
+          const newTxId = doc(collection(db, 'transactions')).id;
+          const txDraft: any = {
+            ...tx,
+            id: newTxId,
+            lines: balancedLines,
             uid: user.uid,
-            date: tx.date,
-            description: tx.description,
-            amountCents: tx.amountCents || tx.totalAmountCents || 0,
-            status: isResolvedCategory ? 'matched' : 'pending',
-            matchedTransactionId: null as string | null,
+            workspaceId: currentWorkspaceId,
+            status: (tx as any).isAI ? 'draft' : 'pending',
+            type: 'actual',
             createdAt: new Date().toISOString()
           };
 
-          // 2. ONLY synthesize actual atomic transaction if category was resolved
-          if (isResolvedCategory) {
-            const newDocRef = doc(collection(db, 'transactions'));
-            const txDraft: any = {
-              ...tx,
-              lines: balancedLines,
-              uid: user.uid,
-              workspaceId: currentWorkspaceId,
-              status: (tx as any).isAI ? 'draft' : 'pending',
-              type: 'actual',
-              createdAt: new Date().toISOString()
-            };
-
-            // Resolution check: If accountName was provided, resolve its ID FIRST
-            if (txDraft.lines && txDraft.lines.length > 0) {
-              txDraft.lines = txDraft.lines.map((line: any) => {
-                if (line.accountName && line.accountId === 'uncategorized') {
-                  const resolved = accountsByName.get(line.accountName);
-                  if (resolved) {
-                    return { ...line, accountId: resolved.id };
-                  }
+          // Resolution check: If accountName was provided, resolve its ID FIRST
+          if (txDraft.lines && txDraft.lines.length > 0) {
+            txDraft.lines = txDraft.lines.map((line: any) => {
+              if (line.accountName && line.accountId === 'uncategorized') {
+                const resolved = accountsByName.get(line.accountName);
+                if (resolved) {
+                  return { ...line, accountId: resolved.id };
                 }
-                if (line.accountId && line.accountId !== "uncategorized" && !accountsById.has(line.accountId)) {
-                  return { ...line, accountId: "uncategorized", accountName: "Manual Review" };
-                }
-                return line;
-              });
-            }
-
-            const finalTx = {
-              ...txDraft,
-              verification: {
-                status: 'verified' as const,
-                verifiedAt: new Date().toISOString(),
-                method: 'manual' as const,
-                hash: DoubleEntryAuditor.computeHash(txDraft as any),
-                timestamp: new Date().toISOString()
               }
-            };
-            
-            transaction.set(newDocRef, finalTx);
-            bankLineRecord.matchedTransactionId = newDocRef.id;
-            
-            processedTxs.push({ ...finalTx, id: newDocRef.id });
-
-            // LEARN: Record as a seen pattern for every line item
-            if (finalTx.lines && finalTx.lines.length > 0) {
-              finalTx.lines.forEach((line: any) => {
-                if (line.accountName && line.accountName !== 'Uncategorized') {
-                  const searchDesc = line.description || finalTx.description;
-                  if (searchDesc) {
-                    recordRulePattern(searchDesc, line.accountId || 'uncategorized', line.accountName, line.tags);
-                  }
-                }
-              });
-            }
+              if (line.accountId && line.accountId !== "uncategorized" && !accountsById.has(line.accountId)) {
+                return { ...line, accountId: "uncategorized", accountName: "Manual Review" };
+              }
+              return line;
+            });
           }
+
+          const finalTx = {
+            ...txDraft,
+            verification: {
+              status: 'verified' as const,
+              verifiedAt: new Date().toISOString(),
+              method: 'manual' as const,
+              hash: DoubleEntryAuditor.computeHash(txDraft as any),
+              timestamp: new Date().toISOString()
+            }
+          };
           
-          transaction.set(bankLineRef, bankLineRecord);
+          bankLineRecord.matchedTransactionId = newTxId;
+          processedTxs.push(finalTx);
+
+          // LEARN: Record as a seen pattern for every line item
+          if (finalTx.lines && finalTx.lines.length > 0) {
+            finalTx.lines.forEach((line: any) => {
+              if (line.accountName && line.accountName !== 'Uncategorized') {
+                const searchDesc = line.description || finalTx.description;
+                if (searchDesc) {
+                  recordRulePattern(searchDesc, line.accountId || 'uncategorized', line.accountName, line.tags);
+                }
+              }
+            });
+          }
+        }
+        
+        bankLineRecords.push(bankLineRecord);
+      });
+
+      // Write bank lines in batches
+      const BANK_BATCH_SIZE = 400;
+      for (let i = 0; i < bankLineRecords.length; i += BANK_BATCH_SIZE) {
+        const batch = writeBatch(db);
+        const chunk = bankLineRecords.slice(i, i + BANK_BATCH_SIZE);
+        for (const record of chunk) {
+          const bRef = doc(db, 'bankLines', record.id);
+          batch.set(bRef, record);
+        }
+        await batch.commit();
+      }
+
+      // Post transactions via authenticated server bulk endpoint
+      if (processedTxs.length > 0) {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/v1/transactions/bulk', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            workspaceId: currentWorkspaceId,
+            transactions: processedTxs
+          })
         });
 
-        return processedTxs;
-      }).then((processedTxs) => {
-        const current = useLedgerStore.getState().transactions;
-        setTransactions([...processedTxs, ...current]);
-        toast.success(`Imported ${newTransactions.length} transactions with heuristic mapping.`, { id: loader });
-      });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Server rejected bulk transaction import.');
+        }
+      }
+
+      const current = useLedgerStore.getState().transactions;
+      setTransactions([...processedTxs, ...current]);
+      toast.success(`Imported ${newTransactions.length} transactions with heuristic mapping.`, { id: loader });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'transactions-batch-import');
       toast.error('Import failed. Transaction sequence aborted.', { id: loader });
@@ -726,19 +749,31 @@ export function useTransactionActions() {
         }
       }
 
-      // Execute in explicit batches of up to 100 with writeBatch
-      const BATCH_SIZE = 100;
-      for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-        const batch = writeBatch(db);
-        const chunkIds = ids.slice(i, i + BATCH_SIZE);
-        for (const id of chunkIds) {
-          const txUpdate = updatesMap.get(id);
-          if (txUpdate) {
-            const txRef = doc(db, 'transactions', id);
-            batch.update(txRef, txUpdate);
-          }
+      const updatesPayload: { id: string; data: any }[] = [];
+      for (const id of ids) {
+        const u = updatesMap.get(id);
+        if (u) {
+          updatesPayload.push({ id, data: u });
         }
-        await batch.commit();
+      }
+
+      if (updatesPayload.length > 0) {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/v1/transactions/batch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            workspaceId: currentWorkspaceId,
+            updates: updatesPayload
+          })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Server rejected batch updates');
+        }
       }
 
       // Update local state atomically
@@ -765,17 +800,30 @@ export function useTransactionActions() {
           onClick: async () => {
             const undoLoader = toast.loading('Reverting bulk updates...');
             try {
-              for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-                const undoBatch = writeBatch(db);
-                const chunkIds = ids.slice(i, i + BATCH_SIZE);
-                for (const id of chunkIds) {
-                  const oldState = oldStates.get(id);
-                  if (oldState) {
-                    const txRef = doc(db, 'transactions', id);
-                    undoBatch.set(txRef, oldState);
-                  }
+              const undoPayload: { id: string; data: any }[] = [];
+              for (const id of ids) {
+                const oldState = oldStates.get(id);
+                if (oldState) {
+                  undoPayload.push({ id, data: oldState });
                 }
-                await undoBatch.commit();
+              }
+              if (undoPayload.length > 0) {
+                const token = await user.getIdToken();
+                const res = await fetch('/api/v1/transactions/batch', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({
+                    workspaceId: currentWorkspaceId,
+                    updates: undoPayload
+                  })
+                });
+                if (!res.ok) {
+                  const errData = await res.json().catch(() => ({}));
+                  throw new Error(errData.error || 'Server rejected undo batch updates');
+                }
               }
               // Revert store state
               useLedgerStore.setState(state => ({
@@ -854,12 +902,12 @@ export function useTransactionActions() {
         user?.uid || '',
         matchingThreshold || 0.85,
         existingTransactions || [],
-        (currentWorkspace as any)?.dimensionNodes
+        currentWorkspace?.dimensionNodes
       );
 
       const headerDimensions: { world?: string; class?: string; project?: string } = {};
-      if ((currentWorkspace as any)?.dimensions) {
-        const worldDim = (currentWorkspace as any).dimensions.find((d: any) => d.isWorld || d.id === 'world');
+      if (currentWorkspace?.dimensions) {
+        const worldDim = currentWorkspace.dimensions.find((d: any) => d.isWorld || d.id === 'world');
         if (worldDim) headerDimensions.world = worldDim.id;
       }
 
@@ -1106,7 +1154,6 @@ export function useTransactionActions() {
 
     
     const token = await user?.getIdToken();
-    let dataOut, err;
     try {
       const payload = {
         ...tx,
@@ -1123,9 +1170,7 @@ export function useTransactionActions() {
          const data = await res.json();
          throw new Error(data.error || 'Failed to update transaction');
       }
-      dataOut = true; err = null;
     } catch(e: any) {
-      err = e;
       const message = e?.message || 'Unknown network error';
       toast.error('Could not save your changes.', {
         description: `Please try again. (${message})`
@@ -1134,8 +1179,7 @@ export function useTransactionActions() {
       return false;
     }
 
-    if (!err) {
-      await recordAudit('UPDATE_TRANSACTION', 'transaction', id, updates);
+    await recordAudit('UPDATE_TRANSACTION', 'transaction', id, updates);
       
       toast.success('Transaction updated', {
         action: {
@@ -1182,11 +1226,6 @@ export function useTransactionActions() {
       }
       // -------------------------------
       return true;
-    } else {
-      setTransactions(originalTransactions); // Rollback
-      toast.error('Sync failed.');
-      return false;
-    }
   };
 
   const handleDeleteAccount = async (id: string, force = false) => {
@@ -1349,17 +1388,19 @@ export function useTransactionActions() {
   const handleReconcileUndo = async (bankLineId: string, transactionId?: string) => {
     setIsSyncing(true);
     try {
-      await runTransaction(db, async (transaction) => {
-        const operations: any[] = [{ type: 'updateBankLine', id: bankLineId, data: { status: 'pending', matchedTransactionId: null } }];
-        if (transactionId) {
-           operations.push({ type: 'updateTransaction', id: transactionId, data: { status: 'completed' } });
-        }
-        await fetch('/api/v1/transactions/reconcile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
-          body: JSON.stringify({ workspaceId: currentWorkspaceId, operations })
-        });
+      const operations: any[] = [{ type: 'updateBankLine', id: bankLineId, data: { status: 'pending', matchedTransactionId: null } }];
+      if (transactionId) {
+         operations.push({ type: 'updateTransaction', id: transactionId, data: { status: 'completed' } });
+      }
+      const res = await fetch('/api/v1/transactions/reconcile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+        body: JSON.stringify({ workspaceId: currentWorkspaceId, operations })
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to revert reconcile alignment');
+      }
       toast.success('Alignment reverted successfully. Re-inserted into potential pipeline matches.');
     } catch (error) {
       toast.error('Failed to undo match.');
@@ -1414,142 +1455,149 @@ export function useTransactionActions() {
     const originalTransactions = [...useLedgerStore.getState().transactions];
 
     try {
-      await runTransaction(db, async (transaction) => {
-        const qRules = query(
-          collection(db, 'autoRules'), 
-          where('workspaceId', '==', currentWorkspaceId),
-          where('uid', '==', user.uid)
-        );
-        const rulesSnap = await getDocs(qRules);
-        const activeRules = rulesSnap.docs
-          .map(d => ({ id: d.id, ...d.data() } as any))
-          .filter(r => ruleIds.includes(r.id));
+      const qRules = query(
+        collection(db, 'autoRules'), 
+        where('workspaceId', '==', currentWorkspaceId),
+        where('uid', '==', user.uid)
+      );
+      const rulesSnap = await getDocs(qRules);
+      const activeRules = rulesSnap.docs
+        .map(d => ({ id: d.id, ...d.data() } as any))
+        .filter(r => ruleIds.includes(r.id));
 
-        if (activeRules.length === 0) return null;
+      if (activeRules.length === 0) {
+        toast.info('No active rules found to apply.', { id: loader });
+        return;
+      }
 
-        // Build search engine
-        const patterns = activeRules.flatMap(r => {
-          const p: any[] = [];
-          if (r.condition.descriptionContains) p.push({ pattern: r.condition.descriptionContains, ruleId: r.id });
-          if (r.condition.vendor) p.push({ pattern: r.condition.vendor, ruleId: r.id });
-          return p;
-        });
-        
-        const acSearch = patterns.length > 0 ? new AhoCorasick(patterns) : null;
-        if (!acSearch) return null;
-
-        const qTxs = query(
-          collection(db, 'transactions'), 
-          where('workspaceId', '==', currentWorkspaceId),
-          where('uid', '==', user.uid)
-        );
-        const txsSnap = await getDocs(qTxs);
-        
-        let count = 0;
-        const accountMap = new Map(accounts.map(a => [a.id, a]));
-        const ruleMap = new Map(activeRules.map(r => [r.id, r]));
-
-        const localUpdatedTxs = originalTransactions.map(tx => {
-          let matchingRuleId: string | null = null;
-          
-          // First, use string matching
-          const results = acSearch ? acSearch.search(tx.description) : [];
-          const candidateRuleIds = results;
-
-          // Also check all active rules to see if they pass purely via numeric/date match without text
-          activeRules.forEach(r => {
-             const hasTextCond = !!(r.condition.descriptionContains || r.condition.vendor);
-             if (!hasTextCond && !candidateRuleIds.includes(r.id)) {
-                 candidateRuleIds.push(r.id);
-             }
-          });
-
-          // Evaluate the full matrix for each candidate
-          for (const ruleId of candidateRuleIds) {
-            const rule = ruleMap.get(ruleId);
-            if (!rule) continue;
-
-            let isMatch = true;
-            
-            // Re-verify text if AhoCorasick matched a substring but we want exact vendor (optional strictness)
-            if (rule.condition.vendor && !tx.description.toLowerCase().includes(rule.condition.vendor.toLowerCase())) {
-                isMatch = false;
-            }
-            if (rule.condition.descriptionContains && !tx.description.toLowerCase().includes(rule.condition.descriptionContains.toLowerCase())) {
-                isMatch = false;
-            }
-
-            // Numeric logic
-            const amt = Math.abs(tx.totalAmountCents);
-            if (rule.condition.amountThreshold && amt < rule.condition.amountThreshold) isMatch = false;
-            if (rule.condition.exactAmount && amt !== rule.condition.exactAmount) isMatch = false;
-            
-            // Date logic
-            if (rule.condition.dateRange) {
-              const d = parseLocalDate(tx.date);
-              const start = parseLocalDate(rule.condition.dateRange.start);
-              const end = parseLocalDate(rule.condition.dateRange.end);
-              if (d < start || d > end) isMatch = false;
-            }
-
-            if (isMatch) {
-              matchingRuleId = rule.id;
-              break;
-            }
-          }
-
-          if (matchingRuleId) {
-            const matchingRule = ruleMap.get(matchingRuleId);
-            const account = accountMap.get(matchingRule?.action.targetNodeId);
-            
-            const updatedTx = {
-              ...tx,
-              // Apply target status if flagged for review
-              status: matchingRule?.action.flagForReview ? 'flagged' : tx.status,
-              // Apply Class & Location
-              classId: matchingRule?.action.targetClass || tx.classId,
-              locationId: matchingRule?.action.targetLocation || tx.locationId,
-              lines: tx.lines.map((line, idx) => {
-                 if (idx === 0 && account) {
-                     return {
-                        ...line,
-                        accountId: account.id,
-                        accountName: account.name
-                     };
-                 }
-                if (line.accountId && line.accountId !== "uncategorized" && !accountMap.has(line.accountId)) {
-                  return { ...line, accountId: "uncategorized", accountName: "Manual Review" };
-                }
-                 return line;
-              }),
-              updatedAt: new Date().toISOString()
-            };
-            
-            const docRef = txsSnap.docs.find(d => d.id === tx.id)?.ref;
-            if (docRef) {
-              transaction.update(docRef, {
-                lines: updatedTx.lines,
-                status: updatedTx.status,
-                classId: updatedTx.classId,
-                locationId: updatedTx.locationId,
-                updatedAt: updatedTx.updatedAt
-              });
-              count++;
-            }
-            return updatedTx;
-          }
-          return tx;
-        });
-
-        return { localUpdatedTxs, count };
-      }).then((result) => {
-        if (result && result.count > 0) {
-          setTransactions(result.localUpdatedTxs);
-          toast.success(`Rule mapping complete. ${result.count} transactions identified and updated.`, { id: loader });
-        } else {
-          toast.info('Scan finished. No matching patterns found.', { id: loader });
-        }
+      // Build search engine
+      const patterns = activeRules.flatMap(r => {
+        const p: any[] = [];
+        if (r.condition.descriptionContains) p.push({ pattern: r.condition.descriptionContains, ruleId: r.id });
+        if (r.condition.vendor) p.push({ pattern: r.condition.vendor, ruleId: r.id });
+        return p;
       });
+      
+      const acSearch = patterns.length > 0 ? new AhoCorasick(patterns) : null;
+      if (!acSearch) {
+        toast.info('No rule patterns to match.', { id: loader });
+        return;
+      }
+
+      let count = 0;
+      const accountMap = new Map(accounts.map(a => [a.id, a]));
+      const ruleMap = new Map(activeRules.map(r => [r.id, r]));
+      const updatesToPost: { id: string; data: any }[] = [];
+
+      const localUpdatedTxs = originalTransactions.map(tx => {
+        let matchingRuleId: string | null = null;
+        
+        // First, use string matching
+        const results = acSearch ? acSearch.search(tx.description) : [];
+        const candidateRuleIds = results;
+
+        // Also check all active rules to see if they pass purely via numeric/date match without text
+        activeRules.forEach(r => {
+           const hasTextCond = !!(r.condition.descriptionContains || r.condition.vendor);
+           if (!hasTextCond && !candidateRuleIds.includes(r.id)) {
+               candidateRuleIds.push(r.id);
+           }
+        });
+
+        // Evaluate the full matrix for each candidate
+        for (const ruleId of candidateRuleIds) {
+          const rule = ruleMap.get(ruleId);
+          if (!rule) continue;
+
+          let isMatch = true;
+          
+          if (rule.condition.vendor && !tx.description.toLowerCase().includes(rule.condition.vendor.toLowerCase())) {
+              isMatch = false;
+          }
+          if (rule.condition.descriptionContains && !tx.description.toLowerCase().includes(rule.condition.descriptionContains.toLowerCase())) {
+              isMatch = false;
+          }
+
+          // Numeric logic
+          const amt = Math.abs(tx.totalAmountCents);
+          if (rule.condition.amountThreshold && amt < rule.condition.amountThreshold) isMatch = false;
+          if (rule.condition.exactAmount && amt !== rule.condition.exactAmount) isMatch = false;
+          
+          // Date logic
+          if (rule.condition.dateRange) {
+            const d = parseLocalDate(tx.date);
+            const start = parseLocalDate(rule.condition.dateRange.start);
+            const end = parseLocalDate(rule.condition.dateRange.end);
+            if (d < start || d > end) isMatch = false;
+          }
+
+          if (isMatch) {
+            matchingRuleId = rule.id;
+            break;
+          }
+        }
+
+        if (matchingRuleId) {
+          const matchingRule = ruleMap.get(matchingRuleId);
+          const account = accountMap.get(matchingRule?.action.targetNodeId);
+          
+          const updatedTx = {
+            ...tx,
+            // Apply target status if flagged for review
+            status: matchingRule?.action.flagForReview ? 'flagged' : tx.status,
+            // Apply Class & Location
+            classId: matchingRule?.action.targetClass || tx.classId,
+            locationId: matchingRule?.action.targetLocation || tx.locationId,
+            lines: tx.lines.map((line, idx) => {
+               if (idx === 0 && account) {
+                   return {
+                      ...line,
+                      accountId: account.id,
+                      accountName: account.name
+                   };
+               }
+              if (line.accountId && line.accountId !== "uncategorized" && !accountMap.has(line.accountId)) {
+                return { ...line, accountId: "uncategorized", accountName: "Manual Review" };
+              }
+               return line;
+            }),
+            updatedAt: new Date().toISOString()
+          };
+          
+          updatesToPost.push({
+            id: tx.id,
+            data: {
+              lines: updatedTx.lines,
+              status: updatedTx.status,
+              classId: updatedTx.classId,
+              locationId: updatedTx.locationId
+            }
+          });
+          count++;
+          return updatedTx;
+        }
+        return tx;
+      });
+
+      if (updatesToPost.length > 0) {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/v1/transactions/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ workspaceId: currentWorkspaceId, updates: updatesToPost })
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'Server rejected batch rule updates');
+        }
+      }
+
+      if (count > 0) {
+        setTransactions(localUpdatedTxs);
+        toast.success(`Rule mapping complete. ${count} transactions identified and updated.`, { id: loader });
+      } else {
+        toast.info('Scan finished. No matching patterns found.', { id: loader });
+      }
     } catch (error) {
       console.error(error);
       setTransactions(originalTransactions); // Rollback
@@ -1793,31 +1841,27 @@ export function useTransactionActions() {
 
       const loader = toast.loading(`Processing ${generatedTransactions.length} due recurring transaction(s)...`);
       try {
-        const batch = writeBatch(db);
-        for (const item of generatedTransactions) {
-          const txRef = doc(collection(db, 'transactions'));
-          const balancedLines = balanceTransactionLines(item.transaction.lines || [], item.transaction.totalAmountCents || 0);
-          batch.set(txRef, {
-            ...item.transaction,
-            lines: balancedLines,
-            id: txRef.id,
-            uid: user.uid,
-            workspaceId: currentWorkspaceId,
-            createdAt: new Date().toISOString()
-          });
+        const token = await user.getIdToken();
+        const res = await fetch('/api/v1/system/recurring/process', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-          const recRef = doc(db, 'recurring', item.templateId);
-          batch.update(recRef, {
-            nextOccurrence: item.updatedNextOccurrence
-          });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || errData.error || 'Failed to process recurring transactions.');
         }
 
-        await batch.commit();
-        toast.success(`Successfully posted ${generatedTransactions.length} recurring transaction(s).`, { id: loader });
-        return { count: generatedTransactions.length };
-      } catch (err) {
+        const data = await res.json();
+        const processedCount = data.data?.processedCount ?? generatedTransactions.length;
+        toast.success(`Successfully posted ${processedCount} recurring transaction(s).`, { id: loader });
+        return { count: processedCount };
+      } catch (err: any) {
         console.error('Failed to process recurring transactions:', err);
-        toast.error('Failed to process recurring transactions.', { id: loader });
+        toast.error(err.message || 'Failed to process recurring transactions.', { id: loader });
         throw err;
       }
     },

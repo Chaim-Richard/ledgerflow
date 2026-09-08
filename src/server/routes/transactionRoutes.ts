@@ -345,7 +345,7 @@ transactionRouter.delete('/:id', async (req, res) => {
   }
 });
 
-// A bulk creation endpoint for atomic multiple postings
+// A bulk creation endpoint for atomic multiple postings with chunking support
 transactionRouter.post('/bulk', async (req, res) => {
   try {
     const { transactions, workspaceId, entityMutation } = req.body;
@@ -356,10 +356,6 @@ transactionRouter.post('/bulk', async (req, res) => {
 
     if (user.developerWorkspaceId && user.developerWorkspaceId !== wsId) {
       return res.status(403).json({ error: `Forbidden: API key is scoped strictly to workspace ${user.developerWorkspaceId}` });
-    }
-
-    if (Array.isArray(transactions) && transactions.length > 500) {
-      return res.status(400).json({ error: 'Bulk transaction limit exceeded. Maximum allowed per request is 500 transactions.' });
     }
 
     const wsDoc = await db.collection('workspaces').doc(wsId).get();
@@ -374,6 +370,14 @@ transactionRouter.post('/bulk', async (req, res) => {
 
     if ((!Array.isArray(transactions) || transactions.length === 0) && !entityMutation) {
       return res.json({ status: 'ok', count: 0 });
+    }
+
+    if (scopedIdempotencyKey) {
+      const idempotencyDoc = await db.collection('idempotencyKeys').doc(scopedIdempotencyKey).get();
+      if (idempotencyDoc.exists) {
+        const cachedResult = idempotencyDoc.data()?.body || { status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 };
+        return res.json(cachedResult);
+      }
     }
 
     // Allowlist entityMutation collections to close arbitrary Admin-SDK mutation primitive
@@ -420,26 +424,9 @@ transactionRouter.post('/bulk', async (req, res) => {
       }
     }
 
-    let cachedResult: any = null;
-    await db.runTransaction(async (t: any) => {
-      if (scopedIdempotencyKey) {
-        const idempotencyRef = db.collection('idempotencyKeys').doc(scopedIdempotencyKey);
-        const idempotencyDoc = await t.get(idempotencyRef);
-        if (idempotencyDoc.exists) {
-          cachedResult = idempotencyDoc.data()?.body || { status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 };
-          return;
-        }
-      }
-
-      const refs = validatedTransactions.map(tx => db.collection('transactions').doc(tx.id));
-      if (refs.length > 0) {
-        const snaps = await t.getAll(...refs);
-        for (const s of snaps) {
-          if (s.exists) throw new Error(`Transaction ${s.id} already exists`);
-        }
-      }
-
-      if (entityMutation) {
+    // Execute entity mutation if provided
+    if (entityMutation) {
+      await db.runTransaction(async (t: any) => {
         const ref = db.collection(entityMutation.collection).doc(entityMutation.docId);
         if (entityMutation.action === "create" || entityMutation.action === "update") {
           const existingDoc = await t.get(ref);
@@ -464,24 +451,35 @@ transactionRouter.post('/bulk', async (req, res) => {
             t.delete(ref);
           }
         }
-      }
-      for (let i = 0; i < validatedTransactions.length; i++) {
-        const tx = validatedTransactions[i];
-        t.create(refs[i], { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-      }
+      });
+    }
 
-      if (scopedIdempotencyKey) {
-        const idempotencyRef = db.collection('idempotencyKeys').doc(scopedIdempotencyKey);
-        t.set(idempotencyRef, {
-          createdAt: FieldValue.serverTimestamp(),
-          code: 200,
-          body: { status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 }
-        });
-      }
-    });
+    // Chunk transactions in batches of 400 to avoid Firestore 500-write limit
+    const CHUNK_SIZE = 400;
+    for (let i = 0; i < validatedTransactions.length; i += CHUNK_SIZE) {
+      const chunk = validatedTransactions.slice(i, i + CHUNK_SIZE);
+      await db.runTransaction(async (t: any) => {
+        const refs = chunk.map(tx => db.collection('transactions').doc(tx.id));
+        if (refs.length > 0) {
+          const snaps = await t.getAll(...refs);
+          for (const s of snaps) {
+            if (s.exists) throw new Error(`Transaction ${s.id} already exists`);
+          }
+        }
 
-    if (cachedResult) {
-      return res.json(cachedResult);
+        for (let j = 0; j < chunk.length; j++) {
+          const tx = chunk[j];
+          t.create(refs[j], { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+        }
+      });
+    }
+
+    if (scopedIdempotencyKey) {
+      await db.collection('idempotencyKeys').doc(scopedIdempotencyKey).set({
+        createdAt: FieldValue.serverTimestamp(),
+        code: 200,
+        body: { status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 }
+      });
     }
 
     res.json({ status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 });
@@ -500,49 +498,51 @@ transactionRouter.post('/batch', async (req, res) => {
      if (!workspaceId || !Array.isArray(updates) || updates.length === 0) {
        return res.status(400).json({ error: "Missing workspaceId or updates" });
      }
-     
-     if (updates.length > 500) {
-       return res.status(400).json({ error: "Batch size exceeds limit of 500 items" });
-     }
 
      const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
      if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
-     
-     if (!updates || !Array.isArray(updates) || updates.length === 0) return res.json({ status: 'ok' });
-     if (updates.length > 500) {
-       return res.status(400).json({ error: 'Batch limit exceeded: maximum 500 updates allowed per request.' });
-     }
 
-     const txRefs = updates.map((u: any) => db.collection('transactions').doc(u.id));
-     const txDocs = await db.getAll(...txRefs);
-     const batch = db.batch();
-
+     const wsData = wsDoc.data();
      const allowedStatuses = ['draft', 'pending', 'certified', 'void', 'reconciled', 'completed', 'failed', 'flagged', 'reviewed', 'overdue', 'approved'];
 
-     for (let i = 0; i < txDocs.length; i++) {
-       const txDoc = txDocs[i];
-       if (!txDoc.exists) throw new Error(`Transaction ${updates[i].id} not found`);
-       
-       const txData = txDoc.data();
-       if (txData?.workspaceId !== workspaceId) throw new Error(`Transaction ${updates[i].id} does not belong to this workspace`);
-       
-       const wsData = wsDoc.data();
-       if (wsData?.lockDate && txData?.date && isTransactionInDateRange(txData as any, undefined, wsData.lockDate)) throw new Error(`Period Locked: Transaction ${updates[i].id} is locked.`);
-       if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) throw new Error(`Forbidden: Transaction ${updates[i].id} status is locked.`);
-       
-       const updateData = updates[i].data;
-       if (updateData.lines !== undefined || updateData.amountCents !== undefined || updateData.totalAmountCents !== undefined || updateData.workspaceId !== undefined || updateData.date !== undefined || updateData.uid !== undefined) {
-         throw new Error(`Restricted fields cannot be modified via batch update on transaction ${updates[i].id}.`);
-       }
+     // Chunk updates in batches of 400 to respect Firestore write limits
+     const BATCH_CHUNK_SIZE = 400;
+     for (let offset = 0; offset < updates.length; offset += BATCH_CHUNK_SIZE) {
+       const chunkUpdates = updates.slice(offset, offset + BATCH_CHUNK_SIZE);
+       const txRefs = chunkUpdates.map((u: any) => db.collection('transactions').doc(u.id));
+       const txDocs = await db.getAll(...txRefs);
+       const batch = db.batch();
 
-       if (updateData.status && !allowedStatuses.includes(updateData.status)) {
-         throw new Error(`Invalid status '${updateData.status}' provided for transaction ${updates[i].id}.`);
-       }
+       for (let i = 0; i < txDocs.length; i++) {
+         const txDoc = txDocs[i];
+         if (!txDoc.exists) throw new Error(`Transaction ${chunkUpdates[i].id} not found`);
+         
+         const txData = txDoc.data();
+         if (txData?.workspaceId !== workspaceId) throw new Error(`Transaction ${chunkUpdates[i].id} does not belong to this workspace`);
+         
+         if (wsData?.lockDate && txData?.date && isTransactionInDateRange(txData as any, undefined, wsData.lockDate)) throw new Error(`Period Locked: Transaction ${chunkUpdates[i].id} is locked.`);
+         if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) throw new Error(`Forbidden: Transaction ${chunkUpdates[i].id} status is locked.`);
+         
+         const updateData = chunkUpdates[i].data;
+         if (updateData.workspaceId !== undefined || updateData.uid !== undefined) {
+           throw new Error(`Restricted fields (workspaceId, uid) cannot be modified via batch update on transaction ${chunkUpdates[i].id}.`);
+         }
 
-       batch.update(txDoc.ref, { ...updateData, updatedAt: FieldValue.serverTimestamp() });
+         if (updateData.lines !== undefined) {
+           const simulatedTx = { ...txData, ...updateData };
+           DoubleEntryValidator.validateJournalEntry(simulatedTx as any);
+         }
+
+         if (updateData.status && !allowedStatuses.includes(updateData.status)) {
+           throw new Error(`Invalid status '${updateData.status}' provided for transaction ${chunkUpdates[i].id}.`);
+         }
+
+         batch.update(txDoc.ref, { ...updateData, updatedAt: FieldValue.serverTimestamp() });
+       }
+       
+       await batch.commit();
      }
-     
-     await batch.commit();
+
      res.json({ status: 'ok' });
    } catch (e: any) {
     if (e.message === 'Not a member') {

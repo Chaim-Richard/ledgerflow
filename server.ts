@@ -3354,7 +3354,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
-  // Scheduled Recurring Processing Endpoint (Authenticated via Admin or System Secret)
+  // Scheduled Recurring Processing Endpoint (Authenticated via Admin, User or System Secret)
   app.post("/api/v1/system/recurring/process", async (req: express.Request, res: express.Response) => {
     try {
       const systemCronSecret = process.env.CRON_SECRET || process.env.SESSION_SECRET || "ledgerflow-system-cron-secret";
@@ -3369,7 +3369,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
           const token = authHeader.split("Bearer ")[1];
           try {
             const decoded = await admin.auth().verifyIdToken(token);
-            if (decoded && (decoded.admin === true || decoded.role === 'admin')) {
+            if (decoded && (decoded.admin === true || decoded.role === 'admin' || decoded.uid)) {
               authorized = true;
             }
           } catch {
@@ -3381,7 +3381,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       if (!authorized) {
         return res.status(403).json({ 
           status: "error", 
-          message: "Forbidden: Requires admin authorization or valid cron secret." 
+          message: "Forbidden: Requires user authorization or valid cron secret." 
         });
       }
 

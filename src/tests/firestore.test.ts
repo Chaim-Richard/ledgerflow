@@ -375,4 +375,50 @@ describe('Firestore Security Rules Unit Tests', () => {
       await adminDb.doc(`supportMessages/${msgId}`).update({ body: 'hacked' });
     }, /permission-denied/i);
   });
+
+  test('Transactions collection denies all direct client-side writes (create, update, delete) even for workspace owners/members', async () => {
+    if (!testEnv) return;
+    const aliceDb = getFirestoreContext({ uid: 'alice' });
+    if (!aliceDb) return;
+
+    // Alice creates her workspace
+    await aliceDb.doc('workspaces/ws-alice').set({
+      id: 'ws-alice',
+      uid: 'alice',
+      name: 'Alice Corp',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const txRef = aliceDb.doc('transactions/tx-alice-direct');
+
+    // 1. Direct client create MUST be denied
+    await assert.rejects(async () => {
+      await txRef.set({
+        id: 'tx-alice-direct',
+        uid: 'alice',
+        workspaceId: 'ws-alice',
+        date: '2026-09-08',
+        description: 'Direct client write attempt',
+        totalAmountCents: 10000,
+        lines: [
+          { accountId: 'acc-1', amountCents: 10000 },
+          { accountId: 'acc-2', amountCents: -10000 }
+        ],
+        status: 'posted'
+      });
+    }, /permission-denied/i);
+
+    // 2. Direct client update MUST be denied
+    await assert.rejects(async () => {
+      await txRef.update({
+        description: 'Direct client update attempt'
+      });
+    }, /permission-denied/i);
+
+    // 3. Direct client delete MUST be denied
+    await assert.rejects(async () => {
+      await txRef.delete();
+    }, /permission-denied/i);
+  });
 });

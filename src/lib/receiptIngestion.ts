@@ -46,7 +46,7 @@ export function isReceiptAggregateRow(description: string): boolean {
     return true;
   }
   // Standalone single word checks with trailing punctuation/symbols
-  if (/^(subtotal|tax|tip|total|change|payment)[:\s\$\d\.\,]*$/i.test(d)) {
+  if (/^(subtotal|tax|tip|total|change|payment)[:\s$\d.,]*$/i.test(d)) {
     return true;
   }
 
@@ -250,6 +250,7 @@ export function mapReceiptToCoordinates(
   if (taxCents > 0) {
     const taxAccount = accounts.find(a =>
       (a as any).role === 'tax' ||
+      (resolveAccountRole(a) as string) === 'tax' ||
       ((a.type === 'expense' || a.type === 'liability') && (a.name.toLowerCase().includes('tax') || (a.category && a.category.toLowerCase().includes('tax'))))
     ) || accounts.find(a => a.name.toLowerCase().includes('tax')) || fallbackReviewAccount;
 

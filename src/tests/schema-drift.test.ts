@@ -48,32 +48,17 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
     assert.equal(extra.length, 0, `workspaces rules permit fields absent from expected model: ${extra.join(', ')}`);
   });
 
-  test('transactions rule allowlist strictly matches Transaction interface fields with no unexpected extras', () => {
-    const keys = extractAffectedKeys(rulesText, 'transactions');
-    assert.ok(keys.length > 0, 'Should find affectedKeys for transactions in firestore.rules');
-
-    const expectedTransactionKeys = [
-      'id', 'uid', 'workspaceId', 'date', 'dueDate', 'description', 'payee', 'lines',
-      'totalAmountCents', 'taxAmountCents', 'currency', 'originalCurrency', 'exchangeRate',
-      'schemaVersion', 'fileUrls', 'isCleared', 'clearedAt', 'bankTransactionId', 'units',
-      'unitType', 'status', 'type', 'total_impact', 'projectId', 'classId', 'locationId',
-      'employeeId', 'tags', 'metadata', 'verification', 'notes', 'attachments', 'referenceNumber',
-      'category', 'recurringRuleId', 'bankFeedLineId', 'paymentToken', 'certifiedAt',
-      'certifiedBy', 'voidedAt', 'voidedBy', 'deletedAt', 'entityId', 'customerId',
-      'vendorId', 'reconciliationId', 'createdAt', 'updatedAt', 'parentEventId',
-      'eventId', 'reversalEventId', 'project', 'dimensions', 'isIntercompany',
-      'isFlagged', 'isLocked', 'lockedAt'
-    ];
-
-    for (const key of expectedTransactionKeys) {
-      assert.ok(
-        keys.includes(key),
-        `firestore.rules transactions allowlist missing key '${key}'`
-      );
-    }
-
-    const extra = keys.filter(k => !expectedTransactionKeys.includes(k));
-    assert.equal(extra.length, 0, `transactions rules permit fields absent from expected model: ${extra.join(', ')}`);
+  test('transactions collection is locked down from direct client-side writes in firestore.rules', () => {
+    // Transactions are managed exclusively by server APIs / Admin SDK to enforce double-entry integrity
+    const blockRegex = /match\s+\/transactions\/\{transactionId\}\s*\{([\s\S]*?)(?=match\s+|$)/;
+    const match = blockRegex.exec(rulesText);
+    assert.ok(match, 'Should find transactions block in firestore.rules');
+    const blockContent = match[1];
+    assert.ok(
+      blockContent.includes('allow create, update, delete: if false;') || 
+      (blockContent.includes('allow write: if false;')),
+      'Transactions collection must disallow direct client-side writes to enforce server-side double entry validation'
+    );
   });
 
   test('supportTickets rule allowlist strictly matches SupportTicket interface fields', () => {
