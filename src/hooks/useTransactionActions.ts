@@ -1,4 +1,6 @@
 import { resolveAccountRole } from '../lib/accountUtils';
+import { validateReceiptPayload, mapReceiptToCoordinates } from '../lib/receiptIngestion';
+import { matchDeepLabel, decomposeHierarchicalLabel, setLineDimension } from '../lib/dimensionUtils';
 import { 
   collection, 
   addDoc, 
@@ -175,6 +177,7 @@ export function useTransactionActions() {
           let lines = tx.lines && tx.lines.length > 0 ? tx.lines : [{ accountId: defaultAccId, accountName: 'Uncategorized Expense', amountCents: tx.amountCents }];
           
           const isPreCategorized = lines.length > 0 && 
+            Boolean(lines[0].accountId) &&
             lines[0].accountId !== 'uncategorized' && 
             lines[0].accountId !== 'unassigned' &&
             lines[0].accountName !== 'Uncategorized' && 
@@ -442,21 +445,52 @@ export function useTransactionActions() {
           }
         ];
       }
-    } else {
-      // Check sum of existing lines
-      const sum = finalLines.reduce((acc, l) => acc + (l.amountCents || 0), 0);
-      if (sum !== 0) {
-        const assetAccounts = accounts.filter(a => a.type === 'asset');
-        const defaultAsset = assetAccounts.find(a => resolveAccountRole(a) === 'cash') || assetAccounts[0] || accounts[0];
+      return finalLines;
+    }
 
-        if (defaultAsset) {
-          finalLines.push({
-            accountId: defaultAsset.id,
-            accountName: defaultAsset.name,
-            amountCents: -sum,
-            description: "System Offset"
-          });
-        }
+    // Check sum of existing lines
+    const sum = finalLines.reduce((acc, l) => acc + (l.amountCents || 0), 0);
+    if (sum === 0) {
+      return finalLines;
+    }
+
+    // If all lines are on one side (all positive debits or all negative credits),
+    // settle against default asset/cash account
+    const allPositive = finalLines.length > 0 && finalLines.every(l => (l.amountCents || 0) > 0);
+    const allNegative = finalLines.length > 0 && finalLines.every(l => (l.amountCents || 0) < 0);
+
+    if (allPositive || allNegative) {
+      const assetAccounts = accounts.filter(a => a.type === 'asset');
+      const defaultAsset = assetAccounts.find(a => resolveAccountRole(a) === 'cash') || assetAccounts[0] || accounts[0];
+
+      if (defaultAsset) {
+        finalLines.push({
+          accountId: defaultAsset.id,
+          accountName: defaultAsset.name,
+          amountCents: -sum,
+          description: allPositive ? "Asset Settlement" : "Category Allocation"
+        });
+      }
+      return finalLines;
+    }
+
+    // If lines already contain both debits and credits, but have an imbalance > 1 cent,
+    // do NOT silently absorb into a System Offset. Reject/throw to protect ledger integrity.
+    if (Math.abs(sum) > 1) {
+      throw new Error(`Double-entry balance violation: Transaction lines are out of balance by $${(Math.abs(sum) / 100).toFixed(2)}.`);
+    }
+
+    // Minor penny rounding adjustment (<= 1 cent)
+    if (Math.abs(sum) > 0) {
+      const assetAccounts = accounts.filter(a => a.type === 'asset');
+      const defaultAsset = assetAccounts.find(a => resolveAccountRole(a) === 'cash') || assetAccounts[0] || accounts[0];
+      if (defaultAsset) {
+        finalLines.push({
+          accountId: defaultAsset.id,
+          accountName: defaultAsset.name,
+          amountCents: -sum,
+          description: "Rounding Adjustment"
+        });
       }
     }
 
@@ -802,59 +836,59 @@ export function useTransactionActions() {
         toast.error(`Extraction failed for ${file.name}`, { id: loader });
         return;
       }
+
+      // Reconciliation & Summary Row Validation Guard
+      const validation = validateReceiptPayload(data);
+      if (!validation.valid) {
+        updateParsingItem(parsingId, { status: 'error' });
+        toast.error(validation.error || 'Receipt validation failed', { id: loader });
+        return;
+      }
       
       setIsSyncing(true);
+
+      const engine = new MatchingEngine(
+        autoRules || [],
+        analyticalPatternCache || {},
+        user?.uid || '',
+        matchingThreshold || 0.85,
+        existingTransactions,
+        currentWorkspace?.dimensionNodes
+      );
+
+      const headerDimensions: { world?: string; class?: string; project?: string } = {};
+      if (currentWorkspace?.dimensions) {
+        const worldDim = currentWorkspace.dimensions.find(d => d.isWorld || d.id === 'world');
+        if (worldDim) headerDimensions.world = worldDim.id;
+      }
+
+      const debitLines = mapReceiptToCoordinates(data, accounts, engine, headerDimensions);
+
       if (transactionId) {
-        await handleUpdateTransaction(transactionId, {
+        // Attaching receipt to an existing transaction: balance the itemized lines with the settlement leg
+        const balancedLines = balanceTransactionLines(debitLines, data.totalAmountCents || 0);
+
+        const success = await handleUpdateTransaction(transactionId, {
           description: data.vendorName,
           totalAmountCents: data.totalAmountCents,
           taxAmountCents: data.taxAmountCents || 0,
           isCleared: true,
           clearedAt: new Date().toISOString(),
-          lines: data.lines.map((l: any) => {
-            const fallbackExpenseAcc = accounts.find(a => a.type === 'expense') || accounts[0];
-            return {
-              accountId: l.category ? (accounts.find(a => a.name === l.category)?.id || fallbackExpenseAcc?.id || '') : (fallbackExpenseAcc?.id || ''),
-              accountName: l.category || 'Uncategorized',
-              amountCents: l.amountCents,
-              description: l.description,
-              quantity: l.quantity,
-              unitPriceCents: l.unitPriceCents,
-              tags: l.tags
-            };
-          })
+          lines: balancedLines
         });
-        toast.success(`${file.name} matched and verified with ${data.lines.length} items`, { id: loader });
+
+        if (success) {
+          toast.success(`${file.name} matched and verified with ${data.lines?.length || 0} items`, { id: loader });
+        }
       } else {
-        const fallbackExpenseAcc = accounts.find(a => a.type === 'expense') || accounts[0];
-        const lines = data.lines.map((l: any) => {
-          const acc = accounts.find(a => a.name === (l.category || data.categorySuggestion));
-          return {
-            accountId: acc?.id || fallbackExpenseAcc?.id || '',
-            accountName: acc?.name || l.category || data.categorySuggestion || 'Uncategorized',
-            amountCents: l.amountCents,
-            description: l.description,
-            quantity: l.quantity,
-            unitPriceCents: l.unitPriceCents,
-            tags: l.tags
-          };
-        });
-
-        const fallbackAcc = accounts.find(a => a.type === 'expense')?.id || accounts[0]?.id || '';
-        const finalLines = lines.length > 0 ? lines : [{
-          accountId: fallbackAcc,
-          accountName: data.categorySuggestion || 'General Expense',
-          amountCents: data.totalAmountCents,
-          description: data.vendorName
-        }];
-
         await handleQuickAdd({ 
-          description: data.vendorName,
+          description: data.vendorName || 'Receipt Entry',
           totalAmountCents: data.totalAmountCents,
+          taxAmountCents: data.taxAmountCents || 0,
           date: data.date || getLocalDateISO(),
-          lines: finalLines
+          lines: debitLines
         });
-        toast.success(`${file.name} processed with ${finalLines.length} line items`, { id: loader });
+        toast.success(`${file.name} processed with ${debitLines.length} line items`, { id: loader });
       }
       
       updateParsingItem(parsingId, { status: 'done' });
@@ -1029,17 +1063,17 @@ export function useTransactionActions() {
     toast.success('Transaction duplicated');
   };
 
-  const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>) => {
-    if (!user || !currentWorkspaceId) return;
+  const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>): Promise<boolean> => {
+    if (!user || !currentWorkspaceId) return false;
     
     const originalTransactions = [...useLedgerStore.getState().transactions];
     const txIndex = originalTransactions.findIndex(t => t.id === id);
-    if (txIndex === -1) return;
+    if (txIndex === -1) return false;
 
     const tx = originalTransactions[txIndex];
     if (updates.date && isPeriodLocked(updates.date)) {
       toast.error("Period freeze active. Modification blocked.");
-      return;
+      return false;
     }
 
     // Double-Entry Integrity Check for updates
@@ -1047,7 +1081,7 @@ export function useTransactionActions() {
       const balance = updates.lines.reduce((sum, l) => sum + (l.amountCents || 0), 0) || 0;
       if (balance !== 0) {
         toast.error("Double-entry violation: Modified lines are unbalanced.");
-        return;
+        return false;
       }
     }
 
@@ -1096,7 +1130,7 @@ export function useTransactionActions() {
         description: `Please try again. (${message})`
       });
       setTransactions(originalTransactions);
-      throw err;
+      return false;
     }
 
     if (!err) {
@@ -1146,10 +1180,11 @@ export function useTransactionActions() {
         }
       }
       // -------------------------------
+      return true;
     } else {
       setTransactions(originalTransactions); // Rollback
       toast.error('Sync failed.');
-      throw err; // Rethrow to let caller know it failed
+      return false;
     }
   };
 

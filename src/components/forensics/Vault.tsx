@@ -32,6 +32,8 @@ import { CloudDocument, Transaction } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { aiService } from '../../services/aiService';
+import { resolveAccountRole } from '../../lib/accountUtils';
+import { mapReceiptToCoordinates, resolveDeepAccount } from '../../lib/receiptIngestion';
 
 
 
@@ -42,6 +44,7 @@ export default function Vault() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const uid = useAuthStore(s => s.user?.uid);
   const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
   const [documents, setDocuments] = useState<CloudDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -129,7 +132,7 @@ export default function Vault() {
       
       const parsedData = await aiService.parseReceipt(file);
       
-      if (parsedData && parsedData.amountCents !== undefined) {
+      if (parsedData && (parsedData.totalAmountCents !== undefined || parsedData.amountCents !== undefined)) {
         setExtractedData(parsedData);
         toast.success('Document analysis complete', { id: toastId });
       } else {
@@ -151,36 +154,82 @@ export default function Vault() {
     const toastId = toast.loading('Injecting into ledger...');
 
     try {
-      const amountCents = Math.abs(extractedData.amountCents || 0);
+      const amountCents = Math.abs(extractedData.totalAmountCents ?? extractedData.amountCents ?? 0);
+      const vendor = extractedData.vendorName || extractedData.merchant || extractedData.description || 'Receipt Auto-sync';
+
+      const cashAccount = accounts.find(a => resolveAccountRole(a) === 'cash') ||
+        accounts.find(a => a.type === 'asset') ||
+        accounts[0];
+      const defaultExpenseAccount = accounts.find(a => resolveAccountRole(a) === 'expense' || a.type === 'expense') ||
+        accounts[0];
+
+      let finalLines: any[];
+      if (extractedData.lines && Array.isArray(extractedData.lines) && extractedData.lines.length > 0) {
+        const debitLines = mapReceiptToCoordinates(
+          {
+            vendorName: vendor,
+            date: extractedData.date,
+            totalAmountCents: amountCents,
+            taxAmountCents: extractedData.taxAmountCents || 0,
+            tipAmountCents: extractedData.tipAmountCents || 0,
+            categorySuggestion: extractedData.category || extractedData.categorySuggestion,
+            lines: extractedData.lines
+          },
+          accounts
+        );
+        const creditLine = {
+          accountId: cashAccount ? cashAccount.id : '',
+          accountName: cashAccount ? cashAccount.name : 'Operating Cash',
+          amountCents: -amountCents, // Credit cash
+          description: "Vault auto-sync offset",
+          category: "Cash",
+          isAutoTagged: true,
+          dimensions: { location: vendor }
+        };
+        finalLines = [...debitLines, creditLine];
+      } else {
+        const { accountId: expAccId, accountName: expAccName } = resolveDeepAccount(
+          extractedData.category || extractedData.categorySuggestion || '',
+          accounts,
+          defaultExpenseAccount
+        );
+        finalLines = [
+          {
+            accountId: expAccId,
+            accountName: expAccName,
+            amountCents: amountCents, // Debit expense
+            description: "Auto-synced from vault",
+            category: extractedData.category || expAccName,
+            isAutoTagged: true,
+            dimensions: {
+              category: extractedData.category || expAccName,
+              location: vendor
+            }
+          },
+          {
+            accountId: cashAccount ? cashAccount.id : '',
+            accountName: cashAccount ? cashAccount.name : 'Operating Cash',
+            amountCents: -amountCents, // Credit cash
+            description: "Vault auto-sync offset",
+            category: "Cash",
+            isAutoTagged: true,
+            dimensions: { location: vendor }
+          }
+        ];
+      }
+
       const newTx: Partial<Transaction> = {
         uid: uid || "",
         workspaceId: workspaceId || "",
         date: extractedData.date || format(new Date(), 'yyyy-MM-dd'),
-        description: extractedData.merchant || extractedData.description || 'Receipt Auto-sync',
+        description: vendor,
         totalAmountCents: amountCents,
         currency: 'USD',
         status: 'completed',
         type: 'actual',
         createdAt: new Date().toISOString(),
         fileUrls: selectedDoc.fileUrl ? [selectedDoc.fileUrl] : [],
-        lines: [
-          {
-            accountId: extractedData.categoryId || "uncategorized",
-            accountName: extractedData.category || "General Expense",
-            amountCents: amountCents, // Debit expense
-            description: "Auto-synced from vault",
-            category: extractedData.category || "General",
-            isAutoTagged: true,
-          },
-          {
-            accountId: "1010",
-            accountName: "Operating Cash",
-            amountCents: -amountCents, // Credit cash
-            description: "Vault auto-sync offset",
-            category: "Cash",
-            isAutoTagged: true,
-          }
-        ],
+        lines: finalLines,
         metadata: {
           confidence: extractedData.confidence || 0,
           vaultDocId: selectedDoc.id

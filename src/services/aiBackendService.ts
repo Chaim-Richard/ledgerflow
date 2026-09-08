@@ -226,7 +226,7 @@ export class AIBackendService {
   private async parseReceipt(data: any) {
     const { base64Data, mimeType, context } = data;
     const source: any = { inlineData: { data: base64Data, mimeType } };
-    const prompt = `Extract receipt data. Context: ${context}. Return vendorName, date, totalAmountCents, taxAmountCents, categorySuggestion, and an array of 'lines' with {description, amountCents, category, quantity, unitPriceCents}.`;
+    const prompt = `Extract receipt data. Context: ${context}. Return vendorName, date, totalAmountCents, taxAmountCents, tipAmountCents, categorySuggestion, and an array of 'lines' with {description, amountCents, category, quantity, unitPriceCents}. Lines MUST contain ONLY purchasable item rows — explicitly exclude SUBTOTAL, TAX, TIP, TOTAL, CHANGE, and payment rows. taxAmountCents, tipAmountCents, and totalAmountCents must be returned as separate scalar fields. Ensure sum(lines[].amountCents) + taxAmountCents + tipAmountCents equals totalAmountCents.`;
     const result = await this.generateContent({
       model: this.getModel(data),
       contents: [{
