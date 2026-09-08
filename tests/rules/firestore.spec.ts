@@ -6,21 +6,17 @@ import { initializeTestEnvironment, RulesTestEnvironment } from '@firebase/rules
 const rules = readFileSync('firestore.rules', 'utf8');
 
 describe('Firestore Security Rules Unit Tests', () => {
-  let testEnv: RulesTestEnvironment | null = null;
+  let testEnv: RulesTestEnvironment;
 
   before(async () => {
-    try {
-      testEnv = await initializeTestEnvironment({
-        projectId: 'demo-ledgerflow',
-        firestore: {
-          rules,
-          host: '127.0.0.1',
-          port: 8080,
-        },
-      });
-    } catch (err) {
-      console.warn('Could not initialize rules-unit-testing environment. Local firestore emulator may not be running:', err);
-    }
+    testEnv = await initializeTestEnvironment({
+      projectId: 'demo-ledgerflow',
+      firestore: {
+        rules,
+        host: '127.0.0.1',
+        port: 8080,
+      },
+    });
   });
 
   after(async () => {
@@ -31,16 +27,14 @@ describe('Firestore Security Rules Unit Tests', () => {
 
   beforeEach(async () => {
     if (testEnv) {
-      try {
-        await testEnv.clearFirestore();
-      } catch (e) {
-        // Ignore clearing error if emulator is not connected
-      }
+      await testEnv.clearFirestore();
     }
   });
 
   function getFirestoreContext(auth: { uid: string; token?: Record<string, any> } | null) {
-    if (!testEnv) return null;
+    if (!testEnv) {
+      throw new Error('Rules test environment is not initialized');
+    }
     if (auth) {
       return testEnv.authenticatedContext(auth.uid, auth.token).firestore();
     }
@@ -48,9 +42,7 @@ describe('Firestore Security Rules Unit Tests', () => {
   }
 
   test('Default Deny catch-all rule blocks unknown collections and unauthenticated access', async () => {
-    if (!testEnv) return;
     const db = getFirestoreContext(null);
-    if (!db) return;
 
     const randomDoc = db.doc('unspecified_collection/some-id');
     await assert.rejects(async () => {
@@ -63,10 +55,8 @@ describe('Firestore Security Rules Unit Tests', () => {
   });
 
   test('Non-members are denied access on workspaces', async () => {
-    if (!testEnv) return;
     const aliceDb = getFirestoreContext({ uid: 'alice' });
     const bobDb = getFirestoreContext({ uid: 'bob' });
-    if (!aliceDb || !bobDb) return;
 
     // Create a workspace for Alice
     const wsRef = aliceDb.doc('workspaces/ws-alice');
@@ -93,10 +83,8 @@ describe('Firestore Security Rules Unit Tests', () => {
   });
 
   test('Non-members are denied access on scoped ledger resources (transactions, chartAccounts, projects)', async () => {
-    if (!testEnv) return;
     const aliceDb = getFirestoreContext({ uid: 'alice' });
     const bobDb = getFirestoreContext({ uid: 'bob' });
-    if (!aliceDb || !bobDb) return;
 
     // Alice creates her workspace
     await aliceDb.doc('workspaces/ws-alice').set({
@@ -146,9 +134,7 @@ describe('Firestore Security Rules Unit Tests', () => {
   });
 
   test('Role field on users collection cannot be changed by the client', async () => {
-    if (!testEnv) return;
     const aliceDb = getFirestoreContext({ uid: 'alice' });
-    if (!aliceDb) return;
 
     const userRef = aliceDb.doc('users/alice');
     
@@ -173,9 +159,7 @@ describe('Firestore Security Rules Unit Tests', () => {
   });
 
   test('LockDate on workspaces cannot be changed by the client on update', async () => {
-    if (!testEnv) return;
     const aliceDb = getFirestoreContext({ uid: 'alice' });
-    if (!aliceDb) return;
 
     const wsRef = aliceDb.doc('workspaces/ws-alice');
 
@@ -201,9 +185,7 @@ describe('Firestore Security Rules Unit Tests', () => {
   });
 
   test('balanceCents and openingBalanceCents on chartAccounts cannot be changed by the client on update', async () => {
-    if (!testEnv) return;
     const aliceDb = getFirestoreContext({ uid: 'alice' });
-    if (!aliceDb) return;
 
     // Create Alice's workspace
     await aliceDb.doc('workspaces/ws-alice').set({
@@ -252,9 +234,7 @@ describe('Firestore Security Rules Unit Tests', () => {
   });
 
   test('Admins collection and external_api_cache are locked down completely for clients', async () => {
-    if (!testEnv) return;
     const aliceDb = getFirestoreContext({ uid: 'alice' });
-    if (!aliceDb) return;
 
     const cacheRef = aliceDb.doc('external_api_cache/some-key');
     const adminRef = aliceDb.doc('admins/some-id');
@@ -281,9 +261,7 @@ describe('Firestore Security Rules Unit Tests', () => {
   });
 
   test('Transactions collection denies all direct client-side writes (create, update, delete) even for workspace owners/members', async () => {
-    if (!testEnv) return;
     const aliceDb = getFirestoreContext({ uid: 'alice' });
-    if (!aliceDb) return;
 
     // Alice creates her workspace
     await aliceDb.doc('workspaces/ws-alice').set({
