@@ -517,7 +517,7 @@ export default function Vault() {
                         <div className="grid grid-cols-2 gap-4">
                            <div>
                               <p className="text-[9px] font-black text-emerald-800/50 uppercase tracking-widest mb-1">Detected Merchant</p>
-                              <p className="text-sm font-bold text-emerald-900">{extractedData.merchant}</p>
+                              <p className="text-sm font-bold text-emerald-900">{extractedData.vendorName || extractedData.merchant || 'Unknown'}</p>
                            </div>
                            <div>
                               <p className="text-[9px] font-black text-emerald-800/50 uppercase tracking-widest mb-1">Parsed Date</p>
@@ -525,7 +525,7 @@ export default function Vault() {
                            </div>
                            <div>
                               <p className="text-[9px] font-black text-emerald-800/50 uppercase tracking-widest mb-1">Total Amount</p>
-                              <p className="text-sm font-bold font-mono text-emerald-900">${(extractedData.amountCents / 100).toFixed(2)}</p>
+                              <p className="text-sm font-bold font-mono text-emerald-900">${(((extractedData.totalAmountCents ?? extractedData.amountCents) || 0) / 100).toFixed(2)}</p>
                            </div>
                            <div>
                               <p className="text-[9px] font-black text-emerald-800/50 uppercase tracking-widest mb-1">Confidence</p>
