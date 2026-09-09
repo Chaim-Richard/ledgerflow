@@ -53,6 +53,26 @@ export function enforceDoubleEntrySafety(req: Request, res: Response, next: Next
   }
 }
 
+/**
+ * Optimistic Concurrency Control: detects if existing transaction was updated since client read it.
+ */
+function isUpdatedAtMismatch(expected: any, current: any): boolean {
+  if (!expected || !current) return false;
+  const getMs = (v: any): number | null => {
+    if (typeof v?.toMillis === 'function') return v.toMillis();
+    if (typeof v?.toDate === 'function') return v.toDate().getTime();
+    if (typeof v?.seconds === 'number') return v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6);
+    const ms = new Date(v).getTime();
+    return isNaN(ms) ? null : ms;
+  };
+  const expMs = getMs(expected);
+  const curMs = getMs(current);
+  if (expMs === null || curMs === null) {
+    return String(expected) !== String(current);
+  }
+  return Math.abs(expMs - curMs) > 100;
+}
+
 
 transactionRouter.get('/', async (req, res) => {
   try {
@@ -199,6 +219,15 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
          const doc = await t.get(txRef);
          if (!doc.exists) throw new Error('Not found');
          const txData = doc.data();
+
+         // Optimistic concurrency check
+         const expectedUpdatedAt = req.body.expectedUpdatedAt || partialUpdate.expectedUpdatedAt;
+         if (isUpdatedAtMismatch(expectedUpdatedAt, txData?.updatedAt)) {
+           const err: any = new Error('version_conflict');
+           err.currentTransaction = { ...txData, id: doc.id };
+           throw err;
+         }
+
          const wsId = txData?.workspaceId;
          authoritativeWsId = wsId;
          // Verify workspace
@@ -227,6 +256,7 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
          delete safePartial.workspaceId;
          delete safePartial.uid;
          delete safePartial.id;
+         delete safePartial.expectedUpdatedAt;
 
          t.update(txRef, { ...safePartial, updatedAt: FieldValue.serverTimestamp() });
       });
@@ -268,6 +298,15 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
       const txRef = db.collection('transactions').doc(id);
       const doc = await t.get(txRef);
       if (!doc.exists) throw new Error('Not found');
+
+      // Optimistic concurrency check
+      const expectedUpdatedAt = req.body.expectedUpdatedAt || transaction?.expectedUpdatedAt;
+      if (isUpdatedAtMismatch(expectedUpdatedAt, doc.data()?.updatedAt)) {
+        const err: any = new Error('version_conflict');
+        err.currentTransaction = { ...doc.data(), id: doc.id };
+        throw err;
+      }
+
       if (doc.data()?.workspaceId !== transaction.workspaceId) throw new Error('Workspace mismatch');
       if ((doc.data()?.status === 'certified' || doc.data()?.status === 'void' || doc.data()?.isCleared === true) && !user.admin) {
         throw new Error('Cannot modify certified, cleared, or voided transactions');
@@ -276,7 +315,10 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
         throw new Error(`Period Locked: Cannot modify a transaction originally dated before ${wsData.lockDate}`);
       }
 
-      t.update(txRef, { ...validatedTx, updatedAt: FieldValue.serverTimestamp() });
+      const txToSave = { ...validatedTx };
+      delete (txToSave as any).expectedUpdatedAt;
+
+      t.update(txRef, { ...txToSave, updatedAt: FieldValue.serverTimestamp() });
     });
 
     const auditId = crypto.randomUUID();
@@ -292,6 +334,13 @@ transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
 
     res.json({ status: 'ok', transactionId: id, data: transaction });
   } catch (e: any) {
+    if (e.message === 'version_conflict') {
+       return res.status(409).json({
+         error: 'version_conflict',
+         message: 'This transaction was modified by another user.',
+         currentTransaction: e.currentTransaction
+       });
+    }
     if (e.message === 'Not found') {
        return res.status(404).json({ error: e.message });
     }
@@ -532,7 +581,19 @@ transactionRouter.post('/batch', async (req, res) => {
          if (wsData?.lockDate && txData?.date && isTransactionInDateRange(txData as any, undefined, wsData.lockDate)) throw new Error(`Period Locked: Transaction ${chunkUpdates[i].id} is locked.`);
          if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) throw new Error(`Forbidden: Transaction ${chunkUpdates[i].id} status is locked.`);
          
-         const updateData = chunkUpdates[i].data;
+         const updateData = { ...chunkUpdates[i].data };
+         const expectedUpdatedAt = chunkUpdates[i].expectedUpdatedAt || updateData.expectedUpdatedAt;
+         delete updateData.expectedUpdatedAt;
+
+         if (isUpdatedAtMismatch(expectedUpdatedAt, txData?.updatedAt)) {
+           return res.status(409).json({
+             error: 'version_conflict',
+             message: `Transaction ${chunkUpdates[i].id} was modified by another user.`,
+             conflictTransactionId: chunkUpdates[i].id,
+             currentTransaction: { ...txData, id: txDoc.id }
+           });
+         }
+
          if (updateData.workspaceId !== undefined || updateData.uid !== undefined) {
            throw new Error(`Restricted fields (workspaceId, uid) cannot be modified via batch update on transaction ${chunkUpdates[i].id}.`);
          }

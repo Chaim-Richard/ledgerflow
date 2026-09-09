@@ -1171,6 +1171,7 @@ export function useTransactionActions() {
     
     const token = await user?.getIdToken();
     try {
+      const expectedUpdatedAt = tx.updatedAt;
       const payload = {
         ...tx,
         ...updates,
@@ -1180,17 +1181,38 @@ export function useTransactionActions() {
       const res = await fetch(`/api/v1/transactions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ transaction: payload })
+        body: JSON.stringify({ transaction: payload, expectedUpdatedAt })
       });
       if (!res.ok) {
          const data = await res.json();
+         if (res.status === 409 || data.error === 'version_conflict') {
+           const err: any = new Error(data.message || 'This transaction was modified by another user.');
+           err.isConflict = true;
+           err.currentTransaction = data.currentTransaction;
+           throw err;
+         }
          throw new Error(data.error || 'Failed to update transaction');
       }
     } catch(e: any) {
-      const message = e?.message || 'Unknown network error';
-      toast.error('Could not save your changes.', {
-        description: `Please try again. (${message})`
-      });
+      if (e.isConflict) {
+        toast.error('Version conflict: Transaction modified by another user.', {
+          description: 'Your changes were not saved to prevent overwriting someone else\'s updates. Loaded latest version.'
+        });
+        if (e.currentTransaction) {
+          const currentTxs = [...useLedgerStore.getState().transactions];
+          const idx = currentTxs.findIndex(t => t.id === id);
+          if (idx !== -1) {
+            currentTxs[idx] = e.currentTransaction;
+            setTransactions(currentTxs);
+          }
+          return false;
+        }
+      } else {
+        const message = e?.message || 'Unknown network error';
+        toast.error('Could not save your changes.', {
+          description: `Please try again. (${message})`
+        });
+      }
       setTransactions(originalTransactions);
       return false;
     }

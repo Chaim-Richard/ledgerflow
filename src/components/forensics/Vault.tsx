@@ -163,8 +163,6 @@ export default function Vault() {
       const defaultExpenseAccount = accounts.find(a => resolveAccountRole(a) === 'expense' || a.type === 'expense') ||
         accounts[0];
 
-      let finalLines: any[];
-      
       const receiptPayload = {
         vendorName: vendor,
         date: extractedData.date,
@@ -188,7 +186,7 @@ export default function Vault() {
       }
 
       const balancedTx = buildBalancedReceiptTransaction(receiptPayload, accounts);
-      finalLines = balancedTx.lines;
+      const finalLines = balancedTx.lines;
 
       const newTx: Partial<Transaction> = {
         uid: uid || "",

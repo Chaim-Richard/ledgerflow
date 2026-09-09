@@ -152,6 +152,8 @@ export interface Transaction {
   isIntercompany?: boolean;
 
   createdAt: string;
+  updatedAt?: string;
+  expectedUpdatedAt?: string;
   deletedAt?: string; 
   isFlagged?: boolean;
   isLocked?: boolean;

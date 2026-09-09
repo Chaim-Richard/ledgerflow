@@ -3,6 +3,7 @@ import { parseLocalDate } from '../../lib/utils';
 // Enforces that numbers, facts, and validations are strictly correct. No false info.
 import { TemporalValidity } from '../../types';
 import Decimal from 'decimal.js';
+import { evaluateAmountExpression } from '../../lib/amountExpression';
 
 export class TruthEngine {
   static resolveEffectiveValue(timeSeries: TemporalValidity[], targetDateStr: string): number {
@@ -76,8 +77,8 @@ export class TruthEngine {
     // Handle unicode minus, currency symbols, commas, and whitespace
     s = s.replace(/\u2212/g, '-').replace(/[$€£¥]/g, '').replace(/,/g, '').trim();
 
-    // Handle parenthesized negatives: (123.45) -> -123.45
-    if (s.startsWith('(') && s.endsWith(')')) {
+    // Handle parenthesized negatives: (123.45) -> -123.45 (only if not an arithmetic expression)
+    if (s.startsWith('(') && s.endsWith(')') && !/[+\-*/]/.test(s.slice(1, -1))) {
       s = '-' + s.slice(1, -1).trim();
     }
 
@@ -93,7 +94,13 @@ export class TruthEngine {
     }
 
     try {
-      let val = new Decimal(s).mul(100).round().toNumber();
+      let val: number;
+      // If the string contains arithmetic operators (+, -, *, /, or parenthesis), route through evaluateAmountExpression
+      if (/[+\-*/(]/.test(s) && !/^-?[0-9.]+$/.test(s)) {
+        val = evaluateAmountExpression(s);
+      } else {
+        val = new Decimal(s).mul(100).round().toNumber();
+      }
       if (isNaN(val)) throw new Error('Integrity Violation: Parsed amount is NaN');
       if (isCR) val = -Math.abs(val);
       if (isDR) val = Math.abs(val);
