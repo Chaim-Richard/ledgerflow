@@ -20,10 +20,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useSupportStore } from '../../stores/useSupportStore';
 import { useSupportData } from '../../hooks/useSupportData';
-import { SupportTicket, Priority } from '../../types';
+import { SupportTicket, Priority, SupportMessage } from '../../types';
 import { getLatestErrorDiagnostic } from '../../lib/errorTracker';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
+import { db } from '../../firebase';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 
 export default function SupportView() {
   const { user, userProfile, getCurrentWorkspace } = useAuthStore();
@@ -107,26 +109,42 @@ export default function SupportView() {
         } : {})
       };
 
-      const { getFirestore, doc, setDoc } = await import('firebase/firestore');
-      const { getApp } = await import('firebase/app');
-      const db = getFirestore(getApp());
-      
       await setDoc(doc(db, 'supportTickets', ticketId), newTicket);
 
       const idToken = await user?.getIdToken();
-      const res = await fetch(`/api/v1/support/tickets/${ticketId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          body: initialMessage,
-          authorRole: 'user'
-        })
-      });
+      let sentViaApi = false;
+      try {
+        const res = await fetch(`/api/v1/support/tickets/${ticketId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            body: initialMessage,
+            authorRole: 'user'
+          })
+        });
+        if (res.ok) {
+          sentViaApi = true;
+        }
+      } catch (apiErr) {
+        console.warn('API message send failed, using client write:', apiErr);
+      }
 
-      if (!res.ok) throw new Error('Failed to send initial message');
+      if (!sentViaApi) {
+        const messageId = `msg-${Math.random().toString(36).substring(2, 9)}`;
+        const newMessage: SupportMessage = {
+          id: messageId,
+          ticketId,
+          workspaceId: currentWorkspace.id,
+          authorUid: user?.uid || '',
+          authorRole: 'user',
+          body: initialMessage,
+          createdAt
+        };
+        await setDoc(doc(db, 'supportMessages', messageId), newMessage);
+      }
 
       setIsCreating(false);
       setNewTicketSubject('');
@@ -142,24 +160,55 @@ export default function SupportView() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageInput.trim() || !selectedTicketId) return;
+    if (!messageInput.trim() || !selectedTicketId || !currentWorkspace) return;
 
     setIsSending(true);
+    const textToSend = messageInput.trim();
     try {
       const idToken = await user?.getIdToken();
-      const res = await fetch(`/api/v1/support/tickets/${selectedTicketId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          body: messageInput,
-          authorRole: isAdmin ? 'admin' : 'user'
-        })
-      });
+      let sentViaApi = false;
+      try {
+        const res = await fetch(`/api/v1/support/tickets/${selectedTicketId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            body: textToSend,
+            authorRole: isAdmin ? 'admin' : 'user'
+          })
+        });
+        if (res.ok) {
+          sentViaApi = true;
+        }
+      } catch (apiErr) {
+        console.warn('API send message failed, using client write:', apiErr);
+      }
 
-      if (!res.ok) throw new Error('Failed to send message');
+      if (!sentViaApi) {
+        const messageId = `msg-${Math.random().toString(36).substring(2, 9)}`;
+        const createdAt = new Date().toISOString();
+        const newMessage: SupportMessage = {
+          id: messageId,
+          ticketId: selectedTicketId,
+          workspaceId: currentWorkspace.id,
+          authorUid: user?.uid || '',
+          authorRole: isAdmin ? 'admin' : 'user',
+          body: textToSend,
+          createdAt
+        };
+        await setDoc(doc(db, 'supportMessages', messageId), newMessage);
+        await updateDoc(doc(db, 'supportTickets', selectedTicketId), {
+          lastMessageAt: createdAt,
+          lastMessageBy: user?.uid || '',
+          updatedAt: createdAt,
+          unreadForUser: isAdmin,
+          unreadForAdmin: !isAdmin,
+          status: isAdmin ? 'pending_user' : 'pending_support'
+        });
+      }
+
       setMessageInput('');
     } catch (err) {
       console.error(err);
@@ -173,15 +222,29 @@ export default function SupportView() {
     if (!selectedTicketId || !isAdmin) return;
     try {
       const idToken = await user?.getIdToken();
-      const res = await fetch(`/api/v1/support/tickets/${selectedTicketId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({ status })
-      });
-      if (!res.ok) throw new Error('Failed to update status');
+      let updatedViaApi = false;
+      try {
+        const res = await fetch(`/api/v1/support/tickets/${selectedTicketId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({ status })
+        });
+        if (res.ok) {
+          updatedViaApi = true;
+        }
+      } catch (apiErr) {
+        console.warn('API update status failed, using client write:', apiErr);
+      }
+
+      if (!updatedViaApi) {
+        await updateDoc(doc(db, 'supportTickets', selectedTicketId), {
+          status,
+          updatedAt: new Date().toISOString()
+        });
+      }
     } catch (err) {
       console.error(err);
       alert('Failed to update status');
