@@ -349,6 +349,22 @@ reportRouter.get("/cash-flow", async (req, res) => {
   }
 });
 
+function calculateMonthDateRange(monthStr: string): { startDate: string; endDate: string } {
+  const [yearStr, monthNumStr] = monthStr.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthNumStr, 10);
+  if (!year || !month || month < 1 || month > 12) {
+    return { startDate: `${monthStr}-01`, endDate: `${monthStr}-31` };
+  }
+  const lastDay = new Date(year, month, 0).getDate();
+  const mPadded = String(month).padStart(2, '0');
+  const dPadded = String(lastDay).padStart(2, '0');
+  return {
+    startDate: `${year}-${mPadded}-01`,
+    endDate: `${year}-${mPadded}-${dPadded}`
+  };
+}
+
 reportRouter.get("/budget-vs-actual", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const result = WorkspaceIdSchema.extend({ month: z.string().optional() }).safeParse(req.query);
@@ -361,8 +377,8 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
 
     let txQuery: admin.firestore.Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
     if (month) {
-      const monthStr = String(month);
-      txQuery = txQuery.where("date", ">=", `${monthStr}-01`).where("date", "<=", `${monthStr}-31`);
+      const { startDate: mStart, endDate: mEnd } = calculateMonthDateRange(String(month));
+      txQuery = txQuery.where("date", ">=", mStart).where("date", "<=", mEnd);
     }
 
     const [budgetsSnap, transactionsSnap, accountsSnap] = await Promise.all([

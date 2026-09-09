@@ -13,20 +13,27 @@ try {
   console.warn('[Firebase Admin] Warning: Could not read firebase-applet-config.json:', error);
 }
 
-const activeFirebaseProjectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId || 'macro-potion-lln7n';
+const activeFirebaseProjectId = process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || firebaseConfig.projectId;
 
-if (admin.apps.length === 0) {
+function initializeAdminApp() {
+  if (admin.apps.length === 0) {
+    if (!activeFirebaseProjectId) {
+      throw new Error('[Firebase Admin Error] Missing Firebase Project ID configuration. Set FIREBASE_PROJECT_ID environment variable or provide firebase-applet-config.json.');
+    }
+    admin.initializeApp({
+      projectId: activeFirebaseProjectId,
+    });
+  }
+}
+
+if (activeFirebaseProjectId && admin.apps.length === 0) {
   admin.initializeApp({
     projectId: activeFirebaseProjectId,
   });
 }
 
 export const getDb = (): Firestore => {
-  if (admin.apps.length === 0) {
-    admin.initializeApp({
-      projectId: activeFirebaseProjectId,
-    });
-  }
+  initializeAdminApp();
   const dbId = process.env.FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)';
   if (dbId && dbId !== '(default)') {
     return getFirestore(admin.app(), dbId);

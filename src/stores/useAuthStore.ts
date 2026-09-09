@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (user) {
       user.getIdTokenResult().then((res) => {
         const tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
-        set({ isAdmin: tokenIsAdmin || get().userProfile?.role === 'admin' });
+        set({ isAdmin: tokenIsAdmin });
       }).catch(console.error);
     } else {
       set({ isAdmin: false });
@@ -59,7 +59,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   setIsAdmin: (isAdmin) => set({ isAdmin }),
   checkTokenAdminClaim: async () => {
-    const { user, userProfile } = get();
+    const { user } = get();
     if (!user) {
       set({ isAdmin: false });
       return false;
@@ -67,29 +67,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       let res = await user.getIdTokenResult();
       let tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
-      if (!tokenIsAdmin && userProfile?.role === 'admin') {
+      if (!tokenIsAdmin) {
         // Force refresh to grab newly granted custom claim
         await user.getIdToken(true);
         res = await user.getIdTokenResult();
         tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
       }
-      const finalIsAdmin = tokenIsAdmin || userProfile?.role === 'admin';
-      set({ isAdmin: finalIsAdmin });
-      return finalIsAdmin;
+      set({ isAdmin: tokenIsAdmin });
+      return tokenIsAdmin;
     } catch (err) {
       console.warn("Failed to check token admin claim:", err);
-      const fallback = userProfile?.role === 'admin';
-      set({ isAdmin: fallback });
-      return fallback;
+      set({ isAdmin: false });
+      return false;
     }
   },
   setUserProfile: (userProfile) => {
     set({ userProfile });
     const { user, isAdmin } = get();
-    if (userProfile?.role === 'admin' && user && !isAdmin) {
+    if (user && !isAdmin) {
       get().checkTokenAdminClaim().catch(console.error);
-    } else if (userProfile) {
-      set({ isAdmin: get().isAdmin || userProfile.role === 'admin' });
     }
   },
   setWorkspaces: (workspaces) => set({ workspaces }),
@@ -138,24 +134,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     try {
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, { role });
-      // Force refresh auth token so custom claims update immediately
-      try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/v1/admin/users/${user.uid}/role`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ role })
+      });
+
+      if (res.ok) {
         await user.getIdToken(true);
-      } catch (err) {
-        console.warn("Could not force-refresh ID token:", err);
-      }
-      if (userProfile) {
-        set({ userProfile: { ...userProfile, role } });
+        if (userProfile) {
+          set({ userProfile: { ...userProfile, role } });
+        }
       } else {
-        set({ 
-          userProfile: { 
-            uid: user.uid, 
-            email: user.email || '', 
-            role 
-          } as UserProfile 
-        });
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server rejected role update: ${res.statusText}`);
       }
     } catch (error) {
       console.error("Failed to update user role:", error);
