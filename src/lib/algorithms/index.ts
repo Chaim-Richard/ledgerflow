@@ -12,6 +12,7 @@ import { RULE_INDUCTION_ALGO } from './rule-induction';
 import { FENWICK_TIME_TRAVEL_ALGO } from './fenwick';
 import { BENFORDS_LAW_ALGO } from './benfords-law';
 import { DUPLICATE_DETECTION_ALGO } from './duplicate-detection';
+import { ISOLATION_FOREST_ALGO } from './isolation-forest-algo';
 
 import { CASH_RUNWAY_ALGO } from './cash-runway';
 import { CAPITAL_BUDGETING_ALGO } from './capital-budgeting';
@@ -74,6 +75,7 @@ export const FINANCIAL_ALGORITHMS: Record<string, AlgorithmDefinition> = {
   'system_1': FENWICK_TIME_TRAVEL_ALGO,
   'forensics_4': BENFORDS_LAW_ALGO,
   'forensics_5': DUPLICATE_DETECTION_ALGO,
+  'forensics_isolation_forest': ISOLATION_FOREST_ALGO,
   'forensics_6': EXPENSE_POLICY_ALGO,
   'planning_3': CASH_RUNWAY_ALGO,
   'planning_4': MONTE_CARLO_ALGO,
