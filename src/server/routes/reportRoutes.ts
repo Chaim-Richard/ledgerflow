@@ -30,13 +30,21 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
   await validateWorkspaceMember(db, workspaceId, req.user);
 }
 
-async function getReportContext(req: AuthenticatedRequest, workspaceId: string) {
+async function getReportContext(req: AuthenticatedRequest, workspaceId: string, startDate?: string, endDate?: string) {
   const db = getDb();
   await authorizeWorkspace(req, workspaceId);
   const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get();
   
+  let txQuery: admin.firestore.Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
+  if (startDate) {
+    txQuery = txQuery.where("date", ">=", startDate);
+  }
+  if (endDate) {
+    txQuery = txQuery.where("date", "<=", endDate);
+  }
+  
   const transactions: any[] = [];
-  const txStream = db.collection("transactions").where("workspaceId", "==", workspaceId).stream();
+  const txStream = txQuery.stream();
   
   for await (const chunk of txStream as any) {
     transactions.push((chunk as any).data());
@@ -54,7 +62,7 @@ reportRouter.get("/profit-and-loss", async (req, res) => {
   if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
   const { workspaceId, startDate, endDate } = result.data;
   try {
-    const { accounts, transactions } = await getReportContext(authReq, workspaceId);
+    const { accounts, transactions } = await getReportContext(authReq, workspaceId, startDate, endDate);
     const start = startDate || "1970-01-01";
     const end = endDate || "2099-12-31";
     const pl: any = {
@@ -105,7 +113,7 @@ reportRouter.get("/balance-sheet", async (req, res) => {
   if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
   const { workspaceId, endDate } = result.data;
   try {
-    const { accounts, transactions } = await getReportContext(authReq, workspaceId);
+    const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, endDate);
     const end = endDate || "2099-12-31";
 
     const balances: Record<string, number> = {};
@@ -277,9 +285,17 @@ reportRouter.get("/cash-flow", async (req, res) => {
     await authorizeWorkspace(authReq, workspaceId);
     const db = getDb();
     
+    let txQuery: admin.firestore.Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
+    if (startDate) {
+      txQuery = txQuery.where("date", ">=", String(startDate));
+    }
+    if (endDate) {
+      txQuery = txQuery.where("date", "<=", String(endDate));
+    }
+
     const [accountsSnap, transactionsSnap] = await Promise.all([
       db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get(),
-      db.collection("transactions").where("workspaceId", "==", workspaceId).get()
+      txQuery.get()
     ]);
 
     const accounts = accountsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
@@ -342,9 +358,16 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
   try {
     await authorizeWorkspace(authReq, workspaceId);
     const db = getDb();
+
+    let txQuery: admin.firestore.Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
+    if (month) {
+      const monthStr = String(month);
+      txQuery = txQuery.where("date", ">=", `${monthStr}-01`).where("date", "<=", `${monthStr}-31`);
+    }
+
     const [budgetsSnap, transactionsSnap, accountsSnap] = await Promise.all([
       db.collection("budgets").where("workspaceId", "==", workspaceId).get(),
-      db.collection("transactions").where("workspaceId", "==", workspaceId).get(),
+      txQuery.get(),
       db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get()
     ]);
 
