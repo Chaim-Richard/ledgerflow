@@ -295,7 +295,11 @@ STRICT ARCHITECTURAL INVARIANTS:
     });
     const rawData = this.safeJsonParse(result.text, {});
     const parsedResult = ReceiptPayloadSchema.safeParse(rawData);
-    return parsedResult.success ? parsedResult.data : rawData;
+    if (!parsedResult.success) {
+      console.warn("[AIBackendService] Receipt schema validation failed:", parsedResult.error);
+      throw new Error(`AI generated receipt failed schema validation: ${parsedResult.error.message}`);
+    }
+    return parsedResult.data;
   }
 
   private async parseStatement(data: any) {

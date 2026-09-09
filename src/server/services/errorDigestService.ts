@@ -1,5 +1,6 @@
 import { getDb } from '../db/firestore';
 import { sendErrorDigestEmail, ErrorGroupSummary } from './emailService';
+import { sha256Sync } from '../../lib/algorithms';
 
 export interface ProcessErrorDigestOptions {
   hoursBack?: number;
@@ -44,7 +45,7 @@ export function generateErrorFingerprint(source: string, message: string, stack?
   // 4. Normalize whitespace
   normalizedMsg = normalizedMsg.replace(/\s+/g, ' ').trim();
 
-  // 5. Normalize top stack frames if present
+  // 5. Normalize top stack frames if present (top 3 frames, paths preserved, line/column stripped)
   let stackSignature = '';
   if (stack && typeof stack === 'string') {
     const lines = stack.split('\n')
@@ -54,11 +55,8 @@ export function generateErrorFingerprint(source: string, message: string, stack?
     const topFrames = lines.slice(0, 3).map(frame => {
       return frame
         .replace(/:\d+:\d+/g, '')
-        .replace(/\?.*$/g, '')
-        .replace(/(?:\/[^\s)]+)+/g, (path) => {
-          const parts = path.split('/');
-          return '/' + parts.slice(-2).join('/');
-        });
+        .replace(/:\d+/g, '')
+        .replace(/\?.*$/g, '');
     });
 
     if (topFrames.length > 0) {
@@ -66,7 +64,8 @@ export function generateErrorFingerprint(source: string, message: string, stack?
     }
   }
 
-  return `${source}::${normalizedMsg}${stackSignature}`;
+  const canonicalSignature = `${source}::${normalizedMsg}${stackSignature}`;
+  return sha256Sync(canonicalSignature);
 }
 
 /**

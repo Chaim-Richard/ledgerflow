@@ -319,9 +319,9 @@ export const AdminGlobalConfigSchema = z.object({
 export const ReceiptLineItemSchema = z.object({
   description: z.string().min(1, "Line description is required").max(500),
   amountCents: z.number().int("amountCents must be an integer").min(0),
-  category: z.string().max(500).optional(),
-  quantity: z.number().positive().finite().optional(),
-  unitPriceCents: z.number().int("unitPriceCents must be an integer").min(0).optional(),
+  category: z.string().min(1, "Category is required").max(500),
+  quantity: z.number().positive().finite(),
+  unitPriceCents: z.number().int("unitPriceCents must be an integer").min(0),
   tags: z.array(z.string()).optional()
 });
 
@@ -329,13 +329,13 @@ export const ReceiptPayloadSchema = z.object({
   vendorName: z.string().min(1, "Vendor name is required").max(200),
   date: z.string().optional(),
   totalAmountCents: z.number().int("totalAmountCents must be an integer").min(0),
-  taxAmountCents: z.number().int("taxAmountCents must be an integer").min(0).optional().default(0),
-  tipAmountCents: z.number().int("tipAmountCents must be an integer").min(0).optional().default(0),
+  taxAmountCents: z.number().int("taxAmountCents must be an integer").min(0),
+  tipAmountCents: z.number().int("tipAmountCents must be an integer").min(0),
   discountAmountCents: z.number().int("discountAmountCents must be an integer").min(0).optional().default(0),
   serviceChargeAmountCents: z.number().int("serviceChargeAmountCents must be an integer").min(0).optional().default(0),
   roundingAdjustmentCents: z.number().int("roundingAdjustmentCents must be an integer").optional().default(0),
-  categorySuggestion: z.string().max(500).optional(),
-  lines: z.array(ReceiptLineItemSchema).optional().default([])
+  categorySuggestion: z.string().min(1, "Category suggestion is required").max(500),
+  lines: z.array(ReceiptLineItemSchema)
 });
 
 export const ErrorTelemetrySchema = z.object({

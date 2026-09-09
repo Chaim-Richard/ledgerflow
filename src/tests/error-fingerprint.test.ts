@@ -4,6 +4,7 @@ import {
   generateErrorFingerprint, 
   aggregateErrorSignatures 
 } from '../server/services/errorDigestService.ts';
+import { sha256Sync } from '../lib/algorithms.ts';
 
 describe('Error Telemetry Fingerprinting and Aggregation', () => {
   test('normalizes dynamic user IDs, digit runs, and quotes into identical fingerprint key', () => {
@@ -13,14 +14,29 @@ describe('Error Telemetry Fingerprinting and Aggregation', () => {
 
     assert.equal(fp1, fp2);
     assert.equal(fp2, fp3);
-    assert.equal(fp1, 'frontend::User # not found');
+    assert.match(fp1, /^[a-f0-9]{64}$/, 'Fingerprint must be a valid 64-character SHA-256 hex hash');
+    
+    const expectedRaw = 'frontend::User # not found';
+    assert.equal(fp1, sha256Sync(expectedRaw));
   });
 
   test('normalizes UUIDs and hex IDs in error messages', () => {
     const uuidMsg = 'Failed to load workspace 123e4567-e89b-12d3-a456-426614174000 document';
     const fp = generateErrorFingerprint('backend', uuidMsg);
 
-    assert.equal(fp, 'backend::Failed to load workspace <id> document');
+    const expectedRaw = 'backend::Failed to load workspace <id> document';
+    assert.equal(fp, sha256Sync(expectedRaw));
+  });
+
+  test('incorporates top 3 stack frames with preserved paths but stripped lines', () => {
+    const stack = `Error: Something broke
+    at compute (/workspace/src/lib/algorithms.ts:872:25)
+    at Object.test (/workspace/src/tests/receipt.test.ts:15:3)`;
+    
+    const fp = generateErrorFingerprint('backend', 'Database error', stack);
+    
+    const expectedRaw = 'backend::Database error::at compute (/workspace/src/lib/algorithms.ts)|at Object.test (/workspace/src/tests/receipt.test.ts)';
+    assert.equal(fp, sha256Sync(expectedRaw));
   });
 
   test('aggregates variable user error messages into a single ErrorGroupSummary', () => {
