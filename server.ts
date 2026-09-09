@@ -157,13 +157,25 @@ const upload = multer({
 const getDb = () => {
   const dbId = firebaseConfig.firestoreDatabaseId || process.env.FIRESTORE_DATABASE_ID || "(default)";
   try {
+    let firestoreInstance;
     if (dbId && dbId !== "(default)") {
-      return getFirestore(admin.app(), dbId);
+      firestoreInstance = getFirestore(admin.app(), dbId);
+    } else {
+      firestoreInstance = getFirestore(admin.app());
     }
-    return getFirestore(admin.app());
+    try {
+      firestoreInstance.settings({ ignoreUndefinedProperties: true });
+    } catch {
+      // settings already initialized
+    }
+    return firestoreInstance;
   } catch (error) {
     console.error(`[Firebase Admin] Failed getFirestore for: ${dbId}`, error);
-    return getFirestore(admin.app()); 
+    const fallbackInstance = getFirestore(admin.app()); 
+    try {
+      fallbackInstance.settings({ ignoreUndefinedProperties: true });
+    } catch {}
+    return fallbackInstance;
   }
 };
 
@@ -1118,14 +1130,25 @@ async function startServer() {
       const sanitizedStack = rawData.stack ? SecurityService.scrubPII(rawData.stack).slice(0, 4000) : undefined;
       const sanitizedComponentStack = rawData.componentStack ? SecurityService.scrubPII(rawData.componentStack).slice(0, 2000) : undefined;
 
-      const record = {
-        ...rawData,
+      const record: Record<string, any> = {
         id: errorId,
         message: sanitizedMessage,
-        stack: sanitizedStack,
-        componentStack: sanitizedComponentStack,
         createdAt: rawData.createdAt || new Date().toISOString()
       };
+
+      if (rawData.workspaceId) record.workspaceId = rawData.workspaceId;
+      if (rawData.userId) record.userId = rawData.userId;
+      if (rawData.userEmail) record.userEmail = rawData.userEmail;
+      if (sanitizedStack) record.stack = sanitizedStack;
+      if (sanitizedComponentStack) record.componentStack = sanitizedComponentStack;
+      if (rawData.url) record.url = rawData.url;
+      if (rawData.userAgent) record.userAgent = rawData.userAgent;
+      if (rawData.appVersion) record.appVersion = rawData.appVersion;
+      if (rawData.release) record.release = rawData.release;
+      if (rawData.source) record.source = rawData.source;
+      if (rawData.severity) record.severity = rawData.severity;
+      if (rawData.metadata) record.metadata = rawData.metadata;
+      if (rawData.ticketId) record.ticketId = rawData.ticketId;
 
       await db.collection("errorLogs").doc(errorId).set(record);
       res.json({ status: "success", errorId });

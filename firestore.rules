@@ -17,7 +17,8 @@ service cloud.firestore {
       return isSignedIn() && (
         request.auth.token.get('admin', false) == true ||
         request.auth.token.get('role', '') == 'admin' ||
-        request.auth.token.get('email', '') == 'shmuelbiller@gmail.com'
+        request.auth.token.get('email', '') == 'shmuelbiller@gmail.com' ||
+        (request.auth.token.email != null && request.auth.token.email == 'shmuelbiller@gmail.com')
       );
     }
 
@@ -68,8 +69,8 @@ service cloud.firestore {
 
     // Workspaces collection rules
     match /workspaces/{workspaceId} {
-      allow get: if isSignedIn() && (resource == null || resource.data.uid == request.auth.uid || (resource.data.admins != null && resource.data.admins[request.auth.uid] == true));
-      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow get: if isSignedIn() && (isPlatformAdmin() || resource == null || resource.data.uid == request.auth.uid || (resource.data.admins != null && resource.data.admins[request.auth.uid] == true));
+      allow list: if isSignedIn() && (isPlatformAdmin() || resource.data.uid == request.auth.uid || (resource.data.admins != null && resource.data.admins[request.auth.uid] == true));
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isValidId(workspaceId) &&
         request.resource.data.name.size() < 128 &&
         (!("description" in request.resource.data) || request.resource.data.description.size() < 1000) &&
@@ -310,11 +311,12 @@ service cloud.firestore {
     match /supportTickets/{ticketId} {
       allow read: if isSignedIn() && (
         isPlatformAdmin() ||
+        resource.data.uid == request.auth.uid ||
         isWorkspaceMember(resource.data.workspaceId)
       );
       allow create: if isSignedIn()
         && request.resource.data.uid == request.auth.uid
-        && isWorkspaceMember(request.resource.data.workspaceId)
+        && (isPlatformAdmin() || isWorkspaceMember(request.resource.data.workspaceId))
         && isValidId(ticketId)
         && request.resource.data.subject is string && request.resource.data.subject.size() <= 200
         && request.resource.data.status == 'open'
@@ -334,12 +336,12 @@ service cloud.firestore {
     match /errorLogs/{logId} {
       allow read: if isSignedIn() && (
         isPlatformAdmin() ||
-        (resource != null && isWorkspaceMember(resource.data.workspaceId))
+        (resource != null && (resource.data.userId == request.auth.uid || isWorkspaceMember(resource.data.workspaceId)))
       );
       allow create: if isSignedIn()
-        && isWorkspaceMember(request.resource.data.workspaceId)
+        && (isPlatformAdmin() || isWorkspaceMember(request.resource.data.workspaceId) || request.resource.data.userId == request.auth.uid)
         && isValidId(logId)
-        && request.resource.data.message is string && request.resource.data.message.size() <= 2000
+        && request.resource.data.message is string && request.resource.data.message.size() <= 4000
         && affectedKeys(['id', 'workspaceId', 'userId', 'userEmail', 'message', 'stack', 'componentStack', 'url', 'userAgent', 'appVersion', 'release', 'source', 'severity', 'metadata', 'ticketId', 'createdAt']);
       allow update, delete: if false; // Immutable forensic error telemetry
     }
@@ -347,6 +349,7 @@ service cloud.firestore {
     match /supportMessages/{messageId} {
       allow read: if isSignedIn() && (
         isPlatformAdmin() ||
+        resource.data.authorUid == request.auth.uid ||
         isWorkspaceMember(resource.data.workspaceId)
       );
       allow create: if isSignedIn()
