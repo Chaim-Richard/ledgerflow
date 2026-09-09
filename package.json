@@ -14,7 +14,7 @@
     "lint": "tsc --noEmit && eslint .",
     "test": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test src/tests/*.test.ts src/lib/*.test.ts",
     "test:rules": "firebase emulators:exec --only firestore \"tsx --test src/tests/rules/firestore.rules.test.ts\"",
-    "verify": "npm ci --dry-run && npm run lint && npm test && npm run test:rules && npm audit --audit-level=high && npx playwright test",
+    "verify": "npm ci --dry-run --ignore-scripts && npm run lint && npm test && npm run test:rules && npm audit --audit-level=high && npx playwright test",
     "preview": "vite preview",
     "start": "node dist/server.cjs",
     "prepare": "husky",

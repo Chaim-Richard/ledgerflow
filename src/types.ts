@@ -386,6 +386,8 @@ export interface ChartAccount {
   subtype?: string;  // e.g. "Credit Card", "Checking"
   taxCategory?: string; // e.g. "Schedule C: Office Expenses"
   currency?: string; // Multi-currency support
+  bankId?: string;   // OFX / Bank routing identifier
+  accountType?: 'CHECKING' | 'SAVINGS' | 'MONEYMRKT' | 'CREDITLINE' | (string & {}); // OFX Account Type
   balanceCents: number;
   projectAllocations?: Record<string, number>;
   openingBalanceCents?: number;

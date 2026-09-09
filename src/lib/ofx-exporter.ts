@@ -1,4 +1,5 @@
 import { Transaction, ChartAccount } from '../types';
+import { resolveAccountRole } from './accountUtils';
 
 /**
  * Open Financial Exchange (OFX) Export Utility
@@ -6,6 +7,21 @@ import { Transaction, ChartAccount } from '../types';
  */
 export function generateOFX(transactions: Transaction[], account: ChartAccount): string {
   const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+  const role = resolveAccountRole(account);
+
+  const curDef = (account.currency || 'USD').toUpperCase();
+  const bankId = account.bankId || '999999999';
+  const acctId = account.code || account.id;
+
+  let defaultAcctType = 'CHECKING';
+  if (role === 'liability' || role === 'ap' || account.type === 'liability') {
+    defaultAcctType = 'CREDITLINE';
+  } else if (account.subtype?.toLowerCase().includes('saving')) {
+    defaultAcctType = 'SAVINGS';
+  } else if (account.subtype?.toLowerCase().includes('money')) {
+    defaultAcctType = 'MONEYMRKT';
+  }
+  const acctType = (account.accountType || defaultAcctType).toUpperCase();
   
   const header = `OFXHEADER:100
 DATA:OFXSGML
@@ -36,11 +52,11 @@ NEWFILEUID:NONE
 <SEVERITY>INFO
 </STATUS>
 <STMTRS>
-<CURDEF>USD
+<CURDEF>${curDef}
 <BANKACCTFROM>
-<BANKID>999999999
-<ACCTID>${account.code}
-<ACCTTYPE>CHECKING
+<BANKID>${bankId}
+<ACCTID>${acctId}
+<ACCTTYPE>${acctType}
 </BANKACCTFROM>
 <BANKTRANLIST>
 <DTSTART>${timestamp}
@@ -50,13 +66,14 @@ NEWFILEUID:NONE
   const body = transactions.map(tx => {
     // Find the line corresponding to this account to get the specific amount
     const accountLine = tx.lines.find(l => l.accountId === account.id);
-    const amount = (accountLine?.amountCents || 0) / 100;
+    const amountCents = accountLine?.amountCents || 0;
+    const amount = amountCents / 100;
     
-    // OFX uses bank perspective: DEBIT is money out, CREDIT is money in
-    // In our ledger, a positive amount in an Asset account is a DEBIT (money in).
-    // This depends on account type. For simplicity, we use the raw sign first.
+    // OFX uses bank/statement perspective:
+    // Positive ledger amount (Debit) = deposit / payment towards liability = CREDIT
+    // Negative ledger amount (Credit) = withdrawal / new liability charge = DEBIT
     const type = amount >= 0 ? 'CREDIT' : 'DEBIT'; 
-    const dtPosted = tx.date.replace(/-/g, '') + '120000';
+    const dtPosted = (tx.date ? tx.date.replace(/-/g, '') : timestamp.slice(0, 8)) + '120000';
     
     return `
 <STMTTRN>
@@ -64,8 +81,8 @@ NEWFILEUID:NONE
 <DTPOSTED>${dtPosted}
 <TRNAMT>${amount.toFixed(2)}
 <FITID>${tx.id}
-<NAME>${tx.description.slice(0, 32)}
-<MEMO>${tx.description}
+<NAME>${(tx.description || 'Transaction').slice(0, 32)}
+<MEMO>${tx.description || ''}
 </STMTTRN>`;
   }).join('');
 
