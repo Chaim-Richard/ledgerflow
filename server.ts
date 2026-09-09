@@ -89,6 +89,20 @@ export function getStripe(): Stripe {
   return stripeClient;
 }
 
+export function isSystemJobAuthorized(
+  decodedToken?: Record<string, unknown> | null,
+  providedSecret?: string,
+  cronSecret?: string
+): boolean {
+  if (cronSecret && providedSecret && cronSecret === providedSecret) {
+    return true;
+  }
+  if (decodedToken && (decodedToken.admin === true || decodedToken.role === 'admin')) {
+    return true;
+  }
+  return false;
+}
+
 // --- Environment Validation ---
 // Determine default NODE_ENV: fail-safe to "production" unless explicitly set to "development" or running ts source directly
 const isTsSourceRun = Boolean(process.argv[1]?.endsWith(".ts"));
@@ -3275,13 +3289,6 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
         
         t.update(userRef, updateData);
 
-        // Update custom claims if role changed to admin or from admin
-        if (validated.role && validated.role !== before.role) {
-          await admin.auth().setCustomUserClaims(userId, {
-            admin: validated.role === 'admin'
-          });
-        }
-        
         const auditResult = { userId, ...before, ...updateData };
 
         await writeAuditLog(
@@ -3295,21 +3302,28 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
           t
         );
 
-        return auditResult;
+        return { auditResult, before, roleChanged: validated.role && validated.role !== before.role, newRole: validated.role };
       };
 
-      let result;
+      let mutationOutput;
       if (scopedKey) {
-        result = await executeIdempotent(scopedKey, {
+        mutationOutput = await executeIdempotent(scopedKey, {
           actor: authReq.user.uid,
           workspaceId: 'system',
           operationType: 'ADMIN_USER_UPDATED'
         }, performMutation);
       } else {
-        result = await db.runTransaction(performMutation);
+        mutationOutput = await db.runTransaction(performMutation);
       }
 
-      res.json({ status: "success", data: result });
+      // Update custom claims after transaction resolves successfully
+      if (mutationOutput?.roleChanged) {
+        await admin.auth().setCustomUserClaims(userId, {
+          admin: mutationOutput.newRole === 'admin'
+        });
+      }
+
+      res.json({ status: "success", data: mutationOutput.auditResult });
     } catch (err: any) {
       handleApiError(res, err);
     }
@@ -3354,34 +3368,27 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
-  // Scheduled Recurring Processing Endpoint (Authenticated via Admin, User or System Secret)
+  // Scheduled Recurring Processing Endpoint (Authenticated via Admin or System Secret)
   app.post("/api/v1/system/recurring/process", async (req: express.Request, res: express.Response) => {
     try {
-      const systemCronSecret = process.env.CRON_SECRET || process.env.SESSION_SECRET || "ledgerflow-system-cron-secret";
+      const cronSecret = process.env.CRON_SECRET;
       const providedSecret = req.headers["x-cron-secret"] as string;
+      const authHeader = req.headers.authorization;
 
-      let authorized = false;
-      if (providedSecret && providedSecret === systemCronSecret) {
-        authorized = true;
-      } else {
-        const authHeader = req.headers.authorization;
-        if (authHeader?.startsWith("Bearer ")) {
-          const token = authHeader.split("Bearer ")[1];
-          try {
-            const decoded = await admin.auth().verifyIdToken(token);
-            if (decoded && (decoded.admin === true || decoded.role === 'admin' || decoded.uid)) {
-              authorized = true;
-            }
-          } catch {
-            authorized = false;
-          }
+      let decodedToken: admin.auth.DecodedIdToken | null = null;
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.split("Bearer ")[1];
+        try {
+          decodedToken = await admin.auth().verifyIdToken(token);
+        } catch {
+          decodedToken = null;
         }
       }
 
-      if (!authorized) {
+      if (!isSystemJobAuthorized(decodedToken, providedSecret, cronSecret)) {
         return res.status(403).json({ 
           status: "error", 
-          message: "Forbidden: Requires user authorization or valid cron secret." 
+          message: "Forbidden: Requires admin authorization or valid cron secret." 
         });
       }
 
@@ -3397,28 +3404,20 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.post("/api/v1/system/telemetry/errors/digest", async (req: express.Request, res: express.Response) => {
     try {
       const cronSecret = process.env.CRON_SECRET;
-      const providedSecret = req.headers['x-cron-secret'];
+      const providedSecret = req.headers["x-cron-secret"] as string;
       const authHeader = req.headers.authorization;
 
-      let authorized = false;
-
-      if (cronSecret && providedSecret && cronSecret === providedSecret) {
-        authorized = true;
-      } else if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split('Bearer ')[1];
-        if (token) {
-          try {
-            const decoded = await admin.auth().verifyIdToken(token);
-            if (decoded && (decoded.admin === true || decoded.role === 'admin')) {
-              authorized = true;
-            }
-          } catch {
-            authorized = false;
-          }
+      let decodedToken: admin.auth.DecodedIdToken | null = null;
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.split("Bearer ")[1];
+        try {
+          decodedToken = await admin.auth().verifyIdToken(token);
+        } catch {
+          decodedToken = null;
         }
       }
 
-      if (!authorized) {
+      if (!isSystemJobAuthorized(decodedToken, providedSecret, cronSecret)) {
         return res.status(403).json({ 
           status: "error", 
           message: "Forbidden: Requires admin authorization or valid cron secret." 
@@ -4484,11 +4483,13 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('⚠️ [Server] Unhandled Promise Rejection caught at:', promise, 'reason:', reason);
 });
 
-console.debug("🌀 [Server] Booting LedgerFlow Backend...");
-startServer().catch(err => {
-  console.error("💥 [Server] Critical Startup Failure:", err);
-  process.exit(1);
-});
+if (process.env.NODE_ENV !== "test") {
+  console.debug("🌀 [Server] Booting LedgerFlow Backend...");
+  startServer().catch(err => {
+    console.error("💥 [Server] Critical Startup Failure:", err);
+    process.exit(1);
+  });
+}
 async function trainClassifierWithWorkspaceData(classifier: import("./src/lib/algorithms.ts").BayesianClassifier, workspaceId: string, apiKeyId?: string) {
   const db = getDb();
   let trainedCount = 0;

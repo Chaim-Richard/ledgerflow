@@ -61,7 +61,7 @@ export default function SupportView() {
     scrollToBottom();
   }, [messages, selectedTicketId]);
 
-  const isAdmin = userProfile?.role === 'admin';
+  const isAdmin = useAuthStore(s => s.isAdmin);
 
   // Filter tickets
   const filteredTickets = tickets.filter(t => {

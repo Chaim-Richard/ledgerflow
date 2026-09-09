@@ -40,6 +40,7 @@ npm run dev              # Start Vite dev server on port 3000
 npm run build            # Full production build
 npm run lint             # Run tsc and eslint
 npm test                 # Run test suite
+npm run grant-admin <uid-or-email> # Grant platform admin claim and update user profile
 npm run scaffold:plugin  # Scaffold a new plugin component
 npm run scaffold:algo    # Scaffold a new algorithm
 ```

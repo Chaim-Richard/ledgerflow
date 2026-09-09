@@ -27,7 +27,7 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
   const currentTabDef = APP_TABS.find(t => t.id === activeTab);
   if (!currentTabDef || !currentTabDef.groupId) return null;
   
-  const isOwner = userProfile?.role === 'admin';
+  const isOwner = useAuthStore(s => s.isAdmin);
   const groupTabs = APP_TABS.filter(t => t.groupId === currentTabDef.groupId && (!t.requiresOwner || isOwner) && (!t.isAdvanced || isProMode));
   
   if (groupTabs.length <= 1) return null;

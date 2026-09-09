@@ -71,6 +71,7 @@ const Sidebar = React.memo(({
   const { isInstallable, promptInstall } = usePWAInstall();
   const user = useAuthStore(s => s.user);
   const userProfile = useAuthStore(s => s.userProfile);
+  const isAdmin = useAuthStore(s => s.isAdmin);
   const realProjects = useLedgerStore(s => s.projects);
   const rawAccounts = useLedgerStore(s => s.accounts);
   const computedAccounts = useLedgerStore(s => s.computedAccounts);
@@ -177,7 +178,7 @@ const Sidebar = React.memo(({
             )}
             <div className="space-y-1">
               {Object.entries(NAV_GROUPS).map(([groupId, groupLabel]) => {
-                 if (groupId === 'admin' && userProfile?.role !== 'admin') return null;
+                 if (groupId === 'admin' && !isAdmin) return null;
 
                  const Icon = GROUP_ICONS[groupId] || LayoutGrid;
                  const isActive = activeGroupId === groupId;

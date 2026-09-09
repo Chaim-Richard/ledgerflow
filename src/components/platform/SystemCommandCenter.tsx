@@ -384,7 +384,7 @@ export default function SystemCommandCenter() {
   const totalErrors = allLogsCombined.filter((l: any) => l.statusCode >= 500).length;
   const liveErrors = allLogsCombined.filter((l: any) => l.statusCode >= 400);
 
-  const isSystemAdmin = userProfile?.role === 'admin';
+  const isSystemAdmin = useAuthStore(s => s.isAdmin);
 
 
 

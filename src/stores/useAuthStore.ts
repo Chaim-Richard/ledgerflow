@@ -10,6 +10,7 @@ interface AuthState {
   user: FirebaseUser | null;
   isGuest: boolean;
   userProfile: UserProfile | null;
+  isAdmin: boolean;
   workspaces: Workspace[];
   currentWorkspaceId: string | null;
   currentProjectId: string | null;
@@ -18,6 +19,8 @@ interface AuthState {
   setUser: (user: FirebaseUser | null) => void;
   setIsGuest: (val: boolean) => void;
   setUserProfile: (profile: UserProfile | null) => void;
+  setIsAdmin: (isAdmin: boolean) => void;
+  checkTokenAdminClaim: () => Promise<boolean>;
   setWorkspaces: (workspaces: Workspace[]) => void;
   setCurrentWorkspaceId: (id: string | null) => void;
   setCurrentProjectId: (id: string | null) => void;
@@ -32,18 +35,63 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isGuest: typeof localStorage !== "undefined" ? localStorage.getItem("isGuest") === "true" : false,
   userProfile: null,
+  isAdmin: false,
   workspaces: [],
   currentWorkspaceId: localStorage.getItem('ledgerflow_current_workspace'),
   currentProjectId: null,
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    set({ user });
+    if (user) {
+      user.getIdTokenResult().then((res) => {
+        const tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
+        set({ isAdmin: tokenIsAdmin || get().userProfile?.role === 'admin' });
+      }).catch(console.error);
+    } else {
+      set({ isAdmin: false });
+    }
+  },
   setIsGuest: (isGuest) => {
     if (typeof localStorage !== "undefined") {
       localStorage.setItem("isGuest", isGuest ? "true" : "false");
     }
     set({ isGuest });
   },
-  setUserProfile: (userProfile) => set({ userProfile }),
+  setIsAdmin: (isAdmin) => set({ isAdmin }),
+  checkTokenAdminClaim: async () => {
+    const { user, userProfile } = get();
+    if (!user) {
+      set({ isAdmin: false });
+      return false;
+    }
+    try {
+      let res = await user.getIdTokenResult();
+      let tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
+      if (!tokenIsAdmin && userProfile?.role === 'admin') {
+        // Force refresh to grab newly granted custom claim
+        await user.getIdToken(true);
+        res = await user.getIdTokenResult();
+        tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
+      }
+      const finalIsAdmin = tokenIsAdmin || userProfile?.role === 'admin';
+      set({ isAdmin: finalIsAdmin });
+      return finalIsAdmin;
+    } catch (err) {
+      console.warn("Failed to check token admin claim:", err);
+      const fallback = userProfile?.role === 'admin';
+      set({ isAdmin: fallback });
+      return fallback;
+    }
+  },
+  setUserProfile: (userProfile) => {
+    set({ userProfile });
+    const { user, isAdmin } = get();
+    if (userProfile?.role === 'admin' && user && !isAdmin) {
+      get().checkTokenAdminClaim().catch(console.error);
+    } else if (userProfile) {
+      set({ isAdmin: get().isAdmin || userProfile.role === 'admin' });
+    }
+  },
   setWorkspaces: (workspaces) => set({ workspaces }),
   setCurrentWorkspaceId: (currentWorkspaceId) => {
     if (currentWorkspaceId) {
@@ -92,6 +140,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, { role });
+      // Force refresh auth token so custom claims update immediately
+      try {
+        await user.getIdToken(true);
+      } catch (err) {
+        console.warn("Could not force-refresh ID token:", err);
+      }
       if (userProfile) {
         set({ userProfile: { ...userProfile, role } });
       } else {

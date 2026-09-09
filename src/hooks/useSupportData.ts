@@ -16,10 +16,20 @@ import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 export function useSupportData() {
   const user = useAuthStore(s => s.user);
   const userProfile = useAuthStore(s => s.userProfile);
+  const isAdmin = useAuthStore(s => s.isAdmin);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const { setTickets, setMessages, setIsSyncing, selectedTicketId } = useSupportStore();
 
-  const isAdmin = userProfile?.role === 'admin';
+  // Ensure token custom claim is refreshed if profile says admin but token claims are stale
+  useEffect(() => {
+    if (isAdmin && user) {
+      user.getIdTokenResult().then((idTokenResult) => {
+        if (!idTokenResult.claims.admin) {
+          user.getIdToken(true).catch(console.error);
+        }
+      }).catch(console.error);
+    }
+  }, [user, isAdmin]);
 
   // 1. Listen for Tickets
   useEffect(() => {
