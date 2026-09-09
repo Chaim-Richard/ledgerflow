@@ -58,8 +58,10 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
   const results = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     const asOfDate = params.asOfDate || today;
-    const period = params.start && params.end 
-      ? { start: params.start, end: params.end } 
+    const rangeInput = algorithm.inputs.find((i: any) => i.kind === 'dateRange');
+    const range = rangeInput ? params[rangeInput.key] : undefined;
+    const period = range?.start && range?.end 
+      ? { start: range.start, end: range.end } 
       : { start: '1970-01-01', end: asOfDate };
 
     const ctx = buildAlgorithmContext(

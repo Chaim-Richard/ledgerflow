@@ -94,6 +94,7 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
           totalAmountCents: amount,
           currency,
           date: latestNextOccStr,
+          recurrenceOccurrenceKey: `${item.id}:${latestNextOccStr}`,
           status: 'completed',
           type: 'actual',
           tags: [...(template.tags || []), 'recurring'],

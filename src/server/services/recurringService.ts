@@ -81,6 +81,17 @@ export async function processAllRecurring(): Promise<ProcessRecurringResult> {
             throw new Error(`Template ${templateId} is no longer active.`);
           }
 
+          const existingTx = await t.get(db.collection('transactions')
+            .where('workspaceId', '==', wsId)
+            .where('recurrenceOccurrenceKey', '==', `${templateId}:${txDate}`)
+            .limit(1));
+
+          if (!existingTx.empty) {
+            const err = new Error(`Occurrence ${templateId}:${txDate} already generated.`);
+            (err as any).status = 409;
+            throw err;
+          }
+
           // Step B: Ledger mutation writes
           t.set(txRef, {
             ...transaction,

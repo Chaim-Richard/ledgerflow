@@ -98,6 +98,7 @@ export interface Transaction {
   dueDate?: string;
   description: string;
   payee?: string;
+  recurrenceOccurrenceKey?: string;
   
   // Atomic Double-Entry Splits
   lines: TransactionLine[];
@@ -571,6 +572,10 @@ export interface RecurringTransaction {
   isActive: boolean;
   template: Partial<Transaction>;
   createdAt: string;
+  generatedCount?: number;
+  lastErrorCode?: string;
+  lastErrorAt?: string;
+  cursorVersion?: number;
 }
 
 export interface BankStatementLine {

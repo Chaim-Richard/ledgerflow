@@ -1,19 +1,22 @@
-import React, { useState } from 'react';
-import { Download, Database, FileSpreadsheet, Archive, AlertCircle } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Download, Database, FileSpreadsheet, Archive, AlertCircle, Upload } from 'lucide-react';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { toast } from 'sonner';
 import { formatDecimal, resolveAccountName } from '../../../lib/utils';
 
 export default function BackupExportSettings() {
   const [isExporting, setIsExporting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const exportJSON = () => {
+  const exportJSON = async () => {
     setIsExporting(true);
     try {
       const state = useLedgerStore.getState();
-      const payload = {
-        version: "2.0",
-        exportDate: new Date().toISOString(),
+      const payload: any = {
+        schemaVersion: 1,
+        exportedAt: new Date().toISOString(),
+        workspace: { id: state.currentWorkspaceId },
         transactions: state.transactions,
         accounts: state.accounts,
         projects: state.projects,
@@ -24,14 +27,27 @@ export default function BackupExportSettings() {
         bills: state.bills,
         inventory: state.inventory,
         assets: state.assets,
-        recurring: state.recurring,
+        recurringRules: state.recurring,
         employees: state.employees,
         payRuns: state.payRuns,
         taxRates: state.taxRates,
         partners: state.partners,
         reconciliations: state.reconciliations,
-        autoRules: state.autoRules
+        autoRules: state.autoRules,
+        metadata: {
+          transactionCount: state.transactions.length,
+          currency: state.baseCurrency || 'USD'
+        }
       };
+
+      // Generate SHA-256 checksum of payload content
+      const payloadString = JSON.stringify(payload);
+      const msgBuffer = new TextEncoder().encode(payloadString);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      payload.metadata.checksum = hashHex;
 
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -95,6 +111,49 @@ export default function BackupExportSettings() {
     }
   };
 
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsRestoring(true);
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+
+      if (!payload.schemaVersion || !payload.metadata || !payload.metadata.checksum) {
+        throw new Error("Invalid backup format: Missing schema version or checksum");
+      }
+
+      // Verify checksum
+      const originalChecksum = payload.metadata.checksum;
+      delete payload.metadata.checksum; // Remove checksum to re-hash the exact structure
+      
+      const payloadString = JSON.stringify(payload);
+      const msgBuffer = new TextEncoder().encode(payloadString);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const calculatedChecksum = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      if (originalChecksum !== calculatedChecksum) {
+        throw new Error("Backup file corrupted: Checksum verification failed.");
+      }
+
+      // Restore dry-run/validation
+      if (!Array.isArray(payload.transactions) || !Array.isArray(payload.accounts)) {
+         throw new Error("Backup file invalid: Missing core ledger collections.");
+      }
+
+      toast.success(`Backup validated! Ready to restore ${payload.transactions.length} transactions. (Restore execution pending implementation)`);
+      // NOTE: Actual firestore replacement would go here.
+    } catch (e: any) {
+      console.error("Restore failed:", e);
+      toast.error(`Restore failed: ${e.message}`);
+    } finally {
+      setIsRestoring(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center gap-4 border-b border-[var(--line)] pb-6">
@@ -141,6 +200,31 @@ export default function BackupExportSettings() {
           >
             <Download size={16} />
             Export CSV
+          </button>
+        </div>
+
+        <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Upload className="text-rose-500" size={24} />
+            <h3 className="font-bold text-[var(--text)]">Restore Backup</h3>
+          </div>
+          <p className="text-sm text-zinc-500 mb-6 min-h-[40px]">
+            Restore your workspace from a verified JSON backup file. Validates checksum and schema integrity before importing.
+          </p>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileSelect}
+            accept=".json" 
+            className="hidden" 
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isRestoring}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            <Upload size={16} />
+            Restore Workspace
           </button>
         </div>
       </div>

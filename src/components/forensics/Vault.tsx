@@ -164,58 +164,31 @@ export default function Vault() {
         accounts[0];
 
       let finalLines: any[];
-      if (extractedData.lines && Array.isArray(extractedData.lines) && extractedData.lines.length > 0) {
-        const receiptPayload = {
-          vendorName: vendor,
-          date: extractedData.date,
-          totalAmountCents: amountCents,
-          taxAmountCents: extractedData.taxAmountCents || 0,
-          tipAmountCents: extractedData.tipAmountCents || 0,
-          categorySuggestion: extractedData.category || extractedData.categorySuggestion,
-          lines: extractedData.lines
-        };
+      
+      const receiptPayload = {
+        vendorName: vendor,
+        date: extractedData.date,
+        totalAmountCents: amountCents,
+        taxAmountCents: extractedData.taxAmountCents || 0,
+        tipAmountCents: extractedData.tipAmountCents || 0,
+        discountAmountCents: extractedData.discountAmountCents || 0,
+        serviceChargeAmountCents: extractedData.serviceChargeAmountCents || 0,
+        roundingAdjustmentCents: extractedData.roundingAdjustmentCents || 0,
+        categorySuggestion: extractedData.category || extractedData.categorySuggestion,
+        lines: extractedData.lines || []
+      };
 
-        const validation = validateReceiptPayload(receiptPayload);
-        if (!validation.valid) {
-          toast.error('Receipt validation failed', {
-            id: toastId,
-            description: validation.error || 'Invalid receipt data'
-          });
-          return;
-        }
-
-        const balancedTx = buildBalancedReceiptTransaction(receiptPayload, accounts);
-        finalLines = balancedTx.lines;
-      } else {
-        const { accountId: expAccId, accountName: expAccName } = resolveDeepAccount(
-          extractedData.category || extractedData.categorySuggestion || '',
-          accounts,
-          defaultExpenseAccount
-        );
-        finalLines = [
-          {
-            accountId: expAccId,
-            accountName: expAccName,
-            amountCents: amountCents, // Debit expense
-            description: "Auto-synced from vault",
-            category: extractedData.category || expAccName,
-            isAutoTagged: true,
-            dimensions: {
-              category: extractedData.category || expAccName,
-              location: vendor
-            }
-          },
-          {
-            accountId: cashAccount ? cashAccount.id : '',
-            accountName: cashAccount ? cashAccount.name : 'Operating Cash',
-            amountCents: -amountCents, // Credit cash
-            description: "Vault auto-sync offset",
-            category: "Cash",
-            isAutoTagged: true,
-            dimensions: { location: vendor }
-          }
-        ];
+      const validation = validateReceiptPayload(receiptPayload);
+      if (!validation.valid) {
+        toast.error('Receipt validation failed', {
+          id: toastId,
+          description: validation.error || 'Invalid receipt data'
+        });
+        return;
       }
+
+      const balancedTx = buildBalancedReceiptTransaction(receiptPayload, accounts);
+      finalLines = balancedTx.lines;
 
       const newTx: Partial<Transaction> = {
         uid: uid || "",
