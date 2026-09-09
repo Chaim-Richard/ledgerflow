@@ -13,6 +13,7 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
   const scrollRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore(s => s.user);
   const userProfile = useAuthStore(s => s.userProfile);
+  const isOwner = useAuthStore(s => s.isAdmin);
   const isProMode = useUIStore(s => s.isProMode);
   
   useEffect(() => {
@@ -27,7 +28,6 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
   const currentTabDef = APP_TABS.find(t => t.id === activeTab);
   if (!currentTabDef || !currentTabDef.groupId) return null;
   
-  const isOwner = useAuthStore(s => s.isAdmin);
   const groupTabs = APP_TABS.filter(t => t.groupId === currentTabDef.groupId && (!t.requiresOwner || isOwner) && (!t.isAdvanced || isProMode));
   
   if (groupTabs.length <= 1) return null;

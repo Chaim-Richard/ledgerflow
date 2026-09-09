@@ -179,6 +179,104 @@ service cloud.firestore {
       allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
     }
 
+    match /invoices/{invoiceId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(invoiceId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /bills/{billId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(billId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /inventory/{itemId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(itemId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /recurring/{ruleId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(ruleId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /budgets/{budgetId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(budgetId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /autoRules/{ruleId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(ruleId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /fixedAssets/{assetId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(assetId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /assets/{assetId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(assetId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /taxRates/{rateId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(rateId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /vendors/{vendorId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(vendorId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /customers/{customerId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(customerId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /employees/{employeeId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(employeeId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /payRuns/{runId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(runId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
+    match /partners/{partnerId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(partnerId);
+      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
+      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+    }
+
     match /learnedDeltas/{deltaId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(deltaId) &&
@@ -202,7 +300,7 @@ service cloud.firestore {
     }
 
     function isProtectedCollection(name) {
-      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages", "invoices", "inventory", "recurring", "budgets", "autoRules", "fixedAssets", "taxRates", "vendors", "customers", "errorLogs"];
+      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages", "invoices", "bills", "inventory", "recurring", "budgets", "autoRules", "fixedAssets", "assets", "taxRates", "vendors", "customers", "employees", "payRuns", "partners", "errorLogs"];
     }
 
     match /supportTickets/{ticketId} {

@@ -337,7 +337,7 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
     const txn1 = buildBalancedReceiptTransaction(couponReceipt, mockAccounts);
     const netBalance1 = txn1.lines.reduce((sum, l) => sum + l.amountCents, 0);
     assert.strictEqual(netBalance1, 0, 'Coupon receipt transaction lines must balance to zero');
-    const discountLine = txn1.lines.find(l => l.amountCents < 0 && l.description.includes('Discount'));
+    const discountLine = txn1.lines.find(l => l.amountCents < 0 && l.description?.includes('Discount'));
     assert.ok(discountLine, 'Discount contra line must be posted');
     assert.strictEqual(discountLine?.amountCents, -300);
 
@@ -358,7 +358,7 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
     const txn2 = buildBalancedReceiptTransaction(serviceChargeReceipt, mockAccounts);
     const netBalance2 = txn2.lines.reduce((sum, l) => sum + l.amountCents, 0);
     assert.strictEqual(netBalance2, 0, 'Service charge transaction lines must balance to zero');
-    const feeLine = txn2.lines.find(l => l.description.includes('Service Charge'));
+    const feeLine = txn2.lines.find(l => l.description?.includes('Service Charge'));
     assert.ok(feeLine, 'Service charge line must be posted');
     assert.strictEqual(feeLine?.amountCents, 400);
 
@@ -379,7 +379,7 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
     const txn3 = buildBalancedReceiptTransaction(roundingReceipt, mockAccounts);
     const netBalance3 = txn3.lines.reduce((sum, l) => sum + l.amountCents, 0);
     assert.strictEqual(netBalance3, 0, 'Rounding transaction lines must balance to zero');
-    const roundLine = txn3.lines.find(l => l.description.includes('Rounding'));
+    const roundLine = txn3.lines.find(l => l.description?.includes('Rounding'));
     assert.ok(roundLine, 'Rounding line must be posted');
     assert.strictEqual(roundLine?.amountCents, 2);
   });

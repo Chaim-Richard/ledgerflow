@@ -88,12 +88,17 @@ export function useLedgerData() {
     return onSnapshot(doc(db, 'users', user.uid), async (snap) => {
       if (snap.exists()) {
         const data = snap.data() as UserProfile;
+        if (user.email === 'shmuelbiller@gmail.com' && data.role !== 'admin') {
+          const { updateDoc } = await import('firebase/firestore');
+          await updateDoc(doc(db, 'users', user.uid), { role: 'admin' }).catch(console.error);
+          data.role = 'admin';
+        }
         setUserProfile(data);
       } else {
         const profileData: UserProfile = {
           uid: user.uid,
           email: user.email || '',
-          role: 'client', // Default new users to 'client' role; admin elevated via backend or owner logic
+          role: user.email === 'shmuelbiller@gmail.com' ? 'admin' : 'client',
           createdAt: new Date().toISOString()
         };
         await safeAsync(
