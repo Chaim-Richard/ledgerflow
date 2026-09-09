@@ -1,8 +1,13 @@
 import admin from 'firebase-admin';
+import fs from 'fs';
 
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
-  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.GCP_PROJECT;
+  let firebaseConfig = {};
+  try {
+    firebaseConfig = JSON.parse(fs.readFileSync('firebase-applet-config.json', 'utf8'));
+  } catch (e) {}
+  const projectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
   if (projectId) {
     admin.initializeApp({ projectId });
   } else {

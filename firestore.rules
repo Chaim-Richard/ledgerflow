@@ -14,7 +14,7 @@ service cloud.firestore {
 
     // Helper to check if user has admin custom claim
     function isPlatformAdmin() {
-      return isSignedIn() && (request.auth.token.get('admin', false) == true || request.auth.token.email == 'shmuelbiller@gmail.com');
+      return isSignedIn() && request.auth.token.get('admin', false) == true;
     }
 
     // ID Validation Guard (prevents large string payload poisoning and ID injection)

@@ -13,7 +13,7 @@ try {
   console.warn('[Firebase Admin] Warning: Could not read firebase-applet-config.json:', error);
 }
 
-const activeFirebaseProjectId = process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || firebaseConfig.projectId;
+const activeFirebaseProjectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
 
 function initializeAdminApp() {
   if (admin.apps.length === 0) {
