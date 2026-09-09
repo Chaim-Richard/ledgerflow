@@ -13,15 +13,20 @@ try {
   console.warn('[Firebase Admin] Warning: Could not read firebase-applet-config.json:', error);
 }
 
-const activeFirebaseProjectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
+const activeFirebaseProjectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId || 'macro-potion-lln7n';
 
-if (admin.apps.length === 0 && activeFirebaseProjectId) {
+if (admin.apps.length === 0) {
   admin.initializeApp({
     projectId: activeFirebaseProjectId,
   });
 }
 
 export const getDb = (): Firestore => {
+  if (admin.apps.length === 0) {
+    admin.initializeApp({
+      projectId: activeFirebaseProjectId,
+    });
+  }
   const dbId = process.env.FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)';
   if (dbId && dbId !== '(default)') {
     return getFirestore(admin.app(), dbId);

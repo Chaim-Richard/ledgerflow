@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-import { isSystemJobAuthorized } from '../../server.ts';
+import { isSystemJobAuthorized } from '../server/auth/systemJobAuth.ts';
 
 describe('System Cron & System Job Auth Gates Test Suite', () => {
   test('rejects decoded token with only uid (non-admin regular user)', () => {

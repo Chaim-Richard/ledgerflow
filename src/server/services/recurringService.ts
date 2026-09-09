@@ -1,4 +1,5 @@
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
+import { getDb } from '../db/firestore';
 import { RecurringTransaction } from '../../types';
 import { findDueRecurring } from '../../lib/recurringEngine';
 import { executeIdempotent, deriveScopedOperationKey } from '../utils/idempotency';
@@ -18,7 +19,7 @@ export interface ProcessRecurringResult {
 }
 
 export async function processAllRecurring(): Promise<ProcessRecurringResult> {
-  const db = getFirestore();
+  const db = getDb();
   console.log('[RecurringService] Starting background recurring processing...');
 
   const result: ProcessRecurringResult = {

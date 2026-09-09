@@ -1,4 +1,5 @@
-import { getFirestore, Timestamp, Transaction as FirestoreTransaction } from 'firebase-admin/firestore';
+import { Timestamp, Transaction as FirestoreTransaction } from 'firebase-admin/firestore';
+import { getDb } from '../db/firestore';
 
 export interface IdempotencyRecord {
   id: string;
@@ -61,7 +62,7 @@ export async function executeIdempotent<T>(
   },
   transactionHandler: (t: FirestoreTransaction) => Promise<T>
 ): Promise<T> {
-  const db = getFirestore();
+  const db = getDb();
   const keyRef = db.collection('idempotencyKeys').doc(scopedOperationId);
 
   return await db.runTransaction(async (t) => {

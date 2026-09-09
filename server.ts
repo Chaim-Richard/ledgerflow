@@ -89,19 +89,7 @@ export function getStripe(): Stripe {
   return stripeClient;
 }
 
-export function isSystemJobAuthorized(
-  decodedToken?: Record<string, unknown> | null,
-  providedSecret?: string,
-  cronSecret?: string
-): boolean {
-  if (cronSecret && providedSecret && cronSecret === providedSecret) {
-    return true;
-  }
-  if (decodedToken && (decodedToken.admin === true || decodedToken.role === 'admin')) {
-    return true;
-  }
-  return false;
-}
+import { isSystemJobAuthorized } from "./src/server/auth/systemJobAuth.ts";
 
 // --- Environment Validation ---
 // Determine default NODE_ENV: fail-safe to "production" unless explicitly set to "development" or running ts source directly

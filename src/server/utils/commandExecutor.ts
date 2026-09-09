@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { getFirestore, Transaction as FirestoreTransaction } from 'firebase-admin/firestore';
+import { Transaction as FirestoreTransaction } from 'firebase-admin/firestore';
+import { getDb } from '../db/firestore';
 import { 
   executeIdempotent, 
   extractCanonicalOperationId, 
@@ -34,7 +35,7 @@ export async function executeCommand<T>(
     operationId: rawOperationId
   };
 
-  const db = getFirestore();
+  const db = getDb();
 
   if (!rawOperationId) {
     // No operation ID provided: execute within a single Firestore transaction

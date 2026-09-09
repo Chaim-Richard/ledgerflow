@@ -1,4 +1,4 @@
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDb } from '../db/firestore';
 import { sendErrorDigestEmail, ErrorGroupSummary } from './emailService';
 
 export interface ProcessErrorDigestOptions {
@@ -79,7 +79,7 @@ export async function processErrorDigest(options?: ProcessErrorDigestOptions): P
   const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
   const recipient = options?.recipientEmail || process.env.ADMIN_ALERT_EMAIL || process.env.EMAIL_FROM || 'admin@ledgerflow.app';
 
-  const db = options?.dbOverride || getFirestore();
+  const db = options?.dbOverride || getDb();
   
   try {
     const snap = await db.collection('errorLogs')
