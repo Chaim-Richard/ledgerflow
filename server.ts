@@ -136,8 +136,8 @@ try {
   console.warn("[Firebase Admin] Warning: Could not read firebase-applet-config.json:", error);
 }
 
-// Environment variable takes precedence over committed config file
-const activeFirebaseProjectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
+// Applet config project ID takes precedence to keep client & admin SDK in sync
+const activeFirebaseProjectId = firebaseConfig.projectId || process.env.FIREBASE_PROJECT_ID;
 
 if (admin.apps.length === 0 && activeFirebaseProjectId) {
   admin.initializeApp({
@@ -155,7 +155,7 @@ const upload = multer({
 });
 
 const getDb = () => {
-  const dbId = process.env.FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || "(default)";
+  const dbId = firebaseConfig.firestoreDatabaseId || process.env.FIRESTORE_DATABASE_ID || "(default)";
   try {
     if (dbId && dbId !== "(default)") {
       return getFirestore(admin.app(), dbId);
@@ -397,24 +397,28 @@ async function writeAuditLog(
   after?: any,
   transaction?: admin.firestore.Transaction
 ) {
-  const db = getFirestore();
-  const auditId = crypto.randomUUID();
-  const auditData = {
-    id: auditId,
-    workspaceId,
-    timestamp: new Date().toISOString(),
-    userId,
-    userEmail: email,
-    action,
-    details,
-    before: before || null,
-    after: after || null
-  };
-  
-  if (transaction) {
-    transaction.set(db.collection("auditLogs").doc(auditId), auditData);
-  } else {
-    await db.collection("auditLogs").doc(auditId).set(auditData);
+  try {
+    const db = getDb();
+    const auditId = crypto.randomUUID();
+    const auditData = {
+      id: auditId,
+      workspaceId,
+      timestamp: new Date().toISOString(),
+      userId,
+      userEmail: email,
+      action,
+      details,
+      before: before || null,
+      after: after || null
+    };
+    
+    if (transaction) {
+      transaction.set(db.collection("auditLogs").doc(auditId), auditData);
+    } else {
+      await db.collection("auditLogs").doc(auditId).set(auditData);
+    }
+  } catch (err: any) {
+    console.warn("[AuditLog] Failed to persist audit log entry to database:", err.message);
   }
 }
 
@@ -4048,7 +4052,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const { access_token, item_id } = response.data;
       
       // Store encrypted access_token in Firestore associated with the user/workspace
-      const db = getFirestore();
+      const db = getDb();
       await db.collection("users").doc(authReq.user.uid).collection("banks").add({
         access_token: SecurityService.encryptSensitiveField(access_token),
         item_id,
@@ -4065,7 +4069,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.post("/api/v1/plaid/sync", authenticate, async (req: express.Request, res: express.Response) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const db = getFirestore();
+      const db = getDb();
       
       // Get all banks for the user
       const banksSnap = await db.collection("users").doc(authReq.user.uid).collection("banks").get();
