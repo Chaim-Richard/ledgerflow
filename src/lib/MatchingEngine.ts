@@ -1,5 +1,5 @@
 import { AhoCorasick, lexicalSimilarity, optimizedTransactionSimilarity, BayesianClassifier, SpellChecker } from './algorithms';
-import { Transaction, AutoRule, DimensionNode } from '../types';
+import { Transaction, AutoRule, DimensionNode, ChartAccount } from '../types';
 import { extractMultiDimensionalLabels, expandDeepLabels, decomposeHierarchicalLabel } from './dimensionUtils';
 
 export interface MatchingClaim {
@@ -30,13 +30,23 @@ export class MatchingEngine {
   private analyticalSalt: string;
   private threshold: number;
   private dimensionNodes: DimensionNode[] = [];
+  private accounts: ChartAccount[] = [];
 
-  constructor(rules: AutoRule[], analyticalCache: Record<string, any> = {}, analyticalSalt = '', threshold = 0.85, allTransactions?: Transaction[], dimensionNodes?: DimensionNode[]) {
+  constructor(
+    rules: AutoRule[], 
+    analyticalCache: Record<string, any> = {}, 
+    analyticalSalt = '', 
+    threshold = 0.85, 
+    allTransactions?: Transaction[], 
+    dimensionNodes?: DimensionNode[],
+    accounts?: ChartAccount[]
+  ) {
     this.rules = rules;
     this.analyticalCache = analyticalCache;
     this.analyticalSalt = analyticalSalt;
     this.threshold = threshold;
     this.dimensionNodes = dimensionNodes || [];
+    this.accounts = accounts || [];
     
     this.bayes = new BayesianClassifier();
     this.spellChecker = new SpellChecker(Object.keys(analyticalCache));
@@ -71,18 +81,25 @@ export class MatchingEngine {
     }
 
     // 2. Seed Bayesian Network with Analytical Cache patterns (Google-Style Pre-training)
+    // Guard against training on archived or inactive accounts
     Object.entries(analyticalCache).forEach(([description, data]: [string, any]) => {
-      if (data.accountName) {
+      if (data.accountName && !this.isAccountArchivedOrInactive(data.accountName)) {
         this.bayes.train(description, data.accountName);
       }
     });
 
     // 3. Dynamic Auto-Learning on Finished Historical Transactions (3x accuracy improvements)
+    // Guard against learning into archived or inactive accounts
     if (allTransactions && allTransactions.length > 0) {
       allTransactions.forEach(t => {
         if (!t.deletedAt && t.status !== 'void' && t.lines && t.lines.length > 0) {
           t.lines.forEach(line => {
-            if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
+            if (
+              line.accountName && 
+              line.accountName !== 'Uncategorized' && 
+              line.accountName !== 'Manual Review' &&
+              !this.isAccountArchivedOrInactive(line.accountId || line.accountName)
+            ) {
               const descToTrain = line.description || (t.lines.length === 1 ? t.description : undefined);
               if (descToTrain) {
                 this.bayes.train(descToTrain, line.accountName);
@@ -94,11 +111,27 @@ export class MatchingEngine {
     }
   }
 
+  public setAccounts(accounts: ChartAccount[]): void {
+    this.accounts = accounts;
+  }
+
+  /**
+   * Checks if an account name or ID refers to an archived or inactive account.
+   */
+  public isAccountArchivedOrInactive(nameOrId: string, accountsOverride?: ChartAccount[]): boolean {
+    const list = (accountsOverride && accountsOverride.length > 0) ? accountsOverride : this.accounts;
+    if (!list || list.length === 0 || !nameOrId) return false;
+    const lower = nameOrId.toLowerCase();
+    const acc = list.find(a => a.id === nameOrId || a.name.toLowerCase() === lower);
+    if (!acc) return false;
+    return (acc as any).archived === true || (acc as any).isArchived === true || acc.isActive === false;
+  }
+
   /**
    * Resolves category based on description patterns with multi-layer fallback.
    * Fully supports deep and multi-dimensional labeling (nested tags, coordinate paths, sub-labels).
    */
-  resolveCategory(description: string): { accountName: string, tags?: string[], dimensions?: Record<string, string> } | null {
+  resolveCategory(description: string, accountsOverride?: ChartAccount[]): { accountName: string, tags?: string[], dimensions?: Record<string, string> } | null {
     const lowerDesc = (description || '').toLowerCase().trim();
     if (!lowerDesc) return null;
 
@@ -112,15 +145,26 @@ export class MatchingEngine {
       extraTags?: string[], 
       extraDims?: Record<string, string>
     ) => {
+      // Archived / Inactive Account Guard:
+      // Skip accounts where archived === true || isActive === false, falling through to Manual Review
+      // with the original category preserved in dimensions.
+      const isArchivedOrInactive = this.isAccountArchivedOrInactive(accountName, accountsOverride);
+      const finalAccountName = isArchivedOrInactive ? 'Manual Review' : accountName;
+
       const dec = decomposeHierarchicalLabel(accountName);
       if (dec.depth > 1) {
         baseDimensions['category'] = dec.fullPath;
         baseTags.push(dec.fullPath);
       }
+      if (isArchivedOrInactive) {
+        baseDimensions['category'] = accountName;
+        baseTags.push('ARCHIVED_ACCOUNT_FALLTHROUGH');
+      }
+
       const combinedDims = { ...baseDimensions, ...(extraDims || {}) };
       const combinedTags = expandDeepLabels([...baseTags, ...(extraTags || [])]);
       return {
-        accountName,
+        accountName: finalAccountName,
         tags: combinedTags.length > 0 ? combinedTags : undefined,
         dimensions: Object.keys(combinedDims).length > 0 ? combinedDims : undefined
       };
@@ -251,14 +295,24 @@ export class MatchingEngine {
     }
 
     const packageDebug = (accountName: string, layer: string, confidence?: number, extraDims?: Record<string, string>) => {
+      const isArchivedOrInactive = this.isAccountArchivedOrInactive(accountName);
+      const finalAccountName = isArchivedOrInactive ? 'Manual Review' : accountName;
+      const finalLayer = isArchivedOrInactive 
+        ? `${layer} (Archived/Inactive Account -> Fallthrough to Manual Review)`
+        : layer + dimensionReason;
+
       const dec = decomposeHierarchicalLabel(accountName);
       if (dec.depth > 1) {
         baseDimensions['category'] = dec.fullPath;
       }
+      if (isArchivedOrInactive) {
+        baseDimensions['category'] = accountName;
+      }
+
       const combined = { ...baseDimensions, ...(extraDims || {}) };
       return {
-        accountName,
-        layer: layer + dimensionReason,
+        accountName: finalAccountName,
+        layer: finalLayer,
         confidence,
         dimensions: Object.keys(combined).length > 0 ? combined : undefined
       };

@@ -325,3 +325,14 @@ export function extractMultiDimensionalLabels(
   const expandedTags = expandDeepLabels(Array.from(tagSet));
   return { dimensions, tags: expandedTags, deepPaths };
 }
+
+/**
+ * Canonical string normalizer: trims whitespace, normalizes Unicode to NFC canonical composition, and converts to lowercase.
+ * Essential for multilingual text (e.g. Hebrew, accented characters) where visually identical glyphs
+ * can have different binary representations (composed vs decomposed).
+ */
+export function normalizeLabel(label: string | null | undefined): string {
+  if (!label) return '';
+  return label.trim().normalize('NFC').toLowerCase();
+}
+

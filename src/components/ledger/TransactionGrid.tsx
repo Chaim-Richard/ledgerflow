@@ -631,7 +631,7 @@ export default function TransactionGrid() {
     const rules = state.autoRules;
     const accounts = state.accounts;
     const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
-    const engine = new MatchingEngine(rules, state.analyticalPatternCache, undefined, state.matchingThreshold, transactionsWithBalance as any, currentWorkspace?.dimensionNodes);
+    const engine = new MatchingEngine(rules, state.analyticalPatternCache, undefined, state.matchingThreshold, transactionsWithBalance as any, currentWorkspace?.dimensionNodes, accounts);
     
     const suggestions = await engine.suggestCategoriesAsync(transactionsWithBalance as any, Math.round);
     

@@ -1,6 +1,6 @@
 import { resolveAccountRole } from '../lib/accountUtils';
 import { validateReceiptPayload, mapReceiptToCoordinates } from '../lib/receiptIngestion';
-import { matchDeepLabel, decomposeHierarchicalLabel, setLineDimension } from '../lib/dimensionUtils';
+import { matchDeepLabel, decomposeHierarchicalLabel, setLineDimension, normalizeLabel } from '../lib/dimensionUtils';
 import { 
   collection, 
   addDoc, 
@@ -157,7 +157,7 @@ export function useTransactionActions() {
       const rulesSnap = await getDocs(qRules);
       const activeRules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
       const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
-      const engine = new MatchingEngine(activeRules, analyticalPatternCache, user.uid, matchingThreshold, existingTransactions, currentWorkspace?.dimensionNodes);
+      const engine = new MatchingEngine(activeRules, analyticalPatternCache, user.uid, matchingThreshold, existingTransactions, currentWorkspace?.dimensionNodes, accounts);
 
       const accountsByName = new Map<string, any>();
       const accountsById = new Map<string, any>();
@@ -375,13 +375,20 @@ export function useTransactionActions() {
 
   const recordRulePattern = async (description: string, accountId: string, accountName: string, tags?: string[], dimensions?: Record<string, string>) => {
     if (!user || !currentWorkspaceId || !description) return;
+
+    // Do not record rule patterns into archived or inactive accounts
+    const currentAccounts = useLedgerStore.getState().accounts;
+    const targetAccount = currentAccounts.find(a => a.id === accountId || a.name.toLowerCase() === accountName.toLowerCase());
+    if (targetAccount && ((targetAccount as any).archived === true || (targetAccount as any).isArchived === true || targetAccount.isActive === false)) {
+      return;
+    }
     
     // Normalize to extract the core merchant/pattern (strip dates, long numbers, transaction IDs)
-    let cleanDesc = description.toLowerCase().trim();
+    let cleanDesc = normalizeLabel(description);
     cleanDesc = cleanDesc.replace(/[0-9]{3,}/g, ''); // Remove sequence of 3+ numbers
     cleanDesc = cleanDesc.replace(/[0-9]+[a-z]+[0-9]+/g, ''); // Remove alphanumeric IDs
     cleanDesc = cleanDesc.replace(/[*#]/g, ''); // Remove common bank delimiters
-    cleanDesc = cleanDesc.trim();
+    cleanDesc = normalizeLabel(cleanDesc);
     
     if (cleanDesc.length < 3) return;
 
@@ -918,7 +925,8 @@ export function useTransactionActions() {
         user?.uid || '',
         matchingThreshold || 0.85,
         existingTransactions || [],
-        currentWorkspace?.dimensionNodes
+        currentWorkspace?.dimensionNodes,
+        accounts
       );
 
       const headerDimensions: { world?: string; class?: string; project?: string } = {};

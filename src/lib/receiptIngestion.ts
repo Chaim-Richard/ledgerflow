@@ -226,38 +226,55 @@ export function validateReceiptPayload(data: ParsedReceiptData): { valid: boolea
 }
 
 /**
+ * Checks if a chart account is active and not archived.
+ */
+export function isAccountActiveAndAvailable(a: ChartAccount | undefined | null): boolean {
+  if (!a) return false;
+  if ((a as any).archived === true || (a as any).isArchived === true) return false;
+  if (a.isActive === false) return false;
+  return true;
+}
+
+/**
  * Resolves an account from the chart of accounts using deep hierarchical matching.
  * Guarantees that accountName and accountId are completely synchronized, never leaving
  * accountName set to an unmapped string while accountId points elsewhere.
+ * Skips accounts where archived === true || isActive === false, falling through
+ * to Manual Review with the original category preserved in dimensions.
  */
 export function resolveDeepAccount(
   categoryCandidate: string,
   accounts: ChartAccount[],
   fallbackReviewAccount?: ChartAccount
-): { accountId: string; accountName: string } {
-  const fallback = fallbackReviewAccount || accounts.find(a =>
-    a.name === 'Manual Review' ||
-    a.name === 'Uncategorized Expense' ||
-    a.name === 'Suspense' ||
-    a.name === 'Review Required'
-  ) || accounts.find(a => resolveAccountRole(a) === 'expense' || a.type === 'expense') || accounts[0];
+): { accountId: string; accountName: string; isFallback?: boolean } {
+  const activeAccounts = accounts.filter(isAccountActiveAndAvailable);
+  const fallback = (fallbackReviewAccount && isAccountActiveAndAvailable(fallbackReviewAccount) ? fallbackReviewAccount : undefined) ||
+    activeAccounts.find(a =>
+      a.name === 'Manual Review' ||
+      a.name === 'Uncategorized Expense' ||
+      a.name === 'Suspense' ||
+      a.name === 'Review Required'
+    ) ||
+    activeAccounts.find(a => resolveAccountRole(a) === 'expense' || a.type === 'expense') ||
+    activeAccounts[0];
 
   if (!categoryCandidate) {
     return {
       accountId: fallback ? fallback.id : '',
-      accountName: fallback ? fallback.name : 'Manual Review'
+      accountName: fallback ? fallback.name : 'Manual Review',
+      isFallback: true
     };
   }
 
-  // Exact full name match first
-  let matched = accounts.find(a => a.name.toLowerCase() === categoryCandidate.toLowerCase());
+  // Exact full name match first (only active accounts)
+  let matched = activeAccounts.find(a => a.name.toLowerCase() === categoryCandidate.toLowerCase());
 
   // Check from most specific leaf segment up to root
   if (!matched) {
     const { segments } = decomposeHierarchicalLabel(categoryCandidate);
     const reversedSegments = [...segments].reverse();
     for (const segment of reversedSegments) {
-      matched = accounts.find(a =>
+      matched = activeAccounts.find(a =>
         a.name.toLowerCase() === segment.toLowerCase() ||
         matchDeepLabel(a.name, segment, true) ||
         (a.category && matchDeepLabel(a.category, segment, true))
@@ -268,16 +285,18 @@ export function resolveDeepAccount(
 
   // If still not matched, try matching full path with matchDeepLabel
   if (!matched) {
-    matched = accounts.find(a =>
+    matched = activeAccounts.find(a =>
       matchDeepLabel(a.name, categoryCandidate, true) ||
       (a.category && matchDeepLabel(a.category, categoryCandidate, true))
     );
   }
 
   const finalAccount = matched || fallback;
+  const isFallback = !matched;
   return {
     accountId: finalAccount ? finalAccount.id : '',
-    accountName: finalAccount ? finalAccount.name : 'Manual Review'
+    accountName: finalAccount ? finalAccount.name : 'Manual Review',
+    isFallback
   };
 }
 
@@ -329,9 +348,12 @@ export function mapReceiptToCoordinates(
     };
 
     // Determine deep hierarchical category path
+    // If account fell through to Manual Review, ensure original category candidate is preserved in dimensions
     const categoryPath = (rawLine.category && (rawLine.category.includes('/') || rawLine.category.includes('>') || rawLine.category.includes(':')))
       ? rawLine.category
-      : (engineMatch?.dimensions?.category || rawLine.category || categoryCandidate || accountName);
+      : (categoryCandidate && (accountName === 'Manual Review' || accountName === 'Uncategorized Expense' || accountName === 'Suspense' || accountName === 'Review Required')
+          ? categoryCandidate
+          : (engineMatch?.dimensions?.category || rawLine.category || categoryCandidate || accountName));
 
     // Coordinate 1: Category (hierarchical path e.g. Groceries/Dairy/Milk)
     line = setLineDimension(line, 'category', categoryPath);

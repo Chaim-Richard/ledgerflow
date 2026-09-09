@@ -126,7 +126,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       const historicalTxs = historySnap.docs.map(d => d.data() as Transaction);
 
       const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
-      const localEngine = new MatchingEngine(activeRules, {}, '', Math.max(0.5, matchingThreshold - 0.03), historicalTxs, currentWorkspace?.dimensionNodes);
+      const localEngine = new MatchingEngine(activeRules, {}, '', Math.max(0.5, matchingThreshold - 0.03), historicalTxs, currentWorkspace?.dimensionNodes, accounts);
 
       const resolvedBatch: any[] = [];
       const outstandingForAI: any[] = [];
@@ -136,11 +136,13 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
         if (t.category && typeof t.category === 'string' && t.category.trim().length > 0) {
           const rawCat = t.category.trim().toLowerCase();
           
-          // Try to map exactly to account name or account code
+          // Try to map exactly to account name or account code (skip archived/inactive)
           const matchedAcct = accounts.find(a => 
-            a.name.toLowerCase() === rawCat || 
-            a.code === rawCat ||
-            a.name.toLowerCase().includes(rawCat)
+            !a.archived && !(a as any).isArchived && a.isActive !== false && (
+              a.name.toLowerCase() === rawCat || 
+              a.code === rawCat ||
+              a.name.toLowerCase().includes(rawCat)
+            )
           );
 
           if (matchedAcct) {

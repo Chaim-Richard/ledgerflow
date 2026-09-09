@@ -1,233 +1,236 @@
 /**
- * MIT License
- *
- * Safe arithmetic expression evaluator for financial amounts.
- * Evaluates expressions like "12.50 + 3.20", "(40 + 5) / 3", "100 / 3 * 2"
- * using exact BigInt rationals to eliminate floating-point drift,
- * returning integer cents rounded half-up.
- *
- * Constraints:
- * - No eval / Function constructor
- * - Max length: 80 characters
- * - Max nesting depth: 12
- * - Explicit division by zero check
+ * BigInt Rational Arithmetic & Amount Expression Evaluator
+ * Safely evaluates arithmetic expressions (e.g., "100 / 3 * 2", "(40 + 5) / 3")
+ * with exact BigInt rational representation, preventing floating-point drift.
+ * Rounds to integer cents using standard half-up rounding.
  */
+
+export const MAX_EXPRESSION_LENGTH = 80;
+export const MAX_PARENTHESIS_DEPTH = 12;
 
 interface Rational {
   num: bigint;
   den: bigint;
 }
 
-function gcd(a: bigint, b: bigint): bigint {
-  let x = a < 0n ? -a : a;
-  let y = b < 0n ? -b : b;
-  while (y !== 0n) {
-    const t = y;
-    y = x % y;
-    x = t;
+function makeRational(n: bigint, d: bigint = 1n): Rational {
+  if (d === 0n) {
+    throw new Error('Integrity Violation: Division by zero is not allowed.');
   }
-  return x;
+  if (d < 0n) {
+    n = -n;
+    d = -d;
+  }
+  const g = gcd(n < 0n ? -n : n, d);
+  return { num: n / g, den: d / g };
 }
 
-function makeRational(num: bigint, den: bigint): Rational {
-  if (den === 0n) {
-    throw new Error('Division by zero in amount expression');
+function gcd(a: bigint, b: bigint): bigint {
+  while (b !== 0n) {
+    const t = b;
+    b = a % b;
+    a = t;
   }
-  if (den < 0n) {
-    num = -num;
-    den = -den;
-  }
-  const g = gcd(num, den);
-  return { num: num / g, den: den / g };
+  return a;
 }
 
 function add(a: Rational, b: Rational): Rational {
   return makeRational(a.num * b.den + b.num * a.den, a.den * b.den);
 }
 
-function sub(a: Rational, b: Rational): Rational {
+function subtract(a: Rational, b: Rational): Rational {
   return makeRational(a.num * b.den - b.num * a.den, a.den * b.den);
 }
 
-function mul(a: Rational, b: Rational): Rational {
+function multiply(a: Rational, b: Rational): Rational {
   return makeRational(a.num * b.num, a.den * b.den);
 }
 
-function div(a: Rational, b: Rational): Rational {
+function divide(a: Rational, b: Rational): Rational {
   if (b.num === 0n) {
-    throw new Error('Division by zero in amount expression');
+    throw new Error('Integrity Violation: Division by zero is not allowed.');
   }
   return makeRational(a.num * b.den, a.den * b.num);
 }
 
-function parseDecimalToRational(str: string): Rational {
-  const parts = str.split('.');
+function rationalFromNumberString(s: string): Rational {
+  const parts = s.split('.');
   if (parts.length === 1) {
-    return makeRational(BigInt(parts[0]), 1n);
+    return makeRational(BigInt(parts[0]));
   }
   if (parts.length === 2) {
     const intPart = parts[0] ? BigInt(parts[0]) : 0n;
     const fracStr = parts[1];
-    if (fracStr.length === 0) {
-      return makeRational(intPart, 1n);
-    }
     const den = 10n ** BigInt(fracStr.length);
     const fracPart = BigInt(fracStr);
-    const num = (intPart < 0n ? -1n : 1n) * ((intPart < 0n ? -intPart : intPart) * den + fracPart);
+    const num = (intPart >= 0n ? 1n : -1n) * (BigInt(Math.abs(Number(intPart))) * den + fracPart);
     return makeRational(num, den);
   }
-  throw new Error(`Invalid decimal number: ${str}`);
+  throw new Error(`Integrity Violation: Invalid decimal format: ${s}`);
 }
 
-const MAX_EXPRESSION_LENGTH = 80;
-const MAX_PARENTHESIS_DEPTH = 12;
+function roundHalfUpToCents(r: Rational): number {
+  // Multiply rational by 100 to get value in cents
+  const centsNum = r.num * 100n;
+  const den = r.den;
 
-export function evaluateAmountExpression(expr: string): number {
-  if (!expr || typeof expr !== 'string') {
-    throw new Error('Amount expression cannot be empty');
-  }
-  const trimmed = expr.trim();
-  if (trimmed.length > MAX_EXPRESSION_LENGTH) {
-    throw new Error(`Amount expression exceeds maximum length of ${MAX_EXPRESSION_LENGTH} characters`);
+  // Exact integer division with remainder
+  const quotient = centsNum / den;
+  const remainder = centsNum % den;
+
+  if (remainder === 0n) {
+    return Number(quotient);
   }
 
-  // Tokenize
-  const tokens: string[] = [];
+  // Double remainder compared to denominator for half-up rounding
+  const absRemainder2 = (remainder < 0n ? -remainder : remainder) * 2n;
+  const isNegative = centsNum < 0n;
+
+  if (absRemainder2 >= den) {
+    return Number(isNegative ? quotient - 1n : quotient + 1n);
+  }
+  return Number(quotient);
+}
+
+/**
+ * Evaluates an arithmetic expression string into integer cents.
+ * Supports +, -, *, /, and parentheses.
+ */
+export function evaluateAmountExpression(expression: string): number {
+  const raw = expression.trim();
+  if (!raw) return 0;
+
+  if (raw.length > MAX_EXPRESSION_LENGTH) {
+    throw new Error(`Integrity Violation: Expression length exceeds maximum allowed (${MAX_EXPRESSION_LENGTH} characters).`);
+  }
+
+  // Tokenizer
+  let depth = 0;
+  for (const ch of raw) {
+    if (ch === '(') depth++;
+    if (ch === ')') depth--;
+    if (depth < 0) throw new Error('Integrity Violation: Unmatched closing parenthesis.');
+    if (depth > MAX_PARENTHESIS_DEPTH) {
+      throw new Error(`Integrity Violation: Parenthesis depth exceeds maximum (${MAX_PARENTHESIS_DEPTH}).`);
+    }
+  }
+  if (depth !== 0) {
+    throw new Error('Integrity Violation: Unmatched opening parenthesis.');
+  }
+
+  type Token =
+    | { type: 'NUM'; value: Rational }
+    | { type: 'OP'; value: '+' | '-' | '*' | '/' }
+    | { type: 'LPAREN' }
+    | { type: 'RPAREN' };
+
+  const tokens: Token[] = [];
   let i = 0;
-  while (i < trimmed.length) {
-    const ch = trimmed[i];
+
+  while (i < raw.length) {
+    const ch = raw[i];
     if (/\s/.test(ch)) {
       i++;
       continue;
     }
-    if (ch === '+' || ch === '-' || ch === '*' || ch === '/' || ch === '(' || ch === ')') {
-      tokens.push(ch);
+
+    if (ch === '(') {
+      tokens.push({ type: 'LPAREN' });
       i++;
       continue;
     }
-    if (/[0-9.]/.test(ch)) {
-      let numStr = '';
-      let hasDot = false;
-      while (i < trimmed.length && /[0-9.]/.test(trimmed[i])) {
-        if (trimmed[i] === '.') {
-          if (hasDot) throw new Error('Invalid number format with multiple decimal points');
-          hasDot = true;
-        }
-        numStr += trimmed[i];
-        i++;
-      }
-      tokens.push(numStr);
+    if (ch === ')') {
+      tokens.push({ type: 'RPAREN' });
+      i++;
       continue;
     }
-    throw new Error(`Unexpected character '${ch}' in amount expression`);
+    if (ch === '+' || ch === '-' || ch === '*' || ch === '/') {
+      tokens.push({ type: 'OP', value: ch });
+      i++;
+      continue;
+    }
+
+    if (/\d|\./.test(ch)) {
+      let numStr = '';
+      while (i < raw.length && /[\d.]/.test(raw[i])) {
+        numStr += raw[i];
+        i++;
+      }
+      tokens.push({ type: 'NUM', value: rationalFromNumberString(numStr) });
+      continue;
+    }
+
+    throw new Error(`Integrity Violation: Invalid character in amount expression: '${ch}'`);
   }
 
-  if (tokens.length === 0) {
-    throw new Error('Amount expression contains no valid tokens');
-  }
-
-  // Recursive descent parser
-  let pos = 0;
-  let depth = 0;
+  // Parser: Recursive descent
+  let cursor = 0;
 
   function parseExpression(): Rational {
-    let result = parseTerm();
-    while (pos < tokens.length) {
-      const op = tokens[pos];
-      if (op === '+') {
-        pos++;
+    let node = parseTerm();
+    while (cursor < tokens.length) {
+      const tok = tokens[cursor];
+      if (tok.type === 'OP' && (tok.value === '+' || tok.value === '-')) {
+        cursor++;
         const nextTerm = parseTerm();
-        result = add(result, nextTerm);
-      } else if (op === '-') {
-        pos++;
-        const nextTerm = parseTerm();
-        result = sub(result, nextTerm);
+        node = tok.value === '+' ? add(node, nextTerm) : subtract(node, nextTerm);
       } else {
         break;
       }
     }
-    return result;
+    return node;
   }
 
   function parseTerm(): Rational {
-    let result = parseFactor();
-    while (pos < tokens.length) {
-      const op = tokens[pos];
-      if (op === '*') {
-        pos++;
+    let node = parseFactor();
+    while (cursor < tokens.length) {
+      const tok = tokens[cursor];
+      if (tok.type === 'OP' && (tok.value === '*' || tok.value === '/')) {
+        cursor++;
         const nextFactor = parseFactor();
-        result = mul(result, nextFactor);
-      } else if (op === '/') {
-        pos++;
-        const nextFactor = parseFactor();
-        result = div(result, nextFactor);
+        node = tok.value === '*' ? multiply(node, nextFactor) : divide(node, nextFactor);
       } else {
         break;
       }
     }
-    return result;
+    return node;
   }
 
   function parseFactor(): Rational {
-    if (pos >= tokens.length) {
-      throw new Error('Unexpected end of expression');
+    if (cursor >= tokens.length) {
+      throw new Error('Integrity Violation: Unexpected end of expression.');
     }
-    const token = tokens[pos];
-    // Unary plus
-    if (token === '+') {
-      pos++;
-      return parseFactor();
-    }
-    // Unary minus
-    if (token === '-') {
-      pos++;
+    const tok = tokens[cursor];
+
+    // Unary plus or minus
+    if (tok.type === 'OP' && (tok.value === '+' || tok.value === '-')) {
+      cursor++;
       const factor = parseFactor();
-      return makeRational(-factor.num, factor.den);
+      return tok.value === '-' ? makeRational(-factor.num, factor.den) : factor;
     }
-    // Parenthesized sub-expression
-    if (token === '(') {
-      depth++;
-      if (depth > MAX_PARENTHESIS_DEPTH) {
-        throw new Error(`Parenthesis nesting depth exceeds limit of ${MAX_PARENTHESIS_DEPTH}`);
-      }
-      pos++;
+
+    if (tok.type === 'LPAREN') {
+      cursor++;
       const res = parseExpression();
-      if (pos >= tokens.length || tokens[pos] !== ')') {
-        throw new Error('Unbalanced parenthesis: missing closing bracket');
+      if (cursor >= tokens.length || tokens[cursor].type !== 'RPAREN') {
+        throw new Error('Integrity Violation: Missing expected closing parenthesis.');
       }
-      pos++;
-      depth--;
+      cursor++;
       return res;
     }
-    // Number literal
-    if (/^[0-9]/.test(token) || token.startsWith('.')) {
-      pos++;
-      return parseDecimalToRational(token);
+
+    if (tok.type === 'NUM') {
+      cursor++;
+      return tok.value;
     }
-    throw new Error(`Unexpected token '${token}' in expression`);
+
+    throw new Error('Integrity Violation: Unexpected token in amount expression.');
   }
 
-  const finalRational = parseExpression();
-  if (pos < tokens.length) {
-    throw new Error(`Unexpected trailing token '${tokens[pos]}'`);
+  const rationalResult = parseExpression();
+  if (cursor < tokens.length) {
+    throw new Error('Integrity Violation: Unexpected tokens remaining after evaluation.');
   }
 
-  // Convert to integer cents: round(finalRational * 100) using half-up
-  const centsNum = finalRational.num * 100n;
-  const den = finalRational.den;
-
-  const isNeg = centsNum < 0n;
-  const absNum = isNeg ? -centsNum : centsNum;
-
-  const quotient = absNum / den;
-  const remainder = absNum % den;
-
-  let roundedAbs = quotient;
-  // Half-up rounding
-  if (remainder * 2n >= den) {
-    roundedAbs += 1n;
-  }
-
-  const roundedCents = isNeg ? -roundedAbs : roundedAbs;
-  return Number(roundedCents);
+  return roundHalfUpToCents(rationalResult);
 }

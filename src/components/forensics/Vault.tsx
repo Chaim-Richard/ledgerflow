@@ -157,12 +157,6 @@ export default function Vault() {
       const amountCents = Math.abs(extractedData.totalAmountCents ?? extractedData.amountCents ?? 0);
       const vendor = extractedData.vendorName || extractedData.merchant || extractedData.description || 'Receipt Auto-sync';
 
-      const cashAccount = accounts.find(a => resolveAccountRole(a) === 'cash') ||
-        accounts.find(a => a.type === 'asset') ||
-        accounts[0];
-      const defaultExpenseAccount = accounts.find(a => resolveAccountRole(a) === 'expense' || a.type === 'expense') ||
-        accounts[0];
-
       const receiptPayload = {
         vendorName: vendor,
         date: extractedData.date,

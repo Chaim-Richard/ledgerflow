@@ -1,6 +1,7 @@
 import { Transaction } from '../../types';
 import { AlgorithmDefinition } from './types';
 import { isPostable } from '../txFilters';
+import { seedPRNG } from '../algorithms';
 
 // The NP-hard subset sum problem with fee tolerance pruning
 // Finds which subset of open items sums to a bank deposit.
@@ -77,13 +78,15 @@ export const SUBSET_SUM_RECONCILIATION: AlgorithmDefinition = {
         .map(t => ({ id: t.id || `TX-${t.date}`, amountCents: Math.abs(t.totalAmountCents) }));
     }
 
+    let isSynthetic = false;
     if (candidates.length < 3) {
-      // Fallback candidates centered on actual transaction scale or target
+      isSynthetic = true;
+      const rng = seedPRNG(Math.abs(target) ^ (numInvoices * 7919));
       const subsetSize = Math.floor(numInvoices / 3) || 1;
       candidates = [];
       let subsetSum = 0;
       for (let i = 0; i < numInvoices; i++) {
-        const amt = Math.floor(Math.random() * (target / 2)) + 1000;
+        const amt = Math.floor(rng() * (target / 2)) + 1000;
         candidates.push({ id: `INV-${i + 1}`, amountCents: amt });
         if (i < subsetSize) subsetSum += amt;
       }
@@ -101,7 +104,7 @@ export const SUBSET_SUM_RECONCILIATION: AlgorithmDefinition = {
       metrics: [
         { label: 'Execution Time', value: `${ms.toFixed(2)} ms` },
         { label: 'Candidates Checked', value: candidates.length },
-        { label: 'Target Deposit', value: `$${(demoTarget/100).toFixed(2)}` },
+        { label: 'Target Deposit', value: `${(demoTarget/100).toFixed(2)}` },
         { label: 'Match Found', value: result ? 'Yes' : 'No', color: result ? 'text-emerald-400' : 'text-red-400' }
       ],
       charts: [
@@ -118,8 +121,11 @@ export const SUBSET_SUM_RECONCILIATION: AlgorithmDefinition = {
          }
       ],
       insights: [
-        result ? `Successfully found ${result.length} invoices summing to $${(foundSubsetSum/100).toFixed(2)}.` : 'No valid subset found.',
-        result ? `Inferred processor fee: $${(inferredFee/100).toFixed(2)}.` : 'NP-hard problem pruned efficiently.',
+        result ? `Successfully found ${result.length} invoices summing to ${(foundSubsetSum/100).toFixed(2)}.` : 'No valid subset found.',
+        result ? `Inferred processor fee: ${(inferredFee/100).toFixed(2)}.` : 'NP-hard problem pruned efficiently.',
+        isSynthetic 
+          ? 'Notice: Synthesized candidate set using deterministic seeded PRNG (not enough postable transactions to reconcile).'
+          : 'Reconciliation candidates derived directly from live postable transactions.',
         'This algorithm explores thousands of nodes in microseconds using sorted branch-and-bound pruning.'
       ]
     };
