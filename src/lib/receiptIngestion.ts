@@ -26,6 +26,36 @@ export interface ParsedReceiptData {
 }
 
 /**
+ * Computes the canonical expected total cents for a receipt:
+ * expectedTotal = sum(lines) - discount + serviceCharge + tax + tip + rounding
+ */
+export function computeExpectedTotalCents(d: ParsedReceiptData): number {
+  const itemsSum = (d.lines || []).reduce((acc, l) => acc + (l.amountCents || 0), 0);
+  const discountCents = d.discountAmountCents || 0;
+  const serviceChargeCents = d.serviceChargeAmountCents || 0;
+  const taxCents = d.taxAmountCents || 0;
+  const tipCents = d.tipAmountCents || 0;
+  const roundingCents = d.roundingAdjustmentCents || 0;
+
+  return itemsSum - discountCents + serviceChargeCents + taxCents + tipCents + roundingCents;
+}
+
+/**
+ * Derives the pre-tax item expense amount for unitemized fallback receipts:
+ * items = total - tax - tip - serviceCharge + discount - rounding
+ */
+export function computeFallbackItemExpenseCents(d: ParsedReceiptData): number {
+  const totalCents = d.totalAmountCents || 0;
+  const discountCents = d.discountAmountCents || 0;
+  const serviceChargeCents = d.serviceChargeAmountCents || 0;
+  const taxCents = d.taxAmountCents || 0;
+  const tipCents = d.tipAmountCents || 0;
+  const roundingCents = d.roundingAdjustmentCents || 0;
+
+  return totalCents - taxCents - tipCents - serviceChargeCents + discountCents - roundingCents;
+}
+
+/**
  * Detects whether a receipt line item description is an aggregate / summary row
  * (e.g. SUBTOTAL, TAX, TOTAL, TIP, PAYMENT) rather than a purchasable item.
  */
@@ -72,50 +102,50 @@ export function validateReceiptPayload(data: ParsedReceiptData): { valid: boolea
   }
 
   const totalCents = data.totalAmountCents;
-  if (typeof totalCents !== 'number' || !Number.isFinite(totalCents) || totalCents < 0) {
+  if (typeof totalCents !== 'number' || !Number.isFinite(totalCents) || !Number.isInteger(totalCents) || totalCents < 0) {
     return {
       valid: false,
-      error: `Invalid receipt total amount: ${totalCents}. Must be a finite non-negative number of cents.`
+      error: `Invalid receipt total amount: ${totalCents}. Must be an integer number of cents.`
     };
   }
 
   const taxCents = data.taxAmountCents ?? 0;
-  if (typeof taxCents !== 'number' || !Number.isFinite(taxCents) || taxCents < 0) {
+  if (typeof taxCents !== 'number' || !Number.isFinite(taxCents) || !Number.isInteger(taxCents) || taxCents < 0) {
     return {
       valid: false,
-      error: `Invalid receipt tax amount: ${taxCents}. Must be a finite non-negative number of cents.`
+      error: `Invalid receipt tax amount: ${taxCents}. Must be an integer number of cents.`
     };
   }
 
   const tipCents = data.tipAmountCents ?? 0;
-  if (typeof tipCents !== 'number' || !Number.isFinite(tipCents) || tipCents < 0) {
+  if (typeof tipCents !== 'number' || !Number.isFinite(tipCents) || !Number.isInteger(tipCents) || tipCents < 0) {
     return {
       valid: false,
-      error: `Invalid receipt tip amount: ${tipCents}. Must be a finite non-negative number of cents.`
+      error: `Invalid receipt tip amount: ${tipCents}. Must be an integer number of cents.`
     };
   }
 
   const discountCents = data.discountAmountCents ?? 0;
-  if (typeof discountCents !== 'number' || !Number.isFinite(discountCents) || discountCents < 0) {
+  if (typeof discountCents !== 'number' || !Number.isFinite(discountCents) || !Number.isInteger(discountCents) || discountCents < 0) {
     return {
       valid: false,
-      error: `Invalid receipt discount amount: ${discountCents}. Must be a finite non-negative number of cents.`
+      error: `Invalid receipt discount amount: ${discountCents}. Must be an integer number of cents.`
     };
   }
 
   const serviceChargeCents = data.serviceChargeAmountCents ?? 0;
-  if (typeof serviceChargeCents !== 'number' || !Number.isFinite(serviceChargeCents) || serviceChargeCents < 0) {
+  if (typeof serviceChargeCents !== 'number' || !Number.isFinite(serviceChargeCents) || !Number.isInteger(serviceChargeCents) || serviceChargeCents < 0) {
     return {
       valid: false,
-      error: `Invalid receipt service charge amount: ${serviceChargeCents}. Must be a finite non-negative number of cents.`
+      error: `Invalid receipt service charge amount: ${serviceChargeCents}. Must be an integer number of cents.`
     };
   }
 
   const roundingCents = data.roundingAdjustmentCents ?? 0;
-  if (typeof roundingCents !== 'number' || !Number.isFinite(roundingCents)) {
+  if (typeof roundingCents !== 'number' || !Number.isFinite(roundingCents) || !Number.isInteger(roundingCents)) {
     return {
       valid: false,
-      error: `Invalid receipt rounding adjustment amount: ${roundingCents}. Must be a finite number of cents.`
+      error: `Invalid receipt rounding adjustment amount: ${roundingCents}. Must be an integer number of cents.`
     };
   }
 
@@ -140,10 +170,10 @@ export function validateReceiptPayload(data: ParsedReceiptData): { valid: boolea
       };
     }
 
-    if (typeof line.amountCents !== 'number' || !Number.isFinite(line.amountCents) || line.amountCents < 0) {
+    if (typeof line.amountCents !== 'number' || !Number.isFinite(line.amountCents) || !Number.isInteger(line.amountCents) || line.amountCents < 0) {
       return {
         valid: false,
-        error: `Receipt rejected: Line item "${desc}" has invalid amountCents (${line.amountCents}). Must be a finite non-negative number.`
+        error: `Receipt rejected: Line item "${desc}" has invalid amountCents (${line.amountCents}). Must be an integer number of cents.`
       };
     }
 
@@ -157,10 +187,10 @@ export function validateReceiptPayload(data: ParsedReceiptData): { valid: boolea
     }
 
     if (line.unitPriceCents !== undefined && line.unitPriceCents !== null) {
-      if (typeof line.unitPriceCents !== 'number' || !Number.isFinite(line.unitPriceCents) || line.unitPriceCents < 0) {
+      if (typeof line.unitPriceCents !== 'number' || !Number.isFinite(line.unitPriceCents) || !Number.isInteger(line.unitPriceCents) || line.unitPriceCents < 0) {
         return {
           valid: false,
-          error: `Receipt rejected: Line item "${desc}" has invalid unitPriceCents (${line.unitPriceCents}). Must be a non-negative finite number.`
+          error: `Receipt rejected: Line item "${desc}" has invalid unitPriceCents (${line.unitPriceCents}). Must be an integer number of cents.`
         };
       }
     }
@@ -179,10 +209,10 @@ export function validateReceiptPayload(data: ParsedReceiptData): { valid: boolea
     }
   }
 
-  // 2. Enforce complete economic equation: sum(lines) - discount + serviceCharge + tax + tip + rounding === totalAmountCents
+  // 2. Enforce complete economic equation using canonical calculation helper
   if (lines.length > 0) {
+    const expectedSum = computeExpectedTotalCents(data);
     const itemsSum = lines.reduce((acc, l) => acc + (l.amountCents || 0), 0);
-    const expectedSum = itemsSum - discountCents + serviceChargeCents + taxCents + tipCents + roundingCents;
 
     if (Math.abs(expectedSum - totalCents) > 1) {
       return {
@@ -327,7 +357,7 @@ export function mapReceiptToCoordinates(
 
   // If no item lines were extracted, provide single expense line
   if (processedLines.length === 0 && data.totalAmountCents > 0) {
-    const defaultAmount = (data.totalAmountCents || 0) - (data.taxAmountCents || 0) - (data.tipAmountCents || 0);
+    const defaultAmount = computeFallbackItemExpenseCents(data);
     const { accountId, accountName } = resolveDeepAccount(data.categorySuggestion || '', accounts, fallbackReviewAccount);
 
     let defaultLine: TransactionLine = {

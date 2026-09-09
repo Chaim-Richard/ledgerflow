@@ -20,7 +20,7 @@ describe('Error Telemetry Fingerprinting and Aggregation', () => {
     const uuidMsg = 'Failed to load workspace 123e4567-e89b-12d3-a456-426614174000 document';
     const fp = generateErrorFingerprint('backend', uuidMsg);
 
-    assert.equal(fp, 'backend::Failed to load workspace <uuid> document');
+    assert.equal(fp, 'backend::Failed to load workspace <id> document');
   });
 
   test('aggregates variable user error messages into a single ErrorGroupSummary', () => {

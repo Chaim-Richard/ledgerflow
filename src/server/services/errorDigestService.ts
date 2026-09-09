@@ -27,15 +27,24 @@ export interface ProcessErrorDigestResult {
 export function generateErrorFingerprint(source: string, message: string, stack?: string): string {
   if (!message) message = 'Unknown error';
 
-  // 1. Normalize message: replace UUIDs, hex IDs, digit sequences, and quoted strings
+  // Deterministic normalization pipeline:
+  // 1. UUIDs & long hex identifiers -> <id>
   let normalizedMsg = message
-    .replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, '<uuid>')
-    .replace(/\b[a-f0-9]{24,32}\b/gi, '<id>')
-    .replace(/"[^"]*"/g, '"<str>"')
-    .replace(/'[^']*'/g, "'<str>'")
-    .replace(/\b\d+\b/g, '#');
+    .replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, '<id>')
+    .replace(/\b[a-f0-9]{24,32}\b/gi, '<id>');
 
-  // 2. Normalize top stack frames if present
+  // 2. Numeric runs -> #
+  normalizedMsg = normalizedMsg.replace(/\b\d+\b/g, '#');
+
+  // 3. Quoted strings -> <str>
+  normalizedMsg = normalizedMsg
+    .replace(/"[^"]*"/g, '"<str>"')
+    .replace(/'[^']*'/g, "'<str>'");
+
+  // 4. Normalize whitespace
+  normalizedMsg = normalizedMsg.replace(/\s+/g, ' ').trim();
+
+  // 5. Normalize top stack frames if present
   let stackSignature = '';
   if (stack && typeof stack === 'string') {
     const lines = stack.split('\n')

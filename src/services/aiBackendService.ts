@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 import { sha256Sync } from "../lib/algorithms";
+import { ReceiptPayloadSchema } from "../schemas";
 
 export class AIBackendService {
   private genAI: GoogleGenAI;
@@ -283,16 +284,18 @@ STRICT ARCHITECTURAL INVARIANTS:
                   unitPriceCents: { type: Type.INTEGER },
                   category: { type: Type.STRING }
                 },
-                required: ["description", "amountCents"]
+                required: ["description", "amountCents", "quantity", "unitPriceCents", "category"]
               }
             }
           },
-          required: ["vendorName", "totalAmountCents", "lines"]
+          required: ["vendorName", "totalAmountCents", "taxAmountCents", "tipAmountCents", "categorySuggestion", "lines"]
         },
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
       }
     });
-    return this.safeJsonParse(result.text, {});
+    const rawData = this.safeJsonParse(result.text, {});
+    const parsedResult = ReceiptPayloadSchema.safeParse(rawData);
+    return parsedResult.success ? parsedResult.data : rawData;
   }
 
   private async parseStatement(data: any) {

@@ -383,4 +383,44 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
     assert.ok(roundLine, 'Rounding line must be posted');
     assert.strictEqual(roundLine?.amountCents, 2);
   });
+
+  it('rejects fractional cent payloads failing Number.isInteger', () => {
+    const fractionalReceipt: any = {
+      vendorName: 'Hardware Store',
+      totalAmountCents: 1000.5,
+      taxAmountCents: 80,
+      lines: [
+        { description: 'Nails', amountCents: 920.5 }
+      ]
+    };
+
+    const res = validateReceiptPayload(fractionalReceipt);
+    assert.strictEqual(res.valid, false, 'Fractional cent payloads must be rejected by validator');
+    assert.ok(res.error?.includes('Must be an integer number of cents'), `Error should mention integer cents requirement: ${res.error}`);
+  });
+
+  it('correctly calculates unitemized fallback expense amount with discounts and service charges', () => {
+    // Unitemized receipt: total $42.30, tax $1.30, service charge $4.00, discount $3.00
+    // Expected fallback item expense: $42.30 - $1.30 - $4.00 + $3.00 = $40.00
+    const unitemizedReceipt: ParsedReceiptData = {
+      vendorName: 'Wholesale Supplier',
+      totalAmountCents: 4230,
+      taxAmountCents: 130,
+      serviceChargeAmountCents: 400,
+      discountAmountCents: 300,
+      categorySuggestion: 'Office/Supplies',
+      lines: []
+    };
+
+    const res = validateReceiptPayload(unitemizedReceipt);
+    assert.strictEqual(res.valid, true, `Unitemized fallback receipt should validate: ${res.error}`);
+
+    const txn = buildBalancedReceiptTransaction(unitemizedReceipt, mockAccounts);
+    const netBalance = txn.lines.reduce((sum, l) => sum + l.amountCents, 0);
+    assert.strictEqual(netBalance, 0, 'Unitemized fallback transaction lines must balance to zero');
+
+    const itemLine = txn.lines.find(l => l.description === 'Wholesale Supplier');
+    assert.ok(itemLine, 'Fallback item line must be generated');
+    assert.strictEqual(itemLine?.amountCents, 4000, 'Derived pre-tax item expense must equal 4000 cents ($40.00)');
+  });
 });
