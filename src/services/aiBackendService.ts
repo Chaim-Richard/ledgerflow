@@ -233,6 +233,9 @@ Return a JSON object with:
 - totalAmountCents: Total settlement amount in integer cents.
 - taxAmountCents: Total sales tax in integer cents (or 0 if none/included).
 - tipAmountCents: Total gratuity / tip in integer cents (or 0).
+- discountAmountCents: Total coupon / store discount savings in integer cents (or 0 if none).
+- serviceChargeAmountCents: Total service charge / fee in integer cents (or 0 if none).
+- roundingAdjustmentCents: Cash rounding adjustment in signed integer cents (+ or -) (or 0).
 - categorySuggestion: Top-level hierarchical category coordinate path (e.g. "Meals/Dining", "Office/Supplies", "Groceries/Food").
 - lines: Array of individual purchasable line items. Each line item MUST contain:
   * description: Exact product or service name.
@@ -244,7 +247,7 @@ Return a JSON object with:
 STRICT ARCHITECTURAL INVARIANTS:
 1. Lines MUST contain ONLY itemized purchasable product/service rows. Explicitly EXCLUDE summary rows such as SUBTOTAL, TAX, TIP, TOTAL, CHANGE, and payment/tender rows.
 2. For each line item: amountCents must equal Math.round(quantity * unitPriceCents).
-3. Total reconciliation constraint: sum(lines[].amountCents) + taxAmountCents + tipAmountCents MUST equal totalAmountCents.`;
+3. Total reconciliation constraint: sum(lines[].amountCents) - discountAmountCents + serviceChargeAmountCents + taxAmountCents + tipAmountCents + roundingAdjustmentCents MUST equal totalAmountCents.`;
 
     const result = await this.generateContent({
       model: this.getModel(data),
@@ -265,6 +268,9 @@ STRICT ARCHITECTURAL INVARIANTS:
             totalAmountCents: { type: Type.INTEGER },
             taxAmountCents: { type: Type.INTEGER },
             tipAmountCents: { type: Type.INTEGER },
+            discountAmountCents: { type: Type.INTEGER },
+            serviceChargeAmountCents: { type: Type.INTEGER },
+            roundingAdjustmentCents: { type: Type.INTEGER },
             categorySuggestion: { type: Type.STRING },
             lines: {
               type: Type.ARRAY,

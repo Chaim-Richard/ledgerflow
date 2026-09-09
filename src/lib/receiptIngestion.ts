@@ -18,6 +18,9 @@ export interface ParsedReceiptData {
   totalAmountCents: number;
   taxAmountCents?: number;
   tipAmountCents?: number;
+  discountAmountCents?: number;
+  serviceChargeAmountCents?: number;
+  roundingAdjustmentCents?: number;
   categorySuggestion?: string;
   lines?: ReceiptLineItem[];
 }
@@ -92,6 +95,30 @@ export function validateReceiptPayload(data: ParsedReceiptData): { valid: boolea
     };
   }
 
+  const discountCents = data.discountAmountCents ?? 0;
+  if (typeof discountCents !== 'number' || !Number.isFinite(discountCents) || discountCents < 0) {
+    return {
+      valid: false,
+      error: `Invalid receipt discount amount: ${discountCents}. Must be a finite non-negative number of cents.`
+    };
+  }
+
+  const serviceChargeCents = data.serviceChargeAmountCents ?? 0;
+  if (typeof serviceChargeCents !== 'number' || !Number.isFinite(serviceChargeCents) || serviceChargeCents < 0) {
+    return {
+      valid: false,
+      error: `Invalid receipt service charge amount: ${serviceChargeCents}. Must be a finite non-negative number of cents.`
+    };
+  }
+
+  const roundingCents = data.roundingAdjustmentCents ?? 0;
+  if (typeof roundingCents !== 'number' || !Number.isFinite(roundingCents)) {
+    return {
+      valid: false,
+      error: `Invalid receipt rounding adjustment amount: ${roundingCents}. Must be a finite number of cents.`
+    };
+  }
+
   const lines = data.lines || [];
 
   // 1. Detect summary rows and enforce per-item quantity / unit-price arithmetic
@@ -152,15 +179,15 @@ export function validateReceiptPayload(data: ParsedReceiptData): { valid: boolea
     }
   }
 
-  // 2. Enforce scalar math: sum(lines.amountCents) + tax + tip === totalAmountCents
+  // 2. Enforce complete economic equation: sum(lines) - discount + serviceCharge + tax + tip + rounding === totalAmountCents
   if (lines.length > 0) {
     const itemsSum = lines.reduce((acc, l) => acc + (l.amountCents || 0), 0);
-    const expectedSum = itemsSum + taxCents + tipCents;
+    const expectedSum = itemsSum - discountCents + serviceChargeCents + taxCents + tipCents + roundingCents;
 
     if (Math.abs(expectedSum - totalCents) > 1) {
       return {
         valid: false,
-        error: `Receipt reconciliation mismatch: items sum ($${(itemsSum / 100).toFixed(2)}) + tax/tip ($${((taxCents + tipCents) / 100).toFixed(2)}) = $${(expectedSum / 100).toFixed(2)}, which does not match total ($${(totalCents / 100).toFixed(2)}).`
+        error: `Receipt reconciliation mismatch: items sum ($${(itemsSum / 100).toFixed(2)}) - discount ($${(discountCents / 100).toFixed(2)}) + service charge ($${(serviceChargeCents / 100).toFixed(2)}) + tax/tip ($${((taxCents + tipCents) / 100).toFixed(2)}) + rounding ($${(roundingCents / 100).toFixed(2)}) = $${(expectedSum / 100).toFixed(2)}, which does not match total ($${(totalCents / 100).toFixed(2)}).`
       };
     }
   }
@@ -366,6 +393,74 @@ export function mapReceiptToCoordinates(
       tipLine = setLineDimension(tipLine, 'location', vendorName);
     }
     processedLines.push(tipLine);
+  }
+
+  // Discount Line: Post as dedicated contra line if present
+  const discountCents = data.discountAmountCents || 0;
+  if (discountCents > 0) {
+    const discountAccount = accounts.find(a =>
+      a.name.toLowerCase().includes('discount') ||
+      a.name.toLowerCase().includes('coupon') ||
+      (a.category && a.category.toLowerCase().includes('discount'))
+    ) || fallbackReviewAccount;
+
+    let discountLine: TransactionLine = {
+      accountId: discountAccount ? discountAccount.id : '',
+      accountName: discountAccount ? discountAccount.name : 'Discounts & Savings',
+      amountCents: -discountCents,
+      description: 'Discount / Coupon Savings',
+      tags: ['discount', 'savings']
+    };
+    discountLine = setLineDimension(discountLine, 'category', 'Discounts/Savings');
+    if (vendorName) {
+      discountLine = setLineDimension(discountLine, 'location', vendorName);
+    }
+    processedLines.push(discountLine);
+  }
+
+  // Service Charge Line: Post as dedicated line if present
+  const serviceChargeCents = data.serviceChargeAmountCents || 0;
+  if (serviceChargeCents > 0) {
+    const serviceAccount = accounts.find(a =>
+      a.name.toLowerCase().includes('service') ||
+      a.name.toLowerCase().includes('fee') ||
+      (a.category && a.category.toLowerCase().includes('fee'))
+    ) || fallbackReviewAccount;
+
+    let serviceLine: TransactionLine = {
+      accountId: serviceAccount ? serviceAccount.id : '',
+      accountName: serviceAccount ? serviceAccount.name : 'Service Fees & Charges',
+      amountCents: serviceChargeCents,
+      description: 'Service Charge / Fee',
+      tags: ['service-charge', 'fee']
+    };
+    serviceLine = setLineDimension(serviceLine, 'category', 'Fees/Service Charges');
+    if (vendorName) {
+      serviceLine = setLineDimension(serviceLine, 'location', vendorName);
+    }
+    processedLines.push(serviceLine);
+  }
+
+  // Rounding Line: Post as dedicated variance line if non-zero
+  const roundingCents = data.roundingAdjustmentCents || 0;
+  if (roundingCents !== 0) {
+    const roundingAccount = accounts.find(a =>
+      a.name.toLowerCase().includes('round') ||
+      a.name.toLowerCase().includes('variance')
+    ) || fallbackReviewAccount;
+
+    let roundingLine: TransactionLine = {
+      accountId: roundingAccount ? roundingAccount.id : '',
+      accountName: roundingAccount ? roundingAccount.name : 'Rounding Adjustment',
+      amountCents: roundingCents,
+      description: 'Cash Rounding Adjustment',
+      tags: ['rounding']
+    };
+    roundingLine = setLineDimension(roundingLine, 'category', 'Adjustments/Rounding');
+    if (vendorName) {
+      roundingLine = setLineDimension(roundingLine, 'location', vendorName);
+    }
+    processedLines.push(roundingLine);
   }
 
   return processedLines;

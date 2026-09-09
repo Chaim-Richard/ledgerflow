@@ -317,4 +317,70 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
       `Error should specifically report item arithmetic mismatch: ${invalidRes.error}`
     );
   });
+
+  it('correctly accepts and balances receipts with coupon discounts, service charges, and rounding adjustments', () => {
+    // 1. Coupon discount: items $18.48 - $3.00 coupon + $1.30 tax = $16.78
+    const couponReceipt: ParsedReceiptData = {
+      vendorName: 'Supermarket Store',
+      totalAmountCents: 1678,
+      taxAmountCents: 130,
+      discountAmountCents: 300,
+      lines: [
+        { description: 'Grocery Item 1', amountCents: 1000 },
+        { description: 'Grocery Item 2', amountCents: 848 }
+      ]
+    };
+
+    const res1 = validateReceiptPayload(couponReceipt);
+    assert.strictEqual(res1.valid, true, `Coupon receipt should validate: ${res1.error}`);
+
+    const txn1 = buildBalancedReceiptTransaction(couponReceipt, mockAccounts);
+    const netBalance1 = txn1.lines.reduce((sum, l) => sum + l.amountCents, 0);
+    assert.strictEqual(netBalance1, 0, 'Coupon receipt transaction lines must balance to zero');
+    const discountLine = txn1.lines.find(l => l.amountCents < 0 && l.description.includes('Discount'));
+    assert.ok(discountLine, 'Discount contra line must be posted');
+    assert.strictEqual(discountLine?.amountCents, -300);
+
+    // 2. Restaurant service charge: items $40.00 + $4.00 fee + $3.52 tax = $47.52
+    const serviceChargeReceipt: ParsedReceiptData = {
+      vendorName: 'Bistro Dining',
+      totalAmountCents: 4752,
+      taxAmountCents: 352,
+      serviceChargeAmountCents: 400,
+      lines: [
+        { description: 'Entree Meal', amountCents: 4000 }
+      ]
+    };
+
+    const res2 = validateReceiptPayload(serviceChargeReceipt);
+    assert.strictEqual(res2.valid, true, `Service charge receipt should validate: ${res2.error}`);
+
+    const txn2 = buildBalancedReceiptTransaction(serviceChargeReceipt, mockAccounts);
+    const netBalance2 = txn2.lines.reduce((sum, l) => sum + l.amountCents, 0);
+    assert.strictEqual(netBalance2, 0, 'Service charge transaction lines must balance to zero');
+    const feeLine = txn2.lines.find(l => l.description.includes('Service Charge'));
+    assert.ok(feeLine, 'Service charge line must be posted');
+    assert.strictEqual(feeLine?.amountCents, 400);
+
+    // 3. Cash rounding adjustment: items $10.00 + $0.80 tax + $0.02 rounding = $10.82
+    const roundingReceipt: ParsedReceiptData = {
+      vendorName: 'Corner Store',
+      totalAmountCents: 1082,
+      taxAmountCents: 80,
+      roundingAdjustmentCents: 2,
+      lines: [
+        { description: 'Coffee Beans', amountCents: 1000 }
+      ]
+    };
+
+    const res3 = validateReceiptPayload(roundingReceipt);
+    assert.strictEqual(res3.valid, true, `Rounding receipt should validate: ${res3.error}`);
+
+    const txn3 = buildBalancedReceiptTransaction(roundingReceipt, mockAccounts);
+    const netBalance3 = txn3.lines.reduce((sum, l) => sum + l.amountCents, 0);
+    assert.strictEqual(netBalance3, 0, 'Rounding transaction lines must balance to zero');
+    const roundLine = txn3.lines.find(l => l.description.includes('Rounding'));
+    assert.ok(roundLine, 'Rounding line must be posted');
+    assert.strictEqual(roundLine?.amountCents, 2);
+  });
 });

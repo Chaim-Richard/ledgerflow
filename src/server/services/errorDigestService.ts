@@ -20,7 +20,48 @@ export interface ProcessErrorDigestResult {
 }
 
 /**
- * Pure aggregation function: groups raw telemetry documents by signature,
+ * Generates a deterministic fingerprint key for error grouping.
+ * Normalizes dynamic identifiers (UUIDs, IDs, digits, quotes) and incorporates
+ * normalized top stack frame signatures.
+ */
+export function generateErrorFingerprint(source: string, message: string, stack?: string): string {
+  if (!message) message = 'Unknown error';
+
+  // 1. Normalize message: replace UUIDs, hex IDs, digit sequences, and quoted strings
+  let normalizedMsg = message
+    .replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, '<uuid>')
+    .replace(/\b[a-f0-9]{24,32}\b/gi, '<id>')
+    .replace(/"[^"]*"/g, '"<str>"')
+    .replace(/'[^']*'/g, "'<str>'")
+    .replace(/\b\d+\b/g, '#');
+
+  // 2. Normalize top stack frames if present
+  let stackSignature = '';
+  if (stack && typeof stack === 'string') {
+    const lines = stack.split('\n')
+      .map(l => l.trim())
+      .filter(l => l.startsWith('at ') || l.includes('@'));
+
+    const topFrames = lines.slice(0, 3).map(frame => {
+      return frame
+        .replace(/:\d+:\d+/g, '')
+        .replace(/\?.*$/g, '')
+        .replace(/(?:\/[^\s)]+)+/g, (path) => {
+          const parts = path.split('/');
+          return '/' + parts.slice(-2).join('/');
+        });
+    });
+
+    if (topFrames.length > 0) {
+      stackSignature = '::' + topFrames.join('|');
+    }
+  }
+
+  return `${source}::${normalizedMsg}${stackSignature}`;
+}
+
+/**
+ * Pure aggregation function: groups raw telemetry documents by normalized signature fingerprint,
  * orders by frequency descending, and preserves worst-case severity and timestamps.
  */
 export function aggregateErrorSignatures(rawDocs: any[]): {
@@ -34,7 +75,8 @@ export function aggregateErrorSignatures(rawDocs: any[]): {
     const msg = (doc.message || 'Unknown error').trim();
     const source = doc.source || 'frontend';
     const severity = doc.severity || 'error';
-    const key = `${source}::${msg}`;
+    const stack = doc.stack || doc.componentStack || undefined;
+    const key = generateErrorFingerprint(source, msg, stack);
     const timestamp = doc.createdAt || new Date().toISOString();
 
     const existing = groupMap.get(key);
@@ -46,7 +88,7 @@ export function aggregateErrorSignatures(rawDocs: any[]): {
         severity,
         firstSeen: timestamp,
         lastSeen: timestamp,
-        sampleStack: doc.stack || doc.componentStack || undefined,
+        sampleStack: stack,
         sampleUrl: doc.url || undefined
       });
     } else {
@@ -56,8 +98,8 @@ export function aggregateErrorSignatures(rawDocs: any[]): {
       if (severity === 'fatal' || (severity === 'error' && existing.severity !== 'fatal')) {
         existing.severity = severity;
       }
-      if (!existing.sampleStack && (doc.stack || doc.componentStack)) {
-        existing.sampleStack = doc.stack || doc.componentStack;
+      if (!existing.sampleStack && stack) {
+        existing.sampleStack = stack;
       }
     }
   }
