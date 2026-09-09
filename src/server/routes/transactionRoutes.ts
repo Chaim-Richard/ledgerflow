@@ -70,12 +70,22 @@ transactionRouter.get('/', async (req, res) => {
       return res.status(403).json({ error: 'Not a member' });
     }
 
-    const { startDate, endDate, accountId, limit } = req.query;
+    const { startDate, endDate, accountId, limit, cursor } = req.query;
 
     let queryFn: any = db.collection("transactions").where("workspaceId", "==", workspaceId);
     
+    // HushLedger-style cursor + ledger revision pagination
+    queryFn = queryFn.orderBy("date", "desc").orderBy("__name__", "desc");
+    
     if (startDate) queryFn = queryFn.where("date", ">=", startDate as string);
     if (endDate) queryFn = queryFn.where("date", "<=", endDate as string);
+    
+    if (cursor) {
+      const cursorDoc = await db.collection("transactions").doc(cursor as string).get();
+      if (cursorDoc.exists) {
+        queryFn = queryFn.startAfter(cursorDoc);
+      }
+    }
     
     const maxLimit = parseInt(limit as string, 10) || 100;
     const fetchLimit = accountId ? 1000 : Math.min(maxLimit, 1000);
@@ -88,16 +98,15 @@ transactionRouter.get('/', async (req, res) => {
       transactions = transactions.filter((t: any) => t.lines?.some((l: any) => l.accountId === accountId));
     }
 
-    transactions.sort((a: any, b: any) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
-
-    if (transactions.length > maxLimit) {
-      transactions = transactions.slice(0, maxLimit);
-    }
+    const nextCursor = transactionsSnap.docs.length === fetchLimit 
+      ? transactionsSnap.docs[transactionsSnap.docs.length - 1].id 
+      : null;
 
     res.json({
       status: "success",
       workspaceId,
       transactionsCount: transactions.length,
+      nextCursor,
       transactions
     });
   } catch (err: any) {

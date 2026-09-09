@@ -35,13 +35,12 @@ async function getReportContext(req: AuthenticatedRequest, workspaceId: string, 
   await authorizeWorkspace(req, workspaceId);
   const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get();
   
+  const defaultStart = startDate || `${new Date().getFullYear()}-01-01`;
+  const defaultEnd = endDate || getLocalDateISO(new Date());
+
   let txQuery: admin.firestore.Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
-  if (startDate) {
-    txQuery = txQuery.where("date", ">=", startDate);
-  }
-  if (endDate) {
-    txQuery = txQuery.where("date", "<=", endDate);
-  }
+  txQuery = txQuery.where("date", ">=", defaultStart);
+  txQuery = txQuery.where("date", "<=", defaultEnd);
   
   const transactions: any[] = [];
   const txStream = txQuery.stream();
@@ -285,13 +284,12 @@ reportRouter.get("/cash-flow", async (req, res) => {
     await authorizeWorkspace(authReq, workspaceId);
     const db = getDb();
     
+    const defaultStart = startDate || `${new Date().getFullYear()}-01-01`;
+    const defaultEnd = endDate || getLocalDateISO(new Date());
+
     let txQuery: admin.firestore.Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
-    if (startDate) {
-      txQuery = txQuery.where("date", ">=", String(startDate));
-    }
-    if (endDate) {
-      txQuery = txQuery.where("date", "<=", String(endDate));
-    }
+    txQuery = txQuery.where("date", ">=", String(defaultStart));
+    txQuery = txQuery.where("date", "<=", String(defaultEnd));
 
     const [accountsSnap, transactionsSnap] = await Promise.all([
       db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get(),
@@ -376,10 +374,10 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
     const db = getDb();
 
     let txQuery: admin.firestore.Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
-    if (month) {
-      const { startDate: mStart, endDate: mEnd } = calculateMonthDateRange(String(month));
-      txQuery = txQuery.where("date", ">=", mStart).where("date", "<=", mEnd);
-    }
+    
+    const targetMonth = month ? String(month) : getLocalDateISO(new Date()).substring(0, 7);
+    const { startDate: mStart, endDate: mEnd } = calculateMonthDateRange(targetMonth);
+    txQuery = txQuery.where("date", ">=", mStart).where("date", "<=", mEnd);
 
     const [budgetsSnap, transactionsSnap, accountsSnap] = await Promise.all([
       db.collection("budgets").where("workspaceId", "==", workspaceId).get(),
@@ -391,10 +389,7 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
     let transactions = transactionsSnap.docs.map((doc: any) => doc.data());
     const accounts = accountsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
 
-    if (month) {
-      const monthStr = String(month);
-      transactions = transactions.filter(tx => tx.date && tx.date.startsWith(monthStr));
-    }
+    transactions = transactions.filter(tx => tx.date && tx.date.startsWith(targetMonth));
 
     const report = budgets.map((b: any) => {
       const account = accounts.find(a => a.id === b.accountId);

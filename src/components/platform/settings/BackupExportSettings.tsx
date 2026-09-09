@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Download, Database, FileSpreadsheet, Archive, AlertCircle, Upload } from 'lucide-react';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
+import { useAuthStore } from '../../../stores/useAuthStore';
 import { toast } from 'sonner';
 import { formatDecimal, resolveAccountName } from '../../../lib/utils';
 
@@ -13,10 +14,11 @@ export default function BackupExportSettings() {
     setIsExporting(true);
     try {
       const state = useLedgerStore.getState();
+      const authState = useAuthStore.getState();
       const payload: any = {
         schemaVersion: 1,
         exportedAt: new Date().toISOString(),
-        workspace: { id: state.currentWorkspaceId },
+        workspace: { id: authState.currentWorkspaceId },
         transactions: state.transactions,
         accounts: state.accounts,
         projects: state.projects,
