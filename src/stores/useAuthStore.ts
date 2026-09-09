@@ -6,6 +6,16 @@ import { Workspace, User as UserProfile } from '../types';
 import { useLedgerStore } from './useLedgerStore';
 import { useSavedViewsStore } from './useSavedViewsStore';
 
+export const SYSTEM_ADMIN_EMAILS = [
+  'shmuelbiller@gmail.com'
+];
+
+export const isSystemAdminEmail = (email?: string | null): boolean => {
+  if (!email) return false;
+  const clean = email.trim().toLowerCase();
+  return SYSTEM_ADMIN_EMAILS.includes(clean);
+};
+
 interface AuthState {
   user: FirebaseUser | null;
   isGuest: boolean;
@@ -43,10 +53,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setUser: (user) => {
     set({ user });
     if (user) {
+      const emailIsAdmin = isSystemAdminEmail(user.email);
+      if (emailIsAdmin) {
+        set({ isAdmin: true });
+      }
       user.getIdTokenResult().then((res) => {
-        const tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
+        const tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin' || emailIsAdmin);
         set({ isAdmin: tokenIsAdmin });
-      }).catch(console.error);
+      }).catch((err) => {
+        console.error(err);
+        set({ isAdmin: emailIsAdmin });
+      });
     } else {
       set({ isAdmin: false });
     }
@@ -64,27 +81,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isAdmin: false });
       return false;
     }
+    const emailIsAdmin = isSystemAdminEmail(user.email);
+    if (emailIsAdmin) {
+      set({ isAdmin: true });
+    }
     try {
       let res = await user.getIdTokenResult();
-      let tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
-      if (!tokenIsAdmin) {
+      let tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin' || emailIsAdmin);
+      if (!tokenIsAdmin && !emailIsAdmin) {
         // Force refresh to grab newly granted custom claim
         await user.getIdToken(true);
         res = await user.getIdTokenResult();
         tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
       }
-      set({ isAdmin: tokenIsAdmin });
-      return tokenIsAdmin;
+      const finalIsAdmin = tokenIsAdmin || emailIsAdmin;
+      set({ isAdmin: finalIsAdmin });
+      return finalIsAdmin;
     } catch (err) {
       console.warn("Failed to check token admin claim:", err);
-      set({ isAdmin: false });
-      return false;
+      set({ isAdmin: emailIsAdmin });
+      return emailIsAdmin;
     }
   },
   setUserProfile: (userProfile) => {
     set({ userProfile });
     const { user, isAdmin } = get();
-    if (user && !isAdmin) {
+    const profileIsAdmin = userProfile?.role === 'admin' || isSystemAdminEmail(userProfile?.email) || isSystemAdminEmail(user?.email);
+    if (profileIsAdmin) {
+      set({ isAdmin: true });
+    } else if (user && !isAdmin) {
       get().checkTokenAdminClaim().catch(console.error);
     }
   },

@@ -8,6 +8,8 @@ import { RefreshCw,
   BarChart3,
   Settings,
   ShieldAlert,
+  ShieldCheck,
+  Building,
   Compass,
   ChevronDown,
   Plus,
@@ -249,6 +251,28 @@ const Sidebar = React.memo(({
            {uiStore.isSidebarOpen && <span className="text-[10px] font-mono text-[var(--faint)] border border-[var(--line)] rounded px-1">⌘K</span>}
          </button>
          
+         {isAdmin && (
+           <button
+             onClick={() => setActiveTab('system-command-center' as any)}
+             className={cn(
+               "flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg transition-all w-full group mb-1 shadow-sm cursor-pointer",
+               uiStore.isSidebarOpen ? "justify-between" : "justify-center",
+               activeTab === 'system-command-center' && "bg-amber-500/25 border-amber-400 text-amber-200"
+             )}
+             title={uiStore.isSidebarOpen ? undefined : "Admin Control Panel"}
+           >
+             <div className="flex items-center gap-2.5">
+               <ShieldCheck size={16} className="shrink-0 text-amber-400 group-hover:scale-110 transition-transform" />
+               {uiStore.isSidebarOpen && <span>Admin Panel</span>}
+             </div>
+             {uiStore.isSidebarOpen && (
+               <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold uppercase tracking-wider">
+                 Admin
+               </span>
+             )}
+           </button>
+         )}
+
          {isInstallable && (
            <button
              onClick={promptInstall}

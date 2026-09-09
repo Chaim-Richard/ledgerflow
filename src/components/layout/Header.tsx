@@ -35,6 +35,9 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
 
 
+  const isAdmin = useAuthStore(state => state.isAdmin);
+  const setActiveTab = useUIStore(state => state.setActiveTab);
+
   return (
     <header className="h-16 bg-[var(--surface)] border-b border-[var(--line)] flex items-center justify-between px-4 sm:px-6 shrink-0 relative z-30 text-[var(--text)]">
       <div className="flex items-center gap-3 flex-1">
@@ -82,15 +85,21 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
 
         {user ? (
           <div className="flex items-center gap-2">
-            <span className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono font-bold text-[var(--brass)] bg-[var(--brass-soft)] border border-[var(--brass-line)] rounded-md">
-              <ShieldCheck size={12} />
-              <span>OWNER / ADMIN</span>
-            </span>
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab('system-command-center' as any)}
+                title="Open Admin Control Panel"
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono font-bold text-[var(--brass)] bg-[var(--brass-soft)] hover:bg-[var(--brass)] hover:text-black border border-[var(--brass-line)] rounded-md transition-colors cursor-pointer"
+              >
+                <ShieldCheck size={12} />
+                <span>ADMIN PANEL</span>
+              </button>
+            )}
             <div 
               role="button" 
               tabIndex={0} 
               onClick={onLogout}
-              title={`Logged in as ${user.email} (System Owner). Click to Log Out.`}
+              title={`Logged in as ${user.email}${isAdmin ? ' (Administrator)' : ''}. Click to Log Out.`}
               className="h-8 w-8 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] text-[11px] font-mono font-bold cursor-pointer hover:bg-[var(--brass)] hover:text-black transition-colors"
             >
               {user.email?.[0]?.toUpperCase() || 'S'}

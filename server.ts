@@ -354,6 +354,16 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
 /**
  * Authentication Middleware
  */
+const SYSTEM_ADMIN_EMAILS = [
+  'shmuelbiller@gmail.com'
+];
+
+function isSystemAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const clean = email.trim().toLowerCase();
+  return SYSTEM_ADMIN_EMAILS.includes(clean);
+}
+
 const authenticate = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -366,9 +376,26 @@ const authenticate = async (req: express.Request, res: express.Response, next: e
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken) as AuthUser;
     
+    // Check if user is a designated system admin
+    if (decodedToken.email && isSystemAdminEmail(decodedToken.email)) {
+      decodedToken.admin = true;
+      (decodedToken as any).role = 'admin';
+      // Asynchronously grant custom user claim in Firebase Auth if not already set
+      admin.auth().getUser(decodedToken.uid).then(userRecord => {
+        if (!userRecord.customClaims?.admin) {
+          admin.auth().setCustomUserClaims(decodedToken.uid, {
+            ...userRecord.customClaims,
+            admin: true,
+            role: 'admin'
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+
     // Strict Verification: Only allow verified institutional emails or anonymous for specific workflows
     const isAnonymous = decodedToken.firebase?.sign_in_provider === 'anonymous';
-    if (!decodedToken.email_verified && !isAnonymous) {
+    const isSystemAdmin = decodedToken.email && isSystemAdminEmail(decodedToken.email);
+    if (!decodedToken.email_verified && !isAnonymous && !isSystemAdmin) {
       return sendError(res, "Access Denied: Please verify your email protocol.", 403);
     }
 
@@ -381,7 +408,14 @@ const authenticate = async (req: express.Request, res: express.Response, next: e
 
 const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const user = (req as AuthenticatedRequest).user;
-  if (!user || user.admin !== true) {
+  const isAdmin = Boolean(
+    user && (
+      user.admin === true || 
+      user.role === 'admin' || 
+      (user.email && isSystemAdminEmail(user.email))
+    )
+  );
+  if (!isAdmin) {
     return res.status(403).json({ status: "error", message: "Forbidden: Admin privileges required." });
   }
   next();
