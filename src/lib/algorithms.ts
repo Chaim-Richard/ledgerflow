@@ -1425,8 +1425,9 @@ export class BayesianClassifier {
 
     features.forEach(feature => {
       this.vocabulary.add(feature);
-      this.wordCounts[category][feature] = (this.wordCounts[category][feature] || 0) + weight;
-      this.categoryFeatureTotals[category] += weight;
+      const featWeight = feature.startsWith('~') ? weight * 0.30 : weight;
+      this.wordCounts[category][feature] = (this.wordCounts[category][feature] || 0) + featWeight;
+      this.categoryFeatureTotals[category] += featWeight;
     });
   }
 
@@ -1462,10 +1463,12 @@ export class BayesianClassifier {
 
         // Lambda mixture model for unigram/bigram semantic blend:
         // Give higher weight (lambda = 0.65) to bigram features if they exist
+        // Give lower weight (0.30) to character trigrams as typo tiebreakers
         const isBigram = feature.includes('_');
-        const bigramMultiplier = isBigram ? 1.65 : 1.00;
+        const isTrigram = feature.startsWith('~');
+        const featureMultiplier = isBigram ? 1.65 : (isTrigram ? 0.30 : 1.00);
         
-        const finalFeatureWeight = bigramMultiplier * idfWeight;
+        const finalFeatureWeight = featureMultiplier * idfWeight;
         
         logProb += finalFeatureWeight * Math.log(pFeatureGivenCategory);
       }
@@ -1535,12 +1538,28 @@ export class BayesianClassifier {
   }
 
   /**
+   * Generates character trigrams with a ~ prefix for fuzzy typo resilience and OCR errors
+   */
+  private extractTrigrams(text: string): string[] {
+    const clean = text.toLowerCase().replace(/[^a-z]+/g, '');
+    if (clean.length < 3) return [];
+    const slice = clean.slice(0, 25);
+    const trigrams: string[] = [];
+    trigrams.push(`~${slice.slice(0, 2)}`);
+    for (let i = 0; i <= slice.length - 3; i++) {
+      trigrams.push(`~${slice.slice(i, i + 3)}`);
+    }
+    return trigrams;
+  }
+
+  /**
    * Extracts clean tokens, discards low-value transaction noise, and pairs unigrams/bigrams
    */
   private tokenizeAndExtractFeatures(text: string): string[] {
     const rawWords = text.toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')        // FIX 1: punctuation → space, not deleted
       .split(/\s+/)
+      .map(w => w.replace(/\d{2,}$/, '')) // FIX 2: strip trailing store/ref digits
       .filter(w => w.length > 2 && !BayesianClassifier.FINANCIAL_STOPWORDS.has(w));
       
     // Unigrams
@@ -1551,6 +1570,10 @@ export class BayesianClassifier {
     for (let i = 0; i < n - 1; i++) {
         features.push(`${rawWords[i]}_${rawWords[i+1]}`);
     }
+
+    // Character trigrams for typo/OCR resilience
+    const trigrams = this.extractTrigrams(text);
+    features.push(...trigrams);
     
     return features;
   }

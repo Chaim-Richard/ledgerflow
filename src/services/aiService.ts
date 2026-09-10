@@ -11,14 +11,15 @@ export interface StrategicDirectives {
 class AIService {
   private async callBackend(task: string, payload: any): Promise<any> {
     const idToken = await getIdToken();
-    if (!idToken) throw new Error("Authentication required for AI operations - falling back to local heuristic");
+    const isGuest = typeof window !== 'undefined' && localStorage.getItem('isGuest') === 'true';
+    if (!idToken && !isGuest) throw new Error("Authentication required for AI operations - falling back to local heuristic");
     
     const selectedModel = typeof window !== 'undefined' ? (localStorage.getItem('lf_selected_ai_model') || 'Gemini 1.5 Flash (Default)') : 'Gemini 1.5 Flash (Default)';
     const response = await fetch("/api/ai/process", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${idToken}`
+        "Authorization": `Bearer ${idToken || 'guest-token'}`
       },
       body: JSON.stringify({ task, payload: { ...payload, selectedModel } })
     });

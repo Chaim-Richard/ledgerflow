@@ -89,9 +89,10 @@ export default function Vault() {
         try {
           const base64DataUri = reader.result as string;
           
-          const newDoc: Omit<CloudDocument, 'id'> = {
-            uid: uid || "",
-            workspaceId: workspaceId || "",
+          const newDoc: CloudDocument = {
+            id: `doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            uid: uid || "guest",
+            workspaceId: workspaceId || "guest-workspace",
             name: file.name,
             fileUrl: base64DataUri, // Persistent Data URI
             mimeType: file.type,
@@ -100,7 +101,25 @@ export default function Vault() {
             createdAt: new Date().toISOString()
           };
 
-          await addDoc(collection(db, 'documents'), newDoc);
+          if (uid && workspaceId) {
+            try {
+              const docRef = await addDoc(collection(db, 'documents'), {
+                uid: newDoc.uid,
+                workspaceId: newDoc.workspaceId,
+                name: newDoc.name,
+                fileUrl: newDoc.fileUrl,
+                mimeType: newDoc.mimeType,
+                sizeBytes: newDoc.sizeBytes,
+                tags: newDoc.tags,
+                createdAt: newDoc.createdAt
+              });
+              newDoc.id = docRef.id;
+            } catch (firestoreErr) {
+              console.warn("Firestore document write fallback to local state:", firestoreErr);
+            }
+          }
+
+          setDocuments(prev => [newDoc, ...prev.filter(d => d.id !== newDoc.id)]);
           toast.success('Document uploaded to Vault', { id: toastId });
         } catch (uploadErr: any) {
           toast.error(uploadErr?.message || 'Failed to save document to database', { id: toastId });
@@ -219,9 +238,14 @@ export default function Vault() {
       const createdTxId = resData.transaction?.id || resData.id;
 
       if (createdTxId) {
-        await updateDoc(doc(db, 'documents', selectedDoc.id), {
-          linkedTransactionId: createdTxId
-        });
+        if (uid && workspaceId) {
+          try {
+            await updateDoc(doc(db, 'documents', selectedDoc.id), {
+              linkedTransactionId: createdTxId
+            });
+          } catch (_err) {}
+        }
+        setDocuments(prev => prev.map(d => d.id === selectedDoc.id ? { ...d, linkedTransactionId: createdTxId } : d));
       }
 
       toast.success('Ledger injected and cryptographically linked!', { id: toastId });

@@ -79,6 +79,38 @@ describe('Deep and Multi-Dimensional Labeling Engine', () => {
     assert.ok(result.depth >= 1);
   });
 
+  it('recovers merchant tokens from noisy bank descriptors (punctuation, store numbers, trigrams)', () => {
+    const bayes = new BayesianClassifier();
+
+    // Train on clean merchant names across distinct categories
+    bayes.train('SHOPRITE', 'Groceries', 5.0);
+    bayes.train('AMZN MKTPLACE', 'Office Supplies', 5.0);
+    bayes.train('SHELL OIL', 'Fuel', 5.0);
+
+    // 1. SHOPRITE#0451 - punctuation + store number should cleanly recover 'shoprite'
+    const shopriteNum = bayes.classify('SHOPRITE#0451');
+    assert.ok(shopriteNum !== null);
+    assert.strictEqual(shopriteNum.category, 'Groceries');
+    assert.ok(shopriteNum.confidence > 0.6, `Expected confidence > 0.6, got ${shopriteNum.confidence}`);
+
+    // 2. SHOPRITE #1234 PARAMUS NJ - store number stripped + branch location
+    const shopriteBranch = bayes.classify('SHOPRITE #1234 PARAMUS NJ');
+    assert.ok(shopriteBranch !== null);
+    assert.strictEqual(shopriteBranch.category, 'Groceries');
+    assert.ok(shopriteBranch.confidence > 0.6, `Expected confidence > 0.6, got ${shopriteBranch.confidence}`);
+
+    // 3. AMZN*MKTPLACE US*2H45L - asterisk separated descriptor
+    const amzn = bayes.classify('AMZN*MKTPLACE US*2H45L');
+    assert.ok(amzn !== null);
+    assert.strictEqual(amzn.category, 'Office Supplies');
+    assert.ok(amzn.confidence > 0.6, `Expected confidence > 0.6, got ${amzn.confidence}`);
+
+    // 4. Character trigram OCR split typo resilience (SHOPRIT E 1234 -> Groceries)
+    const ocrTypo = bayes.classify('SHOPRIT E 1234');
+    assert.ok(ocrTypo !== null);
+    assert.strictEqual(ocrTypo.category, 'Groceries');
+  });
+
   it('MatchingEngine automatically assigns deep multi-dimensional tags and dimensions', () => {
     const rules: AutoRule[] = [
       {

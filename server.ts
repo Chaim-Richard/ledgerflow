@@ -174,7 +174,9 @@ const getDb = () => {
     const fallbackInstance = getFirestore(admin.app()); 
     try {
       fallbackInstance.settings({ ignoreUndefinedProperties: true });
-    } catch {}
+    } catch {
+      // ignore if settings already locked
+    }
     return fallbackInstance;
   }
 };

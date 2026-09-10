@@ -438,6 +438,25 @@ export default function Sales() {
           </div>
         </div>
       )}
+
+      <InvoiceModal
+        isOpen={isInvoiceModalOpen}
+        onClose={() => setIsInvoiceModalOpen(false)}
+        onSave={async (inv) => {
+          await onAddInvoice(inv);
+          setIsInvoiceModalOpen(false);
+        }}
+        customers={customers}
+        accounts={accounts}
+      />
+      <CustomerModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        onSave={async (cust) => {
+          await onAddCustomer(cust);
+          setIsCustomerModalOpen(false);
+        }}
+      />
     </div>
   );
 }

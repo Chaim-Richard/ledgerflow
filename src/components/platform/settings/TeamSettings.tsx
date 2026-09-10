@@ -36,7 +36,29 @@ export default function TeamSettings() {
   };
 
   useEffect(() => {
-    fetchMembers();
+    let active = true;
+    (async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        if (!token || !active) return;
+
+        const res = await fetch(`/api/v1/workspaces/${workspaceId}/members`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.status === 'success' && active) {
+          setMembers(data.members || []);
+          if (data.ownerUid) setOwnerUid(data.ownerUid);
+        }
+      } catch (err: any) {
+        if (active) toast.error('Failed to load workspace team members', { description: err.message });
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, [workspaceId]);
 
   const handleAddMember = async (e: React.FormEvent) => {
