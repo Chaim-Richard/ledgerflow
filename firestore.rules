@@ -16,9 +16,7 @@ service cloud.firestore {
     function isPlatformAdmin() {
       return isSignedIn() && (
         request.auth.token.get('admin', false) == true ||
-        request.auth.token.get('role', '') == 'admin' ||
-        request.auth.token.get('email', '') == 'shmuelbiller@gmail.com' ||
-        (request.auth.token.email != null && request.auth.token.email == 'shmuelbiller@gmail.com')
+        request.auth.token.get('role', '') == 'admin'
       );
     }
 

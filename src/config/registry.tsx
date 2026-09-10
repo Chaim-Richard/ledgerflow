@@ -299,6 +299,7 @@ export const REPORT_TABS_REGISTRY = [
 
 export const SETTINGS_TABS_REGISTRY = [
   { id: 'appearance', label: { en: 'Appearance & Display', he: 'מראה ותצוגה' }, componentName: 'AppearanceSettingsView', icon: Sliders },
+  { id: 'team', label: { en: 'Team & Invites', he: 'צוות והרשאות' }, componentName: 'TeamView', icon: Users },
   { id: 'billing', label: { en: 'Billing & Plan', he: 'תוכניות וחיוב' }, componentName: 'BillingView', icon: CreditCard },
   { id: 'templates', label: { en: 'Custom Templates', he: 'תבניות' }, componentName: 'TemplatesView', icon: FileText },
   { id: 'security', label: { en: 'Security', he: 'אבטחה' }, componentName: 'SecurityView', icon: ShieldCheck },
@@ -310,6 +311,7 @@ export const SETTINGS_TABS_REGISTRY = [
 
 export const SETTINGS_COMPONENTS: Record<string, any> = {
   'AppearanceSettingsView': lazy(() => import('../components/platform/settings/AppearanceSettings')),
+  'TeamView': lazy(() => import('../components/platform/settings/TeamSettings')),
   'BillingView': lazy(() => import('../components/platform/settings/BillingSettings')),
   'TemplatesView': lazy(() => import('../components/platform/settings/BlueprintSettings')),
   'SecurityView': lazy(() => import('../components/platform/settings/SecuritySettings')),

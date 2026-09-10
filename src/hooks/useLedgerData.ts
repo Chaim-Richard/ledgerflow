@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useLedgerStore } from '../stores/useLedgerStore';
-import { useAuthStore, isSystemAdminEmail } from '../stores/useAuthStore';
+import { useAuthStore } from '../stores/useAuthStore';
 import { useUIStore } from '../stores/useUIStore';
 import { 
   Transaction, 
@@ -86,25 +86,14 @@ export function useLedgerData() {
   useEffect(() => {
     if (!user) return;
     return onSnapshot(doc(db, 'users', user.uid), async (snap) => {
-      const isAdminEmail = isSystemAdminEmail(user.email);
       if (snap.exists()) {
         const data = snap.data() as UserProfile;
-        if (isAdminEmail && data.role !== 'admin') {
-          const updated = { ...data, role: 'admin' as const };
-          safeAsync(
-            setDoc(doc(db, 'users', user.uid), updated, { merge: true }),
-            OperationType.UPDATE,
-            `users/${user.uid}`
-          ).catch(console.warn);
-          setUserProfile(updated);
-        } else {
-          setUserProfile(data);
-        }
+        setUserProfile(data);
       } else {
         const profileData: UserProfile = {
           uid: user.uid,
           email: user.email || '',
-          role: isAdminEmail ? 'admin' : 'client',
+          role: 'client',
           createdAt: new Date().toISOString()
         };
         await safeAsync(

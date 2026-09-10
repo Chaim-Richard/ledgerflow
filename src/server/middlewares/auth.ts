@@ -1,10 +1,6 @@
 import express from 'express';
 import { getAuth } from 'firebase-admin/auth';
 
-const SYSTEM_ADMIN_EMAILS = [
-  'shmuelbiller@gmail.com'
-];
-
 export const authenticate = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -14,7 +10,7 @@ export const authenticate = async (req: express.Request, res: express.Response, 
   const idToken = authHeader.split('Bearer ')[1];
   try {
     const decodedToken = await getAuth().verifyIdToken(idToken);
-    if (decodedToken.email && SYSTEM_ADMIN_EMAILS.includes(decodedToken.email.trim().toLowerCase())) {
+    if ((decodedToken as any).admin === true || (decodedToken as any).role === 'admin') {
       (decodedToken as any).admin = true;
       (decodedToken as any).role = 'admin';
     }

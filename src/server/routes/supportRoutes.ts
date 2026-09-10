@@ -32,7 +32,7 @@ supportRouter.post('/tickets/:id/messages', async (req, res) => {
       const ticketData = ticketDoc.data() as SupportTicket;
 
       // Authorization Check
-      const isAdminUser = Boolean(user.admin || (user.email && user.email === 'shmuelbiller@gmail.com'));
+      const isAdminUser = Boolean(user.admin || user.role === 'admin');
       if (authorRole === 'admin') {
         if (!isAdminUser) {
           throw new Error('Forbidden: Admin role required');
@@ -136,7 +136,7 @@ supportRouter.patch('/tickets/:id/status', async (req, res) => {
     const { status } = req.body;
     const user = (req as any).user;
 
-    const isAdminUser = Boolean(user?.admin || (user?.email && user?.email === 'shmuelbiller@gmail.com'));
+    const isAdminUser = Boolean(user?.admin || user?.role === 'admin');
     if (!isAdminUser) {
       return res.status(403).json({ error: 'Forbidden' });
     }

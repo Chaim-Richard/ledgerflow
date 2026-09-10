@@ -24,26 +24,48 @@ if (!targetUid) {
 
 async function grantAdmin() {
   try {
-    let userRecord;
-    if (targetUid.includes('@')) {
-      userRecord = await admin.auth().getUserByEmail(targetUid);
-    } else {
-      userRecord = await admin.auth().getUser(targetUid);
+    const db = admin.firestore();
+    let uid = targetUid;
+    let email = targetUid.includes('@') ? targetUid : '';
+
+    // 1. Try to set custom claims via Auth SDK
+    try {
+      let userRecord;
+      if (targetUid.includes('@')) {
+        userRecord = await admin.auth().getUserByEmail(targetUid);
+      } else {
+        userRecord = await admin.auth().getUser(targetUid);
+      }
+      uid = userRecord.uid;
+      email = userRecord.email || email;
+      await admin.auth().setCustomUserClaims(uid, { admin: true, role: 'admin' });
+      console.log(`Custom user claims set for UID: ${uid}`);
+    } catch (authErr) {
+      console.warn(`Auth SDK user lookup/claims skipped (${authErr.message}). Falling back to Firestore...`);
+      if (targetUid.includes('@')) {
+        const usersSnap = await db.collection('users').where('email', '==', targetUid).limit(1).get();
+        if (!usersSnap.empty) {
+          uid = usersSnap.docs[0].id;
+        }
+      }
     }
 
-    const uid = userRecord.uid;
-    console.log(`Granting admin claim and updating role for UID: ${uid} (${userRecord.email || 'no-email'})...`);
-
-    // 1. Set custom user claims
-    await admin.auth().setCustomUserClaims(uid, { admin: true });
+    console.log(`Granting admin role in Firestore for UID: ${uid} (${email || 'no-email'})...`);
 
     // 2. Update users/{uid} document in Firestore
-    const db = admin.firestore();
     await db.collection('users').doc(uid).set({
       uid,
-      email: userRecord.email || '',
+      email,
       role: 'admin',
       updatedAt: new Date().toISOString()
+    }, { merge: true });
+
+    // 3. Write to admins/{uid} document
+    await db.collection('admins').doc(uid).set({
+      uid,
+      email,
+      isAdmin: true,
+      createdAt: new Date().toISOString()
     }, { merge: true });
 
     console.log(`Successfully granted admin claim and updated Firestore profile for ${uid}.`);

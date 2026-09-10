@@ -18,6 +18,7 @@ import { auth } from '../../firebase';
 import { formatDecimal, getLocalDateISO, parseAmountToCents } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import CategoryWhyPopover from '../common/CategoryWhyPopover';
 import { 
   DEFAULT_WORKSPACE_DIMENSIONS, 
   getLineDimension, 
@@ -460,7 +461,13 @@ export default function TransactionEditModal({
                   >
                     {/* Top Row: Account & Amount & Delete */}
                     <div className="md:col-span-6 space-y-1">
-                      <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Chart of Account</div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Chart of Account</div>
+                        <CategoryWhyPopover 
+                          description={description} 
+                          accountName={line.accountName} 
+                        />
+                      </div>
                       <select
                         disabled={isLocked}
                         value={line.accountId}

@@ -417,4 +417,25 @@ describe('Firestore Security Rules Unit Tests', () => {
       await txRef.delete();
     }, /permission-denied/i);
   });
+
+  test('Privilege Escalation Regression: signed-in user with specific email but no admin claim is denied admin reads', async () => {
+    // User signed in with email claim shmuelbiller@gmail.com but NO admin: true or role: 'admin' claim
+    const unprivilegedAdminEmailDb = getFirestoreContext({
+      uid: 'unprivileged-user-123',
+      token: { email: 'shmuelbiller@gmail.com' }
+    });
+
+    const adminRef = unprivilegedAdminEmailDb.doc('admins/confidential-admin-doc');
+
+    // Must be denied reading protected admin documents
+    await assert.rejects(async () => {
+      await adminRef.get();
+    }, /permission-denied/i);
+
+    // Must be denied reading other users' support tickets
+    const foreignTicketRef = unprivilegedAdminEmailDb.doc('supportTickets/ticket-foreign-workspace');
+    await assert.rejects(async () => {
+      await foreignTicketRef.get();
+    }, /permission-denied/i);
+  });
 });

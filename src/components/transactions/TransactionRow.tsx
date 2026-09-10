@@ -16,6 +16,7 @@ import { parseLocalDate, resolveAccountName, cn } from '../../lib/utils';
 import { isInflow, isTransactionInDateRange } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
+import CategoryWhyPopover from '../common/CategoryWhyPopover';
 
 const HighlightMatch = ({ text, match }: { text: string; match?: string }) => {
   if (!match) return <>{text}</>;
@@ -210,24 +211,31 @@ const TransactionRow = React.memo(({
           )}>
             <div className="flex flex-col gap-1 w-full">
               {tx.lines?.slice(0, 2).map((line, idx) => (
-                <span 
-                  key={idx}
-                  dir="auto"
-                  className={cn(
-                    "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider truncate w-full border transition-all",
-                    line.amountCents > 0 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover/active:text-white group-hover/active:border-white/20" : "bg-[var(--ink)] text-slate-500 border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-white/80 group-hover/active:border-white/20",
-                  )}
-                >
-                  <HighlightMatch text={resolveAccountName(accounts, line.accountId, line.accountName)} match={searchTerm} />
-                  {line.isAnalyticalTagged && (
-                    <div className="absolute -top-2 -right-2 z-20 group/spark">
-                      <Sparkles size={10} className="text-amber-500 animate-[pulse_2s_infinite]" />
-                      <div className="absolute top-4 left-0 w-48 p-3 bg-slate-900 text-white rounded-xl text-[8px] font-medium leading-relaxed opacity-0 group-hover/spark:opacity-100 transition-opacity pointer-events-none shadow-2xl border border-white/10 italic">
-                        Analytical pattern matched: This transaction corresponds to a recurring {resolveAccountName(accounts, line.accountId, line.accountName).toLowerCase()} vector based on historical consistency.
+                <div key={idx} className="flex items-center justify-between gap-1 w-full">
+                  <span 
+                    dir="auto"
+                    className={cn(
+                      "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider truncate flex-1 border transition-all",
+                      line.amountCents > 0 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover/active:text-white group-hover/active:border-white/20" : "bg-[var(--ink)] text-slate-500 border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-white/80 group-hover/active:border-white/20",
+                    )}
+                  >
+                    <HighlightMatch text={resolveAccountName(accounts, line.accountId, line.accountName)} match={searchTerm} />
+                    {line.isAnalyticalTagged && (
+                      <div className="absolute -top-2 -right-2 z-20 group/spark">
+                        <Sparkles size={10} className="text-amber-500 animate-[pulse_2s_infinite]" />
+                        <div className="absolute top-4 left-0 w-48 p-3 bg-slate-900 text-white rounded-xl text-[8px] font-medium leading-relaxed opacity-0 group-hover/spark:opacity-100 transition-opacity pointer-events-none shadow-2xl border border-white/10 italic">
+                          Analytical pattern matched: This transaction corresponds to a recurring {resolveAccountName(accounts, line.accountId, line.accountName).toLowerCase()} vector based on historical consistency.
+                        </div>
                       </div>
-                    </div>
+                    )}
+                  </span>
+                  {idx === 0 && (
+                    <CategoryWhyPopover 
+                      description={displayTx.description} 
+                      accountName={resolveAccountName(accounts, line.accountId, line.accountName)} 
+                    />
                   )}
-                </span>
+                </div>
               ))}
               
               {tx.lines?.map(l => l.tags || []).flat().filter((v, i, a) => a.indexOf(v) === i).slice(0, 2).map((tag, idx) => (

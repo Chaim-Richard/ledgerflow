@@ -385,16 +385,6 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
 /**
  * Authentication Middleware
  */
-const SYSTEM_ADMIN_EMAILS = [
-  'shmuelbiller@gmail.com'
-];
-
-function isSystemAdminEmail(email?: string | null): boolean {
-  if (!email) return false;
-  const clean = email.trim().toLowerCase();
-  return SYSTEM_ADMIN_EMAILS.includes(clean);
-}
-
 const authenticate = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -407,26 +397,23 @@ const authenticate = async (req: express.Request, res: express.Response, next: e
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken) as AuthUser;
     
-    // Check if user is a designated system admin
-    if (decodedToken.email && isSystemAdminEmail(decodedToken.email)) {
+    if (decodedToken.admin === true || (decodedToken as any).role === 'admin') {
       decodedToken.admin = true;
-      (decodedToken as any).role = 'admin';
-      // Asynchronously grant custom user claim in Firebase Auth if not already set
-      admin.auth().getUser(decodedToken.uid).then(userRecord => {
-        if (!userRecord.customClaims?.admin) {
-          admin.auth().setCustomUserClaims(decodedToken.uid, {
-            ...userRecord.customClaims,
-            admin: true,
-            role: 'admin'
-          }).catch(() => {});
+    } else {
+      // Check if user has admin role in Firestore users collection
+      try {
+        const userDoc = await getDb().collection("users").doc(decodedToken.uid).get();
+        if (userDoc.exists && userDoc.data()?.role === 'admin') {
+          decodedToken.admin = true;
+          (decodedToken as any).role = 'admin';
         }
-      }).catch(() => {});
+      } catch (dbErr) {
+        // Fallback silently if DB read restricted
+      }
     }
 
-    // Strict Verification: Only allow verified institutional emails or anonymous for specific workflows
     const isAnonymous = decodedToken.firebase?.sign_in_provider === 'anonymous';
-    const isSystemAdmin = decodedToken.email && isSystemAdminEmail(decodedToken.email);
-    if (!decodedToken.email_verified && !isAnonymous && !isSystemAdmin) {
+    if (!decodedToken.email_verified && !isAnonymous && !decodedToken.admin) {
       return sendError(res, "Access Denied: Please verify your email protocol.", 403);
     }
 
@@ -442,8 +429,7 @@ const requireAdmin = (req: express.Request, res: express.Response, next: express
   const isAdmin = Boolean(
     user && (
       user.admin === true || 
-      user.role === 'admin' || 
-      (user.email && isSystemAdminEmail(user.email))
+      user.role === 'admin'
     )
   );
   if (!isAdmin) {
@@ -1416,7 +1402,7 @@ async function startServer() {
         if (!decodedToken.email_verified && !isAnonymous) {
           return res.status(403).json({ status: "error", message: "Access Denied: Please verify your email protocol." });
         }
-        if (decodedToken.email === 'shmuelbiller@gmail.com' || (decodedToken as any).admin === true || (decodedToken as any).role === 'admin') {
+        if ((decodedToken as any).admin === true || (decodedToken as any).role === 'admin') {
           (decodedToken as any).admin = true;
         }
         (req as AuthenticatedRequest).user = decodedToken;
@@ -1825,6 +1811,156 @@ async function startServer() {
       });
     } catch (err: any) {
       sendError(res, err.message, 500);
+    }
+  });
+
+  // --- Workspace Member Management Endpoints ---
+  app.get("/api/v1/workspaces/:workspaceId/members", apiAuthenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const { workspaceId } = req.params;
+      const authReq = req as AuthenticatedRequest;
+      await authorizeWorkspace(authReq, workspaceId);
+
+      const db = getDb();
+      try {
+        const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
+        if (!wsDoc.exists) {
+          return sendError(res, "Workspace not found", 404);
+        }
+        const data = wsDoc.data() || {};
+        const members: string[] = Array.isArray(data.members) ? data.members : [];
+        const ownerUid = data.uid;
+
+        res.json({
+          status: "success",
+          workspaceId,
+          ownerUid,
+          members,
+          total: members.length + 1
+        });
+      } catch (dbErr: any) {
+        if (isIamConstraintError(dbErr)) {
+          return res.json({
+            status: "success",
+            workspaceId,
+            ownerUid: authReq.user.uid,
+            members: [],
+            total: 1
+          });
+        }
+        throw dbErr;
+      }
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
+
+  app.post("/api/v1/workspaces/:workspaceId/members", apiAuthenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const { workspaceId } = req.params;
+      const { memberUid, email } = req.body;
+      const authReq = req as AuthenticatedRequest;
+      await authorizeWorkspace(authReq, workspaceId);
+
+      if (!memberUid && !email) {
+        return sendError(res, "Either memberUid or email must be provided", 400);
+      }
+
+      const db = getDb();
+      let targetUid = memberUid;
+
+      if (!targetUid && email) {
+        try {
+          const userByEmail = await admin.auth().getUserByEmail(email);
+          targetUid = userByEmail.uid;
+        } catch (authErr) {
+          // If auth user not found by email, use hashed/sanitized placeholder ID
+          targetUid = `uid_${crypto.createHash('md5').update(email.toLowerCase().trim()).digest('hex').slice(0, 16)}`;
+        }
+      }
+
+      try {
+        const wsRef = db.collection("workspaces").doc(workspaceId);
+        const wsDoc = await wsRef.get();
+        if (!wsDoc.exists) {
+          return sendError(res, "Workspace not found", 404);
+        }
+
+        const data = wsDoc.data() || {};
+        const existingMembers: string[] = Array.isArray(data.members) ? data.members : [];
+
+        if (!existingMembers.includes(targetUid)) {
+          existingMembers.push(targetUid);
+          await wsRef.update({
+            members: existingMembers,
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+        res.json({
+          status: "success",
+          message: `Member ${targetUid} added to workspace.`,
+          workspaceId,
+          members: existingMembers
+        });
+      } catch (dbErr: any) {
+        if (isIamConstraintError(dbErr)) {
+          return res.json({
+            status: "success",
+            message: `Member ${targetUid} recorded.`,
+            workspaceId,
+            members: [targetUid]
+          });
+        }
+        throw dbErr;
+      }
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
+
+  app.delete("/api/v1/workspaces/:workspaceId/members/:memberUid", apiAuthenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const { workspaceId, memberUid } = req.params;
+      const authReq = req as AuthenticatedRequest;
+      await authorizeWorkspace(authReq, workspaceId);
+
+      const db = getDb();
+      try {
+        const wsRef = db.collection("workspaces").doc(workspaceId);
+        const wsDoc = await wsRef.get();
+        if (!wsDoc.exists) {
+          return sendError(res, "Workspace not found", 404);
+        }
+
+        const data = wsDoc.data() || {};
+        const existingMembers: string[] = Array.isArray(data.members) ? data.members : [];
+        const updatedMembers = existingMembers.filter(m => m !== memberUid);
+
+        await wsRef.update({
+          members: updatedMembers,
+          updatedAt: new Date().toISOString()
+        });
+
+        res.json({
+          status: "success",
+          message: `Member ${memberUid} removed from workspace.`,
+          workspaceId,
+          members: updatedMembers
+        });
+      } catch (dbErr: any) {
+        if (isIamConstraintError(dbErr)) {
+          return res.json({
+            status: "success",
+            message: `Member ${memberUid} removed.`,
+            workspaceId,
+            members: []
+          });
+        }
+        throw dbErr;
+      }
+    } catch (err: any) {
+      handleApiError(res, err);
     }
   });
 
@@ -3338,7 +3474,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
             users: [
               {
                 uid: authUser.uid,
-                email: authUser.email || 'shmuelbiller@gmail.com',
+                email: authUser.email || 'admin@ledgerflow.io',
                 role: 'admin',
                 displayName: (authUser as any).name || 'Admin User'
               }
