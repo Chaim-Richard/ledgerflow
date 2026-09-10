@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { HelpCircle, BrainCircuit, ShieldCheck, Cpu, ArrowRight } from 'lucide-react';
+import { BrainCircuit, ShieldCheck, Cpu, ArrowRight } from 'lucide-react';
 import { MatchingEngine } from '../../lib/MatchingEngine';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -40,7 +40,25 @@ export default function CategoryWhyPopover({ description, accountName, className
 
   if (!debugInfo) return null;
 
-  const confidencePct = Math.round((debugInfo.confidence || 0.85) * 100);
+  const isManual = !debugInfo.accountName || debugInfo.accountName === 'Manual Review' || debugInfo.layer.includes('Manual') || debugInfo.layer.includes('Empty');
+  const rawConf = debugInfo.confidence;
+
+  let bandLabel = 'No Evidence';
+  let badgeClasses = 'bg-slate-800 text-slate-400 border-slate-700';
+
+  if (!isManual && rawConf !== undefined && rawConf !== null && rawConf > 0) {
+    const pct = Math.round(rawConf * 100);
+    if (rawConf >= 0.75) {
+      bandLabel = `Confident (${pct}%)`;
+      badgeClasses = 'bg-emerald-950 text-emerald-400 border-emerald-800';
+    } else if (rawConf >= 0.40) {
+      bandLabel = `Weak Evidence (${pct}%)`;
+      badgeClasses = 'bg-amber-950 text-amber-400 border-amber-800';
+    } else {
+      bandLabel = `No Evidence (${pct}%)`;
+      badgeClasses = 'bg-slate-800 text-slate-400 border-slate-700';
+    }
+  }
 
   return (
     <div className={`relative inline-block ${className}`} onClick={(e) => e.stopPropagation()}>
@@ -65,8 +83,8 @@ export default function CategoryWhyPopover({ description, accountName, className
               <span className="font-bold text-[10px] uppercase tracking-wider text-indigo-400 flex items-center gap-1">
                 <Cpu size={12} /> Resolution Audit Trail
               </span>
-              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold">
-                {confidencePct}% Confidence
+              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border font-bold ${badgeClasses}`}>
+                {bandLabel}
               </span>
             </div>
 

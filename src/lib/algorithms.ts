@@ -1350,6 +1350,41 @@ export class RootOptimizer {
  * P(Category | Words) = P(Words | Category) * P(Category) / P(Words)
  * Upgraded with Bigram Extraction, TF-IDF scaling considerations, and Laplace Smoothing to achieve 2x greater veracity and "integrity".
  */
+export interface BayesianClassifierOptions {
+  alpha?: number;
+  temperature?: number;
+  bigramMultiplier?: number;
+  enableTrigrams?: boolean;
+  trigramMultiplier?: number;
+  abstentionMargin?: number;
+  abstentionUniformBuffer?: number;
+}
+
+export interface EvaluationSample {
+  text: string;
+  expectedCategory: string;
+}
+
+export interface EvaluationResultItem {
+  text: string;
+  expectedCategory: string;
+  predictedCategory: string | null;
+  confidence: number;
+  correct: boolean;
+  top2Correct: boolean;
+  isUnknown: boolean;
+  isFalseConfidence: boolean;
+}
+
+export interface BenchmarkMetrics {
+  total: number;
+  accuracy: number;
+  top2Accuracy: number;
+  unknownRate: number;
+  falseConfidenceRate: number;
+  results: EvaluationResultItem[];
+}
+
 export class BayesianClassifier {
   private categoryCounts: Record<string, number> = {};
   private wordCounts: Record<string, Record<string, number>> = {};
@@ -1357,6 +1392,36 @@ export class BayesianClassifier {
   private docFrequency: Record<string, number> = {}; // TF-IDF tracking
   private totalDocuments = 0;
   private vocabulary = new Set<string>();
+
+  private alpha: number;
+  private temperature: number;
+  private bigramMultiplier: number;
+  private enableTrigrams: boolean;
+  private trigramMultiplier: number;
+  private abstentionMargin: number;
+  private abstentionUniformBuffer: number;
+
+  constructor(options: BayesianClassifierOptions = {}) {
+    this.alpha = options.alpha ?? 0.75;
+    this.temperature = options.temperature ?? 1.5;
+    this.bigramMultiplier = options.bigramMultiplier ?? 1.65;
+    this.enableTrigrams = options.enableTrigrams ?? false;
+    this.trigramMultiplier = options.trigramMultiplier ?? 0.0;
+    this.abstentionMargin = options.abstentionMargin ?? 0.10;
+    this.abstentionUniformBuffer = options.abstentionUniformBuffer ?? 0.05;
+  }
+
+  public setTrigrams(enable: boolean, multiplier = 0.30): void {
+    this.enableTrigrams = enable;
+    this.trigramMultiplier = multiplier;
+  }
+
+  public getTrigramSettings(): { enableTrigrams: boolean; trigramMultiplier: number } {
+    return {
+      enableTrigrams: this.enableTrigrams,
+      trigramMultiplier: this.trigramMultiplier
+    };
+  }
 
   // Strict list of low-signal financial stopwords to discard during tokenization for increased division contrast
   private static readonly FINANCIAL_STOPWORDS = new Set([
@@ -1425,51 +1490,75 @@ export class BayesianClassifier {
 
     features.forEach(feature => {
       this.vocabulary.add(feature);
-      const featWeight = feature.startsWith('~') ? weight * 0.30 : weight;
-      this.wordCounts[category][feature] = (this.wordCounts[category][feature] || 0) + featWeight;
-      this.categoryFeatureTotals[category] += featWeight;
+      this.wordCounts[category][feature] = (this.wordCounts[category][feature] || 0) + weight;
+      this.categoryFeatureTotals[category] += weight;
     });
   }
 
   /**
-   * Predicts the most likely category and provides a calibrated confidence metric.
+   * Classifies input text and returns full posterior breakdown, margin, and abstention diagnosis.
    */
-  classify(description: string): { category: string; confidence: number } | null {
+  classifyDetailed(description: string): {
+    category: string | null;
+    confidence: number;
+    bestCategory: string;
+    runnerUpCategory: string | null;
+    top1Posterior: number;
+    top2Posterior: number;
+    margin: number;
+    uniformProb: number;
+    isAbstained: boolean;
+    abstainReason?: 'NO_DOCUMENTS' | 'NO_FEATURES' | 'MARGIN_TOO_LOW' | 'NEAR_UNIFORM_PRIOR';
+  } | null {
     if (this.totalDocuments === 0) return null;
 
     const features = this.tokenizeAndExtractFeatures(description);
+    const inVocabFeatures = features.filter(f => this.vocabulary.has(f));
+    const numCategories = Object.keys(this.categoryCounts).length;
+    const uniformProb = numCategories > 0 ? 1 / numCategories : 1;
+
+    if (inVocabFeatures.length === 0) {
+      const topCategory = Object.keys(this.categoryCounts)[0] || 'Uncategorized';
+      return {
+        category: null,
+        confidence: 0,
+        bestCategory: topCategory,
+        runnerUpCategory: null,
+        top1Posterior: 0,
+        top2Posterior: 0,
+        margin: 0,
+        uniformProb: Number(uniformProb.toFixed(4)),
+        isAbstained: true,
+        abstainReason: 'NO_FEATURES'
+      };
+    }
+
     const categoryScores: Record<string, number> = {};
     const vocabSize = this.vocabulary.size;
-
-    // Default Lidstone/Laplace smoothing parameter Alpha
-    const alpha = 0.75; 
+    const alpha = this.alpha;
 
     for (const category in this.categoryCounts) {
       // Prior P(Category)
       let logProb = Math.log(this.categoryCounts[category] / this.totalDocuments);
       const totalFeaturesInCategory = this.categoryFeatureTotals[category] || 0;
 
-      for (let i = 0; i < features.length; i++) {
-        const feature = features[i];
-        const featureCountInCategory = this.wordCounts[category][feature] || 0;
+      for (let i = 0; i < inVocabFeatures.length; i++) {
+        const feature = inVocabFeatures[i];
+        const featureCountInCategory = this.wordCounts[category]?.[feature] || 0;
         
         // P(Feature | Category) using adaptive Lidstone smoothing
-        // This ensures unseen words don't map to zero, and filters noise better than standard Laplace smoothing
         const pFeatureGivenCategory = (featureCountInCategory + alpha) / (totalFeaturesInCategory + alpha * vocabSize);
         
         // TF-IDF scaling factor: penalize common words, boost rare highly-discriminative words
         const docFreq = this.docFrequency[feature] || 1;
-        const idfWeight = Math.log(this.totalDocuments / docFreq) + 1; // Smooth IDF
+        const idfWeight = Math.log(this.totalDocuments / docFreq) + 1;
 
-        // Lambda mixture model for unigram/bigram semantic blend:
-        // Give higher weight (lambda = 0.65) to bigram features if they exist
-        // Give lower weight (0.30) to character trigrams as typo tiebreakers
-        const isBigram = feature.includes('_');
-        const isTrigram = feature.startsWith('~');
-        const featureMultiplier = isBigram ? 1.65 : (isTrigram ? 0.30 : 1.00);
+        // Lambda mixture model for unigram, bigram, and trigram semantic blend
+        const isTrigram = feature.startsWith('c3_');
+        const isBigram = feature.includes('_') && !isTrigram;
+        const multiplier = isBigram ? this.bigramMultiplier : (isTrigram ? this.trigramMultiplier : 1.00);
         
-        const finalFeatureWeight = featureMultiplier * idfWeight;
-        
+        const finalFeatureWeight = multiplier * idfWeight;
         logProb += finalFeatureWeight * Math.log(pFeatureGivenCategory);
       }
       categoryScores[category] = logProb;
@@ -1480,25 +1569,95 @@ export class BayesianClassifier {
     if (sorted.length === 0) return null;
 
     const [bestCategory, bestLogProb] = sorted[0];
-    
-    if (sorted.length > 1) {
-      // Calibrated Softmax under Temperature scaling (T = 1.5) to avoid over-confident spikes
-      let sumExp = 0;
-      const temperature = 1.5;
-      for (const [_, score] of sorted) {
-         // Scale the score difference with temperature to output true graded expectations
-         sumExp += Math.exp((score - bestLogProb) / temperature);
-      }
-      const confidence = 1 / sumExp;
-      
-      // Ensure we truncate / normalize confidence reasonably
-      return { 
-        category: bestCategory, 
-        confidence: Math.min(0.999, Math.max(0.10, confidence)) 
+
+    if (sorted.length === 1) {
+      return {
+        category: bestCategory,
+        confidence: 0.995,
+        bestCategory,
+        runnerUpCategory: null,
+        top1Posterior: 1.0,
+        top2Posterior: 0,
+        margin: 1.0,
+        uniformProb: 1.0,
+        isAbstained: false
       };
     }
 
-    return { category: bestCategory, confidence: 0.995 };
+    // Calibrated Softmax under Temperature scaling
+    let sumExp = 0;
+    for (const [_, score] of sorted) {
+      sumExp += Math.exp((score - bestLogProb) / this.temperature);
+    }
+    const top1Posterior = 1 / sumExp;
+
+    // Calculate margin against distinct competing taxonomy branches
+    const rootOf = (cat: string) => cat.split(/[>/:]/)[0].trim().toLowerCase();
+    const bestRoot = rootOf(bestCategory);
+    const distinctBranchRunnerUp = sorted.slice(1).find(([cat]) => rootOf(cat) !== bestRoot);
+    const immediateRunnerUp = sorted[1];
+
+    const runnerUpCategory = immediateRunnerUp ? immediateRunnerUp[0] : null;
+    const competitorScore = distinctBranchRunnerUp ? distinctBranchRunnerUp[1] : (immediateRunnerUp ? immediateRunnerUp[1] : bestLogProb);
+    const competitorCategory = distinctBranchRunnerUp ? distinctBranchRunnerUp[0] : runnerUpCategory;
+
+    const top2Posterior = immediateRunnerUp 
+      ? Math.exp((immediateRunnerUp[1] - bestLogProb) / this.temperature) / sumExp
+      : 0;
+    const competitorPosterior = distinctBranchRunnerUp
+      ? Math.exp((competitorScore - bestLogProb) / this.temperature) / sumExp
+      : top2Posterior;
+
+    const margin = top1Posterior - competitorPosterior;
+
+    // Abstention guard:
+    // When top-1 is within ~5% of uniform prior (no discriminative evidence)
+    // or margin between top-1 and competing branches is below the threshold, abstain!
+    const nearUniform = top1Posterior <= uniformProb + this.abstentionUniformBuffer;
+    const marginTooLow = margin < this.abstentionMargin;
+
+    if (nearUniform || marginTooLow) {
+      return {
+        category: null,
+        confidence: Number(top1Posterior.toFixed(4)),
+        bestCategory,
+        runnerUpCategory: competitorCategory,
+        top1Posterior: Number(top1Posterior.toFixed(4)),
+        top2Posterior: Number(competitorPosterior.toFixed(4)),
+        margin: Number(margin.toFixed(4)),
+        uniformProb: Number(uniformProb.toFixed(4)),
+        isAbstained: true,
+        abstainReason: nearUniform ? 'NEAR_UNIFORM_PRIOR' : 'MARGIN_TOO_LOW'
+      };
+    }
+
+    const confidence = Math.min(0.999, Math.max(0.10, top1Posterior));
+    return {
+      category: bestCategory,
+      confidence: Number(confidence.toFixed(4)),
+      bestCategory,
+      runnerUpCategory: competitorCategory,
+      top1Posterior: Number(top1Posterior.toFixed(4)),
+      top2Posterior: Number(competitorPosterior.toFixed(4)),
+      margin: Number(margin.toFixed(4)),
+      uniformProb: Number(uniformProb.toFixed(4)),
+      isAbstained: false
+    };
+  }
+
+  /**
+   * Predicts the most likely category and provides a calibrated confidence metric.
+   * Returns null if evidence is weak or the model abstains (near-uniform prior or low margin).
+   */
+  classify(description: string): { category: string; confidence: number } | null {
+    const detailed = this.classifyDetailed(description);
+    if (!detailed || detailed.isAbstained || !detailed.category) {
+      return null;
+    }
+    return {
+      category: detailed.category,
+      confidence: detailed.confidence
+    };
   }
 
   /**
@@ -1538,28 +1697,14 @@ export class BayesianClassifier {
   }
 
   /**
-   * Generates character trigrams with a ~ prefix for fuzzy typo resilience and OCR errors
-   */
-  private extractTrigrams(text: string): string[] {
-    const clean = text.toLowerCase().replace(/[^a-z]+/g, '');
-    if (clean.length < 3) return [];
-    const slice = clean.slice(0, 25);
-    const trigrams: string[] = [];
-    trigrams.push(`~${slice.slice(0, 2)}`);
-    for (let i = 0; i <= slice.length - 3; i++) {
-      trigrams.push(`~${slice.slice(i, i + 3)}`);
-    }
-    return trigrams;
-  }
-
-  /**
-   * Extracts clean tokens, discards low-value transaction noise, and pairs unigrams/bigrams
+   * Extracts clean tokens, discards low-value transaction noise, and pairs unigrams/bigrams/trigrams.
+   * Phase 1 Fix: Replaces all non-alphanumeric clusters with spaces and trims trailing reference numbers.
    */
   private tokenizeAndExtractFeatures(text: string): string[] {
     const rawWords = text.toLowerCase()
-      .replace(/[^a-z0-9]+/g, ' ')        // FIX 1: punctuation → space, not deleted
+      .replace(/[^a-z0-9]+/g, ' ')
       .split(/\s+/)
-      .map(w => w.replace(/\d{2,}$/, '')) // FIX 2: strip trailing store/ref digits
+      .map(w => w.replace(/\d{2,}$/, ''))
       .filter(w => w.length > 2 && !BayesianClassifier.FINANCIAL_STOPWORDS.has(w));
       
     // Unigrams
@@ -1568,15 +1713,80 @@ export class BayesianClassifier {
     // Bigrams for deep semantic context and phrase tracking
     const n = rawWords.length;
     for (let i = 0; i < n - 1; i++) {
-        features.push(`${rawWords[i]}_${rawWords[i+1]}`);
+      features.push(`${rawWords[i]}_${rawWords[i+1]}`);
     }
 
-    // Character trigrams for typo/OCR resilience
-    const trigrams = this.extractTrigrams(text);
-    features.push(...trigrams);
+    // Sub-word character trigrams for typo and spacing deformation tolerance (e.g. SHOPRIT E -> SHOPRITE)
+    if (this.enableTrigrams && this.trigramMultiplier > 0) {
+      for (const word of rawWords) {
+        if (word.length >= 3) {
+          for (let i = 0; i <= word.length - 3; i++) {
+            features.push(`c3_${word.slice(i, i + 3)}`);
+          }
+        }
+      }
+    }
     
     return features;
   }
+}
+
+/**
+ * Evaluates BayesianClassifier on an evaluation dataset and calculates accuracy,
+ * top-2 accuracy, unknown (abstention) rate, and false-confidence rate.
+ */
+export function evaluateClassifier(
+  classifier: BayesianClassifier,
+  testSet: EvaluationSample[],
+  highConfidenceThreshold = 0.70
+): BenchmarkMetrics {
+  let correctCount = 0;
+  let top2CorrectCount = 0;
+  let unknownCount = 0;
+  let falseConfidenceCount = 0;
+
+  const results: EvaluationResultItem[] = testSet.map(sample => {
+    const detailed = classifier.classifyDetailed(sample.text);
+    const predictedCategory = (detailed && !detailed.isAbstained) ? detailed.category : null;
+    const confidence = detailed ? detailed.confidence : 0;
+    
+    const isUnknown = predictedCategory === null;
+    const correct = !isUnknown && (predictedCategory === sample.expectedCategory);
+    
+    const top2Categories = detailed 
+      ? [detailed.bestCategory, detailed.runnerUpCategory].filter((c): c is string => Boolean(c))
+      : [];
+    const top2Correct = top2Categories.includes(sample.expectedCategory);
+    
+    // False confidence: predicted is wrong (and not unknown), but claimed high confidence
+    const isFalseConfidence = !correct && !isUnknown && confidence >= highConfidenceThreshold;
+
+    if (correct) correctCount++;
+    if (top2Correct) top2CorrectCount++;
+    if (isUnknown) unknownCount++;
+    if (isFalseConfidence) falseConfidenceCount++;
+
+    return {
+      text: sample.text,
+      expectedCategory: sample.expectedCategory,
+      predictedCategory,
+      confidence,
+      correct,
+      top2Correct,
+      isUnknown,
+      isFalseConfidence
+    };
+  });
+
+  const total = testSet.length || 1;
+  return {
+    total: testSet.length,
+    accuracy: Number((correctCount / total).toFixed(4)),
+    top2Accuracy: Number((top2CorrectCount / total).toFixed(4)),
+    unknownRate: Number((unknownCount / total).toFixed(4)),
+    falseConfidenceRate: Number((falseConfidenceCount / total).toFixed(4)),
+    results
+  };
 }
 
 /**

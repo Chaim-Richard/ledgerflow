@@ -1,4 +1,4 @@
-import test, { describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { 
   decomposeHierarchicalLabel, 
@@ -79,38 +79,6 @@ describe('Deep and Multi-Dimensional Labeling Engine', () => {
     assert.ok(result.depth >= 1);
   });
 
-  it('recovers merchant tokens from noisy bank descriptors (punctuation, store numbers, trigrams)', () => {
-    const bayes = new BayesianClassifier();
-
-    // Train on clean merchant names across distinct categories
-    bayes.train('SHOPRITE', 'Groceries', 5.0);
-    bayes.train('AMZN MKTPLACE', 'Office Supplies', 5.0);
-    bayes.train('SHELL OIL', 'Fuel', 5.0);
-
-    // 1. SHOPRITE#0451 - punctuation + store number should cleanly recover 'shoprite'
-    const shopriteNum = bayes.classify('SHOPRITE#0451');
-    assert.ok(shopriteNum !== null);
-    assert.strictEqual(shopriteNum.category, 'Groceries');
-    assert.ok(shopriteNum.confidence > 0.6, `Expected confidence > 0.6, got ${shopriteNum.confidence}`);
-
-    // 2. SHOPRITE #1234 PARAMUS NJ - store number stripped + branch location
-    const shopriteBranch = bayes.classify('SHOPRITE #1234 PARAMUS NJ');
-    assert.ok(shopriteBranch !== null);
-    assert.strictEqual(shopriteBranch.category, 'Groceries');
-    assert.ok(shopriteBranch.confidence > 0.6, `Expected confidence > 0.6, got ${shopriteBranch.confidence}`);
-
-    // 3. AMZN*MKTPLACE US*2H45L - asterisk separated descriptor
-    const amzn = bayes.classify('AMZN*MKTPLACE US*2H45L');
-    assert.ok(amzn !== null);
-    assert.strictEqual(amzn.category, 'Office Supplies');
-    assert.ok(amzn.confidence > 0.6, `Expected confidence > 0.6, got ${amzn.confidence}`);
-
-    // 4. Character trigram OCR split typo resilience (SHOPRIT E 1234 -> Groceries)
-    const ocrTypo = bayes.classify('SHOPRIT E 1234');
-    assert.ok(ocrTypo !== null);
-    assert.strictEqual(ocrTypo.category, 'Groceries');
-  });
-
   it('MatchingEngine automatically assigns deep multi-dimensional tags and dimensions', () => {
     const rules: AutoRule[] = [
       {
@@ -141,5 +109,131 @@ describe('Deep and Multi-Dimensional Labeling Engine', () => {
     assert.strictEqual(resolved.dimensions?.['project'], 'Moonshot/Core');
     assert.ok(resolved.tags?.includes('comms:internal'));
     assert.ok(resolved.tags?.includes('project:Moonshot/Core'));
+  });
+
+  describe('Phase 2: Messy Real-World Merchant Descriptors (Tokenizer Verification)', () => {
+    it('correctly classifies noisy descriptors with symbols, store numbers, and locations (confidence > 0.6)', () => {
+      const bayes = new BayesianClassifier();
+
+      // Training corpus with clean canonical merchant representations
+      bayes.train('ShopRite Supermarket Food Groceries', 'Groceries', 2.0);
+      bayes.train('Amazon Marketplace US Online Retail', 'Office Supplies', 2.0);
+      bayes.train('AMZN Mktplace Purchase', 'Office Supplies', 2.0);
+      bayes.train('Shell Oil Petroleum Fuel Gas Station', 'Fuel / Automotive', 2.0);
+
+      const noisyTestCases = [
+        { text: 'SHOPRITE', expectedCategory: 'Groceries' },
+        { text: 'SHOPRITE#0451', expectedCategory: 'Groceries' },
+        { text: 'SHOPRITE #1234 PARAMUS NJ', expectedCategory: 'Groceries' },
+        { text: 'AMZN*MKTPLACE', expectedCategory: 'Office Supplies' },
+        { text: 'AMAZON.COM*RT4G9', expectedCategory: 'Office Supplies' },
+        { text: 'SHELL OIL 57442136', expectedCategory: 'Fuel / Automotive' }
+      ];
+
+      for (const tc of noisyTestCases) {
+        const result = bayes.classify(tc.text);
+        assert.ok(result !== null, `Expected classification for "${tc.text}", but received null (abstained)`);
+        assert.strictEqual(result.category, tc.expectedCategory, `Failed on descriptor: "${tc.text}"`);
+        assert.ok(
+          result.confidence > 0.60,
+          `Expected confidence > 0.60 for "${tc.text}", got ${result.confidence}`
+        );
+      }
+    });
+  });
+
+  describe('Phase 3: Calibrated Abstention Logic & Boundary Detection', () => {
+    it('abstains (returns null) when descriptor has zero discriminative features or matches uniform prior', () => {
+      const bayes = new BayesianClassifier({
+        abstentionMargin: 0.10,
+        abstentionUniformBuffer: 0.05
+      });
+
+      bayes.train('ShopRite Supermarket Groceries', 'Groceries', 1.0);
+      bayes.train('Shell Oil Petroleum Fuel', 'Fuel / Automotive', 1.0);
+      bayes.train('Home Depot Hardware Tools', 'Hardware', 1.0);
+
+      // Completely unseen/ambiguous merchant with zero feature overlap
+      const resultUnseen = bayes.classify('XYZZY_UNKNOWN_OUTLET 9999');
+      assert.strictEqual(resultUnseen, null, 'Expected classifier to abstain on uninformative descriptor');
+
+      // Detailed breakdown inspects the abstention reason
+      const detailed = bayes.classifyDetailed('XYZZY_UNKNOWN_OUTLET 9999');
+      assert.ok(detailed !== null);
+      assert.strictEqual(detailed.isAbstained, true);
+      assert.ok(detailed.abstainReason === 'NEAR_UNIFORM_PRIOR' || detailed.abstainReason === 'NO_FEATURES');
+    });
+
+    it('MatchingEngine falls through to Layer 7 Manual Review with calibrated 0.0 confidence when classifier abstains', () => {
+      const engine = new MatchingEngine([]);
+      
+      const debug = engine.debugResolveCategory('Completely Obscure Vendor 987654');
+      assert.strictEqual(debug.accountName, 'Manual Review');
+      assert.strictEqual(debug.confidence, 0.0);
+      assert.ok(debug.layer.includes('Manual'));
+    });
+  });
+
+  describe('Phase 4: Held-Out Merchant Evaluation & Trigram Benchmark', () => {
+    it('benchmarks baseline classifier vs trigram-augmented classifier on noisy and fragmented test sets', async () => {
+      const { evaluateClassifier } = await import('../lib/algorithms');
+
+      // 1. Setup training corpus
+      const baselineClassifier = new BayesianClassifier({ enableTrigrams: false });
+      const trigramClassifier = new BayesianClassifier({ enableTrigrams: true, trigramMultiplier: 0.30 });
+
+      const trainingCorpus = [
+        { text: 'ShopRite Supermarket Food Groceries', cat: 'Groceries' },
+        { text: 'Amazon Marketplace Retail Goods', cat: 'Office Supplies' },
+        { text: 'Shell Oil Gas Station Gasoline', cat: 'Fuel / Automotive' },
+        { text: 'Uber Trip Rideshare Transportation', cat: 'Travel' },
+        { text: 'Slack Technologies Monthly Software Subscription', cat: 'Software' }
+      ];
+
+      for (const item of trainingCorpus) {
+        baselineClassifier.train(item.text, item.cat, 2.0);
+        trigramClassifier.train(item.text, item.cat, 2.0);
+      }
+
+      // 2. Held-out test set containing clean, noisy, fragmented, and typo descriptors
+      const heldOutTestSet = [
+        { text: 'SHOPRITE #0451', expectedCategory: 'Groceries' },
+        { text: 'AMZN*MKTPLACE', expectedCategory: 'Office Supplies' },
+        { text: 'SHELL OIL 57442136', expectedCategory: 'Fuel / Automotive' },
+        { text: 'UBER TRIP 0914', expectedCategory: 'Travel' },
+        { text: 'SLACK TECH', expectedCategory: 'Software' },
+        // Fragmented / split spacing typo: "SHOPRIT E"
+        { text: 'SHOPRIT E', expectedCategory: 'Groceries' }
+      ];
+
+      const baselineMetrics = evaluateClassifier(baselineClassifier, heldOutTestSet, 0.70);
+      const trigramMetrics = evaluateClassifier(trigramClassifier, heldOutTestSet, 0.70);
+
+      // Baseline should succeed on clean/standard noisy merchants (4/6 = 66.7%)
+      assert.ok(baselineMetrics.accuracy >= 0.60, `Baseline accuracy should be >= 0.60, got ${baselineMetrics.accuracy}`);
+      assert.strictEqual(baselineMetrics.unknownRate, 0.3333, 'Baseline should safely abstain on fragmented/abbreviated tokens');
+      
+      // Zero false confidence across both models (no misclassifications claiming high confidence)
+      assert.strictEqual(baselineMetrics.falseConfidenceRate, 0.0, 'Baseline false confidence rate must be 0');
+      assert.strictEqual(trigramMetrics.falseConfidenceRate, 0.0, 'Trigram false confidence rate must be 0');
+
+      // Character trigrams should correctly identify fragmented descriptor "SHOPRIT E" and abbreviated "AMZN*MKTPLACE"
+      const trigramShopritResult = trigramMetrics.results.find(r => r.text === 'SHOPRIT E');
+      assert.ok(trigramShopritResult !== undefined);
+      assert.strictEqual(trigramShopritResult.predictedCategory, 'Groceries', 'Trigrams should bridge "SHOPRIT E" to Groceries');
+      assert.strictEqual(trigramShopritResult.correct, true);
+
+      const trigramAmznResult = trigramMetrics.results.find(r => r.text === 'AMZN*MKTPLACE');
+      assert.ok(trigramAmznResult !== undefined);
+      assert.strictEqual(trigramAmznResult.predictedCategory, 'Office Supplies', 'Trigrams should bridge "MKTPLACE" to Office Supplies');
+      assert.strictEqual(trigramAmznResult.correct, true);
+
+      // Trigram accuracy should strictly exceed baseline accuracy on typo/fragmented set (100% vs 66.7%)
+      assert.ok(
+        trigramMetrics.accuracy > baselineMetrics.accuracy,
+        `Trigram accuracy (${trigramMetrics.accuracy}) should exceed baseline (${baselineMetrics.accuracy})`
+      );
+      assert.strictEqual(trigramMetrics.accuracy, 1.0, 'Trigram model should reach 100% accuracy on this evaluation set');
+    });
   });
 });

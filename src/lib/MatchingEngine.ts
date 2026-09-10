@@ -372,9 +372,11 @@ export class MatchingEngine {
 
     // LAYER 5: Statistical Inference (Probabilistic Models with Hierarchical Deep Categories)
     if (lowerDesc.length > 5) {
-      const prediction = this.bayes.classifyHierarchical(lowerDesc);
-      if (prediction && prediction.confidence > this.threshold) {
-        return packageDebug(prediction.category, 'Bayesian Auto-Learning Model', Number(prediction.confidence.toFixed(2)));
+      const detailed = this.bayes.classifyDetailed(lowerDesc);
+      if (detailed && !detailed.isAbstained && detailed.confidence > this.threshold) {
+        const hierarchical = this.bayes.classifyHierarchical(lowerDesc);
+        const targetCategory = hierarchical ? hierarchical.category : detailed.bestCategory;
+        return packageDebug(targetCategory, 'Bayesian Auto-Learning Model', Number(detailed.confidence.toFixed(2)));
       }
     }
 
@@ -387,7 +389,16 @@ export class MatchingEngine {
       }
     }
 
-    return packageDebug('Manual Review', 'Fallback Manual Intervention');
+    const detailedDiagnostic = lowerDesc.length > 5 ? this.bayes.classifyDetailed(lowerDesc) : null;
+    let fallbackReason = 'Fallback Manual Intervention';
+    if (detailedDiagnostic?.isAbstained) {
+      if (detailedDiagnostic.abstainReason === 'NEAR_UNIFORM_PRIOR') {
+        fallbackReason = `Fallback Manual Intervention (Abstained: uniform prior, no discriminative evidence)`;
+      } else if (detailedDiagnostic.abstainReason === 'MARGIN_TOO_LOW') {
+        fallbackReason = `Fallback Manual Intervention (Abstained: margin ${(detailedDiagnostic.margin * 100).toFixed(1)}% < 10%)`;
+      }
+    }
+    return packageDebug('Manual Review', fallbackReason, 0.0);
   }
 
   /**
