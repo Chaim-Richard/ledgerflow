@@ -2521,7 +2521,7 @@ export function normalizeMerchantIdentity(rawDescriptor: string): MerchantIdenti
   const cleanTokens = working.toLowerCase().split(/\s+/).filter(t => t.length > 1);
 
   // 7. Resolve Canonical Brand
-  let canonicalMerchant = working;
+  let canonicalMerchant: string;
   let confidence = 0.80;
 
   const key1 = cleanTokens.join(' ');

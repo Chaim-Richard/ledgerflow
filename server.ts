@@ -1218,29 +1218,6 @@ async function startServer() {
     }
   });
 
-  app.post("/api/health", expressRateLimit({ windowMs: 60 * 1000, max: 30 }), async (req, res) => {
-    const errorString = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
-    const sanitized = SecurityService.scrubPII(errorString).slice(0, 2048);
-    console.warn("[Client Telemetry Probe Error]:", sanitized);
-    try {
-      const db = getDb();
-      const errorId = `err_health_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      // Strictly assign to unauthenticated pool to prevent tenant log pollution
-      await db.collection("errorLogs").doc(errorId).set({
-        id: errorId,
-        workspaceId: 'unauthenticated',
-        message: sanitized.slice(0, 1000),
-        source: 'health_probe',
-        severity: 'warning',
-        url: req.body?.url || '',
-        createdAt: new Date().toISOString()
-      });
-    } catch {
-      // Non-blocking telemetry fallback
-    }
-    res.json({ ok: true });
-  });
-
   app.get("/api/health", async (req, res) => {
     res.json({ 
       status: "ok", 

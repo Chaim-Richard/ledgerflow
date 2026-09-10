@@ -5,6 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { ClosingEntryEngine } from '../../kernel/ledger/ClosingEntryEngine';
+import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
 import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchema, BankLineUpdateSchema } from '../../schemas';
 import { Transaction } from '../../types';
 import { parseLocalDate } from '../../lib/utils';
@@ -1419,5 +1420,252 @@ transactionRouter.post('/reset', async (req, res) => {
     res.json({ status: 'ok' });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/transactions/:id/reverse
+ * "Reverse & Correct" — the closed-period correction workflow
+ * Atomic reversal and optional replacement of a transaction with audit trail chaining.
+ */
+transactionRouter.post('/:id/reverse', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reversalDate, reason, replacement, workspaceId } = req.body;
+    const user = (req as any).user;
+    const db = getDb();
+
+    let resultReversal: any = null;
+    let resultReplacement: any = null;
+    let targetWsId = '';
+
+    await db.runTransaction(async (t: any) => {
+      // 1. ALL READS UPFRONT
+      const txRef = db.collection('transactions').doc(id);
+      const origDoc = await t.get(txRef);
+      if (!origDoc.exists) {
+        const err: any = new Error('Transaction not found');
+        err.statusCode = 404;
+        throw err;
+      }
+      const origData = origDoc.data() as Transaction;
+      targetWsId = origData.workspaceId || workspaceId;
+      if (!targetWsId) {
+        const err: any = new Error('Corrupt transaction: missing workspaceId');
+        err.statusCode = 400;
+        throw err;
+      }
+
+      if (workspaceId && workspaceId !== origData.workspaceId) {
+        const err: any = new Error('Workspace mismatch: transaction belongs to a different workspace');
+        err.statusCode = 403;
+        throw err;
+      }
+
+      if (user.developerWorkspaceId && user.developerWorkspaceId !== targetWsId) {
+        const err: any = new Error(`Forbidden: API key is scoped strictly to workspace ${user.developerWorkspaceId}`);
+        err.statusCode = 403;
+        throw err;
+      }
+
+      // Verify workspace membership & period lock date
+      const wsDoc = await t.get(db.collection('workspaces').doc(targetWsId));
+      if (!wsDoc.exists) {
+        const err: any = new Error('Workspace not found');
+        err.statusCode = 404;
+        throw err;
+      }
+      const wsData = wsDoc.data();
+      if (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin) {
+        const err: any = new Error('Not a member');
+        err.statusCode = 403;
+        throw err;
+      }
+
+      // Check if already reversed — reversing twice must be impossible
+      if (origData.reversalEventId) {
+        const err: any = new Error(`Transaction ${id} has already been reversed by ${origData.reversalEventId}.`);
+        err.statusCode = 400;
+        throw err;
+      }
+
+      // Reject reversing a reversal transaction
+      if (origData.type === 'reversal') {
+        const err: any = new Error(`Cannot reverse a transaction that is already a reversal.`);
+        err.statusCode = 400;
+        throw err;
+      }
+
+      // Status lock check on original
+      if ((origData.status === 'certified' || origData.status === 'void') && !user.admin) {
+        const err: any = new Error(`Forbidden: Transaction ${id} status is locked (${origData.status}).`);
+        err.statusCode = 403;
+        throw err;
+      }
+
+      // Validate reversal date against period lock (must land in an open period)
+      const revDate = reversalDate || new Date().toISOString().split('T')[0];
+      if (wsData?.lockDate && revDate <= wsData.lockDate) {
+        const err: any = new Error(`Period Locked: Reversal date (${revDate}) cannot be in a closed period (<= ${wsData.lockDate}).`);
+        err.statusCode = 400;
+        throw err;
+      }
+
+      // Validate replacement date against period lock (must land in an open period)
+      if (replacement) {
+        const replDate = replacement.date || revDate;
+        if (wsData?.lockDate && replDate <= wsData.lockDate) {
+          const err: any = new Error(`Period Locked: Replacement date (${replDate}) cannot be in a closed period (<= ${wsData.lockDate}).`);
+          err.statusCode = 400;
+          throw err;
+        }
+      }
+
+      // Pre-read all chart accounts for both reversal and replacement
+      const accountIds = new Set<string>();
+      if (Array.isArray(origData.lines)) {
+        for (const l of origData.lines) {
+          if (l?.accountId) accountIds.add(l.accountId);
+        }
+      }
+      if (replacement && Array.isArray(replacement.lines)) {
+        for (const l of replacement.lines) {
+          if (l?.accountId) accountIds.add(l.accountId);
+        }
+      }
+
+      const accMap = new Map<string, any>();
+      if (accountIds.size > 0) {
+        const accRefs = Array.from(accountIds).map(aid => db.collection('chartAccounts').doc(aid));
+        const accSnaps = await t.getAll(...accRefs);
+        for (const snap of accSnaps) {
+          if (snap.exists) {
+            accMap.set(snap.id, snap.data());
+          }
+        }
+      }
+
+      // 2. IN-MEMORY PREPARATION & VALIDATION
+      const reversalId = db.collection('transactions').doc().id;
+      const reversalLines = TransactionTemplates.buildReversalLines(origData.lines || [], origData.description);
+      const reversalTxPayload: any = {
+        id: reversalId,
+        workspaceId: targetWsId,
+        uid: user.uid,
+        date: revDate,
+        description: `Reversal of ${origData.description || id}`,
+        totalAmountCents: origData.totalAmountCents,
+        currency: origData.currency || 'USD',
+        originalCurrency: origData.originalCurrency,
+        exchangeRate: origData.exchangeRate || 1,
+        payee: origData.payee,
+        status: 'completed',
+        type: 'reversal',
+        parentEventId: id,
+        lines: reversalLines,
+        metadata: {
+          ...(origData.metadata || {}),
+          isReversal: true,
+          reversesTxId: id,
+          reversalReason: reason || undefined
+        }
+      };
+
+      const validatedReversal = await TransactionValidator.validateAndPrepare(reversalTxPayload, {
+        workspaceId: targetWsId,
+        user: { uid: user.uid, admin: user.admin },
+        wsData,
+        accountsMap: accMap
+      }, undefined, t);
+
+      let validatedReplacement: Transaction | null = null;
+      if (replacement) {
+        const replId = replacement.id || db.collection('transactions').doc().id;
+        const replPayload: any = {
+          ...replacement,
+          id: replId,
+          workspaceId: targetWsId,
+          uid: user.uid,
+          date: replacement.date || revDate,
+          description: replacement.description || origData.description,
+          totalAmountCents: replacement.totalAmountCents || (replacement.lines ? getAbsoluteTotal(replacement) : origData.totalAmountCents),
+          currency: replacement.currency || origData.currency || 'USD',
+          originalCurrency: replacement.originalCurrency || origData.originalCurrency,
+          exchangeRate: replacement.exchangeRate || origData.exchangeRate || 1,
+          payee: replacement.payee || origData.payee,
+          status: replacement.status || 'completed',
+          type: replacement.type || origData.type || 'actual',
+          parentEventId: id,
+          lines: replacement.lines || origData.lines,
+          metadata: {
+            ...(replacement.metadata || {}),
+            isCorrection: true,
+            correctsTxId: id,
+            correctionReason: reason || undefined
+          }
+        };
+
+        validatedReplacement = await TransactionValidator.validateAndPrepare(replPayload, {
+          workspaceId: targetWsId,
+          user: { uid: user.uid, admin: user.admin },
+          wsData,
+          accountsMap: accMap
+        }, undefined, t);
+      }
+
+      // 3. ATOMIC WRITES (All after reads)
+      // A: Create reversal transaction
+      t.create(db.collection('transactions').doc(reversalId), {
+        ...validatedReversal,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+
+      // B: Set reversalEventId on original (narrow exemption on locked period)
+      t.update(txRef, {
+        reversalEventId: reversalId,
+        updatedAt: FieldValue.serverTimestamp()
+      });
+
+      // C: Create replacement transaction if supplied
+      if (validatedReplacement) {
+        t.create(db.collection('transactions').doc(validatedReplacement.id), {
+          ...validatedReplacement,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
+        });
+      }
+
+      resultReversal = validatedReversal;
+      resultReplacement = validatedReplacement;
+    });
+
+    // Write audit-log entry capturing the reason
+    const auditId = crypto.randomUUID();
+    await db.collection("auditLogs").doc(auditId).set({
+      id: auditId,
+      workspaceId: targetWsId,
+      timestamp: new Date().toISOString(),
+      userId: user.uid,
+      userEmail: user.email || "developer@ledgerflow.io",
+      action: "TRANSACTION_REVERSED",
+      details: `Reversed transaction [${id}] via reversal [${resultReversal?.id}]. Reason: ${reason || 'Closed-period correction'}.${resultReplacement ? ` Replaced with correction [${resultReplacement.id}].` : ''}`,
+      metadata: {
+        originalId: id,
+        reversalId: resultReversal?.id,
+        replacementId: resultReplacement?.id || null,
+        reason: reason || 'Closed-period correction'
+      }
+    });
+
+    res.json({
+      status: 'ok',
+      originalId: id,
+      reversal: resultReversal,
+      replacement: resultReplacement
+    });
+  } catch (e: any) {
+    const statusCode = e.statusCode || (e.message === 'Transaction not found' ? 404 : (e.message?.includes('Forbidden') || e.message === 'Not a member' ? 403 : 400));
+    res.status(statusCode).json({ error: e.message });
   }
 });

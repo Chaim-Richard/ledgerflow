@@ -47,6 +47,9 @@ export const TransactionSchema = z.object({
   isCleared: z.boolean().default(false),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
+  parentEventId: z.string().optional(),
+  eventId: z.string().optional(),
+  reversalEventId: z.string().optional(),
   metadata: z.record(z.string(), z.any()).optional(),
 });
 

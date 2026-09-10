@@ -14,10 +14,16 @@ export interface ValidationContext {
 
 export class TransactionValidator {
   
-  static validateTransactionState(existingTx: Transaction, context: ValidationContext) {
-    // 1. Period Lock
+  static validateTransactionState(
+    existingTx: Transaction, 
+    context: ValidationContext, 
+    options?: { isReversalUpdate?: boolean }
+  ) {
+    // 1. Period Lock (exempt if setting reversalEventId as part of a sanctioned reversal)
     if (context.wsData?.lockDate && existingTx.date && existingTx.date <= context.wsData.lockDate) {
-      throw new Error(`Period Locked: Cannot modify transaction on ${existingTx.date} before lock date ${context.wsData.lockDate}.`);
+      if (!options?.isReversalUpdate) {
+        throw new Error(`Period Locked: Cannot modify transaction on ${existingTx.date} before lock date ${context.wsData.lockDate}.`);
+      }
     }
 
     // 2. Status Locks

@@ -15,7 +15,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { auth } from '../../firebase';
-import { formatDecimal, getLocalDateISO, parseAmountToCents } from '../../lib/utils';
+import { formatDecimal, getLocalDateISO, parseAmountToCents, cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import CategoryWhyPopover from '../common/CategoryWhyPopover';
@@ -36,6 +36,8 @@ interface TransactionEditModalProps {
   lockDate?: string | null;
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<Transaction>) => void;
+  isReverseAndCorrectMode?: boolean;
+  onReverseAndCorrect?: (id: string, reversalDate: string, reason: string, replacement?: Partial<Transaction>) => Promise<any>;
 }
 
 export default function TransactionEditModal({
@@ -44,10 +46,26 @@ export default function TransactionEditModal({
   accounts,
   lockDate,
   onClose,
-  onUpdate
+  onUpdate,
+  isReverseAndCorrectMode: initialReverseMode = false,
+  onReverseAndCorrect
 }: TransactionEditModalProps) {
   const baseCurrency = useLedgerStore(s => s.baseCurrency) || 'USD';
-  const [date, setDate] = useState(() => transaction?.date || '');
+  const todayISO = getLocalDateISO();
+  const [isReverseMode, setIsReverseMode] = useState(initialReverseMode);
+  const [reversalDate, setReversalDate] = useState(() => todayISO);
+  const [correctionReason, setCorrectionReason] = useState(() => `Correction for ${transaction?.description || 'transaction'}`);
+
+  // In reverse mode on a locked transaction, suggest an open date (today) for the replacement
+  const initialTxDate = transaction?.date || '';
+  const isOriginalLocked = !!(lockDate && initialTxDate <= lockDate);
+  const [date, setDate] = useState(() => {
+    if (initialReverseMode && isOriginalLocked) {
+      return todayISO > (lockDate || '') ? todayISO : initialTxDate;
+    }
+    return initialTxDate;
+  });
+
   const [description, setDescription] = useState(() => transaction?.description || '');
   const [payee, setPayee] = useState(() => transaction?.payee || '');
   const [type, setType] = useState<Transaction['type']>(transaction.type || 'actual');
@@ -70,7 +88,7 @@ export default function TransactionEditModal({
   // Manage lines for splitting and multiple assignments
   const [lines, setLines] = useState<TransactionLine[]>(() => transaction?.lines ? transaction.lines.map(l => ({ ...l })) : []);
 
-  const isLocked = !!(lockDate && date <= lockDate);
+  const isLocked = !isReverseMode && !!(lockDate && date <= lockDate);
 
   // Compute total absolute sum (or sum of debits/credits in standard book)
   // Our types.ts says line.amountCents: Positive for Debit, Negative for Credit
@@ -138,6 +156,39 @@ export default function TransactionEditModal({
         project: l.project || project.trim() || undefined
       };
     });
+
+    if (isReverseMode) {
+      if (lockDate && reversalDate <= lockDate) {
+        toast.error(`Reversal date (${reversalDate}) must be in an open period (after ${lockDate}).`);
+        return;
+      }
+      if (lockDate && date <= lockDate) {
+        toast.error(`Replacement date (${date}) must be in an open period (after ${lockDate}).`);
+        return;
+      }
+      if (!onReverseAndCorrect) {
+        toast.error('Reverse and correct operation is not available.');
+        return;
+      }
+
+      await onReverseAndCorrect(transaction.id, reversalDate, correctionReason.trim(), {
+        date,
+        description: description.trim(),
+        payee: payee.trim() || undefined,
+        type,
+        status,
+        project: project.trim() || undefined,
+        isCleared,
+        isFlagged,
+        fileUrls,
+        originalCurrency: originalCurrency !== baseCurrency ? originalCurrency : undefined,
+        exchangeRate: originalCurrency !== baseCurrency ? exchangeRate : undefined,
+        lines: finalLines,
+        totalAmountCents: calculatedTotal
+      });
+      onClose();
+      return;
+    }
 
     await onUpdate(transaction.id, {
       date,
@@ -208,15 +259,18 @@ export default function TransactionEditModal({
           {/* Header with audit indicators */}
           <div className="px-6 py-5 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-zinc-900 text-white rounded-xl flex items-center justify-center shadow-md shadow-zinc-800/10">
-                <Sliders size={18} className="text-zinc-100" />
+              <div className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center shadow-md",
+                isReverseMode ? "bg-indigo-600 text-white shadow-indigo-600/20" : "bg-zinc-900 text-white shadow-zinc-800/10"
+              )}>
+                {isReverseMode ? <RefreshCcw size={18} className="text-white" /> : <Sliders size={18} className="text-zinc-100" />}
               </div>
               <div>
                 <h3 className="text-lg font-bold text-[var(--text)] tracking-tight flex items-center gap-2">
-                  Edit Ledger Entry details
+                  {isReverseMode ? 'Reverse & Correct Entry' : 'Edit Ledger Entry details'}
                 </h3>
                 <p className="text-[10px] text-zinc-400 font-mono uppercase tracking-widest mt-0.5">
-                  ID: {transaction.id.slice(0, 12)}... • SHA-255 Audit Sealed
+                  ID: {transaction.id.slice(0, 12)}... • {isReverseMode ? 'Atomic Reversal & Correction' : 'SHA-255 Audit Sealed'}
                 </p>
               </div>
             </div>
@@ -230,15 +284,68 @@ export default function TransactionEditModal({
           {/* Form Content body */}
           <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-8">
             
-            {/* Sealed Alert banner if transaction is period locked */}
-            {isLocked && (
-              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-[32px] text-amber-800">
-                <ShieldAlert className="shrink-0 mt-0.5 text-amber-600" size={18} />
+            {/* Reverse & Correct Workflow Alert banner */}
+            {isReverseMode && (
+              <div className="flex items-start gap-3 p-4 bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-2xl text-indigo-900 dark:text-indigo-200">
+                <RefreshCcw className="shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-400" size={18} />
                 <div className="text-xs space-y-1">
-                  <p className="font-bold">Period Locked (Absolute Integrity Principle)</p>
-                  <p className="text-amber-700/90 leading-relaxed">
-                    This transaction Date ({date}) is prior to the lock date ({lockDate}). You cannot edit this record unless you update the organization lock threshold in System Settings.
+                  <p className="font-bold">Sanctioned Closed-Period Correction</p>
+                  <p className="text-indigo-700/90 dark:text-indigo-300 leading-relaxed">
+                    This action atomically posts a reversal to zero out the original locked entry, sets <code className="font-mono bg-indigo-100 dark:bg-indigo-900/50 px-1 py-0.5 rounded">reversalEventId</code> on the original, and posts this corrected entry into the open period.
                   </p>
+                </div>
+              </div>
+            )}
+
+            {/* Sealed Alert banner if transaction is period locked (and not yet in reverse mode) */}
+            {isLocked && !isReverseMode && (
+              <div className="flex items-start justify-between gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800">
+                <div className="flex items-start gap-3">
+                  <ShieldAlert className="shrink-0 mt-0.5 text-amber-600" size={18} />
+                  <div className="text-xs space-y-1">
+                    <p className="font-bold">Period Locked (Absolute Integrity Principle)</p>
+                    <p className="text-amber-700/90 leading-relaxed">
+                      This transaction Date ({date}) is prior to the lock date ({lockDate}). Direct edits are prohibited, but you can Reverse & Correct.
+                    </p>
+                  </div>
+                </div>
+                {onReverseAndCorrect && (
+                  <button
+                    type="button"
+                    onClick={() => setIsReverseMode(true)}
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shrink-0 transition-colors shadow-sm"
+                  >
+                    Reverse & Correct
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Reversal Parameters if in Reverse Mode */}
+            {isReverseMode && (
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-[var(--line)] grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                    <Calendar size={12} /> Reversal Date (Open Period)
+                  </label>
+                  <input
+                    type="date"
+                    value={reversalDate}
+                    onChange={(e) => setReversalDate(e.target.value)}
+                    className="w-full mt-1.5 bg-white dark:bg-zinc-800 border border-[var(--line)] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                    <FileText size={12} /> Reason for Correction / Audit Note
+                  </label>
+                  <input
+                    type="text"
+                    value={correctionReason}
+                    onChange={(e) => setCorrectionReason(e.target.value)}
+                    placeholder="e.g. Reclassified to correct department"
+                    className="w-full mt-1.5 bg-white dark:bg-zinc-800 border border-[var(--line)] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
               </div>
             )}
@@ -691,10 +798,15 @@ export default function TransactionEditModal({
             <AsyncButton
               onClick={handleSave}
               disabled={isLocked}
-              loadingText="Recording..."
-              className="px-5 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-zinc-800/15 disabled:opacity-50"
+              loadingText={isReverseMode ? "Posting Reversal & Correction..." : "Recording..."}
+              className={cn(
+                "px-5 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-md disabled:opacity-50",
+                isReverseMode 
+                  ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20" 
+                  : "bg-zinc-900 hover:bg-zinc-800 shadow-zinc-800/15"
+              )}
             >
-              Record synchronized changes
+              {isReverseMode ? 'Post Reversal & Correction' : 'Record synchronized changes'}
             </AsyncButton>
           </div>
 

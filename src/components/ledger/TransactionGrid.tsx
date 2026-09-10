@@ -155,6 +155,7 @@ interface VirtualRowProps extends ListChildComponentProps {
     onToggleFlag: (id: string) => void;
     onDuplicate: (id: string) => void;
     onEditDetails?: (tx: Transaction) => void;
+    onReverseAndCorrect?: (tx: Transaction) => void;
     dateFormat: string;
     formatCurrency: (cents: number) => string;
     gridCols: string;
@@ -195,6 +196,7 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
         onToggleFlag={data.onToggleFlag}
         onDuplicate={data.onDuplicate}
         onEditDetails={data.onEditDetails}
+        onReverseAndCorrect={data.onReverseAndCorrect}
         formatCurrency={data.formatCurrency}
         isProMode={data.isProMode}
         isCompactMode={data.isCompactMode}
@@ -324,6 +326,7 @@ export default function TransactionGrid() {
   const [focusedCell, setFocusedCell] = useState<{ id: string, field: string, index: number } | null>(null);
   const [editingCell, setEditingCell] = useState<{ id: string, field: string } | null>(null);
   const [editingDetailsTx, setEditingDetailsTx] = useState<Transaction | null>(null);
+  const [isReverseModeModal, setIsReverseModeModal] = useState(false);
   const lockDate = useLedgerStore(state => state.lockDate);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const toggleSelectAll = () => {
@@ -708,7 +711,14 @@ export default function TransactionGrid() {
     isMobileGrid,
     isTabletGrid,
     onToggleFlag: handleToggleFlag,
-    onEditDetails: setEditingDetailsTx,
+    onEditDetails: (tx: Transaction) => {
+      setEditingDetailsTx(tx);
+      setIsReverseModeModal(false);
+    },
+    onReverseAndCorrect: (tx: Transaction) => {
+      setEditingDetailsTx(tx);
+      setIsReverseModeModal(true);
+    },
     dateFormat,
     formatCurrency,
     gridCols,
@@ -1592,8 +1602,10 @@ export default function TransactionGrid() {
           transaction={editingDetailsTx}
           accounts={accounts}
           lockDate={lockDate}
-          onClose={() => setEditingDetailsTx(null)}
+          isReverseAndCorrectMode={isReverseModeModal}
+          onClose={() => { setEditingDetailsTx(null); setIsReverseModeModal(false); }}
           onUpdate={onUpdate || (() => {})}
+          onReverseAndCorrect={txActions.handleReverseTransaction}
         />
       )}
     </div>

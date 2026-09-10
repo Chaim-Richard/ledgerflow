@@ -1279,6 +1279,60 @@ export function useTransactionActions() {
       return true;
   };
 
+  const handleReverseTransaction = async (
+    id: string,
+    reversalDate: string,
+    reason: string,
+    replacement?: Partial<Transaction>
+  ) => {
+    if (!user || !currentWorkspaceId) return null;
+    const loader = toast.loading('Executing reverse & correct...');
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/v1/transactions/${id}/reverse`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          reversalDate,
+          reason,
+          replacement,
+          workspaceId: currentWorkspaceId
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'Failed to reverse transaction');
+      }
+
+      const data = await res.json();
+      const store = useLedgerStore.getState();
+      const currentTxs = store.transactions;
+      const updatedTxs = currentTxs.map(t => t.id === id ? { ...t, reversalEventId: data.reversal?.id || 'reversed' } : t);
+
+      const toAdd: Transaction[] = [];
+      if (data.reversal) toAdd.push(data.reversal);
+      if (data.replacement) toAdd.push(data.replacement);
+
+      store.setTransactions([...toAdd, ...updatedTxs]);
+
+      await recordAudit('TRANSACTION_REVERSED', 'transaction', id, {
+        reversalId: data.reversal?.id,
+        replacementId: data.replacement?.id,
+        reason
+      });
+
+      toast.success(replacement ? 'Transaction reversed & corrected successfully' : 'Transaction reversed successfully', { id: loader });
+      return data;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reverse transaction', { id: loader });
+      throw err;
+    }
+  };
+
   const handleDeleteAccount = async (id: string, force = false) => {
     if (!user || !currentWorkspaceId) return;
     
@@ -1825,6 +1879,7 @@ export function useTransactionActions() {
     handleImportTransactions, 
     handleQuickAdd, 
     handleUpdateTransaction,
+    handleReverseTransaction,
     handleDuplicateTransaction,
     handleBulkUpdate,
     handleParseReceipt,

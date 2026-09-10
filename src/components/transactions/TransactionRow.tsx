@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { 
   Zap,
   RotateCcw,
+  RefreshCcw,
   AlertCircle,
   Columns,
   Sparkles,
@@ -52,6 +53,7 @@ interface TransactionRowProps {
   onDuplicate?: (id: string) => void;
   onToggleFlag?: (id: string) => void;
   onEditDetails?: (tx: Transaction) => void;
+  onReverseAndCorrect?: (tx: Transaction) => void;
   formatCurrency: (cents: number) => string;
   isProMode?: boolean;
   isCompactMode?: boolean;
@@ -82,6 +84,7 @@ const TransactionRow = React.memo(({
   onDuplicate,
   onToggleFlag,
   onEditDetails,
+  onReverseAndCorrect,
   formatCurrency,
   isProMode = false,
   isCompactMode = false,
@@ -350,8 +353,32 @@ const TransactionRow = React.memo(({
         {!isMobileGrid && !isTabletGrid && (
           <div className={cn("px-4 text-right h-full flex items-center justify-end group-hover/active:text-white")}>
             {isLocked ? (
-              <div className="flex items-center gap-1.5 text-[8px] font-medium uppercase tracking-wider text-[#d97706] bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded border border-amber-500/20 shrink-0 select-none">
-                <Lock size={10} className="text-[#d97706] animate-pulse" /> Immutable
+              <div className="flex items-center justify-end gap-1.5">
+                <div className="flex items-center gap-1 text-[8px] font-medium uppercase tracking-wider text-[#d97706] bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded border border-amber-500/20 shrink-0 select-none">
+                  <Lock size={10} className="text-[#d97706]" /> Immutable
+                </div>
+                {!tx.reversalEventId && tx.type !== 'reversal' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onReverseAndCorrect) {
+                        onReverseAndCorrect(tx);
+                      } else {
+                        onEditDetails?.(tx);
+                      }
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:text-indigo-400 dark:hover:text-white rounded border border-indigo-500/20 text-[9px] font-bold transition-all shrink-0 cursor-pointer"
+                    title="Reverse & Correct (Sanctioned closed-period correction)"
+                  >
+                    <RefreshCcw size={10} />
+                    <span className="hidden sm:inline">Reverse & Correct</span>
+                  </button>
+                )}
+                {tx.reversalEventId && (
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase tracking-wider bg-rose-500/10 text-rose-600 border border-rose-500/20 select-none">
+                    Reversed
+                  </span>
+                )}
               </div>
             ) : (
               <div className={cn(
