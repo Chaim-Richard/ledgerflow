@@ -1190,7 +1190,7 @@ async function startServer() {
     }
     res.json({ ok: true });
   });
-  app.get("/api/health", authenticate, async (req, res) => {
+  app.get("/api/health", async (req, res) => {
     res.json({ 
       status: "ok", 
       timestamp: new Date().toISOString(),
