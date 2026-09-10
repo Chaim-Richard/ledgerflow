@@ -246,7 +246,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         .filter(l => l.amountCents > 0)
         .reduce((sum, l) => sum + l.amountCents, 0) || Math.round(totals.debit * appliedRate);
 
+      const entryId = `tx_je_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const payload = {
+        id: entryId,
         uid: user.uid,
         workspaceId,
         date,
@@ -267,7 +269,8 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'x-operation-id': payload.id
         },
         body: JSON.stringify({ transaction: payload })
       });

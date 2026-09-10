@@ -1,5 +1,9 @@
 import { Request } from 'express';
 
+if (process.env.NODE_ENV === 'production' && !process.env.APP_URL && !process.env.VITE_APP_URL) {
+  throw new Error('APP_URL environment variable is required in production mode');
+}
+
 /**
  * Safely determines the application base URL, strictly preventing Host-header poisoning (#85, #85-R, N6).
  */
@@ -10,14 +14,18 @@ export function getTrustedAppUrl(req?: Request): string {
   if (process.env.VITE_APP_URL) {
     return process.env.VITE_APP_URL.replace(/\/+$/, '');
   }
-  
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('APP_URL environment variable is required in production mode');
+  }
+
   if (req) {
     const rawHost = req.get('x-forwarded-host') || req.get('host') || '';
     const cleanHost = rawHost.split(',')[0].trim().toLowerCase();
     
     // In local development, permit localhost/127.0.0.1
     const isLocal = /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanHost);
-    if (isLocal && process.env.NODE_ENV !== 'production') {
+    if (isLocal) {
       const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
       return `${protocol}://${cleanHost}`;
     }
@@ -27,10 +35,6 @@ export function getTrustedAppUrl(req?: Request): string {
     if (isFirstParty) {
       return `https://${cleanHost}`;
     }
-  }
-
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://ledgerflow.app';
   }
 
   // Safe fallback default for development

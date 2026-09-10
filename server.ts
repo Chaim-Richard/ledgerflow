@@ -1226,23 +1226,51 @@ async function startServer() {
     });
   });
 
-  app.get("/api/v1/public/registration-status", authenticate, async (req, res) => {
+  app.get("/api/v1/public/registration-status", async (req, res) => {
     try {
       const db = getDb();
-      const usersSnap = await db.collection("users").count().get();
-      const totalUsers = usersSnap.data().count;
+      let isAuthenticated = false;
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const idToken = authHeader.split('Bearer ')[1];
+        try {
+          await admin.auth().verifyIdToken(idToken);
+          isAuthenticated = true;
+        } catch (_e) {
+          // Token invalid or expired
+        }
+      }
+
+      let totalUsers: number | undefined = undefined;
       const limit = globalAdminConfig.maxRegistrationLimit !== undefined ? globalAdminConfig.maxRegistrationLimit : 100;
-      res.json({
+      let registrationAllowed = true;
+
+      try {
+        const usersSnap = await db.collection("users").count().get();
+        const userCount = usersSnap.data().count;
+        if (isAuthenticated) {
+          totalUsers = userCount;
+        }
+        registrationAllowed = userCount < limit;
+      } catch (_err) {
+        // DB fallback
+      }
+
+      const payload: Record<string, any> = {
         status: "success",
-        totalUsers,
         maxRegistrationLimit: limit,
-        registrationAllowed: totalUsers < limit,
+        registrationAllowed,
         freeWorkspaceTxCap: globalAdminConfig.freeWorkspaceTxCap !== undefined ? globalAdminConfig.freeWorkspaceTxCap : 100
-      });
-    } catch (err: any) {
+      };
+
+      if (isAuthenticated && totalUsers !== undefined) {
+        payload.totalUsers = totalUsers;
+      }
+
+      res.json(payload);
+    } catch (_err: any) {
       res.json({
         status: "success",
-        totalUsers: 0,
         maxRegistrationLimit: globalAdminConfig.maxRegistrationLimit || 100,
         registrationAllowed: true,
         freeWorkspaceTxCap: globalAdminConfig.freeWorkspaceTxCap || 100

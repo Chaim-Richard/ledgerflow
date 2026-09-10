@@ -138,7 +138,13 @@ transactionRouter.get('/', async (req, res) => {
 });
 
 transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
-  return executeCommand(req, res, 'TRANSACTION_CREATE', async (ctx, t) => {
+  const { transaction } = req.body || {};
+  const workspaceId = transaction?.workspaceId || req.body?.workspaceId;
+  if (!workspaceId) {
+    return res.status(400).json({ status: 'error', message: 'Workspace ID is required' });
+  }
+
+  return executeCommand(req, res, workspaceId, 'TRANSACTION_CREATE', async (ctx, t) => {
     const { transaction } = req.body;
     const user = (req as any).user;
     
@@ -1548,6 +1554,14 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
       // 2. IN-MEMORY PREPARATION & VALIDATION
       const reversalId = db.collection('transactions').doc().id;
       const reversalLines = TransactionTemplates.buildReversalLines(origData.lines || [], origData.description);
+      const allowedMetaKeys = ['confidence', 'vaultDocId', 'tags', 'note', 'category', 'source', 'batchId', 'project', 'department'];
+      const cleanOrigMeta: Record<string, any> = {};
+      if (origData.metadata) {
+        for (const k of allowedMetaKeys) {
+          if (k in origData.metadata) cleanOrigMeta[k] = origData.metadata[k];
+        }
+      }
+
       const reversalTxPayload: any = {
         id: reversalId,
         workspaceId: targetWsId,
@@ -1564,7 +1578,7 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
         parentEventId: id,
         lines: reversalLines,
         metadata: {
-          ...(origData.metadata || {}),
+          ...cleanOrigMeta,
           isReversal: true,
           reversesTxId: id,
           reversalReason: reason || undefined
@@ -1580,6 +1594,11 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
 
       let validatedReplacement: Transaction | null = null;
       if (replacement) {
+        if (!replacement.lines || !Array.isArray(replacement.lines) || replacement.lines.length === 0) {
+          const err = new Error('Replacement transaction must specify non-empty lines') as any;
+          err.status = 400;
+          throw err;
+        }
         const replId = replacement.id || db.collection('transactions').doc().id;
         const replPayload: any = {
           ...replacement,
@@ -1588,7 +1607,7 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
           uid: user.uid,
           date: replacement.date || revDate,
           description: replacement.description || origData.description,
-          totalAmountCents: replacement.totalAmountCents || (replacement.lines ? getAbsoluteTotal(replacement) : origData.totalAmountCents),
+          totalAmountCents: replacement.totalAmountCents || getAbsoluteTotal(replacement),
           currency: replacement.currency || origData.currency || 'USD',
           originalCurrency: replacement.originalCurrency || origData.originalCurrency,
           exchangeRate: replacement.exchangeRate || origData.exchangeRate || 1,
@@ -1596,7 +1615,7 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
           status: replacement.status || 'completed',
           type: replacement.type || origData.type || 'actual',
           parentEventId: id,
-          lines: replacement.lines || origData.lines,
+          lines: replacement.lines,
           metadata: {
             ...(replacement.metadata || {}),
             isCorrection: true,

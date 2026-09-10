@@ -218,18 +218,28 @@ export function useLedgerData() {
       }, debounceMs);
     };
 
+    const filterCriteria = useUIStore.getState().filterCriteria;
+    const startDate = filterCriteria?.startDate;
+    const endDate = filterCriteria?.endDate;
+
+    const txConstraints: any[] = [...filter];
+    if (startDate) txConstraints.push(where('date', '>=', startDate));
+    if (endDate) txConstraints.push(where('date', '<=', endDate));
+    txConstraints.push(orderBy('date', 'desc'));
+    if (!startDate && !endDate) txConstraints.push(limit(2000));
+
     const criticalListeners = [
-      onSnapshot(query(collection(db, 'transactions'), ...filter, orderBy('date', 'desc')), (snap) => {
+      onSnapshot(query(collection(db, 'transactions'), ...txConstraints), (snap) => {
         useLedgerStore.getState().setIsDataTruncated(false);
         scheduleUpdate('transactions', snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'transactions')),
-      onSnapshot(query(collection(db, 'chartAccounts'), ...filter), (snap) => {
+      onSnapshot(query(collection(db, 'chartAccounts'), ...filter, limit(1000)), (snap) => {
         scheduleUpdate('accounts', snap.docs.map(d => ({ id: d.id, ...d.data() } as ChartAccount)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'chartAccounts')),
-      onSnapshot(query(collection(db, 'projects'), ...filter), (snap) => {
+      onSnapshot(query(collection(db, 'projects'), ...filter, limit(1000)), (snap) => {
         scheduleUpdate('projects', snap.docs.map(d => ({ id: d.id, ...d.data() } as Project)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'projects')),
-      onSnapshot(query(collection(db, 'rulePatterns'), ...filter), (snap) => {
+      onSnapshot(query(collection(db, 'rulePatterns'), ...filter, limit(2000)), (snap) => {
         const cache: Record<string, any> = {};
         snap.docs.forEach(d => {
           const data = d.data();
@@ -246,13 +256,13 @@ export function useLedgerData() {
     const secondaryTimer = setTimeout(() => {
       if (!isCurrent.active) return;
       const secondaryUnsubs = [
-        onSnapshot(query(collection(db, 'budgets'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'budgets'), ...filter, limit(1000)), (snap) => {
           scheduleUpdate('budgets', snap.docs.map(d => ({ id: d.id, ...d.data() } as Budget)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'budgets')),
-        onSnapshot(query(collection(db, 'vendors'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'vendors'), ...filter, limit(2000)), (snap) => {
           scheduleUpdate('vendors', snap.docs.map(d => ({ id: d.id, ...d.data() } as Vendor)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'vendors')),
-        onSnapshot(query(collection(db, 'customers'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'customers'), ...filter, limit(2000)), (snap) => {
           scheduleUpdate('customers', snap.docs.map(d => ({ id: d.id, ...d.data() } as Customer)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'customers')),
         onSnapshot(query(collection(db, 'invoices'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
@@ -261,37 +271,37 @@ export function useLedgerData() {
         onSnapshot(query(collection(db, 'bills'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
           scheduleUpdate('bills', snap.docs.map(d => ({ id: d.id, ...d.data() } as Bill)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'bills')),
-        onSnapshot(query(collection(db, 'inventory'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'inventory'), ...filter, limit(2000)), (snap) => {
           scheduleUpdate('inventory', snap.docs.map(d => ({ id: d.id, ...d.data() } as InventoryItem)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'inventory')),
-        onSnapshot(query(collection(db, 'assets'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'assets'), ...filter, limit(2000)), (snap) => {
           scheduleUpdate('assets', snap.docs.map(d => ({ id: d.id, ...d.data() } as FixedAsset)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'assets')),
-        onSnapshot(query(collection(db, 'recurring'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'recurring'), ...filter, limit(1000)), (snap) => {
           scheduleUpdate('recurring', snap.docs.map(d => ({ id: d.id, ...d.data() } as RecurringTransaction)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'recurring')),
-        onSnapshot(query(collection(db, 'employees'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'employees'), ...filter, limit(1000)), (snap) => {
           scheduleUpdate('employees', snap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'employees')),
-        onSnapshot(query(collection(db, 'payRuns'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'payRuns'), ...filter, limit(1000)), (snap) => {
           scheduleUpdate('payRuns', snap.docs.map(d => ({ id: d.id, ...d.data() } as PayRun)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'payRuns')),
-        onSnapshot(query(collection(db, 'taxRates'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'taxRates'), ...filter, limit(500)), (snap) => {
           scheduleUpdate('taxRates', snap.docs.map(d => ({ id: d.id, ...d.data() } as TaxRate)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'taxRates')),
-        onSnapshot(query(collection(db, 'customTemplates'), where('uid', '==', user.uid)), (snap) => {
+        onSnapshot(query(collection(db, 'customTemplates'), where('uid', '==', user.uid), limit(500)), (snap) => {
           scheduleUpdate('customTemplates', snap.docs.map(d => ({ id: d.id, ...d.data() } as CustomTemplate)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'customTemplates')),
         onSnapshot(query(collection(db, 'auditLogs'), ...filter, orderBy('timestamp', 'desc'), limit(500)), (snap) => {
           scheduleUpdate('auditLogs', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'auditLogs')),
-        onSnapshot(query(collection(db, 'partners'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'partners'), ...filter, limit(500)), (snap) => {
           scheduleUpdate('partners', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'partners')),
-        onSnapshot(query(collection(db, 'reconciliations'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'reconciliations'), ...filter, limit(1000)), (snap) => {
           scheduleUpdate('reconciliations', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'reconciliations')),
-        onSnapshot(query(collection(db, 'autoRules'), ...filter), (snap) => {
+        onSnapshot(query(collection(db, 'autoRules'), ...filter, limit(1000)), (snap) => {
           scheduleUpdate('autoRules', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'autoRules')),
         onSnapshot(query(collection(db, 'bankLines'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {

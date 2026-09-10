@@ -22,15 +22,23 @@ export interface CommandContext {
 export async function executeCommand<T>(
   req: Request,
   res: Response,
+  workspaceId: string,
   operationType: string,
   action: (ctx: CommandContext, t: FirestoreTransaction) => Promise<T>
 ) {
+  if (!workspaceId || typeof workspaceId !== 'string' || !workspaceId.trim()) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Workspace ID is required for command execution'
+    });
+  }
+
   const user = (req as any).user;
   const rawOperationId = extractCanonicalOperationId(req);
   
   const ctx: CommandContext = {
     actor: user?.uid || 'anonymous',
-    workspaceId: (req.body?.workspaceId || req.params?.workspaceId || req.query?.workspaceId || 'system') as string,
+    workspaceId: workspaceId.trim(),
     operationType,
     operationId: rawOperationId
   };
@@ -46,7 +54,16 @@ export async function executeCommand<T>(
       return res.json({ status: 'success', data: result });
     } catch (error: any) {
       console.error(`[CommandExecutor] Operation ${operationType} failed:`, error);
-      return res.status(error.status || 500).json({ 
+      const status = error.status || 500;
+      if (status >= 500) {
+        const correlationId = `err_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        return res.status(status).json({
+          status: 'error',
+          message: 'An internal server error occurred.',
+          correlationId
+        });
+      }
+      return res.status(status).json({ 
         status: 'error', 
         message: error.message, 
         details: error.details 
@@ -67,7 +84,16 @@ export async function executeCommand<T>(
       return res.status(409).json({ status: 'error', message: error.message });
     }
     console.error(`[CommandExecutor] Idempotent operation ${scopedKey} failed:`, error);
-    return res.status(error.status || 500).json({ 
+    const status = error.status || 500;
+    if (status >= 500) {
+      const correlationId = `err_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      return res.status(status).json({
+        status: 'error',
+        message: 'An internal server error occurred.',
+        correlationId
+      });
+    }
+    return res.status(status).json({ 
       status: 'error', 
       message: error.message, 
       details: error.details 

@@ -677,7 +677,11 @@ export function useTransactionActions() {
       
       const res = await fetch('/api/v1/transactions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${token}`,
+          'x-operation-id': finalTx.id
+        },
         body: JSON.stringify({ transaction: finalTx })
       });
       if (!res.ok) {

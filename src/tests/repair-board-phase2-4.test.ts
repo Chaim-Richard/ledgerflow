@@ -6,6 +6,7 @@ import { parseLocalDate, getLocalDateISO } from '../lib/utils';
 import { Transaction, ChartAccount } from '../types';
 import { isPostable, lineAmount } from '../lib/txFilters';
 import { optimizedTransactionSimilarity } from '../lib/algorithms';
+import { deriveScopedOperationKey } from '../server/utils/idempotency';
 
 describe('Repair Board Verification: Phase 2-4 Accounting, Security & Algorithms', () => {
 
@@ -215,6 +216,16 @@ describe('Repair Board Verification: Phase 2-4 Accounting, Security & Algorithms
     assert.strictEqual(scoreExact, 1.0, 'Identical strings must have 1.0 similarity');
     assert.ok(scoreClose > 0.6, `Close merchant strings should have high similarity, got ${scoreClose}`);
     assert.ok(scoreDiff < 0.3, `Different merchants should have low similarity, got ${scoreDiff}`);
+  });
+
+  test('Idempotency keys are workspace-scoped across tenants', () => {
+    const sameOpId = 'shared_op_id_999';
+    const keyA = deriveScopedOperationKey('ws_tenant_A', 'TRANSACTION_CREATE', sameOpId);
+    const keyB = deriveScopedOperationKey('ws_tenant_B', 'TRANSACTION_CREATE', sameOpId);
+
+    assert.notStrictEqual(keyA, keyB, 'Keys for different workspaces must be distinct');
+    assert.strictEqual(keyA, 'ws_tenant_A:TRANSACTION_CREATE:shared_op_id_999');
+    assert.strictEqual(keyB, 'ws_tenant_B:TRANSACTION_CREATE:shared_op_id_999');
   });
 
 });
