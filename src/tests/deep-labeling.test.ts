@@ -6,7 +6,7 @@ import {
   expandDeepLabels, 
   extractMultiDimensionalLabels 
 } from '../lib/dimensionUtils';
-import { BayesianClassifier } from '../lib/algorithms';
+import { BayesianClassifier, generateImportIdentity } from '../lib/algorithms';
 import { MatchingEngine } from '../lib/MatchingEngine';
 import { AutoRule } from '../types';
 
@@ -234,6 +234,34 @@ describe('Deep and Multi-Dimensional Labeling Engine', () => {
         `Trigram accuracy (${trigramMetrics.accuracy}) should exceed baseline (${baselineMetrics.accuracy})`
       );
       assert.strictEqual(trigramMetrics.accuracy, 1.0, 'Trigram model should reach 100% accuracy on this evaluation set');
+    });
+  });
+
+  describe('Import Identity & Idempotency Engine', () => {
+    it('generates deterministic fingerprint based on source, kind, date, amount, description, and occurrence', () => {
+      const fp1 = generateImportIdentity('statement_csv', 'line', {
+        date: '2026-03-01',
+        amountCents: 4500,
+        description: 'Shoprite #0451'
+      }, 0);
+
+      const fp2 = generateImportIdentity('statement_csv', 'line', {
+        date: '2026-03-01',
+        amountCents: 4500,
+        description: 'SHOPRITE #0451 '
+      }, 0);
+
+      assert.strictEqual(fp1, fp2, 'Normalized identical transactions must produce identical fingerprints');
+      assert.ok(fp1.startsWith('statement_csv:line:'), 'Fingerprint must follow <source>:<kind>:<hash> format');
+
+      // Occurrence index disambiguation for multiple identical transactions in same batch
+      const fpOccurrence1 = generateImportIdentity('statement_csv', 'line', {
+        date: '2026-03-01',
+        amountCents: 4500,
+        description: 'Shoprite #0451'
+      }, 1);
+
+      assert.notStrictEqual(fp1, fpOccurrence1, 'Different occurrence indices must produce distinct fingerprints');
     });
   });
 });

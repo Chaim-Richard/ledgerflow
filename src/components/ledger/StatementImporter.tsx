@@ -20,7 +20,8 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { BloomFilter, MinHash, AnalyticalMatcher } from '../../lib/algorithms';
+import { BloomFilter, MinHash, AnalyticalMatcher, generateImportIdentity } from '../../lib/algorithms';
+import CategoryWhyPopover from '../common/CategoryWhyPopover';
 
 interface StatementImporterProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ interface ParsedTx {
   date: string;
   description: string;
   amountCents: number;
+  importIdentity?: string;
   isDuplicate?: boolean;
   selected: boolean;
   hasResolvedEntity?: boolean;
@@ -284,22 +286,35 @@ export default function StatementImporter({
       sig: minHash.createSignature(et.description)
     }));
     
-    // Warm up the filter
+    // Warm up the filter and track existing fingerprints
+    const existingIdentities = new Set(existingTransactions.map(et => et.importIdentity).filter(Boolean));
     existingTransactions.forEach(et => {
       bloom.add(`${et.date}-${et.totalAmountCents}-${et.description.toLowerCase()}`);
     });
 
+    const occurrences: Record<string, number> = {};
+
     const processed = results.map((tx: any) => {
       const txKey = `${tx.date}-${Math.abs(tx.amountCents)}-${tx.description.toLowerCase()}`;
+      const occIndex = occurrences[txKey] || 0;
+      occurrences[txKey] = occIndex + 1;
+
+      // Deterministic import fingerprint
+      const importIdentity = generateImportIdentity('statement_csv', 'line', {
+        date: tx.date,
+        amountCents: tx.amountCents,
+        description: tx.description,
+      }, occIndex);
       
-      // Fast bitwise lookup (Deduplication)
-      let isDuplicate = bloom.has(txKey);
+      // Fast bitwise lookup and fingerprint deduplication
+      let isDuplicate = existingIdentities.has(importIdentity) || bloom.has(txKey);
       
       // Verification of potential collisions
-      if (isDuplicate) {
+      if (isDuplicate && !existingIdentities.has(importIdentity)) {
          isDuplicate = existingTransactions.some(et => 
             et.date === tx.date && 
-            Math.abs(et.totalAmountCents - Math.abs(tx.amountCents)) < 1
+            Math.abs(et.totalAmountCents - Math.abs(tx.amountCents)) < 1 &&
+            et.description.toLowerCase().trim() === tx.description.toLowerCase().trim()
          );
       }
 
@@ -320,6 +335,7 @@ export default function StatementImporter({
 
       return {
         ...tx,
+        importIdentity,
         isDuplicate,
         hasResolvedEntity: isLearned || similarity > 0.85,
         isLearned,
@@ -548,6 +564,10 @@ export default function StatementImporter({
                                   {tx.suggestedProject && ` [Proj: ${tx.suggestedProject}]`}
                                 </span>
                               )}
+                              <CategoryWhyPopover 
+                                description={tx.description}
+                                accountName={tx.suggestedAccount}
+                              />
                             </div>
                             <p className="text-sm font-bold text-[var(--text)]">{tx.description}</p>
                           </div>

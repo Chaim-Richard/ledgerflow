@@ -9,6 +9,8 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { db, getIdToken } from '../../firebase';
 import { MatchingEngine } from '../../lib/MatchingEngine';
+import { generateImportIdentity } from '../../lib/algorithms';
+import CategoryWhyPopover from '../common/CategoryWhyPopover';
 import PlaidConnectButton from '../finance/PlaidConnectButton';
 
 interface BankFeedImportProps {
@@ -236,10 +238,16 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
     if (!user) return;
     const toImport = mappedTransactions
       .filter((_, idx) => selectedIndices.has(idx))
-      .map(t => {
+      .map((t, idx) => {
         const fallbackAcc = accounts.find(a => a.name === 'Uncategorized') || accounts.find(a => a.type === 'expense') || accounts[0];
         const accountId = t.accountId || fallbackAcc?.id || '';
         const account = accounts.find(a => a.id === accountId);
+        const importIdentity = generateImportIdentity('bank_feed', 'feed_item', {
+          date: t.date,
+          amountCents: t.amountCents,
+          description: t.description,
+          reference: t.id
+        }, idx);
         
         return {
           uid: user.uid,
@@ -250,6 +258,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
           type: 'actual' as const,
           status: 'completed' as const,
           isCleared: true,
+          importIdentity,
           lines: [
             {
               accountId: accountId,
@@ -391,10 +400,14 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                             <div className="h-2 w-24 bg-[var(--ink)] animate-pulse rounded-full" />
                           ) : (
                             <div className="flex flex-col gap-0.5">
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2">
                                 <span className="px-3 py-1 bg-indigo-600/10 text-indigo-600 border border-indigo-600/20 rounded-lg text-[9px] font-medium uppercase tracking-wider">
                                   {tx.category || 'PENDING'}
                                 </span>
+                                <CategoryWhyPopover 
+                                  description={tx.description}
+                                  accountName={tx.category}
+                                />
                                 <span className="text-[9px] font-mono text-slate-500/40 font-bold uppercase tracking-tighter">
                                   {Math.round((tx.confidence || 0) * 100)}% Match
                                 </span>

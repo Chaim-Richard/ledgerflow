@@ -118,6 +118,7 @@ export interface Transaction {
   isCleared?: boolean;
   clearedAt?: string;
   bankTransactionId?: string; // For Plaid/Teller linking
+  importIdentity?: string; // Deterministic idempotency fingerprint: <source>:<kind>:<hash>
   
   // Unit-Level Logic
   units?: number;

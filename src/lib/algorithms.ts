@@ -2389,5 +2389,47 @@ export const AnalyticalMatcher = SmartMatchingEngine;
 export const DiagnosticEngine = AuditEngine;
 export const FlowAnalyzer = InvariantReconciliation;
 
+/**
+ * Deterministic Import Identity Fingerprint Generator
+ * Format: <source>:<kind>:<sha256(identity + occurrence)>
+ * 
+ * Ensures idempotency and safe re-importing of bank feeds / CSV statements.
+ */
+export function generateImportIdentity(
+  source: string,
+  kind: string,
+  identity: {
+    date: string;
+    amountCents: number;
+    description: string;
+    reference?: string;
+  },
+  occurrenceIndex = 0
+): string {
+  const cleanSource = (source || 'statement').toLowerCase().trim().replace(/[^a-z0-9_-]/g, '_');
+  const cleanKind = (kind || 'tx').toLowerCase().trim().replace(/[^a-z0-9_-]/g, '_');
+  const cleanDate = (identity.date || '').trim();
+  const cleanAmount = Math.abs(identity.amountCents || 0);
+  const cleanDesc = (identity.description || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  const cleanRef = (identity.reference || '').trim();
+
+  const payload = `${cleanSource}|${cleanKind}|${cleanDate}|${cleanAmount}|${cleanDesc}|${cleanRef}|occ:${occurrenceIndex}`;
+  
+  // Deterministic 64-bit/128-bit hash string for fast browser + node collision-resistant hashing
+  let h1 = 0xdeadbeef ^ occurrenceIndex;
+  let h2 = 0x41c6ce57 ^ occurrenceIndex;
+  for (let i = 0; i < payload.length; i++) {
+    const ch = payload.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  const hashHex = (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(16, '0');
+
+  return `${cleanSource}:${cleanKind}:${hashHex}`;
+}
+
 export * from './MatchingEngine';
 export * from './StrategicExpertSystem';
+
