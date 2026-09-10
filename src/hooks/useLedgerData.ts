@@ -46,6 +46,8 @@ export function useLedgerData() {
   const setWorkspaces = useAuthStore(s => s.setWorkspaces);
   const setCurrentWorkspaceId = useAuthStore(s => s.setCurrentWorkspaceId);
   const setUserProfile = useAuthStore(s => s.setUserProfile);
+  const startDate = useUIStore(s => s.filterCriteria?.startDate);
+  const endDate = useUIStore(s => s.filterCriteria?.endDate);
   useSnapshotBridge();
 
 
@@ -218,19 +220,20 @@ export function useLedgerData() {
       }, debounceMs);
     };
 
-    const filterCriteria = useUIStore.getState().filterCriteria;
-    const startDate = filterCriteria?.startDate;
-    const endDate = filterCriteria?.endDate;
-
+    const TX_PAGE_LIMIT = 2000;
     const txConstraints: any[] = [...filter];
-    if (startDate) txConstraints.push(where('date', '>=', startDate));
-    if (endDate) txConstraints.push(where('date', '<=', endDate));
+    if (startDate) {
+      txConstraints.push(where('date', '>=', startDate));
+    }
+    if (endDate) {
+      txConstraints.push(where('date', '<=', endDate));
+    }
     txConstraints.push(orderBy('date', 'desc'));
-    if (!startDate && !endDate) txConstraints.push(limit(2000));
+    txConstraints.push(limit(TX_PAGE_LIMIT));
 
     const criticalListeners = [
       onSnapshot(query(collection(db, 'transactions'), ...txConstraints), (snap) => {
-        useLedgerStore.getState().setIsDataTruncated(false);
+        useLedgerStore.getState().setIsDataTruncated(snap.docs.length >= TX_PAGE_LIMIT);
         scheduleUpdate('transactions', snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'transactions')),
       onSnapshot(query(collection(db, 'chartAccounts'), ...filter, limit(1000)), (snap) => {
@@ -317,7 +320,7 @@ export function useLedgerData() {
       clearTimeout(secondaryTimer);
       if (updateTimer) clearTimeout(updateTimer);
     };
-  }, [user, currentWorkspaceId]);
+  }, [user, currentWorkspaceId, startDate, endDate]);
 
   return null;
 }

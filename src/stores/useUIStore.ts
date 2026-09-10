@@ -132,7 +132,10 @@ export const useUIStore = create<UIState>((set) => ({
   isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
   isSyncing: false,
   language: 'en',
-  filterCriteria: null,
+  filterCriteria: {
+    startDate: `${new Date().getFullYear()}-01-01`,
+    endDate: `${new Date().getFullYear()}-12-31`
+  },
   parsingQueue: [],
   splittingTxId: null,
   isDevMode: false,
