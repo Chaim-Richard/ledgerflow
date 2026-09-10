@@ -426,6 +426,26 @@ const authenticate = async (req: express.Request, res: express.Response, next: e
   }
 };
 
+/**
+ * Optional Authentication Middleware for Telemetry
+ * If valid Bearer token exists, attaches user; otherwise gracefully proceeds as unauthenticated
+ */
+const optionalAuthenticate = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return next();
+  }
+
+  const idToken = authHeader.split("Bearer ")[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken) as AuthUser;
+    (req as AuthenticatedRequest).user = decodedToken;
+  } catch (_err) {
+    // Non-blocking: unauthenticated telemetry fallback
+  }
+  next();
+};
+
 const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const user = (req as AuthenticatedRequest).user;
   const isAdmin = Boolean(
@@ -1122,7 +1142,7 @@ async function startServer() {
 
   // API routes
   // Telemetry and Error Tracking API
-  app.post("/api/v1/telemetry/errors", expressRateLimit({ windowMs: 60 * 1000, max: 60 }), async (req: express.Request, res: express.Response) => {
+  app.post("/api/v1/telemetry/errors", optionalAuthenticate, expressRateLimit({ windowMs: 60 * 1000, max: 60 }), async (req: express.Request, res: express.Response) => {
     try {
       const parsed = ErrorTelemetrySchema.safeParse(req.body);
       if (!parsed.success) {
@@ -1132,27 +1152,56 @@ async function startServer() {
       const db = getDb();
       const rawData = parsed.data;
       const errorId = rawData.id || `err_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const authUser = (req as AuthenticatedRequest).user;
 
       const sanitizedMessage = SecurityService.scrubPII(rawData.message).slice(0, 2000);
       const sanitizedStack = rawData.stack ? SecurityService.scrubPII(rawData.stack).slice(0, 4000) : undefined;
       const sanitizedComponentStack = rawData.componentStack ? SecurityService.scrubPII(rawData.componentStack).slice(0, 2000) : undefined;
 
+      // Determine validated workspaceId: only allow tenant tagging if user is authenticated
+      let validatedWorkspaceId = 'unauthenticated';
+      let validatedUserId: string | undefined = undefined;
+      let validatedUserEmail: string | undefined = undefined;
+
+      if (authUser && rawData.workspaceId && rawData.workspaceId !== 'unassigned' && rawData.workspaceId !== 'unauthenticated') {
+        try {
+          // Check workspace membership or admin role
+          if (authUser.admin) {
+            validatedWorkspaceId = rawData.workspaceId;
+          } else {
+            const memberDoc = await db.collection("workspaces").doc(rawData.workspaceId).collection("members").doc(authUser.uid).get();
+            if (memberDoc.exists) {
+              validatedWorkspaceId = rawData.workspaceId;
+            } else {
+              const wsDoc = await db.collection("workspaces").doc(rawData.workspaceId).get();
+              if (wsDoc.exists && wsDoc.data()?.ownerId === authUser.uid) {
+                validatedWorkspaceId = rawData.workspaceId;
+              }
+            }
+          }
+          validatedUserId = authUser.uid;
+          validatedUserEmail = authUser.email;
+        } catch (_wsErr) {
+          validatedWorkspaceId = 'unauthenticated';
+        }
+      }
+
       const record: Record<string, any> = {
         id: errorId,
+        workspaceId: validatedWorkspaceId,
         message: sanitizedMessage,
         createdAt: rawData.createdAt || new Date().toISOString()
       };
 
-      if (rawData.workspaceId) record.workspaceId = rawData.workspaceId;
-      if (rawData.userId) record.userId = rawData.userId;
-      if (rawData.userEmail) record.userEmail = rawData.userEmail;
+      if (validatedUserId) record.userId = validatedUserId;
+      if (validatedUserEmail) record.userEmail = validatedUserEmail;
       if (sanitizedStack) record.stack = sanitizedStack;
       if (sanitizedComponentStack) record.componentStack = sanitizedComponentStack;
       if (rawData.url) record.url = rawData.url;
       if (rawData.userAgent) record.userAgent = rawData.userAgent;
       if (rawData.appVersion) record.appVersion = rawData.appVersion;
       if (rawData.release) record.release = rawData.release;
-      if (rawData.source) record.source = rawData.source;
+      record.source = validatedWorkspaceId === 'unauthenticated' ? 'anonymous_frontend' : (rawData.source || 'frontend');
       if (rawData.severity) record.severity = rawData.severity;
       if (rawData.metadata) record.metadata = rawData.metadata;
       if (rawData.ticketId) record.ticketId = rawData.ticketId;
@@ -1172,16 +1221,17 @@ async function startServer() {
   app.post("/api/health", expressRateLimit({ windowMs: 60 * 1000, max: 30 }), async (req, res) => {
     const errorString = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
     const sanitized = SecurityService.scrubPII(errorString).slice(0, 2048);
-    console.warn("[Client Telemetry Error]:", sanitized);
+    console.warn("[Client Telemetry Probe Error]:", sanitized);
     try {
       const db = getDb();
       const errorId = `err_health_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      // Strictly assign to unauthenticated pool to prevent tenant log pollution
       await db.collection("errorLogs").doc(errorId).set({
         id: errorId,
-        workspaceId: req.body?.workspaceId || 'unassigned',
+        workspaceId: 'unauthenticated',
         message: sanitized.slice(0, 1000),
-        source: 'frontend',
-        severity: 'error',
+        source: 'health_probe',
+        severity: 'warning',
         url: req.body?.url || '',
         createdAt: new Date().toISOString()
       });
@@ -1190,6 +1240,7 @@ async function startServer() {
     }
     res.json({ ok: true });
   });
+
   app.get("/api/health", async (req, res) => {
     res.json({ 
       status: "ok", 
