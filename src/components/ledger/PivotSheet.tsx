@@ -33,6 +33,7 @@ type PeriodFilter = 'all' | 'this_year' | 'last_year' | 'this_quarter' | 'this_m
 export default function PivotSheet({ transactions, isEmbedded = false }: PivotSheetProps) {
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
   const accounts = useLedgerStore(s => s.accounts);
+  const dimensionNodes = currentWorkspace?.dimensionNodes || [];
   const activeDimensions = useMemo(() => {
     const custom = currentWorkspace?.dimensions || DEFAULT_WORKSPACE_DIMENSIONS;
     const baseIds = custom.map(d => ({ id: d.id, name: d.name }));
@@ -119,7 +120,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
       return resolveAccountName(accounts, line?.accountId, line?.accountName) || 'Unassigned';
     }
 
-    const lineVal = line ? getLineDimension(line, t, dim) : 'Unassigned';
+    const lineVal = line ? getLineDimension(line, t, dim, dimensionNodes) : 'Unassigned';
     return lineVal || 'Unassigned';
   };
 

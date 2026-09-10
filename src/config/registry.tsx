@@ -298,6 +298,7 @@ export const REPORT_TABS_REGISTRY = [
 ];
 
 export const SETTINGS_TABS_REGISTRY = [
+  { id: 'dimensions', label: { en: 'Dimensions & Labels', he: 'ממדים ותגיות' }, componentName: 'DimensionsView', icon: Tag },
   { id: 'appearance', label: { en: 'Appearance & Display', he: 'מראה ותצוגה' }, componentName: 'AppearanceSettingsView', icon: Sliders },
   { id: 'team', label: { en: 'Team & Invites', he: 'צוות והרשאות' }, componentName: 'TeamView', icon: Users },
   { id: 'billing', label: { en: 'Billing & Plan', he: 'תוכניות וחיוב' }, componentName: 'BillingView', icon: CreditCard },
@@ -310,6 +311,7 @@ export const SETTINGS_TABS_REGISTRY = [
 ];
 
 export const SETTINGS_COMPONENTS: Record<string, any> = {
+  'DimensionsView': lazy(() => import('../components/platform/settings/DimensionsSettings')),
   'AppearanceSettingsView': lazy(() => import('../components/platform/settings/AppearanceSettings')),
   'TeamView': lazy(() => import('../components/platform/settings/TeamSettings')),
   'BillingView': lazy(() => import('../components/platform/settings/BillingSettings')),

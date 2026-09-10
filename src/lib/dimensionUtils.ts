@@ -26,85 +26,261 @@ export function suggestNextDimensionNodeId(dimensionId: string, nodes: Dimension
 }
 
 /**
+ * Resolves a stored dimension value (which may be a node ID like "P1", a path "P1/Dairy", or a free-text string)
+ * to its current human-readable display label based on the node registry.
+ */
+export function resolveDimensionLabel(
+  nodes: DimensionNode[] | undefined,
+  dimensionId: string,
+  storedValue: string | undefined
+): string {
+  if (!storedValue || storedValue === 'Unassigned') return 'Unassigned';
+  if (!nodes || nodes.length === 0) return storedValue;
+
+  const normDim = (dimensionId || '').toLowerCase().trim();
+  const target = storedValue.trim();
+  const cleanTarget = target.toLowerCase();
+
+  // 1. Exact ID match
+  const matchById = nodes.find(n => n.dimensionId.toLowerCase() === normDim && n.id.toLowerCase() === cleanTarget);
+  if (matchById) return matchById.description;
+
+  // 2. Exact Description match (already stored as description or legacy)
+  const matchByDesc = nodes.find(n => n.dimensionId.toLowerCase() === normDim && n.description.toLowerCase() === cleanTarget);
+  if (matchByDesc) return matchByDesc.description;
+
+  // 3. Alias match
+  const matchByAlias = nodes.find(n => n.dimensionId.toLowerCase() === normDim && n.aliases?.some(a => a.toLowerCase() === cleanTarget));
+  if (matchByAlias) return matchByAlias.description;
+
+  // 4. Hierarchical path check (e.g. "P1/sub1" where "P1" is node.id or description)
+  if (target.includes('/')) {
+    const parts = target.split('/');
+    const rootPart = parts[0].trim().toLowerCase();
+    const rootNode = nodes.find(n => 
+      n.dimensionId.toLowerCase() === normDim && 
+      (n.id.toLowerCase() === rootPart || 
+       n.description.toLowerCase() === rootPart || 
+       n.aliases?.some(a => a.toLowerCase() === rootPart))
+    );
+    if (rootNode) {
+      return [rootNode.description, ...parts.slice(1)].join('/');
+    }
+  }
+
+  return storedValue;
+}
+
+/**
  * Gets the string value of a specified dimension for a transaction line.
- * Resolution priority:
- * 1. Line-level `dimensions[dimId]`
- * 2. Legacy line fields (`class`, `location`, `project`, `department`, `category`, `accountName`)
- * 3. Line/Transaction tags formatted as `dimId:value` or `dimId/value`
- * 4. Transaction-level `dimensions[dimId]` or legacy fields
- * 5. Default fallback: 'Unassigned'
+ * Optionally resolves node IDs to human display descriptions if `nodes` is provided.
  */
 export function getLineDimension(
   line: TransactionLine,
   tx: Transaction | undefined,
-  dimensionId: string
+  dimensionId: string,
+  nodes?: DimensionNode[]
 ): string {
   const normDim = (dimensionId || '').toLowerCase().trim();
+  let rawVal = 'Unassigned';
 
   // 1. Check line.dimensions map
   if (line.dimensions && line.dimensions[normDim]) {
-    return line.dimensions[normDim];
-  }
+    rawVal = line.dimensions[normDim];
+  } else if (normDim === 'class' && line.class) {
+    rawVal = line.class;
+  } else if (normDim === 'location' && line.location) {
+    rawVal = line.location;
+  } else if (normDim === 'project' && line.project) {
+    rawVal = line.project;
+  } else if (normDim === 'department' && line.department) {
+    rawVal = line.department;
+  } else if (normDim === 'category') {
+    if (line.category) rawVal = line.category;
+    else if (line.accountName) rawVal = line.accountName;
+  } else {
+    // 3. Check line tags or tx tags for `dimension:value` format
+    const allTags = [...(line.tags || []), ...(tx?.tags || [])];
+    for (const tag of allTags) {
+      if (!tag) continue;
+      if (tag.includes(':')) {
+        const [key, ...valParts] = tag.split(':');
+        if (key.trim().toLowerCase() === normDim) {
+          rawVal = valParts.join(':').trim();
+          break;
+        }
+      }
+    }
 
-  // 2. Legacy alias fallback on line
-  if (normDim === 'class' && line.class) return line.class;
-  if (normDim === 'location' && line.location) return line.location;
-  if (normDim === 'project' && line.project) return line.project;
-  if (normDim === 'department' && line.department) return line.department;
-  if (normDim === 'category') {
-    if (line.category) return line.category;
-    if (line.accountName) return line.accountName;
-  }
-
-  // 3. Check line tags or tx tags for `dimension:value` format
-  const allTags = [...(line.tags || []), ...(tx?.tags || [])];
-  for (const tag of allTags) {
-    if (!tag) continue;
-    if (tag.includes(':')) {
-      const [key, ...valParts] = tag.split(':');
-      if (key.trim().toLowerCase() === normDim) {
-        return valParts.join(':').trim();
+    if (rawVal === 'Unassigned') {
+      // 4. Transaction-level dimensions & legacy aliases
+      if (tx?.dimensions && tx.dimensions[normDim]) {
+        rawVal = tx.dimensions[normDim];
+      } else if (tx) {
+        if (normDim === 'project' && tx.projectId) rawVal = tx.projectId;
+        if (normDim === 'class' && (tx as any).classId) rawVal = (tx as any).classId;
+        if (normDim === 'location' && (tx as any).locationId) rawVal = (tx as any).locationId;
       }
     }
   }
 
-  // 4. Transaction-level dimensions & legacy aliases
-  if (tx?.dimensions && tx.dimensions[normDim]) {
-    return tx.dimensions[normDim];
-  }
-  if (tx) {
-    if (normDim === 'project' && tx.projectId) return tx.projectId;
-    if (normDim === 'class' && (tx as any).classId) return (tx as any).classId;
-    if (normDim === 'location' && (tx as any).locationId) return (tx as any).locationId;
+  if (nodes && rawVal && rawVal !== 'Unassigned') {
+    return resolveDimensionLabel(nodes, dimensionId, rawVal);
   }
 
-  return 'Unassigned';
+  return rawVal;
 }
 
 /**
  * Updates a transaction line with a dynamic dimension coordinate while keeping legacy aliases in sync.
+ * If `nodes` is provided and the value matches a known node description or alias, stores node.id for stable identity.
  */
 export function setLineDimension(
   line: TransactionLine,
   dimensionId: string,
-  value: string
+  value: string,
+  nodes?: DimensionNode[]
 ): TransactionLine {
   const normDim = dimensionId.toLowerCase().trim();
-  const updatedDimensions = { ...(line.dimensions || {}), [normDim]: value };
+  let targetValue = value;
 
+  if (nodes && value && value.trim() !== '' && value !== 'Unassigned') {
+    const cleanVal = value.trim().toLowerCase();
+    // 1. Check if value matches an existing node ID exactly
+    const exactNodeId = nodes.find(n => n.dimensionId.toLowerCase() === normDim && n.id.toLowerCase() === cleanVal);
+    if (exactNodeId) {
+      targetValue = exactNodeId.id;
+    } else {
+      // 2. Check if value matches node description or alias
+      const matchingNode = nodes.find(n =>
+        n.dimensionId.toLowerCase() === normDim &&
+        (n.description.toLowerCase() === cleanVal ||
+         n.aliases?.some(a => a.toLowerCase() === cleanVal))
+      );
+      if (matchingNode) {
+        targetValue = matchingNode.id;
+      } else if (cleanVal.includes('/')) {
+        // Check if prefix matches description or alias of a node
+        const parts = value.split('/');
+        const rootPart = parts[0].trim().toLowerCase();
+        const rootNode = nodes.find(n =>
+          n.dimensionId.toLowerCase() === normDim &&
+          (n.id.toLowerCase() === rootPart ||
+           n.description.toLowerCase() === rootPart ||
+           n.aliases?.some(a => a.toLowerCase() === rootPart))
+        );
+        if (rootNode) {
+          targetValue = [rootNode.id, ...parts.slice(1)].join('/');
+        }
+      }
+    }
+  }
+
+  const updatedDimensions = { ...(line.dimensions || {}), [normDim]: targetValue };
   const updatedLine: TransactionLine = {
     ...line,
     dimensions: updatedDimensions
   };
 
-  // Keep backward-compatible legacy fields in sync
-  if (normDim === 'class') updatedLine.class = value;
-  if (normDim === 'location') updatedLine.location = value;
-  if (normDim === 'project') updatedLine.project = value;
-  if (normDim === 'department') updatedLine.department = value;
-  if (normDim === 'category') updatedLine.category = value;
+  // Keep backward-compatible legacy fields in sync with human display label
+  const displayLabel = nodes ? resolveDimensionLabel(nodes, normDim, targetValue) : targetValue;
+  if (normDim === 'class') updatedLine.class = displayLabel;
+  if (normDim === 'location') updatedLine.location = displayLabel;
+  if (normDim === 'project') updatedLine.project = displayLabel;
+  if (normDim === 'department') updatedLine.department = displayLabel;
+  if (normDim === 'category') updatedLine.category = displayLabel;
 
   return updatedLine;
+}
+
+/**
+ * Finds or mints a DimensionNode for a given description or value.
+ */
+export function findOrCreateDimensionNode(
+  nodes: DimensionNode[],
+  dimensionId: string,
+  descriptionOrValue: string
+): { node: DimensionNode; isNew: boolean; updatedNodes: DimensionNode[] } {
+  const normDim = dimensionId.toLowerCase().trim();
+  const clean = descriptionOrValue.trim();
+  const cleanLower = clean.toLowerCase();
+
+  const existing = nodes.find(n =>
+    n.dimensionId.toLowerCase() === normDim &&
+    (n.id.toLowerCase() === cleanLower ||
+     n.description.toLowerCase() === cleanLower ||
+     n.aliases?.some(a => a.toLowerCase() === cleanLower))
+  );
+
+  if (existing) {
+    return { node: existing, isNew: false, updatedNodes: nodes };
+  }
+
+  const newId = suggestNextDimensionNodeId(dimensionId, nodes);
+  const newNode: DimensionNode = {
+    id: newId,
+    dimensionId,
+    description: clean,
+    status: 'active',
+    createdAt: new Date().toISOString()
+  };
+
+  return { node: newNode, isNew: true, updatedNodes: [...nodes, newNode] };
+}
+
+/**
+ * Migrates a set of transactions so that free-text dimension values are converted into stable DimensionNode records
+ * and lines are updated to store node IDs.
+ */
+export function migrateWorkspaceDimensionNodes(
+  transactions: Transaction[],
+  existingNodes: DimensionNode[] = [],
+  dimensionDefs: DimensionDefinition[] = DEFAULT_WORKSPACE_DIMENSIONS
+): { updatedTransactions: Transaction[]; updatedNodes: DimensionNode[]; migrationCount: number } {
+  let currentNodes = [...existingNodes];
+  let migrationCount = 0;
+
+  const activeAxes = dimensionDefs.map(d => d.id);
+
+  const updatedTransactions = transactions.map(tx => {
+    let txModified = false;
+    const newLines = tx.lines?.map(line => {
+      let lineModified = false;
+      let updatedLine = { ...line };
+
+      for (const axisId of activeAxes) {
+        const rawVal = getLineDimension(updatedLine, tx, axisId);
+        if (!rawVal || rawVal === 'Unassigned') continue;
+
+        // Check if rawVal is already a node ID
+        const normDim = axisId.toLowerCase().trim();
+        const isAlreadyNodeId = currentNodes.some(n =>
+          n.dimensionId.toLowerCase() === normDim && n.id === rawVal
+        );
+
+        if (!isAlreadyNodeId) {
+          // Find or create node for rawVal
+          const { node, isNew, updatedNodes } = findOrCreateDimensionNode(currentNodes, axisId, rawVal);
+          currentNodes = updatedNodes;
+
+          // Rewrite line dimension to store node.id
+          updatedLine = setLineDimension(updatedLine, axisId, node.id, currentNodes);
+          lineModified = true;
+          migrationCount++;
+        }
+      }
+
+      if (lineModified) txModified = true;
+      return updatedLine;
+    });
+
+    if (txModified) {
+      return { ...tx, lines: newLines || [] };
+    }
+    return tx;
+  });
+
+  return { updatedTransactions, updatedNodes: currentNodes, migrationCount };
 }
 
 /**

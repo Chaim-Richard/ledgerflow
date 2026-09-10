@@ -629,9 +629,14 @@ export default function TransactionEditModal({
 
                     {/* Bottom Row: Additional Dimensions */}
                     {activeDimensions.filter(d => d.id !== 'category').map(dim => {
-                      const dimVal = getLineDimension(line, transaction, dim.id);
+                      const dimVal = getLineDimension(line, transaction, dim.id, currentWorkspace?.dimensionNodes);
                       const displayVal = dimVal === 'Unassigned' ? '' : dimVal;
-                      const pathOptions = extractUniqueDimensionPaths(transactions, dim.id);
+                      const pathOptions = Array.from(new Set([
+                        ...(currentWorkspace?.dimensionNodes || [])
+                          .filter(n => n.dimensionId === dim.id && n.status !== 'archived')
+                          .map(n => n.description),
+                        ...extractUniqueDimensionPaths(transactions, dim.id)
+                      ]));
                       return (
                         <div key={dim.id} className="md:col-span-2 space-y-1">
                           <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">{dim.name}</div>
@@ -641,7 +646,7 @@ export default function TransactionEditModal({
                               value={displayVal}
                               disabled={isLocked}
                               onChange={(e) => {
-                                const updatedLine = setLineDimension(line, dim.id, e.target.value);
+                                const updatedLine = setLineDimension(line, dim.id, e.target.value, currentWorkspace?.dimensionNodes);
                                 handleLineChange(idx, updatedLine);
                               }}
                               placeholder={`Type or select ${dim.name.toLowerCase()}`}
