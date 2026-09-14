@@ -1,6 +1,7 @@
 import { Transaction, Project, ChartAccount, AnalyticalMetrics } from "../types";
 import { IntentResolver } from "../lib/intentResolver";
 import { getIdToken } from "../firebase";
+import { useAuthStore } from "../stores/useAuthStore";
 
 export interface StrategicDirectives {
   directives: string[];
@@ -14,14 +15,15 @@ class AIService {
     const isGuest = typeof window !== 'undefined' && localStorage.getItem('isGuest') === 'true';
     if (!idToken && !isGuest) throw new Error("Authentication required for AI operations - falling back to local heuristic");
     
-    const selectedModel = typeof window !== 'undefined' ? (localStorage.getItem('lf_selected_ai_model') || 'Gemini 1.5 Flash (Default)') : 'Gemini 1.5 Flash (Default)';
+    const selectedModel = typeof window !== 'undefined' ? (localStorage.getItem('lf_selected_ai_model') || 'Gemini 3.8 Flash (Default)') : 'Gemini 3.8 Flash (Default)';
+    const workspaceId = payload?.workspaceId || useAuthStore.getState().currentWorkspaceId;
     const response = await fetch("/api/ai/process", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${idToken || 'guest-token'}`
       },
-      body: JSON.stringify({ task, payload: { ...payload, selectedModel } })
+      body: JSON.stringify({ task, payload: { ...payload, workspaceId, selectedModel } })
     });
 
     if (!response.ok) {

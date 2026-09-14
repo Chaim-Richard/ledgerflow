@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Sparkles, Send, User, ChevronRight } from "lucide-react";
+import { Sparkles, Send, User, ChevronRight, ShieldCheck, Database } from "lucide-react";
 import { useAuthStore } from "../../stores/useAuthStore";
+import { useLedgerStore } from "../../stores/useLedgerStore";
+import { isPostable, isCashAccount } from "../../lib/txFilters";
 import { cn } from "../../lib/utils";
 import Markdown from "react-markdown";
 import { motion, AnimatePresence } from 'motion/react';
@@ -21,8 +23,20 @@ function renderMarkdown(text: string) {
 }
 
 export default function Copilot() {
+  const currentWorkspaceId = useAuthStore((s) => s.currentWorkspaceId);
+  const currentWorkspace = useAuthStore((s) => s.getCurrentWorkspace());
+  const transactions = useLedgerStore((s) => s.transactions);
+  const accounts = useLedgerStore((s) => s.accounts);
+
+  const selectedModel = typeof window !== 'undefined' 
+    ? (localStorage.getItem('lf_selected_ai_model') || currentWorkspace?.aiModel || 'Gemini 3.8 Flash')
+    : 'Gemini 3.8 Flash';
+
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "I am your advanced financial modeling intelligence. Connected to your live unified ledger. How may I assist your strategy today?" },
+    { 
+      role: "assistant", 
+      content: "I am your advanced financial modeling intelligence. Connected with **verified read-only access** to your live general ledger. How may I assist your strategy today?" 
+    },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,6 +55,70 @@ export default function Copilot() {
       const token = await useAuthStore.getState().user?.getIdToken();
       let answer = "";
       
+      // Assemble verified, read-only ledger context
+      let totalCashCents = 0;
+      let totalRevenueCents = 0;
+      let totalExpensesCents = 0;
+      let totalArCents = 0;
+      let totalApCents = 0;
+
+      const accountsSummary = (accounts || []).map((a) => {
+        const bal = a.balanceCents || 0;
+        const type = (a.type || '').toLowerCase();
+        const cat = (a.category || '').toLowerCase();
+
+        if (isCashAccount(a)) {
+          totalCashCents += bal;
+        }
+        if (type === 'revenue' || type === 'income') {
+          totalRevenueCents += bal;
+        }
+        if (type === 'expense' || type === 'cost_of_goods' || type === 'cogs') {
+          totalExpensesCents += bal;
+        }
+        if (cat.includes('receivable') || type === 'receivable') {
+          totalArCents += bal;
+        }
+        if (cat.includes('payable') || type === 'payable') {
+          totalApCents += bal;
+        }
+
+        return {
+          name: a.name,
+          category: a.category,
+          type: a.type,
+          balanceFormatted: `$${(bal / 100).toFixed(2)}`
+        };
+      });
+
+      const postableTx = (transactions || [])
+        .filter((t) => isPostable(t))
+        .slice(0, 40)
+        .map((t) => ({
+          date: t.date,
+          description: t.description || '',
+          category: t.lines?.[0]?.category || (t as any).category || '',
+          amountFormatted: `$${((t.totalAmountCents || 0) / 100).toFixed(2)}`
+        }));
+
+      const monthlyBurnCents = totalExpensesCents > totalRevenueCents 
+        ? Math.round((totalExpensesCents - totalRevenueCents) / 12) 
+        : 0;
+      const runwayMonths = monthlyBurnCents > 0 
+        ? (totalCashCents / monthlyBurnCents).toFixed(1) 
+        : "99+ (Profitable / Cash Positive)";
+
+      const ledgerSummary = {
+        workspaceId: currentWorkspaceId,
+        totalCash: `$${(totalCashCents / 100).toFixed(2)}`,
+        monthlyBurn: `$${(monthlyBurnCents / 100).toFixed(2)}`,
+        runwayMonths,
+        totalAccountsReceivable: `$${(totalArCents / 100).toFixed(2)}`,
+        totalAccountsPayable: `$${(totalApCents / 100).toFixed(2)}`,
+        keyAccounts: accountsSummary.slice(0, 15),
+        recentTransactions: postableTx
+      };
+
       try {
         const res = await fetch("/api/ai/process", {
             method: "POST",
@@ -50,7 +128,12 @@ export default function Copilot() {
             },
             body: JSON.stringify({ 
               task: "chat", 
-              payload: { query: question } 
+              payload: { 
+                query: question,
+                workspaceId: currentWorkspaceId,
+                selectedModel,
+                ledgerSummary
+              } 
             })
         });
         const data = await res.json();
@@ -58,11 +141,11 @@ export default function Copilot() {
         if (res.ok) {
             answer = data.answer;
         } else {
-            throw new Error(data.detail || data.message || "Execution exception")
+            throw new Error(data.detail || data.message || "Execution exception");
         }
       } catch (err: any) {
         console.warn("AI Backend unreachable:", err);
-        answer = `*Vector analysis initialized...*\n\nBased on your ledger integrity engine, all key ratios remain within operational safety bounds.\n\n_(System Note: Operating in offline fallback simulation mode due to: ${err.message})_`;
+        answer = `*Ledger Intelligence Offline Fallback*\n\n**Financial Snapshot:**\n- **Verified Cash:** ${ledgerSummary.totalCash}\n- **Estimated Burn Rate:** ${ledgerSummary.monthlyBurn} / mo\n- **Runway:** ${ledgerSummary.runwayMonths} months\n- **Accounts Receivable:** ${ledgerSummary.totalAccountsReceivable}\n- **Accounts Payable:** ${ledgerSummary.totalAccountsPayable}\n\n*(Notice: Live Gemini backend unreachable: ${err.message}. Operating in deterministic heuristic mode).*`;
       }
       
       setMessages((m) => [...m, { role: "assistant", content: answer }]);
@@ -75,14 +158,30 @@ export default function Copilot() {
 
   return (
     <div className="flex flex-col h-full bg-[var(--ink)]/50">
-      <div className="px-6 md:px-10 py-6 md:py-8 border-b border-[var(--line)] bg-[var(--surface)] sticky top-0 z-20 flex justify-between items-center shadow-sm">
+      <div className="px-6 md:px-10 py-6 md:py-8 border-b border-[var(--line)] bg-[var(--surface)] sticky top-0 z-20 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-[var(--brass)] text-black rounded-xl flex items-center justify-center shadow-md">
             <Sparkles size={24} className="text-black" />
           </div>
           <div>
-            <h1 className="font-display font-black text-2xl uppercase tracking-tight text-[var(--text)]">AI Co-pilot</h1>
-            <p className="text-[var(--muted)] font-bold uppercase tracking-widest text-[10px] mt-1">Live rule analysis over your general ledger integrity</p>
+            <div className="flex items-center gap-2">
+              <h1 className="font-display font-black text-2xl uppercase tracking-tight text-[var(--text)]">AI Co-pilot</h1>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 border border-indigo-200 text-indigo-700">
+                {selectedModel}
+              </span>
+            </div>
+            <p className="text-[var(--muted)] font-bold uppercase tracking-widest text-[10px] mt-1">Live analytical reasoning over verified general ledger data</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold">
+            <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+            <span>Read-Only Guardrail Active</span>
+          </div>
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium">
+            <Database size={13} className="text-slate-500 shrink-0" />
+            <span>{accounts.length} Accounts • {transactions.length} Tx</span>
           </div>
         </div>
       </div>
@@ -121,14 +220,14 @@ export default function Copilot() {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex gap-4"
               >
-                <div className="w-10 h-10 rounded-[32px] bg-indigo-600 flex items-center justify-center shrink-0 shadow-sm mt-1">
-                  <Sparkles size={18} className="text-white animate-pulse" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--brass)] text-black flex items-center justify-center shrink-0 shadow-sm mt-1">
+                  <Sparkles size={18} className="animate-pulse" />
                 </div>
-                <div className="px-6 py-5 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm text-[10px] uppercase tracking-widest font-black text-slate-400 flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  <span className="ml-2">Interrogating Integrity Engine data arrays...</span>
+                <div className="px-6 py-5 bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm text-xs font-semibold text-slate-500 flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-[var(--brass)] rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-[var(--brass)] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-[var(--brass)] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <span className="ml-2">Analyzing verified ledger data with {selectedModel}...</span>
                 </div>
               </motion.div>
             )}
@@ -145,7 +244,7 @@ export default function Copilot() {
                 <button 
                   key={s} 
                   onClick={() => ask(s)}
-                  className="text-left flex items-center justify-between font-bold text-xs uppercase tracking-wider border border-[var(--line)] bg-[var(--surface)] px-5 py-4 rounded-[32px] text-slate-500 hover:border-slate-900 hover:text-[var(--text)] hover:shadow-sm transition-all group active:scale-95"
+                  className="text-left flex items-center justify-between font-bold text-xs uppercase tracking-wider border border-[var(--line)] bg-[var(--surface)] px-5 py-4 rounded-xl text-slate-600 hover:border-slate-900 hover:text-[var(--text)] hover:shadow-sm transition-all group active:scale-95"
                 >
                   <span className="text-xs">{s}</span>
                   <ChevronRight size={16} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
@@ -155,16 +254,16 @@ export default function Copilot() {
           )}
           <form onSubmit={(e) => { e.preventDefault(); ask(input); }} className="relative flex items-center group">
             <input 
-              className="flex-1 w-full bg-[var(--ink)] border-2 border-[var(--line)] rounded-[32px] px-8 py-5 text-[15px] focus:bg-[var(--surface)] focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 outline-none transition-all placeholder:text-slate-400 font-medium tracking-tight shadow-sm" 
-              placeholder="Query the underlying core financial integrity…" 
+              className="flex-1 w-full bg-[var(--ink)] border-2 border-[var(--line)] rounded-2xl px-6 py-4 text-sm focus:bg-[var(--surface)] focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 outline-none transition-all placeholder:text-slate-400 font-medium tracking-tight shadow-sm" 
+              placeholder="Ask Copilot about cash runway, AR aging, spending patterns, or financial ratios…" 
               value={input}
               onChange={(e) => setInput(e.target.value)} 
             />
-            <button type="button" 
-              className="absolute right-3 p-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-[32px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md active:scale-95" 
+            <button type="submit" 
+              className="absolute right-2.5 p-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md active:scale-95" 
               disabled={loading || !input.trim()} 
-             aria-label="Send action">
-              <Send size={20} className="ml-0.5" />
+              aria-label="Send action">
+              <Send size={18} />
             </button>
           </form>
         </div>

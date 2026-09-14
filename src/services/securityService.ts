@@ -53,8 +53,8 @@ export class SecurityService {
   static scrubPII(text: string): string {
     if (!text) return "";
     return text
-      // Secret API keys
-      .replace(/\b(lf_live_[a-zA-Z0-9_-]+|lf_test_[a-zA-Z0-9_-]+|sk_live_[a-zA-Z0-9_-]+|sk_test_[a-zA-Z0-9_-]+)\b/g, "[SECRET_KEY_REDACTED]")
+      // Secret API keys (LedgerFlow, Stripe, Google AI/Gemini)
+      .replace(/\b(lf_live_[a-zA-Z0-9_-]+|lf_test_[a-zA-Z0-9_-]+|sk_live_[a-zA-Z0-9_-]+|sk_test_[a-zA-Z0-9_-]+|AIza[a-zA-Z0-9_-]{30,45})\b/g, "[SECRET_KEY_REDACTED]")
       // Credit card numbers (formatted or contiguous 13-16 digits)
       .replace(/\b(?:\d{4}[ -]?){3}\d{1,4}\b|\b\d{13,16}\b/g, "[CREDIT_CARD_REDACTED]")
       // Emails

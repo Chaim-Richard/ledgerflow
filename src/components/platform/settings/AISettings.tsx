@@ -28,7 +28,7 @@ export default function AISettings() {
       if (persisted) return persisted;
     }
     // Read from workspace or default
-    return currentWorkspace?.aiModel || 'Gemini 3.5 Flash';
+    return currentWorkspace?.aiModel || 'Gemini 3.8 Flash';
   });
 
   // Self-learning precision threshold (Laplace/Bayes classification gate)
@@ -55,14 +55,14 @@ export default function AISettings() {
 
   const MODEL_OPTIONS = [
     {
-      name: 'Gemini 2.5 Flash',
+      name: 'Gemini 3.8 Flash',
       tier: 'Production Default',
-      desc: 'Optimized high-throughput multimodal intelligence for fast ledger categorization, pattern extraction, and receipt parsing.'
+      desc: 'Optimized high-throughput multimodal intelligence for OCR receipt extraction, bank statement parsing, deep transaction labeling, and real-time copilot intelligence.'
     },
     {
-      name: 'Gemini 2.5 Pro',
+      name: 'Gemini 3.1 Pro',
       tier: 'Deep Reasoning',
-      desc: 'Advanced reasoning model for complex financial tax profiles, multi-entity consolidation, and strategic audit simulations.'
+      desc: 'Advanced reasoning model for complex financial tax profiles, multi-entity consolidation, and forensic audit simulations.'
     }
   ];
 

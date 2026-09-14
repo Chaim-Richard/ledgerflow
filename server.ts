@@ -1061,6 +1061,81 @@ async function startServer() {
          throw new Error("Missing Gemini API Key. Please configure it in AI Settings.");
       }
 
+      // For Copilot chat tasks, ensure secure read-only financial data access with PII redaction
+      if (task === 'chat') {
+        if (payload?.query) {
+          payload.query = SecurityService.scrubPII(payload.query);
+        }
+        
+        // If client did not provide complete ledgerSummary, assemble it securely from authorized workspace
+        if (!payload?.ledgerSummary) {
+          const { accounts, transactions } = await getReportContext(req as AuthenticatedRequest, workspaceId);
+          
+          let totalCashCents = 0;
+          let totalRevenueCents = 0;
+          let totalExpensesCents = 0;
+          let totalArCents = 0;
+          let totalApCents = 0;
+
+          const accountsList = (accounts || []).map((a: any) => {
+            const bal = a.balanceCents || 0;
+            const type = (a.type || '').toLowerCase();
+            const cat = (a.category || '').toLowerCase();
+            const name = (a.name || '').toLowerCase();
+
+            if (cat.includes('cash') || cat.includes('bank') || name.includes('checking') || name.includes('cash') || (a.role || '').toLowerCase() === 'cash') {
+              totalCashCents += bal;
+            }
+            if (type === 'revenue' || type === 'income') {
+              totalRevenueCents += bal;
+            }
+            if (type === 'expense' || type === 'cost_of_goods' || type === 'cogs') {
+              totalExpensesCents += bal;
+            }
+            if (cat.includes('receivable') || type === 'receivable') {
+              totalArCents += bal;
+            }
+            if (cat.includes('payable') || type === 'payable') {
+              totalApCents += bal;
+            }
+            return {
+              name: a.name,
+              type: a.type,
+              category: a.category,
+              balanceFormatted: `$${(bal / 100).toFixed(2)}`
+            };
+          });
+
+          // Postable transactions only, sanitized and sorted desc
+          const postableTx = (transactions || [])
+            .filter((t: any) => t && t.status !== 'void' && t.status !== 'failed' && !t.deletedAt)
+            .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''))
+            .slice(0, 40)
+            .map((t: any) => ({
+              date: t.date,
+              description: SecurityService.scrubPII(t.description || ''),
+              category: t.category || '',
+              amountFormatted: `$${((t.totalAmountCents || 0) / 100).toFixed(2)}`
+            }));
+
+          const monthlyBurnCents = totalExpensesCents > totalRevenueCents ? Math.round((totalExpensesCents - totalRevenueCents) / 12) : 0;
+          const runwayMonths = monthlyBurnCents > 0 ? (totalCashCents / monthlyBurnCents).toFixed(1) : "99+ (Profitable / Cash Positive)";
+
+          payload.ledgerSummary = {
+            workspaceId,
+            totalCash: `$${(totalCashCents / 100).toFixed(2)}`,
+            monthlyBurn: `$${(monthlyBurnCents / 100).toFixed(2)}`,
+            runwayMonths,
+            totalAccountsReceivable: `$${(totalArCents / 100).toFixed(2)}`,
+            totalAccountsPayable: `$${(totalApCents / 100).toFixed(2)}`,
+            keyAccounts: accountsList.slice(0, 15),
+            recentTransactions: postableTx
+          };
+        } else {
+          payload.ledgerSummary = JSON.parse(SecurityService.scrubPII(JSON.stringify(payload.ledgerSummary)));
+        }
+      }
+
       // Check whether payload and task are cached via our unified caching base BEFORE triggering AI!
       const isCached = AIBackendService.hasCachedResponse(task, payload, uid);
 
@@ -1078,7 +1153,7 @@ async function startServer() {
           const outputTokens = usage.candidatesTokenCount || 0;
           const totalTokens = usage.totalTokenCount || (promptTokens + outputTokens);
           
-          // Gemini 2.5 Flash Pricing Model True Alignment ($0.075 / 1M input, $0.30 / 1M output)
+          // Gemini 3.8 Flash Pricing Model True Alignment ($0.075 / 1M input, $0.30 / 1M output)
           baseCents = Math.round((promptTokens * 7.5 / 1000000) + (outputTokens * 30 / 1000000));
           baseWeight = totalTokens > 0 ? totalTokens : 15;
         } else {
@@ -3207,7 +3282,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
 
       const genAI = new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } });
       const result = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         contents: [{ role: "user", parts: [{ text: finalPrompt }] }]
       });
 
@@ -3217,7 +3292,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
       const outputTokens = usage?.candidatesTokenCount || Math.floor((result.text || "").length / 4);
       const totalTokens = usage?.totalTokenCount || (promptTokens + outputTokens);
 
-      // Gemini 2.5 Flash Pricing Model True Alignment ($0.075 / 1M input, $0.30 / 1M output)
+      // Gemini 3.8 Flash Pricing Model True Alignment ($0.075 / 1M input, $0.30 / 1M output)
       // cost in cents = (prompt / 1M * 7.5) + (output / 1M * 30)
       const baseCentsExact = (promptTokens * 7.5 / 1000000) + (outputTokens * 30 / 1000000);
       const baseCents = baseCentsExact;
