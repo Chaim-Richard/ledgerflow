@@ -629,7 +629,9 @@ async function startServer() {
     hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   }));
-  app.use(morgan("tiny"));
+  app.use(morgan("tiny", {
+    skip: (req) => !req.url || !req.url.startsWith("/api")
+  }));
   
   // Stripe Webhook needs raw body
   app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {

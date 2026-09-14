@@ -30,6 +30,16 @@ export async function reportClientError(
   }
 ): Promise<string> {
   const message = typeof err === 'string' ? err : (err.message || 'Unknown error');
+  if (
+    !message ||
+    message.includes('ResizeObserver loop') ||
+    message.includes('failed to connect to websocket') ||
+    message.includes('WebSocket') ||
+    message.includes('[vite]') ||
+    message === 'Script error.'
+  ) {
+    return '';
+  }
   const stack = typeof err === 'object' && err.stack ? err.stack : undefined;
   
   const authState = useAuthStore.getState();
