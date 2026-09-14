@@ -229,6 +229,64 @@ export function findOrCreateDimensionNode(
 }
 
 /**
+ * Updates a dimension node's description while preserving the previous description as an alias
+ * so historical free-text lines continue resolving to the renamed node without splitting report buckets.
+ */
+export function updateDimensionNodeDescription(
+  nodes: DimensionNode[],
+  nodeId: string,
+  dimensionId: string,
+  newDescription: string
+): DimensionNode[] {
+  const normDim = (dimensionId || '').toLowerCase().trim();
+  const cleanNew = newDescription.trim();
+
+  return nodes.map(n => {
+    if (n.id === nodeId && n.dimensionId.toLowerCase() === normDim) {
+      const prevDesc = n.description?.trim();
+      const aliases = [...(n.aliases || [])];
+      if (prevDesc && prevDesc !== cleanNew && !aliases.some(a => a.toLowerCase() === prevDesc.toLowerCase())) {
+        aliases.push(prevDesc);
+      }
+      return { ...n, description: newDescription, aliases };
+    }
+    return n;
+  });
+}
+
+/**
+ * One-time backfill: extracts distinct free-text dimension values from transaction lines
+ * across all axes using extractUniqueDimensionPaths and mints DimensionNode entries
+ * for any value not yet backed by a node.
+ */
+export function backfillDimensionNodesFromTransactions(
+  transactions: Transaction[],
+  existingNodes: DimensionNode[] = [],
+  dimensionDefs: DimensionDefinition[] = DEFAULT_WORKSPACE_DIMENSIONS
+): { newNodes: DimensionNode[]; allNodes: DimensionNode[]; createdCount: number } {
+  let currentNodes = [...existingNodes];
+  const newNodesCreated: DimensionNode[] = [];
+
+  for (const dim of dimensionDefs) {
+    const paths = extractUniqueDimensionPaths(transactions, dim.id);
+    for (const p of paths) {
+      if (!p || p === 'Unassigned') continue;
+      const { node, isNew, updatedNodes } = findOrCreateDimensionNode(currentNodes, dim.id, p);
+      if (isNew) {
+        newNodesCreated.push(node);
+        currentNodes = updatedNodes;
+      }
+    }
+  }
+
+  return {
+    newNodes: newNodesCreated,
+    allNodes: currentNodes,
+    createdCount: newNodesCreated.length
+  };
+}
+
+/**
  * Migrates a set of transactions so that free-text dimension values are converted into stable DimensionNode records
  * and lines are updated to store node IDs.
  */
@@ -260,7 +318,7 @@ export function migrateWorkspaceDimensionNodes(
 
         if (!isAlreadyNodeId) {
           // Find or create node for rawVal
-          const { node, isNew, updatedNodes } = findOrCreateDimensionNode(currentNodes, axisId, rawVal);
+          const { node, isNew: _isNew, updatedNodes } = findOrCreateDimensionNode(currentNodes, axisId, rawVal);
           currentNodes = updatedNodes;
 
           // Rewrite line dimension to store node.id

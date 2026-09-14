@@ -6,7 +6,9 @@ import {
   getLineDimension, 
   setLineDimension, 
   findOrCreateDimensionNode, 
-  migrateWorkspaceDimensionNodes 
+  migrateWorkspaceDimensionNodes,
+  updateDimensionNodeDescription,
+  backfillDimensionNodesFromTransactions
 } from '../lib/dimensionUtils';
 
 describe('Stable Dimension Identity & Label Node Management', () => {
@@ -251,5 +253,138 @@ describe('Stable Dimension Identity & Label Node Management', () => {
     // Idempotency: Running migration again results in 0 additional changes
     const secondPass = migrateWorkspaceDimensionNodes(updatedTransactions, updatedNodes, [{ id: 'category', name: 'Category' }]);
     assert.equal(secondPass.migrationCount, 0);
+  });
+
+  test('7. Alias preservation on rename keeps legacy free-text lines in the same bucket', () => {
+    // Initial state: node C1 created as "Groceries/Dairy"
+    let nodes: DimensionNode[] = [
+      {
+        id: 'C1',
+        dimensionId: 'category',
+        description: 'Groceries/Dairy',
+        aliases: [],
+        status: 'active',
+        createdAt: '2026-01-01T00:00:00Z'
+      }
+    ];
+
+    // Transaction Line A: written with stable node ID 'C1'
+    const lineWithNodeId: TransactionLine = {
+      accountId: 'acc-exp',
+      accountName: 'Food Expense',
+      amountCents: 5000,
+      dimensions: { category: 'C1' }
+    };
+
+    // Transaction Line B: legacy free-text line written before node registry existed
+    const lineWithLegacyText: TransactionLine = {
+      accountId: 'acc-exp',
+      accountName: 'Food Expense',
+      amountCents: 3500,
+      dimensions: { category: 'Groceries/Dairy' }
+    };
+
+    // Before rename: both resolve to "Groceries/Dairy"
+    const labelBefore1 = resolveDimensionLabel(nodes, 'category', lineWithNodeId.dimensions?.category);
+    const labelBefore2 = resolveDimensionLabel(nodes, 'category', lineWithLegacyText.dimensions?.category);
+    assert.equal(labelBefore1, 'Groceries/Dairy');
+    assert.equal(labelBefore2, 'Groceries/Dairy');
+
+    // User renames node C1 to "Food/Dairy" using updateDimensionNodeDescription
+    nodes = updateDimensionNodeDescription(nodes, 'C1', 'category', 'Food/Dairy');
+
+    // Verify C1 has updated description AND previous name pushed to aliases
+    const updatedC1 = nodes.find(n => n.id === 'C1');
+    assert.ok(updatedC1);
+    assert.equal(updatedC1.description, 'Food/Dairy');
+    assert.ok(updatedC1.aliases?.includes('Groceries/Dairy'), 'Old name must be preserved in aliases');
+
+    // AFTER rename:
+    // 1. Line storing 'C1' resolves to "Food/Dairy" via tier 1 (exact node ID match)
+    const labelAfterNodeId = resolveDimensionLabel(nodes, 'category', lineWithNodeId.dimensions?.category);
+    assert.equal(labelAfterNodeId, 'Food/Dairy');
+
+    // 2. Legacy line storing 'Groceries/Dairy' resolves to "Food/Dairy" via tier 3 (alias match)
+    const labelAfterLegacy = resolveDimensionLabel(nodes, 'category', lineWithLegacyText.dimensions?.category);
+    assert.equal(labelAfterLegacy, 'Food/Dairy');
+
+    // 3. Both lines bucket together into ONE bucket ['Food/Dairy'], history survives unbroken!
+    const buckets = Array.from(new Set([labelAfterNodeId, labelAfterLegacy]));
+    assert.deepEqual(buckets, ['Food/Dairy'], 'Must group into a single bucket rather than splitting history');
+  });
+
+  test('8. One-time backfill extracts distinct free-text paths and mints stable nodes without mutating lines', () => {
+    const rawTransactions: Transaction[] = [
+      {
+        id: 'tx-1',
+        uid: 'user-1',
+        workspaceId: 'ws-1',
+        date: '2026-03-01',
+        description: 'Vendor A',
+        type: 'actual',
+        status: 'completed',
+        totalAmountCents: 10000,
+        currency: 'USD',
+        createdAt: '2026-03-01T00:00:00Z',
+        lines: [
+          { accountId: 'acc-cash', accountName: 'Cash', amountCents: -10000 },
+          { 
+            accountId: 'acc-exp', 
+            accountName: 'Operating', 
+            amountCents: 10000,
+            dimensions: { category: 'Marketing/Digital', project: 'Apollo' }
+          }
+        ]
+      },
+      {
+        id: 'tx-2',
+        uid: 'user-1',
+        workspaceId: 'ws-1',
+        date: '2026-03-02',
+        description: 'Vendor B',
+        type: 'actual',
+        status: 'completed',
+        totalAmountCents: 5000,
+        currency: 'USD',
+        createdAt: '2026-03-02T00:00:00Z',
+        lines: [
+          { accountId: 'acc-cash', accountName: 'Cash', amountCents: -5000 },
+          { 
+            accountId: 'acc-exp', 
+            accountName: 'Operating', 
+            amountCents: 5000,
+            dimensions: { category: 'Marketing/Digital', project: 'Zeus' }
+          }
+        ]
+      }
+    ];
+
+    const { newNodes, allNodes, createdCount } = backfillDimensionNodesFromTransactions(
+      rawTransactions,
+      [],
+      [
+        { id: 'category', name: 'Category' },
+        { id: 'project', name: 'Project' }
+      ]
+    );
+
+    // Mints nodes for distinct paths:
+    // For category: Cash (from account fallback), Marketing (parent path step), Marketing/Digital
+    // For project: Apollo, Zeus
+    // Total = 5
+    assert.equal(createdCount, 5);
+    assert.equal(newNodes.length, 5);
+    assert.equal(allNodes.length, 5);
+
+    const mktgNode = allNodes.find(n => n.description === 'Marketing/Digital');
+    assert.ok(mktgNode);
+    assert.equal(mktgNode.dimensionId, 'category');
+
+    const apolloNode = allNodes.find(n => n.description === 'Apollo');
+    assert.ok(apolloNode);
+    assert.equal(apolloNode.dimensionId, 'project');
+
+    // Verify transactions lines were not mutated during pure backfill
+    assert.equal(rawTransactions[0].lines[1].dimensions?.['category'], 'Marketing/Digital');
   });
 });

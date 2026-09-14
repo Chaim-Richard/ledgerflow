@@ -24,9 +24,84 @@ import {
 import { 
   DEFAULT_WORKSPACE_DIMENSIONS, 
   suggestNextDimensionNodeId, 
-  migrateWorkspaceDimensionNodes 
+  migrateWorkspaceDimensionNodes,
+  backfillDimensionNodesFromTransactions
 } from '../../../lib/dimensionUtils';
 import AsyncButton from '../../ui/AsyncButton';
+
+function EditableNodeDescription({
+  initialValue,
+  onCommit
+}: {
+  initialValue: string;
+  onCommit: (newVal: string) => void;
+}) {
+  const [val, setVal] = useState(initialValue);
+  const [prevInitial, setPrevInitial] = useState(initialValue);
+
+  if (initialValue !== prevInitial) {
+    setPrevInitial(initialValue);
+    setVal(initialValue);
+  }
+
+  return (
+    <input
+      type="text"
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => {
+        const trimmed = val.trim();
+        if (trimmed && trimmed !== initialValue.trim()) {
+          onCommit(trimmed);
+        } else if (!trimmed) {
+          setVal(initialValue);
+        }
+      }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') {
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+      className="w-full bg-[var(--surface)] border border-[var(--line)] focus:border-indigo-500 rounded-lg px-2.5 py-1 text-xs text-[var(--text)] outline-none font-medium"
+    />
+  );
+}
+
+function EditableNodeAliases({
+  initialValue,
+  onCommit
+}: {
+  initialValue: string;
+  onCommit: (newVal: string) => void;
+}) {
+  const [val, setVal] = useState(initialValue);
+  const [prevInitial, setPrevInitial] = useState(initialValue);
+
+  if (initialValue !== prevInitial) {
+    setPrevInitial(initialValue);
+    setVal(initialValue);
+  }
+
+  return (
+    <input
+      type="text"
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => {
+        if (val !== initialValue) {
+          onCommit(val);
+        }
+      }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') {
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+      placeholder="e.g. Alias 1, Alias 2"
+      className="w-full bg-[var(--surface)] border border-[var(--line)] focus:border-indigo-500 rounded-lg px-2.5 py-1 text-xs text-slate-400 outline-none"
+    />
+  );
+}
 
 export default function DimensionsSettings() {
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
@@ -93,7 +168,12 @@ export default function DimensionsSettings() {
   const handleUpdateNodeDescription = (nodeId: string, dimId: string, newDescription: string) => {
     setDimensionNodes(prev => prev.map(n => {
       if (n.id === nodeId && n.dimensionId === dimId) {
-        return { ...n, description: newDescription };
+        const prevDesc = n.description?.trim();
+        const aliases = [...(n.aliases || [])];
+        if (prevDesc && prevDesc !== newDescription.trim() && !aliases.some(a => a.toLowerCase() === prevDesc.toLowerCase())) {
+          aliases.push(prevDesc);
+        }
+        return { ...n, description: newDescription, aliases };
       }
       return n;
     }));
@@ -248,6 +328,49 @@ export default function DimensionsSettings() {
     }
   };
 
+  const handleRunBackfillOnly = async () => {
+    if (!currentWorkspaceId) return;
+    setIsMigrating(true);
+    try {
+      const { allNodes, createdCount } = backfillDimensionNodesFromTransactions(
+        transactions,
+        dimensionNodes,
+        dimensions
+      );
+
+      if (createdCount === 0) {
+        toast.info('All historical free-text paths are already backed by registered nodes.');
+        setIsMigrating(false);
+        return;
+      }
+
+      setDimensionNodes(allNodes);
+
+      if (db) {
+        const wsRef = doc(db, 'workspaces', currentWorkspaceId);
+        await updateDoc(wsRef, {
+          dimensionNodes: allNodes
+        });
+      }
+
+      const allWorkspaces = useAuthStore.getState().workspaces;
+      const updated = allWorkspaces.map(w => {
+        if (w.id === currentWorkspaceId) {
+          return { ...w, dimensionNodes: allNodes };
+        }
+        return w;
+      });
+      setWorkspaces(updated);
+
+      toast.success(`One-time backfill complete: minted ${createdCount} new nodes from transaction paths.`);
+    } catch (err: any) {
+      console.error('Backfill failed:', err);
+      toast.error(`Backfill failed: ${err.message || err}`);
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   return (
     <div className="space-y-10">
       {/* Overview Banner */}
@@ -306,15 +429,27 @@ export default function DimensionsSettings() {
           </p>
         </div>
 
-        <AsyncButton
-          type="button"
-          loading={isMigrating}
-          onClick={handleRunMigration}
-          className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 whitespace-nowrap shrink-0"
-        >
-          <RefreshCw size={14} className={isMigrating ? "animate-spin" : ""} />
-          Run Migration Sweep
-        </AsyncButton>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+          <AsyncButton
+            type="button"
+            loading={isMigrating}
+            onClick={handleRunBackfillOnly}
+            className="px-4 py-3 bg-[var(--surface)] border border-indigo-500/40 hover:bg-indigo-500/10 text-indigo-300 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+          >
+            <Database size={14} />
+            One-Time Node Backfill
+          </AsyncButton>
+
+          <AsyncButton
+            type="button"
+            loading={isMigrating}
+            onClick={handleRunMigration}
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+          >
+            <RefreshCw size={14} className={isMigrating ? "animate-spin" : ""} />
+            Run Full Migration Sweep
+          </AsyncButton>
+        </div>
       </div>
 
       {/* Dimension Axes & Nodes */}
@@ -430,20 +565,15 @@ export default function DimensionsSettings() {
                             {node.id}
                           </td>
                           <td className="py-2.5 px-3">
-                            <input
-                              type="text"
-                              value={node.description}
-                              onChange={e => handleUpdateNodeDescription(node.id, dim.id, e.target.value)}
-                              className="w-full bg-[var(--surface)] border border-[var(--line)] focus:border-indigo-500 rounded-lg px-2.5 py-1 text-xs text-[var(--text)] outline-none font-medium"
+                            <EditableNodeDescription
+                              initialValue={node.description}
+                              onCommit={newVal => handleUpdateNodeDescription(node.id, dim.id, newVal)}
                             />
                           </td>
                           <td className="py-2.5 px-3">
-                            <input
-                              type="text"
-                              value={(node.aliases || []).join(', ')}
-                              onChange={e => handleUpdateNodeAliases(node.id, dim.id, e.target.value)}
-                              placeholder="e.g. Alias 1, Alias 2"
-                              className="w-full bg-[var(--surface)] border border-[var(--line)] focus:border-indigo-500 rounded-lg px-2.5 py-1 text-xs text-slate-400 outline-none"
+                            <EditableNodeAliases
+                              initialValue={(node.aliases || []).join(', ')}
+                              onCommit={newVal => handleUpdateNodeAliases(node.id, dim.id, newVal)}
                             />
                           </td>
                           <td className="py-2.5 px-3">
