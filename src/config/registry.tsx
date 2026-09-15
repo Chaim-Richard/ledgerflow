@@ -56,6 +56,10 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'audit': lazy(() => import('../components/forensics/ForensicAudit')),
   'transactions': lazy(() => import('../components/ledger/TransactionGrid')),
   'register': lazy(() => import('../components/finance/AccountRegisterView')),
+  'general-ledger': lazy(() => import('../components/ledger/GeneralLedgerView')),
+  'statement': lazy(() => import('../components/reporting/StatementView')),
+  'tax-liability': lazy(() => import('../components/reporting/TaxLiabilityView')),
+  'estimates': lazy(() => import('../components/sales/EstimatesView')),
   'projects': lazy(() => import('../components/projects/Projects')),
   'reports': lazy(() => import('../components/reporting/Reports')),
   'ledger': lazy(() => import('../components/ledger/TwoLensesLedger')),
@@ -106,6 +110,7 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'month-end-close', label: { en: 'Month-End Close', he: 'סגירת חודש' }, icon: ClipboardCheck, groupId: 'reconcile' },
 
   { id: 'sales', label: { en: 'Sales', he: 'כסף נכנס' }, icon: ArrowUpRight, groupId: 'money_in' },
+  { id: 'estimates', label: { en: 'Estimates & Quotes', he: 'הצעות מחיר' }, icon: FileSignature, groupId: 'money_in' },
   
   { id: 'purchases', label: { en: 'Purchases', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'money_out' },
 
@@ -283,6 +288,9 @@ export const REPORT_COMPONENTS: Record<string, any> = {
   'CashFlowView': lazy(() => import('../components/ledger/CashFlowView')),
   'ARAgingReportView': lazy(() => import('../components/reporting/ARAgingReportView')),
   'APAgingReportView': lazy(() => import('../components/reporting/APAgingReportView')),
+  'GeneralLedgerView': lazy(() => import('../components/ledger/GeneralLedgerView')),
+  'StatementView': lazy(() => import('../components/reporting/StatementView')),
+  'TaxLiabilityView': lazy(() => import('../components/reporting/TaxLiabilityView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = [
@@ -299,6 +307,9 @@ export const REPORT_TABS_REGISTRY = [
   { id: 'cash-flow', label: { en: 'Cash Flow', he: 'תזרים' }, componentName: 'CashFlowView', icon: RefreshCw },
   { id: 'ar-aging', label: { en: 'A/R Aging', he: 'גיול לקוחות' }, componentName: 'ARAgingReportView', icon: Users },
   { id: 'ap-aging', label: { en: 'A/P Aging', he: 'גיול ספקים' }, componentName: 'APAgingReportView', icon: Building },
+  { id: 'general-ledger', label: { en: 'General Ledger', he: 'ספר ראשי' }, componentName: 'GeneralLedgerView', icon: BookOpen },
+  { id: 'statement', label: { en: 'Account Statement', he: 'דף חשבון' }, componentName: 'StatementView', icon: FileText },
+  { id: 'tax-liability', label: { en: 'Sales Tax Liability', he: 'חבות מס קניה' }, componentName: 'TaxLiabilityView', icon: Receipt },
 ];
 
 export const SETTINGS_TABS_REGISTRY = [

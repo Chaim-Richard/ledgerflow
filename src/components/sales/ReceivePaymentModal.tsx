@@ -1,0 +1,534 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { X, DollarSign, Check, AlertCircle, Sparkles } from 'lucide-react';
+import { runTransaction, doc, collection } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { formatCurrency, getLocalDateISO, roundCents } from '../../lib/utils';
+import { LedgerPostService } from '../../services/LedgerPostService';
+import { toast } from 'sonner';
+
+const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
+
+interface ReceivePaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  defaultDirection?: 'received' | 'made';
+  defaultContactId?: string;
+  defaultDocumentId?: string;
+}
+
+export default function ReceivePaymentModal({
+  isOpen,
+  onClose,
+  defaultDirection = 'received',
+  defaultContactId = '',
+  defaultDocumentId = ''
+}: ReceivePaymentModalProps) {
+  const user = useAuthStore(s => s.user);
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+
+  const customers = useLedgerStore(s => s.customers);
+  const vendors = useLedgerStore(s => s.vendors);
+  const invoices = useLedgerStore(s => s.invoices);
+  const bills = useLedgerStore(s => s.bills);
+  const accounts = useLedgerStore(s => s.accounts);
+
+  const [direction, setDirection] = useState<'received' | 'made'>(defaultDirection);
+  const [contactId, setContactId] = useState<string>(defaultContactId);
+  const [date, setDate] = useState<string>(getLocalDateISO());
+  const [amountDollars, setAmountDollars] = useState<string>('');
+  const [method, setMethod] = useState<'cash' | 'check' | 'bank_transfer' | 'card' | 'other'>('bank_transfer');
+  const [reference, setReference] = useState<string>('');
+  const [depositAccountId, setDepositAccountId] = useState<string>('');
+  const [allocationsMap, setAllocationsMap] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Filter bank/cash accounts
+  const cashAccounts = useMemo(() => {
+    return (accounts || []).filter(a => 
+      a.type === 'asset' && 
+      (a.category === 'Cash' || a.category === 'Bank' || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('checking'))
+    );
+  }, [accounts]);
+
+  // Set default deposit account
+  useEffect(() => {
+    if (cashAccounts.length > 0 && !depositAccountId) {
+      setDepositAccountId(cashAccounts[0].id);
+    }
+  }, [cashAccounts, depositAccountId]);
+
+  useEffect(() => {
+    setDirection(defaultDirection);
+    setContactId(defaultContactId);
+  }, [defaultDirection, defaultContactId, isOpen]);
+
+  // Filter target open documents
+  const openDocs = useMemo(() => {
+    if (direction === 'received') {
+      return (invoices || []).filter(inv => {
+        if (contactId && inv.customerId !== contactId) return false;
+        const total = inv.amountCents || inv.totalCents || 0;
+        const paid = inv.amountPaidCents || 0;
+        return (total - paid) > 0 && inv.status !== 'void' && inv.status !== 'rejected';
+      }).map(inv => {
+        const total = inv.amountCents || inv.totalCents || 0;
+        const paid = inv.amountPaidCents || 0;
+        return {
+          id: inv.id,
+          number: inv.number || inv.id,
+          date: inv.date || '',
+          totalCents: total,
+          paidCents: paid,
+          remainingCents: total - paid,
+          type: 'invoice' as const
+        };
+      });
+    } else {
+      return (bills || []).filter(b => {
+        if (contactId && b.vendorId !== contactId) return false;
+        const total = b.amountCents || 0;
+        const paid = b.amountPaidCents || 0;
+        return (total - paid) > 0 && b.status !== 'void';
+      }).map(b => {
+        const total = b.amountCents || 0;
+        const paid = b.amountPaidCents || 0;
+        return {
+          id: b.id,
+          number: b.number || b.id,
+          date: b.date || b.dueDate || '',
+          totalCents: total,
+          paidCents: paid,
+          remainingCents: total - paid,
+          type: 'bill' as const
+        };
+      });
+    }
+  }, [direction, contactId, invoices, bills]);
+
+  // Pre-fill default document allocation
+  useEffect(() => {
+    if (defaultDocumentId && openDocs.some(d => d.id === defaultDocumentId)) {
+      const target = openDocs.find(d => d.id === defaultDocumentId);
+      if (target) {
+        setAmountDollars((target.remainingCents / 100).toFixed(2));
+        setAllocationsMap({ [defaultDocumentId]: (target.remainingCents / 100).toFixed(2) });
+      }
+    }
+  }, [defaultDocumentId, openDocs]);
+
+  const paymentAmountCents = useMemo(() => {
+    const parsed = parseFloat(amountDollars);
+    return isNaN(parsed) || parsed <= 0 ? 0 : Math.round(parsed * 100);
+  }, [amountDollars]);
+
+  const totalAllocatedCents = useMemo(() => {
+    return Object.values(allocationsMap).reduce((sum, val) => {
+      const p = parseFloat(val);
+      return sum + (isNaN(p) || p <= 0 ? 0 : Math.round(p * 100));
+    }, 0);
+  }, [allocationsMap]);
+
+  const unappliedCents = Math.max(0, paymentAmountCents - totalAllocatedCents);
+
+  const handleAutoAllocate = () => {
+    let remainingToDistribute = paymentAmountCents;
+    const nextMap: Record<string, string> = {};
+
+    for (const docItem of openDocs) {
+      if (remainingToDistribute <= 0) break;
+      const alloc = Math.min(docItem.remainingCents, remainingToDistribute);
+      nextMap[docItem.id] = (alloc / 100).toFixed(2);
+      remainingToDistribute -= alloc;
+    }
+
+    setAllocationsMap(nextMap);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentWorkspaceId || !user) {
+      toast.error('Workspace or user context missing');
+      return;
+    }
+    if (paymentAmountCents <= 0) {
+      toast.error('Payment amount must be greater than zero');
+      return;
+    }
+    if (!depositAccountId) {
+      toast.error('Please select a Bank / Cash Account');
+      return;
+    }
+    if (!contactId) {
+      toast.error(`Please select a ${direction === 'received' ? 'Customer' : 'Vendor'}`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const contactObj = direction === 'received' 
+        ? customers.find(c => c.id === contactId) 
+        : vendors.find(v => v.id === contactId);
+
+      const contactName = contactObj?.name || 'Contact';
+
+      // Allocations array
+      const allocations: { documentId: string; documentType: 'invoice' | 'bill'; amountCents: number }[] = [];
+      Object.entries(allocationsMap).forEach(([docId, valStr]) => {
+        const p = parseFloat(valStr);
+        const cents = isNaN(p) || p <= 0 ? 0 : Math.round(p * 100);
+        if (cents > 0) {
+          allocations.push({
+            documentId: docId,
+            documentType: direction === 'received' ? 'invoice' : 'bill',
+            amountCents: cents
+          });
+        }
+      });
+
+      // Execute Firestore transaction: all reads before all writes
+      const paymentRef = doc(collection(db, 'payments'));
+      const paymentId = paymentRef.id;
+
+      const paymentData = {
+        id: paymentId,
+        uid: user.uid,
+        workspaceId: currentWorkspaceId,
+        direction,
+        contactId,
+        contactName,
+        date,
+        amountCents: paymentAmountCents,
+        currency: 'USD',
+        method,
+        reference: reference || '',
+        depositAccountId,
+        allocations,
+        unappliedCents,
+        status: 'posted' as const,
+        createdAt: new Date().toISOString()
+      };
+
+      await runTransaction(db, async (tx) => {
+        // READ PHASE: read all target documents first
+        const docSnaps: { docRef: any; snap: any; allocationCents: number; targetType: 'invoice' | 'bill' }[] = [];
+        for (const alloc of allocations) {
+          const collectionName = alloc.documentType === 'invoice' ? 'invoices' : 'bills';
+          const targetRef = doc(db, collectionName, alloc.documentId);
+          const snap = await tx.get(targetRef);
+          docSnaps.push({
+            docRef: targetRef,
+            snap,
+            allocationCents: alloc.amountCents,
+            targetType: alloc.documentType
+          });
+        }
+
+        // WRITE PHASE: set payment doc and update targets
+        tx.set(paymentRef, paymentData);
+
+        for (const item of docSnaps) {
+          if (item.snap.exists()) {
+            const currentData = item.snap.data();
+            const currentPaid = currentData.amountPaidCents || currentData.paidAmountCents || 0;
+            const total = currentData.amountCents || currentData.totalCents || 0;
+            const newPaid = currentPaid + item.allocationCents;
+            let newStatus = currentData.status;
+            if (newPaid >= total) {
+              newStatus = 'paid';
+            } else if (newPaid > 0) {
+              newStatus = 'partially_paid';
+            }
+
+            tx.update(item.docRef, {
+              amountPaidCents: newPaid,
+              paidAmountCents: newPaid,
+              status: newStatus,
+              updatedAt: new Date().toISOString()
+            });
+          }
+        }
+      });
+
+      // Double-entry accounting posting via LedgerPostService
+      await LedgerPostService.postPaymentLedger(
+        paymentId,
+        paymentData,
+        currentWorkspaceId,
+        user.uid
+      );
+
+      toast.success(`Payment of ${formatCurrency(paymentAmountCents / 100)} recorded successfully!`);
+      onClose();
+    } catch (err: any) {
+      console.error('Failed to post payment:', err);
+      toast.error(err.message || 'Failed to record payment');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl max-w-3xl w-full border border-slate-200 dark:border-slate-800 overflow-hidden my-8">
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <DollarSign className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                {direction === 'received' ? 'Receive Customer Payment' : 'Pay Vendor Bill'}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Record payment and apply to open balances across documents
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Direction toggle */}
+          <div className="grid grid-cols-2 gap-3 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+            <button
+              type="button"
+              onClick={() => {
+                setDirection('received');
+                setContactId('');
+                setAllocationsMap({});
+              }}
+              className={cn(
+                'py-2 text-sm font-semibold rounded-md transition-colors',
+                direction === 'received'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              )}
+            >
+              Receive Customer Payment
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDirection('made');
+                setContactId('');
+                setAllocationsMap({});
+              }}
+              className={cn(
+                'py-2 text-sm font-semibold rounded-md transition-colors',
+                direction === 'made'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              )}
+            >
+              Pay Vendor Bill
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Contact selection */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                {direction === 'received' ? 'Customer' : 'Vendor'} *
+              </label>
+              <select
+                value={contactId}
+                onChange={e => {
+                  setContactId(e.target.value);
+                  setAllocationsMap({});
+                }}
+                required
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              >
+                <option value="">Select {direction === 'received' ? 'Customer' : 'Vendor'}...</option>
+                {direction === 'received' ? (
+                  customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
+                ) : (
+                  vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)
+                )}
+              </select>
+            </div>
+
+            {/* Total Payment Amount */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Payment Amount ($) *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="0.00"
+                value={amountDollars}
+                onChange={e => setAmountDollars(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono"
+              />
+            </div>
+
+            {/* Date */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Payment Date *
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              />
+            </div>
+
+            {/* Deposit Account */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                {direction === 'received' ? 'Deposit to Account' : 'Paid from Account'} *
+              </label>
+              <select
+                value={depositAccountId}
+                onChange={e => setDepositAccountId(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              >
+                {cashAccounts.map(a => (
+                  <option key={a.id} value={a.id}>{a.code ? `${a.code} - ${a.name}` : a.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Payment Method */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Payment Method
+              </label>
+              <select
+                value={method}
+                onChange={e => setMethod(e.target.value as any)}
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              >
+                <option value="bank_transfer">Bank Transfer / Wire</option>
+                <option value="check">Check</option>
+                <option value="card">Credit / Debit Card</option>
+                <option value="cash">Cash</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {/* Reference */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Reference / Check #
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. CHK-90412"
+                value={reference}
+                onChange={e => setReference(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          {/* Document Allocation Table */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Apply to Open {direction === 'received' ? 'Invoices' : 'Bills'} ({openDocs.length})
+              </span>
+              <button
+                type="button"
+                onClick={handleAutoAllocate}
+                disabled={paymentAmountCents <= 0 || openDocs.length === 0}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Auto-Allocate Top-Down
+              </button>
+            </div>
+
+            {openDocs.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-500 dark:text-slate-400">
+                {contactId ? `No open ${direction === 'received' ? 'invoices' : 'bills'} found for this contact.` : `Select a ${direction === 'received' ? 'customer' : 'vendor'} to view open documents.`}
+              </div>
+            ) : (
+              <div className="max-h-60 overflow-y-auto divide-y divide-slate-200 dark:divide-slate-800">
+                {openDocs.map(docItem => (
+                  <div key={docItem.id} className="grid grid-cols-12 gap-2 p-3 items-center text-xs hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                    <div className="col-span-3 font-medium text-slate-900 dark:text-white">
+                      #{docItem.number}
+                    </div>
+                    <div className="col-span-3 text-slate-500">
+                      {docItem.date}
+                    </div>
+                    <div className="col-span-3 font-mono text-slate-700 dark:text-slate-300">
+                      Remaining: {formatCurrency(docItem.remainingCents / 100)}
+                    </div>
+                    <div className="col-span-3">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max={(docItem.remainingCents / 100).toFixed(2)}
+                        placeholder="0.00"
+                        value={allocationsMap[docItem.id] || ''}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setAllocationsMap(prev => ({ ...prev, [docItem.id]: val }));
+                        }}
+                        className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-right text-slate-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Payment Summary Footer */}
+          <div className="flex flex-wrap items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-800 text-xs gap-4">
+            <div>
+              <span className="text-slate-500">Total Payment:</span>{' '}
+              <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(paymentAmountCents / 100)}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500">Total Applied:</span>{' '}
+              <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(totalAllocatedCents / 100)}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500">Unapplied Balance:</span>{' '}
+              <strong className={cn("font-mono", unappliedCents > 0 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-slate-900 dark:text-white")}>
+                {formatCurrency(unappliedCents / 100)}
+              </strong>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-5 py-2 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+            >
+              {isSubmitting ? 'Posting Payment...' : 'Record & Post Payment'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

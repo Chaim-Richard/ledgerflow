@@ -37,6 +37,8 @@ export interface Workspace {
   dimensions?: DimensionDefinition[]; // Dynamic workspace dimensional coordinate schema
   dimensionNodes?: DimensionNode[];   // Nodes/labels within dimensions (e.g., P1 under property)
   allowedWorldPaths?: string[];       // Coordinate-scoped permissions for sub-ledgers
+  numberingSeries?: Record<string, { prefix: string; nextNumber: number; padding: number }>;
+  roles?: Record<string, 'owner' | 'accountant' | 'bookkeeper' | 'viewer'>;
 }
 
 export interface DimensionDefinition {
@@ -231,6 +233,7 @@ export interface Bill {
   date?: string;
   dueDate: string;
   status: 'draft' | 'pending' | 'approved' | 'paid' | 'partially_paid' | 'overdue' | 'unpaid' | 'void';
+  amountPaidCents?: number;
   reversalEventId?: string;
   isLocked?: boolean;
   lockedAt?: string;
@@ -245,6 +248,7 @@ export interface Invoice {
   customerName?: string;
   number?: string;
   amountCents: number;
+  amountPaidCents?: number;
   exchangeRate?: number;
   totalCents?: number;
   date?: string;
@@ -265,6 +269,56 @@ export interface Invoice {
   isLocked?: boolean;
   lockedAt?: string;
   paymentToken?: string;
+}
+
+export interface PaymentAllocation {
+  documentId: string; // invoice id or bill id
+  documentType: 'invoice' | 'bill';
+  amountCents: number;
+}
+
+export interface Payment {
+  id: string;
+  uid: string;
+  workspaceId: string;
+  direction: 'received' | 'made';      // received = from customer, made = to vendor
+  contactId: string;                    // customerId or vendorId
+  contactName?: string;
+  date: string;
+  amountCents: number;                  // always absolute, per AGENTS.md
+  currency?: string;
+  exchangeRate?: number;
+  method: 'cash' | 'check' | 'bank_transfer' | 'card' | 'other';
+  reference?: string;                   // cheque number, wire ref
+  depositAccountId: string;             // which bank/cash account it hit
+  allocations: PaymentAllocation[];
+  unappliedCents: number;               // amountCents minus sum(allocations)
+  status: 'draft' | 'posted' | 'void';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface Estimate {
+  id: string;
+  uid: string;
+  workspaceId: string;
+  customerId: string;
+  customerName?: string;
+  number?: string;
+  amountCents: number;
+  date: string;
+  expiryDate?: string;
+  status: 'draft' | 'sent' | 'accepted' | 'declined' | 'expired' | 'converted';
+  convertedInvoiceId?: string;
+  lines: Array<{
+    description: string;
+    quantity: number;
+    unitPriceCents: number;
+    amountCents: number;
+  }>;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CreditNote {

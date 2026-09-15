@@ -202,3 +202,232 @@ export function computeCashFlow(accounts: any[], transactions: any[], startDate?
 
   return cashFlow;
 }
+
+export function computeGeneralLedger(accounts: any[], transactions: any[], startDate?: string, endDate?: string, targetAccountId?: string) {
+  const start = startDate || "1970-01-01";
+  const end = endDate || "2099-12-31";
+
+  const targetAccounts = targetAccountId
+    ? accounts.filter((a: any) => a.id === targetAccountId)
+    : accounts;
+
+  const resultAccounts = targetAccounts.map((acc: any) => {
+    let openingBalanceCents = acc.openingBalanceCents || 0;
+    const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
+
+    // Compute prior period postings
+    transactions.forEach((tx: any) => {
+      if (!isPostable(tx)) return;
+      if (tx.date && tx.date < start) {
+        tx.lines?.forEach((line: any) => {
+          if (line.accountId === acc.id) {
+            const amt = lineAmount(line, tx);
+            openingBalanceCents += isDebitNature ? amt : -amt;
+          }
+        });
+      }
+    });
+
+    const periodTxs = transactions.filter((tx: any) => {
+      if (!isPostable(tx)) return false;
+      return isTransactionInDateRange(tx, start, end);
+    }).sort((a: any, b: any) => (a.date || '').localeCompare(b.date || ''));
+
+    let runningBalanceCents = openingBalanceCents;
+    let periodDebitsCents = 0;
+    let periodCreditsCents = 0;
+    const entries: any[] = [];
+
+    periodTxs.forEach((tx: any) => {
+      tx.lines?.forEach((line: any) => {
+        if (line.accountId === acc.id) {
+          const amt = lineAmount(line, tx);
+          const debitCents = amt > 0 ? amt : 0;
+          const creditCents = amt < 0 ? Math.abs(amt) : 0;
+
+          periodDebitsCents += debitCents;
+          periodCreditsCents += creditCents;
+
+          const netEffect = isDebitNature ? amt : -amt;
+          runningBalanceCents += netEffect;
+
+          entries.push({
+            transactionId: tx.id || '',
+            date: tx.date || '',
+            description: tx.description || '',
+            reference: tx.reference || line.description || '',
+            debitCents,
+            creditCents,
+            runningBalanceCents
+          });
+        }
+      });
+    });
+
+    return {
+      accountId: acc.id,
+      accountCode: acc.code || '',
+      accountName: acc.name,
+      type: acc.type,
+      category: acc.category || '',
+      openingBalanceCents,
+      periodDebitsCents,
+      periodCreditsCents,
+      endingBalanceCents: runningBalanceCents,
+      entries
+    };
+  });
+
+  return {
+    startDate: start,
+    endDate: end,
+    accounts: resultAccounts
+  };
+}
+
+export function computeStatement(
+  contact: any,
+  invoices: any[],
+  bills: any[],
+  payments: any[],
+  startDate: string,
+  endDate: string,
+  type: 'customer' | 'vendor'
+) {
+  const start = startDate || "1970-01-01";
+  const end = endDate || "2099-12-31";
+
+  const contactId = contact?.id || '';
+  const isCustomer = type === 'customer';
+
+  // Build prior balance
+  let openingBalanceCents = 0;
+
+  if (isCustomer) {
+    invoices.filter((inv: any) => inv.customerId === contactId && inv.date < start && inv.status !== 'void').forEach((inv: any) => {
+      openingBalanceCents += (inv.amountCents || inv.totalCents || 0);
+    });
+    payments.filter((p: any) => p.contactId === contactId && p.date < start && p.direction === 'received' && p.status !== 'void').forEach((p: any) => {
+      openingBalanceCents -= (p.amountCents || 0);
+    });
+  } else {
+    bills.filter((b: any) => b.vendorId === contactId && (b.date || b.issueDate || '') < start && b.status !== 'void').forEach((b: any) => {
+      openingBalanceCents += (b.amountCents || 0);
+    });
+    payments.filter((p: any) => p.contactId === contactId && p.date < start && p.direction === 'made' && p.status !== 'void').forEach((p: any) => {
+      openingBalanceCents -= (p.amountCents || 0);
+    });
+  }
+
+  // Activity stream in range
+  const activityItems: any[] = [];
+
+  if (isCustomer) {
+    invoices.filter((inv: any) => inv.customerId === contactId && inv.date >= start && inv.date <= end && inv.status !== 'void').forEach((inv: any) => {
+      activityItems.push({
+        id: inv.id,
+        date: inv.date,
+        type: 'Invoice',
+        reference: inv.number || inv.id,
+        amountCents: (inv.amountCents || inv.totalCents || 0),
+        creditCents: 0,
+        debitCents: (inv.amountCents || inv.totalCents || 0)
+      });
+    });
+    payments.filter((p: any) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'received' && p.status !== 'void').forEach((p: any) => {
+      activityItems.push({
+        id: p.id,
+        date: p.date,
+        type: 'Payment',
+        reference: p.reference || p.id,
+        amountCents: -(p.amountCents || 0),
+        creditCents: (p.amountCents || 0),
+        debitCents: 0
+      });
+    });
+  } else {
+    bills.filter((b: any) => b.vendorId === contactId && (b.date || b.issueDate || '') >= start && (b.date || b.issueDate || '') <= end && b.status !== 'void').forEach((b: any) => {
+      activityItems.push({
+        id: b.id,
+        date: b.date || b.issueDate || '',
+        type: 'Bill',
+        reference: b.number || b.id,
+        amountCents: (b.amountCents || 0),
+        creditCents: 0,
+        debitCents: (b.amountCents || 0)
+      });
+    });
+    payments.filter((p: any) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'made' && p.status !== 'void').forEach((p: any) => {
+      activityItems.push({
+        id: p.id,
+        date: p.date,
+        type: 'Payment',
+        reference: p.reference || p.id,
+        amountCents: -(p.amountCents || 0),
+        creditCents: (p.amountCents || 0),
+        debitCents: 0
+      });
+    });
+  }
+
+  activityItems.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  let runningBalanceCents = openingBalanceCents;
+  const entries = activityItems.map(item => {
+    runningBalanceCents += item.amountCents;
+    return {
+      ...item,
+      runningBalanceCents
+    };
+  });
+
+  return {
+    contactId,
+    contactName: contact?.name || 'Contact',
+    type,
+    startDate: start,
+    endDate: end,
+    openingBalanceCents,
+    endingBalanceCents: runningBalanceCents,
+    entries
+  };
+}
+
+export function computeTaxLiability(invoices: any[], bills: any[], startDate?: string, endDate?: string) {
+  const start = startDate || "1970-01-01";
+  const end = endDate || "2099-12-31";
+
+  let taxableSalesCents = 0;
+  let taxCollectedCents = 0;
+  let taxablePurchasesCents = 0;
+  let taxPaidCents = 0;
+
+  invoices.forEach((inv: any) => {
+    if (inv.date >= start && inv.date <= end && inv.status !== 'void' && inv.status !== 'rejected') {
+      const total = inv.amountCents || inv.totalCents || 0;
+      const tax = inv.taxAmountCents || (inv.taxRate ? Math.round((total / (1 + inv.taxRate / 100)) * (inv.taxRate / 100)) : 0);
+      taxableSalesCents += (total - tax);
+      taxCollectedCents += tax;
+    }
+  });
+
+  bills.forEach((b: any) => {
+    const bDate = b.date || b.issueDate || '';
+    if (bDate >= start && bDate <= end && b.status !== 'void' && b.status !== 'rejected') {
+      const total = b.amountCents || 0;
+      const tax = b.taxAmountCents || (b.taxRate ? Math.round((total / (1 + b.taxRate / 100)) * (b.taxRate / 100)) : 0);
+      taxablePurchasesCents += (total - tax);
+      taxPaidCents += tax;
+    }
+  });
+
+  return {
+    startDate: start,
+    endDate: end,
+    taxableSalesCents,
+    taxCollectedCents,
+    taxablePurchasesCents,
+    taxPaidCents,
+    netTaxLiabilityCents: taxCollectedCents - taxPaidCents
+  };
+}

@@ -360,6 +360,56 @@ export const ErrorTelemetrySchema = z.object({
   createdAt: z.string().optional()
 });
 
+export const PaymentAllocationSchema = z.object({
+  documentId: z.string().min(1),
+  documentType: z.enum(['invoice', 'bill']),
+  amountCents: z.number().int().positive()
+});
+
+export const PaymentSchema = z.object({
+  id: z.string().optional(),
+  uid: z.string().optional(),
+  workspaceId: z.string(),
+  direction: z.enum(['received', 'made']),
+  contactId: z.string().min(1),
+  contactName: z.string().max(200).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  amountCents: z.number().int().positive(),
+  currency: z.string().optional().default('USD'),
+  exchangeRate: z.number().positive().finite().optional(),
+  method: z.enum(['cash', 'check', 'bank_transfer', 'card', 'other']),
+  reference: z.string().max(200).optional(),
+  depositAccountId: z.string().min(1),
+  allocations: z.array(PaymentAllocationSchema),
+  unappliedCents: z.number().int().nonnegative(),
+  status: z.enum(['draft', 'posted', 'void']).default('posted'),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional()
+});
+
+export const EstimateSchema = z.object({
+  id: z.string().optional(),
+  uid: z.string().optional(),
+  workspaceId: z.string(),
+  customerId: z.string().min(1),
+  customerName: z.string().max(200).optional(),
+  number: z.string().max(100).optional(),
+  amountCents: z.number().int().positive(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  expiryDate: z.string().optional(),
+  status: z.enum(['draft', 'sent', 'accepted', 'declined', 'expired', 'converted']).default('draft'),
+  convertedInvoiceId: z.string().optional(),
+  lines: z.array(z.object({
+    description: z.string().min(1),
+    quantity: z.number().positive(),
+    unitPriceCents: z.number().int().nonnegative(),
+    amountCents: z.number().int().nonnegative()
+  })),
+  notes: z.string().max(2000).optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional()
+});
+
 export const CreditNoteSchema = z.object({
   id: z.string().optional(),
   uid: z.string().optional(),

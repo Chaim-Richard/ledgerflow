@@ -23,6 +23,8 @@ import {
   Customer, 
   Invoice, 
   Bill, 
+  Payment,
+  Estimate,
   InventoryItem, 
   FixedAsset, 
   RecurringTransaction, 
@@ -271,6 +273,12 @@ export function useLedgerData() {
         onSnapshot(query(collection(db, 'invoices'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
           scheduleUpdate('invoices', snap.docs.map(d => ({ id: d.id, ...d.data() } as Invoice)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'invoices')),
+        onSnapshot(query(collection(db, 'payments'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+          scheduleUpdate('payments', snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment)), snap.metadata.hasPendingWrites);
+        }, (err) => handleFirestoreError(err, OperationType.LIST, 'payments')),
+        onSnapshot(query(collection(db, 'estimates'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+          scheduleUpdate('estimates', snap.docs.map(d => ({ id: d.id, ...d.data() } as Estimate)), snap.metadata.hasPendingWrites);
+        }, (err) => handleFirestoreError(err, OperationType.LIST, 'estimates')),
         onSnapshot(query(collection(db, 'bills'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
           scheduleUpdate('bills', snap.docs.map(d => ({ id: d.id, ...d.data() } as Bill)), snap.metadata.hasPendingWrites);
         }, (err) => handleFirestoreError(err, OperationType.LIST, 'bills')),

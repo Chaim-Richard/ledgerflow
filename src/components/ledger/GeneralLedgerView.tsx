@@ -1,0 +1,192 @@
+import React, { useState, useMemo } from 'react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { formatCurrency } from '../../lib/utils';
+import { computeGeneralLedger } from '../../server/reports/computeReports';
+import { Search, Filter, BookOpen, Download } from 'lucide-react';
+
+export default function GeneralLedgerView() {
+  const accounts = useLedgerStore(s => s.accounts);
+  const transactions = useLedgerStore(s => s.transactions);
+
+  const [startDate, setStartDate] = useState('2026-01-01');
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const glData = useMemo(() => {
+    return computeGeneralLedger(
+      accounts,
+      transactions,
+      startDate,
+      endDate,
+      selectedAccountId === 'all' ? undefined : selectedAccountId
+    );
+  }, [accounts, transactions, startDate, endDate, selectedAccountId]);
+
+  const filteredAccounts = useMemo(() => {
+    if (!searchTerm) return glData.accounts;
+    const term = searchTerm.toLowerCase();
+    return glData.accounts.filter(a => 
+      a.accountName.toLowerCase().includes(term) ||
+      a.accountCode.toLowerCase().includes(term) ||
+      a.category.toLowerCase().includes(term)
+    );
+  }, [glData.accounts, searchTerm]);
+
+  return (
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+            <BookOpen className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">General Ledger</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Complete itemized transaction ledger for all chart of accounts
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-3">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">From</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">To</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Account</label>
+            <select
+              value={selectedAccountId}
+              onChange={e => setSelectedAccountId(e.target.value)}
+              className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+            >
+              <option value="all">All Accounts ({accounts.length})</option>
+              {accounts.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.code ? `${a.code} - ${a.name}` : a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search GL accounts..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white w-56"
+          />
+        </div>
+      </div>
+
+      {/* Account Ledgers List */}
+      <div className="space-y-6">
+        {filteredAccounts.map(acc => (
+          <div key={acc.accountId} className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
+            {/* Account Header */}
+            <div className="flex flex-wrap items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 mr-2 font-bold">
+                  {acc.accountCode || 'N/A'}
+                </span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                  {acc.accountName}
+                </span>
+                <span className="text-xs text-slate-500 ml-2 capitalize">
+                  ({acc.type} • {acc.category})
+                </span>
+              </div>
+              <div className="flex items-center gap-6 text-xs font-mono">
+                <div>
+                  <span className="text-slate-400 mr-1">Opening:</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    {formatCurrency(acc.openingBalanceCents / 100)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 mr-1">Period Debits:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    +{formatCurrency(acc.periodDebitsCents / 100)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 mr-1">Period Credits:</span>
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">
+                    -{formatCurrency(acc.periodCreditsCents / 100)}
+                  </span>
+                </div>
+                <div className="pl-2 border-l border-slate-300 dark:border-slate-700">
+                  <span className="text-slate-400 mr-1">Ending:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {formatCurrency(acc.endingBalanceCents / 100)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Entries Table */}
+            {acc.entries.length === 0 ? (
+              <div className="p-4 text-center text-xs text-slate-400">
+                No transactions recorded in selected period
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-500 font-semibold uppercase text-[10px]">
+                      <th className="py-2.5 px-4">Date</th>
+                      <th className="py-2.5 px-4">Description</th>
+                      <th className="py-2.5 px-4">Reference</th>
+                      <th className="py-2.5 px-4 text-right">Debit</th>
+                      <th className="py-2.5 px-4 text-right">Credit</th>
+                      <th className="py-2.5 px-4 text-right">Running Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
+                    {acc.entries.map((entry: any, i: number) => (
+                      <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                        <td className="py-2 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{entry.date}</td>
+                        <td className="py-2 px-4 text-slate-900 dark:text-white font-sans font-medium">{entry.description}</td>
+                        <td className="py-2 px-4 text-slate-500">{entry.reference || '-'}</td>
+                        <td className="py-2 px-4 text-right text-emerald-600 dark:text-emerald-400">
+                          {entry.debitCents > 0 ? formatCurrency(entry.debitCents / 100) : '-'}
+                        </td>
+                        <td className="py-2 px-4 text-right text-rose-600 dark:text-rose-400">
+                          {entry.creditCents > 0 ? formatCurrency(entry.creditCents / 100) : '-'}
+                        </td>
+                        <td className="py-2 px-4 text-right font-bold text-slate-900 dark:text-white">
+                          {formatCurrency(entry.runningBalanceCents / 100)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

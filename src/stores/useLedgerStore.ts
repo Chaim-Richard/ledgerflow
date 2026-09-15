@@ -13,6 +13,8 @@ import {
   Customer, 
   Invoice, 
   CreditNote,
+  Payment,
+  Estimate,
   Bill, 
   VendorCredit, 
   InventoryItem, 
@@ -39,6 +41,8 @@ export interface LedgerState {
   customers: Customer[];
   invoices: Invoice[];
   creditNotes: CreditNote[];
+  payments: Payment[];
+  estimates: Estimate[];
   bills: Bill[];
   vendorCredits: VendorCredit[];
   inventory: InventoryItem[];
@@ -107,6 +111,8 @@ export interface LedgerState {
   updateCustomer: (id: string, updates: Partial<Customer>) => void;
   setInvoices: (data: Invoice[]) => void;
   setCreditNotes: (data: CreditNote[]) => void;
+  setPayments: (data: Payment[]) => void;
+  setEstimates: (data: Estimate[]) => void;
   setBills: (data: Bill[]) => void;
   setVendorCredits: (data: VendorCredit[]) => void;
   setInventory: (data: InventoryItem[]) => void;
@@ -149,6 +155,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   customers: [],
   invoices: [],
   creditNotes: [],
+  payments: [],
+  estimates: [],
   bills: [],
   vendorCredits: [],
   inventory: [],
@@ -476,6 +484,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   },
   setInvoices: (invoices) => set({ invoices }),
   setCreditNotes: (creditNotes) => set({ creditNotes }),
+  setPayments: (payments) => set({ payments }),
+  setEstimates: (estimates) => set({ estimates }),
   setBills: (bills) => set({ bills }),
   setVendorCredits: (vendorCredits) => set({ vendorCredits }),
   setInventory: (inventory) => set({ inventory }),
@@ -550,6 +560,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       customers: [],
       invoices: [],
       creditNotes: [],
+      payments: [],
+      estimates: [],
       bills: [],
       vendorCredits: [],
       inventory: [],

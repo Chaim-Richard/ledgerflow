@@ -429,6 +429,196 @@ export class LedgerPostService {
   }
 
   /**
+   * Post double-entry journal entries for a payment document.
+   */
+  static async postPaymentLedger(paymentId: string, paymentData: any, workspaceId: string, uid: string, entityMutation?: any, context?: any) {
+    if (!workspaceId || !paymentId) return;
+
+    const paymentDate = paymentData.date || getLocalDateISO();
+    this.verifyLockDate(paymentDate, context);
+
+    const accounts = this.getAccounts(context);
+    const workspaces = this.getWorkspaces(context);
+    const currentWs = workspaces.find(w => w.id === workspaceId);
+    const mappings = currentWs?.defaultAccountMappings || {};
+
+    const arAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['ar', 'accounts receivable', 'receivables', 'receivable'],
+      a => a.type === 'asset' && (a.category === 'Receivables' || a.name.toLowerCase().includes('receivable') || a.code === '1100'),
+      'Accounts Receivable (A/R)'
+    );
+
+    const apAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['ap', 'accounts payable', 'payables', 'payable'],
+      a => a.type === 'liability' && (a.category === 'Payables' || a.name.toLowerCase().includes('payable') || a.code === '2000'),
+      'Accounts Payable (A/P)'
+    );
+
+    const depositAcc = accounts.find(a => a.id === paymentData.depositAccountId);
+    const cashAccount = depositAcc ? { id: depositAcc.id, name: depositAcc.name } : this.resolveAccount(
+      accounts,
+      mappings,
+      ['cash', 'bank', 'checking'],
+      a => resolveAccountRole(a) === 'cash',
+      'Bank/Cash Account'
+    );
+
+    // Reversals of prior payment postings
+    const allTxs = this.getTransactions(context).filter(t => t.metadata?.paymentId === paymentId);
+    const reversedIds = new Set(allTxs.filter(t => t.metadata?.isReversal).map(t => t.metadata?.reversesTxId || t.metadata?.reversedTransactionId));
+    
+    const existingTxs = allTxs.filter(t => 
+      isPostable(t) && 
+      !t.metadata?.isReversal &&
+      !reversedIds.has(t.id)
+    );
+
+    const txsToPost: any[] = [];
+    const today = getLocalDateISO();
+
+    for (const prevTx of existingTxs) {
+      txsToPost.push({
+        uid,
+        workspaceId,
+        date: today,
+        description: `Reversal of prior payment posting (Payment ${paymentId})`,
+        totalAmountCents: prevTx.totalAmountCents,
+        currency: prevTx.currency || 'USD',
+        exchangeRate: prevTx.exchangeRate || 1,
+        status: 'completed',
+        type: 'actual',
+        createdAt: new Date().toISOString(),
+        metadata: {
+          paymentId,
+          type: 'payment-reversal',
+          reversesTxId: prevTx.id,
+          isReversal: true
+        },
+        lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
+      });
+    }
+
+    if (paymentData.status === 'void') {
+      if (txsToPost.length > 0) {
+        await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+      }
+      return;
+    }
+
+    const rawAmount = paymentData.amountCents || 0;
+    const rate = paymentData.exchangeRate || 1;
+    const amount = roundCents(rawAmount * rate);
+    if (amount <= 0) return;
+
+    const isReceipt = paymentData.direction === 'received';
+    const offsetAccount = isReceipt ? arAccount : apAccount;
+
+    const paymentTx = {
+      uid,
+      workspaceId,
+      date: paymentDate,
+      description: `${isReceipt ? 'Payment Received from' : 'Payment Made to'} ${paymentData.contactName || 'Contact'} (${paymentData.method || 'Direct'})`,
+      totalAmountCents: amount,
+      currency: paymentData.currency || 'USD',
+      exchangeRate: rate,
+      status: 'completed',
+      type: 'actual',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        paymentId,
+        contactId: paymentData.contactId,
+        direction: paymentData.direction,
+        type: 'standalone-payment'
+      },
+      lines: TransactionTemplates.buildPaymentLines({
+        documentNumber: paymentData.reference || paymentId,
+        entityName: paymentData.contactName || 'Contact',
+        amountCents: amount,
+        exchangeRate: rate,
+        cashAccount,
+        offsetAccount,
+        isReceipt
+      })
+    };
+    txsToPost.push(paymentTx);
+
+    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+  }
+
+  /**
+   * Post bad debt write-off entry.
+   */
+  static async postWriteOffLedger(invoiceId: string, invoiceData: any, writeOffCents: number, workspaceId: string, uid: string, reason?: string, entityMutation?: any, context?: any) {
+    if (!workspaceId || !invoiceId || writeOffCents <= 0) return;
+
+    const today = getLocalDateISO();
+    this.verifyLockDate(today, context);
+
+    const accounts = this.getAccounts(context);
+    const workspaces = this.getWorkspaces(context);
+    const currentWs = workspaces.find(w => w.id === workspaceId);
+    const mappings = currentWs?.defaultAccountMappings || {};
+
+    const arAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['ar', 'accounts receivable', 'receivables', 'receivable'],
+      a => a.type === 'asset' && (a.category === 'Receivables' || a.name.toLowerCase().includes('receivable') || a.code === '1100'),
+      'Accounts Receivable (A/R)'
+    );
+
+    const badDebtAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['bad debt', 'bad debt expense', 'uncollectible'],
+      a => a.type === 'expense' && (a.name.toLowerCase().includes('bad debt') || a.code === '6800' || a.category === 'Expense'),
+      'Bad Debt Expense'
+    );
+
+    const invNum = invoiceData.number || invoiceId;
+    const customer = invoiceData.customerName || 'Customer';
+
+    const writeOffTx = {
+      uid,
+      workspaceId,
+      date: today,
+      description: `Bad Debt Write-off for Invoice ${invNum} - ${customer}${reason ? `: ${reason}` : ''}`,
+      totalAmountCents: writeOffCents,
+      currency: invoiceData.currency || 'USD',
+      exchangeRate: 1,
+      status: 'completed',
+      type: 'actual',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        invoiceId,
+        type: 'invoice-bad-debt-writeoff'
+      },
+      lines: [
+        {
+          accountId: badDebtAccount.id,
+          accountName: badDebtAccount.name,
+          debitCents: writeOffCents,
+          creditCents: 0,
+          description: `Write-off expense: Invoice ${invNum}`
+        },
+        {
+          accountId: arAccount.id,
+          accountName: arAccount.name,
+          debitCents: 0,
+          creditCents: writeOffCents,
+          description: `Reduce A/R for written-off Invoice ${invNum}`
+        }
+      ]
+    };
+
+    await this.postTxsServerApi([writeOffTx], workspaceId, entityMutation);
+  }
+
+  /**
    * Reverse all postings when an invoice or bill is deleted.
    */
   static async deletePostings(id: string, keyName: 'invoiceId' | 'billId', workspaceId: string, entityMutation?: any, context?: any) {

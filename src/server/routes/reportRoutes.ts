@@ -9,7 +9,10 @@ import {
   computeProfitAndLoss,
   computeBalanceSheet,
   computeTrialBalance,
-  computeCashFlow
+  computeCashFlow,
+  computeGeneralLedger,
+  computeStatement,
+  computeTaxLiability
 } from "../reports/computeReports";
 
 export const reportRouter = express.Router();
@@ -277,5 +280,96 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
     if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
     if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
     sendError(res, "Failed to generate budget vs actual report", 500, error.message);
+  }
+});
+
+reportRouter.get("/general-ledger", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const result = ReportRangeSchema.extend({ accountId: z.string().optional() }).safeParse(req.query);
+  if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
+  const { workspaceId, startDate, endDate, accountId } = result.data;
+
+  try {
+    const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, endDate);
+    const gl = computeGeneralLedger(accounts, transactions, startDate, endDate, accountId);
+    res.json(gl);
+  } catch (error: any) {
+    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate General Ledger report", 500, error.message);
+  }
+});
+
+reportRouter.get("/statement", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const result = WorkspaceIdSchema.extend({
+    type: z.enum(['customer', 'vendor']),
+    contactId: z.string().min(1),
+    startDate: z.string().optional(),
+    endDate: z.string().optional()
+  }).safeParse(req.query);
+  if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
+  const { workspaceId, type, contactId, startDate = '1970-01-01', endDate = '2099-12-31' } = result.data;
+
+  try {
+    await authorizeWorkspace(authReq, workspaceId);
+    const db = getDb();
+
+    const contactCollection = type === 'customer' ? 'customers' : 'vendors';
+    const contactSnap = await db.collection(contactCollection).doc(contactId).get();
+    if (!contactSnap.exists) return sendError(res, "Contact not found", 404);
+
+    const [invSnap, billSnap, paySnap] = await Promise.all([
+      db.collection("invoices").where("workspaceId", "==", workspaceId).get(),
+      db.collection("bills").where("workspaceId", "==", workspaceId).get(),
+      db.collection("payments").where("workspaceId", "==", workspaceId).get()
+    ]);
+
+    const invoices = invSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const bills = billSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const payments = paySnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+
+    const statement = computeStatement(
+      { id: contactSnap.id, ...contactSnap.data() },
+      invoices,
+      bills,
+      payments,
+      startDate,
+      endDate,
+      type
+    );
+
+    res.json(statement);
+  } catch (error: any) {
+    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate Statement", 500, error.message);
+  }
+});
+
+reportRouter.get("/tax-liability", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const result = ReportRangeSchema.safeParse(req.query);
+  if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
+  const { workspaceId, startDate, endDate } = result.data;
+
+  try {
+    await authorizeWorkspace(authReq, workspaceId);
+    const db = getDb();
+
+    const [invSnap, billSnap] = await Promise.all([
+      db.collection("invoices").where("workspaceId", "==", workspaceId).get(),
+      db.collection("bills").where("workspaceId", "==", workspaceId).get()
+    ]);
+
+    const invoices = invSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const bills = billSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+
+    const taxLiability = computeTaxLiability(invoices, bills, startDate, endDate);
+    res.json(taxLiability);
+  } catch (error: any) {
+    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate Tax Liability report", 500, error.message);
   }
 });
