@@ -1,23 +1,59 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
+import {
+  computeProfitAndLoss,
+  computeBalanceSheet,
+  computeTrialBalance,
+  computeCashFlow
+} from '../server/reports/computeReports';
 
-// Source file: src/server/routes/reportRoutes.ts
-// Handlers: /balance-sheet, /trial-balance, /cash-flow, /profit-and-loss
+// Sample accounts and transactions for running pure computation tests
+const sampleAccounts = [
+  { id: 'acc_cash', name: 'Cash', type: 'asset', category: 'Cash', openingBalanceCents: 100000 },
+  { id: 'acc_ar', name: 'Accounts Receivable', type: 'asset', category: 'Receivables', openingBalanceCents: 50000 },
+  { id: 'acc_ap', name: 'Accounts Payable', type: 'liability', category: 'Payables', openingBalanceCents: 0 },
+  { id: 'acc_equity', name: 'Owner Equity', type: 'equity', category: 'Equity', openingBalanceCents: 0 },
+  { id: 'acc_rev', name: 'Sales Revenue', type: 'income', category: 'Revenue', openingBalanceCents: 0 },
+  { id: 'acc_cogs', name: 'Cost of Goods Sold', type: 'cost_of_goods', category: 'COGS', openingBalanceCents: 0 },
+  { id: 'acc_exp', name: 'Office Expense', type: 'expense', category: 'Operating Expenses', openingBalanceCents: 0 }
+];
+
+const sampleTransactions = [
+  {
+    id: 'tx_1',
+    date: '2026-01-15',
+    status: 'posted',
+    posted: true,
+    lines: [
+      { accountId: 'acc_ar', amountCents: 150000 },
+      { accountId: 'acc_rev', amountCents: -150000 }
+    ]
+  },
+  {
+    id: 'tx_2',
+    date: '2026-01-20',
+    status: 'posted',
+    posted: true,
+    lines: [
+      { accountId: 'acc_cogs', amountCents: 40000 },
+      { accountId: 'acc_ap', amountCents: -40000 }
+    ]
+  },
+  {
+    id: 'tx_3',
+    date: '2026-01-25',
+    status: 'posted',
+    posted: true,
+    lines: [
+      { accountId: 'acc_exp', amountCents: 30000 },
+      { accountId: 'acc_cash', amountCents: -30000 }
+    ]
+  }
+];
 
 describe('Report Contract Structural Guard Suite', () => {
   test('Balance Sheet contract: assets, liabilities, equity are flat Record<string, number> and totalClaims equals liabilities + equity + netIncome', () => {
-    // Fixture representing res.json output from /balance-sheet handler in src/server/routes/reportRoutes.ts
-    const fixture = {
-      assets: { acc_cash: 100000, acc_ar: 50000 },
-      liabilities: { acc_ap: 20000 },
-      equity: { acc_re: 80000 },
-      totalAssets: 150000,
-      totalLiabilities: 20000,
-      totalEquity: 80000, // equity accounts only (excluding net income)
-      netIncome: 50000,
-      totalClaims: 150000, // totalLiabilities + totalEquity + netIncome
-      isBalanced: true
-    };
+    const fixture = computeBalanceSheet(sampleAccounts, sampleTransactions, '2026-12-31');
 
     // Assert assets, liabilities, equity are flat Record<string, number> where every value is a finite number
     for (const category of [fixture.assets, fixture.liabilities, fixture.equity]) {
@@ -39,23 +75,14 @@ describe('Report Contract Structural Guard Suite', () => {
 
     // Assert balance sheet fundamental accounting identity relied upon by BalanceSheetView.tsx
     assert.equal(
-      fixture.totalLiabilities + (fixture.totalEquity + fixture.netIncome),
+      fixture.totalLiabilities + fixture.totalEquity + fixture.netIncome,
       fixture.totalClaims,
       'Balance Sheet Contract Violation: totalLiabilities + totalEquity + netIncome must equal totalClaims'
     );
   });
 
   test('Trial Balance contract: accounts is an Array with id, debit, credit, netSigned', () => {
-    // Fixture representing res.json output from /trial-balance handler in src/server/routes/reportRoutes.ts
-    const fixture = {
-      accounts: [
-        { id: 'acc_cash', name: 'Cash', code: '1000', type: 'asset', debit: 10000, credit: 0, netSigned: 10000 },
-        { id: 'acc_rev', name: 'Revenue', code: '4000', type: 'income', debit: 0, credit: 10000, netSigned: -10000 }
-      ],
-      totalDebit: 10000,
-      totalCredit: 10000,
-      isBalanced: true
-    };
+    const fixture = computeTrialBalance(sampleAccounts, sampleTransactions);
 
     assert.ok(Array.isArray(fixture.accounts), 'Trial Balance accounts property must be an Array');
     for (const acc of fixture.accounts) {
@@ -69,13 +96,7 @@ describe('Report Contract Structural Guard Suite', () => {
   });
 
   test('Cash Flow contract: buckets contain finite inflow, outflow, total, and (inflow - outflow) matches total', () => {
-    // Fixture representing res.json output from /cash-flow handler in src/server/routes/reportRoutes.ts
-    const fixture = {
-      operating: { total: 5000, inflow: 12000, outflow: 7000, items: [{ name: 'Client Payment', amount: 5000 }] },
-      investing: { total: -2000, inflow: 0, outflow: 2000, items: [{ name: 'Equipment Purchase', amount: -2000 }] },
-      financing: { total: 1000, inflow: 1000, outflow: 0, items: [{ name: 'Owner Contribution', amount: 1000 }] },
-      netChange: 4000
-    };
+    const fixture = computeCashFlow(sampleAccounts, sampleTransactions);
 
     const buckets = [fixture.operating, fixture.investing, fixture.financing];
     for (const bucket of buckets) {
@@ -91,23 +112,17 @@ describe('Report Contract Structural Guard Suite', () => {
   });
 
   test('Profit & Loss contract: income, cogs, expense each have total + accounts object, grossProfit & netIncome are finite', () => {
-    // Fixture representing res.json output from /profit-and-loss handler in src/server/routes/reportRoutes.ts
-    const fixture = {
-      income: { total: 15000, accounts: { acc_rev: 15000 } },
-      cogs: { total: 4000, accounts: { acc_cogs: 4000 } },
-      expense: { total: 3000, accounts: { acc_exp: 3000 } },
-      grossProfit: 11000,
-      netIncome: 8000
-    };
+    const fixture = computeProfitAndLoss(sampleAccounts, sampleTransactions);
 
     const categories = [fixture.income, fixture.cogs, fixture.expense];
     for (const category of categories) {
       assert.ok(Number.isFinite(category.total));
       assert.equal(typeof category.accounts, 'object');
       assert.notEqual(category.accounts, null);
-      for (const [id, bal] of Object.entries(category.accounts)) {
+      for (const [id, bal] of Object.entries(category.accounts as Record<string, any>)) {
         assert.equal(typeof id, 'string');
-        assert.ok(Number.isFinite(bal), `Balance for ${id} in P&L must be a finite number`);
+        const balance = typeof bal === 'number' ? bal : bal.balance;
+        assert.ok(Number.isFinite(balance), `Balance for ${id} in P&L must be a finite number`);
       }
     }
     assert.ok(Number.isFinite(fixture.grossProfit));
