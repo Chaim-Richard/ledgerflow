@@ -267,6 +267,48 @@ export interface Invoice {
   paymentToken?: string;
 }
 
+export interface CreditNote {
+  id: string;
+  uid: string;
+  workspaceId: string;
+  customerId: string;
+  customerName?: string;
+  number?: string;
+  invoiceId?: string;
+  amountCents: number;
+  remainingCents: number;
+  date: string;
+  reason?: string;
+  status: 'draft' | 'open' | 'applied' | 'partially_applied' | 'void';
+  currency?: string;
+  exchangeRate?: number;
+  tags?: string[];
+  metadata?: Record<string, any>;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface VendorCredit {
+  id: string;
+  uid: string;
+  workspaceId: string;
+  vendorId: string;
+  vendorName?: string;
+  number?: string;
+  billId?: string;
+  amountCents: number;
+  remainingCents: number;
+  date: string;
+  reason?: string;
+  status: 'draft' | 'open' | 'applied' | 'partially_applied' | 'void';
+  currency?: string;
+  exchangeRate?: number;
+  tags?: string[];
+  metadata?: Record<string, any>;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface Customer {
   id: string;
   uid: string;

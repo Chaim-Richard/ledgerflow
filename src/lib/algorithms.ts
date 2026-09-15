@@ -1405,8 +1405,8 @@ export class BayesianClassifier {
     this.alpha = options.alpha ?? 0.75;
     this.temperature = options.temperature ?? 1.5;
     this.bigramMultiplier = options.bigramMultiplier ?? 1.65;
-    this.enableTrigrams = options.enableTrigrams ?? false;
-    this.trigramMultiplier = options.trigramMultiplier ?? 0.0;
+    this.enableTrigrams = options.enableTrigrams ?? true;
+    this.trigramMultiplier = options.trigramMultiplier ?? 0.30;
     this.abstentionMargin = options.abstentionMargin ?? 0.10;
     this.abstentionUniformBuffer = options.abstentionUniformBuffer ?? 0.05;
   }

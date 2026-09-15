@@ -12,7 +12,9 @@ import {
   Vendor, 
   Customer, 
   Invoice, 
+  CreditNote,
   Bill, 
+  VendorCredit, 
   InventoryItem, 
   FixedAsset, 
   RecurringTransaction, 
@@ -36,7 +38,9 @@ export interface LedgerState {
   vendors: Vendor[];
   customers: Customer[];
   invoices: Invoice[];
+  creditNotes: CreditNote[];
   bills: Bill[];
+  vendorCredits: VendorCredit[];
   inventory: InventoryItem[];
   assets: FixedAsset[];
   recurring: RecurringTransaction[];
@@ -102,7 +106,9 @@ export interface LedgerState {
   setCustomers: (data: Customer[]) => void;
   updateCustomer: (id: string, updates: Partial<Customer>) => void;
   setInvoices: (data: Invoice[]) => void;
+  setCreditNotes: (data: CreditNote[]) => void;
   setBills: (data: Bill[]) => void;
+  setVendorCredits: (data: VendorCredit[]) => void;
   setInventory: (data: InventoryItem[]) => void;
   setAssets: (data: FixedAsset[]) => void;
   setRecurring: (data: RecurringTransaction[]) => void;
@@ -142,7 +148,9 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   vendors: [],
   customers: [],
   invoices: [],
+  creditNotes: [],
   bills: [],
+  vendorCredits: [],
   inventory: [],
   assets: [],
   recurring: [],
@@ -467,7 +475,9 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     get().setCustomers(nextCustomers);
   },
   setInvoices: (invoices) => set({ invoices }),
+  setCreditNotes: (creditNotes) => set({ creditNotes }),
   setBills: (bills) => set({ bills }),
+  setVendorCredits: (vendorCredits) => set({ vendorCredits }),
   setInventory: (inventory) => set({ inventory }),
   setAssets: (assets) => set({ assets }),
   setRecurring: (recurring) => set({ recurring }),
@@ -539,7 +549,9 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       vendors: [],
       customers: [],
       invoices: [],
+      creditNotes: [],
       bills: [],
+      vendorCredits: [],
       inventory: [],
       assets: [],
       recurring: [],

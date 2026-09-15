@@ -26,13 +26,15 @@ interface CustomerAgingSummary {
   days31To60Cents: number;  // 31-60 days
   days61To90Cents: number;  // 61-90 days
   days90PlusCents: number;  // 90+ days
-  totalCents: number;
+  unappliedCreditCents: number; // Open Credit Notes
+  totalCents: number;       // Net A/R Outstanding (Invoices - Unapplied Credit Notes)
   oldestInvoiceDays: number;
   invoices: Invoice[];
 }
 
 export default function ARAgingReportView() {
   const invoices = useLedgerStore(s => s.invoices);
+  const creditNotes = useLedgerStore(s => s.creditNotes || []);
   const customers = useLedgerStore(s => s.customers);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,6 +58,7 @@ export default function ARAgingReportView() {
         days31To60Cents: 0,
         days61To90Cents: 0,
         days90PlusCents: 0,
+        unappliedCreditCents: 0,
         totalCents: 0,
         oldestInvoiceDays: 0,
         invoices: []
@@ -76,6 +79,7 @@ export default function ARAgingReportView() {
           days31To60Cents: 0,
           days61To90Cents: 0,
           days90PlusCents: 0,
+          unappliedCreditCents: 0,
           totalCents: 0,
           oldestInvoiceDays: 0,
           invoices: []
@@ -107,8 +111,20 @@ export default function ARAgingReportView() {
       }
     });
 
+    // Account for open Customer Credit Notes without corrupting invoice aging days
+    const openCreditNotes = creditNotes.filter(cn => cn.status === 'open' || cn.status === 'partially_applied');
+    openCreditNotes.forEach(cn => {
+      const custId = cn.customerId || 'unknown';
+      if (customerMap.has(custId)) {
+        const summary = customerMap.get(custId)!;
+        const unapplied = cn.remainingCents ?? cn.amountCents ?? 0;
+        summary.unappliedCreditCents += unapplied;
+        summary.totalCents -= unapplied;
+      }
+    });
+
     // Only keep customers with outstanding balances or search matches
-    return Array.from(customerMap.values()).filter(c => c.totalCents > 0 || c.invoices.length > 0);
+    return Array.from(customerMap.values()).filter(c => c.totalCents !== 0 || c.unappliedCreditCents > 0 || c.invoices.length > 0);
   }, [invoices, customers, asOfDate]);
 
   // Totals summary across all customers

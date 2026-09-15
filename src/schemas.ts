@@ -360,6 +360,44 @@ export const ErrorTelemetrySchema = z.object({
   createdAt: z.string().optional()
 });
 
+export const CreditNoteSchema = z.object({
+  id: z.string().optional(),
+  uid: z.string().optional(),
+  workspaceId: z.string(),
+  customerId: z.string().min(1),
+  customerName: z.string().optional(),
+  number: z.string().optional(),
+  invoiceId: z.string().optional(),
+  amountCents: z.number().int().positive(),
+  remainingCents: z.number().int().nonnegative().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  reason: z.string().max(1000).optional(),
+  status: z.enum(['draft', 'open', 'applied', 'partially_applied', 'void']).default('open'),
+  currency: z.string().optional().default('USD'),
+  exchangeRate: z.number().positive().finite().optional(),
+  tags: z.array(z.string()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+});
+
+export const VendorCreditSchema = z.object({
+  id: z.string().optional(),
+  uid: z.string().optional(),
+  workspaceId: z.string(),
+  vendorId: z.string().min(1),
+  vendorName: z.string().optional(),
+  number: z.string().optional(),
+  billId: z.string().optional(),
+  amountCents: z.number().int().positive(),
+  remainingCents: z.number().int().nonnegative().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  reason: z.string().max(1000).optional(),
+  status: z.enum(['draft', 'open', 'applied', 'partially_applied', 'void']).default('open'),
+  currency: z.string().optional().default('USD'),
+  exchangeRate: z.number().positive().finite().optional(),
+  tags: z.array(z.string()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+});
+
 export type ValidatedTransaction = z.infer<typeof TransactionSchema>;
 export type ValidatedChartAccount = z.infer<typeof ChartAccountSchema>;
 export type ValidatedWorkspace = z.infer<typeof WorkspaceSchema>;

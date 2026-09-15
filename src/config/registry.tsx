@@ -76,6 +76,7 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
   'system-command-center': lazy(() => import('../components/platform/SystemCommandCenter')),
   'consolidation': lazy(() => import('../components/finance/Consolidation')),
+  'credit-notes': lazy(() => import('../components/finance/CreditNotesView')),
   'taxes': lazy(() => import('../components/finance/TaxManager')),
   'support': lazy(() => import('../components/support/SupportView')),
 };
@@ -95,6 +96,7 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'copilot', label: { en: 'AI Co-pilot', he: 'טייס משנה' }, icon: Sparkles, groupId: 'dashboard' },
 
   { id: 'transactions', label: { en: 'Transactions', he: 'תנועות' }, icon: Layers, groupId: 'transactions' },
+  { id: 'credit-notes', label: { en: 'Credit Notes & Vendor Credits', he: 'זיכויים וזיכויי ספק' }, icon: RotateCcw, groupId: 'transactions' },
   { id: 'register', label: { en: 'Account Register', he: 'יומן חשבון' }, icon: BookOpen, groupId: 'transactions' },
   { id: 'ledger', label: { en: 'Ledger & Journal', he: 'ספר ראשי ויומן' }, icon: Database, groupId: 'transactions' },
   { id: 'banking', label: { en: 'Bank Connections', he: 'חיבורי בנק' }, icon: Building, groupId: 'transactions' },

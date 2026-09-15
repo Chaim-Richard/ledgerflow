@@ -26,7 +26,8 @@ interface VendorAgingSummary {
   days31To60Cents: number;  // 31-60 days
   days61To90Cents: number;  // 61-90 days
   days90PlusCents: number;  // 90+ days
-  totalCents: number;
+  unappliedCreditCents: number; // Open Vendor Credits
+  totalCents: number;       // Net A/P Outstanding (Bills - Vendor Credits)
   dueThisWeekCents: number;
   oldestBillDays: number;
   bills: Bill[];
@@ -34,6 +35,7 @@ interface VendorAgingSummary {
 
 export default function APAgingReportView() {
   const bills = useLedgerStore(s => s.bills);
+  const vendorCredits = useLedgerStore(s => s.vendorCredits || []);
   const vendors = useLedgerStore(s => s.vendors);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,6 +63,7 @@ export default function APAgingReportView() {
         days31To60Cents: 0,
         days61To90Cents: 0,
         days90PlusCents: 0,
+        unappliedCreditCents: 0,
         totalCents: 0,
         dueThisWeekCents: 0,
         oldestBillDays: 0,
@@ -82,6 +85,7 @@ export default function APAgingReportView() {
           days31To60Cents: 0,
           days61To90Cents: 0,
           days90PlusCents: 0,
+          unappliedCreditCents: 0,
           totalCents: 0,
           dueThisWeekCents: 0,
           oldestBillDays: 0,
@@ -119,7 +123,19 @@ export default function APAgingReportView() {
       }
     });
 
-    return Array.from(vendorMap.values()).filter(v => v.totalCents > 0 || v.bills.length > 0);
+    // Account for open Vendor Credits without corrupting bill aging days
+    const openVendorCredits = vendorCredits.filter(vc => vc.status === 'open' || vc.status === 'partially_applied');
+    openVendorCredits.forEach(vc => {
+      const vId = vc.vendorId || 'unknown';
+      if (vendorMap.has(vId)) {
+        const summary = vendorMap.get(vId)!;
+        const unapplied = vc.remainingCents ?? vc.amountCents ?? 0;
+        summary.unappliedCreditCents += unapplied;
+        summary.totalCents -= unapplied;
+      }
+    });
+
+    return Array.from(vendorMap.values()).filter(v => v.totalCents !== 0 || v.unappliedCreditCents > 0 || v.bills.length > 0);
   }, [bills, vendors, asOfDate, nextWeekDate]);
 
   // Overall totals
