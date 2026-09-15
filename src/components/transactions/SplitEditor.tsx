@@ -149,7 +149,7 @@ export default function SplitEditor({
                     />
                   </div>
 
-                  <div className="text-right font-mono text-[10px] font-black text-slate-500">
+                  <div className="text-right font-mono text-[10px] font-black text-slate-500 tabular-nums">
                     {((line.amountCents / (transaction.totalAmountCents || 1)) * 100).toFixed(1)}%
                   </div>
 

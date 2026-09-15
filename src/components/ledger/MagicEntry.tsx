@@ -208,7 +208,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
             <div className="grid grid-cols-2 gap-y-4 gap-x-8">
               <div>
                 <p className="text-xs text-[var(--faint)] mb-1">Amount</p>
-                <p className={`text-xl font-bold ${parsed.action === 'expense' ? 'text-[var(--neg)]' : 'text-[var(--pos)]'}`}>
+                <p className={`text-xl font-bold tabular-nums ${parsed.action === 'expense' ? 'text-[var(--neg)]' : 'text-[var(--pos)]'}`}>
                   ${Math.abs(parsed.amount / 100).toFixed(2)} {parsed.action === 'expense' ? 'Out' : 'In'}
                 </p>
               </div>

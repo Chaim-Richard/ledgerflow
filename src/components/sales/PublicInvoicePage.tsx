@@ -102,7 +102,7 @@ export default function PublicInvoicePage() {
               <button
                 onClick={handlePay}
                 disabled={isPaying}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
+                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-md transition-all flex items-center gap-2 disabled:opacity-50 tabular-nums"
               >
                 {isPaying ? 'Processing...' : `Pay ${formatCurrency(invoice.totalCents || invoice.amountCents)}`}
               </button>
@@ -120,7 +120,7 @@ export default function PublicInvoicePage() {
               </div>
               <div className="sm:text-right">
                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Total Amount</h3>
-                <p className="text-4xl font-bold text-gray-900">{formatCurrency(invoice.totalCents || invoice.amountCents)}</p>
+                <p className="text-4xl font-bold text-gray-900 tabular-nums">{formatCurrency(invoice.totalCents || invoice.amountCents)}</p>
                 {!isPaid && (
                   <p className="text-sm text-gray-500 mt-1">Due by {parseLocalDate(invoice.dueDate || '').toLocaleDateString()}</p>
                 )}

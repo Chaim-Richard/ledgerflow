@@ -626,7 +626,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                               <span className={cn(
                                 "flex items-center justify-end gap-1",
                                 cellVal >= 0 ? "text-emerald-500" : "text-rose-500"
-                              )}>
+                              , "tabular-nums")}>
                                  {formatCurrency(cellVal)}
                                  <ExternalLink size={10} className="opacity-0 group-hover/cell:opacity-100 text-indigo-500 transition-opacity" />
                               </span>
@@ -651,7 +651,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                         title={`Click to inspect all ${matrixData.rowItems[rKey]?.length || 0} transactions for ${formatDimensionDisplay(rowDim, rKey)}`}
                         className="px-6 py-3 text-right font-mono text-xs font-bold bg-[var(--ink)]/30 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40 cursor-pointer transition-colors group/rowtot"
                       >
-                        <span className={cn("flex items-center justify-end gap-1.5", rowTotalVal >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                        <span className={cn("flex items-center justify-end gap-1.5", rowTotalVal >= 0 ? "text-emerald-600" : "text-rose-600", "tabular-nums")}>
                            {formatCurrency(rowTotalVal)}
                            <ExternalLink size={11} className="opacity-0 group-hover/rowtot:opacity-100 text-indigo-500 transition-opacity" />
                         </span>
@@ -682,7 +682,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                         title={`Click to inspect all ${items.length} transactions for ${cKey}`}
                         className="px-4 py-4 text-right font-mono text-xs font-bold border-r border-slate-150 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40 cursor-pointer transition-colors group/coltot"
                       >
-                        <span className={cn("flex items-center justify-end gap-1", colTotalVal >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                        <span className={cn("flex items-center justify-end gap-1", colTotalVal >= 0 ? "text-emerald-600" : "text-rose-600", "tabular-nums")}>
                            {formatCurrency(colTotalVal)}
                            <ExternalLink size={10} className="opacity-0 group-hover/coltot:opacity-100 text-indigo-500 transition-opacity" />
                         </span>
@@ -703,7 +703,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                     title={`Click to inspect all ${matrixData.allItems.length} transactions`}
                     className="px-6 py-4 text-right font-mono text-xs font-black bg-slate-200/40 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/40 cursor-pointer transition-colors group/gtot"
                   >
-                    <span className={cn("flex items-center justify-end gap-1.5", matrixData.grandTotal >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                    <span className={cn("flex items-center justify-end gap-1.5", matrixData.grandTotal >= 0 ? "text-emerald-700" : "text-rose-700", "tabular-nums")}>
                        {formatCurrency(matrixData.grandTotal)}
                        <ExternalLink size={11} className="opacity-0 group-hover/gtot:opacity-100 text-indigo-600 transition-opacity" />
                     </span>

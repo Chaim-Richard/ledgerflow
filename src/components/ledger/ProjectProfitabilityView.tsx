@@ -92,7 +92,7 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 tabular-nums">
          {[
            { label: 'Total Global Income', val: formatCurrency(totalIncome), color: 'text-indigo-600', icon: TrendingUp },
            { label: 'Total Energy Expense', val: formatCurrency(totalExpense), color: 'text-rose-500', icon: Zap },
@@ -216,9 +216,9 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
                     </div>
                   </td>
                   <td className="px-8 py-5 text-right font-mono text-slate-600 font-bold text-xs">{p.transactionsCount}</td>
-                  <td className="px-8 py-5 text-right font-mono text-indigo-600 font-bold text-sm">{formatCurrency(p.income)}</td>
-                  <td className="px-8 py-5 text-right font-mono text-rose-500/80 font-bold text-sm">{formatCurrency(p.expense)}</td>
-                  <td className="px-8 py-5 text-right font-mono font-black text-[var(--text)] text-sm">{formatCurrency(p.net)}</td>
+                  <td className="px-8 py-5 text-right font-mono text-indigo-600 font-bold text-sm tabular-nums">{formatCurrency(p.income)}</td>
+                  <td className="px-8 py-5 text-right font-mono text-rose-500/80 font-bold text-sm tabular-nums">{formatCurrency(p.expense)}</td>
+                  <td className="px-8 py-5 text-right font-mono font-black text-[var(--text)] text-sm tabular-nums">{formatCurrency(p.net)}</td>
                   <td className="px-8 py-5 text-right">
                     <span className={cn(
                       "px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-sm border",

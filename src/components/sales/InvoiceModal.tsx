@@ -381,7 +381,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                     </div>
                   </div>
                   <div className="col-span-3 md:col-span-1 space-y-1 flex flex-col justify-end">
-                    <div className="px-2 py-2 text-right font-mono font-bold text-[var(--text)] border border-transparent">
+                    <div className="px-2 py-2 text-right font-mono font-bold text-[var(--text)] border border-transparent tabular-nums">
                       {(item.amountCents / 100).toFixed(2)}
                     </div>
                   </div>

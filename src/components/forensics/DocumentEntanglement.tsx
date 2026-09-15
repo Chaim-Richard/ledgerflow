@@ -111,7 +111,7 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
                   <DollarSign className="text-zinc-400" size={20} />
                   <div>
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total</p>
-                    <p className="font-bold text-[var(--text)]">{formatCurrency(parsedData.totalAmountCents)}</p>
+                    <p className="font-bold text-[var(--text)] tabular-nums">{formatCurrency(parsedData.totalAmountCents)}</p>
                   </div>
                 </div>
               </div>
@@ -125,7 +125,7 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
                 <div key={idx} className="group p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] hover:border-zinc-900 transition-all">
                   <div className="flex justify-between items-start mb-2">
                     <p className="font-bold text-[var(--text)] text-sm leading-tight">{item.description}</p>
-                    <p className="font-mono font-bold text-[var(--text)]">{formatCurrency(item.amountCents)}</p>
+                    <p className="font-mono font-bold text-[var(--text)] tabular-nums">{formatCurrency(item.amountCents)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Tag size={12} className="text-zinc-400" />
@@ -140,7 +140,7 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
                 <ShieldCheck size={16} />
                 <span className="text-xs font-medium uppercase tracking-wider">Tax Detected</span>
               </div>
-              <p className="text-sm text-emerald-800 font-medium">
+              <p className="text-sm text-emerald-800 font-medium tabular-nums">
                 AI identified {formatCurrency(parsedData.taxAmountCents)} in sales tax. A tax split will be automatically generated.
               </p>
             </div>

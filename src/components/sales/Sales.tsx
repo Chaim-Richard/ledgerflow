@@ -211,7 +211,7 @@ export default function Sales() {
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-mono uppercase tracking-widest text-rose-500 font-semibold mb-3 relative z-10">Critical Overdue</p>
-          <p className="text-2xl sm:text-3xl font-mono font-bold text-rose-600 tracking-tight relative z-10">{formatCurrency(agingBuckets.overdue)}</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-rose-600 tracking-tight relative z-10 tabular-nums">{formatCurrency(agingBuckets.overdue)}</p>
           <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
              <AlertCircle size={12} />
              Immediate Disbursement Priority
@@ -226,7 +226,7 @@ export default function Sales() {
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-mono uppercase tracking-widest text-amber-500 font-semibold mb-3 relative z-10">Short-Term (30d)</p>
-          <p className="text-2xl sm:text-3xl font-mono font-bold text-amber-600 tracking-tight relative z-10">{formatCurrency(agingBuckets.dueSoon)}</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-amber-600 tracking-tight relative z-10 tabular-nums">{formatCurrency(agingBuckets.dueSoon)}</p>
           <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
              <Activity size={12} />
              Operational Inflow Expected
@@ -241,7 +241,7 @@ export default function Sales() {
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-semibold mb-3 relative z-10">Mid-Term (30-60d)</p>
-          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10">{formatCurrency(0 /* N/A for sales */)}</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10 tabular-nums">{formatCurrency(0 /* N/A for sales */)}</p>
           <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
              <Clock size={12} />
              Liquidity Forecast Cluster
@@ -256,7 +256,7 @@ export default function Sales() {
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-semibold mb-3 relative z-10">Total Accounts Receivable</p>
-          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10">{formatCurrency(agingBuckets.total)}</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10 tabular-nums">{formatCurrency(agingBuckets.total)}</p>
           <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
              <ShieldCheck size={12} className="text-[var(--brass)]" />
              Verified System Liability
@@ -307,7 +307,7 @@ export default function Sales() {
                         )}
                       </div>
                     </td>
-                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-lg tracking-tighter">
+                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-lg tracking-tighter tabular-nums">
                       {formatCurrency(inv.amountCents || 0)}
                     </td>
                     <td className="p-4 md:p-8">
@@ -407,7 +407,7 @@ export default function Sales() {
                           <span className="font-bold text-[var(--text)] group-hover/email:text-indigo-600 transition-colors">{cust.email}</span>
                        </div>
                     </td>
-                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-xl tracking-tighter">
+                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-xl tracking-tighter tabular-nums">
                       {formatCurrency(customerBalances[cust.id] ?? cust.balanceCents ?? 0)}
                     </td>
                     <td className="p-4 md:p-8">

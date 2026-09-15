@@ -26,7 +26,7 @@ export default function PivotView({ pivotData, formatCurrency }: PivotViewProps)
             <div className="flex items-center justify-between">
               <span className="text-xs text-zinc-500">Total Volume</span>
               <span className={cn(
-                "font-mono font-bold",
+                "font-mono font-bold tabular-nums",
                 item.value >= 0 ? "text-emerald-600" : "text-rose-600"
               )}>
                 {item.value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}

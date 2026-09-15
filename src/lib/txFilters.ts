@@ -292,4 +292,64 @@ export function getAbsoluteTotal(tx: Transaction): number {
     .reduce((sum, l) => sum + lineAmount(l, tx), 0);
 }
 
+/**
+ * Computes filtered inflow and outflow totals across a set of transactions.
+ * Excludes void, draft, and soft-deleted transactions via isPostable,
+ * and applies multi-currency exchange rates via lineAmount.
+ */
+export function calculateFilteredTotals(
+  transactions: Transaction[],
+  accounts?: ChartAccount[] | Map<string, ChartAccount>
+): { inflowCents: number; outflowCents: number; totalExposure: number; postableCount: number } {
+  let inflowCents = 0;
+  let outflowCents = 0;
+  let totalExposure = 0;
+  let postableCount = 0;
+
+  const accountMap = Array.isArray(accounts)
+    ? new Map(accounts.map(a => [a.id, a]))
+    : accounts;
+
+  for (let i = 0; i < transactions.length; i++) {
+    const t = transactions[i];
+    if (!isPostable(t)) continue;
+    postableCount++;
+    totalExposure += Math.abs(t.totalAmountCents || 0);
+
+    if (t.type === 'income' || isInflow(t, accountMap)) {
+      const amt = t.lines && t.lines.length > 0
+        ? t.lines.filter(l => (l.amountCents || 0) > 0).reduce((s, l) => s + lineAmount(l, t), 0)
+        : Math.round(Math.abs(t.totalAmountCents || 0) * (t.exchangeRate ?? 1));
+      inflowCents += amt;
+    } else if (t.type === 'expense' || isOutflow(t, accountMap)) {
+      const amt = t.lines && t.lines.length > 0
+        ? t.lines.filter(l => (l.amountCents || 0) > 0).reduce((s, l) => s + lineAmount(l, t), 0)
+        : Math.round(Math.abs(t.totalAmountCents || 0) * (t.exchangeRate ?? 1));
+      outflowCents += amt;
+    } else if (t.lines && t.lines.length > 0) {
+      let handled = false;
+      for (const l of t.lines) {
+        const acc = accountMap?.get(l.accountId);
+        const amt = lineAmount(l, t);
+        if (acc && isRevenueAccount(acc)) {
+          inflowCents += Math.abs(amt);
+          handled = true;
+        } else if (acc && isExpenseAccount(acc)) {
+          outflowCents += Math.abs(amt);
+          handled = true;
+        }
+      }
+      if (!handled) {
+        const posSum = t.lines.filter(l => (l.amountCents || 0) > 0).reduce((s, l) => s + lineAmount(l, t), 0);
+        outflowCents += posSum;
+      }
+    } else {
+      const amt = Math.round(Math.abs(t.totalAmountCents || 0) * (t.exchangeRate ?? 1));
+      outflowCents += amt;
+    }
+  }
+
+  return { inflowCents, outflowCents, totalExposure, postableCount };
+}
+
 

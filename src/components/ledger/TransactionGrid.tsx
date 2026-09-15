@@ -1016,14 +1016,37 @@ export default function TransactionGrid() {
           </div>
         </div>
 
-        {/* Global Action Bar */}
+        {/* Three-Cell Filtered Totals Summary Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 lg:gap-6 pt-6 lg:pt-8 border-t border-[var(--line)]/30">
-          <div className="flex flex-wrap items-center gap-4 lg:gap-12">
-             <div className="flex items-center gap-3">
-                <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", stats.discrepancies > 0 ? "bg-rose-50 animate-pulse" : "bg-emerald-50 shadow-[0_0_8px_rgba(16,185,129,0.4)]")} />
-                <span className="text-[9px] sm:text-[11px] font-black text-[var(--text)] uppercase tracking-[0.3em]">
-                  {stats.count.toLocaleString()} Amount Matches
-                </span>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6">
+             <div 
+               data-testid="filtered-totals-bar"
+               className="flex flex-wrap items-center divide-x divide-[var(--line)]/50 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-xs overflow-hidden"
+             >
+               {/* Filtered Inflow */}
+               <div data-testid="filtered-inflow" className="flex items-center gap-2 px-3 py-2">
+                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Filtered Inflow:</span>
+                 <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                   +{formatCurrency(stats.inflowCents)}
+                 </span>
+               </div>
+
+               {/* Filtered Outflow */}
+               <div data-testid="filtered-outflow" className="flex items-center gap-2 px-3 py-2">
+                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Filtered Outflow:</span>
+                 <span className="text-xs font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                   -{formatCurrency(stats.outflowCents)}
+                 </span>
+               </div>
+
+               {/* Matching Records */}
+               <div data-testid="matching-records" className="flex items-center gap-2 px-3 py-2">
+                 <div className={cn("w-2 h-2 rounded-full shrink-0", stats.discrepancies > 0 ? "bg-rose-500 animate-pulse" : "bg-emerald-500")} />
+                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Matching Records:</span>
+                 <span className="text-xs font-black text-[var(--text)] tabular-nums">
+                   {stats.count.toLocaleString()}
+                 </span>
+               </div>
              </div>
              {searchTerm && (
                <div style={{ height: '50.5px' }} className="hidden sm:flex items-center gap-3 px-5 py-2 bg-indigo-600/5 border border-indigo-600/20 rounded-full">
@@ -1498,7 +1521,7 @@ export default function TransactionGrid() {
                      totalBalancedSum === 0 
                        ? "text-emerald-400" 
                        : "text-rose-400"
-                   )}>
+                   , "tabular-nums")}>
                      {formatCurrency(totalBalancedSum)}
                    </p>
                  </div>
@@ -1508,13 +1531,13 @@ export default function TransactionGrid() {
                      <div className="flex items-center gap-4 lg:gap-10">
                         <div className="flex flex-col text-emerald-400 whitespace-nowrap">
                           <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 opacity-40">Sum ({selectedIds.size})</p>
-                          <p className="text-xl font-black font-mono tracking-tighter">
+                          <p className="text-xl font-black font-mono tracking-tighter tabular-nums">
                             {formatCurrency(selectedMetricsResult.sum)}
                           </p>
                         </div>
                         <div className="flex flex-col text-white/60 whitespace-nowrap">
                           <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 opacity-40">Mean Vector</p>
-                          <p className="text-xl font-black font-mono tracking-tighter uppercase">
+                          <p className="text-xl font-black font-mono tracking-tighter uppercase tabular-nums">
                             {formatCurrency(selectedMetricsResult.mean)}
                           </p>
                         </div>

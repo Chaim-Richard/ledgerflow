@@ -47,7 +47,7 @@ export default function JournalView({ journalEntries = [], formatCurrency }: Jou
 
             <div className="flex flex-col items-end">
                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Magnitude</span>
-               <span className="font-mono text-xs font-bold text-[var(--text)]">
+               <span className="font-mono text-xs font-bold text-[var(--text)] tabular-nums">
                  {formatCurrency(totalDebits)}
                </span>
             </div>

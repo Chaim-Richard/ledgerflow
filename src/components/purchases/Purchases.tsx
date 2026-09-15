@@ -204,7 +204,7 @@ export default function Purchases() {
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-mono uppercase tracking-widest text-rose-500 font-semibold mb-3 relative z-10">Critical Overdue</p>
-          <p className="text-2xl sm:text-3xl font-mono font-bold text-rose-600 tracking-tight relative z-10">{formatCurrency(agingBuckets.overdue)}</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-rose-600 tracking-tight relative z-10 tabular-nums">{formatCurrency(agingBuckets.overdue)}</p>
           <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
              <AlertCircle size={12} />
              Immediate Disbursement Priority
@@ -219,7 +219,7 @@ export default function Purchases() {
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-mono uppercase tracking-widest text-amber-500 font-semibold mb-3 relative z-10">Short-Term (30d)</p>
-          <p className="text-2xl sm:text-3xl font-mono font-bold text-amber-600 tracking-tight relative z-10">{formatCurrency(agingBuckets.due30)}</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-amber-600 tracking-tight relative z-10 tabular-nums">{formatCurrency(agingBuckets.due30)}</p>
           <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
              <Activity size={12} />
              Operational Outflow Expected
@@ -234,7 +234,7 @@ export default function Purchases() {
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-semibold mb-3 relative z-10">Mid-Term (30-60d)</p>
-          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10">{formatCurrency(agingBuckets.due60)}</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10 tabular-nums">{formatCurrency(agingBuckets.due60)}</p>
           <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
              <Clock size={12} />
              Liquidity Forecast Cluster
@@ -249,7 +249,7 @@ export default function Purchases() {
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
           <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--muted)] font-semibold mb-3 relative z-10">Total Aggregate Payable</p>
-          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10">{formatCurrency(agingBuckets.current)}</p>
+          <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10 tabular-nums">{formatCurrency(agingBuckets.current)}</p>
           <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
              <ShieldCheck size={12} className="text-[var(--brass)]" />
              Verified System Liability
@@ -291,7 +291,7 @@ export default function Purchases() {
               <span className="text-base font-mono font-bold">{format(day.date, 'dd')}</span>
               {day.amountCents > 0 ? (
                 <div className="flex flex-col items-center pt-1 border-t border-[var(--brass-line)]/40 w-full mt-1">
-                  <span className="text-[10px] font-mono font-bold text-[var(--text)]">
+                  <span className="text-[10px] font-mono font-bold text-[var(--text)] tabular-nums">
                     ${(day.amountCents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
                 </div>
@@ -417,7 +417,7 @@ export default function Purchases() {
                         )}
                       </div>
                     </td>
-                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-lg tracking-tighter">
+                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-lg tracking-tighter tabular-nums">
                       {formatCurrency(bill.amountCents || 0)}
                     </td>
                     <td className="p-4 md:p-8">
@@ -517,7 +517,7 @@ export default function Purchases() {
                           <span className="font-bold text-[var(--text)] group-hover/email:text-indigo-600 transition-colors">{vend.email}</span>
                        </div>
                     </td>
-                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-xl tracking-tighter">
+                    <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-xl tracking-tighter tabular-nums">
                       {formatCurrency(vendorBalances[vend.id] ?? vend.balanceCents ?? 0)}
                     </td>
                     <td className="p-4 md:p-8">

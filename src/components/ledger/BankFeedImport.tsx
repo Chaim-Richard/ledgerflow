@@ -392,7 +392,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                         </td>
                         <td className="px-4 py-4 text-[11px] font-mono font-bold text-slate-500">{tx.date}</td>
                         <td className="px-4 py-4 font-black text-[var(--text)] italic uppercase tracking-tight text-xs">{tx.description}</td>
-                        <td className="px-4 py-4 font-mono font-black text-[var(--text)] text-sm">
+                        <td className="px-4 py-4 font-mono font-black text-[var(--text)] text-sm tabular-nums">
                           {(tx.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                         </td>
                         <td className="px-4 py-4">

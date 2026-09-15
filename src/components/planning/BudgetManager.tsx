@@ -202,11 +202,11 @@ export default function BudgetManager() {
                 <div className="flex justify-between items-end">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50 mb-1">Consumption Flow</span>
-                    <span className="text-2xl font-black text-[var(--text)] font-mono tracking-tighter">{formatCurrency(b.actualCents)}</span>
+                    <span className="text-2xl font-black text-[var(--text)] font-mono tracking-tighter tabular-nums">{formatCurrency(b.actualCents)}</span>
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50 mb-1">Cap Magnitude</span>
-                    <span className="text-sm font-bold text-slate-500 font-mono">{formatCurrency(b.amountCents)}</span>
+                    <span className="text-sm font-bold text-slate-500 font-mono tabular-nums">{formatCurrency(b.amountCents)}</span>
                   </div>
                 </div>
 
@@ -230,7 +230,7 @@ export default function BudgetManager() {
                   )}>
                     {b.percentUsed.toFixed(1)}% Capacity Utilization
                   </span>
-                  <span className="text-slate-500 opacity-40">
+                  <span className="text-slate-500 opacity-40 tabular-nums">
                     {b.variance > 0 ? `Forensic Buffer: ${formatCurrency(b.variance)}` : 'Cap Threshold Breached'}
                   </span>
                 </div>

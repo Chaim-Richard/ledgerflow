@@ -226,7 +226,7 @@ const Sidebar = React.memo(({
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: w.color }} />
                         <span className="truncate text-[var(--text)]">{w.name}</span>
                      </div>
-                     <span className="font-mono text-[11px] text-[var(--muted)]">{w.val}</span>
+                     <span className="font-mono text-[11px] text-[var(--muted)] tabular-nums">{w.val}</span>
                    </div>
                  ))}
               </div>

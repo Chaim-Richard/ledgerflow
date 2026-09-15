@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Transaction, FilterCriteria, ChartAccount } from '../types';
 import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
-import { isPostable } from '../lib/txFilters';
+import { isPostable, lineAmount, isInflow, isOutflow, isRevenueAccount, isExpenseAccount, calculateFilteredTotals } from '../lib/txFilters';
 import { useScenarioStore } from '../lib/scenarioStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useSavedViewsStore } from '../stores/useSavedViewsStore';
@@ -249,12 +249,11 @@ export function useLedgerComputation(
   }, [smartFilteredTransactions, chronologicalRunningBalances]);
 
   const stats = useMemo(() => {
-    let totalExposure = 0;
     let discrepancies = 0;
     const conflicts = new Map<string, { type: string, message: string }>();
     
     for (const t of smartFilteredTransactions) {
-      totalExposure += Math.abs(t.totalAmountCents);
+      if (!isPostable(t)) continue;
       
       const auditErrors = LedgerEngine.auditTransaction(t, accountMap);
       if (auditErrors.length > 0) {
@@ -266,9 +265,16 @@ export function useLedgerComputation(
       }
     }
 
+    const { inflowCents, outflowCents, totalExposure } = calculateFilteredTotals(
+      smartFilteredTransactions,
+      accounts
+    );
+
     return { 
       totalExposure, 
       count: smartFilteredTransactions.length, 
+      inflowCents,
+      outflowCents,
       discrepancies, 
       conflicts,
       totalValues: {

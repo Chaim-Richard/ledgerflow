@@ -195,7 +195,7 @@ export const AccountRegisterView: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="bg-[var(--surface-sunken)] p-3 rounded-lg border border-[var(--border)]">
           <span className="text-xs text-[var(--text-muted)] font-medium">Opening Balance</span>
-          <p className="text-base font-semibold mt-0.5">
+          <p className="text-base font-semibold mt-0.5 tabular-nums">
             {formatCurrency(selectedAccount?.openingBalanceCents || 0)}
           </p>
         </div>
@@ -210,7 +210,7 @@ export const AccountRegisterView: React.FC = () => {
         </div>
         <div className="bg-[var(--surface-sunken)] p-3 rounded-lg border border-[var(--border)]">
           <span className="text-xs text-[var(--text-muted)] font-medium">Current Register Balance</span>
-          <p className="text-base font-bold text-[var(--accent)] mt-0.5">
+          <p className="text-base font-bold text-[var(--accent)] mt-0.5 tabular-nums">
             {formatCurrency(registerCalculation.endingBalanceMinor)}
           </p>
         </div>
@@ -289,13 +289,13 @@ export const AccountRegisterView: React.FC = () => {
                   <td className="py-2.5 px-3 truncate max-w-[280px] text-[var(--text-muted)]">
                     {entry.description}
                   </td>
-                  <td className="py-2.5 px-3 text-right font-mono text-emerald-400 font-medium">
+                  <td className="py-2.5 px-3 text-right font-mono text-emerald-400 font-medium tabular-nums">
                     {entry.debitMinor > 0 ? formatDecimal(entry.debitMinor) : ''}
                   </td>
-                  <td className="py-2.5 px-3 text-right font-mono text-rose-400 font-medium">
+                  <td className="py-2.5 px-3 text-right font-mono text-rose-400 font-medium tabular-nums">
                     {entry.creditMinor > 0 ? formatDecimal(entry.creditMinor) : ''}
                   </td>
-                  <td className="py-2.5 px-3 text-right font-mono font-semibold">
+                  <td className="py-2.5 px-3 text-right font-mono font-semibold tabular-nums">
                     {formatDecimal(entry.runningBalanceMinor)}
                   </td>
                 </tr>

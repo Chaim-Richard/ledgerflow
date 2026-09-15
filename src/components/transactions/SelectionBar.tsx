@@ -38,7 +38,7 @@ export default function SelectionBar({
         </div>
         <div className="flex flex-col">
           <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Net Value</span>
-          <span className="text-sm font-black font-mono">
+          <span className="text-sm font-black font-mono tabular-nums">
             {formatCurrency(totalAmount)}
           </span>
         </div>

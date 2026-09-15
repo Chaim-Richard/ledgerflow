@@ -117,7 +117,7 @@ export default function OwnerLens() {
             </button>
           )}
         </div>
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 tabular-nums">
           {transactions.length === 0 ? (
             <div className="p-8 text-center bg-[var(--panel)] border border-[var(--line)] rounded-2xl text-[var(--muted)] text-sm font-mono">
               No transactions recorded yet in this workspace.

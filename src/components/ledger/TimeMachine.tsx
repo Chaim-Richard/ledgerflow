@@ -277,7 +277,7 @@ export default function TimeMachine() {
                           <FileText size={14} className="text-slate-400" />
                           {tx.description || 'Unknown'}
                         </span>
-                        <span className="font-mono text-[var(--text)] font-bold ml-4">{formatCurrency(tx.totalAmountCents, tx.currency)}</span>
+                        <span className="font-mono text-[var(--text)] font-bold ml-4 tabular-nums">{formatCurrency(tx.totalAmountCents, tx.currency)}</span>
                       </div>
                     ))}
                     {commit.txs.length > 3 && (

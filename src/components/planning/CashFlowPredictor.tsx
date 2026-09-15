@@ -110,13 +110,13 @@ export default function CashFlowPredictor() {
                        <Calendar className="w-4 h-4 text-slate-400" />
                        <span className="font-bold text-[var(--text)]">{p.month}</span>
                     </div>
-                    <div className="col-span-3 text-right font-mono font-bold text-emerald-600">
+                    <div className="col-span-3 text-right font-mono font-bold text-emerald-600 tabular-nums">
                        +{formatCurrency(p.inflow * 100)}
                     </div>
-                    <div className="col-span-3 text-right font-mono font-bold text-rose-600">
+                    <div className="col-span-3 text-right font-mono font-bold text-rose-600 tabular-nums">
                        -{formatCurrency(p.outflow * 100)}
                     </div>
-                    <div className="col-span-3 text-right font-mono font-bold text-slate-900">
+                    <div className="col-span-3 text-right font-mono font-bold text-slate-900 tabular-nums">
                        {formatCurrency(p.balance * 100)}
                     </div>
                   </div>
@@ -138,7 +138,7 @@ export default function CashFlowPredictor() {
                            "w-full rounded-t-sm transition-colors relative",
                            d.value >= 0 ? "bg-emerald-200 hover:bg-emerald-300" : "bg-rose-200 hover:bg-rose-300"
                          )} style={{ height: `${height}%` }}>
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap pointer-events-none z-10">
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap pointer-events-none z-10 tabular-nums">
                                {formatCurrency(d.value * 100)}
                             </div>
                          </div>

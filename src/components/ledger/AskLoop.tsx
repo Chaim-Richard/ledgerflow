@@ -100,7 +100,7 @@ export default function AskLoop() {
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 tabular-nums">
         {pendingTransactions.length === 0 ? (
           <div className="bg-[var(--ink)] border border-[var(--line)]/80 rounded-2xl p-12 flex flex-col items-center justify-center text-center">
             <div className="w-14 h-14 bg-emerald-100/80 rounded-2xl flex items-center justify-center mb-4">

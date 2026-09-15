@@ -640,7 +640,7 @@ const Ledger = React.memo(() => {
                 <div className="p-4 md:p-8 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] space-y-6">
                   <div className="flex justify-between items-center">
                     <span className="text-zinc-500 text-sm font-medium">Net Income</span>
-                    <span className="font-black text-[var(--text)] text-lg">{formatCurrency(totalProfitCents)}</span>
+                    <span className="font-black text-[var(--text)] text-lg tabular-nums">{formatCurrency(totalProfitCents)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-zinc-500 text-sm font-medium">Unreconciled Items</span>

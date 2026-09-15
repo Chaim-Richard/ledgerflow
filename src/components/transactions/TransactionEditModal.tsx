@@ -721,7 +721,7 @@ export default function TransactionEditModal({
                   {new Intl.NumberFormat('en-US', { style: 'currency', currency: transaction.currency || 'USD' }).format(totalAmountCents / 100)}
                 </div>
                 {sumLines !== 0 && (
-                  <p className="text-[10px] text-amber-600 font-medium">
+                  <p className="text-[10px] text-amber-600 font-medium tabular-nums">
                     Trial balance variance offset: ${formatDecimal(sumLines)}
                   </p>
                 )}

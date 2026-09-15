@@ -106,11 +106,11 @@ export default function LedgerInterruptOverlay() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="space-y-1">
                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Total Debits</p>
-                    <p className="text-lg font-black font-mono text-zinc-100">{formatCurrency(result?.totalDebits || 0)}</p>
+                    <p className="text-lg font-black font-mono text-zinc-100 tabular-nums">{formatCurrency(result?.totalDebits || 0)}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Total Credits</p>
-                    <p className="text-lg font-black font-mono text-zinc-100">{formatCurrency(result?.totalCredits || 0)}</p>
+                    <p className="text-lg font-black font-mono text-zinc-100 tabular-nums">{formatCurrency(result?.totalCredits || 0)}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Trial Balance</p>
@@ -135,7 +135,7 @@ export default function LedgerInterruptOverlay() {
                     {result?.imbalances?.map((imb: any, index: number) => (
                       <div key={`imb-${index}`} className="flex items-center justify-between text-xs p-3.5 bg-red-950/20 border border-red-900/10 rounded-xl">
                         <span className="font-mono text-zinc-400">UUID: {imb.id.substring(0, 8)}... ({imb.type})</span>
-                        <span className="text-red-400 font-bold font-mono">Imbalance: {formatCurrency(imb.diff)}</span>
+                        <span className="text-red-400 font-bold font-mono tabular-nums">Imbalance: {formatCurrency(imb.diff)}</span>
                       </div>
                     ))}
                     {!result?.hashChainValid && (

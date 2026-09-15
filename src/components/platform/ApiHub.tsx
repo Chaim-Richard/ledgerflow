@@ -2201,7 +2201,7 @@ const kpiResults = await response.json();
                     <p className="text-slate-500">Resolves time-bound financial configurations (Tax changes, Currency fluctuations) efficiently.</p>
                  </div>
                  <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-5 overflow-x-auto border border-[#292E42]">
-<pre className="font-mono text-[13px] leading-relaxed">
+<pre className="font-mono text-[13px] leading-relaxed tabular-nums">
 {docLang === 'curl' ? `curl -X POST "https://api.ledgerflow.io/api/v1/math/temporal" \\
   -H "Authorization: Bearer <token>" \\
   -d '{

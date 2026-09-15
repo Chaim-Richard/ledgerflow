@@ -402,7 +402,7 @@ export default function Dashboard() {
             <span>Net Worth</span>
             <Building2 size={15} className="text-[var(--brass)] group-hover:scale-110 transition-transform" />
           </div>
-          <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight mt-1 text-[var(--text)]">
+          <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight mt-1 text-[var(--text)] tabular-nums">
             {formatCurrency(metrics.netWorth)}
           </div>
           <div className="font-mono text-xs text-[var(--muted)] mt-2 flex items-center justify-between">
@@ -417,10 +417,10 @@ export default function Dashboard() {
             <span>Money In (Revenue)</span>
             <ArrowUpRight size={15} className="text-[var(--pos)] group-hover:scale-110 transition-transform" />
           </div>
-          <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight mt-1 text-[var(--pos)]">
+          <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight mt-1 text-[var(--pos)] tabular-nums">
             {formatCurrency(metrics.totalRevenue)}
           </div>
-          <div className="font-mono text-xs text-[var(--muted)] mt-2">
+          <div className="font-mono text-xs text-[var(--muted)] mt-2 tabular-nums">
             Expenses: {formatCurrency(metrics.totalExpenses)}
           </div>
         </div>
@@ -431,10 +431,10 @@ export default function Dashboard() {
             <span>Liquid Cash</span>
             <Wallet size={15} className="text-[var(--brass)] group-hover:scale-110 transition-transform" />
           </div>
-          <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight mt-1 text-[var(--text)]">
+          <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight mt-1 text-[var(--text)] tabular-nums">
             {formatCurrency(metrics.liquidCash)}
           </div>
-          <div className="font-mono text-xs text-[var(--muted)] mt-2">
+          <div className="font-mono text-xs text-[var(--muted)] mt-2 tabular-nums">
             Liabilities: {formatCurrency(metrics.totalLiabilities)}
           </div>
         </div>
@@ -574,7 +574,7 @@ export default function Dashboard() {
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ledgerflow.color }} />
                     {ledgerflow.name}s
                   </span>
-                  <span className="font-mono text-[var(--muted)]">{formatCurrency(ledgerflow.total)}</span>
+                  <span className="font-mono text-[var(--muted)] tabular-nums">{formatCurrency(ledgerflow.total)}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-[var(--surface)] overflow-hidden">
                   <div 

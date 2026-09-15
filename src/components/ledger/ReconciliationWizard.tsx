@@ -253,15 +253,15 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                 <div className="grid grid-cols-4 gap-6">
                   <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 italic">Statement Horizon</p>
-                    <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight">{formatCurrency(stats.targetBalance)}</p>
+                    <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight tabular-nums">{formatCurrency(stats.targetBalance)}</p>
                   </div>
                   <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 italic">Aligned Quanta</p>
-                    <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight">{formatCurrency(stats.cleared)}</p>
+                    <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight tabular-nums">{formatCurrency(stats.cleared)}</p>
                   </div>
                   <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 italic">Current Registry</p>
-                    <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight">{formatCurrency(stats.currentBalance)}</p>
+                    <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight tabular-nums">{formatCurrency(stats.currentBalance)}</p>
                   </div>
                   <div className={cn(
                     "p-7 rounded-[32px] border transition-all shadow-lg",
@@ -318,7 +318,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                             <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1 opacity-50">{format(parseLocalDate(t.date), 'MMM dd, yyyy')} // NODE_ID: {t.id.substring(0,8)}</p>
                           </div>
                         </div>
-                        <p className="text-sm font-black font-mono text-[var(--text)] italic tracking-tight">
+                        <p className="text-sm font-black font-mono text-[var(--text)] italic tracking-tight tabular-nums">
                           {formatCurrency(t.relevantAmountCents)}
                         </p>
                       </div>

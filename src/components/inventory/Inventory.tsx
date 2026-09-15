@@ -419,30 +419,30 @@ export default function Inventory() {
                         {!item.isAnalysisAccurate && <Info size={10} className="text-zinc-400" />}
                       </div>
                       <div className="flex flex-col gap-0.5">
-                        <p className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter">
+                        <p className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter tabular-nums">
                           Base (Pack): {formatCurrency(item.landedCostStructure.base)}
                         </p>
                         {item.unitsPerPackage && item.unitsPerPackage > 1 && (
-                          <p className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">
+                          <p className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter tabular-nums">
                             {formatCurrency(Math.round(item.trueCostCents / item.unitsPerPackage))} / {item.measurementUnit || 'unit'}
                           </p>
                         )}
                         <p className={cn(
                           "text-[8px] font-bold uppercase tracking-tighter",
                           item.landedCostStructure.direct > 0 ? "text-indigo-600" : "text-zinc-300"
-                        )}>
+                        , "tabular-nums")}>
                           Direct: +{formatCurrency(item.landedCostStructure.direct)}
                         </p>
-                        <p className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter">
+                        <p className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter tabular-nums">
                           Indirect: +{formatCurrency(item.landedCostStructure.indirect)}
                         </p>
                       </div>
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-zinc-500 font-mono">{formatCurrency(item.unitCostCents)}</span>
+                      <span className="text-sm font-bold text-zinc-500 font-mono tabular-nums">{formatCurrency(item.unitCostCents)}</span>
                       {item.unitsPerPackage && item.unitsPerPackage > 1 && (
-                        <span className="text-[10px] font-black text-emerald-600 tracking-widest mt-0.5 uppercase">
+                        <span className="text-[10px] font-black text-emerald-600 tracking-widest mt-0.5 uppercase tabular-nums">
                           {formatCurrency(Math.round(item.unitCostCents / item.unitsPerPackage))} / {item.measurementUnit || 'unit'}
                         </span>
                       )}
@@ -461,7 +461,7 @@ export default function Inventory() {
                             {item.trajectory < 0 && <TrendingDown size={8} className="text-emerald-500" />}
                          </div>
                          {item.arbitrage.saving > 0 && item.isAnalysisAccurate && (
-                            <span className="text-[8px] font-black text-emerald-600 animate-pulse bg-emerald-50 px-1 rounded">-{formatCurrency(item.arbitrage.saving)} Saving</span>
+                            <span className="text-[8px] font-black text-emerald-600 animate-pulse bg-emerald-50 px-1 rounded tabular-nums">-{formatCurrency(item.arbitrage.saving)} Saving</span>
                          )}
                       </div>
                       <div className={cn(
@@ -471,7 +471,7 @@ export default function Inventory() {
                       )}>
                          <div className="flex items-center justify-between gap-4">
                             <span className="text-[9px] font-bold text-zinc-500 truncate max-w-[80px]">{item.arbitrage.bestVendor}</span>
-                            <span className="text-xs font-black text-[var(--text)] font-mono italic">
+                            <span className="text-xs font-black text-[var(--text)] font-mono italic tabular-nums">
                                {item.arbitrage.bestPrice > 0 ? formatCurrency(item.arbitrage.bestPrice) : "---"}
                             </span>
                          </div>
@@ -513,9 +513,9 @@ export default function Inventory() {
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      <span className="text-sm font-black text-emerald-600 font-mono">{formatCurrency(item.unitPriceCents)}</span>
+                      <span className="text-sm font-black text-emerald-600 font-mono tabular-nums">{formatCurrency(item.unitPriceCents)}</span>
                       {item.unitsPerPackage && item.unitsPerPackage > 1 && (
-                        <span className="text-[10px] font-bold text-amber-600 tracking-widest mt-0.5 uppercase">
+                        <span className="text-[10px] font-bold text-amber-600 tracking-widest mt-0.5 uppercase tabular-nums">
                           {formatCurrency(Math.round(item.unitPriceCents / item.unitsPerPackage))} / {item.measurementUnit || 'unit'}
                         </span>
                       )}
@@ -738,11 +738,11 @@ export default function Inventory() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Blended Unit Cost:</span>
-                    <span className="font-bold text-[var(--text)]">{formatCurrency(cogsItem.unitCostCents || 5000)}</span>
+                    <span className="font-bold text-[var(--text)] tabular-nums">{formatCurrency(cogsItem.unitCostCents || 5000)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Estimated Total COGS:</span>
-                    <span className="font-bold text-emerald-600 font-mono">
+                    <span className="font-bold text-emerald-600 font-mono tabular-nums">
                       {formatCurrency(cogsQty * (cogsItem.unitCostCents || 5000))}
                     </span>
                   </div>

@@ -474,7 +474,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
           {isComparative && (
             <div className="text-right">
               <span className="block text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">As Of {priorDate}</span>
-              <span className="block text-xs font-mono font-medium text-slate-400">
+              <span className="block text-xs font-mono font-medium text-slate-400 tabular-nums">
                 {formatCurrency(prevData.totalAssets)} Assets / {formatCurrency(prevData.totalClaims)} Claims
               </span>
             </div>
@@ -548,10 +548,10 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
                       </div>
                     </div>
                     <div className="flex flex-col items-end shrink-0 ml-2">
-                      <span className="font-mono font-bold text-[var(--text)] text-xs">{formatCurrency(curVal)}</span>
+                      <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums">{formatCurrency(curVal)}</span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-slate-400">prev: {formatCurrency(prVal)}</span>
+                          <span className="font-mono text-[8px] text-slate-400 tabular-nums">prev: {formatCurrency(prVal)}</span>
                           {variance.pct !== null && prVal !== 0 && (
                             <span className={cn("text-[8px] font-bold", variance.pct >= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -570,7 +570,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
                  <span className="text-[var(--text)] font-bold uppercase tracking-wider text-[9px]">Total {labels.assetsLabel}</span>
               </div>
               <div className="text-right">
-                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none">{formatCurrency(currentData.totalAssets)}</span>
+                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none tabular-nums">{formatCurrency(currentData.totalAssets)}</span>
                 {isComparative && prevData.totalAssets !== 0 && (
                   <span className={cn("text-[9px] font-bold block mt-1", currentData.totalAssets >= prevData.totalAssets ? "text-emerald-500" : "text-rose-500")}>
                     {(((currentData.totalAssets - prevData.totalAssets) / Math.abs(prevData.totalAssets)) * 100).toFixed(1)}% vs Prior
@@ -637,10 +637,10 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
                         </div>
                       </div>
                       <div className="flex flex-col items-end shrink-0 ml-2">
-                        <span className="font-mono font-bold text-[var(--text)] text-xs">{formatCurrency(curVal)}</span>
+                        <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums">{formatCurrency(curVal)}</span>
                         {isComparative && (
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[8px] text-slate-400">prev: {formatCurrency(prVal)}</span>
+                            <span className="font-mono text-[8px] text-slate-400 tabular-nums">prev: {formatCurrency(prVal)}</span>
                             {variance.pct !== null && prVal !== 0 && (
                               <span className={cn("text-[8px] font-bold", variance.pct <= 0 ? "text-emerald-500" : "text-rose-500")}>
                                 {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -654,7 +654,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
                 })}
                 <div className="flex justify-between items-center pt-2 text-slate-400 text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Liabilities</span>
-                  <span className="font-mono font-semibold">{formatCurrency(currentData.totalLiabilities)}</span>
+                  <span className="font-mono font-semibold tabular-nums">{formatCurrency(currentData.totalLiabilities)}</span>
                 </div>
               </div>
 
@@ -697,10 +697,10 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
                         </div>
                       </div>
                       <div className="flex flex-col items-end shrink-0 ml-2">
-                        <span className="font-mono font-bold text-[var(--text)] text-xs">{formatCurrency(curVal)}</span>
+                        <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums">{formatCurrency(curVal)}</span>
                         {isComparative && (
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[8px] text-slate-400">prev: {formatCurrency(prVal)}</span>
+                            <span className="font-mono text-[8px] text-slate-400 tabular-nums">prev: {formatCurrency(prVal)}</span>
                             {variance.pct !== null && prVal !== 0 && (
                               <span className={cn("text-[8px] font-bold", variance.pct <= 0 ? "text-emerald-500" : "text-rose-500")}>
                                 {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -738,12 +738,12 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
                     </div>
                   </div>
                   <div className="flex flex-col items-end shrink-0 ml-2">
-                    <span className={cn("font-mono font-bold text-xs", currentData.netIncome >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                    <span className={cn("font-mono font-bold text-xs", currentData.netIncome >= 0 ? "text-emerald-700" : "text-rose-700", "tabular-nums")}>
                       {formatCurrency(currentData.netIncome)}
                     </span>
                     {isComparative && (
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="font-mono text-[8.5px] text-slate-400">prev: {formatCurrency(prevData.netIncome)}</span>
+                        <span className="font-mono text-[8.5px] text-slate-400 tabular-nums">prev: {formatCurrency(prevData.netIncome)}</span>
                         {prevData.netIncome !== 0 && (
                           <span className={cn("text-[8.5px] font-bold", (currentData.netIncome >= prevData.netIncome) ? "text-emerald-500" : "text-rose-500")}>
                             {(((currentData.netIncome - prevData.netIncome) / Math.abs(prevData.netIncome)) * 100).toFixed(1)}%
@@ -756,7 +756,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
 
                 <div className="flex justify-between items-center pt-2 text-slate-400 text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Equity</span>
-                  <span className="font-mono font-semibold">{formatCurrency(currentData.totalEquity + currentData.netIncome)}</span>
+                  <span className="font-mono font-semibold tabular-nums">{formatCurrency(currentData.totalEquity + currentData.netIncome)}</span>
                 </div>
               </div>
             </div>
@@ -776,7 +776,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
                 )}
               </div>
               <div className="text-right shrink-0">
-                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none">
+                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none tabular-nums">
                   {formatCurrency(currentData.totalClaims)}
                 </span>
                 {isComparative && prevData.totalClaims !== 0 && (

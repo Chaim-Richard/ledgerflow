@@ -603,7 +603,7 @@ export default function StatementImporter({
                                   <span className="text-[8px] text-[var(--brass)] font-medium uppercase tracking-wider">{item.category}</span>
                                 )}
                               </div>
-                              <p className="text-[10px] font-mono font-bold text-[var(--muted)]">
+                              <p className="text-[10px] font-mono font-bold text-[var(--muted)] tabular-nums">
                                 {((item.amountCents || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                               </p>
                             </div>

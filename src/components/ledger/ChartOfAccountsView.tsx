@@ -83,7 +83,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
           </td>
           <td className="p-4 text-slate-500 text-[10px] font-medium">{account.category || 'Uncategorized'}</td>
           <td className={cn(
-            "p-4 text-right font-bold font-mono text-xs",
+            "p-4 text-right font-bold font-mono text-xs tabular-nums",
             account.balanceCents < 0 ? "text-rose-600" : "text-[var(--text)]"
           )}>
             {formatCurrency(account.balanceCents)}

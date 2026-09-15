@@ -11,7 +11,8 @@ import {
   Copy,
   Lock,
   Edit3,
-  BrainCircuit
+  BrainCircuit,
+  Paperclip
 } from 'lucide-react';
 import { parseLocalDate, resolveAccountName, cn } from '../../lib/utils';
 import { isInflow, isTransactionInDateRange } from '../../lib/txFilters';
@@ -190,6 +191,17 @@ const TransactionRow = React.memo(({
             <>
               <span className="truncate w-full font-sans tracking-tight flex items-center gap-1.5 flex-wrap">
                 <HighlightMatch text={displayTx.description} match={searchTerm} />
+                {displayTx.fileUrls && displayTx.fileUrls.length > 0 && (
+                  <span 
+                    data-testid="attachment-badge"
+                    title={`${displayTx.fileUrls.length} attachment${displayTx.fileUrls.length === 1 ? '' : 's'}`}
+                    aria-label={`${displayTx.fileUrls.length} attachment${displayTx.fileUrls.length === 1 ? '' : 's'}`}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wider border bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 shrink-0 select-none group-hover/active:bg-indigo-500 group-hover/active:text-white group-hover/active:border-white/20"
+                  >
+                    <Paperclip size={10} className="shrink-0" />
+                    <span>{displayTx.fileUrls.length}</span>
+                  </span>
+                )}
                 {isLocked && (
                   <span title="Locked under Absolute Integrity">
                     <Lock className="text-amber-500 inline shrink-0 animate-pulse" size={11} />
@@ -325,7 +337,7 @@ const TransactionRow = React.memo(({
         </div>
         {!isMobileGrid && !isTabletGrid && (
           <div className={cn(
-            "px-4 text-right font-bold font-mono text-slate-500 text-[11px] h-full flex items-center justify-end border-r border-[var(--line)]/50 transition-colors group-hover/active:text-white/60 whitespace-nowrap",
+            "px-4 text-right font-bold font-mono text-slate-500 text-[11px] h-full flex items-center justify-end border-r border-[var(--line)]/50 transition-colors group-hover/active:text-white/60 whitespace-nowrap tabular-nums",
             isProMode && "px-2 text-[10px]"
           )}>
             {formatCurrency(tx.balanceCents || 0)}

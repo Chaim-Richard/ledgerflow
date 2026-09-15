@@ -374,11 +374,11 @@ export default function Projects() {
                 <div className="grid grid-cols-3 gap-4 mb-4 relative z-10 pt-2 border-t border-[var(--line)]/10">
                   <div className="space-y-0.5">
                     <p className={cn("text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "text-white/60" : "text-slate-400")}>Allocated</p>
-                    <p className="font-semibold font-mono text-xs">{formatCurrency(stats.budgetCents)}</p>
+                    <p className="font-semibold font-mono text-xs tabular-nums">{formatCurrency(stats.budgetCents)}</p>
                   </div>
                   <div className="space-y-0.5">
                     <p className={cn("text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "text-white/60" : "text-slate-400")}>Cost Burn</p>
-                    <p className="font-semibold font-mono text-xs">{formatCurrency(stats.expenseCents)}</p>
+                    <p className="font-semibold font-mono text-xs tabular-nums">{formatCurrency(stats.expenseCents)}</p>
                   </div>
                   <div className="space-y-0.5">
                     <p className={cn("text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "text-white/60" : "text-slate-400")}>Usage</p>
@@ -440,7 +440,7 @@ export default function Projects() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs font-bold font-mono text-[var(--text)] col-span-1">
+                          <p className="text-xs font-bold font-mono text-[var(--text)] col-span-1 tabular-nums">
                             {formatCurrency(
                               transactions.filter(t => 
                                 isPostable(t) && selectedProject && isProjectTx(t, selectedProject) && 

@@ -374,11 +374,11 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
         <div className="flex flex-wrap items-center gap-6">
           <div className="text-left sm:text-right">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Debits</p>
-            <p className="text-base font-bold font-mono text-[var(--text)]">{formatCurrency(trialBalance.totalDebits)}</p>
+            <p className="text-base font-bold font-mono text-[var(--text)] tabular-nums">{formatCurrency(trialBalance.totalDebits)}</p>
           </div>
           <div className="text-left sm:text-right">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Credits</p>
-            <p className="text-base font-bold font-mono text-[var(--text)]">{formatCurrency(trialBalance.totalCredits)}</p>
+            <p className="text-base font-bold font-mono text-[var(--text)] tabular-nums">{formatCurrency(trialBalance.totalCredits)}</p>
           </div>
           <motion.div 
             animate={trialBalance.isBalanced ? {} : { x: [0, -4, 4, -4, 4, 0] }}
@@ -482,10 +482,10 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                     </p>
                   </div>
                 </td>
-                <td className="px-5 py-3 text-right font-mono text-[var(--text)] font-bold">
+                <td className="px-5 py-3 text-right font-mono text-[var(--text)] font-bold tabular-nums">
                   {line.debit > 0 ? formatCurrency(line.debit) : '—'}
                 </td>
-                <td className="px-5 py-3 text-right font-mono text-[var(--text)] font-bold">
+                <td className="px-5 py-3 text-right font-mono text-[var(--text)] font-bold tabular-nums">
                   {line.credit > 0 ? formatCurrency(line.credit) : '—'}
                 </td>
               </motion.tr>
@@ -506,10 +506,10 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                   <span className="text-sm font-bold text-[var(--text)] uppercase">Total Trial Balance</span>
                 </div>
               </td>
-              <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-[var(--text)]">
+              <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-[var(--text)] tabular-nums">
                 {formatCurrency(trialBalance.totalDebits)}
               </td>
-              <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-[var(--text)]">
+              <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-[var(--text)] tabular-nums">
                 {formatCurrency(trialBalance.totalCredits)}
               </td>
             </tr>

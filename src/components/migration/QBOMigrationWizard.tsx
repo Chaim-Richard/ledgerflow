@@ -789,19 +789,19 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                 <div className="grid grid-cols-1 sm:grid-cols-3 max-w-lg mx-auto gap-3 text-left">
                   <div className="p-4 bg-[var(--panel)] rounded-xl border border-[var(--line)]">
                     <div className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wider mb-1">Total Debits</div>
-                    <div className="text-lg font-mono font-bold text-[var(--text)]">
+                    <div className="text-lg font-mono font-bold text-[var(--text)] tabular-nums">
                       {formatCurrency(metrics.totalDebitCents)}
                     </div>
                   </div>
                   <div className="p-4 bg-[var(--panel)] rounded-xl border border-[var(--line)]">
                     <div className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wider mb-1">Total Credits</div>
-                    <div className="text-lg font-mono font-bold text-[var(--text)]">
+                    <div className="text-lg font-mono font-bold text-[var(--text)] tabular-nums">
                       {formatCurrency(metrics.totalCreditCents)}
                     </div>
                   </div>
                   <div className="p-4 bg-[var(--panel)] rounded-xl border border-[var(--line)]">
                     <div className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wider mb-1">Trial Balance Net</div>
-                    <div className={`text-lg font-mono font-bold ${metrics.isBalanced ? 'text-emerald-600' : 'text-amber-500'}`}>
+                    <div className={`text-lg font-mono font-bold ${metrics.isBalanced ? 'text-emerald-600' : 'text-amber-500'} tabular-nums`}>
                       {formatCurrency(metrics.netCents)}
                     </div>
                   </div>

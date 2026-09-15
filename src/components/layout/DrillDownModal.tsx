@@ -75,7 +75,7 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                            </div>
                         </td>
                         <td className={cn(
-                          "py-4 text-right pr-4 font-black font-mono border-y border-r border-[var(--line)] group-hover:border-slate-300 rounded-r-2xl",
+                          "py-4 text-right pr-4 font-black font-mono border-y border-r border-[var(--line)] group-hover:border-slate-300 rounded-r-2xl tabular-nums",
                           amount >= 0 ? "text-emerald-600" : "text-rose-600"
                         )}>
                           {amount >= 0 ? '+' : ''}{formatCurrency(amount)}

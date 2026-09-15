@@ -174,7 +174,7 @@ export default function InboxView() {
               {(showAllHighConfidence ? highConfidence : highConfidence.slice(0, 5)).map(t => (
                 <div key={t.id} className="bg-[var(--ink)] border border-[var(--line)] px-3 py-2 rounded-lg text-xs font-medium text-slate-600 flex items-center gap-2">
                   <span className="truncate max-w-[120px]">{t.description}</span>
-                  <span className="font-bold text-[var(--text)]">{formatCurrency(t.totalAmountCents)}</span>
+                  <span className="font-bold text-[var(--text)] tabular-nums">{formatCurrency(t.totalAmountCents)}</span>
                   <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[10px]">{Math.round(t.uiConfidence)}%</span>
                 </div>
               ))}
@@ -228,7 +228,7 @@ export default function InboxView() {
                       <p className="text-xs text-slate-400 mb-0.5">Suggested</p>
                       <p className="text-sm font-medium text-[#0047AB] bg-blue-50 px-2 py-0.5 rounded-md">Software / SaaS</p>
                     </div>
-                    <p className="font-mono font-bold text-[var(--text)]">{formatCurrency(t.totalAmountCents)}</p>
+                    <p className="font-mono font-bold text-[var(--text)] tabular-nums">{formatCurrency(t.totalAmountCents)}</p>
                   </div>
                 </div>
               ))}
@@ -255,7 +255,7 @@ export default function InboxView() {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <p className="font-bold text-[var(--text)]">{t.description}</p>
-                        <p className="font-mono text-sm text-slate-600 mt-1">{formatCurrency(t.totalAmountCents)}</p>
+                        <p className="font-mono text-sm text-slate-600 mt-1 tabular-nums">{formatCurrency(t.totalAmountCents)}</p>
                       </div>
                       <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-lg flex items-center gap-1">
                         <MessageSquare size={12} />

@@ -218,7 +218,7 @@ const ForensicAudit = React.memo(() => {
                        </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-lg font-black text-[var(--text)] mono-value">{CURRENCY.format(Math.abs(t.totalAmountCents) / 100)}</p>
+                       <p className="text-lg font-black text-[var(--text)] mono-value tabular-nums">{CURRENCY.format(Math.abs(t.totalAmountCents) / 100)}</p>
                        <p className="text-[9px] font-black text-slate-500 flex items-center justify-end gap-1 mt-1">
                           <History size={10} />
                           {format(parseLocalDate(t.date), 'MMM yyyy')}

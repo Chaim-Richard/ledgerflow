@@ -469,7 +469,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
            </div>
           <div>
             <p className="text-[9px] font-bold text-white/40 mb-2 uppercase tracking-wider">{labels.netLabel}</p>
-            <p className="text-xl font-black italic tracking-tight font-mono leading-none mb-3">
+            <p className="text-xl font-black italic tracking-tight font-mono leading-none mb-3 tabular-nums">
               {formatCurrency(data.netIncome || 0)}
             </p>
           </div>
@@ -529,10 +529,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
                  <h4 className="font-bold text-[var(--text)] uppercase tracking-wider text-xs">{labels.revenueStreams}</h4>
               </div>
               <div className="flex flex-col items-end">
-                <span className="font-mono text-base font-black text-emerald-700">{formatCurrency(data.income?.total || 0)}</span>
+                <span className="font-mono text-base font-black text-emerald-700 tabular-nums">{formatCurrency(data.income?.total || 0)}</span>
                 {isComparative && prevData.income?.total !== 0 && (
                   <div className="flex items-center gap-1.5 mt-0.5">
-                     <span className="font-mono text-[9px] text-slate-400 font-medium">prev: {formatCurrency(prevData.income?.total)}</span>
+                     <span className="font-mono text-[9px] text-slate-400 font-medium tabular-nums">prev: {formatCurrency(prevData.income?.total)}</span>
                      <span className={cn(
                        "text-[10px] font-bold", 
                        (data.income?.total || 0) >= prevData.income?.total ? "text-emerald-500" : "text-rose-500"
@@ -582,10 +582,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
                       </span>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
-                      <span className="font-mono text-[var(--text)] text-xs font-semibold">{formatCurrency(balance)}</span>
+                      <span className="font-mono text-[var(--text)] text-xs font-semibold tabular-nums">{formatCurrency(balance)}</span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-slate-400">prev: {formatCurrency(prevBalance)}</span>
+                          <span className="font-mono text-[8px] text-slate-400 tabular-nums">prev: {formatCurrency(prevBalance)}</span>
                           {variance !== null && (
                             <span className={cn("text-[9px] font-bold", variance >= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance >= 0 ? '+' : ''}{variance.toFixed(1)}%
@@ -608,10 +608,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
                   <h4 className="font-bold text-[var(--text)] uppercase tracking-wider text-xs">{labels.expenseClusters}</h4>
                </div>
                <div className="flex flex-col items-end">
-                 <span className="font-mono text-base font-black text-rose-700">{formatCurrency(data.expense?.total || 0)}</span>
+                 <span className="font-mono text-base font-black text-rose-700 tabular-nums">{formatCurrency(data.expense?.total || 0)}</span>
                  {isComparative && prevData.expense?.total !== 0 && (
                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="font-mono text-[9px] text-slate-400 font-medium">prev: {formatCurrency(prevData.expense?.total)}</span>
+                      <span className="font-mono text-[9px] text-slate-400 font-medium tabular-nums">prev: {formatCurrency(prevData.expense?.total)}</span>
                       <span className={cn(
                         "text-[10px] font-bold", 
                         (data.expense?.total || 0) <= prevData.expense?.total ? "text-emerald-500" : "text-rose-500"
@@ -661,10 +661,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
                       </span>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
-                      <span className="font-mono text-[var(--text)] text-xs font-semibold">{formatCurrency(balance)}</span>
+                      <span className="font-mono text-[var(--text)] text-xs font-semibold tabular-nums">{formatCurrency(balance)}</span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-slate-400">prev: {formatCurrency(prevBalance)}</span>
+                          <span className="font-mono text-[8px] text-slate-400 tabular-nums">prev: {formatCurrency(prevBalance)}</span>
                           {variance !== null && (
                             <span className={cn("text-[9px] font-bold", variance <= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance >= 0 ? '+' : ''}{variance.toFixed(1)}%
@@ -685,7 +685,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
               <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{labels.netChangeTitle}</h4>
               <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">{labels.netSub}</p>
             </div>
-            <div className="flex flex-col items-end sm:items-center sm:flex-row gap-4 text-right">
+            <div className="flex flex-col items-end sm:items-center sm:flex-row gap-4 text-right tabular-nums">
               {isComparative && prevData.netIncome !== 0 && (
                 <div className="flex flex-col sm:items-end items-end mr-4">
                   <span className="text-[9px] font-bold text-slate-400 font-medium tracking-wider mb-1">PRIOR PERIOD</span>

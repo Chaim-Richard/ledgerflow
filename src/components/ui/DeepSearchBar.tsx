@@ -76,7 +76,7 @@ export default function DeepSearchBar({ value, onChange, metrics, placeholder = 
 
         {value.trim() && metrics && (
           <div className="flex items-center gap-2 pl-2 border-l border-[var(--line)] shrink-0">
-            <span className="text-[11px] font-bold text-[var(--brass)] bg-[var(--brass)]/15 px-2 py-0.5 rounded-md">
+            <span className="text-[11px] font-bold text-[var(--brass)] bg-[var(--brass)]/15 px-2 py-0.5 rounded-md tabular-nums">
               ${formatCurrency(metrics.totalExposure / 100)}
             </span>
             <span className="text-[10px] text-[var(--muted)] font-mono">

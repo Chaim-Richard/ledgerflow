@@ -600,7 +600,7 @@ export default function Reconciliation() {
                                  <span className="px-2 py-0.2 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[7px] font-black uppercase tracking-wider">Locked Status</span>
                                </div>
                                <h5 className="font-extrabold text-sm text-[var(--text)] truncate">{line.description}</h5>
-                               <p className="text-[10px] text-slate-400 font-mono mt-0.5">Statement Amount: {formatCurrency(line.amountCents)}</p>
+                               <p className="text-[10px] text-slate-400 font-mono mt-0.5 tabular-nums">Statement Amount: {formatCurrency(line.amountCents)}</p>
                              </div>
 
                              {/* Connector Node */}
@@ -613,7 +613,7 @@ export default function Reconciliation() {
                              <div className="flex-1 min-w-0">
                                <span className="text-[8px] font-black uppercase text-indigo-400 font-mono tracking-wider">Linked Registry Record</span>
                                <h5 className="font-bold text-sm text-slate-700 truncate">{linkedTx?.description || 'Legacy Synapsed Node'}</h5>
-                               <p className="text-[10px] text-slate-400 font-mono mt-0.5 mt-0.5">Registry value: {linkedTx ? formatCurrency(linkedTx.totalAmountCents) : 'N/A'}</p>
+                               <p className="text-[10px] text-slate-400 font-mono mt-0.5 mt-0.5 tabular-nums">Registry value: {linkedTx ? formatCurrency(linkedTx.totalAmountCents) : 'N/A'}</p>
                              </div>
 
                              {/* Revert controls directly */}
@@ -662,7 +662,7 @@ export default function Reconciliation() {
                   <span className="text-md font-bold truncate mt-1 tracking-tight">{selectedBankLine.description}</span>
                   <div className="flex items-center justify-between mt-3 flex-wrap gap-1">
                     <span className="text-[10px] font-mono text-[var(--muted)]">{selectedBankLine.date}</span>
-                    <span className="text-sm font-bold font-mono text-[var(--text)]">{formatCurrency(selectedBankLine.amountCents)}</span>
+                    <span className="text-sm font-bold font-mono text-[var(--text)] tabular-nums">{formatCurrency(selectedBankLine.amountCents)}</span>
                   </div>
                 </div>
 
@@ -702,7 +702,7 @@ export default function Reconciliation() {
                   <span className="text-md font-bold truncate mt-1 tracking-tight">{selectedLedgerTx?.description || 'Orphan Ledger'}</span>
                   <div className="flex items-center justify-between mt-3 flex-wrap gap-1">
                     <span className="text-[10px] font-mono text-[var(--muted)]">{selectedLedgerTx?.date || 'N/A'}</span>
-                    <span className="text-sm font-bold font-mono text-[var(--text)]">
+                    <span className="text-sm font-bold font-mono text-[var(--text)] tabular-nums">
                       {selectedLedgerTx ? formatCurrency(selectedLedgerTx.totalAmountCents) : 'N/A'}
                     </span>
                   </div>
@@ -736,7 +736,7 @@ export default function Reconciliation() {
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
                         <span className="text-[10px] text-slate-350 font-bold uppercase tracking-tight">
-                          Data Price Difference: <strong className={cn(checkSimilarity.amountDiff !== 0 ? "text-amber-400" : "text-emerald-400")}>
+                          Data Price Difference: <strong className={cn(checkSimilarity.amountDiff !== 0 ? "text-amber-400" : "text-emerald-400", "tabular-nums")}>
                             {checkSimilarity.amountDiff === 0 ? "Perfect Price Match" : `${formatCurrency(Math.abs(checkSimilarity.amountDiff))} Delta`}
                           </strong>
                         </span>
@@ -915,7 +915,7 @@ export default function Reconciliation() {
                                    <p className="font-bold text-[var(--text)] truncate text-sm">{matchedLtx.description}</p>
                                    <p className="text-[10px] font-semibold text-slate-500 font-mono mt-0.5">{matchedLtx.date} • {formatCurrency(matchedLtx.totalAmountCents)}</p>
                                    {Math.abs(btx.amountCents) !== Math.abs(matchedLtx.totalAmountCents) && (
-                                     <span className="text-[9px] text-amber-600 font-bold uppercase tracking-wider block mt-1 bg-amber-50/50 inline-block px-1.5 py-0.5 rounded border border-amber-200">
+                                     <span className="text-[9px] text-amber-600 font-bold uppercase tracking-wider block mt-1 bg-amber-50/50 inline-block px-1.5 py-0.5 rounded border border-amber-200 tabular-nums">
                                        Diff: {formatCurrency(Math.abs(Math.abs(btx.amountCents) - Math.abs(matchedLtx.totalAmountCents)))}
                                      </span>
                                    )}

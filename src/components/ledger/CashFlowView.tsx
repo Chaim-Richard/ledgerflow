@@ -419,14 +419,14 @@ export default function CashFlowView() {
                  <span className="text-[12px] font-bold text-white/40 uppercase tracking-widest block mb-1">{labels.netChange}</span>
                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest block">{labels.netChangeSub}</span>
                </div>
-               <div className="flex items-center gap-6">
+               <div className="flex items-center gap-6 tabular-nums">
                  {isComparative && prevData.netChange !== 0 && (
                     <div className="text-right">
                        <span className="block text-[8px] font-bold text-slate-500 uppercase tracking-widest">Prior Delta</span>
                        <span className="font-mono text-sm text-slate-400">{formatCurrency(prevData.netChange)}</span>
                     </div>
                  )}
-                 <span className={cn("text-3xl font-black font-mono tracking-tighter", currentData.netChange >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                 <span className={cn("text-3xl font-black font-mono tracking-tighter", currentData.netChange >= 0 ? "text-emerald-400" : "text-rose-400", "tabular-nums")}>
                     {formatCurrency(currentData.netChange)}
                  </span>
                </div>

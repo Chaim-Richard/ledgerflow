@@ -267,23 +267,23 @@ export default function APAgingReportView() {
           <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block flex items-center gap-1">
             <Zap className="w-3 h-3 text-amber-600" /> Due This Week
           </span>
-          <p className="text-lg font-bold font-mono text-amber-900 mt-1">{formatCurrency(overallTotals.dueThisWeek)}</p>
+          <p className="text-lg font-bold font-mono text-amber-900 mt-1 tabular-nums">{formatCurrency(overallTotals.dueThisWeek)}</p>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-3xs">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Current (0-30d)</span>
-          <p className="text-lg font-bold font-mono text-slate-900 mt-1">{formatCurrency(overallTotals.current)}</p>
+          <p className="text-lg font-bold font-mono text-slate-900 mt-1 tabular-nums">{formatCurrency(overallTotals.current)}</p>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-3xs">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">31 - 60 Days</span>
-          <p className="text-lg font-bold font-mono text-amber-600 mt-1">{formatCurrency(overallTotals.days31To60)}</p>
+          <p className="text-lg font-bold font-mono text-amber-600 mt-1 tabular-nums">{formatCurrency(overallTotals.days31To60)}</p>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-3xs">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">61 - 90 Days</span>
-          <p className="text-lg font-bold font-mono text-orange-600 mt-1">{formatCurrency(overallTotals.days61To90)}</p>
+          <p className="text-lg font-bold font-mono text-orange-600 mt-1 tabular-nums">{formatCurrency(overallTotals.days61To90)}</p>
         </div>
         <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-xs col-span-2 md:col-span-1">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Payables</span>
-          <p className="text-lg font-bold font-mono text-white mt-1">{formatCurrency(overallTotals.total)}</p>
+          <p className="text-lg font-bold font-mono text-white mt-1 tabular-nums">{formatCurrency(overallTotals.total)}</p>
         </div>
       </div>
 
@@ -342,22 +342,22 @@ export default function APAgingReportView() {
                       )}
                     </div>
                   </td>
-                  <td className="py-3.5 px-4 text-right font-mono text-slate-600">
+                  <td className="py-3.5 px-4 text-right font-mono text-slate-600 tabular-nums">
                     {item.currentCents > 0 ? formatCurrency(item.currentCents) : '-'}
                   </td>
-                  <td className="py-3.5 px-4 text-right font-mono text-amber-700">
+                  <td className="py-3.5 px-4 text-right font-mono text-amber-700 tabular-nums">
                     {item.days31To60Cents > 0 ? formatCurrency(item.days31To60Cents) : '-'}
                   </td>
-                  <td className="py-3.5 px-4 text-right font-mono text-orange-700">
+                  <td className="py-3.5 px-4 text-right font-mono text-orange-700 tabular-nums">
                     {item.days61To90Cents > 0 ? formatCurrency(item.days61To90Cents) : '-'}
                   </td>
-                  <td className="py-3.5 px-4 text-right font-mono font-bold text-rose-600">
+                  <td className="py-3.5 px-4 text-right font-mono font-bold text-rose-600 tabular-nums">
                     {item.days90PlusCents > 0 ? formatCurrency(item.days90PlusCents) : '-'}
                   </td>
-                  <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-800 bg-amber-50/30">
+                  <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-800 bg-amber-50/30 tabular-nums">
                     {item.dueThisWeekCents > 0 ? formatCurrency(item.dueThisWeekCents) : '-'}
                   </td>
-                  <td className="py-3.5 px-5 text-right font-mono font-bold text-slate-900">
+                  <td className="py-3.5 px-5 text-right font-mono font-bold text-slate-900 tabular-nums">
                     {formatCurrency(item.totalCents)}
                   </td>
                   <td className="py-3.5 px-4 text-center">
@@ -386,12 +386,12 @@ export default function APAgingReportView() {
               <tfoot>
                 <tr className="bg-slate-900 text-white font-bold border-t-2 border-slate-900">
                   <td className="py-4 px-5 uppercase tracking-wider text-[11px]">Total Accounts Payable</td>
-                  <td className="py-4 px-4 text-right font-mono">{formatCurrency(overallTotals.current)}</td>
-                  <td className="py-4 px-4 text-right font-mono text-amber-300">{formatCurrency(overallTotals.days31To60)}</td>
-                  <td className="py-4 px-4 text-right font-mono text-orange-300">{formatCurrency(overallTotals.days61To90)}</td>
-                  <td className="py-4 px-4 text-right font-mono text-rose-300">{formatCurrency(overallTotals.days90Plus)}</td>
-                  <td className="py-4 px-4 text-right font-mono text-amber-300 bg-slate-800">{formatCurrency(overallTotals.dueThisWeek)}</td>
-                  <td className="py-4 px-5 text-right font-mono text-white text-sm">{formatCurrency(overallTotals.total)}</td>
+                  <td className="py-4 px-4 text-right font-mono tabular-nums">{formatCurrency(overallTotals.current)}</td>
+                  <td className="py-4 px-4 text-right font-mono text-amber-300 tabular-nums">{formatCurrency(overallTotals.days31To60)}</td>
+                  <td className="py-4 px-4 text-right font-mono text-orange-300 tabular-nums">{formatCurrency(overallTotals.days61To90)}</td>
+                  <td className="py-4 px-4 text-right font-mono text-rose-300 tabular-nums">{formatCurrency(overallTotals.days90Plus)}</td>
+                  <td className="py-4 px-4 text-right font-mono text-amber-300 bg-slate-800 tabular-nums">{formatCurrency(overallTotals.dueThisWeek)}</td>
+                  <td className="py-4 px-5 text-right font-mono text-white text-sm tabular-nums">{formatCurrency(overallTotals.total)}</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -427,7 +427,7 @@ export default function APAgingReportView() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-mono font-bold text-sm text-slate-900">{formatCurrency(bill.amountCents || 0)}</p>
+                    <p className="font-mono font-bold text-sm text-slate-900 tabular-nums">{formatCurrency(bill.amountCents || 0)}</p>
                     <span className="text-[10px] font-semibold text-slate-400 capitalize">{bill.status}</span>
                   </div>
                 </div>

@@ -147,7 +147,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
             <div className="px-2 mb-4 space-y-1">
               <div className="flex justify-between items-end">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Budget</span>
-                <span className="font-mono font-black text-[var(--text)] tracking-tighter">{formatCurrency(totalBudget)}</span>
+                <span className="font-mono font-black text-[var(--text)] tracking-tighter tabular-nums">{formatCurrency(totalBudget)}</span>
               </div>
             </div>
 
@@ -185,13 +185,13 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
                       <div className="flex items-end justify-between">
                         <div className="space-y-1">
                           <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Budget</p>
-                          <p className="text-xs font-bold text-[var(--text)] font-mono">
+                          <p className="text-xs font-bold text-[var(--text)] font-mono tabular-nums">
                             {formatCurrency(stats.budgetCents)}
                           </p>
                         </div>
                         <div className="text-right">
                            <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Spent</p>
-                          <span className="text-xs font-black font-mono tracking-tighter text-slate-600">
+                          <span className="text-xs font-black font-mono tracking-tighter text-slate-600 tabular-nums">
                             {formatCurrency(stats.expenseCents)}
                           </span>
                         </div>

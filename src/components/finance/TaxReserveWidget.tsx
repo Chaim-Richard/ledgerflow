@@ -205,19 +205,19 @@ export function TaxReserveWidget() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-[var(--surface)]/60 border border-[var(--line)] rounded-xl flex flex-col justify-center">
               <p className="font-mono text-[9px] uppercase tracking-widest text-[var(--muted)] font-semibold mb-1">Liquid Cash Balance</p>
-              <p className="font-mono text-xl font-bold text-[var(--text)]">{formatCurrency(liquidCash)}</p>
+              <p className="font-mono text-xl font-bold text-[var(--text)] tabular-nums">{formatCurrency(liquidCash)}</p>
             </div>
             
             <div className="p-4 bg-[var(--surface)]/60 border border-[var(--line)] rounded-xl flex flex-col justify-center">
               <p className="font-mono text-[9px] uppercase tracking-widest text-[var(--muted)] font-semibold mb-1 flex items-center gap-1">
                 Est. Tax Set-Aside <span className="text-[10px] text-[var(--brass)] bg-[var(--brass-soft)] px-1 py-0.2 rounded border border-[var(--brass-line)]/40">{taxRate}%</span>
               </p>
-              <p className="font-mono text-xl font-bold text-[var(--neg)]">{formatCurrency(estimatedTax)}</p>
+              <p className="font-mono text-xl font-bold text-[var(--neg)] tabular-nums">{formatCurrency(estimatedTax)}</p>
             </div>
             
             <div className="p-4 bg-gradient-to-br from-[var(--brass-soft)]/40 via-[var(--brass-soft)]/10 to-[var(--surface)] border border-[var(--brass-line)] rounded-xl flex flex-col justify-center shadow-xs">
               <p className="font-mono text-[9px] uppercase tracking-widest text-[var(--brass)] font-bold mb-1">Safe to Spend</p>
-              <p className="font-mono text-xl font-bold text-[var(--text)]">{formatCurrency(simpleSafeToSpendCents)}</p>
+              <p className="font-mono text-xl font-bold text-[var(--text)] tabular-nums">{formatCurrency(simpleSafeToSpendCents)}</p>
             </div>
           </div>
 
@@ -281,7 +281,7 @@ export function TaxReserveWidget() {
                       <p className="text-[10px] text-[var(--faint)]">Sum of bank & checking accounts</p>
                     </div>
                   </div>
-                  <span className="font-bold text-[var(--text)]">{formatCurrency(liquidCash)}</span>
+                  <span className="font-bold text-[var(--text)] tabular-nums">{formatCurrency(liquidCash)}</span>
                 </div>
 
                 {/* 2. Tax Set Aside */}
@@ -294,7 +294,7 @@ export function TaxReserveWidget() {
                         <p className="text-[10px] text-[var(--faint)]">Running margin based on net profits</p>
                       </div>
                     </div>
-                    <span className="font-bold text-[var(--neg)]">-{formatCurrency(estimatedTax)}</span>
+                    <span className="font-bold text-[var(--neg)] tabular-nums">-{formatCurrency(estimatedTax)}</span>
                   </div>
                   {/* Slider */}
                   <div className="pl-7 pr-2 flex items-center gap-3">
@@ -321,7 +321,7 @@ export function TaxReserveWidget() {
                         <p className="text-[10px] text-[var(--faint)]">Unpaid outlays pre-funding safety lock</p>
                       </div>
                     </div>
-                    <span className="font-bold text-amber-500">-{formatCurrency(totalCommittedBillsCents)}</span>
+                    <span className="font-bold text-amber-500 tabular-nums">-{formatCurrency(totalCommittedBillsCents)}</span>
                   </div>
 
                   {/* Payday Date and bill count */}
@@ -346,7 +346,7 @@ export function TaxReserveWidget() {
                       {upcomingBillsList.map(b => (
                         <div key={b.id} className="flex items-center justify-between text-[10px] text-[var(--muted)] bg-[var(--panel)]/50 p-1.5 rounded border border-[var(--line)]/50">
                           <span className="truncate max-w-[160px]">{b.vendorName || 'Vendor'} (#{b.number || 'Bill'})</span>
-                          <span className="shrink-0 font-semibold">{formatCurrency(b.amountCents)} <span className="text-[9px] text-[var(--faint)]">({b.dueDate})</span></span>
+                          <span className="shrink-0 font-semibold tabular-nums">{formatCurrency(b.amountCents)} <span className="text-[9px] text-[var(--faint)]">({b.dueDate})</span></span>
                         </div>
                       ))}
                     </div>
@@ -363,7 +363,7 @@ export function TaxReserveWidget() {
                         <p className="text-[10px] text-[var(--faint)]">Holding back minor amounts for annual spikes</p>
                       </div>
                     </div>
-                    <span className="font-bold text-violet-400">-{formatCurrency(totalIrregularReservesCents)}</span>
+                    <span className="font-bold text-violet-400 tabular-nums">-{formatCurrency(totalIrregularReservesCents)}</span>
                   </div>
 
                   {/* Mini-Reserve Pill Toggles */}
@@ -382,7 +382,7 @@ export function TaxReserveWidget() {
                         <span className="text-sm shrink-0">{item.icon}</span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] font-bold truncate leading-tight">{item.name}</p>
-                          <p className="text-[9px] font-mono text-[var(--faint)]">
+                          <p className="text-[9px] font-mono text-[var(--faint)] tabular-nums">
                             {formatCurrency(item.annualCost * 100)}/yr ({formatCurrency(Math.round(((item.annualCost * 100) / item.periodDays) * 30))}/mo)
                           </p>
                         </div>
@@ -405,7 +405,7 @@ export function TaxReserveWidget() {
                         <p className="text-[10px] text-[var(--faint)]">Locked emergency cash safety floor</p>
                       </div>
                     </div>
-                    <span className="font-bold text-cyan-400">-{formatCurrency(bufferCents)}</span>
+                    <span className="font-bold text-cyan-400 tabular-nums">-{formatCurrency(bufferCents)}</span>
                   </div>
                   {/* Slider */}
                   <div className="pl-7 pr-2 flex items-center gap-3">
@@ -419,7 +419,7 @@ export function TaxReserveWidget() {
                       onChange={(e) => setSafetyBuffer(Number(e.target.value))}
                       className="flex-1 accent-[var(--brass)] h-1 bg-[var(--line)] rounded-lg appearance-none cursor-pointer"
                     />
-                    <span className="text-[10px] font-bold text-[var(--brass)] bg-[var(--brass-soft)] px-1.5 py-0.5 rounded border border-[var(--brass-line)]/50 shrink-0 w-14 text-center">{formatCurrency(bufferCents)}</span>
+                    <span className="text-[10px] font-bold text-[var(--brass)] bg-[var(--brass-soft)] px-1.5 py-0.5 rounded border border-[var(--brass-line)]/50 shrink-0 w-14 text-center tabular-nums">{formatCurrency(bufferCents)}</span>
                   </div>
                 </div>
 

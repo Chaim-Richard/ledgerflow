@@ -160,7 +160,7 @@ export default function TaxManager({
               <span className="text-[9px] font-black text-[var(--text)] uppercase tracking-widest">Incl. SE Tax</span>
             </label>
           </div>
-          <p className="text-3xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10">
+          <p className="text-3xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10 tabular-nums">
             {formatCurrency(taxMetrics.estimatedTax)}
           </p>
           <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-[var(--brass)] uppercase tracking-widest bg-[var(--brass-soft)] p-2 rounded-lg border border-[var(--brass-line)] w-fit">
@@ -172,7 +172,7 @@ export default function TaxManager({
         <div className="p-6 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-[0.02] pointer-events-none" />
           <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-4 relative z-10">Indirect Provisioning</p>
-          <p className="text-3xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10">
+          <p className="text-3xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10 tabular-nums">
             {formatCurrency(taxMetrics.salesTaxCollected)}
           </p>
           <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-[var(--pos)] uppercase tracking-widest bg-[var(--pos)]/10 p-2 rounded-lg border border-[var(--pos)]/20 w-fit">
@@ -184,7 +184,7 @@ export default function TaxManager({
         <div className="p-6 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-[0.02] pointer-events-none" />
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Fiscal Period Yield</p>
-          <p className="text-3xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10">
+          <p className="text-3xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10 tabular-nums">
             {formatCurrency(taxMetrics.netProfit)}
           </p>
           <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-[var(--ink)] p-2 rounded-lg border border-[var(--line)] w-fit">
@@ -274,13 +274,13 @@ export default function TaxManager({
                     <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">Federal Corporate Levy</p>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-mono">IRC SEC 11 COMPLIANT</p>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)]">
+                  <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)] tabular-nums">
                     {formatCurrency(taxMetrics.netProfit)}
                   </td>
                   <td className="px-6 py-6 text-center">
                     <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50">
+                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50 tabular-nums">
                     {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * (taxRates.find(r => r.type === 'Income')?.rate ?? 0.21) : 0)}
                   </td>
                 </tr>
@@ -290,13 +290,13 @@ export default function TaxManager({
                     <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">Self-Employment Tax</p>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-mono">SECA PROVISION (15.3%)</p>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)]">
+                  <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)] tabular-nums">
                     {formatCurrency(taxMetrics.netProfit)}
                   </td>
                   <td className="px-6 py-6 text-center">
                     <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50">
+                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50 tabular-nums">
                     {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * 0.153 : 0)}
                   </td>
                 </tr>
@@ -306,13 +306,13 @@ export default function TaxManager({
                     <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">Indirect Consumption Flow</p>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-mono">SALES & USE PASS-THROUGH</p>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)]">
+                  <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)] tabular-nums">
                     {formatCurrency(taxMetrics.salesTaxCollected)}
                   </td>
                   <td className="px-6 py-6 text-center">
                     <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">GROSS_FLOW</div>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-base font-black text-emerald-600 bg-emerald-50/50 group-hover/row:bg-emerald-50">
+                  <td className="px-6 py-6 text-right font-mono text-base font-black text-emerald-600 bg-emerald-50/50 group-hover/row:bg-emerald-50 tabular-nums">
                     {formatCurrency(taxMetrics.salesTaxCollected)}
                   </td>
                 </tr>
