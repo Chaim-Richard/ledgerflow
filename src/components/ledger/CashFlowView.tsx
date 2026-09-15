@@ -194,9 +194,9 @@ export default function CashFlowView() {
   const currentData = useMemo(() => {
     if (isServerAuthoritative && serverData) {
       return {
-        operating: { total: serverData.operating.total, inflow: localCalculation.currentData.operating.inflow, outflow: localCalculation.currentData.operating.outflow },
-        investing: { total: serverData.investing.total, inflow: localCalculation.currentData.investing.inflow, outflow: localCalculation.currentData.investing.outflow },
-        financing: { total: serverData.financing.total, inflow: localCalculation.currentData.financing.inflow, outflow: localCalculation.currentData.financing.outflow },
+        operating: { total: serverData.operating.total, inflow: serverData.operating.inflow, outflow: serverData.operating.outflow },
+        investing: { total: serverData.investing.total, inflow: serverData.investing.inflow, outflow: serverData.investing.outflow },
+        financing: { total: serverData.financing.total, inflow: serverData.financing.inflow, outflow: serverData.financing.outflow },
         netChange: serverData.netChange,
       };
     }
@@ -206,9 +206,9 @@ export default function CashFlowView() {
   const prevData = useMemo(() => {
     if (isServerAuthoritative && serverPrevData) {
       return {
-        operating: { total: serverPrevData.operating.total, inflow: localCalculation.prevData.operating.inflow, outflow: localCalculation.prevData.operating.outflow },
-        investing: { total: serverPrevData.investing.total, inflow: localCalculation.prevData.investing.inflow, outflow: localCalculation.prevData.investing.outflow },
-        financing: { total: serverPrevData.financing.total, inflow: localCalculation.prevData.financing.inflow, outflow: localCalculation.prevData.financing.outflow },
+        operating: { total: serverPrevData.operating.total, inflow: serverPrevData.operating.inflow, outflow: serverPrevData.operating.outflow },
+        investing: { total: serverPrevData.investing.total, inflow: serverPrevData.investing.inflow, outflow: serverPrevData.investing.outflow },
+        financing: { total: serverPrevData.financing.total, inflow: serverPrevData.financing.inflow, outflow: serverPrevData.financing.outflow },
         netChange: serverPrevData.netChange,
       };
     }

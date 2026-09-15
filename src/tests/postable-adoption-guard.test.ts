@@ -78,15 +78,12 @@ test('Adoption Guard: Financial statements and exports must leverage server-auth
 
   for (const file of exportAndStatementFiles) {
     const content = readFileSync(file, 'utf8');
-    const hasServerConnection = 
-      content.includes('/api/v1/workspaces') || 
-      content.includes('useFinancialReporting') || 
-      content.includes('/export') ||
-      content.includes('fetch');
+    const usesServerHook = content.includes('useFinancialReporting') || content.includes('/api/v1/workspaces');
+    const branchesOnResult = content.includes('isServerAuthoritative') || content.includes('usedServer');
 
     assert.ok(
-      hasServerConnection,
-      `Adoption Guard Violation: Statement/Export component ${file} must reference server-authoritative streaming API or hook to avoid 2,000-row client-side truncation.`
+      usesServerHook && branchesOnResult,
+      `Adoption Guard Violation: ${file} must fetch from the server-authoritative endpoint AND branch on the result.`
     );
   }
 });

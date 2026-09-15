@@ -167,8 +167,8 @@ reportRouter.get("/balance-sheet", async (req, res) => {
       }
     });
 
-    totalEquity += netIncome;
-    const totalClaims = totalLiabilities + totalEquity;
+    // totalEquity stays equity-accounts-only, matching BalanceSheetView.tsx:182
+    const totalClaims = totalLiabilities + totalEquity + netIncome;
     const isBalanced = Math.abs(totalAssets - totalClaims) <= 1;
 
     res.json({
