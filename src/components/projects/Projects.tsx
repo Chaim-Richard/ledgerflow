@@ -20,6 +20,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, safeConfirm, parseAmountToCents } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 import { toast } from 'sonner';
 import ProjectPipeline from './ProjectPipeline';
@@ -149,7 +150,7 @@ export default function Projects() {
     const accountsMap = new Map(accounts.map(a => [a.id, a]));
 
     projects.forEach(p => {
-      const projectTransactions = transactions.filter(t => isProjectTx(t, p));
+      const projectTransactions = transactions.filter(t => isPostable(t) && isProjectTx(t, p));
       let income = 0;
       let expense = 0;
 
@@ -159,7 +160,7 @@ export default function Projects() {
           const acc = accountsMap.get(l.accountId);
           const role = resolveAccountRole(acc);
           const accName = (l.accountName || acc?.name || '').toLowerCase();
-          const amt = l.amountCents || 0;
+          const amt = lineAmount(l, t);
 
           if (role === 'revenue' || acc?.type === 'income' || acc?.type === 'revenue') {
             // Revenue in double-entry is negative (credit)
@@ -442,7 +443,7 @@ export default function Projects() {
                           <p className="text-xs font-bold font-mono text-[var(--text)] col-span-1">
                             {formatCurrency(
                               transactions.filter(t => 
-                                selectedProject && isProjectTx(t, selectedProject) && 
+                                isPostable(t) && selectedProject && isProjectTx(t, selectedProject) && 
                                 (t.metadata?.vendorId === vendor.id || t.payee?.toLowerCase() === vendor.name.toLowerCase())
                               ).reduce((sum, t) => sum + Math.abs(t.totalAmountCents), 0)
                             )}

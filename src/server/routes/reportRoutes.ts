@@ -313,13 +313,24 @@ reportRouter.get("/cash-flow", async (req, res) => {
     txQuery = txQuery.where("date", ">=", String(defaultStart));
     txQuery = txQuery.where("date", "<=", String(defaultEnd));
 
-    const [accountsSnap, transactionsSnap] = await Promise.all([
-      db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get(),
-      txQuery.get()
-    ]);
-
+    const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get();
     const accounts = accountsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-    let transactions = transactionsSnap.docs.map((doc: any) => doc.data());
+
+    let transactions: any[] = [];
+    await new Promise<void>((resolve, reject) => {
+      txQuery.stream()
+        .on("data", (doc: any) => transactions.push(doc.data()))
+        .on("end", () => resolve())
+        .on("error", async (err: any) => {
+          try {
+            const snap = await txQuery.get();
+            transactions = snap.docs.map((doc: any) => doc.data());
+            resolve();
+          } catch (fallbackErr) {
+            reject(err);
+          }
+        });
+    });
 
     if (startDate || endDate) {
       const start = startDate ? String(startDate) : "1970-01-01";
@@ -401,14 +412,28 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
     const { startDate: mStart, endDate: mEnd } = calculateMonthDateRange(targetMonth);
     txQuery = txQuery.where("date", ">=", mStart).where("date", "<=", mEnd);
 
-    const [budgetsSnap, transactionsSnap, accountsSnap] = await Promise.all([
+    const [budgetsSnap, accountsSnap] = await Promise.all([
       db.collection("budgets").where("workspaceId", "==", workspaceId).get(),
-      txQuery.get(),
       db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get()
     ]);
 
+    let transactions: any[] = [];
+    await new Promise<void>((resolve, reject) => {
+      txQuery.stream()
+        .on("data", (doc: any) => transactions.push(doc.data()))
+        .on("end", () => resolve())
+        .on("error", async (err: any) => {
+          try {
+            const snap = await txQuery.get();
+            transactions = snap.docs.map((doc: any) => doc.data());
+            resolve();
+          } catch (fallbackErr) {
+            reject(err);
+          }
+        });
+    });
+
     const budgets = budgetsSnap.docs.map((doc: any) => doc.data());
-    let transactions = transactionsSnap.docs.map((doc: any) => doc.data());
     const accounts = accountsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
 
     transactions = transactions.filter(tx => tx.date && tx.date.startsWith(targetMonth));

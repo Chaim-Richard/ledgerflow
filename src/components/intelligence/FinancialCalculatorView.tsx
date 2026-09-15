@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Calculator, ArrowRight, DollarSign, Percent, TrendingUp, BarChart3, RefreshCw, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { isPostable, lineAmount } from '../../lib/txFilters';
+import { resolveAccountRole } from '../../lib/accountUtils';
 
 interface FinancialCalculatorViewProps {
   type: 'breakeven' | 'compound' | 'rule72' | 'ltv' | 'npv' | 'cac' | 'wacc' | 'roas' | 'caprate' | 'ratios' | 'ebitda';
@@ -14,12 +16,29 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
   const accounts = computedAccounts.length > 0 ? computedAccounts : rawAccounts;
 
   // Compute live ledger base figures
-  const totalIncome = transactions.reduce((sum, t) => {
-    const inc = t.lines?.filter(l => l.amountCents > 0).reduce((a, b) => a + b.amountCents, 0) || 0;
+  const totalIncome = transactions.filter(isPostable).reduce((sum, t) => {
+    let inc = 0;
+    t.lines?.forEach(l => {
+      const acc = accounts.find(a => a.id === l.accountId);
+      const role = resolveAccountRole(acc);
+      const amt = lineAmount(l, t);
+      if (role === 'revenue' || acc?.type === 'income' || acc?.type === 'revenue') {
+        inc += Math.abs(amt);
+      }
+    });
     return sum + (inc / 100);
   }, 0);
-  const totalExpense = transactions.reduce((sum, t) => {
-    const exp = t.lines?.filter(l => l.amountCents < 0).reduce((a, b) => a + Math.abs(b.amountCents), 0) || 0;
+
+  const totalExpense = transactions.filter(isPostable).reduce((sum, t) => {
+    let exp = 0;
+    t.lines?.forEach(l => {
+      const acc = accounts.find(a => a.id === l.accountId);
+      const role = resolveAccountRole(acc);
+      const amt = lineAmount(l, t);
+      if (role === 'expense' || role === 'cogs' || acc?.type === 'expense' || acc?.type === 'cost_of_goods') {
+        exp += Math.abs(amt);
+      }
+    });
     return sum + (exp / 100);
   }, 0);
   const totalAssets = accounts.filter(a => a.type === 'asset').reduce((s, a) => s + Math.abs(a.balanceCents / 100), 0);

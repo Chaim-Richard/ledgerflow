@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Transaction, ChartAccount, JournalEntry, Budget, TaxRate } from '../../types';
 import { cn, reportError, OperationType } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { addDoc, collection } from 'firebase/firestore';
@@ -99,20 +100,23 @@ const Ledger = React.memo(() => {
   const accounts = React.useMemo(() => {
     return computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
   }, [computedAccounts, rawAccounts]);
-  const journalEntries = React.useMemo<JournalEntry[]>(() => (transactions || []).map(tx => ({
+  const journalEntries = React.useMemo<JournalEntry[]>(() => (transactions || []).filter(isPostable).map(tx => ({
     id: tx.id,
     uid: tx.uid || 'system',
     workspaceId: tx.workspaceId || '',
     date: tx.date || '',
     description: tx.description || '',
     reference: (tx as any).reference || tx.id,
-    lines: (tx.lines || []).map(l => ({
-      accountId: l.accountId,
-      accountName: l.accountName || '',
-      debit: l.amountCents > 0 ? l.amountCents : 0,
-      credit: l.amountCents < 0 ? Math.abs(l.amountCents) : 0,
-      description: l.description
-    })),
+    lines: (tx.lines || []).map(l => {
+      const amt = lineAmount(l, tx);
+      return {
+        accountId: l.accountId,
+        accountName: l.accountName || '',
+        debit: amt > 0 ? amt : 0,
+        credit: amt < 0 ? Math.abs(amt) : 0,
+        description: l.description
+      };
+    }),
     createdAt: tx.createdAt || new Date().toISOString()
   })), [transactions]);
   const reconciliations = useLedgerStore(s => s.reconciliations);

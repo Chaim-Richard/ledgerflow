@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Transaction, ChartAccount } from '../../types';
 import { parseLocalDate, cn } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { format } from 'date-fns';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -28,7 +29,7 @@ const ForensicAudit = React.memo(() => {
 
     for (let i = 0; i < transactions.length; i++) {
       const t = transactions[i];
-      if (t.deletedAt) continue;
+      if (!isPostable(t)) continue;
       const amount = Math.abs(t.totalAmountCents) / 100;
       if (amount >= 1) {
         // High-performance first digit extraction without string conversion
@@ -91,10 +92,10 @@ const ForensicAudit = React.memo(() => {
     const sameSigMap = new Map<string, number>();
     
     for (const t of transactions) {
-      if (t.deletedAt) continue;
+      if (!isPostable(t)) continue;
       
       // Unbalanced check
-      const lineSum = (t.lines || []).reduce((sum: number, l: any) => sum + (l.amountCents as number || 0), 0);
+      const lineSum = (t.lines || []).reduce((sum: number, l: any) => sum + lineAmount(l, t), 0);
       if (lineSum !== 0) unbalancedCount++;
       
       // Project Check

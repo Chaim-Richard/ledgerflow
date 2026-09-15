@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { format, differenceInDays } from 'date-fns';
 import { motion } from 'motion/react';
 
@@ -59,15 +60,13 @@ export default function Sales() {
     // 2. Transaction-based AR logic (fallback aging report logic)
     // Add pending AR lines that map to this customer by name
     if (transactions) {
-      transactions.forEach(tx => {
-        if (tx.status === 'void') return;
-        
+      transactions.filter(isPostable).forEach(tx => {
         let arAmount = 0;
-        tx.lines.forEach(l => {
+        tx.lines?.forEach(l => {
           const acc = accounts?.find(a => a.id === l.accountId);
           // If it's an AR account
           if (acc && (resolveAccountRole(acc) === 'ar' || (acc.type === 'asset' && acc.name.toLowerCase().includes('receivable')))) {
-            arAmount += l.amountCents; // Positive is debit (increase AR)
+            arAmount += lineAmount(l, tx); // Positive is debit (increase AR)
           }
         });
         

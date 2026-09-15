@@ -17,6 +17,7 @@ import { collection, writeBatch, doc } from 'firebase/firestore';
 import { db, getIdToken } from '../../firebase';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 import { MatchingEngine } from '../../lib/MatchingEngine';
 import { SpellChecker } from '../../lib/algorithms';
@@ -109,7 +110,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   const autoRules = useLedgerStore(s => s.autoRules);
   const matchingThreshold = useLedgerStore(s => s.matchingThreshold);
   
-  const engine = useMemo(() => new MatchingEngine(autoRules, analyticalPatternCache, undefined, matchingThreshold, transactions, workspace?.dimensionNodes, accounts), [autoRules, analyticalPatternCache, transactions, matchingThreshold, workspace?.dimensionNodes, accounts]);
+  const engine = useMemo(() => new MatchingEngine(autoRules, analyticalPatternCache, undefined, matchingThreshold, transactions.filter(isPostable), workspace?.dimensionNodes, accounts), [autoRules, analyticalPatternCache, transactions, matchingThreshold, workspace?.dimensionNodes, accounts]);
   
   const spellChecker = useMemo(() => {
     const dictionary = [

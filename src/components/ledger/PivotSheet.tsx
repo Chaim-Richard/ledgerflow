@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDecimal, cn, formatCurrency, sanitizeCsvCell, resolveAccountName } from '../../lib/utils';
-import { isPostable, isTransactionInDateRange } from '../../lib/txFilters';
+import { isPostable, isTransactionInDateRange, lineAmount } from '../../lib/txFilters';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -154,7 +154,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
           return;
         }
 
-        const convertedCents = Math.round((line.amountCents || 0) * txRate);
+        const convertedCents = Math.round((lineAmount(line, t) || 0) * txRate);
 
         if (!groups[key]) {
           groups[key] = { total: 0, items: [], lineCount: 0 };
@@ -215,7 +215,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
         rowKeys.add(rKey);
         colKeys.add(cKey);
 
-        const convertedCents = Math.round((line.amountCents || 0) * txRate);
+        const convertedCents = Math.round((lineAmount(line, t) || 0) * txRate);
 
         if (!cells[rKey]) cells[rKey] = {};
         if (!cells[rKey][cKey]) cells[rKey][cKey] = 0;
@@ -375,7 +375,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                       `"${t.description.replace(/"/g, '""')}"`,
                       `"${(t.payee || '').replace(/"/g, '""')}"`,
                       `"${resolveAccountName(accounts, l.accountId, l.accountName).replace(/"/g, '""')}"`,
-                      formatDecimal(Math.round((l.amountCents || 0) * (t.exchangeRate || 1)))
+                      formatDecimal(Math.round((lineAmount(l, t) || 0) * (t.exchangeRate || 1)))
                     ]);
                   });
                   const csvString = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');

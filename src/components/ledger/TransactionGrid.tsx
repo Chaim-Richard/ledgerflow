@@ -21,7 +21,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName } from '../../lib/utils';
-import { isCashAccount } from '../../lib/txFilters';
+import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import TransactionRow from '../transactions/TransactionRow';

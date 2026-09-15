@@ -9,6 +9,7 @@ import {
   HelpCircle, DollarSign, Wallet, ArrowRight, TrendingUp, AlertCircle
 } from 'lucide-react';
 import { formatCurrency, getLocalDateISO, cn } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export function TaxReserveWidget() {
   const transactions = useLedgerStore(s => s.transactions);
@@ -55,12 +56,11 @@ export function TaxReserveWidget() {
     });
     // Fallback if no specific bank accounts yet, use cumulative cash flows from transactions
     if (cash === 0) {
-      transactions.forEach(t => {
-        if (t.status === 'void') return;
+      transactions.filter(isPostable).forEach(t => {
         t.lines?.forEach(l => {
           const acc = accounts.find(a => a.id === l.accountId);
           if (acc && resolveAccountRole(acc) === 'cash') {
-            cash += l.amountCents;
+            cash += lineAmount(l, t);
           }
         });
       });
@@ -70,7 +70,7 @@ export function TaxReserveWidget() {
 
   // 2. Math: Tax Reserve
   const taxReserveResult = useMemo(() => {
-    return calculateSafeToSpend(transactions, accounts);
+    return calculateSafeToSpend(transactions.filter(isPostable), accounts);
   }, [transactions, accounts]);
 
   // 3. Math: Upcoming Bills before next payday

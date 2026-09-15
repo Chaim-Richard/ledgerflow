@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { parseLocalDate, cn, formatCurrency, safeConfirm } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 
 interface TaxManagerProps {
@@ -47,19 +48,19 @@ export default function TaxManager({
   const [includeSE, setIncludeSE] = useState(false);
   
   const taxMetrics = useMemo(() => {
-    const yearTransactions = (transactions || []).filter(tx => parseLocalDate(tx.date).getFullYear() === selectedYear);
+    const yearTransactions = (transactions || []).filter(tx => isPostable(tx) && parseLocalDate(tx.date).getFullYear() === selectedYear);
     
     const grossIncome = yearTransactions
       .reduce((acc, tx) => {
         const incomeLines = tx.lines?.filter(l => accounts.find(a => a.id === l.accountId)?.type === 'income') || [];
         // Typically income lines are negative in a ledger (Credit)
-        return acc + incomeLines.reduce((sum, l) => sum + Math.abs(l.amountCents), 0);
+        return acc + incomeLines.reduce((sum, l) => sum + Math.abs(lineAmount(l, tx)), 0);
       }, 0);
 
     const expenses = yearTransactions
       .reduce((acc, tx) => {
         const expenseLines = tx.lines?.filter(l => accounts.find(a => a.id === l.accountId)?.type === 'expense') || [];
-        return acc + expenseLines.reduce((sum, l) => sum + Math.abs(l.amountCents), 0);
+        return acc + expenseLines.reduce((sum, l) => sum + Math.abs(lineAmount(l, tx)), 0);
       }, 0);
 
     const netProfit = grossIncome - expenses;
@@ -86,9 +87,9 @@ export default function TaxManager({
     const estimatedTax = netProfit > 0 ? incomeTax + seTax : 0; 
 
     const salesTaxCollected = yearTransactions
-      .flatMap(tx => tx.lines)
-      .filter(line => accounts.find(a => a.id === line.accountId)?.name.toLowerCase().includes('sales tax'))
-      .reduce((acc, line) => acc + line.amountCents, 0);
+      .flatMap(tx => (tx.lines || []).map(l => ({ line: l, tx })))
+      .filter(({ line }) => accounts.find(a => a.id === line.accountId)?.name.toLowerCase().includes('sales tax'))
+      .reduce((acc, { line, tx }) => acc + lineAmount(line, tx), 0);
 
     return {
       grossIncome,

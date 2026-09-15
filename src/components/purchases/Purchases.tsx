@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { motion } from 'motion/react';
 import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { format, differenceInDays, addDays, startOfDay } from 'date-fns';
 
 import BillModal from './BillModal';
@@ -50,14 +51,12 @@ export default function Purchases() {
 
     // Transaction-based AP matching
     if (transactions) {
-      transactions.forEach(tx => {
-        if (tx.status === 'void') return;
-
+      transactions.filter(isPostable).forEach(tx => {
         let apAmount = 0;
-        tx.lines.forEach(l => {
+        tx.lines?.forEach(l => {
           const acc = accounts?.find(a => a.id === l.accountId);
           if (acc && (resolveAccountRole(acc) === 'ap' || (acc.type === 'liability' && acc.name.toLowerCase().includes('payable')))) {
-            apAmount += Math.abs(l.amountCents);
+            apAmount += Math.abs(lineAmount(l, tx));
           }
         });
 

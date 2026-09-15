@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { toast } from 'sonner';
 
 interface HealthCheckModalProps {
@@ -34,8 +35,8 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
     const timer = setTimeout(() => {
       // 1. Trial Balance Check
       let tbNet = 0;
-      transactions.forEach(t => {
-        t.lines.forEach(l => { tbNet += l.amountCents; });
+      transactions.filter(isPostable).forEach(t => {
+        t.lines?.forEach(l => { tbNet += lineAmount(l, t); });
       });
 
       // 2. Uncategorized Check
@@ -106,8 +107,8 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
     setReport(null);
     setTimeout(() => {
       let tbNet = 0;
-      transactions.forEach(t => {
-        t.lines.forEach(l => { tbNet += l.amountCents; });
+      transactions.filter(isPostable).forEach(t => {
+        t.lines?.forEach(l => { tbNet += lineAmount(l, t); });
       });
 
       const uncategorized = transactions.filter(t => 

@@ -1,4 +1,5 @@
 import { resolveAccountRole } from '../lib/accountUtils';
+import { isPostable, lineAmount } from '../lib/txFilters';
 import { validateReceiptPayload, mapReceiptToCoordinates } from '../lib/receiptIngestion';
 import { matchDeepLabel, decomposeHierarchicalLabel, setLineDimension, normalizeLabel } from '../lib/dimensionUtils';
 import { 
@@ -1773,13 +1774,13 @@ export function useTransactionActions() {
         const blSig = minHash.createSignature(`${bl.description} ${bl.amountCents}`);
         const blDescClean = (bl.description || '').toLowerCase().replace(/[^a-z0-9 \u0590-\u05FF]/g, '').trim();
         
-        transactions.forEach((tx, idx) => {
+        transactions.filter(isPostable).forEach((tx, idx) => {
           // Check sign direction:
           const cashLines = tx.lines?.filter(l => {
             const acc = accounts.find(a => a.id === l.accountId);
             return acc && resolveAccountRole(acc) === 'cash';
           }) || [];
-          const cashDelta = cashLines.reduce((s, l) => s + l.amountCents, 0);
+          const cashDelta = cashLines.reduce((s, l) => s + lineAmount(l, tx), 0);
 
           // If transaction has explicit cash lines, cash movement direction MUST match bank line sign!
           if (cashDelta !== 0 && Math.sign(cashDelta) !== Math.sign(bl.amountCents)) {
@@ -1979,7 +1980,7 @@ export function useTransactionActions() {
       if (!user || !currentWorkspaceId) return;
       const loader = toast.loading('Calculating transaction clusters...');
       try {
-        const txs = useLedgerStore.getState().transactions;
+        const txs = (useLedgerStore.getState().transactions || []).filter(isPostable);
         const uncategorized = txs.filter(t => t.lines?.[0]?.accountId === 'uncategorized');
         
         if (uncategorized.length < 5) {

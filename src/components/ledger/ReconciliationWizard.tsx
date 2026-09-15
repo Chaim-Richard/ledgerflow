@@ -1,4 +1,4 @@
-import { isTransactionInDateRange } from '../../lib/txFilters';
+import { isTransactionInDateRange, isPostable, lineAmount } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React,
@@ -73,18 +73,20 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
   const filteredTransactions = useMemo(() => {
     if (!selectedAccount || !account) return [];
     return (transactions || []).filter(t => 
-      !t.deletedAt &&
+      isPostable(t) &&
       t.status !== 'reconciled' &&
-      t.status !== 'void' &&
       !t.clearedAt &&
       isTransactionInDateRange(t, undefined, statementDate) &&
       t.lines?.some(l => l.accountId === account.id || l.accountName === account.name) && 
       (t.description.toLowerCase().includes(searchTerm.toLowerCase()) || t.totalAmountCents.toString().includes(searchTerm))
-    ).map(t => ({
-      ...t,
-      // For reconciliation, we care about the amount specifically for the selected account
-      relevantAmountCents: t.lines?.find(l => l.accountId === account.id || l.accountName === account.name)?.amountCents || 0
-    }));
+    ).map(t => {
+      const matchLine = t.lines?.find(l => l.accountId === account.id || l.accountName === account.name);
+      return {
+        ...t,
+        // For reconciliation, we care about the amount specifically for the selected account
+        relevantAmountCents: matchLine ? lineAmount(matchLine, t) : 0
+      };
+    });
   }, [selectedAccount, account, statementDate, searchTerm, transactions]);
 
   const stats = useMemo(() => {

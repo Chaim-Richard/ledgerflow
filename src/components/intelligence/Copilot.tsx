@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Sparkles, Send, User, ChevronRight, ShieldCheck, Database } from "lucide-react";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useLedgerStore } from "../../stores/useLedgerStore";
-import { isPostable, isCashAccount } from "../../lib/txFilters";
+import { isPostable, isCashAccount, lineAmount } from "../../lib/txFilters";
 import { cn } from "../../lib/utils";
 import Markdown from "react-markdown";
 import { motion, AnimatePresence } from 'motion/react';

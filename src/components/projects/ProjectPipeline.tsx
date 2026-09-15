@@ -1,4 +1,5 @@
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import React,
  { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -86,17 +87,18 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
     const stats: Record<string, { actualCents: number, budgetCents: number, incomeCents: number, expenseCents: number }> = {};
     
     projects.forEach(p => {
-      const projectTransactions = (transactions || []).filter(t => t.lines?.some(l => l.project === p.id));
+      const projectTransactions = (transactions || []).filter(t => isPostable(t) && t.lines?.some(l => l.project === p.id));
       let income = 0;
       let expense = 0;
 
       projectTransactions.forEach(t => {
         t.lines?.filter(l => l.project === p.id).forEach(l => {
           const accName = (l.accountName || '').toLowerCase();
+          const amt = Math.abs(lineAmount(l, t));
           if (accName.includes('income') || accName.includes('revenue')) {
-            income += Math.abs(l.amountCents);
+            income += amt;
           } else if (accName.includes('expense') || accName.includes('cost')) {
-            expense += Math.abs(l.amountCents);
+            expense += amt;
           }
         });
       });

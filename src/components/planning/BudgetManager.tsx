@@ -1,3 +1,4 @@
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
@@ -90,14 +91,13 @@ export default function BudgetManager() {
         (a.code || '').toLowerCase() === targetLower
       );
 
-      const actualCents = transactions.reduce((sum: number, t: any) => {
-        if (t.status === 'void' || t.status === 'deleted') return sum;
+      const actualCents = (transactions || []).filter(isPostable).reduce((sum: number, t: any) => {
         const lines = t.lines?.filter((l: any) => 
           l.accountId === budget.targetId || 
           (matchingAccount && l.accountId === matchingAccount.id) ||
           (l.accountName || '').toLowerCase() === targetLower
         ) || [];
-        return sum + lines.reduce((s: number, l: any) => s + Math.max(0, l.amountCents || 0), 0);
+        return sum + lines.reduce((s: number, l: any) => s + Math.max(0, lineAmount(l, t) || 0), 0);
       }, 0);
       
       const variance = budget.amountCents - actualCents;

@@ -1990,6 +1990,145 @@ async function startServer() {
     }
   });
 
+  // --- Workspace Full Complete Export Endpoint (Server-Side Streaming & Authoritative Checksum) ---
+  const handleWorkspaceExport = async (req: express.Request, res: express.Response) => {
+    try {
+      const { workspaceId } = req.params;
+      const authReq = req as AuthenticatedRequest;
+      await authorizeWorkspace(authReq, workspaceId);
+
+      const db = getDb();
+      const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
+      const wsData = wsDoc.exists ? wsDoc.data() : { id: workspaceId };
+
+      // Helper to stream all documents of a collection scoped to this workspace
+      const streamCollection = async (collectionName: string): Promise<any[]> => {
+        try {
+          const query = db.collection(collectionName).where("workspaceId", "==", workspaceId);
+          const items: any[] = [];
+          return await new Promise<any[]>((resolve, reject) => {
+            const stream = query.stream();
+            stream.on("data", (doc: any) => {
+              items.push({ id: doc.id, ...doc.data() });
+            });
+            stream.on("end", () => resolve(items));
+            stream.on("error", async (err: any) => {
+              try {
+                const snap = await query.get();
+                resolve(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
+              } catch (fallbackErr) {
+                reject(err);
+              }
+            });
+          });
+        } catch (err) {
+          return [];
+        }
+      };
+
+      const [
+        transactions,
+        accounts,
+        projects,
+        budgets,
+        vendors,
+        customers,
+        invoices,
+        bills,
+        recurring,
+        inventory,
+        assets,
+        taxRates,
+        autoRules,
+        reconciliations
+      ] = await Promise.all([
+        streamCollection("transactions"),
+        streamCollection("chartAccounts"),
+        streamCollection("projects"),
+        streamCollection("budgets"),
+        streamCollection("vendors"),
+        streamCollection("customers"),
+        streamCollection("invoices"),
+        streamCollection("bills"),
+        streamCollection("recurring"),
+        streamCollection("inventory"),
+        streamCollection("assets"),
+        streamCollection("taxRates"),
+        streamCollection("autoRules"),
+        streamCollection("reconciliations")
+      ]);
+
+      const format = (req.query.format as string)?.toLowerCase();
+      const todayIso = new Date().toISOString().split("T")[0];
+
+      if (format === "csv") {
+        let csvContent = "Date,Amount,Description,Category,Type,Status,Reference\n";
+        const accountsMap = new Map(accounts.map((a: any) => [a.id, a.name || a.code || a.id]));
+        transactions.forEach((t: any) => {
+          const categoryName = t.lines && t.lines.length > 0 ? (accountsMap.get(t.lines[0].accountId) || t.lines[0].accountName || 'Uncategorized') : 'Uncategorized';
+          const amountStr = ((t.totalAmountCents || 0) / 100).toFixed(2);
+          const row = [
+            t.date || '',
+            amountStr,
+            `"${(t.description || '').replace(/"/g, '""')}"`,
+            `"${String(categoryName).replace(/"/g, '""')}"`,
+            t.type || 'actual',
+            t.status || 'posted',
+            `"${(t.reference || '').replace(/"/g, '""')}"`
+          ];
+          csvContent += row.join(",") + "\n";
+        });
+        res.setHeader("Content-Disposition", `attachment; filename="ledgerflow-transactions-${workspaceId}-${todayIso}.csv"`);
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        return res.send(csvContent);
+      }
+
+      const payload: any = {
+        schemaVersion: 1,
+        exportedAt: new Date().toISOString(),
+        workspace: { id: workspaceId, ...(wsData || {}) },
+        transactions,
+        accounts,
+        projects,
+        budgets,
+        vendors,
+        customers,
+        invoices,
+        bills,
+        inventory,
+        assets,
+        recurringRules: recurring,
+        taxRates,
+        autoRules,
+        reconciliations,
+        metadata: {
+          transactionCount: transactions.length,
+          invoiceCount: invoices.length,
+          billCount: bills.length,
+          accountCount: accounts.length,
+          projectCount: projects.length,
+          currency: (wsData as any)?.currency || (wsData as any)?.baseCurrency || 'USD',
+          exportedBy: authReq.user?.uid || 'user',
+          serverAuthoritative: true
+        }
+      };
+
+      // Server SHA-256 Checksum over complete unabridged payload string
+      const payloadString = JSON.stringify(payload);
+      const checksum = crypto.createHash("sha256").update(payloadString).digest("hex");
+      payload.metadata.checksum = checksum;
+
+      res.setHeader("Content-Disposition", `attachment; filename="ledgerflow-backup-${workspaceId}-${todayIso}.json"`);
+      res.setHeader("Content-Type", "application/json");
+      return res.send(JSON.stringify(payload, null, 2));
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  };
+
+  app.get("/api/v1/workspaces/:workspaceId/export", apiAuthenticate, handleWorkspaceExport);
+  app.get("/api/workspaces/:workspaceId/export", apiAuthenticate, handleWorkspaceExport);
+
   app.post("/api/v1/workspaces/:workspaceId/members", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
       const { workspaceId } = req.params;

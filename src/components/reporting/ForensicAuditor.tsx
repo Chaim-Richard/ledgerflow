@@ -5,6 +5,7 @@ import { Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { AnomalyDetector } from '../../lib/algorithms';
 import { formatDecimal, cn } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { toast } from 'sonner';
 
 
@@ -14,7 +15,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
   const [isRunning, setIsRunning] = useState(false);
 
   const forensicData = useMemo(() => {
-    const amounts = transactions.map(t => Math.abs(t.totalAmountCents) / 100);
+    const amounts = transactions.filter(isPostable).map(t => Math.abs(t.totalAmountCents) / 100);
     return AnomalyDetector.detectBenfordAnomaly(amounts);
   }, [transactions]);
 
@@ -33,9 +34,9 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
     const sameSigMap = new Map<string, number>();
     
     for (const t of transactions) {
-      if (t.deletedAt) continue;
+      if (!isPostable(t)) continue;
       
-      const lineSum = (t.lines || []).reduce((sum, l) => sum + (l.amountCents || 0), 0);
+      const lineSum = (t.lines || []).reduce((sum, l) => sum + lineAmount(l, t), 0);
       if (lineSum !== 0) unbalancedCount++;
       if (!t.projectId && !t.project) missingProjectCount++;
       
@@ -83,9 +84,10 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
         logContent += "\n";
         
         logContent += "3. CHRONOLOGICAL DATA DRAIN LINE ITEMS:\n";
-        transactions.slice(-50).forEach((t, i) => {
+        const postableTxs = transactions.filter(isPostable);
+        postableTxs.slice(-50).forEach((t, i) => {
            const amount = formatDecimal(t.totalAmountCents);
-           logContent += ` - [T-${transactions.length - i}] Date: ${t.date} | Payee: ${t.payee || t.description || 'N/A'} | Amount: $${amount}\n`;
+           logContent += ` - [T-${postableTxs.length - i}] Date: ${t.date} | Payee: ${t.payee || t.description || 'N/A'} | Amount: $${amount}\n`;
         });
         
         logContent += "\n" + separator;

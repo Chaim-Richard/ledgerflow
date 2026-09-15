@@ -31,7 +31,7 @@ import {
   findGlobalOptimalMatch 
 } from '../../lib/algorithms';
 import { toast } from 'sonner';
-import { isPostable } from '../../lib/txFilters';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 
 
@@ -107,7 +107,7 @@ export default function Reconciliation() {
           const acc = safeAccounts.find(a => a.id === l.accountId);
           return acc && resolveAccountRole(acc) === 'cash';
         }) || [];
-        const cashDelta = cashLines.reduce((s: number, l: any) => s + l.amountCents, 0);
+        const cashDelta = cashLines.reduce((s: number, l: any) => s + lineAmount(l, ltx), 0);
 
         // Disallow matching positive bank deposits with negative cash outflows and vice versa
         if (cashDelta !== 0 && Math.sign(cashDelta) !== Math.sign(btx.amountCents)) {

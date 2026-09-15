@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { CheckCircle2, Circle, AlertTriangle, ArrowRight, BookOpen, Lock, ShieldCheck, Download } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { Transaction } from '../../types';
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
@@ -33,7 +34,7 @@ export default function MonthEndCloseView() {
   const [closedPeriods, setClosedPeriods] = useState<string[]>([]);
 
   const stats = useMemo(() => {
-    const periodTx = transactions.filter(t => !t.deletedAt && t.status !== 'void' && (t.date || '').startsWith(selectedMonth));
+    const periodTx = transactions.filter(t => isPostable(t) && (t.date || '').startsWith(selectedMonth));
     const periodBankLines = bankLines.filter(l => (l.date || '').startsWith(selectedMonth));
 
     const uncategorizedCount = periodTx.filter(t => 
@@ -46,10 +47,10 @@ export default function MonthEndCloseView() {
 
     // Trial balance net calculation across cumulative ledger up to month end
     let tbNet = 0;
-    const cumulativeTx = transactions.filter(t => !t.deletedAt && t.status !== 'void' && (t.date || '') <= `${selectedMonth}-31`);
+    const cumulativeTx = transactions.filter(t => isPostable(t) && (t.date || '') <= `${selectedMonth}-31`);
     cumulativeTx.forEach(t => {
       t.lines?.forEach(l => {
-        tbNet += l.amountCents || 0;
+        tbNet += lineAmount(l, t);
       });
     });
     const tbIsZero = Math.abs(tbNet) === 0;
@@ -157,10 +158,11 @@ export default function MonthEndCloseView() {
             debitCents: 0,
             creditCents: 0
           };
-          if (l.amountCents > 0) {
-            acc.debitCents += l.amountCents;
+          const amt = lineAmount(l, t);
+          if (amt > 0) {
+            acc.debitCents += amt;
           } else {
-            acc.creditCents += Math.abs(l.amountCents);
+            acc.creditCents += Math.abs(amt);
           }
           accountMap[l.accountId] = acc;
         });
@@ -199,7 +201,7 @@ export default function MonthEndCloseView() {
             account: l.accountName || l.accountId || 'General',
             type: t.type || 'actual',
             status: t.status,
-            amount: ((l.amountCents || t.totalAmountCents || 0) / 100).toFixed(2)
+            amount: (lineAmount(l, t) / 100).toFixed(2)
           });
         });
       });

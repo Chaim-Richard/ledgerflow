@@ -1,10 +1,11 @@
 import { resolveAccountRole } from '../../lib/accountUtils';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { parseLocalDate, formatDecimal, formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
-import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal } from 'lucide-react';
+import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useFinancialReporting, ServerCashFlowData } from '../../hooks/useFinancialReporting';
 import MonthNavigator from '../ui/MonthNavigator';
 
 export default function CashFlowView() {
@@ -20,6 +21,35 @@ export default function CashFlowView() {
     end: getLocalDateISO()
   });
   const [isComparative, setIsComparative] = useState(false);
+
+  const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
+  const { fetchCashFlow, loadingStates } = useFinancialReporting();
+  const [serverData, setServerData] = useState<ServerCashFlowData | null>(null);
+  const [serverPrevData, setServerPrevData] = useState<ServerCashFlowData | null>(null);
+  const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+
+  const loadServerReport = useCallback(async () => {
+    try {
+      const res = await fetchCashFlow(dateRange.start, dateRange.end);
+      if (res) {
+        setServerData(res);
+        setIsServerAuthoritative(true);
+      }
+      if (isComparative) {
+        const prev = getPrevPeriod(dateRange.start, dateRange.end);
+        const prevRes = await fetchCashFlow(prev.start, prev.end);
+        if (prevRes) {
+          setServerPrevData(prevRes);
+        }
+      }
+    } catch {
+      setIsServerAuthoritative(false);
+    }
+  }, [fetchCashFlow, dateRange.start, dateRange.end, isComparative]);
+
+  useEffect(() => {
+    loadServerReport();
+  }, [loadServerReport]);
 
   const workspaces = useAuthStore(s => s.workspaces);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -82,7 +112,7 @@ export default function CashFlowView() {
     }
   };
 
-  const { currentData, prevData } = useMemo(() => {
+  const localCalculation = useMemo(() => {
     const calcPeriod = (start: string, end: string) => {
       const data = {
         operating: { total: 0, inflow: 0, outflow: 0 },
@@ -161,6 +191,30 @@ export default function CashFlowView() {
     return { currentData, prevData };
   }, [transactions, accounts, dateRange, isComparative]);
 
+  const currentData = useMemo(() => {
+    if (isServerAuthoritative && serverData) {
+      return {
+        operating: { total: serverData.operating.total, inflow: localCalculation.currentData.operating.inflow, outflow: localCalculation.currentData.operating.outflow },
+        investing: { total: serverData.investing.total, inflow: localCalculation.currentData.investing.inflow, outflow: localCalculation.currentData.investing.outflow },
+        financing: { total: serverData.financing.total, inflow: localCalculation.currentData.financing.inflow, outflow: localCalculation.currentData.financing.outflow },
+        netChange: serverData.netChange,
+      };
+    }
+    return localCalculation.currentData;
+  }, [isServerAuthoritative, serverData, localCalculation]);
+
+  const prevData = useMemo(() => {
+    if (isServerAuthoritative && serverPrevData) {
+      return {
+        operating: { total: serverPrevData.operating.total, inflow: localCalculation.prevData.operating.inflow, outflow: localCalculation.prevData.operating.outflow },
+        investing: { total: serverPrevData.investing.total, inflow: localCalculation.prevData.investing.inflow, outflow: localCalculation.prevData.investing.outflow },
+        financing: { total: serverPrevData.financing.total, inflow: localCalculation.prevData.financing.inflow, outflow: localCalculation.prevData.financing.outflow },
+        netChange: serverPrevData.netChange,
+      };
+    }
+    return localCalculation.prevData;
+  }, [isServerAuthoritative, serverPrevData, localCalculation]);
+
   const exportCashFlow = async () => {
     const isComp = isComparative;
     const ExcelJS = await import('exceljs');
@@ -213,6 +267,37 @@ export default function CashFlowView() {
 
   return (
     <div className="space-y-6">
+      {/* Authoritative / Truncation Status Banner */}
+      {!isServerAuthoritative && isDataTruncated ? (
+        <div id="cf-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Showing 2,000 of N transactions — totals are incomplete without server sync</span>
+          </div>
+          <button
+            onClick={() => loadServerReport()}
+            className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 rounded-lg text-xs transition-colors shrink-0 cursor-pointer"
+          >
+            {loadingStates.cf ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+            <span>{loadingStates.cf ? "Loading Server..." : "Load Full Server Report"}</span>
+          </button>
+        </div>
+      ) : isServerAuthoritative ? (
+        <div id="cf-statement-authoritative-badge" className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Server-Authoritative Statement (Full Streaming History Verified)</span>
+          </div>
+          <button
+            onClick={() => loadServerReport()}
+            className="flex items-center gap-1 text-[11px] hover:underline cursor-pointer"
+          >
+            {loadingStates.cf ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}
+            <span>Refresh</span>
+          </button>
+        </div>
+      ) : null}
+
       {/* Date Range & Controls */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
         <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />

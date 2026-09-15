@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { TrendingUp, Activity, BarChart, Zap, Calendar, ArrowUpRight, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
 import { StrategicEngine } from '../../services/strategicEngine';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 import { useLedgerStore } from '../../stores/useLedgerStore';
 
@@ -13,19 +14,19 @@ export default function CashFlowPredictor() {
   const [activeTab, setActiveTab] = useState<'forecast' | 'trends'>('forecast');
   
   const forecastData = useMemo(() => {
-    return StrategicEngine.getForecast(transactions, accounts);
+    return StrategicEngine.getForecast(transactions.filter(isPostable), accounts);
   }, [transactions, accounts]);
 
   const historicalData = useMemo(() => {
     const monthlyMap: Record<string, number> = {};
-    transactions.forEach(t => {
+    transactions.filter(isPostable).forEach(t => {
       if (!t.date) return;
       const m = t.date.substring(0, 7);
       if (!monthlyMap[m]) monthlyMap[m] = 0;
-      t.lines.forEach(l => {
+      t.lines?.forEach(l => {
         const acc = accounts.find(a => a.id === l.accountId);
         if (acc && resolveAccountRole(acc) === 'cash') {
-          monthlyMap[m] += l.amountCents / 100;
+          monthlyMap[m] += lineAmount(l, t) / 100;
         }
       });
     });

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Transaction, FilterCriteria, ChartAccount } from '../types';
 import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
+import { isPostable } from '../lib/txFilters';
 import { useScenarioStore } from '../lib/scenarioStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useSavedViewsStore } from '../stores/useSavedViewsStore';
@@ -220,7 +221,7 @@ export function useLedgerComputation(
   const chronologicalRunningBalances = useMemo(() => {
     // Chronologically compute historical running balance for every transaction to ensure mathematical stability.
     // Done once per transaction load, massively improving rendering & filtering performance for 50,000+ inputs.
-    const chronologicalTxs = [...transactions].sort((a, b) => {
+    const chronologicalTxs = [...transactions].filter(isPostable).sort((a, b) => {
       if (a.date < b.date) return -1;
       if (a.date > b.date) return 1;
       const aTime = (a as any).createdAt || a.id;
@@ -271,7 +272,7 @@ export function useLedgerComputation(
       discrepancies, 
       conflicts,
       totalValues: {
-        sum: smartFilteredTransactions.reduce((acc, t) => acc + (t.totalAmountCents || 0), 0)
+        sum: smartFilteredTransactions.filter(isPostable).reduce((acc, t) => acc + (t.totalAmountCents || 0), 0)
       }
     };
   }, [smartFilteredTransactions, accounts]);

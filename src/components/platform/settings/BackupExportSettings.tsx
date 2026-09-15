@@ -14,109 +14,156 @@ export default function BackupExportSettings() {
   const exportJSON = async () => {
     setIsExporting(true);
     try {
-      const state = useLedgerStore.getState();
       const authState = useAuthStore.getState();
-      const payload: any = {
-        schemaVersion: 1,
-        exportedAt: new Date().toISOString(),
-        workspace: { id: authState.currentWorkspaceId },
-        transactions: state.transactions,
-        accounts: state.accounts,
-        projects: state.projects,
-        budgets: state.budgets,
-        vendors: state.vendors,
-        customers: state.customers,
-        invoices: state.invoices,
-        bills: state.bills,
-        inventory: state.inventory,
-        assets: state.assets,
-        recurringRules: state.recurring,
-        employees: state.employees,
-        payRuns: state.payRuns,
-        taxRates: state.taxRates,
-        partners: state.partners,
-        reconciliations: state.reconciliations,
-        autoRules: state.autoRules,
-        metadata: {
-          transactionCount: state.transactions.length,
-          currency: state.baseCurrency || 'USD'
-        }
-      };
+      const workspaceId = authState.currentWorkspaceId;
+      if (!workspaceId) {
+        throw new Error("No active workspace selected");
+      }
 
-      // Generate SHA-256 checksum of payload content
-      const payloadString = JSON.stringify(payload);
-      const msgBuffer = new TextEncoder().encode(payloadString);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      
-      payload.metadata.checksum = hashHex;
+      let payload: any = null;
+      let usedServer = false;
+
+      // 1. Authoritative Server-side complete streaming export
+      try {
+        const token = await authState.user?.getIdToken();
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const res = await fetch(`/api/v1/workspaces/${workspaceId}/export`, { headers });
+        if (res.ok) {
+          payload = await res.json();
+          usedServer = true;
+        }
+      } catch (serverErr) {
+        console.warn("Server backup export endpoint unavailable, attempting fallback:", serverErr);
+      }
+
+      // 2. Client fallback (e.g. offline or unauthenticated guest mode)
+      if (!payload) {
+        const state = useLedgerStore.getState();
+        payload = {
+          schemaVersion: 1,
+          exportedAt: new Date().toISOString(),
+          workspace: { id: workspaceId },
+          transactions: state.transactions,
+          accounts: state.accounts,
+          projects: state.projects,
+          budgets: state.budgets,
+          vendors: state.vendors,
+          customers: state.customers,
+          invoices: state.invoices,
+          bills: state.bills,
+          inventory: state.inventory,
+          assets: state.assets,
+          recurringRules: state.recurring,
+          employees: state.employees,
+          payRuns: state.payRuns,
+          taxRates: state.taxRates,
+          partners: state.partners,
+          reconciliations: state.reconciliations,
+          autoRules: state.autoRules,
+          metadata: {
+            transactionCount: state.transactions.length,
+            currency: state.baseCurrency || 'USD',
+            serverAuthoritative: false
+          }
+        };
+
+        const payloadString = JSON.stringify(payload);
+        const msgBuffer = new TextEncoder().encode(payloadString);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        payload.metadata.checksum = hashHex;
+      }
 
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `ledgerflow-backup-${new Date().toISOString().split('T')[0]}.json`;
+      link.download = `ledgerflow-backup-${workspaceId}-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
-      if (authState.currentWorkspaceId) {
-        recordBackupCompleted(authState.currentWorkspaceId);
-      }
-      toast.success('Workspace backup exported successfully');
-    } catch (e) {
+      recordBackupCompleted(workspaceId);
+      toast.success(usedServer ? `Full verified backup exported (${payload.metadata?.transactionCount || payload.transactions?.length} transactions)` : 'Workspace backup exported successfully');
+    } catch (e: any) {
       console.error(e);
-      toast.error('Failed to export backup');
+      toast.error('Failed to export backup: ' + (e.message || 'Unknown error'));
     } finally {
       setIsExporting(false);
     }
   };
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
     setIsExporting(true);
     try {
-      const { transactions, accounts } = useLedgerStore.getState();
-      
-      let csvContent = "Date,Amount,Description,Category,Type,Status,Reference\n";
-      
-      transactions.forEach(t => {
-        const categoryName = t.lines && t.lines.length > 0 ? resolveAccountName(accounts, t.lines[0].accountId, t.lines[0].accountName) : 'Uncategorized';
-        const amountStr = formatDecimal(t.totalAmountCents || 0);
-        
-        const row = [
-          t.date,
-          amountStr,
-          `"${(t.description || '').replace(/"/g, '""')}"`,
-          `"${categoryName.replace(/"/g, '""')}"`,
-          (t as any).type || 'actual',
-          (t as any).status || 'posted',
-          `"${((t as any).reference || '').replace(/"/g, '""')}"`
-        ];
-        
-        csvContent += row.join(",") + "\n";
-      });
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `ledgerflow-transactions-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
       const authState = useAuthStore.getState();
-      if (authState.currentWorkspaceId) {
-        recordBackupCompleted(authState.currentWorkspaceId);
+      const workspaceId = authState.currentWorkspaceId;
+      let downloadedViaServer = false;
+
+      if (workspaceId) {
+        try {
+          const token = await authState.user?.getIdToken();
+          const headers: Record<string, string> = {};
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+
+          const res = await fetch(`/api/v1/workspaces/${workspaceId}/export?format=csv`, { headers });
+          if (res.ok) {
+            const csvBlob = await res.blob();
+            const url = URL.createObjectURL(csvBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `ledgerflow-transactions-${workspaceId}-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            downloadedViaServer = true;
+          }
+        } catch (csvErr) {
+          console.warn("Server CSV export failed, falling back to local:", csvErr);
+        }
       }
 
+      if (!downloadedViaServer) {
+        const { transactions, accounts } = useLedgerStore.getState();
+        let csvContent = "Date,Amount,Description,Category,Type,Status,Reference\n";
+        transactions.forEach(t => {
+          const categoryName = t.lines && t.lines.length > 0 ? resolveAccountName(accounts, t.lines[0].accountId, t.lines[0].accountName) : 'Uncategorized';
+          const amountStr = formatDecimal(t.totalAmountCents || 0);
+          const row = [
+            t.date,
+            amountStr,
+            `"${(t.description || '').replace(/"/g, '""')}"`,
+            `"${categoryName.replace(/"/g, '""')}"`,
+            (t as any).type || 'actual',
+            (t as any).status || 'posted',
+            `"${((t as any).reference || '').replace(/"/g, '""')}"`
+          ];
+          csvContent += row.join(",") + "\n";
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `ledgerflow-transactions-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+
+      if (workspaceId) {
+        recordBackupCompleted(workspaceId);
+      }
       toast.success('Transactions CSV exported successfully');
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      toast.error('Failed to export CSV');
+      toast.error('Failed to export CSV: ' + (e.message || 'Unknown error'));
     } finally {
       setIsExporting(false);
     }

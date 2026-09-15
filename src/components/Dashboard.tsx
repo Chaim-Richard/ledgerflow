@@ -22,6 +22,7 @@ import { TaxReserveWidget } from './finance/TaxReserveWidget';
 import OnboardingView from './onboarding/OnboardingView';
 import SavedViewsBar from './ui/SavedViewsBar';
 import { formatCurrency, resolveAccountName, cn } from '../lib/utils';
+import { isPostable, lineAmount } from '../lib/txFilters';
 
 import { useShallow } from 'zustand/react/shallow';
 
@@ -497,9 +498,14 @@ export default function Dashboard() {
                 </button>
               </div>
             ) : (
-              transactions.slice(0, 8).map(tx => {
-                const amountCents = tx.totalAmountCents || 0;
-                const isExpense = amountCents < 0 || tx.lines?.some(l => l.amountCents < 0);
+              transactions.filter(isPostable).slice(0, 8).map(tx => {
+                const amountCents = Math.abs(tx.totalAmountCents || 0);
+                const isExpense = tx.lines?.some(l => {
+                  const amt = lineAmount(l, tx);
+                  const acc = accounts.find(a => a.id === l.accountId);
+                  const role = resolveAccountRole(acc);
+                  return role === 'expense' || role === 'cogs' || amt > 0;
+                });
                 return (
                   <div key={tx.id} className="p-4 hover:bg-[var(--elevated)] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="space-y-1.5">
