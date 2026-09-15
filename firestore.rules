@@ -30,12 +30,31 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly(allowedList);
     }
 
-    // Workspace Access Helper - ensures users can only read/write data in workspaces they own or admin
+    // Workspace Access Helper - ensures users can only read/write data in workspaces they own, admin, or are members of
     function isWorkspaceMember(workspaceId) {
       return isSignedIn() && (isPlatformAdmin() || 
         get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.uid == request.auth.uid ||
-        (get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.admins != null && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.admins[request.auth.uid] == true)
+        (get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.admins != null && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.admins[request.auth.uid] == true) ||
+        (get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.roles != null && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.roles[request.auth.uid] != null)
       );
+    }
+
+    // Workspace Role Resolution Helpers
+    function workspaceRole(wsId) {
+      let wsData = get(/databases/$(database)/documents/workspaces/$(wsId)).data;
+      return wsData.uid == request.auth.uid ? 'owner' : (
+        wsData.roles != null && wsData.roles[request.auth.uid] != null
+          ? wsData.roles[request.auth.uid]
+          : (wsData.admins != null && wsData.admins[request.auth.uid] == true ? 'owner' : 'viewer')
+      );
+    }
+
+    function canWrite(wsId) {
+      return isSignedIn() && (isPlatformAdmin() || workspaceRole(wsId) in ['owner', 'accountant', 'bookkeeper']);
+    }
+
+    function canAdmin(wsId) {
+      return isSignedIn() && (isPlatformAdmin() || workspaceRole(wsId) in ['owner', 'accountant']);
     }
 
     // Immutability Guard - ensures immutable variables cannot be altered
@@ -67,8 +86,8 @@ service cloud.firestore {
 
     // Workspaces collection rules
     match /workspaces/{workspaceId} {
-      allow get: if isSignedIn() && (isPlatformAdmin() || resource == null || resource.data.uid == request.auth.uid || (resource.data.admins != null && resource.data.admins[request.auth.uid] == true));
-      allow list: if isSignedIn() && (isPlatformAdmin() || resource.data.uid == request.auth.uid || (resource.data.admins != null && resource.data.admins[request.auth.uid] == true));
+      allow get: if isSignedIn() && (isPlatformAdmin() || resource == null || resource.data.uid == request.auth.uid || (resource.data.admins != null && resource.data.admins[request.auth.uid] == true) || isWorkspaceMember(workspaceId));
+      allow list: if isSignedIn() && (isPlatformAdmin() || resource.data.uid == request.auth.uid || (resource.data.admins != null && resource.data.admins[request.auth.uid] == true) || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isValidId(workspaceId) &&
         request.resource.data.name.size() < 128 &&
         (!("description" in request.resource.data) || request.resource.data.description.size() < 1000) &&
@@ -76,16 +95,20 @@ service cloud.firestore {
         (!("computeCreditBalance" in request.resource.data) || request.resource.data.computeCreditBalance <= 100) &&
         (!("bypassBilling" in request.resource.data) || request.resource.data.bypassBilling == false) &&
         (!("maxSeats" in request.resource.data) || request.resource.data.maxSeats <= 5) &&
-        affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore", "defaultAccountMappings", "dimensions", "dimensionNodes", "allowedWorldPaths", "bypassBilling", "members"]);
-      allow update: if isSignedIn() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid && isUnchanged("uid") &&
-        request.resource.data.name.size() < 128 &&
-        (!("description" in request.resource.data) || request.resource.data.description.size() < 1000) &&
-        isUnchanged("lockDate") &&
-        isUnchanged("plan") && isUnchanged("computeCreditBalance") && isUnchanged("apiQuotaMonthlyLimitCents") && isUnchanged("maxSeats") && isUnchanged("concurrentUserLimit") &&
-        isUnchanged("apiQuotaTotalCentsUsed") && isUnchanged("stripeCustomerId") && isUnchanged("seatCount") &&
-        isUnchanged("billingCycle") && isUnchanged("status") && isUnchanged("lockedUntilDate") &&
-        isUnchanged("bypassBilling") && isUnchanged("stripeSubscriptionId") &&
-        affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore", "defaultAccountMappings", "dimensions", "dimensionNodes", "allowedWorldPaths", "bypassBilling", "members"]);
+        affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "roles", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore", "defaultAccountMappings", "dimensions", "dimensionNodes", "allowedWorldPaths", "bypassBilling", "members"]);
+      allow update: if isSignedIn() && (
+        (resource.data.uid == request.auth.uid || isPlatformAdmin()) ||
+        (canAdmin(workspaceId) &&
+          isUnchanged("uid") &&
+          isUnchanged("plan") && isUnchanged("computeCreditBalance") && isUnchanged("apiQuotaMonthlyLimitCents") && isUnchanged("maxSeats") && isUnchanged("concurrentUserLimit") &&
+          isUnchanged("apiQuotaTotalCentsUsed") && isUnchanged("stripeCustomerId") && isUnchanged("seatCount") &&
+          isUnchanged("billingCycle") && isUnchanged("status") && isUnchanged("lockedUntilDate") &&
+          isUnchanged("bypassBilling") && isUnchanged("stripeSubscriptionId") &&
+          isUnchanged("members") && isUnchanged("admins")
+        )
+      ) &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["lockDate"]) || canAdmin(workspaceId)) &&
+      affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "roles", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore", "defaultAccountMappings", "dimensions", "dimensionNodes", "allowedWorldPaths", "bypassBilling", "members"]);
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
@@ -108,27 +131,29 @@ service cloud.firestore {
     // Specific rules for all tenant-scoped ledger resources to eliminate the general pattern loophole
     match /transactions/{transactionId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create, update, delete: if false;
+      allow create: if canWrite(request.resource.data.workspaceId) && isValidId(transactionId) && isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date);
+      allow update: if canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") && isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date);
+      allow delete: if canWrite(resource.data.workspaceId);
     }
 
     match /chartAccounts/{accountId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(accountId) &&
+      allow create: if isSignedIn() && canAdmin(request.resource.data.workspaceId) && isValidId(accountId) &&
         affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "currency", "balanceCents", "openingBalanceCents", "asOfDate", "parentId", "projectAllocations", "isContra", "isArchived", "archived", "isActive", "createdAt", "updatedAt", "isSystem", "classification"]);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
+      allow update: if isSignedIn() && canAdmin(resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid") &&
         isUnchanged("balanceCents") && isUnchanged("openingBalanceCents") && isUnchanged("isSystem") &&
         (resource.data.isSystem != true || (isUnchanged("type") && isUnchanged("code") && isUnchanged("classification"))) &&
         affectedKeys(["id", "uid", "workspaceId", "name", "code", "type", "category", "subtype", "taxCategory", "description", "currency", "balanceCents", "openingBalanceCents", "asOfDate", "parentId", "projectAllocations", "isContra", "isArchived", "archived", "isActive", "createdAt", "updatedAt", "isSystem", "classification"]);
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId) && (resource.data.isSystem == null || resource.data.isSystem == false);
+      allow delete: if isSignedIn() && canAdmin(resource.data.workspaceId) && (resource.data.isSystem == null || resource.data.isSystem == false);
     }
 
     match /projects/{projectId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(projectId) &&
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(projectId) &&
         affectedKeys(["id", "uid", "workspaceId", "name", "description", "type", "status", "pipelineStage", "budgetCents", "costCodes", "laborBuckets", "materialsBuckets", "subcontractCosts", "dimensions", "tags", "splitRules", "metadata", "createdAt", "updatedAt"]);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") &&
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") &&
         affectedKeys(["id", "uid", "workspaceId", "name", "description", "type", "status", "pipelineStage", "budgetCents", "costCodes", "laborBuckets", "materialsBuckets", "subcontractCosts", "dimensions", "tags", "splitRules", "metadata", "createdAt", "updatedAt"]);
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /auditLogs/{logId} {
@@ -177,121 +202,121 @@ service cloud.firestore {
 
     match /reconciliations/{recId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(recId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(recId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /invoices/{invoiceId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(invoiceId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(invoiceId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /payments/{paymentId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(paymentId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(paymentId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /estimates/{estimateId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(estimateId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(estimateId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /bills/{billId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(billId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(billId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /inventory/{itemId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(itemId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(itemId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /recurring/{ruleId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(ruleId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(ruleId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /budgets/{budgetId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(budgetId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(budgetId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /autoRules/{ruleId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(ruleId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(ruleId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /fixedAssets/{assetId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(assetId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(assetId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /assets/{assetId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(assetId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(assetId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /taxRates/{rateId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(rateId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(rateId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /vendors/{vendorId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(vendorId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(vendorId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /customers/{customerId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(customerId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(customerId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /employees/{employeeId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(employeeId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(employeeId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /payRuns/{runId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(runId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(runId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /partners/{partnerId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(partnerId);
-      allow update: if isSignedIn() && request.resource.data.uid == request.auth.uid && isWorkspaceMember(request.resource.data.workspaceId) && isUnchanged("workspaceId") && isUnchanged("uid");
-      allow delete: if isSignedIn() && isWorkspaceMember(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(partnerId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /learnedDeltas/{deltaId} {

@@ -374,48 +374,73 @@ describe('Firestore Security Rules Unit Tests', () => {
     }, /permission-denied/i);
   });
 
-  test('Transactions collection denies all direct client-side writes (create, update, delete) even for workspace owners/members', async () => {
-    const aliceDb = getFirestoreContext({ uid: 'alice' });
+  test('Workspace role enforcement: viewer cannot write transaction, bookkeeper can write transaction but cannot change lockDate, accountant can change lockDate', async () => {
+    // 1. Setup workspace with roles
+    const ownerDb = getFirestoreContext({ uid: 'owner-uid' });
+    const viewerDb = getFirestoreContext({ uid: 'viewer-uid' });
+    const bookkeeperDb = getFirestoreContext({ uid: 'bookkeeper-uid' });
+    const accountantDb = getFirestoreContext({ uid: 'accountant-uid' });
 
-    // Alice creates her workspace
-    await aliceDb.doc('workspaces/ws-alice').set({
-      id: 'ws-alice',
-      uid: 'alice',
-      name: 'Alice Corp',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    const wsRef = ownerDb.doc('workspaces/ws-roles-test');
+    await assert.doesNotReject(async () => {
+      await wsRef.set({
+        id: 'ws-roles-test',
+        uid: 'owner-uid',
+        name: 'Role Test Workspace',
+        roles: {
+          'viewer-uid': 'viewer',
+          'bookkeeper-uid': 'bookkeeper',
+          'accountant-uid': 'accountant',
+          'owner-uid': 'owner'
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
     });
 
-    const txRef = aliceDb.doc('transactions/tx-alice-direct');
-
-    // 1. Direct client create MUST be denied
+    // 2. Viewer attempts transaction write -> MUST BE REJECTED
+    const viewerTxRef = viewerDb.doc('transactions/tx-viewer-1');
     await assert.rejects(async () => {
-      await txRef.set({
-        id: 'tx-alice-direct',
-        uid: 'alice',
-        workspaceId: 'ws-alice',
-        date: '2026-09-08',
-        description: 'Direct client write attempt',
-        totalAmountCents: 10000,
-        lines: [
-          { accountId: 'acc-1', amountCents: 10000 },
-          { accountId: 'acc-2', amountCents: -10000 }
-        ],
-        status: 'posted'
+      await viewerTxRef.set({
+        id: 'tx-viewer-1',
+        uid: 'viewer-uid',
+        workspaceId: 'ws-roles-test',
+        date: '2026-09-10',
+        description: 'Unauthorized viewer transaction',
+        totalAmountCents: 5000
       });
     }, /permission-denied/i);
 
-    // 2. Direct client update MUST be denied
+    // 3. Bookkeeper attempts transaction write -> PERMITTED
+    const bkTxRef = bookkeeperDb.doc('transactions/tx-bk-1');
+    await assert.doesNotReject(async () => {
+      await bkTxRef.set({
+        id: 'tx-bk-1',
+        uid: 'bookkeeper-uid',
+        workspaceId: 'ws-roles-test',
+        date: '2026-09-10',
+        description: 'Authorized bookkeeper transaction',
+        totalAmountCents: 5000
+      });
+    });
+
+    // 4. Bookkeeper attempts lockDate change -> MUST BE REJECTED
+    const bkWsRef = bookkeeperDb.doc('workspaces/ws-roles-test');
     await assert.rejects(async () => {
-      await txRef.update({
-        description: 'Direct client update attempt'
+      await bkWsRef.update({
+        lockDate: '2026-08-31',
+        updatedAt: new Date().toISOString()
       });
     }, /permission-denied/i);
 
-    // 3. Direct client delete MUST be denied
-    await assert.rejects(async () => {
-      await txRef.delete();
-    }, /permission-denied/i);
+    // 5. Accountant attempts lockDate change -> PERMITTED
+    const accWsRef = accountantDb.doc('workspaces/ws-roles-test');
+    await assert.doesNotReject(async () => {
+      await accWsRef.update({
+        lockDate: '2026-08-31',
+        updatedAt: new Date().toISOString()
+      });
+    });
   });
 
   test('Privilege Escalation Regression: signed-in user with specific email but no admin claim is denied admin reads', async () => {

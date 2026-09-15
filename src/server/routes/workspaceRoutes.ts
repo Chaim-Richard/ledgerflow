@@ -58,64 +58,78 @@ export function requireWorkspaceRole(allowedRoles: string[]) {
   };
 }
 
+export async function allocateNextNumber(db: any, workspaceId: string, type: 'invoice' | 'bill' | 'estimate'): Promise<string> {
+  const wsRef = db.collection('workspaces').doc(workspaceId);
+
+  return await db.runTransaction(async (tx: any) => {
+    const wsSnap = await tx.get(wsRef);
+    const wsData = wsSnap.exists ? (wsSnap.data() || {}) : {};
+
+    const ns = JSON.parse(JSON.stringify(wsData.numberingSeries || {}));
+    
+    let prefix = '';
+    let nextNum = 1;
+    let padding = 4;
+
+    if (ns[type] && typeof ns[type] === 'object') {
+      prefix = ns[type].prefix ?? (type === 'invoice' ? 'INV-2026-' : type === 'bill' ? 'BIL-2026-' : 'EST-2026-');
+      nextNum = ns[type].nextNumber ?? 1;
+      padding = ns[type].padding ?? 4;
+      ns[type] = {
+        prefix,
+        nextNumber: nextNum + 1,
+        padding
+      };
+    } else {
+      if (type === 'invoice') {
+        prefix = ns.invoicePrefix || 'INV-2026-';
+        nextNum = ns.invoiceNextNumber || 1;
+        ns.invoiceNextNumber = nextNum + 1;
+      } else if (type === 'bill') {
+        prefix = ns.billPrefix || 'BIL-2026-';
+        nextNum = ns.billNextNumber || 1;
+        ns.billNextNumber = nextNum + 1;
+      } else if (type === 'estimate') {
+        prefix = ns.estimatePrefix || 'EST-2026-';
+        nextNum = ns.estimateNextNumber || 1;
+        ns.estimateNextNumber = nextNum + 1;
+      }
+    }
+
+    if (wsSnap.exists) {
+      tx.update(wsRef, {
+        numberingSeries: ns,
+        updatedAt: new Date().toISOString()
+      });
+    } else {
+      tx.set(wsRef, {
+        id: workspaceId,
+        numberingSeries: ns,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    }
+
+    return `${prefix}${String(nextNum).padStart(padding, '0')}`;
+  });
+}
+
 /**
  * Task 5: Allocate next document number atomically within Firestore transaction.
  */
-workspaceRouter.post('/:workspaceId/next-number', async (req, res) => {
+workspaceRouter.all('/:workspaceId/next-number', async (req, res) => {
   const authReq = req as unknown as AuthenticatedRequest;
   const { workspaceId } = req.params;
-  const schema = z.object({
-    type: z.enum(['invoice', 'bill', 'estimate'])
-  });
+  const rawType = (req.query.type || req.body?.type) as string;
 
-  const parsed = schema.safeParse(req.body);
+  const schema = z.enum(['invoice', 'bill', 'estimate']);
+  const parsed = schema.safeParse(rawType);
   if (!parsed.success) return sendError(res, 'Invalid request parameters', 400, parsed.error.issues);
-  const { type } = parsed.data;
+  const type = parsed.data;
 
   try {
     const db = getDb();
     await validateWorkspaceMember(db, workspaceId, authReq.user);
-
-    const wsRef = db.collection('workspaces').doc(workspaceId);
-
-    const formattedNumber = await db.runTransaction(async (tx) => {
-      const wsSnap = await tx.get(wsRef);
-      if (!wsSnap.exists) throw new Error('NOT_FOUND');
-      const wsData = wsSnap.data() || {};
-
-      const numberingSeries = wsData.numberingSeries || {
-        invoicePrefix: 'INV-',
-        invoiceNextNumber: 1001,
-        billPrefix: 'BILL-',
-        billNextNumber: 501,
-        estimatePrefix: 'EST-',
-        estimateNextNumber: 2001
-      };
-
-      let prefix = '';
-      let nextNum = 1;
-
-      if (type === 'invoice') {
-        prefix = numberingSeries.invoicePrefix || 'INV-';
-        nextNum = numberingSeries.invoiceNextNumber || 1001;
-        numberingSeries.invoiceNextNumber = nextNum + 1;
-      } else if (type === 'bill') {
-        prefix = numberingSeries.billPrefix || 'BILL-';
-        nextNum = numberingSeries.billNextNumber || 501;
-        numberingSeries.billNextNumber = nextNum + 1;
-      } else if (type === 'estimate') {
-        prefix = numberingSeries.estimatePrefix || 'EST-';
-        nextNum = numberingSeries.estimateNextNumber || 2001;
-        numberingSeries.estimateNextNumber = nextNum + 1;
-      }
-
-      tx.update(wsRef, {
-        numberingSeries,
-        updatedAt: new Date().toISOString()
-      });
-
-      return `${prefix}${nextNum}`;
-    });
+    const formattedNumber = await allocateNextNumber(db, workspaceId, type);
 
     res.json({ number: formattedNumber });
   } catch (err: any) {

@@ -1,5 +1,5 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Save, CreditCard, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Bill, Vendor, ChartAccount } from '../../types';
@@ -32,6 +32,27 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     status: 'pending',
     amountCents: 0
   }));
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchNextNumber = async () => {
+        try {
+          const wsId = useLedgerStore.getState().activeWorkspaceId;
+          if (!wsId) return;
+          const res = await fetch(`/api/v1/workspaces/${wsId}/next-number?type=bill`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.number) {
+              setBill(prev => ({ ...prev, number: data.number }));
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch next bill number', e);
+        }
+      };
+      fetchNextNumber();
+    }
+  }, [isOpen]);
 
   const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string }>>([
     { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }

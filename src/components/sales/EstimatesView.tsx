@@ -37,10 +37,21 @@ export default function EstimatesView() {
     setIsSubmitting(true);
     try {
       const customerObj = customers.find(c => c.id === customerId);
+      let allocatedEstNumber = `EST-${Math.floor(1000 + Math.random() * 9000)}`;
+      try {
+        const res = await fetch(`/api/v1/workspaces/${currentWorkspaceId}/next-number?type=estimate`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.number) allocatedEstNumber = data.number;
+        }
+      } catch (e) {
+        console.error('Failed to fetch next estimate number', e);
+      }
+
       const estData = {
         uid: user.uid,
         workspaceId: currentWorkspaceId,
-        number: `EST-${Math.floor(1000 + Math.random() * 9000)}`,
+        number: allocatedEstNumber,
         customerId,
         customerName: customerObj?.name || 'Customer',
         date: getLocalDateISO(),
@@ -69,10 +80,21 @@ export default function EstimatesView() {
     if (!currentWorkspaceId || !user || est.status === 'converted') return;
 
     try {
+      let allocatedInvNumber = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
+      try {
+        const res = await fetch(`/api/v1/workspaces/${currentWorkspaceId}/next-number?type=invoice`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.number) allocatedInvNumber = data.number;
+        }
+      } catch (e) {
+        console.error('Failed to fetch next invoice number', e);
+      }
+
       const invData = {
         uid: user.uid,
         workspaceId: currentWorkspaceId,
-        number: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
+        number: allocatedInvNumber,
         customerId: est.customerId,
         customerName: est.customerName,
         date: getLocalDateISO(),

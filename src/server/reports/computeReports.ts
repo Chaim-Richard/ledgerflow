@@ -120,8 +120,8 @@ export function computeTrialBalance(accounts: any[], transactions: any[], asOfDa
       name: acc.name,
       code: acc.code,
       type: acc.type,
-      debit: isDebitNature && opening > 0 ? opening : (!isDebitNature && opening < 0 ? Math.abs(opening) : 0),
-      credit: !isDebitNature && opening > 0 ? opening : (isDebitNature && opening < 0 ? Math.abs(opening) : 0),
+      debit: opening > 0 ? opening : 0,
+      credit: opening < 0 ? Math.abs(opening) : 0,
       netSigned: opening
     };
   });

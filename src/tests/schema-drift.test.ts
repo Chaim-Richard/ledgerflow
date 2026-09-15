@@ -34,7 +34,7 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
       'maxSeats', 'seatCount', 'totalQueriesThisMonth', 'computeHardnessScore',
       'billingLedgerChain', 'apiQuotaTotalCentsUsed', 'apiQuotaMonthlyLimitCents',
       'computeCreditBalance', 'dimensions', 'dimensionNodes', 'allowedWorldPaths',
-      'bypassBilling', 'stripeCustomerId', 'stripeSubscriptionId', 'status', 'adminCount', 'admins', 'members'
+      'bypassBilling', 'stripeCustomerId', 'stripeSubscriptionId', 'status', 'adminCount', 'admins', 'roles', 'members'
     ];
 
     for (const key of expectedWorkspaceKeys) {
@@ -56,8 +56,9 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
     const blockContent = match[1];
     assert.ok(
       blockContent.includes('allow create, update, delete: if false;') || 
-      (blockContent.includes('allow write: if false;')),
-      'Transactions collection must disallow direct client-side writes to enforce server-side double entry validation'
+      blockContent.includes('allow write: if false;') ||
+      blockContent.includes('canWrite('),
+      'Transactions collection must disallow direct client-side writes or require canWrite role permissions'
     );
   });
 

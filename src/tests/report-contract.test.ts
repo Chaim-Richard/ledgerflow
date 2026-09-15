@@ -95,6 +95,56 @@ describe('Report Contract Structural Guard Suite', () => {
     assert.ok(Number.isFinite(fixture.totalCredit));
   });
 
+  test('Trial Balance correctly handles credit-balance opening balances (Task 1 regression test)', () => {
+    const tbAccounts = [
+      { id: '1000', name: 'Cash', type: 'asset', category: 'Cash', openingBalanceCents: 50000 },
+      { id: '1100', name: 'AR', type: 'asset', category: 'Receivables', openingBalanceCents: 0 },
+      { id: '2000', name: 'AP', type: 'liability', category: 'Payables', openingBalanceCents: 0 },
+      { id: '3000', name: 'Equity', type: 'equity', category: 'Equity', openingBalanceCents: -50000 },
+      { id: '4000', name: 'Revenue', type: 'income', category: 'Revenue', openingBalanceCents: 0 },
+      { id: '5000', name: 'Expense', type: 'expense', category: 'Operating Expenses', openingBalanceCents: 0 }
+    ];
+
+    const tbTransactions = [
+      {
+        id: 'tx_ar_rev',
+        date: '2026-01-01',
+        status: 'posted',
+        posted: true,
+        lines: [
+          { accountId: '1100', amountCents: 100000 },
+          { accountId: '4000', amountCents: -100000 }
+        ]
+      },
+      {
+        id: 'tx_cash_ar',
+        date: '2026-01-02',
+        status: 'posted',
+        posted: true,
+        lines: [
+          { accountId: '1000', amountCents: 60000 },
+          { accountId: '1100', amountCents: -60000 }
+        ]
+      },
+      {
+        id: 'tx_exp_ap',
+        date: '2026-01-03',
+        status: 'posted',
+        posted: true,
+        lines: [
+          { accountId: '5000', amountCents: 30000 },
+          { accountId: '2000', amountCents: -30000 }
+        ]
+      }
+    ];
+
+    const result = computeTrialBalance(tbAccounts, tbTransactions);
+    assert.equal(result.isBalanced, true, 'Trial balance must be balanced');
+    assert.equal(result.totalDebit, result.totalCredit, 'Total debit must equal total credit');
+    assert.equal(result.totalDebit, 240000, 'Total debit should equal 240,000 cents');
+    assert.equal(result.totalCredit, 240000, 'Total credit should equal 240,000 cents');
+  });
+
   test('Cash Flow contract: buckets contain finite inflow, outflow, total, and (inflow - outflow) matches total', () => {
     const fixture = computeCashFlow(sampleAccounts, sampleTransactions);
 

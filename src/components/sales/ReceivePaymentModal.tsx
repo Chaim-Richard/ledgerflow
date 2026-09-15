@@ -187,77 +187,36 @@ export default function ReceivePaymentModal({
         }
       });
 
-      // Execute Firestore transaction: all reads before all writes
-      const paymentRef = doc(collection(db, 'payments'));
-      const paymentId = paymentRef.id;
-
-      const paymentData = {
-        id: paymentId,
-        uid: user.uid,
-        workspaceId: currentWorkspaceId,
-        direction,
-        contactId,
-        contactName,
-        date,
-        amountCents: paymentAmountCents,
-        currency: 'USD',
-        method,
-        reference: reference || '',
-        depositAccountId,
-        allocations,
-        unappliedCents,
-        status: 'posted' as const,
-        createdAt: new Date().toISOString()
-      };
-
-      await runTransaction(db, async (tx) => {
-        // READ PHASE: read all target documents first
-        const docSnaps: { docRef: any; snap: any; allocationCents: number; targetType: 'invoice' | 'bill' }[] = [];
-        for (const alloc of allocations) {
-          const collectionName = alloc.documentType === 'invoice' ? 'invoices' : 'bills';
-          const targetRef = doc(db, collectionName, alloc.documentId);
-          const snap = await tx.get(targetRef);
-          docSnaps.push({
-            docRef: targetRef,
-            snap,
-            allocationCents: alloc.amountCents,
-            targetType: alloc.documentType
-          });
-        }
-
-        // WRITE PHASE: set payment doc and update targets
-        tx.set(paymentRef, paymentData);
-
-        for (const item of docSnaps) {
-          if (item.snap.exists()) {
-            const currentData = item.snap.data();
-            const currentPaid = currentData.amountPaidCents || currentData.paidAmountCents || 0;
-            const total = currentData.amountCents || currentData.totalCents || 0;
-            const newPaid = currentPaid + item.allocationCents;
-            let newStatus = currentData.status;
-            if (newPaid >= total) {
-              newStatus = 'paid';
-            } else if (newPaid > 0) {
-              newStatus = 'partially_paid';
-            }
-
-            tx.update(item.docRef, {
-              amountPaidCents: newPaid,
-              paidAmountCents: newPaid,
-              status: newStatus,
-              updatedAt: new Date().toISOString()
-            });
-          }
-        }
+      const token = await getIdToken();
+      const res = await fetch('/api/v1/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          workspaceId: currentWorkspaceId,
+          paymentDate: date,
+          amountCents: paymentAmountCents,
+          paymentMethod: method,
+          referenceNumber: reference || '',
+          memo: memo || '',
+          customerId: contactType === 'customer' ? contactId : undefined,
+          vendorId: contactType === 'vendor' ? contactId : undefined,
+          entityName: contactName,
+          cashAccountId: depositAccountId,
+          allocations: allocations.map(a => ({
+            documentId: a.documentId,
+            documentType: a.documentType,
+            amountCents: a.amountCents
+          }))
+        })
       });
 
-      // Double-entry accounting posting via LedgerPostService
-      await LedgerPostService.postPaymentLedger(
-        paymentId,
-        paymentData,
-        currentWorkspaceId,
-        user.uid
-      );
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({ message: 'Payment processing failed' }));
+        throw new Error(errJson.message || 'Payment processing failed');
+      }
 
       toast.success(`Payment of ${formatCurrency(paymentAmountCents / 100)} recorded successfully!`);
       onClose();

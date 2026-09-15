@@ -8,6 +8,7 @@ import { consolidationRouter } from "./src/server/routes/consolidationRoutes";
 import { leaseRouter } from "./src/server/routes/leaseRoutes";
 import { inventoryRouter } from "./src/server/routes/inventoryRoutes";
 import { supportRouter } from "./src/server/routes/supportRoutes";
+import { paymentRouter } from "./src/server/routes/paymentRoutes";
 import express from "express";
 import cors from "cors";
 import Stripe from "stripe";
@@ -4950,6 +4951,7 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.use("/api/v1/lease", apiAuthenticate, leaseRouter);
   app.use("/api/v1/inventory", apiAuthenticate, inventoryRouter);
   app.use("/api/v1/support", authenticate, supportRouter);
+  app.use("/api/v1/payments", apiAuthenticate, paymentRouter);
   app.use("/api/v1/invoices/public", expressRateLimit({
     windowMs: 15 * 60 * 1000,
     max: 50,

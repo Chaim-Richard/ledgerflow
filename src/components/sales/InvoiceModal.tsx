@@ -1,10 +1,11 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Save } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Invoice, Customer, ChartAccount } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
 
 interface InvoiceModalProps {
@@ -28,6 +29,27 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     amountCents: 0,
     totalCents: 0
   }));
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchNextNumber = async () => {
+        try {
+          const wsId = useLedgerStore.getState().activeWorkspaceId;
+          if (!wsId) return;
+          const res = await fetch(`/api/v1/workspaces/${wsId}/next-number?type=invoice`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.number) {
+              setInvoice(prev => ({ ...prev, number: data.number }));
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch next invoice number', e);
+        }
+      };
+      fetchNextNumber();
+    }
+  }, [isOpen]);
 
   const [items, setItems] = useState<Array<{ id: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string }>>([
     { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }

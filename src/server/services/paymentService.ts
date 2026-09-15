@@ -1,0 +1,180 @@
+export interface CreatePaymentPayload {
+  workspaceId: string;
+  uid: string;
+  paymentDate: string;
+  amountCents: number;
+  paymentMethod?: string;
+  referenceNumber?: string;
+  memo?: string;
+  customerId?: string;
+  vendorId?: string;
+  entityName?: string;
+  cashAccountId: string;
+  offsetAccountId?: string;
+  allocations: Array<{
+    documentId: string;
+    documentType: 'invoice' | 'bill';
+    amountCents: number;
+  }>;
+}
+
+export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload) {
+  const {
+    workspaceId,
+    uid,
+    paymentDate,
+    amountCents,
+    paymentMethod = 'cash',
+    referenceNumber = '',
+    memo = '',
+    customerId,
+    vendorId,
+    entityName,
+    cashAccountId,
+    offsetAccountId,
+    allocations = []
+  } = payload;
+
+  return await db.runTransaction(async (tx: any) => {
+    // 1. Fetch workspace for lockDate and default mappings
+    const wsRef = db.collection('workspaces').doc(workspaceId);
+    const wsSnap = await tx.get(wsRef);
+    if (!wsSnap.exists) throw new Error('NOT_FOUND');
+    const wsData = wsSnap.data() || {};
+
+    if (wsData.lockDate && paymentDate <= wsData.lockDate) {
+      throw new Error(`Period is locked on or before ${wsData.lockDate}. Cannot post payment.`);
+    }
+
+    // 2. Validate cash account exists
+    const cashAccRef = db.collection('chartAccounts').doc(cashAccountId);
+    const cashAccSnap = await tx.get(cashAccRef);
+    if (!cashAccSnap.exists) {
+      throw new Error(`Invalid cash account ID: ${cashAccountId}`);
+    }
+
+    let resolvedOffsetAccountId = offsetAccountId;
+    if (resolvedOffsetAccountId) {
+      const offsetAccRef = db.collection('chartAccounts').doc(resolvedOffsetAccountId);
+      const offsetAccSnap = await tx.get(offsetAccRef);
+      if (!offsetAccSnap.exists) {
+        throw new Error(`Invalid offset account ID: ${resolvedOffsetAccountId}`);
+      }
+    }
+
+    // 3. Read & validate target invoices / bills
+    const docUpdates: Array<{ ref: any; updates: any }> = [];
+
+    for (const alloc of allocations) {
+      const collName = alloc.documentType === 'invoice' ? 'invoices' : 'bills';
+      const docRef = db.collection(collName).doc(alloc.documentId);
+      const docSnap = await tx.get(docRef);
+
+      if (!docSnap.exists) {
+        throw new Error(`Document ${alloc.documentId} not found`);
+      }
+
+      const docData = docSnap.data() || {};
+      const currentPaid = docData.amountPaidCents || docData.paidAmountCents || 0;
+      const total = docData.amountCents || docData.totalCents || 0;
+      const newPaid = currentPaid + alloc.amountCents;
+
+      let newStatus = docData.status;
+      if (newPaid >= total) {
+        newStatus = 'paid';
+      } else if (newPaid > 0) {
+        newStatus = 'partially_paid';
+      }
+
+      docUpdates.push({
+        ref: docRef,
+        updates: {
+          amountPaidCents: newPaid,
+          paidAmountCents: newPaid,
+          status: newStatus,
+          updatedAt: new Date().toISOString()
+        }
+      });
+
+      if (!resolvedOffsetAccountId) {
+        resolvedOffsetAccountId = docData.arAccountId || docData.apAccountId || wsData.defaultAccountMappings?.ar || wsData.defaultAccountMappings?.ap;
+      }
+    }
+
+    if (!resolvedOffsetAccountId) {
+      throw new Error('Offset account ID (A/R or A/P) could not be resolved or is invalid');
+    }
+
+    // Validate resolved offset account
+    const offsetAccRef = db.collection('chartAccounts').doc(resolvedOffsetAccountId);
+    const offsetAccSnap = await tx.get(offsetAccRef);
+    if (!offsetAccSnap.exists) {
+      throw new Error(`Invalid offset account ID: ${resolvedOffsetAccountId}`);
+    }
+
+    // 4. Build Payment Document
+    const paymentRef = db.collection('payments').doc();
+    const paymentId = paymentRef.id;
+    const paymentData = {
+      id: paymentId,
+      workspaceId,
+      uid,
+      date: paymentDate,
+      paymentDate,
+      amountCents,
+      paymentMethod,
+      referenceNumber,
+      memo,
+      customerId: customerId || null,
+      vendorId: vendorId || null,
+      entityName: entityName || '',
+      cashAccountId,
+      offsetAccountId: resolvedOffsetAccountId,
+      allocations,
+      createdAt: new Date().toISOString()
+    };
+
+    // 5. Build General Ledger Transaction
+    const isReceipt = allocations.some(a => a.documentType === 'invoice') || Boolean(customerId);
+    const ledgerTxRef = db.collection('transactions').doc();
+
+    const ledgerTxData = {
+      id: ledgerTxRef.id,
+      uid,
+      workspaceId,
+      date: paymentDate,
+      description: `Payment ${paymentId} (${paymentMethod}) - ${entityName || memo || 'Payment'}`,
+      totalAmountCents: amountCents,
+      currency: 'USD',
+      exchangeRate: 1,
+      status: 'completed',
+      type: 'actual',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        paymentId,
+        type: 'payment-posting'
+      },
+      lines: [
+        {
+          accountId: cashAccountId,
+          amountCents: isReceipt ? amountCents : -amountCents,
+          description: `Cash ${isReceipt ? 'Debit' : 'Credit'} for Payment ${paymentId}`
+        },
+        {
+          accountId: resolvedOffsetAccountId,
+          amountCents: isReceipt ? -amountCents : amountCents,
+          description: `Offset ${isReceipt ? 'Credit' : 'Debit'} for Payment ${paymentId}`
+        }
+      ]
+    };
+
+    // 6. Stage writes
+    for (const update of docUpdates) {
+      tx.update(update.ref, update.updates);
+    }
+    tx.set(paymentRef, paymentData);
+    tx.set(ledgerTxRef, ledgerTxData);
+
+    return { paymentId, transactionId: ledgerTxRef.id, payment: paymentData, ledgerTransaction: ledgerTxData };
+  });
+}
