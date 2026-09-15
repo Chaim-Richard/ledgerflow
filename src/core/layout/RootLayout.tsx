@@ -19,6 +19,8 @@ import { useUIStore } from '../../stores/useUIStore';
 
 import ShortcutOverlay from '../../components/layout/ShortcutOverlay';
 import DiagnosticConsole from '../../components/intelligence/DiagnosticConsole';
+import ConnectionBanner from '../../components/platform/ConnectionBanner';
+import LedgerBackupReminder from '../../components/platform/LedgerBackupReminder';
 
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
@@ -138,9 +140,11 @@ export function RootLayout() {
         "flex-1 flex flex-col overflow-hidden relative transition-all duration-300 bg-[var(--ink)] text-[var(--text)] pb-[env(safe-area-inset-bottom)] lg:pb-0",
         "pb-[64px] lg:pb-0" // Add 64px padding on mobile specifically for the BottomNav
       )}>
+        <ConnectionBanner />
+        <LedgerBackupReminder />
         {isDataTruncated && (
           <div className="bg-amber-500/10 text-amber-500 border-b border-amber-500/20 px-4 py-2 text-sm text-center font-medium">
-            Active view is filtered — some historical records or balances may be segmented.
+            Showing 2,000 of N transactions — totals are incomplete without server sync.
           </div>
         )}
         {!isFocusMode && <Header onLogout={handleLogout} onLoginPrompt={handleLoginPrompt} />}

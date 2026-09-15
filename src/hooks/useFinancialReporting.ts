@@ -1,139 +1,207 @@
-import { parseLocalDate } from '../lib/utils';
 import { useState, useMemo, useCallback } from 'react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { ChartAccount, Transaction } from '../types';
 import { toast } from 'sonner';
-import { isPostable, isOpenInvoice, isOpenBill, lineAmount, isRevenueAccount, isExpenseAccount, calculateTransactionImpact } from '../lib/txFilters';
-import { resolveAccountRole } from '../lib/accountUtils';
+import { isPostable, calculateTransactionImpact } from '../lib/txFilters';
+
+export interface ServerPLData {
+  income: { total: number; accounts: Record<string, { name: string; code?: string; balance: number; parentId?: string }> };
+  cogs: { total: number; accounts: Record<string, { name: string; code?: string; balance: number; parentId?: string }> };
+  expense: { total: number; accounts: Record<string, { name: string; code?: string; balance: number; parentId?: string }> };
+  grossProfit: number;
+  netIncome: number;
+}
+
+export interface ServerBalanceSheetData {
+  assets: Record<string, number>;
+  liabilities: Record<string, number>;
+  equity: Record<string, number>;
+  totalAssets: number;
+  totalLiabilities: number;
+  totalEquity: number;
+  currentPeriodNetIncome: number;
+  totalClaims: number;
+  isBalanced: boolean;
+}
+
+export interface ServerTrialBalanceData {
+  accounts: Record<string, { name: string; code?: string; type: string; debit: number; credit: number; netSigned: number }>;
+  totalDebit: number;
+  totalCredit: number;
+  isBalanced: boolean;
+}
+
+export interface ServerCashFlowData {
+  operating: { total: number; items: Array<{ name: string; amount: number }> };
+  investing: { total: number; items: Array<{ name: string; amount: number }> };
+  financing: { total: number; items: Array<{ name: string; amount: number }> };
+  netChange: number;
+}
+
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const user = useAuthStore.getState().user;
+  if (!user) return {};
+  try {
+    const token = await user.getIdToken();
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
 
 export function useFinancialReporting() {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
-  const invoices = useLedgerStore(s => s.invoices);
-  const bills = useLedgerStore(s => s.bills);
   const [loading, setLoading] = useState(false);
-  const [apiReports, setApiReports] = useState<any>({ pl: null, aging: null, agingAP: null, cashFlow: null });
+  const [loadingStates, setLoadingStates] = useState<{ pl: boolean; bs: boolean; tb: boolean; cf: boolean }>({
+    pl: false,
+    bs: false,
+    tb: false,
+    cf: false,
+  });
+  const [apiReports, setApiReports] = useState<{
+    pl: ServerPLData | null;
+    balanceSheet: ServerBalanceSheetData | null;
+    trialBalance: ServerTrialBalanceData | null;
+    cashFlow: ServerCashFlowData | null;
+    aging: any | null;
+    agingAP: any | null;
+  }>({
+    pl: null,
+    balanceSheet: null,
+    trialBalance: null,
+    cashFlow: null,
+    aging: null,
+    agingAP: null,
+  });
 
-  const fetchPL = useCallback(async (startDate?: string, endDate?: string) => {
-    if (!currentWorkspaceId) return;
+  const fetchPL = useCallback(async (startDate?: string, endDate?: string): Promise<ServerPLData | null> => {
+    if (!currentWorkspaceId) return null;
     setLoading(true);
+    setLoadingStates(prev => ({ ...prev, pl: true }));
     try {
-      const user = useAuthStore.getState().user;
-      if (!user) return;
-      
-      let url = `/api/v1/reports/pl?workspaceId=${currentWorkspaceId}`;
+      const headers = await getAuthHeaders();
+      let url = `/api/v1/reports/profit-and-loss?workspaceId=${currentWorkspaceId}`;
       if (startDate) url += `&startDate=${startDate}`;
       if (endDate) url += `&endDate=${endDate}`;
 
-      const token = await user.getIdToken();
-      const response = await fetch(url, {
-         headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.status === 'success') {
-         setApiReports((prev: any) => ({ ...prev, pl: data.data }));
+      const response = await fetch(url, { headers });
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
       }
+      const data = await response.json();
+      const report: ServerPLData = data.data || data;
+      setApiReports(prev => ({ ...prev, pl: report }));
+      return report;
     } catch (e: any) {
-      toast.error('Failed to fetch P&L');
+      console.warn('P&L server fetch fallback:', e);
+      return null;
     } finally {
       setLoading(false);
+      setLoadingStates(prev => ({ ...prev, pl: false }));
+    }
+  }, [currentWorkspaceId]);
+
+  const fetchBalanceSheet = useCallback(async (endDate?: string): Promise<ServerBalanceSheetData | null> => {
+    if (!currentWorkspaceId) return null;
+    setLoading(true);
+    setLoadingStates(prev => ({ ...prev, bs: true }));
+    try {
+      const headers = await getAuthHeaders();
+      let url = `/api/v1/reports/balance-sheet?workspaceId=${currentWorkspaceId}`;
+      if (endDate) url += `&endDate=${endDate}`;
+
+      const response = await fetch(url, { headers });
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+      const data = await response.json();
+      const report: ServerBalanceSheetData = data.data || data;
+      setApiReports(prev => ({ ...prev, balanceSheet: report }));
+      return report;
+    } catch (e: any) {
+      console.warn('Balance Sheet server fetch fallback:', e);
+      return null;
+    } finally {
+      setLoading(false);
+      setLoadingStates(prev => ({ ...prev, bs: false }));
+    }
+  }, [currentWorkspaceId]);
+
+  const fetchTrialBalance = useCallback(async (asOfDate?: string): Promise<ServerTrialBalanceData | null> => {
+    if (!currentWorkspaceId) return null;
+    setLoading(true);
+    setLoadingStates(prev => ({ ...prev, tb: true }));
+    try {
+      const headers = await getAuthHeaders();
+      let url = `/api/v1/reports/trial-balance?workspaceId=${currentWorkspaceId}`;
+      if (asOfDate) url += `&asOfDate=${asOfDate}`;
+
+      const response = await fetch(url, { headers });
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+      const data = await response.json();
+      const report: ServerTrialBalanceData = data.data || data;
+      setApiReports(prev => ({ ...prev, trialBalance: report }));
+      return report;
+    } catch (e: any) {
+      console.warn('Trial Balance server fetch fallback:', e);
+      return null;
+    } finally {
+      setLoading(false);
+      setLoadingStates(prev => ({ ...prev, tb: false }));
+    }
+  }, [currentWorkspaceId]);
+
+  const fetchCashFlow = useCallback(async (startDate?: string, endDate?: string): Promise<ServerCashFlowData | null> => {
+    if (!currentWorkspaceId) return null;
+    setLoading(true);
+    setLoadingStates(prev => ({ ...prev, cf: true }));
+    try {
+      const headers = await getAuthHeaders();
+      let url = `/api/v1/reports/cash-flow?workspaceId=${currentWorkspaceId}`;
+      if (startDate) url += `&startDate=${startDate}`;
+      if (endDate) url += `&endDate=${endDate}`;
+
+      const response = await fetch(url, { headers });
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+      const data = await response.json();
+      const report: ServerCashFlowData = data.data || data;
+      setApiReports(prev => ({ ...prev, cashFlow: report }));
+      return report;
+    } catch (e: any) {
+      console.warn('Cash flow server fetch fallback:', e);
+      return null;
+    } finally {
+      setLoading(false);
+      setLoadingStates(prev => ({ ...prev, cf: false }));
     }
   }, [currentWorkspaceId]);
 
   const fetchAging = useCallback(async (type: 'ar' | 'ap') => {
     if (!currentWorkspaceId) return;
     setLoading(true);
-
     try {
-      const rawItems = type === 'ar' ? invoices : bills;
-      const items = rawItems.filter(item => type === 'ar' ? isOpenInvoice(item) : isOpenBill(item));
-      const now = new Date();
-      
-      const aging = {
-        current: 0,
-        "1-30": 0,
-        "31-60": 0,
-        "61-90": 0,
-        "90+": 0,
-        total: 0
-      };
-
-      items.forEach((item: any) => {
-        const dueDate = parseLocalDate(item.dueDate);
-        const diffDays = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-        const amount = item.amountCents || item.totalCents || 0;
-
-        if (diffDays <= 0) aging.current += amount;
-        else if (diffDays <= 30) aging["1-30"] += amount;
-        else if (diffDays <= 60) aging["31-60"] += amount;
-        else if (diffDays <= 90) aging["61-90"] += amount;
-        else aging["90+"] += amount;
-
-        aging.total += amount;
-      });
-
-      setApiReports((prev: any) => ({ ...prev, [type === 'ar' ? 'aging' : 'agingAP']: aging }));
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/v1/reports/aging?workspaceId=${currentWorkspaceId}&type=${type}`, { headers });
+      if (response.ok) {
+        const data = await response.json();
+        setApiReports(prev => ({ ...prev, [type === 'ar' ? 'aging' : 'agingAP']: data.data || data }));
+      }
     } catch (error) {
       console.error(error);
     } finally {
       setLoading(false);
     }
-  }, [currentWorkspaceId, invoices, bills]);
-
-  const fetchCashFlow = useCallback(async () => {
-    if (!currentWorkspaceId) return;
-    setLoading(true);
-
-    try {
-      const cashFlow = {
-        operating: { total: 0, items: [] as any[] },
-        investing: { total: 0, items: [] as any[] },
-        financing: { total: 0, items: [] as any[] },
-        netChange: 0
-      };
-
-      transactions.filter(isPostable).forEach((tx: any) => {
-        const accountMap = new Map(accounts.map(a => [a.id, a]));
-        tx.lines?.forEach((line: any) => {
-          const acc = accountMap.get(line.accountId);
-          if (!acc) return;
-
-          const role = resolveAccountRole(acc);
-          const amt = lineAmount(line, tx);
-
-          if (isRevenueAccount(acc)) cashFlow.operating.total -= amt;
-          if (isExpenseAccount(acc)) cashFlow.operating.total -= amt;
-
-          if (role === 'ar' || acc.category === 'Receivables' || acc.category === 'Receivable') cashFlow.operating.total -= amt;
-          if (role === 'ap' || acc.category === 'Payables' || acc.category === 'Payable') cashFlow.operating.total += amt;
-
-          if (acc.category === 'Fixed Assets' || acc.category === 'Fixed Asset') {
-            cashFlow.investing.total -= amt;
-            cashFlow.investing.items.push({ name: tx.description, amount: -amt });
-          }
-
-          if (acc.type === 'equity' || acc.category === 'Debt' || acc.category === 'Long Term Liability') {
-            cashFlow.financing.total += amt;
-            cashFlow.financing.items.push({ name: tx.description, amount: amt });
-          }
-        });
-      });
-
-      cashFlow.netChange = cashFlow.operating.total + cashFlow.investing.total + cashFlow.financing.total;
-
-      setApiReports((prev: any) => ({ ...prev, cashFlow }));
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentWorkspaceId, accounts, transactions]);
+  }, [currentWorkspaceId]);
 
   // Combined reports object
   const reports = useMemo(() => {
-    // Local calculation for immediate feedback
     let localIncome = 0;
     let localExpenses = 0;
     const accountMap = new Map(accounts.map(a => [a.id, a]));
@@ -150,5 +218,14 @@ export function useFinancialReporting() {
     };
   }, [transactions, accounts, apiReports]);
 
-  return { reports, loading, fetchPL, fetchAging, fetchCashFlow };
+  return { 
+    reports, 
+    loading, 
+    loadingStates,
+    fetchPL, 
+    fetchBalanceSheet,
+    fetchTrialBalance,
+    fetchCashFlow,
+    fetchAging 
+  };
 }

@@ -1,11 +1,13 @@
-import React, { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { parseLocalDate, cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount, calculateNetIncome, isTransactionInDateRange } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useFinancialReporting, ServerPLData } from '../../hooks/useFinancialReporting';
+import MonthNavigator from '../ui/MonthNavigator';
 import DrillDownModal from '../layout/DrillDownModal';
 
 interface PLData {
@@ -31,6 +33,35 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('balance');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: any[] } | null>(null);
+
+  const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
+  const { fetchPL, loadingStates } = useFinancialReporting();
+  const [serverData, setServerData] = useState<PLData | null>(null);
+  const [serverPrevData, setServerPrevData] = useState<PLData | null>(null);
+  const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+
+  const loadServerReport = useCallback(async () => {
+    try {
+      const res = await fetchPL(dateRange.start, dateRange.end);
+      if (res) {
+        setServerData(res);
+        setIsServerAuthoritative(true);
+      }
+      if (isComparative) {
+        const prev = getPrevPeriod(dateRange.start, dateRange.end);
+        const prevRes = await fetchPL(prev.start, prev.end);
+        if (prevRes) {
+          setServerPrevData(prevRes);
+        }
+      }
+    } catch {
+      setIsServerAuthoritative(false);
+    }
+  }, [fetchPL, dateRange.start, dateRange.end, isComparative]);
+
+  useEffect(() => {
+    loadServerReport();
+  }, [loadServerReport]);
 
   const toggleSort = (field: 'code' | 'name' | 'balance') => {
     if (sortBy === field) {
@@ -106,7 +137,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
     }
   };
 
-  const { data, prevData } = useMemo(() => {
+  const localCalculation = useMemo(() => {
     const defaultData = {
       income: { total: 0, accounts: {} },
       cogs: { total: 0, accounts: {} },
@@ -187,6 +218,9 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
     return { data: currentPl, prevData: prevPl };
   }, [transactions, accounts, dateRange, isComparative]);
 
+  const data = isServerAuthoritative && serverData ? serverData : localCalculation.data;
+  const prevData = isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
+
   const formatCurrency = (cents: number) => 
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 
@@ -265,10 +299,46 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
 
   return (
     <div className="space-y-6">
+      {/* Authoritative / Truncation Status Banner */}
+      {!isServerAuthoritative && isDataTruncated ? (
+        <div id="pl-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Showing 2,000 of N transactions — totals are incomplete</span>
+          </div>
+          <button
+            onClick={loadServerReport}
+            disabled={loadingStates.pl}
+            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded text-xs transition flex items-center gap-1.5"
+          >
+            {loadingStates.pl ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+            <span>{loadingStates.pl ? "Loading Server..." : "Load Full Server Report"}</span>
+          </button>
+        </div>
+      ) : isServerAuthoritative ? (
+        <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Server-Authoritative Report (Full Streaming History Verified)</span>
+          </div>
+          <button 
+            onClick={loadServerReport} 
+            title="Refresh server report"
+            className="text-emerald-400/80 hover:text-emerald-300 p-0.5 rounded transition"
+          >
+            <RefreshCw className={cn("w-3 h-3", loadingStates.pl && "animate-spin")} />
+          </button>
+        </div>
+      ) : null}
+
       {/* Date Range & Controls */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
         <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10 w-full lg:w-auto">
+          <MonthNavigator 
+            currentDate={dateRange.start} 
+            onMonthChange={({ start, end }) => setDateRange({ start, end })} 
+          />
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-slate-500 shrink-0">
                <Calendar size={13} />

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ChartAccount } from '../../types';
 import { format, subMonths, endOfMonth, endOfQuarter, subQuarters, subYears, endOfYear } from 'date-fns';
 import { 
@@ -10,6 +10,8 @@ import { formatDecimal, sanitizeCsvCell, cn } from '../../lib/utils';
 import { motion } from 'motion/react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
+import { useFinancialReporting, ServerTrialBalanceData } from '../../hooks/useFinancialReporting';
+import MonthNavigator from '../ui/MonthNavigator';
 
 interface TrialBalanceViewProps {
   accounts: ChartAccount[];
@@ -26,6 +28,27 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   const [asOfDate, setAsOfDate] = useState<string>(() => format(new Date(), 'yyyy-MM-dd'));
   const [sortField, setSortField] = useState<SortField>('code');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
+  const { fetchTrialBalance, loadingStates } = useFinancialReporting();
+  const [serverData, setServerData] = useState<ServerTrialBalanceData | null>(null);
+  const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+
+  const loadServerReport = useCallback(async () => {
+    try {
+      const res = await fetchTrialBalance(asOfDate);
+      if (res) {
+        setServerData(res);
+        setIsServerAuthoritative(true);
+      }
+    } catch {
+      setIsServerAuthoritative(false);
+    }
+  }, [fetchTrialBalance, asOfDate]);
+
+  useEffect(() => {
+    loadServerReport();
+  }, [loadServerReport]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -50,7 +73,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   };
 
   // Compute live, accurate balances as of the chosen asOfDate
-  const trialBalance = useMemo(() => {
+  const localTrialBalance = useMemo(() => {
     // 1. Build map of accounts for O(1) lookups
     const accountById = new Map(accounts.map(a => [a.id, a]));
     const accountByName = new Map(accounts.map(a => [a.name, a]));
@@ -152,6 +175,38 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
     return { lines, totalDebits, totalCredits, isBalanced };
   }, [accounts, transactions, asOfDate, sortField, sortDir]);
 
+  const trialBalance = useMemo(() => {
+    if (isServerAuthoritative && serverData) {
+      const lines = serverData.accounts.map(acc => ({
+        id: acc.id,
+        code: acc.code || '',
+        name: acc.name,
+        type: acc.type as any,
+        debit: acc.debit,
+        credit: acc.credit,
+        netBalance: acc.netSigned
+      }));
+
+      lines.sort((a, b) => {
+        let comp = 0;
+        if (sortField === 'code') comp = (a.code || '').localeCompare(b.code || '');
+        else if (sortField === 'name') comp = (a.name || '').localeCompare(b.name || '');
+        else if (sortField === 'type') comp = (a.type || '').localeCompare(b.type || '');
+        else if (sortField === 'debit') comp = a.debit - b.debit;
+        else if (sortField === 'credit') comp = a.credit - b.credit;
+        return sortDir === 'asc' ? comp : -comp;
+      });
+
+      return {
+        lines,
+        totalDebits: serverData.totalDebit,
+        totalCredits: serverData.totalCredit,
+        isBalanced: serverData.isBalanced
+      };
+    }
+    return localTrialBalance;
+  }, [isServerAuthoritative, serverData, localTrialBalance, sortField, sortDir]);
+
   const handleExportCSV = () => {
     const headers = ['Account Code', 'Account Name', 'Classification', 'Debit ($)', 'Credit ($)'];
     const rows = trialBalance.lines.map(line => [
@@ -226,28 +281,65 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   };
 
   return (
-    <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative group">
-      <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
-      
-      {/* Header & Controls */}
-      <div className="p-5 border-b border-[var(--line)] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate mb-1">
-             <Scale size={12} className="shrink-0" />
-             Double-Entry Stability Protocol
+    <div className="space-y-4">
+      {/* Authoritative / Truncation Status Banner */}
+      {!isServerAuthoritative && isDataTruncated ? (
+        <div id="tb-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Showing 2,000 of N transactions — totals are incomplete</span>
           </div>
-          <h3 className="text-xl font-bold text-[var(--text)] tracking-tight">Trial Balance</h3>
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <div className="flex items-center gap-1.5 bg-[var(--ink)] px-2.5 py-1 rounded-lg border border-[var(--line)]">
-              <Calendar size={13} className="text-slate-400" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase">As of:</span>
-              <input 
-                type="date"
-                value={asOfDate}
-                onChange={(e) => setAsOfDate(e.target.value)}
-                className="bg-transparent text-xs font-mono font-bold text-[var(--text)] focus:outline-none cursor-pointer"
-              />
+          <button
+            onClick={loadServerReport}
+            disabled={loadingStates.trialBalance}
+            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded text-xs transition flex items-center gap-1.5"
+          >
+            {loadingStates.trialBalance ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+            <span>{loadingStates.trialBalance ? "Loading Server..." : "Load Full Server Report"}</span>
+          </button>
+        </div>
+      ) : isServerAuthoritative ? (
+        <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Server-Authoritative Trial Balance (Full History Verified)</span>
+          </div>
+          <button 
+            onClick={loadServerReport} 
+            title="Refresh server report"
+            className="text-emerald-400/80 hover:text-emerald-300 p-0.5 rounded transition"
+          >
+            <RefreshCw className={cn("w-3 h-3", loadingStates.trialBalance && "animate-spin")} />
+          </button>
+        </div>
+      ) : null}
+
+      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative group">
+        <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
+        
+        {/* Header & Controls */}
+        <div className="p-5 border-b border-[var(--line)] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate mb-1">
+               <Scale size={12} className="shrink-0" />
+               Double-Entry Stability Protocol
             </div>
+            <h3 className="text-xl font-bold text-[var(--text)] tracking-tight">Trial Balance</h3>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <MonthNavigator
+                currentDate={asOfDate}
+                onMonthChange={({ end }) => setAsOfDate(end)}
+              />
+              <div className="flex items-center gap-1.5 bg-[var(--ink)] px-2.5 py-1 rounded-lg border border-[var(--line)]">
+                <Calendar size={13} className="text-slate-400" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase">As of:</span>
+                <input 
+                  type="date"
+                  value={asOfDate}
+                  onChange={(e) => setAsOfDate(e.target.value)}
+                  className="bg-transparent text-xs font-mono font-bold text-[var(--text)] focus:outline-none cursor-pointer"
+                />
+              </div>
             
             {/* Quick Presets */}
             <div className="flex items-center gap-1 text-[9px] font-bold uppercase">
@@ -425,5 +517,6 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
         </table>
       </div>
     </div>
-  );
+  </div>
+);
 }

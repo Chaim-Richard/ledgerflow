@@ -18,7 +18,7 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen } from 'lucide-react';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
 const pluginModules = import.meta.glob('../plugins/*.tsx');
@@ -55,6 +55,7 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'copilot': lazy(() => import('../components/intelligence/Copilot')),
   'audit': lazy(() => import('../components/forensics/ForensicAudit')),
   'transactions': lazy(() => import('../components/ledger/TransactionGrid')),
+  'register': lazy(() => import('../components/finance/AccountRegisterView')),
   'projects': lazy(() => import('../components/projects/Projects')),
   'reports': lazy(() => import('../components/reporting/Reports')),
   'ledger': lazy(() => import('../components/ledger/TwoLensesLedger')),
@@ -94,6 +95,7 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'copilot', label: { en: 'AI Co-pilot', he: 'טייס משנה' }, icon: Sparkles, groupId: 'dashboard' },
 
   { id: 'transactions', label: { en: 'Transactions', he: 'תנועות' }, icon: Layers, groupId: 'transactions' },
+  { id: 'register', label: { en: 'Account Register', he: 'יומן חשבון' }, icon: BookOpen, groupId: 'transactions' },
   { id: 'ledger', label: { en: 'Ledger & Journal', he: 'ספר ראשי ויומן' }, icon: Database, groupId: 'transactions' },
   { id: 'banking', label: { en: 'Bank Connections', he: 'חיבורי בנק' }, icon: Building, groupId: 'transactions' },
   { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת' }, icon: Search, groupId: 'transactions' },

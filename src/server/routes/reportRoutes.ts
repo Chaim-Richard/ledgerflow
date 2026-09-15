@@ -3,6 +3,7 @@ import admin from "firebase-admin";
 import { z } from "zod";
 import { getDb, validateWorkspaceMember } from "../db/firestore";
 import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount, isTransactionInDateRange } from "../../lib/txFilters";
+import { resolveAccountRole } from "../../lib/accountUtils";
 import { ReportRangeSchema, WorkspaceIdSchema } from "../../schemas";
 import { parseLocalDate, getLocalDateISO } from "../../lib/utils";
 
@@ -35,12 +36,13 @@ async function getReportContext(req: AuthenticatedRequest, workspaceId: string, 
   await authorizeWorkspace(req, workspaceId);
   const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get();
   
-  const defaultStart = startDate || `${new Date().getFullYear()}-01-01`;
-  const defaultEnd = endDate || getLocalDateISO(new Date());
-
   let txQuery: admin.firestore.Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
-  txQuery = txQuery.where("date", ">=", defaultStart);
-  txQuery = txQuery.where("date", "<=", defaultEnd);
+  if (startDate) {
+    txQuery = txQuery.where("date", ">=", startDate);
+  }
+  if (endDate) {
+    txQuery = txQuery.where("date", "<=", endDate);
+  }
   
   const transactions: any[] = [];
   const txStream = txQuery.stream();
@@ -55,7 +57,7 @@ async function getReportContext(req: AuthenticatedRequest, workspaceId: string, 
   };
 }
 
-reportRouter.get("/profit-and-loss", async (req, res) => {
+reportRouter.get(["/profit-and-loss", "/pl"], async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const result = ReportRangeSchema.safeParse(req.query);
   if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
@@ -66,15 +68,19 @@ reportRouter.get("/profit-and-loss", async (req, res) => {
     const end = endDate || "2099-12-31";
     const pl: any = {
       income: { total: 0, accounts: {} },
+      cogs: { total: 0, accounts: {} },
       expense: { total: 0, accounts: {} },
       grossProfit: 0,
       netIncome: 0
     };
     accounts.forEach((acc: any) => {
+      const isCogs = acc.type === 'cost_of_goods' || acc.category === 'COGS' || acc.category === 'Direct Costs' || resolveAccountRole(acc) === 'cogs';
       if (isRevenueAccount(acc)) {
-        pl.income.accounts[acc.id] = { name: acc.name, balance: 0, parentId: acc.parentId };
+        pl.income.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0, parentId: acc.parentId };
+      } else if (isCogs) {
+        pl.cogs.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0, parentId: acc.parentId };
       } else if (isExpenseAccount(acc)) {
-        pl.expense.accounts[acc.id] = { name: acc.name, balance: 0, parentId: acc.parentId };
+        pl.expense.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0, parentId: acc.parentId };
       }
     });
     for (const tx of transactions) {
@@ -86,6 +92,10 @@ reportRouter.get("/profit-and-loss", async (req, res) => {
           const val = -amount; 
           pl.income.accounts[line.accountId].balance += val;
           pl.income.total += val;
+        } else if (pl.cogs.accounts[line.accountId]) {
+          const val = amount;
+          pl.cogs.accounts[line.accountId].balance += val;
+          pl.cogs.total += val;
         } else if (pl.expense.accounts[line.accountId]) {
           const val = amount;
           pl.expense.accounts[line.accountId].balance += val;
@@ -97,6 +107,7 @@ reportRouter.get("/profit-and-loss", async (req, res) => {
     pl.grossProfit = totals.grossProfit;
     pl.netIncome = totals.netIncome;
     pl.income.total = totals.income;
+    pl.cogs.total = totals.cogs;
     pl.expense.total = totals.expense;
     res.json(pl);
   } catch (error: any) {
@@ -243,24 +254,35 @@ reportRouter.get("/trial-balance", async (req, res) => {
   const result = WorkspaceIdSchema.safeParse(req.query);
   if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
   const { workspaceId } = result.data;
+  const asOfDate = (req.query.asOfDate || req.query.endDate) as string | undefined;
   try {
-    const { accounts, transactions } = await getReportContext(authReq, workspaceId);
-    const trialBalance: Record<string, { name: string, debit: number, credit: number }> = {};
+    const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, asOfDate);
+    const trialBalance: Record<string, { name: string, code?: string, type: string, debit: number, credit: number, netSigned: number }> = {};
     accounts.forEach((acc: any) => {
       const opening = acc.openingBalanceCents || 0;
+      const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
       trialBalance[acc.id] = {
         name: acc.name,
-        debit: opening > 0 ? opening : 0,
-        credit: opening < 0 ? Math.abs(opening) : 0
+        code: acc.code,
+        type: acc.type,
+        debit: isDebitNature && opening > 0 ? opening : (!isDebitNature && opening < 0 ? Math.abs(opening) : 0),
+        credit: !isDebitNature && opening > 0 ? opening : (isDebitNature && opening < 0 ? Math.abs(opening) : 0),
+        netSigned: opening
       };
     });
     for (const tx of transactions) {
       if (!isPostable(tx)) continue;
+      if (asOfDate && !isTransactionInDateRange(tx, undefined, asOfDate)) continue;
       tx.lines?.forEach((line: any) => {
         const amount = lineAmount(line, tx);
         if (trialBalance[line.accountId]) {
-          if (amount > 0) trialBalance[line.accountId].debit += amount;
-          else trialBalance[line.accountId].credit += Math.abs(amount);
+          const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(trialBalance[line.accountId].type);
+          if (amount > 0) {
+            trialBalance[line.accountId].debit += amount;
+          } else {
+            trialBalance[line.accountId].credit += Math.abs(amount);
+          }
+          trialBalance[line.accountId].netSigned += (isDebitNature ? amount : -amount);
         }
       });
     }

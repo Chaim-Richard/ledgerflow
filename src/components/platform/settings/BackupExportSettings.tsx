@@ -4,6 +4,7 @@ import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { toast } from 'sonner';
 import { formatDecimal, resolveAccountName } from '../../../lib/utils';
+import { recordBackupCompleted } from '../../../lib/ledgerBackupHealth';
 
 export default function BackupExportSettings() {
   const [isExporting, setIsExporting] = useState(false);
@@ -61,6 +62,9 @@ export default function BackupExportSettings() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
+      if (authState.currentWorkspaceId) {
+        recordBackupCompleted(authState.currentWorkspaceId);
+      }
       toast.success('Workspace backup exported successfully');
     } catch (e) {
       console.error(e);
@@ -103,6 +107,11 @@ export default function BackupExportSettings() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+
+      const authState = useAuthStore.getState();
+      if (authState.currentWorkspaceId) {
+        recordBackupCompleted(authState.currentWorkspaceId);
+      }
 
       toast.success('Transactions CSV exported successfully');
     } catch (e) {

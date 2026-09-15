@@ -1,5 +1,5 @@
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ChartAccount, Transaction, JournalEntry } from '../../types';
 import { 
   AlertCircle, 
@@ -13,12 +13,16 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  ExternalLink
+  ExternalLink,
+  CheckCircle2,
+  RefreshCw
 } from 'lucide-react';
 import { formatDecimal, cn, getLocalDateISO, formatCurrency as utilsFormatCurrency } from '../../lib/utils';
 import { isPostable, isTransactionInDateRange, lineAmount, calculateNetIncome } from '../../lib/txFilters';
 import { motion } from 'motion/react';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useFinancialReporting, ServerBalanceSheetData } from '../../hooks/useFinancialReporting';
+import MonthNavigator from '../ui/MonthNavigator';
 import DrillDownModal from '../layout/DrillDownModal';
 
 interface BalanceSheetViewProps {
@@ -37,6 +41,34 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('code');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[] } | null>(null);
+
+  const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
+  const { fetchBalanceSheet, loadingStates } = useFinancialReporting();
+  const [serverData, setServerData] = useState<ServerBalanceSheetData | null>(null);
+  const [serverPrevData, setServerPrevData] = useState<ServerBalanceSheetData | null>(null);
+  const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+
+  const loadServerReport = useCallback(async () => {
+    try {
+      const res = await fetchBalanceSheet(asOfDate);
+      if (res) {
+        setServerData(res);
+        setIsServerAuthoritative(true);
+      }
+      if (isComparative) {
+        const prevRes = await fetchBalanceSheet(priorDate);
+        if (prevRes) {
+          setServerPrevData(prevRes);
+        }
+      }
+    } catch {
+      setIsServerAuthoritative(false);
+    }
+  }, [fetchBalanceSheet, asOfDate, priorDate, isComparative]);
+
+  useEffect(() => {
+    loadServerReport();
+  }, [loadServerReport]);
 
   const toggleSort = (field: 'code' | 'name' | 'balance') => {
     if (sortBy === field) {
@@ -165,11 +197,14 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
     };
   }, [transactions, accounts]);
 
-  const { currentData, prevData } = useMemo(() => {
-    const currentData = getPeriodBalances(asOfDate);
-    const prevData = isComparative ? getPeriodBalances(priorDate) : currentData;
-    return { currentData, prevData };
+  const localCalculation = useMemo(() => {
+    const current = getPeriodBalances(asOfDate);
+    const prev = isComparative ? getPeriodBalances(priorDate) : current;
+    return { currentData: current, prevData: prev };
   }, [getPeriodBalances, asOfDate, priorDate, isComparative]);
+
+  const currentData = isServerAuthoritative && serverData ? serverData : localCalculation.currentData;
+  const prevData = isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
 
   const exportBalanceSheet = async () => {
     const ExcelJS = await import('exceljs');
@@ -292,10 +327,46 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
 
   return (
     <div className="space-y-6">
+      {/* Authoritative / Truncation Status Banner */}
+      {!isServerAuthoritative && isDataTruncated ? (
+        <div id="bs-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Showing 2,000 of N transactions — totals are incomplete</span>
+          </div>
+          <button
+            onClick={loadServerReport}
+            disabled={loadingStates.balanceSheet}
+            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded text-xs transition flex items-center gap-1.5"
+          >
+            {loadingStates.balanceSheet ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+            <span>{loadingStates.balanceSheet ? "Loading Server..." : "Load Full Server Report"}</span>
+          </button>
+        </div>
+      ) : isServerAuthoritative ? (
+        <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Server-Authoritative Balance Sheet (Full History Verified)</span>
+          </div>
+          <button 
+            onClick={loadServerReport} 
+            title="Refresh server report"
+            className="text-emerald-400/80 hover:text-emerald-300 p-0.5 rounded transition"
+          >
+            <RefreshCw className={cn("w-3 h-3", loadingStates.balanceSheet && "animate-spin")} />
+          </button>
+        </div>
+      ) : null}
+
       {/* Date controls and configuration header */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
         <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10 w-full lg:w-auto">
+          <MonthNavigator
+            currentDate={asOfDate}
+            onMonthChange={({ end }) => setAsOfDate(end)}
+          />
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-slate-500 shrink-0">
                <Calendar size={13} />

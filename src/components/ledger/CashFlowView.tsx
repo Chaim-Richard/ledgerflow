@@ -5,6 +5,7 @@ import { parseLocalDate, formatDecimal, formatCurrency, cn, getLocalDateISO } fr
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
 import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore';
+import MonthNavigator from '../ui/MonthNavigator';
 
 export default function CashFlowView() {
   const transactions = useLedgerStore(s => s.transactions);
@@ -215,7 +216,11 @@ export default function CashFlowView() {
       {/* Date Range & Controls */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
         <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10 w-full lg:w-auto">
+          <MonthNavigator
+            currentDate={dateRange.start}
+            onMonthChange={({ start, end }) => setDateRange({ start, end })}
+          />
           <div className="flex items-center gap-3 w-full">
             <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-slate-500 shrink-0">
                <Calendar size={13} />
