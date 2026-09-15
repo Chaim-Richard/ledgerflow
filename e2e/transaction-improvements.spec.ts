@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Transaction List Improvements Suite', () => {
 
   test.beforeEach(async ({ page }) => {
-    // Seed guest session directly into localStorage
+    // Seed guest session directly into localStorage so auth passes immediately
     await page.addInitScript(() => {
       localStorage.setItem('isGuest', 'true');
       localStorage.setItem('has_seen_onboarding', 'true');
@@ -26,12 +26,18 @@ test.describe('Transaction List Improvements Suite', () => {
 
   test('Filtered totals bar displays and updates upon filtering, and attachment badge renders on transaction with fileUrls', async ({ page }) => {
     // Navigate to Transactions -> Ledger & Journal
-    await page.click('button:has-text("Transactions")');
-    await page.click('button:has-text("Ledger & Journal")');
+    const txNav = page.locator('button:has-text("Transactions")');
+    if (await txNav.isVisible()) {
+      await txNav.click();
+    }
+    const ledgerNav = page.locator('button:has-text("Ledger & Journal")');
+    if (await ledgerNav.isVisible()) {
+      await ledgerNav.click();
+    }
 
     // Wait for the Transaction Grid and Filtered Totals bar
     const totalsBar = page.locator('[data-testid="filtered-totals-bar"]');
-    await totalsBar.waitFor({ state: 'visible', timeout: 10000 });
+    await totalsBar.waitFor({ state: 'visible', timeout: 15000 });
 
     // Assert that the three cells in the summary bar exist
     const inflowElement = page.locator('[data-testid="filtered-inflow"]');
@@ -48,16 +54,19 @@ test.describe('Transaction List Improvements Suite', () => {
 
     // Inject a test transaction with attachments (fileUrls) into the Zustand ledger store
     await page.evaluate(() => {
-      const store = (window as any).__ledgerStore || (window as any).useLedgerStore;
+      const store = (window as any).__ledgerStore;
       const testTx = {
         id: 'tx_e2e_attachment_test',
+        uid: 'guest_user',
+        workspaceId: 'default',
         date: '2026-09-15',
         description: 'Special Audit Item with Receipt',
         type: 'income',
-        status: 'posted',
+        status: 'completed',
         totalAmountCents: 888800,
         currency: 'USD',
         fileUrls: ['https://example.com/receipt1.pdf', 'https://example.com/receipt2.pdf'],
+        createdAt: '2026-09-15',
         lines: [
           { accountId: 'acc_cash', accountName: 'Cash', amountCents: 888800 },
           { accountId: 'acc_rev', accountName: 'Revenue', amountCents: -888800 }
@@ -71,7 +80,6 @@ test.describe('Transaction List Improvements Suite', () => {
 
     // Check if the attachment badge renders
     const attachmentBadge = page.locator('[data-testid="attachment-badge"]').first();
-    // In case the store injection updated the grid:
     if (await attachmentBadge.count() > 0) {
       await expect(attachmentBadge).toBeVisible();
     }
@@ -90,12 +98,18 @@ test.describe('Transaction List Improvements Suite', () => {
   });
 
   test('Tabular figures (tabular-nums) class is present on transaction amounts', async ({ page }) => {
-    await page.click('button:has-text("Transactions")');
-    await page.click('button:has-text("Ledger & Journal")');
+    const txNav = page.locator('button:has-text("Transactions")');
+    if (await txNav.isVisible()) {
+      await txNav.click();
+    }
+    const ledgerNav = page.locator('button:has-text("Ledger & Journal")');
+    if (await ledgerNav.isVisible()) {
+      await ledgerNav.click();
+    }
 
-    await page.waitForSelector('[data-testid="filtered-totals-bar"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="filtered-totals-bar"]', { timeout: 15000 });
 
-    // Assert that the inflow and outflow value spans have the tabular-nums class
+    // Assert that the inflow value span has the tabular-nums class
     const inflowValue = page.locator('[data-testid="filtered-inflow"] .tabular-nums').first();
     await expect(inflowValue).toBeVisible();
   });

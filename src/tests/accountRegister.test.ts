@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import { calculateAccountRegisterBalances, visibleAccountRegisterEntries } from '../lib/accountRegister';
 
 describe('accountRegister calculations', () => {
@@ -18,12 +19,12 @@ describe('accountRegister calculations', () => {
       [-1000, -2000, 5000]
     );
 
-    expect(result.endingBalanceMinor).toBe(12000);
+    assert.equal(result.endingBalanceMinor, 12000);
     // After Tx 3 (newest): 12000
     // After Tx 2: 12000 - (-1000) = 13000
     // After Tx 1: 13000 - (-2000) = 15000
     // Prior to Tx 1: 15000 - 5000 = 10000 (matches opening!)
-    expect(result.runningNewestFirst).toEqual([12000, 13000, 15000]);
+    assert.deepEqual(result.runningNewestFirst, [12000, 13000, 15000]);
   });
 
   it('works correctly when newest list is paginated / truncated', () => {
@@ -36,14 +37,14 @@ describe('accountRegister calculations', () => {
       [500, -200]
     );
 
-    expect(result.endingBalanceMinor).toBe(60000);
-    expect(result.runningNewestFirst).toEqual([60000, 59500]);
+    assert.equal(result.endingBalanceMinor, 60000);
+    assert.deepEqual(result.runningNewestFirst, [60000, 59500]);
   });
 
   it('rejects unsafe integer inputs', () => {
-    expect(() => calculateAccountRegisterBalances(1.5, 100, [100])).toThrow(TypeError);
-    expect(() => calculateAccountRegisterBalances(100, NaN, [100])).toThrow(TypeError);
-    expect(() => calculateAccountRegisterBalances(100, 100, [2.5])).toThrow(TypeError);
+    assert.throws(() => calculateAccountRegisterBalances(1.5, 100, [100]), TypeError);
+    assert.throws(() => calculateAccountRegisterBalances(100, NaN, [100]), TypeError);
+    assert.throws(() => calculateAccountRegisterBalances(100, 100, [2.5]), TypeError);
   });
 
   it('filters uncleared entries when unclearedOnly is true', () => {
@@ -53,8 +54,8 @@ describe('accountRegister calculations', () => {
       { id: '3', desc: 'C' }
     ];
 
-    expect(visibleAccountRegisterEntries(entries, false)).toHaveLength(3);
-    expect(visibleAccountRegisterEntries(entries, true)).toEqual([
+    assert.equal(visibleAccountRegisterEntries(entries, false).length, 3);
+    assert.deepEqual(visibleAccountRegisterEntries(entries, true), [
       { id: '2', isCleared: false, desc: 'B' },
       { id: '3', desc: 'C' }
     ]);
