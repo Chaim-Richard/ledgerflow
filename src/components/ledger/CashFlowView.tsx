@@ -28,6 +28,19 @@ export default function CashFlowView() {
   const [serverPrevData, setServerPrevData] = useState<ServerCashFlowData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
 
+  const getPrevPeriod = (start: string, end: string) => {
+    const s = parseLocalDate(start);
+    const e = parseLocalDate(end);
+    const msDiff = e.getTime() - s.getTime();
+    const prevE = new Date(s.getTime() - 86400000); 
+    const MathDiffDays = Math.round(msDiff / 86400000);
+    const prevS = new Date(prevE.getTime() - (MathDiffDays * 86400000));
+    return {
+      start: getLocalDateISO(prevS),
+      end: getLocalDateISO(prevE)
+    };
+  };
+
   const loadServerReport = useCallback(async () => {
     try {
       const res = await fetchCashFlow(dateRange.start, dateRange.end);
@@ -98,19 +111,6 @@ export default function CashFlowView() {
       };
     }
   }, [businessType]);
-
-  const getPrevPeriod = (start: string, end: string) => {
-    const s = parseLocalDate(start);
-    const e = parseLocalDate(end);
-    const msDiff = e.getTime() - s.getTime();
-    const prevE = new Date(s.getTime() - 86400000); 
-    const MathDiffDays = Math.round(msDiff / 86400000);
-    const prevS = new Date(prevE.getTime() - (MathDiffDays * 86400000));
-    return {
-      start: getLocalDateISO(prevS),
-      end: getLocalDateISO(prevE)
-    }
-  };
 
   const localCalculation = useMemo(() => {
     const calcPeriod = (start: string, end: string) => {

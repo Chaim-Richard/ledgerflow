@@ -15,8 +15,7 @@ describe('Filtered Totals & Inflow/Outflow Calculation Suite', () => {
       currency: 'USD',
       code: '1000',
       isActive: true,
-      balanceCents: 100000,
-      createdAt: '2026-01-01'
+      balanceCents: 100000
     },
     {
       id: 'acc_rev',
@@ -28,8 +27,7 @@ describe('Filtered Totals & Inflow/Outflow Calculation Suite', () => {
       currency: 'USD',
       code: '4000',
       isActive: true,
-      balanceCents: -50000,
-      createdAt: '2026-01-01'
+      balanceCents: -50000
     },
     {
       id: 'acc_exp',
@@ -41,8 +39,7 @@ describe('Filtered Totals & Inflow/Outflow Calculation Suite', () => {
       currency: 'USD',
       code: '6000',
       isActive: true,
-      balanceCents: 20000,
-      createdAt: '2026-01-01'
+      balanceCents: 20000
     }
   ];
 

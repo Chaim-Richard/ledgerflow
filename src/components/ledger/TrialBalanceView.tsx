@@ -478,7 +478,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                       {line.name}
                     </p>
                     <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">
-                      {line.type} Classification • {line.category || 'Standard'}
+                      {line.type} Classification • {((line as any).category) || 'Standard'}
                     </p>
                   </div>
                 </td>

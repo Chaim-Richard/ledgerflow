@@ -20,23 +20,34 @@ export interface ServerBalanceSheetData {
   totalAssets: number;
   totalLiabilities: number;
   totalEquity: number;
-  currentPeriodNetIncome: number;
+  netIncome: number;
   totalClaims: number;
   isBalanced: boolean;
 }
 
 export interface ServerTrialBalanceData {
-  accounts: Record<string, { name: string; code?: string; type: string; debit: number; credit: number; netSigned: number }>;
+  accounts: Array<{ id: string; name: string; code?: string; type: string; debit: number; credit: number; netSigned: number }>;
   totalDebit: number;
   totalCredit: number;
   isBalanced: boolean;
 }
 
 export interface ServerCashFlowData {
-  operating: { total: number; items: Array<{ name: string; amount: number }> };
-  investing: { total: number; items: Array<{ name: string; amount: number }> };
-  financing: { total: number; items: Array<{ name: string; amount: number }> };
+  operating: { total: number; inflow: number; outflow: number; items: Array<{ name: string; amount: number }> };
+  investing: { total: number; inflow: number; outflow: number; items: Array<{ name: string; amount: number }> };
+  financing: { total: number; inflow: number; outflow: number; items: Array<{ name: string; amount: number }> };
   netChange: number;
+}
+
+export interface ReportLoadingStates {
+  pl: boolean;
+  bs: boolean;
+  tb: boolean;
+  cf: boolean;
+  profitAndLoss: boolean;
+  balanceSheet: boolean;
+  trialBalance: boolean;
+  cashFlow: boolean;
 }
 
 async function getAuthHeaders(): Promise<HeadersInit> {
@@ -55,11 +66,15 @@ export function useFinancialReporting() {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const [loading, setLoading] = useState(false);
-  const [loadingStates, setLoadingStates] = useState<{ pl: boolean; bs: boolean; tb: boolean; cf: boolean }>({
+  const [loadingStates, setLoadingStates] = useState<ReportLoadingStates>({
     pl: false,
     bs: false,
     tb: false,
     cf: false,
+    profitAndLoss: false,
+    balanceSheet: false,
+    trialBalance: false,
+    cashFlow: false,
   });
   const [apiReports, setApiReports] = useState<{
     pl: ServerPLData | null;
@@ -80,7 +95,7 @@ export function useFinancialReporting() {
   const fetchPL = useCallback(async (startDate?: string, endDate?: string): Promise<ServerPLData | null> => {
     if (!currentWorkspaceId) return null;
     setLoading(true);
-    setLoadingStates(prev => ({ ...prev, pl: true }));
+    setLoadingStates(prev => ({ ...prev, pl: true, profitAndLoss: true }));
     try {
       const headers = await getAuthHeaders();
       let url = `/api/v1/reports/profit-and-loss?workspaceId=${currentWorkspaceId}`;
@@ -100,14 +115,14 @@ export function useFinancialReporting() {
       return null;
     } finally {
       setLoading(false);
-      setLoadingStates(prev => ({ ...prev, pl: false }));
+      setLoadingStates(prev => ({ ...prev, pl: false, profitAndLoss: false }));
     }
   }, [currentWorkspaceId]);
 
   const fetchBalanceSheet = useCallback(async (endDate?: string): Promise<ServerBalanceSheetData | null> => {
     if (!currentWorkspaceId) return null;
     setLoading(true);
-    setLoadingStates(prev => ({ ...prev, bs: true }));
+    setLoadingStates(prev => ({ ...prev, bs: true, balanceSheet: true }));
     try {
       const headers = await getAuthHeaders();
       let url = `/api/v1/reports/balance-sheet?workspaceId=${currentWorkspaceId}`;
@@ -126,14 +141,14 @@ export function useFinancialReporting() {
       return null;
     } finally {
       setLoading(false);
-      setLoadingStates(prev => ({ ...prev, bs: false }));
+      setLoadingStates(prev => ({ ...prev, bs: false, balanceSheet: false }));
     }
   }, [currentWorkspaceId]);
 
   const fetchTrialBalance = useCallback(async (asOfDate?: string): Promise<ServerTrialBalanceData | null> => {
     if (!currentWorkspaceId) return null;
     setLoading(true);
-    setLoadingStates(prev => ({ ...prev, tb: true }));
+    setLoadingStates(prev => ({ ...prev, tb: true, trialBalance: true }));
     try {
       const headers = await getAuthHeaders();
       let url = `/api/v1/reports/trial-balance?workspaceId=${currentWorkspaceId}`;
@@ -152,14 +167,14 @@ export function useFinancialReporting() {
       return null;
     } finally {
       setLoading(false);
-      setLoadingStates(prev => ({ ...prev, tb: false }));
+      setLoadingStates(prev => ({ ...prev, tb: false, trialBalance: false }));
     }
   }, [currentWorkspaceId]);
 
   const fetchCashFlow = useCallback(async (startDate?: string, endDate?: string): Promise<ServerCashFlowData | null> => {
     if (!currentWorkspaceId) return null;
     setLoading(true);
-    setLoadingStates(prev => ({ ...prev, cf: true }));
+    setLoadingStates(prev => ({ ...prev, cf: true, cashFlow: true }));
     try {
       const headers = await getAuthHeaders();
       let url = `/api/v1/reports/cash-flow?workspaceId=${currentWorkspaceId}`;
@@ -179,7 +194,7 @@ export function useFinancialReporting() {
       return null;
     } finally {
       setLoading(false);
-      setLoadingStates(prev => ({ ...prev, cf: false }));
+      setLoadingStates(prev => ({ ...prev, cf: false, cashFlow: false }));
     }
   }, [currentWorkspaceId]);
 

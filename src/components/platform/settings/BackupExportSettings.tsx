@@ -33,9 +33,16 @@ export default function BackupExportSettings() {
         if (res.ok) {
           payload = await res.json();
           usedServer = true;
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || `Server returned status ${res.status}`);
         }
-      } catch (serverErr) {
-        console.warn("Server backup export endpoint unavailable, attempting fallback:", serverErr);
+      } catch (serverErr: any) {
+        if (!navigator.onLine || !authState.user) {
+          console.warn("Offline/unauthenticated mode, using local client export fallback");
+        } else {
+          throw new Error(`Server export failed: ${serverErr.message || 'Unknown error'}. Falling back to local state will produce an incomplete backup. Retry or resolve server error.`);
+        }
       }
 
       // 2. Client fallback (e.g. offline or unauthenticated guest mode)
@@ -65,7 +72,9 @@ export default function BackupExportSettings() {
           metadata: {
             transactionCount: state.transactions.length,
             currency: state.baseCurrency || 'USD',
-            serverAuthoritative: false
+            serverAuthoritative: false,
+            checksumAlgorithm: 'SHA-256',
+            checksumScope: 'payload-excluding-checksum'
           }
         };
 
@@ -130,20 +139,54 @@ export default function BackupExportSettings() {
 
       if (!downloadedViaServer) {
         const { transactions, accounts } = useLedgerStore.getState();
-        let csvContent = "Date,Amount,Description,Category,Type,Status,Reference\n";
+        const accountsMap = new Map(accounts.map(a => [a.id, a]));
+        let csvContent = "Date,TransactionId,Description,AccountCode,AccountName,Debit,Credit,NetAmount,Type,Status,Reference\n";
         transactions.forEach(t => {
-          const categoryName = t.lines && t.lines.length > 0 ? resolveAccountName(accounts, t.lines[0].accountId, t.lines[0].accountName) : 'Uncategorized';
-          const amountStr = formatDecimal(t.totalAmountCents || 0);
-          const row = [
-            t.date,
-            amountStr,
-            `"${(t.description || '').replace(/"/g, '""')}"`,
-            `"${categoryName.replace(/"/g, '""')}"`,
-            (t as any).type || 'actual',
-            (t as any).status || 'posted',
-            `"${((t as any).reference || '').replace(/"/g, '""')}"`
-          ];
-          csvContent += row.join(",") + "\n";
+          if (t.lines && t.lines.length > 0) {
+            t.lines.forEach(line => {
+              const acc = accountsMap.get(line.accountId);
+              const accCode = (acc?.code || (line as any).accountCode || '').toString();
+              const accName = (acc?.name || line.accountName || 'Uncategorized').toString();
+              const amtCents = line.amountCents || 0;
+              const debitCents = amtCents > 0 ? amtCents : 0;
+              const creditCents = amtCents < 0 ? Math.abs(amtCents) : 0;
+              const debitStr = (debitCents / 100).toFixed(2);
+              const creditStr = (creditCents / 100).toFixed(2);
+              const netStr = (amtCents / 100).toFixed(2);
+
+              const row = [
+                t.date || '',
+                `"${(t.id || '').replace(/"/g, '""')}"`,
+                `"${(line.description || t.description || '').replace(/"/g, '""')}"`,
+                `"${accCode.replace(/"/g, '""')}"`,
+                `"${accName.replace(/"/g, '""')}"`,
+                debitStr,
+                creditStr,
+                netStr,
+                t.type || 'actual',
+                t.status || 'posted',
+                `"${((t as any).reference || '').replace(/"/g, '""')}"`
+              ];
+              csvContent += row.join(",") + "\n";
+            });
+          } else {
+            const netCents = t.totalAmountCents || 0;
+            const debitCents = netCents > 0 ? netCents : 0;
+            const row = [
+              t.date || '',
+              `"${(t.id || '').replace(/"/g, '""')}"`,
+              `"${(t.description || '').replace(/"/g, '""')}"`,
+              '""',
+              '"Uncategorized"',
+              (debitCents / 100).toFixed(2),
+              '0.00',
+              (netCents / 100).toFixed(2),
+              t.type || 'actual',
+              t.status || 'posted',
+              `"${((t as any).reference || '').replace(/"/g, '""')}"`
+            ];
+            csvContent += row.join(",") + "\n";
+          }
         });
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -180,6 +223,10 @@ export default function BackupExportSettings() {
 
       if (!payload.schemaVersion || !payload.metadata || !payload.metadata.checksum) {
         throw new Error("Invalid backup format: Missing schema version or checksum");
+      }
+
+      if (payload.metadata.checksumAlgorithm && payload.metadata.checksumAlgorithm !== 'SHA-256') {
+        throw new Error(`Unsupported checksum algorithm: ${payload.metadata.checksumAlgorithm}`);
       }
 
       // Verify checksum

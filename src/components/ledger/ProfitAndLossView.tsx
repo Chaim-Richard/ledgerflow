@@ -40,6 +40,20 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
   const [serverPrevData, setServerPrevData] = useState<PLData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
 
+  // Helper to subtract months
+  const getPrevPeriod = (start: string, end: string) => {
+    const s = parseLocalDate(start);
+    const e = parseLocalDate(end);
+    const msDiff = e.getTime() - s.getTime();
+    const prevE = new Date(s.getTime() - 86400000); 
+    const MathDiffDays = Math.round(msDiff / 86400000);
+    const prevS = new Date(prevE.getTime() - (MathDiffDays * 86400000));
+    return {
+      start: getLocalDateISO(prevS),
+      end: getLocalDateISO(prevE)
+    };
+  };
+
   const loadServerReport = useCallback(async () => {
     try {
       const res = await fetchPL(dateRange.start, dateRange.end);
@@ -122,20 +136,6 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
       };
     }
   }, [businessType]);
-
-  // Helper to subtract months
-  const getPrevPeriod = (start: string, end: string) => {
-    const s = parseLocalDate(start);
-    const e = parseLocalDate(end);
-    const msDiff = e.getTime() - s.getTime();
-    const prevE = new Date(s.getTime() - 86400000); 
-    const MathDiffDays = Math.round(msDiff / 86400000);
-    const prevS = new Date(prevE.getTime() - (MathDiffDays * 86400000));
-    return {
-      start: getLocalDateISO(prevS),
-      end: getLocalDateISO(prevE)
-    }
-  };
 
   const localCalculation = useMemo(() => {
     const defaultData = {

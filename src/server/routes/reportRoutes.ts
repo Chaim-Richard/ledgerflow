@@ -143,9 +143,9 @@ reportRouter.get("/balance-sheet", async (req, res) => {
 
     const { netIncome } = calculateNetIncome(transactions, accounts, "1970-01-01", end);
 
-    const assets: Record<string, { name: string; balance: number; subtype?: string }> = {};
-    const liabilities: Record<string, { name: string; balance: number; subtype?: string }> = {};
-    const equity: Record<string, { name: string; balance: number; subtype?: string }> = {};
+    const assets: Record<string, number> = {};
+    const liabilities: Record<string, number> = {};
+    const equity: Record<string, number> = {};
 
     let totalAssets = 0;
     let totalLiabilities = 0;
@@ -154,28 +154,33 @@ reportRouter.get("/balance-sheet", async (req, res) => {
     accounts.forEach((acc: any) => {
       const bal = balances[acc.id] || 0;
       if (acc.type === 'asset') {
-        assets[acc.id] = { name: acc.name, balance: bal, subtype: acc.subtype };
+        assets[acc.id] = bal;
         totalAssets += bal;
       } else if (acc.type === 'liability') {
         const val = -bal;
-        liabilities[acc.id] = { name: acc.name, balance: val, subtype: acc.subtype };
+        liabilities[acc.id] = val;
         totalLiabilities += val;
       } else if (acc.type === 'equity') {
         const val = -bal;
-        equity[acc.id] = { name: acc.name, balance: val, subtype: acc.subtype };
+        equity[acc.id] = val;
         totalEquity += val;
       }
     });
 
     totalEquity += netIncome;
+    const totalClaims = totalLiabilities + totalEquity;
+    const isBalanced = Math.abs(totalAssets - totalClaims) <= 1;
 
     res.json({
-      assets: { total: totalAssets, accounts: assets },
-      liabilities: { total: totalLiabilities, accounts: liabilities },
-      equity: { total: totalEquity, accounts: equity, currentPeriodNetIncome: netIncome },
+      assets,
+      liabilities,
+      equity,
       totalAssets,
-      totalLiabilitiesAndEquity: totalLiabilities + totalEquity,
-      isBalanced: totalAssets === (totalLiabilities + totalEquity)
+      totalLiabilities,
+      totalEquity,
+      netIncome,
+      totalClaims,
+      isBalanced
     });
   } catch (error: any) {
     if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
@@ -288,7 +293,16 @@ reportRouter.get("/trial-balance", async (req, res) => {
     }
     const totalDebit = Object.values(trialBalance).reduce((sum, acc) => sum + acc.debit, 0);
     const totalCredit = Object.values(trialBalance).reduce((sum, acc) => sum + acc.credit, 0);
-    res.json({ accounts: trialBalance, totalDebit, totalCredit, isBalanced: totalDebit === totalCredit });
+    const accountsArray = Object.entries(trialBalance).map(([id, acc]) => ({
+      id,
+      name: acc.name,
+      code: acc.code,
+      type: acc.type,
+      debit: acc.debit,
+      credit: acc.credit,
+      netSigned: acc.netSigned
+    }));
+    res.json({ accounts: accountsArray, totalDebit, totalCredit, isBalanced: Math.abs(totalDebit - totalCredit) <= 1 });
   } catch (error: any) {
     if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
     if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
@@ -339,33 +353,36 @@ reportRouter.get("/cash-flow", async (req, res) => {
     }
 
     const cashFlow = {
-      operating: { total: 0, items: [] as any[] },
-      investing: { total: 0, items: [] as any[] },
-      financing: { total: 0, items: [] as any[] },
+      operating: { total: 0, inflow: 0, outflow: 0, items: [] as any[] },
+      investing: { total: 0, inflow: 0, outflow: 0, items: [] as any[] },
+      financing: { total: 0, inflow: 0, outflow: 0, items: [] as any[] },
       netChange: 0
     };
 
     transactions.forEach((tx: any) => {
       if (!isPostable(tx)) return;
       tx.lines?.forEach((line: any) => {
-        const acc = accounts.find(a => a.id === line.accountId);
+        const acc = accounts.find((a: any) => a.id === line.accountId);
         if (!acc) return;
         const amount = lineAmount(line, tx);
+        const delta = -amount;
 
-        if (acc.type === 'income') cashFlow.operating.total -= amount;
-        if (acc.type === 'expense') cashFlow.operating.total -= amount;
-
-        if (acc.type === 'asset' && (acc.category === 'Receivables' || acc.category === 'Receivable' || acc.category === 'Accounts Receivable')) cashFlow.operating.total -= amount;
-        if (acc.type === 'liability' && (acc.category === 'Payables' || acc.category === 'Payable' || acc.category === 'Accounts Payable')) cashFlow.operating.total -= amount;
-
-        if (acc.type === 'asset' && (acc.category === 'Fixed Assets' || acc.category === 'Fixed Asset')) {
-          cashFlow.investing.total -= amount;
-          cashFlow.investing.items.push({ name: tx.description, amount: -amount });
-        }
-
-        if (acc.type === 'equity' || (acc.type === 'liability' && (acc.category === 'Long Term Liabilities' || acc.category === 'Long Term Liability'))) {
-          cashFlow.financing.total -= amount;
-          cashFlow.financing.items.push({ name: tx.description, amount: -amount });
+        if (acc.type === 'income' || acc.type === 'revenue' || acc.type === 'expense' || acc.type === 'cost_of_goods' || acc.type === 'cogs' ||
+            (acc.type === 'asset' && (acc.category === 'Receivables' || acc.category === 'Receivable' || acc.category === 'Accounts Receivable')) ||
+            (acc.type === 'liability' && (acc.category === 'Payables' || acc.category === 'Payable' || acc.category === 'Accounts Payable'))) {
+          cashFlow.operating.total += delta;
+          if (delta > 0) cashFlow.operating.inflow += delta;
+          else cashFlow.operating.outflow += Math.abs(delta);
+        } else if (acc.type === 'asset' && (acc.category === 'Fixed Assets' || acc.category === 'Fixed Asset')) {
+          cashFlow.investing.total += delta;
+          if (delta > 0) cashFlow.investing.inflow += delta;
+          else cashFlow.investing.outflow += Math.abs(delta);
+          cashFlow.investing.items.push({ name: tx.description, amount: delta });
+        } else if (acc.type === 'equity' || (acc.type === 'liability' && (acc.category === 'Long Term Liabilities' || acc.category === 'Long Term Liability'))) {
+          cashFlow.financing.total += delta;
+          if (delta > 0) cashFlow.financing.inflow += delta;
+          else cashFlow.financing.outflow += Math.abs(delta);
+          cashFlow.financing.items.push({ name: tx.description, amount: delta });
         }
       });
     });

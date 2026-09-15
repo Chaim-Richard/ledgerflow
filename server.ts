@@ -51,7 +51,7 @@ import {
 import { BayesianClassifier, sha256Sync } from "./src/lib/algorithms.ts";
 import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
 import { TruthEngine } from "./src/modules/integrity/TruthEngine.ts";
-import { calculateNetIncome } from "./src/lib/txFilters.ts";
+import { calculateNetIncome, lineAmount } from "./src/lib/txFilters.ts";
 import { TransactionValidator } from "./src/kernel/validation/TransactionValidator.ts";
 import { assertWorkspaceAccess } from "./src/server/db/firestore.ts";
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
@@ -2016,13 +2016,13 @@ async function startServer() {
               try {
                 const snap = await query.get();
                 resolve(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
-              } catch (fallbackErr) {
-                reject(err);
+              } catch (fallbackErr: any) {
+                reject(new Error(`Failed to export collection "${collectionName}": ${err.message || fallbackErr.message}`));
               }
             });
           });
-        } catch (err) {
-          return [];
+        } catch (err: any) {
+          throw new Error(`Failed to export collection "${collectionName}": ${err.message}`);
         }
       };
 
@@ -2038,7 +2038,14 @@ async function startServer() {
         recurring,
         inventory,
         assets,
+        employees,
+        payRuns,
         taxRates,
+        partners,
+        auditLogs,
+        bankLines,
+        customTemplates,
+        rulePatterns,
         autoRules,
         reconciliations
       ] = await Promise.all([
@@ -2053,7 +2060,14 @@ async function startServer() {
         streamCollection("recurring"),
         streamCollection("inventory"),
         streamCollection("assets"),
+        streamCollection("employees"),
+        streamCollection("payRuns"),
         streamCollection("taxRates"),
+        streamCollection("partners"),
+        streamCollection("auditLogs"),
+        streamCollection("bankLines"),
+        streamCollection("customTemplates"),
+        streamCollection("rulePatterns"),
         streamCollection("autoRules"),
         streamCollection("reconciliations")
       ]);
@@ -2062,21 +2076,54 @@ async function startServer() {
       const todayIso = new Date().toISOString().split("T")[0];
 
       if (format === "csv") {
-        let csvContent = "Date,Amount,Description,Category,Type,Status,Reference\n";
-        const accountsMap = new Map(accounts.map((a: any) => [a.id, a.name || a.code || a.id]));
+        let csvContent = "Date,TransactionId,Description,AccountCode,AccountName,Debit,Credit,NetAmount,Type,Status,Reference\n";
+        const accountsMap = new Map(accounts.map((a: any) => [a.id, a]));
         transactions.forEach((t: any) => {
-          const categoryName = t.lines && t.lines.length > 0 ? (accountsMap.get(t.lines[0].accountId) || t.lines[0].accountName || 'Uncategorized') : 'Uncategorized';
-          const amountStr = ((t.totalAmountCents || 0) / 100).toFixed(2);
-          const row = [
-            t.date || '',
-            amountStr,
-            `"${(t.description || '').replace(/"/g, '""')}"`,
-            `"${String(categoryName).replace(/"/g, '""')}"`,
-            t.type || 'actual',
-            t.status || 'posted',
-            `"${(t.reference || '').replace(/"/g, '""')}"`
-          ];
-          csvContent += row.join(",") + "\n";
+          if (t.lines && t.lines.length > 0) {
+            t.lines.forEach((line: any) => {
+              const acc = accountsMap.get(line.accountId);
+              const accCode = (acc?.code || line.accountCode || '').toString();
+              const accName = (acc?.name || line.accountName || 'Uncategorized').toString();
+              const amtCents = lineAmount(line, t);
+              const debitCents = amtCents > 0 ? amtCents : 0;
+              const creditCents = amtCents < 0 ? Math.abs(amtCents) : 0;
+              const debitStr = (debitCents / 100).toFixed(2);
+              const creditStr = (creditCents / 100).toFixed(2);
+              const netStr = (amtCents / 100).toFixed(2);
+
+              const row = [
+                t.date || '',
+                `"${(t.id || '').replace(/"/g, '""')}"`,
+                `"${(line.description || t.description || '').replace(/"/g, '""')}"`,
+                `"${accCode.replace(/"/g, '""')}"`,
+                `"${accName.replace(/"/g, '""')}"`,
+                debitStr,
+                creditStr,
+                netStr,
+                t.type || 'actual',
+                t.status || 'posted',
+                `"${(t.reference || '').replace(/"/g, '""')}"`
+              ];
+              csvContent += row.join(",") + "\n";
+            });
+          } else {
+            const netCents = t.totalAmountCents || 0;
+            const debitCents = netCents > 0 ? netCents : 0;
+            const row = [
+              t.date || '',
+              `"${(t.id || '').replace(/"/g, '""')}"`,
+              `"${(t.description || '').replace(/"/g, '""')}"`,
+              '""',
+              '"Uncategorized"',
+              (debitCents / 100).toFixed(2),
+              '0.00',
+              (netCents / 100).toFixed(2),
+              t.type || 'actual',
+              t.status || 'posted',
+              `"${(t.reference || '').replace(/"/g, '""')}"`
+            ];
+            csvContent += row.join(",") + "\n";
+          }
         });
         res.setHeader("Content-Disposition", `attachment; filename="ledgerflow-transactions-${workspaceId}-${todayIso}.csv"`);
         res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -2098,7 +2145,14 @@ async function startServer() {
         inventory,
         assets,
         recurringRules: recurring,
+        employees,
+        payRuns,
         taxRates,
+        partners,
+        auditLogs,
+        bankLines,
+        customTemplates,
+        rulePatterns,
         autoRules,
         reconciliations,
         metadata: {
@@ -2107,9 +2161,12 @@ async function startServer() {
           billCount: bills.length,
           accountCount: accounts.length,
           projectCount: projects.length,
+          employeeCount: employees.length,
           currency: (wsData as any)?.currency || (wsData as any)?.baseCurrency || 'USD',
           exportedBy: authReq.user?.uid || 'user',
-          serverAuthoritative: true
+          serverAuthoritative: true,
+          checksumAlgorithm: 'SHA-256',
+          checksumScope: 'payload-excluding-checksum'
         }
       };
 

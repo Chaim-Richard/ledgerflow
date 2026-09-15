@@ -152,6 +152,7 @@ export default function Dashboard() {
         schemaVersion: '1.1',
         tags: ['scenario', 'ghost'],
         metadata: { isGhost: true },
+        createdAt: new Date().toISOString(),
         lines: [
           {
             accountId: isExpense ? 'expense-acc' : 'asset-acc',
