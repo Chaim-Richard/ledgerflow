@@ -22,8 +22,12 @@ export interface Workspace {
     anomalyAlert: boolean;
   };
   // Billing & Tenant Resource Constraints
-  plan?: 'free' | 'growth' | 'enterprise';
-  billingCycle?: 'monthly' | 'yearly';
+  plan?: 'free' | 'growth' | 'pro' | 'enterprise';
+  billingCycle?: 'monthly' | 'yearly' | 'free';
+  paymentStatus?: 'active' | 'past_due' | 'unpaid' | string;
+  trialEndsAt?: string;
+  stripeSubscriptionId?: string | null;
+  stripeCustomerId?: string | null;
   concurrentUserLimit?: number;
   activeUserCount?: number;
   maxSeats?: number;
@@ -681,6 +685,7 @@ export interface RecurringTransaction {
   exchangeRate?: number;
   frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
   nextOccurrence: string;
+  anchorDay?: number;
   isActive: boolean;
   template: Partial<Transaction>;
   createdAt: string;

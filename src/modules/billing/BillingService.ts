@@ -4,6 +4,8 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useAuthStore } from '../../stores/useAuthStore';
+
 export interface BillingState {
   currentPlan: 'free' | 'growth' | 'pro' | 'enterprise';
   transactionCount: number;
@@ -14,9 +16,8 @@ export interface BillingState {
   registrationAllowed: boolean;
   incrementTransaction: () => void;
   incrementUserCount: () => void;
-  upgradePlan: (plan: 'growth' | 'pro' | 'enterprise') => void;
   fetchSystemCaps: () => Promise<void>;
-  checkQuota: (plan?: string, txCount?: number) => boolean; // Enforcement for 'integrity' of usage metrics
+  checkQuota: (plan?: string, txCount?: number) => boolean; // UX-only helper for UI feedback
 }
 
 export const useBillingStore = create<BillingState>()(
@@ -31,7 +32,6 @@ export const useBillingStore = create<BillingState>()(
       registrationAllowed: true,
       incrementTransaction: () => set((state) => ({ transactionCount: state.transactionCount + 1 })),
       incrementUserCount: () => set((state) => ({ userCount: state.userCount + 1 })),
-      upgradePlan: (plan) => set({ currentPlan: plan }),
       fetchSystemCaps: async () => {
         try {
           const res = await fetch('/api/v1/public/registration-status');
@@ -53,11 +53,14 @@ export const useBillingStore = create<BillingState>()(
           }
         }
       },
+      // NOTE: checkQuota is for UX/UI feedback ONLY (e.g., showing upgrade prompts or disabling buttons).
+      // True security and plan capacity limits are enforced server-side in Firestore rules and API routes.
       checkQuota: (plan?: string, txCount?: number) => {
-        const activePlan = (plan || get().currentPlan || 'free').toLowerCase();
+        const workspacePlan = useAuthStore.getState().getCurrentWorkspace()?.plan;
+        const activePlan = (plan || workspacePlan || 'free').toLowerCase();
         const activeTxCount = txCount !== undefined ? txCount : get().transactionCount;
         
-        if (activePlan === 'free') {
+        if (activePlan === 'free' || activePlan === 'sandbox') {
           const cap = get().freeWorkspaceTxCap ?? 100;
           return activeTxCount < cap;
         } else if (activePlan === 'growth') {

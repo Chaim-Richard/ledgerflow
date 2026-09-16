@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../../stores/useAuthStore';
-import { CreditCard, Zap, Server, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { CreditCard, Zap, Server, ChevronRight, CheckCircle2, AlertTriangle, Clock, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { auth } from '../../../firebase';
 
@@ -129,96 +129,190 @@ export default function BillingSettings() {
     }
   };
 
-  const isPro = billingStatus?.billingCycle === 'pro' || billingStatus?.plan === 'pro' || billingStatus?.plan === 'growth' || billingStatus?.plan === 'enterprise';
+  const activePlan = (billingStatus?.plan || currentWorkspace?.plan || 'free').toLowerCase();
+  const isPastDue = billingStatus?.paymentStatus === 'past_due' || (currentWorkspace as any)?.paymentStatus === 'past_due';
+
+  const plans = [
+    {
+      id: 'free',
+      name: 'Free',
+      price: '$0',
+      period: '/mo',
+      desc: 'Starter accounting for micro-businesses',
+      features: [
+        'Up to 100 Transactions',
+        '1 User Seat',
+        'Basic Financial Reports',
+        'Community Support'
+      ]
+    },
+    {
+      id: 'growth',
+      name: 'Growth',
+      price: '$29',
+      period: '/mo',
+      desc: 'Scaling teams needing multi-currency',
+      features: [
+        'Up to 1,000 Transactions',
+        '5 User Seats',
+        'Multi-Currency Support',
+        'Bank Feed Import & Reconciliation',
+        'Standard Email Support'
+      ]
+    },
+    {
+      id: 'pro',
+      name: 'Pro',
+      price: '$99',
+      period: '/mo',
+      badge: 'Popular',
+      desc: 'Mid-market ERP with AI automation',
+      features: [
+        'Up to 10,000 Transactions',
+        '25 User Seats',
+        'Full AI General Ledger',
+        'Audit Trail & Role Control',
+        'Priority 24/7 Support'
+      ]
+    },
+    {
+      id: 'enterprise',
+      name: 'Enterprise',
+      price: '$299',
+      period: '/mo',
+      desc: 'Large organizations & multi-entity groups',
+      features: [
+        '1,000,000+ Transactions',
+        '1,000 User Seats',
+        'Consolidation Engine',
+        'Custom SSO & Dedicated Manager',
+        'SLA Guarantee'
+      ]
+    }
+  ];
 
   return (
-    <div className="space-y-10">
-      <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
-        <div className="flex flex-col md:flex-row gap-10 md:items-center justify-between mb-10">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center shadow-xl shadow-indigo-600/20">
-              <CreditCard size={28} />
+    <div className="space-y-8">
+      {/* Payment Warning Banner */}
+      {isPastDue && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-amber-900 shadow-sm">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="text-amber-600 shrink-0" size={20} />
+            <div>
+              <h4 className="font-bold text-sm">Payment Past Due</h4>
+              <p className="text-xs text-amber-700">Your last subscription payment failed. Please update your payment method to avoid service interruption.</p>
+            </div>
+          </div>
+          <button
+            onClick={handleOpenPortal}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shrink-0"
+          >
+            Update Payment Method
+          </button>
+        </div>
+      )}
+
+      {/* Main Container */}
+      <div className="ledger-card p-6 md:p-10 bg-white border border-slate-200 rounded-3xl shadow-sm">
+        <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between mb-8 pb-6 border-b border-slate-100">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
+              <CreditCard size={24} />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase tracking-widest">Subscription & Billing</h3>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">Manage computational resources</p>
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">Subscription & Plan Tiers</h3>
+              <p className="text-xs text-slate-500 font-medium">Manage workspace plan capacity, billing cycle, and billing portal</p>
             </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-slate-500">Current Plan:</span>
+            <span className="px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-full uppercase tracking-wider">
+              {activePlan}
+            </span>
+            {billingStatus?.stripeSubscriptionId && (
+              <button
+                onClick={handleOpenPortal}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                <CheckCircle2 size={14} /> Manage Portal
+              </button>
+            )}
           </div>
         </div>
 
         {isVerifying ? (
-          <div className="p-6 md:p-12 text-center text-slate-500 font-medium animate-pulse">
-            Verifying secure payment session...
+          <div className="p-12 text-center text-slate-500 font-medium animate-pulse">
+            Verifying secure checkout payment session...
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className={`p-8 border rounded-[32px] space-y-6 transition-colors ${!isPro ? 'border-indigo-600 bg-indigo-50/50 shadow-sm relative overflow-hidden group' : 'border-[var(--line)] hover:border-indigo-200 bg-[var(--ink)]'}`}>
-              {!isPro && (
-                <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg">
-                  Current Plan
-                </div>
-              )}
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className={`text-sm font-black uppercase tracking-tight ${!isPro ? 'text-indigo-900' : 'text-[var(--text)]'}`}>Free Tier</h4>
-                  <p className={`text-[11px] font-medium mt-1 ${!isPro ? 'text-indigo-700/70' : 'text-slate-500'}`}>Local computations</p>
-                </div>
-                <span className={`text-2xl font-black ${!isPro ? 'text-indigo-900' : 'text-[var(--text)]'}`}>$0<span className={`text-sm ${!isPro ? 'text-indigo-600' : 'text-slate-500'}`}>/mo</span></span>
-              </div>
-              
-              <ul className={`space-y-3 pb-6 border-b text-xs font-medium ${!isPro ? 'border-indigo-200 text-indigo-800' : 'border-[var(--line)] text-slate-600'}`}>
-                <li className="flex items-center gap-2"><Zap size={12} className={!isPro ? 'text-indigo-500' : 'text-slate-400'} /> Basic AI classification</li>
-                <li className="flex items-center gap-2"><Server size={12} className={!isPro ? 'text-indigo-500' : 'text-slate-400'} /> 10,000 API Compute Credits</li>
-              </ul>
-
-              <button disabled className={`w-full py-3 font-bold text-xs uppercase tracking-wider rounded-xl cursor-not-allowed ${!isPro ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`} aria-label="Current Plan">
-                Current Plan
-              </button>
-            </div>
-
-            <div className={`p-8 border rounded-[32px] space-y-6 transition-colors ${isPro ? 'border-indigo-600 bg-indigo-50/50 shadow-sm relative overflow-hidden group' : 'border-[var(--line)] hover:border-indigo-200 bg-[var(--ink)] relative overflow-hidden group'}`}>
-              {isPro ? (
-                <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg">
-                  Current Plan
-                </div>
-              ) : (
-                <div className="absolute top-0 right-0 bg-slate-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg">
-                  Recommended
-                </div>
-              )}
-
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className={`text-sm font-black uppercase tracking-tight ${isPro ? 'text-indigo-900' : 'text-[var(--text)]'}`}>Pro Network</h4>
-                  <p className={`text-[11px] font-medium mt-1 ${isPro ? 'text-indigo-700/70' : 'text-slate-500'}`}>Full cloud acceleration</p>
-                </div>
-                <span className={`text-2xl font-black ${isPro ? 'text-indigo-900' : 'text-[var(--text)]'}`}>$5<span className={`text-sm ${isPro ? 'text-indigo-600' : 'text-slate-500'}`}>/mo</span></span>
-              </div>
-              
-              <ul className={`space-y-3 pb-6 border-b text-xs font-medium ${isPro ? 'border-indigo-200 text-indigo-800' : 'border-[var(--line)] text-slate-700'}`}>
-                <li className="flex items-center gap-2"><Zap size={12} className={isPro ? 'text-indigo-500 fill-indigo-500' : 'text-slate-400'} /> Advanced Rule Tracing</li>
-                <li className="flex items-center gap-2"><Server size={12} className={isPro ? 'text-indigo-500' : 'text-slate-400'} /> Dynamic Resource Allocation</li>
-                <li className="flex items-center gap-2"><CreditCard size={12} className={isPro ? 'text-indigo-500' : 'text-slate-400'} /> Pay-as-you-go Usage ($10 overage)</li>
-              </ul>
-
-              {isPro ? (
-                <button 
-                  onClick={handleOpenPortal}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex justify-center items-center gap-2 cursor-pointer shadow-md" 
-                  aria-label="Manage Subscription Portal"
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {plans.map(p => {
+              const isCurrent = activePlan === p.id;
+              return (
+                <div
+                  key={p.id}
+                  className={`p-6 rounded-2xl border flex flex-col justify-between transition-all ${
+                    isCurrent
+                      ? 'border-indigo-600 bg-indigo-50/40 shadow-md relative'
+                      : 'border-slate-200 bg-white hover:border-indigo-300 hover:shadow-sm'
+                  }`}
                 >
-                  <CheckCircle2 size={16} /> Manage Subscription & Billing Portal
-                </button>
-              ) : (
-                <button 
-                  onClick={() => handleCheckout("pro")}
-                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex justify-center items-center gap-2"
-                >
-                  Upgrade to Pro
-                  <ChevronRight size={14} />
-                </button>
-              )}
-            </div>
+                  {p.badge && !isCurrent && (
+                    <div className="absolute -top-3 right-4 bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
+                      {p.badge}
+                    </div>
+                  )}
+
+                  {isCurrent && (
+                    <div className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
+                      Active
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900">{p.name}</h4>
+                    <p className="text-xs text-slate-500 mt-1 min-h-[32px]">{p.desc}</p>
+                    <div className="mt-4 mb-6">
+                      <span className="text-3xl font-extrabold text-slate-900">{p.price}</span>
+                      <span className="text-xs text-slate-500 font-medium">{p.period}</span>
+                    </div>
+
+                    <ul className="space-y-2.5 text-xs text-slate-600 mb-6">
+                      {p.features.map((f, idx) => (
+                        <li key={idx} className="flex items-center gap-2">
+                          <CheckCircle2 size={14} className="text-indigo-600 shrink-0" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {isCurrent ? (
+                    <button
+                      disabled
+                      className="w-full py-2.5 bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl cursor-default"
+                    >
+                      Current Plan
+                    </button>
+                  ) : p.id === 'free' ? (
+                    <button
+                      disabled
+                      className="w-full py-2.5 bg-slate-100 text-slate-400 font-semibold text-xs rounded-xl cursor-not-allowed"
+                    >
+                      Included
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleCheckout(p.id)}
+                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      Upgrade to {p.name} <ChevronRight size={14} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

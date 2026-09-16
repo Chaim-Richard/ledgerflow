@@ -10,6 +10,7 @@ import { inventoryRouter } from "./src/server/routes/inventoryRoutes";
 import { supportRouter } from "./src/server/routes/supportRoutes";
 import { paymentRouter } from "./src/server/routes/paymentRoutes";
 import { documentRouter } from "./src/server/routes/documentRoutes";
+import { requirePlanCapacity } from "./src/server/middleware/planCapacity";
 import express from "express";
 import cors from "cors";
 import Stripe from "stripe";
@@ -1946,7 +1947,7 @@ async function startServer() {
   app.get("/api/v1/workspaces/:workspaceId/export", apiAuthenticate, handleWorkspaceExport);
   app.get("/api/workspaces/:workspaceId/export", apiAuthenticate, handleWorkspaceExport);
 
-  app.post("/api/v1/workspaces/:workspaceId/members", apiAuthenticate, async (req: express.Request, res: express.Response) => {
+  app.post("/api/v1/workspaces/:workspaceId/members", apiAuthenticate, requirePlanCapacity('seats'), async (req: express.Request, res: express.Response) => {
     try {
       const { workspaceId } = req.params;
       const { memberUid, email } = req.body;

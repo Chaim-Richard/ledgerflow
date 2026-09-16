@@ -13,6 +13,7 @@ import { getDb } from '../db/firestore';
 import { isPostable, getAbsoluteTotal, isTransactionInDateRange } from '../../lib/txFilters';
 import { optimizedTransactionSimilarity } from '../../lib/algorithms';
 import { executeCommand } from '../utils/commandExecutor';
+import { requirePlanCapacity } from '../middleware/planCapacity';
 
 export const transactionRouter = express.Router();
 
@@ -137,7 +138,7 @@ transactionRouter.get('/', async (req, res) => {
   }
 });
 
-transactionRouter.post('/', enforceDoubleEntrySafety, async (req, res) => {
+transactionRouter.post('/', requirePlanCapacity('transactions'), enforceDoubleEntrySafety, async (req, res) => {
   const { transaction } = req.body || {};
   const workspaceId = transaction?.workspaceId || req.body?.workspaceId;
   if (!workspaceId) {

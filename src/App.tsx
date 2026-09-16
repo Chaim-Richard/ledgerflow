@@ -28,6 +28,8 @@ const LedgerAutoAuditor = lazy(() => import('./components/forensics/LedgerAutoAu
 
 import { FallbackBoundary } from './components/FallbackBoundary';
 import PublicInvoicePage from './components/sales/PublicInvoicePage';
+import CookieConsent from './components/legal/CookieConsent';
+import LegalModal from './components/legal/LegalModal';
 
 
 export default function App() {
@@ -35,6 +37,8 @@ export default function App() {
   usePerformanceTrace("App");
 
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<'terms' | 'privacy'>('privacy');
   const user = useAuthStore(state => state.user);
   const setUser = useAuthStore(state => state.setUser);
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
@@ -334,6 +338,8 @@ const shortcutMap = useMemo(() => {
         )}
         <Suspense fallback={null}><LedgerAutoAuditor /></Suspense>
         <RootLayout />
+        <CookieConsent onOpenPrivacyPolicy={() => { setLegalModalTab('privacy'); setIsLegalModalOpen(true); }} />
+        <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} initialTab={legalModalTab} />
       </div>
     </FallbackBoundary>
   );

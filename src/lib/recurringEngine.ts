@@ -1,15 +1,20 @@
 import { RecurringTransaction, Transaction } from '../types';
 import { parseLocalDate } from './utils';
 
-export function calculateNextOccurrence(currentDateStr: string, frequency: RecurringTransaction['frequency']): string {
+export function calculateNextOccurrence(
+  currentDateStr: string,
+  frequency: RecurringTransaction['frequency'],
+  anchorDay?: number
+): string {
   const [y, m, d] = (currentDateStr || new Date().toISOString().slice(0, 10)).split('-').map(Number);
-  
+  const anchor = anchorDay ?? d;
+
   const addMonths = (n: number) => {
     const targetMonth = m - 1 + n;
     const ty = y + Math.floor(targetMonth / 12);
     const tm = ((targetMonth % 12) + 12) % 12;
-    const lastDay = new Date(Date.UTC(ty, tm + 1, 0)).getUTCDate(); // day 0 of next month
-    return `${ty}-${String(tm + 1).padStart(2, '0')}-${String(Math.min(d, lastDay)).padStart(2, '0')}`;
+    const lastDay = new Date(Date.UTC(ty, tm + 1, 0)).getUTCDate();
+    return `${ty}-${String(tm + 1).padStart(2, '0')}-${String(Math.min(anchor, lastDay)).padStart(2, '0')}`;
   };
 
   switch (frequency) {
@@ -84,6 +89,8 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
         ];
       }
 
+      const anchorDay = item.anchorDay ?? (item.nextOccurrence ? Number(item.nextOccurrence.split('-')[2]) : Number(item.createdAt.slice(0, 10).split('-')[2])) ?? 1;
+
       // Handle catch-up loop if overdue
       let latestNextOccStr = currentNextOccStr;
       while (nextOccTime <= asOfTime) {
@@ -105,7 +112,7 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
           }
         };
 
-        latestNextOccStr = calculateNextOccurrence(latestNextOccStr, item.frequency);
+        latestNextOccStr = calculateNextOccurrence(latestNextOccStr, item.frequency, anchorDay);
         nextOccTime = parseLocalDate(latestNextOccStr).getTime();
 
         generatedTransactions.push({
