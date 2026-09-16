@@ -79,6 +79,8 @@ export const WorkspaceSchema = z.object({
   isClosed: z.boolean().default(false),
   lockDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   fiscalYearEnd: z.string().optional(),
+  fiscalYearStartMonth: z.number().int().min(1).max(12).optional(),
+  fiscalYearStartDay: z.number().int().min(1).max(28).optional(),
   currency: z.string().default('USD'),
   admins: z.record(z.string(), z.boolean()).optional(),
   createdAt: z.string().optional(),
@@ -100,8 +102,8 @@ export const WorkspaceIdSchema = z.object({
 });
 
 export const ReportRangeSchema = WorkspaceIdSchema.extend({
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal('')).optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal('')).optional()
 });
 
 // --- Enterprise Math API Schemas ---
