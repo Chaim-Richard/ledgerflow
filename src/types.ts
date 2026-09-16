@@ -291,6 +291,7 @@ export interface Payment {
   id: string;
   uid: string;
   workspaceId: string;
+  number?: string;
   direction: 'received' | 'made';      // received = from customer, made = to vendor
   contactId: string;                    // customerId or vendorId
   contactName?: string;

@@ -1,24 +1,34 @@
 # Security Specification: LedgerFlow Zero-Trust Protocol
 
-## 1. Data Invariants
+## 1. Core Data Invariants & Zero-Trust Architecture
 - **Identity Integrity**: No user can create or modify a document where `uid` does not match their `request.auth.uid`.
-- **Relational Sync**: Transactions must belong to a `workspaceId` that the user actually owns.
-- **Terminal State Lock**: Once a transaction is marked as `voided` or `certified`, only an admin can perform a destructive update.
-- **PII Isolation**: User email data is strictly limited to the document owner.
+- **Relational Sync**: Transactions, invoices, bills, payments, and accounts must belong to a `workspaceId` that the user has explicit membership or ownership in.
+- **Top-Level Multi-Tenancy**: All collections (`transactions`, `invoices`, `bills`, `chartAccounts`, `projects`, `payments`, `estimates`, `creditNotes`, `recurring`, `auditLogs`) are top-level collections partitioned by `workspaceId`.
+- **Terminal State Lock & Period Immutability**: Once an accounting period is locked (`lockDate`), transactions dated on or prior to the lock date cannot be modified or deleted directly. Only the sanctioned `Reverse & Correct` workflow is permitted.
+- **PII Isolation & Encryption**: Sensitive credentials, bank details, and tokens are encrypted with AES-256-GCM via `SecurityService` before persistence. SSNs, credit cards, and API keys are scrubbed from telemetry logs.
+- **Strict Role-Based Access Control (RBAC)**:
+  - **Owner**: Full administrative controls, billing, deletion, and token generation.
+  - **Accountant**: Period locking, journal entry posting, tax reconciliation, and bad debt write-offs.
+  - **Bookkeeper**: Document creation (invoices, bills, estimates, payments) and draft preparation.
+  - **Viewer**: Read-only access to statements, registers, and reports.
 
-## 2. The Dirty Dozen (Threat Payloads)
-1. **Identity Spoofing**: Attempting to set `uid` to a different user's ID during creation.
-2. **Ghost Workspace**: Creating a transaction in a `workspaceId` that doesn't exist or isn't owned by the user.
-3. **Privilege Escalation**: A user attempting to update their own `role` to 'admin'.
-4. **Denial of Wallet**: Sending a 1MB string in the `description` field to exhaust storage costs.
-5. **ID Poisoning**: Using a 2KB junk string as a document ID.
-6. **Immutable Tampering**: Attempting to change `createdAt` or `workspaceId` on an existing transaction.
-7. **Cross-Tenant Leak**: Attempting to 'list' transactions without a `where('uid', '==', auth.uid)` filter.
-8. **State Shortcutting**: Updating a 'pending' transaction directly to 'reconciled' without certification.
-9. **Temporal Spoofing**: Providing a client-side `timestamp` that is in the future.
-10. **Array Shadowing**: Adding hidden metadata fields to the `lines` array that bypass validation.
-11. **Email Overwrite**: Modifying the PII `email` field without verification.
-12. **Orphaned Write**: Creating a transaction line that references a non-existent account ID.
+---
 
-## 3. Red Team Certification
-The `firestore.rules` must incorporate `isValidId()` guards and action-based `affectedKeys()` gates for every single collection.
+## 2. Threat Mitigation Matrix (The Dirty Dozen + Extended Guards)
+1. **Identity Spoofing**: Attempting to set `uid` to a different user's ID during document creation -> Rejected by `request.auth.uid == request.resource.data.uid`.
+2. **Ghost Workspace / Cross-Tenant Leak**: Accessing or creating resources in a `workspaceId` where the user is not a member -> Rejected by `isWorkspaceMember(workspaceId)`.
+3. **Privilege Escalation**: Non-owner attempting to elevate their own role to 'owner' or 'admin' -> Rejected by custom claims gate and Firestore rule restrictions.
+4. **Denial of Wallet / Payload Exhaustion**: Sending oversized strings (>10KB) in text fields -> Rejected by `isValidText()` schema string length bounds.
+5. **ID Poisoning**: Submitting abnormal or injection-crafted document IDs -> Enforced by `isValidId()` alphanumeric regex.
+6. **Immutable Tampering**: Attempting to change `createdAt`, `workspaceId`, or forensic hash on existing documents -> Blocked via `affectedKeys()` rule gates.
+7. **Direct Client Ledger Modification**: Attempting client-side writes to `/transactions` -> Fully disabled in `firestore.rules` (transactions are only written via authenticated server-side atomic transactions).
+8. **Double-Entry Disequilibrium**: Attempting to post unbalanced debits and credits -> Rejected by `DoubleEntryValidator` (`SUM(lines.amountCents) == 0`).
+9. **Temporal / Retroactive Backdating**: Attempting to backdate entries into a closed fiscal period -> Blocked by `PeriodLockGuard` against workspace `lockDate`.
+10. **Double Reversal Exploitation**: Attempting to reverse an already reversed journal -> Blocked by `reversalEventId` check.
+11. **Payment Injection**: Non-standard payment token structures -> Enforced by strict token format regex.
+12. **Orphaned Account Reference**: Referencing a non-existent or inactive Chart of Accounts node -> Validated against active Chart of Accounts before commit.
+
+---
+
+## 3. Red Team Verification & Compliance
+All Firestore rules incorporate `isValidId()` guards, strict allowlists (`affectedKeys().hasOnly(...)`), and server-side cryptographic signatures. Continuous automated test suites in `src/tests/` verify forensic immutability, role permissions, and double-entry consistency on every build.

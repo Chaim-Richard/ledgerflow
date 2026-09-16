@@ -115,10 +115,12 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
     // 4. Build Payment Document
     const paymentRef = db.collection('payments').doc();
     const paymentId = paymentRef.id;
+    const paymentNumber = `PMT-${Math.floor(1000 + Math.random() * 9000)}`;
     const paymentData = {
       id: paymentId,
       workspaceId,
       uid,
+      number: paymentNumber,
       date: paymentDate,
       paymentDate,
       amountCents,

@@ -1,46 +1,110 @@
-# LedgerFlow Enterprise ERP
+# LedgerFlow Enterprise ERP & Continuous Ledger
 
-LedgerFlow is an Enterprise Resource Planning (ERP) and Financial Ledger system built with React 18, Vite, Tailwind CSS, and Zustand. It features real-time double-entry ledger accounting, zero-configuration plugin views, and pure financial algorithm tools.
+LedgerFlow is an enterprise-grade multi-entity continuous financial ledger and ERP system built on modern TypeScript, React 19, and Vite. It provides double-entry accounting with absolute directional balancing, multi-dimension allocation, closed-period integrity controls ("Reverse & Correct"), automated bank reconciliation, billing/invoicing with PDF document generation, and real-time financial reporting.
 
-## Architecture & System Overview
+---
 
-All tools and views are organized into three strict layers:
+## 🛠 Tech Stack & Environment
 
-1. **Layer 1: Data Source of Truth (Zustand & Firestore)**
-   - Core financial data is stored in `useLedgerStore` (`src/stores/useLedgerStore.ts`).
-   - The primary data sources are top-level Firestore collections (`transactions`, `accounts`, `invoices`, `bills`, `projects`, `recurring`) scoped strictly by `workspaceId`.
+- **Frontend:** React `^19.0.0`, Vite `^6.2.0`, TypeScript `~5.8.2`, Tailwind CSS `^4.1.14`
+- **State Management:** Zustand `^5.0.14`
+- **Database & Auth:** Firebase / Cloud Firestore `^11.4.0`, Firebase Admin `^13.8.0`
+- **Backend Server:** Express `^4.21.2`, Node.js (TypeScript via `tsx` and bundled with `esbuild`)
+- **Payments & Billing:** Stripe `^22.2.1`
+- **Banking Integrations:** Plaid `^42.2.0`, `react-plaid-link` `^4.1.1`
+- **Document Generation:** PDFKit `^0.20.2` (custom native PDF stream engine with `/api/v1/workspaces/:workspaceId/documents/:type/:id/pdf`)
+- **Visualization:** Recharts `^2.15.1`, D3 `^7.9.0`
+- **Animations:** Motion `^12.23.24` (`motion/react`)
 
-2. **Layer 2: Pure Math Algorithms (`src/lib/algorithms/`)**
-   - Pure, deterministic financial algorithms receiving an `AlgorithmContext` (`{ transactions, accounts, period, asOfDate, reportingCurrency }`) and returning `{ metrics, charts, insights }`.
-   - Registered centrally in `FINANCIAL_ALGORITHMS` (`src/lib/algorithms/index.ts`).
+---
 
-3. **Layer 3: Dynamic Views & Registries (`src/config/registry.tsx`)**
-   - Standard React components registered under `VIEW_COMPONENTS` and navigation registries in `src/config/registry.tsx`.
-   - Plug-and-play components dropped into `src/plugins/` are automatically scanned and mounted.
+## 🏛 Three-Layer System Architecture
 
-## Common Developer Tasks
+LedgerFlow strictly separates data, computation, and rendering into three decoupled layers:
 
-### 1. Adding a Financial Algorithm
-- Create your algorithm file in `src/lib/algorithms/your-algorithm.ts`.
-- Export an `AlgorithmDefinition` implementing `compute: (ctx, inputs) => AlgoResult`.
-- Register it in `src/lib/algorithms/index.ts`. It will automatically appear in the Tool Sandbox.
+### Layer 1: Data Source of Truth (Zustand & Cloud Firestore)
+- All client-side runtime ledger state is managed via `useLedgerStore` (`src/stores/useLedgerStore.ts`).
+- Canonical data lives in **top-level Firestore collections** (`transactions`, `accounts`, `invoices`, `bills`, `projects`, `recurring`, `bankLines`, `auditLogs`) scoped strictly by `workspaceId`.
+- No nested subcollections are used.
 
-### 2. Adding a New View
-- **Plugin Option (Zero Configuration):** Create `src/plugins/MyTool.tsx` exporting `config` and a default React component. It is auto-discovered via `import.meta.glob`.
-- **Core View Option:** Add your component under `src/components/`, register it lazily in `VIEW_COMPONENTS` inside `src/config/registry.tsx`, and add its tab definition to `NAV_GROUPS`.
+### Layer 2: Pure Math Financial Algorithms (`src/lib/algorithms/`)
+- Financial formulas are 100% pure math functions that never fetch external data or mutate state.
+- Each algorithm implements the `AlgorithmDefinition` interface, taking `AlgorithmContext` (`transactions`, `accounts`, `period`, `asOfDate`, `reportingCurrency`) and inputs to produce `{ metrics, charts, insights }`.
+- Central registry: `FINANCIAL_ALGORITHMS` (`src/lib/algorithms/index.ts`).
 
-### 3. Modifying Types & Schemas
-- `src/types.ts` is the single source of truth for TypeScript interfaces (`Transaction`, `ChartAccount`, `Invoice`, etc.).
-- `src/schemas.ts` defines Zod validation schemas for API endpoints.
+### Layer 3: Dynamic Views, Registries & Plugins (`src/config/registry.tsx`)
+- Views are modular React components registered lazily in `VIEW_COMPONENTS` and categorized under `NAV_GROUPS`.
+- Zero-configuration plugin discovery via `src/plugins/` using `import.meta.glob`.
+- Interactive operational documentation available via the Help Guide (`help` tab / top-bar `?` icon).
 
-## CLI Commands
+---
+
+## 🚀 Core Features & Modules
+
+1. **Continuous Double-Entry Ledger:**
+   - Strict debit/credit equilibrium on every transaction.
+   - Dynamic account role resolution (`resolveAccountRole`) — no hardcoded accounts.
+   - Absolute transaction totals (`totalAmountCents`) with directionality defined strictly by line items.
+   - Filtered via `isPostable()` to exclude non-posting drafts or rejected lines.
+
+2. **Closed-Period Governance ("Reverse & Correct"):**
+   - Locked fiscal periods strictly reject direct edits or deletions.
+   - Corrective actions post an equal-and-opposite reversal in the open period linked to a replacement entry with full audit trail history.
+
+3. **Sales & Customer Invoicing:**
+   - Invoicing with tax-inclusive or tax-exclusive calculations, discounts, and retainage.
+   - Real-time PDF document preview and generation with native streaming endpoints.
+   - Bad debt write-off modal for overdue balances.
+
+4. **Purchases & Accounts Payable:**
+   - Vendor bill tracking, multi-category split allocation, and receipt attachments.
+   - Settlement payment processing with automated oldest-first allocation across open bills/invoices.
+
+5. **Banking & Zero-Variance Reconciliation:**
+   - Direct bank feed integration via Plaid.
+   - Bank statement imports (CSV, OFX, QBO).
+   - Zero-variance statement balancing before finalizing reconciliation statements.
+
+6. **Financial Statements & Analytics:**
+   - Balance Sheet, Profit & Loss (P&L), Cash Flow Statement, A/R & A/P Aging, and Tax Liability reports.
+   - Monte Carlo cash flow forecasting and runway simulator.
+
+---
+
+## ⚡ Quick Start & CLI Scripts
 
 ```bash
-npm run dev              # Start Vite dev server on port 3000
-npm run build            # Full production build
-npm run lint             # Run tsc and eslint
-npm test                 # Run test suite
-npm run grant-admin <uid-or-email> # Grant platform admin claim and update user profile
-npm run scaffold:plugin  # Scaffold a new plugin component
-npm run scaffold:algo    # Scaffold a new algorithm
+# 1. Install dependencies
+npm install
+
+# 2. Start local development server (binds on port 3000)
+npm run dev
+
+# 3. Execute full TypeScript typecheck & ESLint validation
+npm run lint
+
+# 4. Run automated test suite
+npm test
+
+# 5. Build for production (bundles Vite client + standalone server.cjs)
+npm run build
+
+# 6. Start production server
+npm start
+
+# 7. Grant platform admin privileges to a user
+npm run grant-admin <uid-or-email>
+
+# 8. Scaffold new tools
+npm run scaffold:plugin <name>
+npm run scaffold:algo <name>
 ```
+
+---
+
+## 🔒 Security & Verification Standards
+
+- **Server-Side API Keys:** All third-party secrets (`GEMINI_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, Plaid credentials) reside exclusively server-side.
+- **Data Encryption:** Sensitive fields are encrypted using AES-256-GCM.
+- **PII Scrubbing:** Automated sanitization of SSNs, credit card numbers, and secret tokens in logs.
+- **Role-Based Access Control:** Firestore security rules enforce strict ownership, workspace boundaries, and closed-period write lockdown.

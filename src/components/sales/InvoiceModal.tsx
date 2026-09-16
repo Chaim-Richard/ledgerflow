@@ -35,6 +35,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     totalCents: 0
   }));
 
+  const [items, setItems] = useState<Array<{ id: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string, taxRate?: number }>>([
+    { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }
+  ]);
+
   useEffect(() => {
     if (initialInvoice) {
       setInvoice(initialInvoice);
@@ -64,10 +68,6 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       fetchNextNumber();
     }
   }, [isOpen]);
-
-  const [items, setItems] = useState<Array<{ id: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string, taxRate?: number }>>([
-    { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }
-  ]);
 
   const [memo, setMemo] = useState('');
   const [terms, setTerms] = useState('');

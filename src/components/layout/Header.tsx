@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Search, Sun, Moon, Plus, Compass, ShieldCheck } from 'lucide-react';
+import { Menu, Search, Sun, Moon, Plus, Compass, ShieldCheck, HelpCircle } from 'lucide-react';
 import QuickCreateMenu from './QuickCreateMenu';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
@@ -72,6 +72,16 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
       </div>
 
       <div className="flex items-center gap-3 flex-1 justify-end">
+        {/* Help & Guide Button */}
+        <button
+          onClick={() => setActiveTab('help' as any)}
+          className="p-2 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] rounded-lg transition-colors"
+          title="Open Help & Operational Guide"
+          aria-label="Open Help & Operational Guide"
+        >
+          <HelpCircle size={17} />
+        </button>
+
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}

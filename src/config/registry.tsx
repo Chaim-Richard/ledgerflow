@@ -84,6 +84,7 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'credit-notes': lazy(() => import('../components/finance/CreditNotesView')),
   'taxes': lazy(() => import('../components/finance/TaxManager')),
   'support': lazy(() => import('../components/support/SupportView')),
+  'help': lazy(() => import('../components/support/HelpGuideView')),
 };
 
 export interface AppTabDefinition {
@@ -122,6 +123,7 @@ export const APP_TABS: AppTabDefinition[] = [
 
   { id: 'settings', label: { en: 'Preferences', he: 'הגדרות' }, icon: Settings, groupId: 'settings' },
   { id: 'support', label: { en: 'Support', he: 'תמיכה' }, icon: Headphones, groupId: 'settings' },
+  { id: 'help', label: { en: 'Help & Guide', he: 'מדריך ועזרה' }, icon: BookOpen, groupId: 'settings' },
   { id: 'vault', label: { en: 'Documents', he: 'מסמכים' }, icon: ShieldCheck, groupId: 'settings' },
   { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'settings' },
   { id: 'system-command-center', label: { en: 'Admin Panel', he: 'ניהול' }, icon: Building, groupId: 'settings', requiresOwner: true }

@@ -56,9 +56,9 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
       const billsSnap = await db.collection('bills').where('workspaceId', '==', workspaceId).get();
       const paymentsSnap = await db.collection('payments').where('workspaceId', '==', workspaceId).get();
 
-      const invoices = invsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const bills = billsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const payments = paymentsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const invoices = invsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+      const bills = billsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+      const payments = paymentsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
 
       const stmt: any = computeStatement(contactData, invoices, bills, payments, '1970-01-01', '2099-12-31', contactType);
 

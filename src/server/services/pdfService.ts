@@ -69,10 +69,9 @@ Q
     `6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n`
   ];
 
-  let offset = 0;
   const offsets: number[] = [];
   let pdfStr = objects[0];
-  offset = Buffer.byteLength(pdfStr, 'utf-8');
+  let offset = Buffer.byteLength(pdfStr, 'utf-8');
 
   for (let i = 1; i < objects.length; i++) {
     offsets.push(offset);

@@ -89,7 +89,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
         await workbook.xlsx.load(data as ArrayBuffer);
         const worksheet = workbook.worksheets[0];
         if (worksheet) {
-          worksheet.eachRow((row) => {
+          worksheet.eachRow((row: any) => {
             const rowData: any[] = [];
             if (Array.isArray(row.values)) {
               // row.values is 1-indexed in ExcelJS

@@ -280,7 +280,7 @@ const Sidebar = React.memo(({
                uiStore.isSidebarOpen ? "justify-between" : "justify-center"
              )}
              title={uiStore.isSidebarOpen ? undefined : "Install App"}
-            aria-label="uiStore.isSidebarOpen ? undefined :">
+            aria-label="Install App">
              <div className="flex items-center gap-2.5">
                <Download size={16} className="shrink-0 text-emerald-400 group-hover:scale-110 transition-transform" />
                {uiStore.isSidebarOpen && <span>Install App</span>}
@@ -299,7 +299,7 @@ const Sidebar = React.memo(({
              !uiStore.isSidebarOpen && "justify-center"
            )}
            title={uiStore.isSidebarOpen ? undefined : (user ? "Log Out" : "Exit Guest / Sign In")}
-          aria-label="uiStore.isSidebarOpen ? undefined : (user ?">
+          aria-label="Log Out">
            <LogOut size={16} className="shrink-0 text-[var(--faint)] group-hover:text-red-400 transition-colors" />
            {uiStore.isSidebarOpen && <span>{user ? "Log Out" : "Exit Guest / Sign In"}</span>}
          </button>

@@ -893,3 +893,49 @@ Takes a gross revenue dump for a specific IP (e.g., a song) and loops through th
   "cashAccountId": "acc-bank-1"
 }
 ```
+
+---
+
+## 43. Multi-Document Payment Allocation Engine
+
+### `POST /api/v1/payments`
+Atomically records a customer or vendor payment, allocates settlement amounts across one or more open invoices/bills, updates document statuses (paid/partially_paid), and synthesizes a balanced General Ledger journal entry debiting Cash and crediting Accounts Receivable (or debiting Accounts Payable and crediting Cash).
+
+**Request Body:**
+```json
+{
+  "workspaceId": "ws-123",
+  "paymentDate": "2024-06-30",
+  "amountCents": 150000,
+  "paymentMethod": "bank_transfer",
+  "referenceNumber": "WIRE-99481",
+  "customerId": "cust-456",
+  "entityName": "Acme Corp",
+  "cashAccountId": "acc-bank-101",
+  "allocations": [
+    {
+      "documentId": "inv-001",
+      "documentType": "invoice",
+      "amountCents": 100000
+    },
+    {
+      "documentId": "inv-002",
+      "documentType": "invoice",
+      "amountCents": 50000
+    }
+  ]
+}
+```
+
+---
+
+## 44. Server-Side Binary PDF Rendering
+
+### `GET /api/v1/documents/:type/:id/pdf?workspaceId=:workspaceId`
+Generates deterministic, pixel-perfect binary PDF documents (`application/pdf`) with `%PDF-` binary signatures for:
+- `invoice` — Customer sales invoices with line items, tax breakdowns, discounts, and retainage.
+- `estimate` — Customer sales proposals and quotes.
+- `creditNote` — Customer credit memos and vendor credit vouchers.
+- `payment` — Official payment receipts with document allocation tables.
+- `statement` — Chronological customer/vendor balance statements with running balances.
+
