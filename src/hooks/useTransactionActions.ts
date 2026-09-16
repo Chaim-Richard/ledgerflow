@@ -38,7 +38,6 @@ import { safeAsync, safeConfirm, getLocalDateISO } from '../lib/utils';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { useBillingStore } from '../modules/billing/BillingService';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
-import { findDueRecurring } from '../lib/recurringEngine';
 
 export function useTransactionActions() {
   const user = useAuthStore(s => s.user);
@@ -1942,15 +1941,7 @@ export function useTransactionActions() {
     handleToggleFlag,
     handleProcessDueRecurring: async () => {
       if (!user || !currentWorkspaceId) return { count: 0 };
-      const recurringList = useLedgerStore.getState().recurring || [];
-      const { dueTemplates, generatedTransactions } = findDueRecurring(recurringList);
-
-      if (generatedTransactions.length === 0) {
-        toast.info('No recurring transactions due at this time.');
-        return { count: 0 };
-      }
-
-      const loader = toast.loading(`Processing ${generatedTransactions.length} due recurring transaction(s)...`);
+      const loader = toast.loading('Triggering server recurring transaction processing...');
       try {
         const token = await user.getIdToken();
         const res = await fetch('/api/v1/system/recurring/process', {
@@ -1967,13 +1958,17 @@ export function useTransactionActions() {
         }
 
         const data = await res.json();
-        const processedCount = data.data?.processedCount ?? generatedTransactions.length;
-        toast.success(`Successfully posted ${processedCount} recurring transaction(s).`, { id: loader });
+        const processedCount = data.data?.processedCount ?? 0;
+        if (processedCount === 0) {
+          toast.info('No recurring transactions due at this time.', { id: loader });
+        } else {
+          toast.success(`Successfully posted ${processedCount} recurring transaction(s).`, { id: loader });
+        }
         return { count: processedCount };
       } catch (err: any) {
         console.error('Failed to process recurring transactions:', err);
         toast.error(err.message || 'Failed to process recurring transactions.', { id: loader });
-        throw err;
+        return { count: 0 };
       }
     },
     handleSmartCluster: async () => {

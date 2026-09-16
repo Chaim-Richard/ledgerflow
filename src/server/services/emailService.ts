@@ -1,3 +1,97 @@
+import { getDb } from '../db/firestore';
+
+export interface SendEmailWithSuppressionParams {
+  workspaceId: string;
+  to: string;
+  subject: string;
+  html: string;
+  invoiceId?: string;
+}
+
+export async function isAddressSuppressed(email: string): Promise<boolean> {
+  try {
+    const db = getDb();
+    const snap = await db.collection('emailEvents')
+      .where('recipient', '==', email.toLowerCase())
+      .where('event', 'in', ['bounced', 'complaint'])
+      .limit(1)
+      .get();
+    return !snap.empty;
+  } catch (err) {
+    console.error('[EmailService] Error checking suppression status:', err);
+    return false;
+  }
+}
+
+export async function recordEmailEvent(eventData: {
+  workspaceId?: string;
+  recipient: string;
+  event: 'delivered' | 'bounced' | 'complaint' | 'opened' | 'sent';
+  invoiceId?: string;
+  provider?: string;
+  messageId?: string;
+  metadata?: any;
+}) {
+  try {
+    const db = getDb();
+    const docRef = db.collection('emailEvents').doc();
+    const now = new Date().toISOString();
+
+    await docRef.set({
+      id: docRef.id,
+      workspaceId: eventData.workspaceId || 'default',
+      recipient: eventData.recipient.toLowerCase(),
+      event: eventData.event,
+      invoiceId: eventData.invoiceId || null,
+      provider: eventData.provider || 'unknown',
+      messageId: eventData.messageId || null,
+      metadata: eventData.metadata || {},
+      timestamp: now
+    });
+
+    if (eventData.invoiceId) {
+      await db.collection('invoices').doc(eventData.invoiceId).update({
+        deliveryStatus: eventData.event,
+        updatedAt: now
+      }).catch(err => console.error('[EmailService] Error updating invoice deliveryStatus:', err));
+    }
+  } catch (err) {
+    console.error('[EmailService] Error recording email event:', err);
+  }
+}
+
+export async function sendEmailWithSuppression(params: SendEmailWithSuppressionParams): Promise<{ sent: boolean; reason?: string; messageId?: string }> {
+  if (await isAddressSuppressed(params.to)) {
+    console.warn(`[EmailService] Suppressed email sending to hard-bounced address: ${params.to}`);
+    return { sent: false, reason: 'ADDRESS_SUPPRESSED_DUE_TO_PREVIOUS_BOUNCE' };
+  }
+
+  try {
+    const res = await deliverInvoiceEmail({
+      toEmail: params.to,
+      subject: params.subject,
+      invoiceUrl: '',
+      customBody: params.html
+    });
+
+    if (res.delivered) {
+      await recordEmailEvent({
+        workspaceId: params.workspaceId,
+        recipient: params.to,
+        event: 'sent',
+        invoiceId: params.invoiceId,
+        provider: res.provider,
+        messageId: res.messageId
+      });
+      return { sent: true, messageId: res.messageId };
+    }
+    return { sent: false, reason: 'DELIVERY_FAILED' };
+  } catch (err: any) {
+    console.error('[EmailService] Failed to send email:', err);
+    return { sent: false, reason: err.message };
+  }
+}
+
 export interface EmailAttachment {
   filename: string;
   content: string | Buffer;
