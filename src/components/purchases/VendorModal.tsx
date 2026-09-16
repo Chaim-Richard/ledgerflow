@@ -79,11 +79,11 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
 
         <form onSubmit={handleSubmit} className="p-4 md:p-8 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
           <div className="space-y-2">
-            <label className="micro-label">Vendor Name</label>
+            <label htmlFor="vend-name" className="micro-label">Vendor Name</label>
             <input 
+              id="vend-name"
               type="text"
               required
-              autoFocus
               value={vendor.name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="e.g. Amazon Web Services"
@@ -93,9 +93,10 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="micro-label">Default GL Category</label>
+              <label htmlFor="vend-cat" className="micro-label">Default GL Category</label>
               <div className="relative">
                 <input 
+                  id="vend-cat"
                   type="text"
                   value={vendor.category}
                   onChange={(e) => setVendor({ ...vendor, category: e.target.value })}
@@ -105,8 +106,9 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
               </div>
             </div>
             <div className="space-y-2">
-              <label className="micro-label">Vendor Type</label>
+              <label htmlFor="vend-type" className="micro-label">Vendor Type</label>
               <select 
+                id="vend-type"
                 value={vendor.type || 'supplier'}
                 onChange={(e) => setVendor({ ...vendor, type: e.target.value })}
                 className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
@@ -121,8 +123,9 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="micro-label">Email Address</label>
+              <label htmlFor="vend-email" className="micro-label">Email Address</label>
               <input 
+                id="vend-email"
                 type="email"
                 value={vendor.email}
                 onChange={(e) => setVendor({ ...vendor, email: e.target.value })}
@@ -131,8 +134,9 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
               />
             </div>
             <div className="space-y-2">
-              <label className="micro-label">Phone Number</label>
+              <label htmlFor="vend-phone" className="micro-label">Phone Number</label>
               <input 
+                id="vend-phone"
                 type="tel"
                 value={vendor.phone || ''}
                 onChange={(e) => setVendor({ ...vendor, phone: e.target.value })}
@@ -144,8 +148,9 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="micro-label">Status</label>
+              <label htmlFor="vend-status" className="micro-label">Status</label>
               <select 
+                id="vend-status"
                 value={vendor.status || 'active'}
                 onChange={(e) => setVendor({ ...vendor, status: e.target.value as any })}
                 className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
@@ -157,12 +162,12 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
               </select>
             </div>
             <div className="space-y-2 flex flex-col justify-center pt-6 gap-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                 <input type="checkbox" checked={vendor.is1099 || false} onChange={(e) => setVendor({ ...vendor, is1099: e.target.checked })} className="w-5 h-5 rounded border-zinc-300" />
+              <label htmlFor="vend-1099" className="flex items-center gap-2 cursor-pointer">
+                 <input id="vend-1099" type="checkbox" checked={vendor.is1099 || false} onChange={(e) => setVendor({ ...vendor, is1099: e.target.checked })} className="w-5 h-5 rounded border-zinc-300" />
                  <span className="font-bold text-sm">1099 Tax-Reportable Contractor</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                 <input type="checkbox" checked={vendor.isForeign || false} onChange={(e) => setVendor({ ...vendor, isForeign: e.target.checked })} className="w-5 h-5 rounded border-zinc-300" />
+              <label htmlFor="vend-foreign" className="flex items-center gap-2 cursor-pointer">
+                 <input id="vend-foreign" type="checkbox" checked={vendor.isForeign || false} onChange={(e) => setVendor({ ...vendor, isForeign: e.target.checked })} className="w-5 h-5 rounded border-zinc-300" />
                  <span className="font-bold text-sm">Foreign Entity (Wire/FX)</span>
               </label>
             </div>

@@ -180,7 +180,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="micro-label">Vendor</label>
+                <label htmlFor="bill-vendor" className="micro-label">Vendor</label>
                 {autofillNotice && (
                   <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-200">
                     <Sparkles size={10} /> Auto-filled
@@ -188,6 +188,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 )}
               </div>
               <select 
+                id="bill-vendor"
                 required
                 value={bill.vendorId || ''}
                 onChange={(e) => handleVendorSelect(e.target.value)}
@@ -198,8 +199,9 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               </select>
             </div>
             <div className="space-y-2">
-              <label className="micro-label">Bill Number</label>
+              <label htmlFor="bill-number" className="micro-label">Bill Number</label>
               <input 
+                id="bill-number"
                 type="text"
                 required
                 value={bill.number}
@@ -208,8 +210,9 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               />
             </div>
             <div className="space-y-2">
-              <label className="micro-label">Status</label>
+              <label htmlFor="bill-status" className="micro-label">Status</label>
               <select 
+                id="bill-status"
                 value={bill.status}
                 onChange={(e) => setBill({ ...bill, status: e.target.value as any })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
@@ -224,8 +227,9 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
-              <label className="micro-label">Bill Date</label>
+              <label htmlFor="bill-date" className="micro-label">Bill Date</label>
               <input 
+                id="bill-date"
                 type="date"
                 required
                 value={bill.date}
@@ -234,8 +238,9 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               />
             </div>
             <div className="space-y-2">
-              <label className="micro-label">Due Date</label>
+              <label htmlFor="bill-due-date" className="micro-label">Due Date</label>
               <input 
+                id="bill-due-date"
                 type="date"
                 required
                 value={bill.dueDate}
@@ -250,6 +255,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <h4 className="micro-label">Expense Allocation</h4>
               <button 
                 type="button"
+                aria-label="Add Split Expense"
                 onClick={() => setSplits([...splits, { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }])}
                 className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all"
               >
@@ -262,8 +268,9 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               {splits.map((split, idx) => (
                 <div key={split.id} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
                   <div className="col-span-5 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Description</label>
+                    <label htmlFor={`bill-split-desc-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Description</label>
                     <input 
+                      id={`bill-split-desc-${idx}`}
                       type="text"
                       value={split.description}
                       onChange={(e) => {
@@ -276,8 +283,9 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                     />
                   </div>
                   <div className="col-span-3 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Expense Account</label>
+                    <label htmlFor={`bill-split-acc-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Expense Account</label>
                     <select 
+                      id={`bill-split-acc-${idx}`}
                       value={split.accountId}
                       onChange={(e) => {
                         const newSplits = [...splits];
@@ -291,8 +299,9 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                     </select>
                   </div>
                   <div className="col-span-3 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Amount ($)</label>
+                    <label htmlFor={`bill-split-amount-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Amount ($)</label>
                     <input 
+                      id={`bill-split-amount-${idx}`}
                       type="number"
                       step="0.01"
                       value={split.amountCents / 100}
@@ -307,6 +316,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                   <div className="col-span-1 pb-1">
                     <button 
                       type="button"
+                      aria-label={`Remove split line ${idx + 1}`}
                       onClick={() => setSplits(splits.filter((_, i) => i !== idx))}
                       className="p-2 text-zinc-300 hover:text-rose-500 transition-colors"
                     >
@@ -321,8 +331,9 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-[var(--line)] pt-8 mt-8">
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="micro-label">Internal Memo</label>
+                <label htmlFor="bill-memo" className="micro-label">Internal Memo</label>
                 <textarea 
+                  id="bill-memo"
                   value={memo}
                   onChange={(e) => setMemo(e.target.value)}
                   placeholder="Notes about this bill..."
@@ -332,11 +343,11 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="micro-label">Attachments & Receipts</label>
+                <label htmlFor="bill-file-upload" className="micro-label">Attachments & Receipts</label>
                 <div className="flex items-center gap-4">
-                   <label className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
+                   <label htmlFor="bill-file-upload" className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Select Files</span>
-                     <input type="file" multiple className="hidden" onChange={handleFileUpload} />
+                     <input id="bill-file-upload" type="file" multiple className="hidden" onChange={handleFileUpload} />
                    </label>
                 </div>
                 {attachments.length > 0 && (

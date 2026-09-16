@@ -251,6 +251,8 @@ export default function ReceivePaymentModal({
             </div>
           </div>
           <button
+            type="button"
+            aria-label="Close"
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg"
           >
@@ -298,10 +300,11 @@ export default function ReceivePaymentModal({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Contact selection */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label htmlFor="pay-contact" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 {direction === 'received' ? 'Customer' : 'Vendor'} *
               </label>
               <select
+                id="pay-contact"
                 value={contactId}
                 onChange={e => {
                   setContactId(e.target.value);
@@ -321,10 +324,11 @@ export default function ReceivePaymentModal({
 
             {/* Total Payment Amount */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label htmlFor="pay-amount" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Payment Amount ($) *
               </label>
               <input
+                id="pay-amount"
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -338,10 +342,11 @@ export default function ReceivePaymentModal({
 
             {/* Date */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label htmlFor="pay-date" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Payment Date *
               </label>
               <input
+                id="pay-date"
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
@@ -352,10 +357,11 @@ export default function ReceivePaymentModal({
 
             {/* Deposit Account */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label htmlFor="pay-deposit-acc" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 {direction === 'received' ? 'Deposit to Account' : 'Paid from Account'} *
               </label>
               <select
+                id="pay-deposit-acc"
                 value={depositAccountId}
                 onChange={e => setDepositAccountId(e.target.value)}
                 required
@@ -369,10 +375,11 @@ export default function ReceivePaymentModal({
 
             {/* Payment Method */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label htmlFor="pay-method" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Payment Method
               </label>
               <select
+                id="pay-method"
                 value={method}
                 onChange={e => setMethod(e.target.value as any)}
                 className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
@@ -387,10 +394,11 @@ export default function ReceivePaymentModal({
 
             {/* Reference */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label htmlFor="pay-reference" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Reference / Check #
               </label>
               <input
+                id="pay-reference"
                 type="text"
                 placeholder="e.g. CHK-90412"
                 value={reference}
@@ -436,6 +444,8 @@ export default function ReceivePaymentModal({
                     </div>
                     <div className="col-span-3">
                       <input
+                        id={`alloc-${docItem.id}`}
+                        aria-label={`Allocation amount for document ${docItem.number}`}
                         type="number"
                         step="0.01"
                         min="0"

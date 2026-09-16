@@ -44,17 +44,12 @@ class MockTransactionalDb {
       }
     };
 
-    try {
-      const res = await updateFunction(tx);
-      // If transaction succeeded, commit state to DB
-      for (const [k, v] of snapshotMap.entries()) {
-        this.data.set(k, v);
-      }
-      return res;
-    } catch (err) {
-      // Transaction aborted: DO NOT commit snapshotMap to this.data
-      throw err;
+    const res = await updateFunction(tx);
+    // If transaction succeeded, commit state to DB
+    for (const [k, v] of snapshotMap.entries()) {
+      this.data.set(k, v);
     }
+    return res;
   }
 
   getDocData(collName: string, docId: string) {

@@ -23,6 +23,7 @@ export interface ServerBalanceSheetData {
   netIncome: number;
   totalClaims: number;
   isBalanced: boolean;
+  orphanedLines?: Array<{ accountId: string; transactionId?: string; date?: string; amountCents: number }>;
 }
 
 export interface ServerTrialBalanceData {

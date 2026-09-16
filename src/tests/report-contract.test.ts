@@ -4,7 +4,8 @@ import {
   computeProfitAndLoss,
   computeBalanceSheet,
   computeTrialBalance,
-  computeCashFlow
+  computeCashFlow,
+  computeTaxLiability
 } from '../server/reports/computeReports';
 
 // Sample accounts and transactions for running pure computation tests
@@ -177,5 +178,102 @@ describe('Report Contract Structural Guard Suite', () => {
     }
     assert.ok(Number.isFinite(fixture.grossProfit));
     assert.ok(Number.isFinite(fixture.netIncome));
+  });
+
+  test('Tax Report Task 1 & 2: tax-exclusive $1000 @10% -> tax=10000', () => {
+    const invoices = [
+      {
+        id: 'inv_excl',
+        date: '2026-02-01',
+        status: 'sent',
+        amountCents: 100000,
+        taxRate: 10,
+        taxInclusive: false
+      }
+    ];
+    const report = computeTaxLiability(invoices, [], '2026-01-01', '2026-12-31');
+    assert.equal(report.taxCollectedCents, 10000, 'Tax collected on $1000 @ 10% tax-exclusive must be exactly 10000 cents');
+    assert.equal(report.taxableSalesCents, 100000, 'Taxable base for tax-exclusive invoice must equal total net sales ($1000)');
+  });
+
+  test('Tax Report Task 1 & 2: tax-inclusive $1100 @10% -> tax=10000', () => {
+    const invoices = [
+      {
+        id: 'inv_incl',
+        date: '2026-02-01',
+        status: 'approved',
+        amountCents: 110000,
+        taxRate: 10,
+        taxInclusive: true
+      }
+    ];
+    const report = computeTaxLiability(invoices, [], '2026-01-01', '2026-12-31');
+    assert.equal(report.taxCollectedCents, 10000, 'Tax collected on $1100 @ 10% tax-inclusive must be exactly 10000 cents');
+    assert.equal(report.taxableSalesCents, 100000, 'Taxable base for tax-inclusive invoice must back out tax ($1000)');
+  });
+
+  test('Tax Report Task 1 & 2: bill $1000 @10% tax-exclusive -> taxPaid=10000', () => {
+    const bills = [
+      {
+        id: 'bill_excl',
+        date: '2026-02-01',
+        status: 'pending',
+        amountCents: 100000,
+        taxRate: 10,
+        taxInclusive: false
+      }
+    ];
+    const report = computeTaxLiability([], bills, '2026-01-01', '2026-12-31');
+    assert.equal(report.taxPaidCents, 10000, 'Tax paid on $1000 @ 10% tax-exclusive must be exactly 10000 cents');
+    assert.equal(report.taxablePurchasesCents, 100000, 'Taxable purchases for tax-exclusive bill must equal total net ($1000)');
+  });
+
+  test('Tax Report Task 2: draft invoice and draft bill are excluded from tax owed (tax=0, taxPaid=0)', () => {
+    const invoices = [
+      {
+        id: 'inv_draft',
+        date: '2026-02-01',
+        status: 'draft',
+        amountCents: 100000,
+        taxRate: 10,
+        taxInclusive: false
+      }
+    ];
+    const bills = [
+      {
+        id: 'bill_draft',
+        date: '2026-02-01',
+        status: 'draft',
+        amountCents: 100000,
+        taxRate: 10,
+        taxInclusive: false
+      }
+    ];
+    const report = computeTaxLiability(invoices, bills, '2026-01-01', '2026-12-31');
+    assert.equal(report.taxCollectedCents, 0, 'Draft invoice must not count towards taxCollectedCents');
+    assert.equal(report.taxPaidCents, 0, 'Draft bill must not count towards taxPaidCents');
+  });
+
+  test('Balance Sheet Task 3: orphaned account reference detection', () => {
+    const accounts = [
+      { id: 'acc_asset', name: 'Asset', type: 'asset', category: 'Cash', openingBalanceCents: 0 }
+    ];
+    const transactions = [
+      {
+        id: 'tx_with_orphan',
+        date: '2026-01-01',
+        status: 'posted',
+        posted: true,
+        lines: [
+          { accountId: 'acc_asset', amountCents: 40000 },
+          { accountId: 'acc_deleted_or_missing', amountCents: -40000 }
+        ]
+      }
+    ];
+    const result = computeBalanceSheet(accounts, transactions, '2026-12-31');
+    assert.ok(Array.isArray(result.orphanedLines), 'orphanedLines must be an array');
+    assert.equal(result.orphanedLines.length, 1, 'Should detect 1 orphaned line');
+    assert.equal(result.orphanedLines[0].accountId, 'acc_deleted_or_missing');
+    assert.equal(result.isBalanced, false, 'Should flag unbalanced due to missing account');
   });
 });

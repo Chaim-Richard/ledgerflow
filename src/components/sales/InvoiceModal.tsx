@@ -141,9 +141,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
-              <label className="micro-label">Customer</label>
+              <label htmlFor="inv-customer" className="micro-label">Customer</label>
               <div className="relative">
                 <input 
+                  id="inv-customer"
                   required
                   list="invoice-customer-list"
                   value={invoice.customerName || invoice.customerId || ''}
@@ -160,8 +161,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               </div>
             </div>
             <div className="space-y-2">
-              <label className="micro-label">Invoice Number</label>
+              <label htmlFor="inv-number" className="micro-label">Invoice Number</label>
               <input 
+                id="inv-number"
                 type="text"
                 required
                 value={invoice.number}
@@ -170,8 +172,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               />
             </div>
             <div className="space-y-2">
-              <label className="micro-label">Status</label>
+              <label htmlFor="inv-status" className="micro-label">Status</label>
               <select 
+                id="inv-status"
                 value={invoice.status}
                 onChange={(e) => setInvoice({ ...invoice, status: e.target.value as any })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
@@ -186,8 +189,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-2">
-              <label className="micro-label">Invoice Type</label>
+              <label htmlFor="inv-type" className="micro-label">Invoice Type</label>
               <select 
+                id="inv-type"
                 value={invoice.type || 'standard'}
                 onChange={(e) => setInvoice({ ...invoice, type: e.target.value as any })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
@@ -199,8 +203,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             </div>
             
             <div className="space-y-2">
-              <label className="micro-label">Payment Terms</label>
+              <label htmlFor="inv-payment-terms" className="micro-label">Payment Terms</label>
               <select 
+                id="inv-payment-terms"
                 value={invoice.paymentTerms || 'due_on_receipt'}
                 onChange={(e) => setInvoice({ ...invoice, paymentTerms: e.target.value })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
@@ -214,8 +219,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
             {invoice.type === 'recurring' && (
                <div className="space-y-2">
-                 <label className="micro-label">Recurring Interval</label>
+                 <label htmlFor="inv-recurring-interval" className="micro-label">Recurring Interval</label>
                  <select 
+                   id="inv-recurring-interval"
                    value={invoice.recurringInterval || 'monthly'}
                    onChange={(e) => setInvoice({ ...invoice, recurringInterval: e.target.value as any })}
                    className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
@@ -229,8 +235,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
             {invoice.type === 'progress' && (
                <div className="space-y-2">
-                 <label className="micro-label">Progress Percentage (%)</label>
+                 <label htmlFor="inv-progress-pct" className="micro-label">Progress Percentage (%)</label>
                  <input 
+                   id="inv-progress-pct"
                    type="number"
                    min="0"
                    max="100"
@@ -244,8 +251,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
-              <label className="micro-label">Invoice Date</label>
+              <label htmlFor="inv-date" className="micro-label">Invoice Date</label>
               <input 
+                id="inv-date"
                 type="date"
                 required
                 value={invoice.date}
@@ -254,8 +262,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               />
             </div>
             <div className="space-y-2">
-              <label className="micro-label">Due Date</label>
+              <label htmlFor="inv-due-date" className="micro-label">Due Date</label>
               <input 
+                id="inv-due-date"
                 type="date"
                 required
                 value={invoice.dueDate}
@@ -267,54 +276,60 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
              <div className="space-y-2">
-               <label className="micro-label">Discount ($)</label>
+               <label htmlFor="inv-discount" className="micro-label">Discount ($)</label>
                <input 
+                 id="inv-discount"
                  type="number" step="0.01" min="0" value={(invoice.discountCents || 0) / 100}
                  onChange={(e) => setInvoice({ ...invoice, discountCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
                  className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                />
              </div>
              <div className="space-y-2">
-               <label className="micro-label">Deposit ($)</label>
+               <label htmlFor="inv-deposit" className="micro-label">Deposit ($)</label>
                <input 
+                 id="inv-deposit"
                  type="number" step="0.01" min="0" value={(invoice.depositCents || 0) / 100}
                  onChange={(e) => setInvoice({ ...invoice, depositCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
                  className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                />
              </div>
              <div className="space-y-2">
-               <label className="micro-label">Retainage ($)</label>
+               <label htmlFor="inv-retainage" className="micro-label">Retainage ($)</label>
                <input 
+                 id="inv-retainage"
                  type="number" step="0.01" min="0" value={(invoice.retainageCents || 0) / 100}
                  onChange={(e) => setInvoice({ ...invoice, retainageCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
                  className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                />
              </div>
              <div className="space-y-2">
-                 <label className="micro-label">Milestone / Proj.</label>
+                 <label htmlFor="inv-milestone" className="micro-label">Milestone / Proj.</label>
                  <input 
+                   id="inv-milestone"
                    type="text" value={invoice.milestone || ''}
                    onChange={(e) => setInvoice({ ...invoice, milestone: e.target.value })}
                    className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
                  />
              </div>
              <div className="space-y-2">
-                 <label className="micro-label">Tax Rate (%)</label>
+                 <label htmlFor="inv-tax-rate" className="micro-label">Tax Rate (%)</label>
                  <input 
+                   id="inv-tax-rate"
                    type="number" step="0.001" min="0" max="100" value={invoice.taxRate || 0}
                    onChange={(e) => setInvoice({ ...invoice, taxRate: parseFloat(e.target.value || '0') })}
                    className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                  />
              </div>
              <div className="space-y-2 flex flex-col justify-end pb-3">
-               <label className="flex items-center gap-2 cursor-pointer">
-                 <input type="checkbox" checked={invoice.taxInclusive || false} onChange={e => setInvoice({ ...invoice, taxInclusive: e.target.checked })} className="w-5 h-5 rounded border-zinc-300 text-[var(--text)] focus:ring-zinc-900" />
+               <label htmlFor="inv-tax-inclusive" className="flex items-center gap-2 cursor-pointer">
+                 <input id="inv-tax-inclusive" type="checkbox" checked={invoice.taxInclusive || false} onChange={e => setInvoice({ ...invoice, taxInclusive: e.target.checked })} className="w-5 h-5 rounded border-zinc-300 text-[var(--text)] focus:ring-zinc-900" />
                  <span className="text-sm font-bold text-zinc-700">Tax Inclusive</span>
                </label>
              </div>
              <div className="space-y-2">
-                 <label className="micro-label">Currency</label>
+                 <label htmlFor="inv-currency" className="micro-label">Currency</label>
                  <select 
+                   id="inv-currency"
                    value={invoice.currency || 'USD'}
                    onChange={(e) => setInvoice({ ...invoice, currency: e.target.value })}
                    className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
@@ -325,8 +340,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  </select>
              </div>
              <div className="space-y-2">
-                 <label className="micro-label">Exchange Rate</label>
+                 <label htmlFor="inv-exchange-rate" className="micro-label">Exchange Rate</label>
                  <input 
+                   id="inv-exchange-rate"
                    type="number" step="0.0001" min="0.0001" value={invoice.exchangeRate || 1}
                    onChange={(e) => setInvoice({ ...invoice, exchangeRate: parseFloat(e.target.value || '1') })}
                    className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
@@ -351,8 +367,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               {items.map((item, idx) => (
                 <div key={item.id} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
                   <div className="col-span-12 md:col-span-4 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Description</label>
+                    <label htmlFor={`inv-item-desc-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Description</label>
                     <input 
+                      id={`inv-item-desc-${idx}`}
                       type="text"
                       value={item.description}
                       onChange={(e) => {
@@ -365,8 +382,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                     />
                   </div>
                   <div className="col-span-6 md:col-span-2 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Qty</label>
+                    <label htmlFor={`inv-item-qty-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Qty</label>
                     <input 
+                      id={`inv-item-qty-${idx}`}
                       type="number"
                       step="0.01"
                       min="0"
@@ -382,8 +400,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                     />
                   </div>
                   <div className="col-span-6 md:col-span-2 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Rate ($)</label>
+                    <label htmlFor={`inv-item-rate-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Rate ($)</label>
                     <input 
+                      id={`inv-item-rate-${idx}`}
                       type="number"
                       step="0.01"
                       min="0"
@@ -399,9 +418,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                     />
                   </div>
                   <div className="col-span-8 md:col-span-2 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Income Account</label>
+                    <label htmlFor={`inv-item-acc-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Income Account</label>
                     <div className="relative">
                       <input 
+                        id={`inv-item-acc-${idx}`}
                         list={`invoice-account-${idx}`}
                         value={safeAccounts.find(a => a.id === item.accountId)?.name || item.accountId || ''}
                         onChange={(e) => {
@@ -419,8 +439,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                     </div>
                   </div>
                   <div className="col-span-6 md:col-span-1 space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Tax %</label>
+                    <label htmlFor={`inv-item-tax-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Tax %</label>
                     <input 
+                      id={`inv-item-tax-${idx}`}
                       type="number"
                       step="0.001"
                       min="0"
@@ -441,6 +462,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                   <div className="col-span-1 pb-1">
                     <button 
                       type="button"
+                      aria-label={`Remove line ${idx + 1}`}
                       onClick={() => setItems(items.filter((_, i) => i !== idx))}
                       className="p-2 text-zinc-300 hover:text-rose-500 transition-colors"
                     >
@@ -454,8 +476,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-[var(--line)] pt-8 mt-8">
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="micro-label">Customer Memo</label>
+                <label htmlFor="inv-memo" className="micro-label">Customer Memo</label>
                 <textarea 
+                  id="inv-memo"
                   value={memo}
                   onChange={(e) => setMemo(e.target.value)}
                   placeholder="Message to customer..."
@@ -463,8 +486,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                 />
               </div>
               <div className="space-y-2">
-                <label className="micro-label">Terms & Conditions</label>
+                <label htmlFor="inv-terms" className="micro-label">Terms & Conditions</label>
                 <textarea 
+                  id="inv-terms"
                   value={terms}
                   onChange={(e) => setTerms(e.target.value)}
                   placeholder="Standard terms..."
@@ -474,8 +498,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="micro-label">Email Subject</label>
+                <label htmlFor="inv-email-subject" className="micro-label">Email Subject</label>
                 <input 
+                  id="inv-email-subject"
                   type="text"
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
@@ -484,11 +509,11 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                 />
               </div>
               <div className="space-y-2">
-                <label className="micro-label">Attachments</label>
+                <label htmlFor="inv-attachments" className="micro-label">Attachments</label>
                 <div className="flex items-center gap-4">
-                   <label className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
+                   <label htmlFor="inv-attachments" className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Select Files</span>
-                     <input type="file" multiple className="hidden" onChange={handleFileUpload} />
+                     <input id="inv-attachments" type="file" multiple className="hidden" onChange={handleFileUpload} />
                    </label>
                 </div>
                 {attachments.length > 0 && (

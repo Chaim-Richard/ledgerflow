@@ -58,12 +58,21 @@ export function computeBalanceSheet(accounts: any[], transactions: any[], endDat
     balances[acc.id] = acc.openingBalanceCents || 0;
   });
 
+  const orphanedLines: Array<{ accountId: string; transactionId?: string; date?: string; amountCents: number }> = [];
+
   for (const tx of transactions) {
     if (!isPostable(tx)) continue;
     if (!isTransactionInDateRange(tx, undefined, end)) continue;
     tx.lines?.forEach((line: any) => {
       if (balances[line.accountId] !== undefined) {
         balances[line.accountId] += lineAmount(line, tx);
+      } else {
+        orphanedLines.push({
+          accountId: line.accountId,
+          transactionId: tx.id,
+          date: tx.date,
+          amountCents: lineAmount(line, tx)
+        });
       }
     });
   }
@@ -107,7 +116,8 @@ export function computeBalanceSheet(accounts: any[], transactions: any[], endDat
     totalEquity,
     netIncome,
     totalClaims,
-    isBalanced
+    isBalanced,
+    orphanedLines
   };
 }
 
@@ -402,21 +412,37 @@ export function computeTaxLiability(invoices: any[], bills: any[], startDate?: s
   let taxablePurchasesCents = 0;
   let taxPaidCents = 0;
 
+  const COUNTS_FOR_TAX = new Set(['sent', 'approved', 'invoiced', 'pending', 'overdue', 'partially_paid', 'paid']);
+
   invoices.forEach((inv: any) => {
-    if (inv.date >= start && inv.date <= end && inv.status !== 'void' && inv.status !== 'rejected') {
-      const total = inv.amountCents || inv.totalCents || 0;
-      const tax = inv.taxAmountCents || (inv.taxRate ? Math.round((total / (1 + inv.taxRate / 100)) * (inv.taxRate / 100)) : 0);
-      taxableSalesCents += (total - tax);
+    if (inv.date >= start && inv.date <= end && COUNTS_FOR_TAX.has(inv.status)) {
+      const total = inv.amountCents ?? inv.totalCents ?? 0;
+      const rate = (inv.taxRate ?? 0) / 100;
+      const tax = inv.taxAmountCents ?? (
+        rate === 0 ? 0
+        : inv.taxInclusive
+          ? Math.round(total - total / (1 + rate))
+          : Math.round(total * rate)
+      );
+      const net = inv.taxInclusive ? total - tax : total;
+      taxableSalesCents += net;
       taxCollectedCents += tax;
     }
   });
 
   bills.forEach((b: any) => {
     const bDate = b.date || b.issueDate || '';
-    if (bDate >= start && bDate <= end && b.status !== 'void' && b.status !== 'rejected') {
-      const total = b.amountCents || 0;
-      const tax = b.taxAmountCents || (b.taxRate ? Math.round((total / (1 + b.taxRate / 100)) * (b.taxRate / 100)) : 0);
-      taxablePurchasesCents += (total - tax);
+    if (bDate >= start && bDate <= end && COUNTS_FOR_TAX.has(b.status)) {
+      const total = b.amountCents ?? 0;
+      const rate = (b.taxRate ?? 0) / 100;
+      const tax = b.taxAmountCents ?? (
+        rate === 0 ? 0
+        : b.taxInclusive
+          ? Math.round(total - total / (1 + rate))
+          : Math.round(total * rate)
+      );
+      const net = b.taxInclusive ? total - tax : total;
+      taxablePurchasesCents += net;
       taxPaidCents += tax;
     }
   });

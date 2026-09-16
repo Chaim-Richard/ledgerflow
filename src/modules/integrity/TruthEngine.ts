@@ -458,6 +458,44 @@ export class TruthEngine {
     if (turnoverDeltaS) score++;
     return score;
   }
+
+  static scanOrphanedAccountReferences(accounts: Array<{ id: string }>, transactions: any[]): {
+    orphanedAccountIds: string[];
+    orphanedLines: Array<{
+      transactionId: string;
+      date: string;
+      accountId: string;
+      amountCents: number;
+    }>;
+    totalOrphanedAmountCents: number;
+  } {
+    const knownAccountIds = new Set(accounts.map(a => a.id));
+    const orphanedLines: Array<{ transactionId: string; date: string; accountId: string; amountCents: number }> = [];
+    const orphanedAccountIdsSet = new Set<string>();
+
+    for (const tx of transactions) {
+      if (tx.status === 'void' || tx.status === 'rejected' || tx.deletedAt) continue;
+      tx.lines?.forEach((line: any) => {
+        if (line.accountId && !knownAccountIds.has(line.accountId)) {
+          orphanedAccountIdsSet.add(line.accountId);
+          orphanedLines.push({
+            transactionId: tx.id || '',
+            date: tx.date || '',
+            accountId: line.accountId,
+            amountCents: line.amountCents || 0
+          });
+        }
+      });
+    }
+
+    const totalOrphanedAmountCents = orphanedLines.reduce((sum, l) => sum + Math.abs(l.amountCents), 0);
+
+    return {
+      orphanedAccountIds: Array.from(orphanedAccountIdsSet),
+      orphanedLines,
+      totalOrphanedAmountCents
+    };
+  }
 }
 
 

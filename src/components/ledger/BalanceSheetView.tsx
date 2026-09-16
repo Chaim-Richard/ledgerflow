@@ -156,13 +156,23 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
       else if (acc.type === 'expense' || acc.type === 'cost_of_goods') expense[acc.id] = initVal;
     });
 
+    const orphanedLines: Array<{ accountId: string; transactionId?: string; date?: string; amountCents: number }> = [];
+
     // Sum transactions before or on cutoff date
     transactions.forEach(tx => {
       if (!isPostable(tx) || !isTransactionInDateRange(tx, undefined, dateCutoff)) return;
       tx.lines?.forEach(line => {
         const id = line.accountId;
         const acc = accountMap.get(id) || accountMap.get(line.accountName);
-        if (!acc) return;
+        if (!acc) {
+          orphanedLines.push({
+            accountId: id || line.accountName || 'unknown',
+            transactionId: tx.id,
+            date: tx.date,
+            amountCents: lineAmount(line, tx)
+          });
+          return;
+        }
         const accId = acc.id;
         
         const amt = lineAmount(line, tx);
@@ -193,7 +203,8 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
       totalEquity,
       netIncome,
       totalClaims,
-      isBalanced: Math.abs(totalAssets - totalClaims) < 1 // check for integer equality
+      isBalanced: Math.abs(totalAssets - totalClaims) < 1, // check for integer equality
+      orphanedLines
     };
   }, [transactions, accounts]);
 
@@ -493,6 +504,27 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
           </motion.div>
         </div>
       </div>
+
+      {currentData.orphanedLines && currentData.orphanedLines.length > 0 && (
+        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3 text-amber-800 dark:text-amber-200">
+          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1 text-xs">
+            <p className="font-bold uppercase tracking-wider text-amber-900 dark:text-amber-100">
+              Orphaned Account References Detected ({currentData.orphanedLines.length} line{currentData.orphanedLines.length > 1 ? 's' : ''})
+            </p>
+            <p className="mt-1 text-slate-600 dark:text-slate-300">
+              Transactions reference accounts not found in the current Chart of Accounts. This unbalances assets and claims.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {Array.from(new Set(currentData.orphanedLines.map(l => l.accountId))).map(accId => (
+                <span key={accId} className="px-2 py-0.5 bg-amber-200/50 dark:bg-amber-900/40 rounded text-[10px] font-mono font-medium">
+                  Missing ID: {accId}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Assets Column */}

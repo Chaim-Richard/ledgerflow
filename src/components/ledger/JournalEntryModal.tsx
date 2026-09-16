@@ -354,8 +354,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
               {/* Meta Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <div className="space-y-2">
-                  <label className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Date</label>
+                  <label htmlFor="je-date" className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Date</label>
                   <input 
+                    id="je-date"
                     type="date" 
                     required
                     value={date}
@@ -364,8 +365,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                   />
                 </div>
                 <div className="md:col-span-2 space-y-2 relative">
-                  <label className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Description</label>
+                  <label htmlFor="je-desc" className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Description</label>
                   <input 
+                    id="je-desc"
                     type="text" 
                     required
                     value={description}
@@ -396,8 +398,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                   </AnimatePresence>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Reference (Optional)</label>
+                  <label htmlFor="je-ref" className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Reference (Optional)</label>
                   <input 
+                    id="je-ref"
                     type="text" 
                     value={reference}
                     onChange={(e) => setReference(e.target.value)}
@@ -407,8 +410,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 </div>
                 
                 <div className="space-y-2">
-                   <label className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Currency</label>
+                   <label htmlFor="je-currency" className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Currency</label>
                    <select 
+                     id="je-currency"
                      value={transactionCurrency}
                      onChange={(e) => setTransactionCurrency(e.target.value)}
                      className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--brass-line)] focus:bg-[var(--surface)] transition-all font-bold appearance-none text-[var(--text)] cursor-pointer"
@@ -421,10 +425,11 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 
                 {transactionCurrency !== baseCurrency && (
                    <div className="space-y-2">
-                     <label className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">
+                     <label htmlFor="je-fx-rate" className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">
                        Exchange Rate ({transactionCurrency} → {baseCurrency})
                      </label>
                      <input 
+                       id="je-fx-rate"
                        type="number" 
                        step="0.000001"
                        value={exchangeRate}
@@ -442,8 +447,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-widest">Entry Lines</h3>
                   <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label htmlFor="je-show-dim" className="flex items-center gap-2 cursor-pointer">
                       <input 
+                        id="je-show-dim"
                         type="checkbox" 
                         checked={showDimensions} 
                         onChange={e => setShowDimensions(e.target.checked)} 
@@ -463,17 +469,18 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
 
                 <div className="border border-[var(--line)] rounded-xl overflow-hidden overflow-x-auto custom-scrollbar">
                   <table className="w-full border-collapse text-sm min-w-[600px]">
+                    <caption className="sr-only">Journal Entry Lines</caption>
                     <thead>
                       <tr className="text-left border-b border-[var(--line)] bg-[var(--ink)]/50">
-                        <th className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]">Account</th>
+                        <th scope="col" className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]">Account</th>
                         {showDimensions && activeDimensions.map(dim => (
-                          <th key={dim.id} className={cn("p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]", dim.isWorld && "text-[var(--brass)]")}>
+                          <th scope="col" key={dim.id} className={cn("p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]", dim.isWorld && "text-[var(--brass)]")}>
                             {dim.name}
                           </th>
                         ))}
-                        <th className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px] text-right w-32">Debit</th>
-                        <th className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px] text-right w-32">Credit</th>
-                        <th className="p-3.5 w-12"></th>
+                        <th scope="col" className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px] text-right w-32">Debit</th>
+                        <th scope="col" className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px] text-right w-32">Credit</th>
+                        <th scope="col" className="p-3.5 w-12"><span className="sr-only">Actions</span></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--line)]">
@@ -483,6 +490,8 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                             <div className="relative">
                               <input 
                                 required
+                                id={`je-line-acc-${idx}`}
+                                aria-label={`Account for line ${idx + 1}`}
                                 list={`je-account-${idx}`}
                                 value={accounts.find(a => a.id === line.accountId) ? `${accounts.find(a => a.id === line.accountId)?.code} - ${accounts.find(a => a.id === line.accountId)?.name}` : line.accountId || ''}
                                 onChange={(e) => {
@@ -503,6 +512,8 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                             <td key={dim.id} className="p-2.5">
                               <div className="relative">
                                 <input 
+                                  id={`je-dim-${dim.id}-${idx}`}
+                                  aria-label={`${dim.name} for line ${idx + 1}`}
                                   value={line.dimensions?.[dim.id.toLowerCase()] || (line as any)[dim.id.toLowerCase()] || ''}
                                   onChange={(e) => handleDimensionChange(idx, dim.id, e.target.value)}
                                   placeholder={`Select ${dim.name}...`}
@@ -513,6 +524,8 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                           ))}
                           <td className="p-2.5">
                             <input 
+                              id={`je-line-debit-${idx}`}
+                              aria-label={`Debit amount for line ${idx + 1}`}
                               type="number" 
                               step="0.01"
                               value={line.debit > 0 ? line.debit / 100 : ''}
@@ -523,6 +536,8 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                           </td>
                           <td className="p-2.5">
                             <input 
+                              id={`je-line-credit-${idx}`}
+                              aria-label={`Credit amount for line ${idx + 1}`}
                               type="number" 
                               step="0.01"
                               value={line.credit > 0 ? line.credit / 100 : ''}
@@ -534,6 +549,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                           <td className="p-2.5 text-center">
                             <button 
                               type="button"
+                              aria-label={`Remove line ${idx + 1}`}
                               onClick={() => handleRemoveLine(idx)}
                               className="p-2 text-[var(--muted)] hover:text-rose-600 transition-colors cursor-pointer"
                             >

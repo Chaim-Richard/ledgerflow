@@ -3864,6 +3864,26 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
+  app.post("/api/v1/admin/integrity/orphan-scan", authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const workspaceId = (req.body.workspaceId as string) || (authReq.query?.workspaceId as string) || authReq.user?.developerWorkspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ status: "error", message: "Missing workspaceId" });
+      }
+      const { accounts, transactions } = await getReportContext(authReq, workspaceId);
+      const scanResult = TruthEngine.scanOrphanedAccountReferences(accounts, transactions);
+      res.json({
+        status: "success",
+        workspaceId,
+        scannedAt: new Date().toISOString(),
+        ...scanResult
+      });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
+
   app.post("/api/v1/billing/checkout", authenticate, async (req: express.Request, res: express.Response) => {
     try {
       const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;

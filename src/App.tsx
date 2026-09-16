@@ -110,9 +110,9 @@ export default function App() {
   const isQuietMode = useUIStore(state => state.isQuietMode);
 
   useEffect(() => {
-    document.documentElement.dir = language === 'he' ? 'rtl' : 'ltr';
-    document.documentElement.lang = language || 'en';
-  }, [language]);
+    document.documentElement.dir = 'ltr';
+    document.documentElement.lang = 'en';
+  }, []);
   const setActiveTabStore = useUIStore(state => state.setActiveTab);
   const navigateToolStore = useUIStore(state => state.navigateTool);
   const isCommandPaletteOpen = useUIStore(state => state.isCommandPaletteOpen);
@@ -319,7 +319,7 @@ const shortcutMap = useMemo(() => {
 
   return (
     <FallbackBoundary>
-      <div dir={language === 'he' ? 'rtl' : 'ltr'} className="h-[100dvh] w-full bg-[var(--ink)] overflow-hidden flex flex-col font-sans text-[var(--text)]">
+      <div dir="ltr" className="h-[100dvh] w-full bg-[var(--ink)] overflow-hidden flex flex-col font-sans text-[var(--text)]">
         <Toaster theme="light" position="top-right" expand={false} richColors closeButton className={isQuietMode ? 'opacity-0 pointer-events-none' : ''} />
         {/* Google-grade Progress Line */}
         {isPending && (

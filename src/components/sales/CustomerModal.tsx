@@ -55,11 +55,11 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
 
         <form onSubmit={handleSubmit} className="p-4 md:p-8 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
           <div className="space-y-2">
-            <label className="micro-label">Customer Name</label>
+            <label htmlFor="cust-name" className="micro-label">Customer Name</label>
             <input 
+              id="cust-name"
               type="text"
               required
-              autoFocus
               value={customer.name}
               onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
               placeholder="e.g. Acme Corp"
@@ -69,8 +69,9 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="micro-label">Email Address</label>
+              <label htmlFor="cust-email" className="micro-label">Email Address</label>
               <input 
+                id="cust-email"
                 type="email"
                 value={customer.email}
                 onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
@@ -79,8 +80,9 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
               />
             </div>
             <div className="space-y-2">
-              <label className="micro-label">Phone Number</label>
+              <label htmlFor="cust-phone" className="micro-label">Phone Number</label>
               <input 
+                id="cust-phone"
                 type="tel"
                 value={customer.phone || ''}
                 onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
@@ -92,8 +94,9 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="micro-label">Stage</label>
+              <label htmlFor="cust-stage" className="micro-label">Stage</label>
               <select 
+                id="cust-stage"
                 value={customer.pipelineStage || 'lead'}
                 onChange={(e) => setCustomer({ ...customer, pipelineStage: e.target.value as any })}
                 className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
@@ -106,8 +109,9 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
               </select>
             </div>
             <div className="space-y-2">
-              <label className="micro-label">Segment</label>
+              <label htmlFor="cust-segment" className="micro-label">Segment</label>
               <select 
+                id="cust-segment"
                 value={customer.customerSegment || 'standard'}
                 onChange={(e) => setCustomer({ ...customer, customerSegment: e.target.value as any })}
                 className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-medium"
@@ -122,8 +126,9 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="micro-label">Lead Score (0-100)</label>
+              <label htmlFor="cust-score" className="micro-label">Lead Score (0-100)</label>
               <input 
+                id="cust-score"
                 type="number" min="0" max="100"
                 value={customer.score || 0}
                 onChange={(e) => setCustomer({ ...customer, score: parseInt(e.target.value, 10) || 0 })}
@@ -131,16 +136,17 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
               />
             </div>
             <div className="space-y-2 flex flex-col justify-center pt-6">
-              <label className="flex items-center gap-2 cursor-pointer">
-                 <input type="checkbox" checked={customer.isForeign || false} onChange={(e) => setCustomer({ ...customer, isForeign: e.target.checked })} className="w-5 h-5 rounded border-zinc-300" />
+              <label htmlFor="cust-foreign" className="flex items-center gap-2 cursor-pointer">
+                 <input id="cust-foreign" type="checkbox" checked={customer.isForeign || false} onChange={(e) => setCustomer({ ...customer, isForeign: e.target.checked })} className="w-5 h-5 rounded border-zinc-300" />
                  <span className="font-bold text-sm">International/Foreign Entity</span>
               </label>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="micro-label">Internal Notes / CRM Info</label>
+            <label htmlFor="cust-notes" className="micro-label">Internal Notes / CRM Info</label>
             <textarea 
+              id="cust-notes"
               value={customer.notes || ''}
               onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
               placeholder="e.g. Prefers email contact, introduced by..."
