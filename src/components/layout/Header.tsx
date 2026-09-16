@@ -1,8 +1,10 @@
-import React from 'react';
-import { Menu, Search, Sun, Moon, Plus, Compass, ShieldCheck, HelpCircle } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Menu, Search, Sun, Moon, Plus, Compass, ShieldCheck, HelpCircle, Bell } from 'lucide-react';
 import QuickCreateMenu from './QuickCreateMenu';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
+import { useNotificationStore } from '../../stores/useNotificationStore';
+import NotificationDrawer from './NotificationDrawer';
 
 interface HeaderProps {
   onLogout?: () => void;
@@ -17,6 +19,15 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
   const setCommandPaletteOpen = useUIStore(s => s.setCommandPaletteOpen);
   const theme = useUIStore(s => s.theme);
   const setTheme = useUIStore(s => s.setTheme);
+
+  const { notifications, setDrawerOpen, runScheduledChecks } = useNotificationStore();
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  useEffect(() => {
+    if (currentWorkspaceId) {
+      runScheduledChecks(currentWorkspaceId);
+    }
+  }, [currentWorkspaceId, runScheduledChecks]);
   
   const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
@@ -82,6 +93,21 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           <HelpCircle size={17} />
         </button>
 
+        {/* Notification Bell */}
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className="p-2 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] rounded-lg transition-colors relative cursor-pointer"
+          title="Open Notifications"
+          aria-label="Open Notifications"
+        >
+          <Bell size={17} />
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-bold bg-indigo-600 text-white rounded-full leading-none">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
@@ -126,6 +152,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           </button>
         )}
       </div>
+      <NotificationDrawer />
     </header>
   );
 });

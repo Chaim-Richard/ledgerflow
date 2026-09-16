@@ -85,6 +85,9 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'taxes': lazy(() => import('../components/finance/TaxManager')),
   'support': lazy(() => import('../components/support/SupportView')),
   'help': lazy(() => import('../components/support/HelpGuideView')),
+  'data-health': lazy(() => import('../components/system/DataHealthView')),
+  'charts': lazy(() => import('../components/finance/FinancialChartsDashboard')),
+  'query-builder': lazy(() => import('../components/ledger/QueryView')),
 };
 
 export interface AppTabDefinition {
@@ -105,6 +108,7 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'credit-notes', label: { en: 'Credit Notes & Vendor Credits', he: 'זיכויים וזיכויי ספק' }, icon: RotateCcw, groupId: 'transactions' },
   { id: 'register', label: { en: 'Account Register', he: 'יומן חשבון' }, icon: BookOpen, groupId: 'transactions' },
   { id: 'ledger', label: { en: 'Ledger & Journal', he: 'ספר ראשי ויומן' }, icon: Database, groupId: 'transactions' },
+  { id: 'query-builder', label: { en: 'BQL Query Builder', he: 'בונה שאילתות' }, icon: Filter, groupId: 'transactions' },
   { id: 'banking', label: { en: 'Bank Connections', he: 'חיבורי בנק' }, icon: Building, groupId: 'transactions' },
   { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת' }, icon: Search, groupId: 'transactions' },
 
@@ -118,10 +122,12 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'purchases', label: { en: 'Purchases', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'money_out' },
 
   { id: 'reports', label: { en: 'Reports', he: 'דוחות' }, icon: FileText, groupId: 'reports' },
+  { id: 'charts', label: { en: 'Visual Analytics', he: 'ניתוח חזותי' }, icon: PieChart, groupId: 'reports' },
   { id: 'forecaster', label: { en: 'Forecasting', he: 'תחזית תזרים' }, icon: TrendingUp, groupId: 'reports' },
   { id: 'intelligence', label: { en: 'Insights', he: 'תובנות' }, icon: BarChart3, groupId: 'reports' },
 
   { id: 'settings', label: { en: 'Preferences', he: 'הגדרות' }, icon: Settings, groupId: 'settings' },
+  { id: 'data-health', label: { en: 'Data Health & Audit', he: 'בריאות נתונים' }, icon: ShieldCheck, groupId: 'settings' },
   { id: 'support', label: { en: 'Support', he: 'תמיכה' }, icon: Headphones, groupId: 'settings' },
   { id: 'help', label: { en: 'Help & Guide', he: 'מדריך ועזרה' }, icon: BookOpen, groupId: 'settings' },
   { id: 'vault', label: { en: 'Documents', he: 'מסמכים' }, icon: ShieldCheck, groupId: 'settings' },

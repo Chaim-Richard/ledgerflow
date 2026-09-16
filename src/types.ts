@@ -1,3 +1,25 @@
+export type NotificationKind =
+  | 'invoice-created' | 'invoice-sent' | 'invoice-scheduled' | 'invoice-paid'
+  | 'invoice-overdue' | 'invoice-cancelled' | 'invoice-refunded' | 'invoice-reminder-sent'
+  | 'recurring-invoice-upcoming' | 'recurring-series-started'
+  | 'recurring-series-paused' | 'recurring-series-completed'
+  | 'transactions-created' | 'transactions-categorized' | 'transactions-assigned' | 'transactions-exported'
+  | 'inbox-new' | 'inbox-needs-review' | 'inbox-auto-matched' | 'inbox-cross-currency-matched'
+  | 'document-uploaded' | 'document-processed' | 'insight-ready';
+
+export interface AppNotification {
+  id: string;
+  workspaceId: string;
+  uid?: string;
+  kind: NotificationKind;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  linkTab?: string;
+  metadata?: Record<string, any>;
+}
+
 export interface Workspace {
   id: string;
   uid: string;

@@ -1,12 +1,25 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { toast } from 'sonner';
+import Decimal from 'decimal.js';
+
+// Set default rounding mode to HALF_UP (standard financial rounding)
+Decimal.set({ rounding: Decimal.ROUND_HALF_UP });
 
 /**
- * Specialized financial rounding to prevent decimal loss in tax calculations
+ * Specialized financial rounding using Decimal.js to prevent half-cent floating point drift.
  */
-export function roundCents(cents: number): number {
-  return Math.sign(cents) * Math.round(Math.abs(cents));
+export function roundCents(cents: number | string): number {
+  if (typeof cents === 'number' && isNaN(cents)) return 0;
+  return new Decimal(cents || 0).round().toNumber();
+}
+
+/**
+ * Safely converts monetary values with exchange rates or tax factors to exact integer cents.
+ */
+export function calculateFXCents(amountCents: number, exchangeRate: number): number {
+  if (!exchangeRate || exchangeRate <= 0) return roundCents(amountCents);
+  return new Decimal(amountCents).mul(exchangeRate).round().toNumber();
 }
 
 /**
@@ -16,12 +29,11 @@ export function parseAmountToCents(val: string | number | undefined | null): num
   if (val === undefined || val === null || val === '') return 0;
   if (typeof val === 'number') {
     if (isNaN(val)) return 0;
-    return Math.round(val * 100);
+    return new Decimal(val).mul(100).round().toNumber();
   }
   const cleanStr = String(val).replace(/[^0-9.-]/g, '');
-  const parsed = parseFloat(cleanStr);
-  if (isNaN(parsed)) return 0;
-  return Math.round(parsed * 100);
+  if (!cleanStr || cleanStr === '-') return 0;
+  return new Decimal(cleanStr).mul(100).round().toNumber();
 }
 
 /**
