@@ -104,7 +104,32 @@ export default function BillingSettings() {
     }
   };
 
-  const isPro = billingStatus?.billingCycle === 'pro';
+  const handleOpenPortal = async () => {
+    if (!currentWorkspace?.id || !auth.currentUser) return;
+    try {
+      const toastId = toast.loading('Opening customer portal...');
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/v1/billing/portal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ workspaceId: currentWorkspace.id })
+      });
+      const data = await res.json();
+      if (data.url) {
+        toast.dismiss(toastId);
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.message || 'Customer portal unavailable');
+      }
+    } catch (e: any) {
+      toast.error('Portal Error', { description: e.message || String(e) });
+    }
+  };
+
+  const isPro = billingStatus?.billingCycle === 'pro' || billingStatus?.plan === 'pro' || billingStatus?.plan === 'growth' || billingStatus?.plan === 'enterprise';
 
   return (
     <div className="space-y-10">
@@ -177,8 +202,12 @@ export default function BillingSettings() {
               </ul>
 
               {isPro ? (
-                <button disabled className="w-full py-3 bg-indigo-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-not-allowed flex justify-center items-center gap-2" aria-label="Active Subscription">
-                  <CheckCircle2 size={16} /> Active Subscription
+                <button 
+                  onClick={handleOpenPortal}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex justify-center items-center gap-2 cursor-pointer shadow-md" 
+                  aria-label="Manage Subscription Portal"
+                >
+                  <CheckCircle2 size={16} /> Manage Subscription & Billing Portal
                 </button>
               ) : (
                 <button 

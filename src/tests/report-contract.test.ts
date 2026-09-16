@@ -5,7 +5,8 @@ import {
   computeBalanceSheet,
   computeTrialBalance,
   computeCashFlow,
-  computeTaxLiability
+  computeTaxLiability,
+  computeStatement
 } from '../server/reports/computeReports';
 
 // Sample accounts and transactions for running pure computation tests
@@ -307,5 +308,26 @@ describe('Report Contract Structural Guard Suite', () => {
     assert.equal(result.orphanedLines.length, 1, 'Should detect 1 orphaned line');
     assert.equal(result.orphanedLines[0].accountId, 'acc_deleted_or_missing');
     assert.equal(result.isBalanced, false, 'Should flag unbalanced due to missing account');
+  });
+
+  test('Statement report excludes draft invoices, draft bills, and unposted payments', () => {
+    const contact = { id: 'cust_100', name: 'Acme Corp' };
+    const invoices = [
+      { id: 'inv_draft', customerId: 'cust_100', date: '2026-02-01', status: 'draft', amountCents: 100000 },
+      { id: 'inv_sent', customerId: 'cust_100', date: '2026-02-05', status: 'sent', amountCents: 50000 }
+    ];
+    const bills: any[] = [];
+    const payments = [
+      { id: 'pay_draft', contactId: 'cust_100', date: '2026-02-10', direction: 'received', status: 'draft', amountCents: 20000 },
+      { id: 'pay_posted', contactId: 'cust_100', date: '2026-02-12', direction: 'received', status: 'posted', amountCents: 10000 }
+    ];
+
+    const statement = computeStatement(contact, invoices, bills, payments, '2026-01-01', '2026-12-31', 'customer');
+
+    // Only inv_sent (50000) and pay_posted (-10000) should appear
+    assert.equal(statement.entries.length, 2, 'Statement should have exactly 2 activity entries (excluding drafts)');
+    assert.equal(statement.entries[0].id, 'inv_sent');
+    assert.equal(statement.entries[1].id, 'pay_posted');
+    assert.equal(statement.endingBalanceCents, 40000, 'Ending balance should be 50000 - 10000 = 40000 cents');
   });
 });

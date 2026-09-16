@@ -2,13 +2,16 @@ import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lin
 import { resolveAccountRole } from "../../lib/accountUtils";
 import type { Invoice, Bill } from "../../types";
 
-export const INVOICE_COUNTS_FOR_TAX = new Set<Invoice['status']>([
+export const INVOICE_IS_ISSUED = new Set<Invoice['status']>([
   'sent', 'approved', 'invoiced', 'pending', 'overdue', 'partially_paid', 'paid'
 ]);
 
-export const BILL_COUNTS_FOR_TAX = new Set<Bill['status']>([
+export const BILL_IS_ISSUED = new Set<Bill['status']>([
   'pending', 'approved', 'unpaid', 'overdue', 'partially_paid', 'paid'
 ]);
+
+export const INVOICE_COUNTS_FOR_TAX = INVOICE_IS_ISSUED;
+export const BILL_COUNTS_FOR_TAX = BILL_IS_ISSUED;
 
 export function computeProfitAndLoss(accounts: any[], transactions: any[], startDate?: string, endDate?: string) {
   const start = startDate || "1970-01-01";
@@ -323,17 +326,17 @@ export function computeStatement(
   let openingBalanceCents = 0;
 
   if (isCustomer) {
-    invoices.filter((inv: any) => inv.customerId === contactId && inv.date < start && inv.status !== 'void').forEach((inv: any) => {
+    invoices.filter((inv: any) => inv.customerId === contactId && inv.date < start && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv: any) => {
       openingBalanceCents += (inv.amountCents || inv.totalCents || 0);
     });
-    payments.filter((p: any) => p.contactId === contactId && p.date < start && p.direction === 'received' && p.status !== 'void').forEach((p: any) => {
+    payments.filter((p: any) => p.contactId === contactId && p.date < start && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p: any) => {
       openingBalanceCents -= (p.amountCents || 0);
     });
   } else {
-    bills.filter((b: any) => b.vendorId === contactId && (b.date || b.issueDate || '') < start && b.status !== 'void').forEach((b: any) => {
+    bills.filter((b: any) => b.vendorId === contactId && (b.date || b.issueDate || '') < start && BILL_IS_ISSUED.has(b.status)).forEach((b: any) => {
       openingBalanceCents += (b.amountCents || 0);
     });
-    payments.filter((p: any) => p.contactId === contactId && p.date < start && p.direction === 'made' && p.status !== 'void').forEach((p: any) => {
+    payments.filter((p: any) => p.contactId === contactId && p.date < start && p.direction === 'made' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p: any) => {
       openingBalanceCents -= (p.amountCents || 0);
     });
   }
@@ -342,7 +345,7 @@ export function computeStatement(
   const activityItems: any[] = [];
 
   if (isCustomer) {
-    invoices.filter((inv: any) => inv.customerId === contactId && inv.date >= start && inv.date <= end && inv.status !== 'void').forEach((inv: any) => {
+    invoices.filter((inv: any) => inv.customerId === contactId && inv.date >= start && inv.date <= end && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv: any) => {
       activityItems.push({
         id: inv.id,
         date: inv.date,
@@ -353,7 +356,7 @@ export function computeStatement(
         debitCents: (inv.amountCents || inv.totalCents || 0)
       });
     });
-    payments.filter((p: any) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'received' && p.status !== 'void').forEach((p: any) => {
+    payments.filter((p: any) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p: any) => {
       activityItems.push({
         id: p.id,
         date: p.date,
@@ -365,7 +368,7 @@ export function computeStatement(
       });
     });
   } else {
-    bills.filter((b: any) => b.vendorId === contactId && (b.date || b.issueDate || '') >= start && (b.date || b.issueDate || '') <= end && b.status !== 'void').forEach((b: any) => {
+    bills.filter((b: any) => b.vendorId === contactId && (b.date || b.issueDate || '') >= start && (b.date || b.issueDate || '') <= end && BILL_IS_ISSUED.has(b.status)).forEach((b: any) => {
       activityItems.push({
         id: b.id,
         date: b.date || b.issueDate || '',
@@ -376,7 +379,7 @@ export function computeStatement(
         debitCents: (b.amountCents || 0)
       });
     });
-    payments.filter((p: any) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'made' && p.status !== 'void').forEach((p: any) => {
+    payments.filter((p: any) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'made' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p: any) => {
       activityItems.push({
         id: p.id,
         date: p.date,

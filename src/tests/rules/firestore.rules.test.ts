@@ -463,4 +463,55 @@ describe('Firestore Security Rules Unit Tests', () => {
       await foreignTicketRef.get();
     }, /permission-denied/i);
   });
+
+  test('Workspace owner and members are strictly forbidden from changing plan, concurrentUserLimit, or bypassBilling', async () => {
+    const ownerDb = getFirestoreContext({ uid: 'workspace-owner-123' });
+    const wsRef = ownerDb.doc('workspaces/ws-plan-lock-test');
+
+    // Create initial workspace with free plan
+    await assert.doesNotReject(async () => {
+      await wsRef.set({
+        id: 'ws-plan-lock-test',
+        uid: 'workspace-owner-123',
+        name: 'Plan Lock Test Workspace',
+        plan: 'free',
+        concurrentUserLimit: 2,
+        bypassBilling: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    });
+
+    // Owner attempts to update plan to enterprise -> MUST BE REJECTED
+    await assert.rejects(async () => {
+      await wsRef.update({
+        plan: 'enterprise',
+        updatedAt: new Date().toISOString()
+      });
+    }, /permission-denied/i);
+
+    // Owner attempts to alter bypassBilling to true -> MUST BE REJECTED
+    await assert.rejects(async () => {
+      await wsRef.update({
+        bypassBilling: true,
+        updatedAt: new Date().toISOString()
+      });
+    }, /permission-denied/i);
+
+    // Owner attempts to increase concurrentUserLimit -> MUST BE REJECTED
+    await assert.rejects(async () => {
+      await wsRef.update({
+        concurrentUserLimit: 999,
+        updatedAt: new Date().toISOString()
+      });
+    }, /permission-denied/i);
+
+    // Standard allowed update (e.g. changing workspace name) -> PERMITTED
+    await assert.doesNotReject(async () => {
+      await wsRef.update({
+        name: 'Updated Workspace Name',
+        updatedAt: new Date().toISOString()
+      });
+    });
+  });
 });

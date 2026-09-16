@@ -2,36 +2,34 @@ import { RecurringTransaction, Transaction } from '../types';
 import { parseLocalDate } from './utils';
 
 export function calculateNextOccurrence(currentDateStr: string, frequency: RecurringTransaction['frequency']): string {
-  const date = parseLocalDate(currentDateStr || new Date().toISOString().slice(0, 10));
-  if (isNaN(date.getTime())) {
-    const now = new Date();
-    return now.toISOString().slice(0, 10);
-  }
+  const [y, m, d] = (currentDateStr || new Date().toISOString().slice(0, 10)).split('-').map(Number);
+  
+  const addMonths = (n: number) => {
+    const targetMonth = m - 1 + n;
+    const ty = y + Math.floor(targetMonth / 12);
+    const tm = ((targetMonth % 12) + 12) % 12;
+    const lastDay = new Date(Date.UTC(ty, tm + 1, 0)).getUTCDate(); // day 0 of next month
+    return `${ty}-${String(tm + 1).padStart(2, '0')}-${String(Math.min(d, lastDay)).padStart(2, '0')}`;
+  };
 
   switch (frequency) {
-    case 'daily':
-      date.setDate(date.getDate() + 1);
-      break;
-    case 'weekly':
-      date.setDate(date.getDate() + 7);
-      break;
+    case 'daily': {
+      const dt = new Date(Date.UTC(y, m - 1, d + 1));
+      return dt.toISOString().slice(0, 10);
+    }
+    case 'weekly': {
+      const dt = new Date(Date.UTC(y, m - 1, d + 7));
+      return dt.toISOString().slice(0, 10);
+    }
     case 'monthly':
-      date.setMonth(date.getMonth() + 1);
-      break;
+      return addMonths(1);
     case 'quarterly':
-      date.setMonth(date.getMonth() + 3);
-      break;
+      return addMonths(3);
     case 'yearly':
-      date.setFullYear(date.getFullYear() + 1);
-      break;
+      return addMonths(12);
     default:
-      date.setMonth(date.getMonth() + 1);
+      return addMonths(1);
   }
-
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
 }
 
 export interface DueRecurringResult {

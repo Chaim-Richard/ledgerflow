@@ -3967,6 +3967,37 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
+  app.post("/api/v1/billing/portal", authenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const workspaceId = (req.body.workspaceId as string) || (req as any).user?.developerWorkspaceId;
+      if (!workspaceId) return res.status(400).json({ status: "error", message: "Missing workspaceId" });
+
+      const authReq = req as AuthenticatedRequest;
+      await authorizeWorkspace(authReq, workspaceId);
+
+      const db = getDb();
+      const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
+      const wsData = wsDoc.exists ? wsDoc.data() || {} : {};
+
+      const stripe = getStripe();
+      const baseUrl = getTrustedAppUrl(req);
+
+      if (!wsData.stripeCustomerId) {
+        return res.status(400).json({ status: "error", message: "No active Stripe customer found for this workspace" });
+      }
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: wsData.stripeCustomerId,
+        return_url: `${baseUrl}/`,
+      });
+
+      res.json({ url: session.url });
+    } catch (err: any) {
+      console.error("[Stripe Portal] Failed:", err);
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
   app.post("/api/v1/billing/verify-session", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
       const { session_id, workspaceId } = req.body;
