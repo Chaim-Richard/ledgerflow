@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { CreditNote, VendorCredit } from '../../types';
 import { 
   FileText, 
@@ -12,14 +13,19 @@ import {
   CheckCircle2, 
   RotateCcw, 
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  Eye,
+  Download
 } from 'lucide-react';
 import { formatCurrency, getLocalDateISO, parseLocalDate } from '../../lib/utils';
 import { toast } from 'sonner';
+import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 
 export default function CreditNotesView() {
   const [activeTab, setActiveTab] = useState<'customer' | 'vendor'>('customer');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const [previewCreditNote, setPreviewCreditNote] = useState<any | null>(null);
 
   const customers = useLedgerStore(s => s.customers);
   const vendors = useLedgerStore(s => s.vendors);
@@ -247,6 +253,7 @@ export default function CreditNotesView() {
                     <th className="p-3 text-right">Amount</th>
                     <th className="p-3 text-right">Remaining Credit</th>
                     <th className="p-3 text-center">Status</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
@@ -262,6 +269,24 @@ export default function CreditNotesView() {
                         <span className="px-2 py-1 text-xs rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 font-semibold">
                           {cn.status.toUpperCase()}
                         </span>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setPreviewCreditNote(cn)}
+                            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+                            title="Preview PDF"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => downloadDocumentPdf('creditNote', cn.id, currentWorkspaceId || 'default', `credit_note_${cn.number || cn.id}.pdf`)}
+                            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+                            title="Download PDF"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -411,6 +436,18 @@ export default function CreditNotesView() {
             </form>
           </div>
         </div>
+      )}
+
+      {previewCreditNote && (
+        <PdfPreviewModal
+          isOpen={!!previewCreditNote}
+          onClose={() => setPreviewCreditNote(null)}
+          title={`Credit Note ${previewCreditNote.number || previewCreditNote.id}`}
+          documentType="creditNote"
+          documentId={previewCreditNote.id}
+          workspaceId={currentWorkspaceId || 'default'}
+          filename={`credit_note_${previewCreditNote.number || previewCreditNote.id}.pdf`}
+        />
       )}
     </div>
   );

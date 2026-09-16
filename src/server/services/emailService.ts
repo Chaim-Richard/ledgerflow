@@ -1,3 +1,9 @@
+export interface EmailAttachment {
+  filename: string;
+  content: string | Buffer;
+  contentType?: string;
+}
+
 export interface SendInvoiceEmailParams {
   toEmail: string;
   subject: string;
@@ -6,6 +12,8 @@ export interface SendInvoiceEmailParams {
   totalFormatted?: string;
   invoiceUrl: string;
   customBody?: string;
+  pdfAttachment?: EmailAttachment;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailDeliveryResult {
@@ -181,6 +189,14 @@ export async function deliverInvoiceEmail(params: SendInvoiceEmailParams): Promi
     </div>
   `;
 
+  const attachmentsList: EmailAttachment[] = [];
+  if (params.pdfAttachment) {
+    attachmentsList.push(params.pdfAttachment);
+  }
+  if (Array.isArray(params.attachments)) {
+    attachmentsList.push(...params.attachments);
+  }
+
   // 1. Resend API
   if (process.env.RESEND_API_KEY) {
     const res = await fetch('https://api.resend.com/emails', {
@@ -193,7 +209,11 @@ export async function deliverInvoiceEmail(params: SendInvoiceEmailParams): Promi
         from: fromEmail,
         to: [params.toEmail],
         subject: params.subject,
-        html: htmlContent
+        html: htmlContent,
+        attachments: attachmentsList.length > 0 ? attachmentsList.map(a => ({
+          filename: a.filename,
+          content: Buffer.isBuffer(a.content) ? a.content.toString('base64') : a.content
+        })) : undefined
       })
     });
 
@@ -221,7 +241,12 @@ export async function deliverInvoiceEmail(params: SendInvoiceEmailParams): Promi
         From: fromEmail,
         To: params.toEmail,
         Subject: params.subject,
-        HtmlBody: htmlContent
+        HtmlBody: htmlContent,
+        Attachments: attachmentsList.length > 0 ? attachmentsList.map(a => ({
+          Name: a.filename,
+          Content: Buffer.isBuffer(a.content) ? a.content.toString('base64') : a.content,
+          ContentType: a.contentType || 'application/pdf'
+        })) : undefined
       })
     });
 
@@ -249,7 +274,13 @@ export async function deliverInvoiceEmail(params: SendInvoiceEmailParams): Promi
         personalizations: [{ to: [{ email: params.toEmail }] }],
         from: { email: fromEmail },
         subject: params.subject,
-        content: [{ type: 'text/html', value: htmlContent }]
+        content: [{ type: 'text/html', value: htmlContent }],
+        attachments: attachmentsList.length > 0 ? attachmentsList.map(a => ({
+          content: Buffer.isBuffer(a.content) ? a.content.toString('base64') : a.content,
+          filename: a.filename,
+          type: a.contentType || 'application/pdf',
+          disposition: 'attachment'
+        })) : undefined
       })
     });
 

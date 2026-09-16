@@ -552,7 +552,7 @@ export class LedgerPostService {
   /**
    * Post bad debt write-off entry.
    */
-  static async postWriteOffLedger(invoiceId: string, invoiceData: any, writeOffCents: number, workspaceId: string, uid: string, reason?: string, entityMutation?: any, context?: any) {
+  static async postWriteOffLedger(invoiceId: string, invoiceData: any, writeOffCents: number, workspaceId: string, uid: string, reason?: string, entityMutation?: any, context?: any, badDebtAccountId?: string) {
     if (!workspaceId || !invoiceId || writeOffCents <= 0) return;
 
     const today = getLocalDateISO();
@@ -571,7 +571,8 @@ export class LedgerPostService {
       'Accounts Receivable (A/R)'
     );
 
-    const badDebtAccount = this.resolveAccount(
+    const selectedAccount = badDebtAccountId ? accounts.find(a => a.id === badDebtAccountId) : null;
+    const badDebtAccount = selectedAccount || this.resolveAccount(
       accounts,
       mappings,
       ['bad debt', 'bad debt expense', 'uncollectible'],

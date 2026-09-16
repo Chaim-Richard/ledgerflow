@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
-import { Plus, ArrowRight, FileText, CheckCircle, Clock } from 'lucide-react';
+import { Plus, ArrowRight, FileText, CheckCircle, Clock, Eye, Download } from 'lucide-react';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { toast } from 'sonner';
+import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 
 export default function EstimatesView() {
   const user = useAuthStore(s => s.user);
@@ -20,6 +21,7 @@ export default function EstimatesView() {
   const [amountDollars, setAmountDollars] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewEstimate, setPreviewEstimate] = useState<any | null>(null);
 
   const handleCreateEstimate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,15 +251,31 @@ export default function EstimatesView() {
                     {formatCurrency(est.amountCents / 100)}
                   </td>
                   <td className="py-3 px-4 text-right">
-                    {est.status !== 'converted' && (
+                    <div className="flex items-center justify-end gap-1.5">
                       <button
-                        onClick={() => handleConvertToInvoice(est)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition-colors"
+                        onClick={() => setPreviewEstimate(est)}
+                        className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                        title="Preview PDF"
                       >
-                        <span>Convert to Invoice</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <Eye className="w-3.5 h-3.5" />
                       </button>
-                    )}
+                      <button
+                        onClick={() => downloadDocumentPdf('estimate', est.id, currentWorkspaceId || 'default', `estimate_${est.number || est.id}.pdf`)}
+                        className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                        title="Download PDF"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                      {est.status !== 'converted' && (
+                        <button
+                          onClick={() => handleConvertToInvoice(est)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition-colors ml-1"
+                        >
+                          <span>Convert</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -265,6 +283,18 @@ export default function EstimatesView() {
           </table>
         )}
       </div>
+
+      {previewEstimate && (
+        <PdfPreviewModal
+          isOpen={!!previewEstimate}
+          onClose={() => setPreviewEstimate(null)}
+          title={`Estimate ${previewEstimate.number || previewEstimate.id}`}
+          documentType="estimate"
+          documentId={previewEstimate.id}
+          workspaceId={currentWorkspaceId || 'default'}
+          filename={`estimate_${previewEstimate.number || previewEstimate.id}.pdf`}
+        />
+      )}
     </div>
   );
 }

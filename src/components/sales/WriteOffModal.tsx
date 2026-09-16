@@ -3,6 +3,7 @@ import { X, AlertTriangle } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import { Invoice } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { LedgerPostService } from '../../services/LedgerPostService';
@@ -17,7 +18,11 @@ interface WriteOffModalProps {
 export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModalProps) {
   const user = useAuthStore(s => s.user);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const accounts = useLedgerStore(s => s.accounts) || [];
+  const expenseAccounts = accounts.filter(a => a.type === 'expense');
+  const defaultBadDebt = expenseAccounts.find(a => a.name.toLowerCase().includes('bad debt') || a.code === '6800') || expenseAccounts[0];
 
+  const [badDebtAccountId, setBadDebtAccountId] = useState<string>(defaultBadDebt?.id || '');
   const [reason, setReason] = useState('Uncollectible bad debt');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,7 +58,10 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
         remainingCents,
         currentWorkspaceId,
         user.uid,
-        reason
+        reason,
+        undefined,
+        undefined,
+        badDebtAccountId || undefined
       );
 
       toast.success(`Written off ${formatCurrency(remainingCents / 100)} as Bad Debt`);
@@ -104,6 +112,23 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Bad Debt Expense Account
+            </label>
+            <select
+              value={badDebtAccountId}
+              onChange={e => setBadDebtAccountId(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+            >
+              {expenseAccounts.map(acc => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.code ? `${acc.code} - ` : ''}{acc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Write-off Reason / Notes
             </label>
             <textarea
@@ -116,7 +141,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            This will debit <strong>Bad Debt Expense (6800)</strong> and credit <strong>Accounts Receivable (1100)</strong>, clearing the customer's open balance.
+            This will debit the selected Bad Debt Expense account and credit Accounts Receivable (1100), clearing the customer's open balance.
           </p>
 
           <div className="flex justify-end gap-3 pt-2">

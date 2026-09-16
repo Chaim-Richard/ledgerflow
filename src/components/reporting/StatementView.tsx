@@ -1,10 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency } from '../../lib/utils';
 import { computeStatement } from '../../server/reports/computeReports';
-import { FileText, Printer, Mail, Calendar, User, Building2 } from 'lucide-react';
+import { FileText, Printer, Mail, Calendar, User, Building2, Eye, Download } from 'lucide-react';
+import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 
 export default function StatementView() {
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const customers = useLedgerStore(s => s.customers);
   const vendors = useLedgerStore(s => s.vendors);
   const invoices = useLedgerStore(s => s.invoices);
@@ -58,13 +62,33 @@ export default function StatementView() {
           </div>
         </div>
 
-        <button
-          onClick={handlePrint}
-          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-lg transition-colors"
-        >
-          <Printer className="w-4 h-4" />
-          Print Statement
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedContact && (
+            <>
+              <button
+                onClick={() => setIsPreviewOpen(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200 dark:border-indigo-800"
+              >
+                <Eye className="w-4 h-4" />
+                Preview PDF
+              </button>
+              <button
+                onClick={() => downloadDocumentPdf('statement', selectedContact.id, currentWorkspaceId || 'default', `statement_${selectedContact.name || selectedContact.id}.pdf`)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Download PDF
+              </button>
+            </>
+          )}
+          <button
+            onClick={handlePrint}
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-lg transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+            Print Statement
+          </button>
+        </div>
       </div>
 
       {/* Filter Options */}
@@ -213,6 +237,18 @@ export default function StatementView() {
             </table>
           </div>
         </div>
+      )}
+
+      {isPreviewOpen && selectedContact && (
+        <PdfPreviewModal
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          title={`Account Statement - ${selectedContact.name || selectedContact.id}`}
+          documentType="statement"
+          documentId={selectedContact.id}
+          workspaceId={currentWorkspaceId || 'default'}
+          filename={`statement_${selectedContact.name || selectedContact.id}.pdf`}
+        />
       )}
     </div>
   );

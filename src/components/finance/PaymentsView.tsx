@@ -1,13 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, parseLocalDate, cn } from '../../lib/utils';
 import { format } from 'date-fns';
-import { DollarSign, Search, Filter } from 'lucide-react';
+import { DollarSign, Search, Filter, Eye, Download } from 'lucide-react';
+import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 
 export default function PaymentsView() {
   const payments = useLedgerStore(s => s.payments) || [];
   const customers = useLedgerStore(s => s.customers) || [];
   const vendors = useLedgerStore(s => s.vendors) || [];
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const [previewPayment, setPreviewPayment] = useState<any | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -54,6 +58,7 @@ export default function PaymentsView() {
                 <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Method & Ref</th>
                 <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap text-right">Amount</th>
                 <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Allocations</th>
+                <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ledger-line/30">
@@ -94,11 +99,29 @@ export default function PaymentsView() {
                       ))}
                     </div>
                   </td>
+                  <td className="p-4 md:p-8 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setPreviewPayment(payment)}
+                        className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
+                        title="Preview PDF Receipt"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => downloadDocumentPdf('payment', payment.id, currentWorkspaceId || 'default', `receipt_${payment.number || payment.id}.pdf`)}
+                        className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
+                        title="Download PDF Receipt"
+                      >
+                        <Download size={16} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {filteredPayments.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-24 text-center relative overflow-hidden">
+                  <td colSpan={6} className="p-24 text-center relative overflow-hidden">
                     <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
                     <div className="relative z-10 flex flex-col items-center gap-4">
                       <div className="w-20 h-20 bg-slate-200/20 rounded-[32px] flex items-center justify-center text-slate-500/30">
@@ -113,6 +136,18 @@ export default function PaymentsView() {
           </table>
         </div>
       </div>
+
+      {previewPayment && (
+        <PdfPreviewModal
+          isOpen={!!previewPayment}
+          onClose={() => setPreviewPayment(null)}
+          title={`Payment Receipt ${previewPayment.number || previewPayment.id}`}
+          documentType="payment"
+          documentId={previewPayment.id}
+          workspaceId={currentWorkspaceId || 'default'}
+          filename={`receipt_${previewPayment.number || previewPayment.id}.pdf`}
+        />
+      )}
     </div>
   );
 }

@@ -254,6 +254,38 @@ describe('Report Contract Structural Guard Suite', () => {
     assert.equal(report.taxPaidCents, 0, 'Draft bill must not count towards taxPaidCents');
   });
 
+  test('Tax Report Task 3: eight-status bill verification table for input tax', () => {
+    const statuses: Array<{ status: any; want: number }> = [
+      { status: 'pending', want: 10000 },
+      { status: 'unpaid', want: 10000 },
+      { status: 'approved', want: 10000 },
+      { status: 'paid', want: 10000 },
+      { status: 'partially_paid', want: 10000 },
+      { status: 'overdue', want: 10000 },
+      { status: 'draft', want: 0 },
+      { status: 'void', want: 0 }
+    ];
+
+    for (const { status, want } of statuses) {
+      const bills = [
+        {
+          id: `bill_${status}`,
+          date: '2026-02-01',
+          status,
+          amountCents: 100000,
+          taxRate: 10,
+          taxInclusive: false
+        }
+      ];
+      const report = computeTaxLiability([], bills, '2026-01-01', '2026-12-31');
+      assert.equal(
+        report.taxPaidCents,
+        want,
+        `bill '${status}' -> taxPaid=${report.taxPaidCents} want=${want}`
+      );
+    }
+  });
+
   test('Balance Sheet Task 3: orphaned account reference detection', () => {
     const accounts = [
       { id: 'acc_asset', name: 'Asset', type: 'asset', category: 'Cash', openingBalanceCents: 0 }

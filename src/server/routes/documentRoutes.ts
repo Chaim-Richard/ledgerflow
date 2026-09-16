@@ -5,7 +5,7 @@ import { computeStatement } from '../reports/computeReports';
 
 export const documentRouter = express.Router();
 
-async function handlePdfRequest(req: express.Request, res: express.Response) {
+export async function handlePdfRequest(req: express.Request, res: express.Response, dbOverride?: any) {
   try {
     const authReq = req as any;
     const { type, id } = req.params;
@@ -20,7 +20,7 @@ async function handlePdfRequest(req: express.Request, res: express.Response) {
       return res.status(400).json({ status: 'error', message: `Invalid document type. Must be one of: ${validTypes.join(', ')}` });
     }
 
-    const db = getDb();
+    const db = dbOverride || getDb();
     await validateWorkspaceMember(db, workspaceId, authReq.user);
 
     // Fetch workspace

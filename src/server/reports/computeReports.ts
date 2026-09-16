@@ -1,5 +1,14 @@
 import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount, isTransactionInDateRange } from "../../lib/txFilters";
 import { resolveAccountRole } from "../../lib/accountUtils";
+import type { Invoice, Bill } from "../../types";
+
+export const INVOICE_COUNTS_FOR_TAX = new Set<Invoice['status']>([
+  'sent', 'approved', 'invoiced', 'pending', 'overdue', 'partially_paid', 'paid'
+]);
+
+export const BILL_COUNTS_FOR_TAX = new Set<Bill['status']>([
+  'pending', 'approved', 'unpaid', 'overdue', 'partially_paid', 'paid'
+]);
 
 export function computeProfitAndLoss(accounts: any[], transactions: any[], startDate?: string, endDate?: string) {
   const start = startDate || "1970-01-01";
@@ -412,10 +421,8 @@ export function computeTaxLiability(invoices: any[], bills: any[], startDate?: s
   let taxablePurchasesCents = 0;
   let taxPaidCents = 0;
 
-  const COUNTS_FOR_TAX = new Set(['sent', 'approved', 'invoiced', 'pending', 'overdue', 'partially_paid', 'paid']);
-
   invoices.forEach((inv: any) => {
-    if (inv.date >= start && inv.date <= end && COUNTS_FOR_TAX.has(inv.status)) {
+    if (inv.date >= start && inv.date <= end && INVOICE_COUNTS_FOR_TAX.has(inv.status)) {
       const total = inv.amountCents ?? inv.totalCents ?? 0;
       const rate = (inv.taxRate ?? 0) / 100;
       const tax = inv.taxAmountCents ?? (
@@ -432,7 +439,7 @@ export function computeTaxLiability(invoices: any[], bills: any[], startDate?: s
 
   bills.forEach((b: any) => {
     const bDate = b.date || b.issueDate || '';
-    if (bDate >= start && bDate <= end && COUNTS_FOR_TAX.has(b.status)) {
+    if (bDate >= start && bDate <= end && BILL_COUNTS_FOR_TAX.has(b.status)) {
       const total = b.amountCents ?? 0;
       const rate = (b.taxRate ?? 0) / 100;
       const tax = b.taxAmountCents ?? (

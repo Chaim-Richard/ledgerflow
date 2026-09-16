@@ -1,6 +1,6 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save } from 'lucide-react';
+import { X, Plus, Trash2, Save, FileText, Download, Eye } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Invoice, Customer, ChartAccount } from '../../types';
 import { format } from 'date-fns';
@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import AsyncButton from '../ui/AsyncButton';
+import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -15,14 +16,17 @@ interface InvoiceModalProps {
   onSave: (invoice: Partial<Invoice>) => void;
   customers: Customer[];
   accounts: ChartAccount[];
+  initialInvoice?: Partial<Invoice>;
 }
 
-export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], accounts = [] }: InvoiceModalProps) {
+export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], accounts = [], initialInvoice }: InvoiceModalProps) {
   // Ensure we have arrays even if props were passed as null
   const safeCustomers = Array.isArray(customers) ? customers : [];
   const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'income') : [];
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
 
-  const [invoice, setInvoice] = useState<Partial<Invoice>>(() => ({
+  const [invoice, setInvoice] = useState<Partial<Invoice>>(() => initialInvoice || ({
     number: `INV-${Date.now().toString().slice(-6)}`,
     date: format(new Date(), 'yyyy-MM-dd'),
     dueDate: format(new Date(), 'yyyy-MM-dd'),
@@ -30,6 +34,15 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     amountCents: 0,
     totalCents: 0
   }));
+
+  useEffect(() => {
+    if (initialInvoice) {
+      setInvoice(initialInvoice);
+      if (initialInvoice.items && initialInvoice.items.length > 0) {
+        setItems(initialInvoice.items as any);
+      }
+    }
+  }, [initialInvoice]);
 
   useEffect(() => {
     if (isOpen) {
@@ -536,6 +549,26 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             </span>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3 w-full sm:w-auto">
+            {invoice.id && (
+              <>
+                <button 
+                  type="button"
+                  onClick={() => setShowPdfPreview(true)}
+                  className="px-4 py-3.5 bg-[var(--surface)] border border-[var(--line)] text-zinc-700 dark:text-zinc-300 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center gap-1.5"
+                >
+                  <Eye size={14} />
+                  Preview PDF
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => downloadDocumentPdf('invoice', invoice.id!, currentWorkspaceId || 'default', `invoice_${invoice.number || invoice.id}.pdf`)}
+                  className="px-4 py-3.5 bg-[var(--surface)] border border-[var(--line)] text-indigo-600 dark:text-indigo-400 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all flex items-center gap-1.5"
+                >
+                  <Download size={14} />
+                  Download PDF
+                </button>
+              </>
+            )}
             <button 
               type="button"
               onClick={onClose}
@@ -571,6 +604,18 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
           </div>
         </div>
       </motion.div>
+
+      {showPdfPreview && invoice.id && (
+        <PdfPreviewModal
+          isOpen={showPdfPreview}
+          onClose={() => setShowPdfPreview(false)}
+          title={`Invoice ${invoice.number || invoice.id}`}
+          documentType="invoice"
+          documentId={invoice.id}
+          workspaceId={currentWorkspaceId || 'default'}
+          filename={`invoice_${invoice.number || invoice.id}.pdf`}
+        />
+      )}
     </div>
   );
 }

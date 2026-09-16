@@ -19,7 +19,7 @@ import {
   RefreshCw,
   Kanban,
   Trash2, Zap, DollarSign,
-  Check
+  Check, Eye, Ban, FileText
 } from 'lucide-react';
 import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -30,9 +30,8 @@ import { motion } from 'motion/react';
 import InvoiceModal from './InvoiceModal';
 import { EmptyState } from '../ui/EmptyState';
 import CustomerModal from './CustomerModal';
-
-
-
+import WriteOffModal from './WriteOffModal';
+import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import ReceivePaymentModal from './ReceivePaymentModal';
 
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -119,6 +118,10 @@ export default function Sales() {
   const [paymentDocumentId, setPaymentDocumentId] = useState<string | null>(null);
   const [paymentContactId, setPaymentContactId] = useState<string | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isWriteOffOpen, setIsWriteOffOpen] = useState(false);
+  const [selectedInvoiceForWriteOff, setSelectedInvoiceForWriteOff] = useState<Invoice | null>(null);
+  const [previewPdfInvoice, setPreviewPdfInvoice] = useState<Invoice | null>(null);
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [searchTerm, setSearchTerm] = useState('');
 
   const agingBuckets = useMemo(() => {
@@ -345,6 +348,32 @@ export default function Sales() {
                             <DollarSign size={16} />
                           </button>
                         )}
+                        {(inv.status === 'overdue' || (inv.status !== 'paid' && inv.status !== 'void' && differenceInDays(new Date(), parseLocalDate(inv.dueDate)) > 0)) && (
+                          <button
+                            onClick={() => {
+                              setSelectedInvoiceForWriteOff(inv);
+                              setIsWriteOffOpen(true);
+                            }}
+                            className="p-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
+                            title="Write Off Bad Debt"
+                          >
+                            <Ban size={16} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setPreviewPdfInvoice(inv)}
+                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
+                          title="Preview PDF"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          onClick={() => downloadDocumentPdf('invoice', inv.id, currentWorkspaceId || 'default', `invoice_${inv.number || inv.id}.pdf`)}
+                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
+                          title="Download PDF"
+                        >
+                          <Download size={16} />
+                        </button>
                         <button 
                           onClick={() => {
                             const newBill = { ...inv, id: `inv-${crypto.randomUUID()}`, number: `${inv.number}-COPY`, status: 'unpaid' as any };
@@ -363,15 +392,6 @@ export default function Sales() {
                         >
                            <Trash2 size={16} />
                         </button>
-                        {inv.status !== 'paid' && (
-                          <button 
-                            onClick={() => onAddInvoice({ id: inv.id, status: 'paid' })}
-                            className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-emerald-500 transition-all"
-                            title="Write Off"
-                          >
-                            <Zap size={16} />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -486,6 +506,27 @@ export default function Sales() {
           defaultDirection="received"
           defaultDocumentId={paymentDocumentId}
           defaultContactId={paymentContactId}
+        />
+      )}
+      {isWriteOffOpen && selectedInvoiceForWriteOff && (
+        <WriteOffModal
+          isOpen={isWriteOffOpen}
+          onClose={() => {
+            setIsWriteOffOpen(false);
+            setSelectedInvoiceForWriteOff(null);
+          }}
+          invoice={selectedInvoiceForWriteOff}
+        />
+      )}
+      {previewPdfInvoice && (
+        <PdfPreviewModal
+          isOpen={!!previewPdfInvoice}
+          onClose={() => setPreviewPdfInvoice(null)}
+          title={`Invoice ${previewPdfInvoice.number || previewPdfInvoice.id}`}
+          documentType="invoice"
+          documentId={previewPdfInvoice.id}
+          workspaceId={currentWorkspaceId || 'default'}
+          filename={`invoice_${previewPdfInvoice.number || previewPdfInvoice.id}.pdf`}
         />
       )}
     </div>

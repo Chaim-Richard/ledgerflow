@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { getDb } from '../db/firestore';
 import { getTrustedAppUrl } from '../utils/urlHelper';
 import { deliverInvoiceEmail } from '../services/emailService';
+import { generateDocumentPdf } from '../services/pdfService';
 
 export const invoiceEmailRouter = express.Router();
 
@@ -86,6 +87,19 @@ invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
       ? `$${(invoice.totalCents / 100).toFixed(2)}`
       : (typeof invoice.amountCents === 'number' ? `$${(invoice.amountCents / 100).toFixed(2)}` : undefined);
 
+    // Generate PDF attachment for outgoing invoice email
+    let pdfAttachment;
+    try {
+      const pdfBuffer = await generateDocumentPdf('invoice', { id: invoiceId, ...invoice }, wsData);
+      pdfAttachment = {
+        filename: `invoice_${invoice.invoiceNumber || invoice.number || invoiceId}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      };
+    } catch (pdfErr) {
+      console.warn('[InvoiceEmail] Could not generate PDF attachment:', pdfErr);
+    }
+
     // Dispatch real email delivery
     let deliveryResult;
     try {
@@ -96,7 +110,8 @@ invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
         customerName: invoice.customerName || invoice.customer?.name,
         totalFormatted: totalAmount,
         invoiceUrl,
-        customBody: body
+        customBody: body,
+        pdfAttachment
       });
     } catch (deliveryError: any) {
       console.error('[InvoiceEmail] Provider delivery failure:', deliveryError);
