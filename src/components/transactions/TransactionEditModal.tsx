@@ -325,10 +325,11 @@ export default function TransactionEditModal({
             {isReverseMode && (
               <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-[var(--line)] grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                  <label htmlFor="tx-reversal-date" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
                     <Calendar size={12} /> Reversal Date (Open Period)
                   </label>
                   <input
+                    id="tx-reversal-date"
                     type="date"
                     value={reversalDate}
                     onChange={(e) => setReversalDate(e.target.value)}
@@ -336,10 +337,11 @@ export default function TransactionEditModal({
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                  <label htmlFor="tx-correction-reason" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
                     <FileText size={12} /> Reason for Correction / Audit Note
                   </label>
                   <input
+                    id="tx-correction-reason"
                     type="text"
                     value={correctionReason}
                     onChange={(e) => setCorrectionReason(e.target.value)}
@@ -354,10 +356,11 @@ export default function TransactionEditModal({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
               <div className="space-y-1.5Col">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                <label htmlFor="tx-date" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
                   <Calendar size={11} /> Transaction Date
                 </label>
                 <input
+                  id="tx-date"
                   type="date"
                   disabled={isLocked}
                   value={date}
@@ -367,10 +370,11 @@ export default function TransactionEditModal({
               </div>
 
               <div className="md:col-span-2 space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                <label htmlFor="tx-description" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
                   <FileText size={11} /> Description
                 </label>
                 <input
+                  id="tx-description"
                   type="text"
                   disabled={isLocked}
                   value={description}
@@ -386,10 +390,11 @@ export default function TransactionEditModal({
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                <label htmlFor="tx-payee" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
                   <Building2 size={11} /> Payee / counterparty
                 </label>
                 <input
+                  id="tx-payee"
                   type="text"
                   disabled={isLocked}
                   value={payee}
@@ -400,10 +405,11 @@ export default function TransactionEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                <label htmlFor="tx-project" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
                   Custom Project Code
                 </label>
                 <input
+                  id="tx-project"
                   type="text"
                   disabled={isLocked}
                   value={project}
@@ -414,10 +420,11 @@ export default function TransactionEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                <label htmlFor="tx-type" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                   Vector Type
                 </label>
                 <select
+                  id="tx-type"
                   disabled={isLocked}
                   value={type}
                   onChange={(e) => setType(e.target.value as any)}
@@ -431,10 +438,11 @@ export default function TransactionEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                <label htmlFor="tx-status" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                   Process Status
                 </label>
                 <select
+                  id="tx-status"
                   disabled={isLocked}
                   value={status}
                   onChange={(e) => setStatus(e.target.value as any)}
@@ -448,10 +456,11 @@ export default function TransactionEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                <label htmlFor="tx-original-currency" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                   Currency Context
                 </label>
                 <select
+                  id="tx-original-currency"
                   disabled={isLocked}
                   value={originalCurrency}
                   onChange={(e) => setOriginalCurrency(e.target.value)}

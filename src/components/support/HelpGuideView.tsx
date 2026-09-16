@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { 
   BookOpen, 
   Search, 
-  HelpCircle, 
   Layers, 
   RotateCcw, 
   DollarSign, 
@@ -12,7 +11,8 @@ import {
   Command, 
   ArrowRight,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  LayoutGrid
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useUIStore } from "../../stores/useUIStore";
@@ -141,6 +141,33 @@ const GUIDE_SECTIONS: SectionDoc[] = [
       "? or Shift+/ — Open this Help & Operational Guide",
       "Esc — Close active modal, drilldown, or dialog",
       "⌘Enter or Ctrl+Enter — Submit and save active form / journal"
+    ]
+  },
+  {
+    id: "views-directory",
+    title: "All Views & Modules Directory",
+    icon: LayoutGrid,
+    category: "Reference",
+    summary: "Complete reference index of all 37 views and tools available across the platform.",
+    steps: [
+      "Credit Notes (credit-notes): Issue customer credit memos and record vendor credit notes.",
+      "Estimates & Quotes (estimates): Draft quotes, track client acceptance, and convert directly to sales invoices.",
+      "Statement View (statement): Generate formal customer billing statements and accounts receivable balance summaries.",
+      "General Ledger (general-ledger): Deep, chronologically sorted account-by-account transaction logs with running balances.",
+      "Tax Liability (tax-liability): Real-time sales tax and VAT reporting with tax-inclusive / exclusive breakdowns.",
+      "Projects (projects): Assign revenue, costs, and billable hours to project dimension codes for job costing.",
+      "Budgets (budgets): Establish department and account fiscal budgets and track real-time variance against actuals.",
+      "Consolidation (consolidation): Multi-entity financial roll-up with automated intercompany transaction eliminations.",
+      "Time Machine (time-machine): Inspect the exact historical state of the entire financial ledger at any prior timestamp.",
+      "Vault (vault): Secure, tamper-proof repository for invoices, bill receipts, tax forms, and compliance documents.",
+      "Forecaster (forecaster): Monte Carlo cash flow simulation and runway projection engine.",
+      "AI Co-pilot (copilot): Natural language financial queries, pattern recognition, and ledger analysis.",
+      "Account Register (register): Single-account checkbook register with inline transaction recording.",
+      "Audit Trail (audit-trail): Immutable forensic log of every write, reversal, and user modification.",
+      "API Platform (api-hub): Manage webhook endpoints, API tokens, and programmatic integrations."
+    ],
+    tips: [
+      "Press ⌘K or Ctrl+K anytime to quickly jump to any of these views by typing its name."
     ]
   }
 ];
