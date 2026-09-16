@@ -6,6 +6,8 @@ import { useAuthStore } from '../../../stores/useAuthStore';
 import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
+import { multiFactor, TotpMultiFactorGenerator } from 'firebase/auth';
+import { auth } from '../../../firebase';
 import { toast } from 'sonner';
 
 export default function SecuritySettings() {
@@ -13,7 +15,39 @@ export default function SecuritySettings() {
   const setLockDate = useLedgerStore(s => s.setLockDate);
   const [isResetting, setIsResetting] = useState(false);
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
+  const user = useAuthStore(state => state.user);
   const txActions = useTransactionActions();
+  
+  const [mfaSecret, setMfaSecret] = useState<any>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [isEnrollingMfa, setIsEnrollingMfa] = useState(false);
+
+  const startMfaEnrollment = async () => {
+    if (!user) return;
+    try {
+      setIsEnrollingMfa(true);
+      const mfaSession = await multiFactor(user).getSession();
+      const secret = await TotpMultiFactorGenerator.generateSecret(mfaSession);
+      setMfaSecret(secret);
+    } catch (e: any) {
+      toast.error('Failed to start MFA: ' + e.message);
+      setIsEnrollingMfa(false);
+    }
+  };
+
+  const completeMfaEnrollment = async () => {
+    if (!user || !mfaSecret || !mfaCode) return;
+    try {
+      const assertion = TotpMultiFactorGenerator.assertionForEnrollment(mfaSecret, mfaCode);
+      await multiFactor(user).enroll(assertion, 'Authenticator');
+      toast.success('MFA Successfully Enrolled');
+      setMfaSecret(null);
+      setMfaCode('');
+      setIsEnrollingMfa(false);
+    } catch (e: any) {
+      toast.error('Failed to enroll MFA: ' + e.message);
+    }
+  };
 
   const handleLockDateChange = async (dateStr: string | null) => {
     if (dateStr) {
@@ -103,7 +137,111 @@ export default function SecuritySettings() {
             </div>
           ))}
 
-          <div className="pt-6 mt-4 border-t border-[var(--line)]">
+          <div className="pt-6 mt-4 border-t border-[var(--line)] space-y-6">
+            <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="space-y-1">
+                  <h4 className="text-base font-black text-[var(--text)] uppercase tracking-tight">Multi-Factor Authentication (MFA)</h4>
+                  <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
+                    Secure your account using an authenticator app (TOTP). Required for administrative actions.
+                  </p>
+                  {mfaSecret && (
+                    <div className="mt-4 p-4 bg-[var(--surface)] border border-[var(--line)] rounded-lg">
+                      <p className="text-sm font-bold text-[var(--text)] mb-2">1. Scan or enter this secret in your Authenticator app:</p>
+                      <code className="block bg-[var(--ink)] p-2 rounded text-indigo-400 font-mono text-sm break-all mb-4">
+                        {mfaSecret.secretKey}
+                      </code>
+                      <p className="text-sm font-bold text-[var(--text)] mb-2">2. Enter the 6-digit code:</p>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={mfaCode}
+                          onChange={e => setMfaCode(e.target.value)}
+                          placeholder="000000"
+                          className="bg-[var(--ink)] border border-[var(--line)] px-4 py-2 rounded-lg text-[var(--text)] font-mono outline-none w-32"
+                        />
+                        <button 
+                          onClick={completeMfaEnrollment}
+                          className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-bold uppercase tracking-wider text-[10px]"
+                        >
+                          Verify
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {!mfaSecret && (
+                  <button 
+                    onClick={startMfaEnrollment}
+                    disabled={isEnrollingMfa}
+                    className="px-6 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--ink)] transition-all flex items-center gap-2 cursor-pointer shrink-0"
+                  >
+                    <ShieldCheck size={14} />
+                    {isEnrollingMfa ? 'ENROLLING...' : 'ENROLL TOTP'}
+                  </button>
+                )}
+            </div>
+
+            <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="space-y-1">
+                  <h4 className="text-base font-black text-[var(--text)] uppercase tracking-tight">Active Sessions</h4>
+                  <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
+                    Revoke all existing sessions and refresh tokens globally. You will be signed out on all devices.
+                  </p>
+                </div>
+                <button 
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/v1/auth/revoke-sessions', {
+                        method: 'POST',
+                        headers: {
+                          'Authorization': `Bearer ${await useAuthStore.getState().user?.getIdToken()}`
+                        }
+                      });
+                      if (!res.ok) throw new Error(await res.text());
+                      toast.success('Sessions revoked. You will be signed out.');
+                    } catch (err: any) {
+                      toast.error('Failed to revoke sessions: ' + err.message);
+                    }
+                  }}
+                  className="px-6 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--ink)] transition-all flex items-center gap-2 cursor-pointer shrink-0"
+                >
+                  <AlertCircle size={14} />
+                  REVOKE ALL SESSIONS
+                </button>
+            </div>
+
+            <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="space-y-1">
+                  <h4 className="text-base font-black text-rose-500 uppercase tracking-tight">Delete User Account</h4>
+                  <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
+                    Permanently delete your user account and all personal data. Workspaces you own will be orphaned unless transferred.
+                  </p>
+                </div>
+                <button 
+                  onClick={async () => {
+                    if (confirm('Are you absolutely sure you want to permanently delete your account? This action cannot be undone.')) {
+                      try {
+                        const res = await fetch('/api/v1/auth/delete-account', {
+                          method: 'DELETE',
+                          headers: {
+                            'Authorization': `Bearer ${await useAuthStore.getState().user?.getIdToken()}`
+                          }
+                        });
+                        if (!res.ok) throw new Error(await res.text());
+                        toast.success('Account deleted successfully.');
+                        auth.signOut();
+                      } catch (err: any) {
+                        toast.error('Failed to delete account: ' + err.message);
+                      }
+                    }
+                  }}
+                  className="px-6 py-3 bg-rose-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-rose-600 transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0"
+                >
+                  <AlertCircle size={14} />
+                  DELETE ACCOUNT
+                </button>
+            </div>
+
             <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-1">
                   <h4 className="text-base font-black text-rose-500 uppercase tracking-tight">Institutional Purge System</h4>

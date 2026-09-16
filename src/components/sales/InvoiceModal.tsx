@@ -6,6 +6,7 @@ import { Invoice, Customer, ChartAccount } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import AsyncButton from '../ui/AsyncButton';
 
 interface InvoiceModalProps {
@@ -34,7 +35,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     if (isOpen) {
       const fetchNextNumber = async () => {
         try {
-          const wsId = useLedgerStore.getState().activeWorkspaceId;
+          const wsId = useAuthStore.getState().currentWorkspaceId;
           if (!wsId) return;
           const res = await fetch(`/api/v1/workspaces/${wsId}/next-number?type=invoice`);
           if (res.ok) {
@@ -51,7 +52,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     }
   }, [isOpen]);
 
-  const [items, setItems] = useState<Array<{ id: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string }>>([
+  const [items, setItems] = useState<Array<{ id: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string, taxRate?: number }>>([
     { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }
   ]);
 
@@ -84,6 +85,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
         status: actionStatus as any,
         totalCents: total,
         amountCents: total,
+        items,
         metadata: {
           memo,
           terms,
@@ -182,7 +184,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-2">
               <label className="micro-label">Invoice Type</label>
               <select 
@@ -196,6 +198,20 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               </select>
             </div>
             
+            <div className="space-y-2">
+              <label className="micro-label">Payment Terms</label>
+              <select 
+                value={invoice.paymentTerms || 'due_on_receipt'}
+                onChange={(e) => setInvoice({ ...invoice, paymentTerms: e.target.value })}
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+              >
+                <option value="due_on_receipt">Due on Receipt</option>
+                <option value="net_15">Net 15</option>
+                <option value="net_30">Net 30</option>
+                <option value="net_60">Net 60</option>
+              </select>
+            </div>
+
             {invoice.type === 'recurring' && (
                <div className="space-y-2">
                  <label className="micro-label">Recurring Interval</label>
@@ -382,7 +398,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                       className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
                     />
                   </div>
-                  <div className="col-span-8 md:col-span-3 space-y-1">
+                  <div className="col-span-8 md:col-span-2 space-y-1">
                     <label className="text-[10px] font-bold text-zinc-400 uppercase">Income Account</label>
                     <div className="relative">
                       <input 
@@ -401,6 +417,21 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                         {safeAccounts.map(a => <option key={a.id} value={a.name} />)}
                       </datalist>
                     </div>
+                  </div>
+                  <div className="col-span-6 md:col-span-1 space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Tax %</label>
+                    <input 
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      value={item.taxRate || 0}
+                      onChange={(e) => {
+                        const newItems = [...items];
+                        newItems[idx].taxRate = parseFloat(e.target.value || '0');
+                        setItems(newItems);
+                      }}
+                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
+                    />
                   </div>
                   <div className="col-span-3 md:col-span-1 space-y-1 flex flex-col justify-end">
                     <div className="px-2 py-2 text-right font-mono font-bold text-[var(--text)] border border-transparent tabular-nums">

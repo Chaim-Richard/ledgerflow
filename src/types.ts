@@ -258,6 +258,16 @@ export interface Invoice {
   status: 'pending' | 'paid' | 'partially_paid' | 'overdue' | 'sent' | 'draft' | 'approved' | 'rejected' | 'invoiced' | 'void';
   type?: 'standard' | 'recurring' | 'progress' | 'estimate' | 'quote' | 'change-order' | 'time-materials'; // For advanced billing workflows
   recurringInterval?: 'monthly' | 'weekly' | 'yearly';
+  paymentTerms?: string; // 'net_15', 'net_30', 'net_60', 'due_on_receipt', etc.
+  items?: Array<{
+    id: string;
+    description: string;
+    quantity: number;
+    rateCents: number;
+    amountCents: number;
+    accountId: string;
+    taxRate?: number;
+  }>;
   progressPercentage?: number;
   discountCents?: number;
   retainageCents?: number;

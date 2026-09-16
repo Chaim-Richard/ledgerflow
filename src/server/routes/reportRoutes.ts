@@ -5,6 +5,7 @@ import { getDb, validateWorkspaceMember } from "../db/firestore";
 import { isTransactionInDateRange, isPostable } from "../../lib/txFilters";
 import { ReportRangeSchema, WorkspaceIdSchema } from "../../schemas";
 import { parseLocalDate, getLocalDateISO } from "../../lib/utils";
+import crypto from "crypto";
 import {
   computeProfitAndLoss,
   computeBalanceSheet,
@@ -16,6 +17,14 @@ import {
 } from "../reports/computeReports";
 
 export const reportRouter = express.Router();
+
+const REPORT_CACHE = new Map<string, { data: any; expiry: number }>();
+const CACHE_TTL_MS = 60000; // 60 seconds
+
+function getCacheKey(req: express.Request): string {
+  const payload = JSON.stringify({ path: req.path, query: req.query, body: req.body, user: (req as any).user?.uid });
+  return crypto.createHash('sha256').update(payload).digest('hex');
+}
 
 interface AuthUser extends admin.auth.DecodedIdToken {
   email_verified: boolean;
@@ -70,9 +79,13 @@ reportRouter.get(["/profit-and-loss", "/pl"], async (req, res) => {
   const result = ReportRangeSchema.safeParse(req.query);
   if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
   const { workspaceId, startDate, endDate } = result.data;
+  const cacheKey = getCacheKey(req);
+  const cached = REPORT_CACHE.get(cacheKey);
+  if (cached && cached.expiry > Date.now()) return res.json(cached.data);
   try {
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, startDate, endDate);
     const pl = computeProfitAndLoss(accounts, transactions, startDate, endDate);
+    REPORT_CACHE.set(cacheKey, { data: pl, expiry: Date.now() + CACHE_TTL_MS });
     res.json(pl);
   } catch (error: any) {
     if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
@@ -86,9 +99,13 @@ reportRouter.get("/balance-sheet", async (req, res) => {
   const result = ReportRangeSchema.safeParse(req.query);
   if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
   const { workspaceId, endDate } = result.data;
+  const cacheKey = getCacheKey(req);
+  const cached = REPORT_CACHE.get(cacheKey);
+  if (cached && cached.expiry > Date.now()) return res.json(cached.data);
   try {
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, endDate);
     const bs = computeBalanceSheet(accounts, transactions, endDate);
+    REPORT_CACHE.set(cacheKey, { data: bs, expiry: Date.now() + CACHE_TTL_MS });
     res.json(bs);
   } catch (error: any) {
     if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);

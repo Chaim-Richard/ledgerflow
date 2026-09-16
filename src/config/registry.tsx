@@ -58,6 +58,7 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'register': lazy(() => import('../components/finance/AccountRegisterView')),
   'general-ledger': lazy(() => import('../components/ledger/GeneralLedgerView')),
   'statement': lazy(() => import('../components/reporting/StatementView')),
+  'payments': lazy(() => import('../components/finance/PaymentsView')),
   'tax-liability': lazy(() => import('../components/reporting/TaxLiabilityView')),
   'estimates': lazy(() => import('../components/sales/EstimatesView')),
   'projects': lazy(() => import('../components/projects/Projects')),
@@ -111,6 +112,7 @@ export const APP_TABS: AppTabDefinition[] = [
 
   { id: 'sales', label: { en: 'Sales', he: 'כסף נכנס' }, icon: ArrowUpRight, groupId: 'money_in' },
   { id: 'estimates', label: { en: 'Estimates & Quotes', he: 'הצעות מחיר' }, icon: FileSignature, groupId: 'money_in' },
+  { id: 'payments', label: { en: 'Payments', he: 'תשלומים' }, icon: DollarSign, groupId: 'money_in' },
   
   { id: 'purchases', label: { en: 'Purchases', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'money_out' },
 

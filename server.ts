@@ -9,6 +9,7 @@ import { leaseRouter } from "./src/server/routes/leaseRoutes";
 import { inventoryRouter } from "./src/server/routes/inventoryRoutes";
 import { supportRouter } from "./src/server/routes/supportRoutes";
 import { paymentRouter } from "./src/server/routes/paymentRoutes";
+import { documentRouter } from "./src/server/routes/documentRoutes";
 import express from "express";
 import cors from "cors";
 import Stripe from "stripe";
@@ -29,7 +30,6 @@ import morgan from "morgan";
 import crypto from "crypto";
 import { rateLimit as expressRateLimit } from "express-rate-limit";
 import { SecurityService } from "./src/services/securityService.ts";
-import { AIBackendService } from "./src/services/aiBackendService.ts";
 import { GoogleGenAI } from "@google/genai";
 import { getTrustedAppUrl } from "./src/server/utils/urlHelper.ts";
 import { 
@@ -1025,197 +1025,6 @@ async function startServer() {
       });
     } catch (err: any) {
       sendError(res, err.message, 500);
-    }
-  });
-
-  app.post("/api/ai/process", authenticate, async (req: express.Request, res: express.Response) => {
-    const { task, payload } = req.body;
-    if (!task) return sendError(res, "Task identifier required", 400);
-
-    const workspaceId = (payload?.workspaceId) || (req as any).user?.developerWorkspaceId;
-    if (!workspaceId) {
-      return sendError(res, "workspaceId is required for AI processing to verify quotas and access.", 400);
-    }
-
-    try {
-      const db = getDb();
-
-      // Ensure the user actually has permission to operate on this workspace!
-      await authorizeWorkspace(req as AuthenticatedRequest, workspaceId);
-
-      // Implement workspace quota/credit budget locking
-      if (workspaceId) {
-        const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
-        if (wsDoc.exists) {
-          const wsData = wsDoc.data() || {};
-          const creditBalance = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000;
-          if (creditBalance <= 0) {
-            return res.status(403).json({
-              status: "error",
-              message: "Forbidden: AI operations suspended. This workspace has exhausted its compute credit balance. Please configure additional credits."
-            });
-          }
-        }
-      }
-
-      const uid = (req as AuthenticatedRequest).user?.uid;
-      const { apiKey, isCustom: isCustomKeyUsed } = await resolveUserGeminiApiKey(uid);
-
-      if (!apiKey) {
-         throw new Error("Missing Gemini API Key. Please configure it in AI Settings.");
-      }
-
-      // For Copilot chat tasks, ensure secure read-only financial data access with PII redaction
-      if (task === 'chat') {
-        if (payload?.query) {
-          payload.query = SecurityService.scrubPII(payload.query);
-        }
-        
-        // If client did not provide complete ledgerSummary, assemble it securely from authorized workspace
-        if (!payload?.ledgerSummary) {
-          const { accounts, transactions } = await getReportContext(req as AuthenticatedRequest, workspaceId);
-          
-          let totalCashCents = 0;
-          let totalRevenueCents = 0;
-          let totalExpensesCents = 0;
-          let totalArCents = 0;
-          let totalApCents = 0;
-
-          const accountsList = (accounts || []).map((a: any) => {
-            const bal = a.balanceCents || 0;
-            const type = (a.type || '').toLowerCase();
-            const cat = (a.category || '').toLowerCase();
-            const name = (a.name || '').toLowerCase();
-
-            if (cat.includes('cash') || cat.includes('bank') || name.includes('checking') || name.includes('cash') || (a.role || '').toLowerCase() === 'cash') {
-              totalCashCents += bal;
-            }
-            if (type === 'revenue' || type === 'income') {
-              totalRevenueCents += bal;
-            }
-            if (type === 'expense' || type === 'cost_of_goods' || type === 'cogs') {
-              totalExpensesCents += bal;
-            }
-            if (cat.includes('receivable') || type === 'receivable') {
-              totalArCents += bal;
-            }
-            if (cat.includes('payable') || type === 'payable') {
-              totalApCents += bal;
-            }
-            return {
-              name: a.name,
-              type: a.type,
-              category: a.category,
-              balanceFormatted: `$${(bal / 100).toFixed(2)}`
-            };
-          });
-
-          // Postable transactions only, sanitized and sorted desc
-          const postableTx = (transactions || [])
-            .filter((t: any) => t && t.status !== 'void' && t.status !== 'failed' && !t.deletedAt)
-            .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''))
-            .slice(0, 40)
-            .map((t: any) => ({
-              date: t.date,
-              description: SecurityService.scrubPII(t.description || ''),
-              category: t.category || '',
-              amountFormatted: `$${((t.totalAmountCents || 0) / 100).toFixed(2)}`
-            }));
-
-          const monthlyBurnCents = totalExpensesCents > totalRevenueCents ? Math.round((totalExpensesCents - totalRevenueCents) / 12) : 0;
-          const runwayMonths = monthlyBurnCents > 0 ? (totalCashCents / monthlyBurnCents).toFixed(1) : "99+ (Profitable / Cash Positive)";
-
-          payload.ledgerSummary = {
-            workspaceId,
-            totalCash: `$${(totalCashCents / 100).toFixed(2)}`,
-            monthlyBurn: `$${(monthlyBurnCents / 100).toFixed(2)}`,
-            runwayMonths,
-            totalAccountsReceivable: `$${(totalArCents / 100).toFixed(2)}`,
-            totalAccountsPayable: `$${(totalApCents / 100).toFixed(2)}`,
-            keyAccounts: accountsList.slice(0, 15),
-            recentTransactions: postableTx
-          };
-        } else {
-          payload.ledgerSummary = JSON.parse(SecurityService.scrubPII(JSON.stringify(payload.ledgerSummary)));
-        }
-      }
-
-      // Check whether payload and task are cached via our unified caching base BEFORE triggering AI!
-      const isCached = AIBackendService.hasCachedResponse(task, payload, uid);
-
-      const aiService = new AIBackendService(apiKey);
-      const result = await aiService.process(task, payload, uid);
-
-      // Charge credits and log audit traces only if it's NOT a cache hit!
-      if (workspaceId && !isCached) {
-        let baseWeight = 15;
-        let baseCents = 0;
-        
-        const usage = aiService.lastUsageMetadata;
-        if (usage) {
-          const promptTokens = usage.promptTokenCount || 0;
-          const outputTokens = usage.candidatesTokenCount || 0;
-          const totalTokens = usage.totalTokenCount || (promptTokens + outputTokens);
-          
-          // Gemini 3.8 Flash Pricing Model True Alignment ($0.075 / 1M input, $0.30 / 1M output)
-          baseCents = Math.round((promptTokens * 7.5 / 1000000) + (outputTokens * 30 / 1000000));
-          baseWeight = totalTokens > 0 ? totalTokens : 15;
-        } else {
-          if (task === 'parse-personal-tax-profile') baseWeight = 1500;
-          else if (task === 'parse-receipt' || task === 'parse-statement') baseWeight = 1000;
-          else if (task === 'parse-business-blueprint') baseWeight = 1200;
-          else if (task === 'strategic-analysis' || task === 'analyze-trends') baseWeight = 800;
-          
-          baseCents = Math.round(baseWeight * 0.1); // 0.1 cent per weight unit
-        }
-
-        try {
-          const wsRef = db.collection("workspaces").doc(workspaceId);
-          let chargedWeightScore = 0;
-          await db.runTransaction(async (t) => {
-            const wsDoc = await t.get(wsRef);
-            if (!wsDoc.exists) return;
-            const wsData = wsDoc.data() || {};
-            
-            // Centralized dynamic multiplier calculation
-            const { credits: weightScore, cents: deltaCents } = calculateWorkspaceCharges(wsData, baseWeight, baseCents, isCustomKeyUsed);
-            chargedWeightScore = weightScore;
-
-            const currentCredit = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000;
-            const newCredit = Math.max(0, currentCredit - weightScore);
-
-            t.update(wsRef, {
-              apiQuotaTotalCentsUsed: admin.firestore.FieldValue.increment(deltaCents),
-              totalQueriesThisMonth: admin.firestore.FieldValue.increment(1),
-              computeHardnessScore: admin.firestore.FieldValue.increment(weightScore),
-              computeCreditBalance: newCredit
-            });
-          });
-
-          if (chargedWeightScore > 0) {
-            // Log trace audit record
-            const traceId = `trace-${crypto.randomUUID()}`;
-            await db.collection("billingLedgerTraces").doc(traceId).set({
-              id: traceId,
-              workspaceId,
-              uid: (req as AuthenticatedRequest).user.uid,
-              userEmail: (req as AuthenticatedRequest).user.email || 'developer@ledgerflow.io',
-              algorithmName: `AI_${task.toUpperCase().replace(/-/g, '_')}`,
-              complexityFormat: 'O(Tokens)',
-              weightScore: chargedWeightScore,
-              isSelfFunded: isCustomKeyUsed,
-              executionTimeMs: 1500,
-              timestamp: new Date().toISOString()
-            });
-          }
-        } catch (billingErr) {
-          console.error("[Server Billing System Bypass]: ", billingErr);
-        }
-      }
-
-      res.json(result);
-    } catch (error: any) {
-      sendError(res, "AI Processing Hub Failure", 500, error.message);
     }
   });
 
@@ -4942,6 +4751,30 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
     }
   });
 
+  // Session revocation
+  app.post("/api/v1/auth/revoke-sessions", apiAuthenticate, async (req: any, res) => {
+    try {
+      const uid = req.user.uid;
+      await admin.auth().revokeRefreshTokens(uid);
+      res.json({ success: true, message: 'All active sessions revoked successfully. You will be signed out shortly.' });
+    } catch (error: any) {
+      console.error('Failed to revoke sessions:', error);
+      res.status(500).json({ error: error.message || 'Failed to revoke sessions' });
+    }
+  });
+
+  // Delete user account
+  app.delete("/api/v1/auth/delete-account", apiAuthenticate, async (req: any, res) => {
+    try {
+      const uid = req.user.uid;
+      await admin.auth().deleteUser(uid);
+      res.json({ success: true, message: 'Account deleted successfully.' });
+    } catch (error: any) {
+      console.error('Failed to delete account:', error);
+      res.status(500).json({ error: error.message || 'Failed to delete account' });
+    }
+  });
+
   // Mount kernel routes
   app.use("/api/v1/reports", apiAuthenticate, reportRouter);
   app.use("/api/v1/workspaces", apiAuthenticate, workspaceRouter);
@@ -4952,12 +4785,33 @@ Conduct a brilliant, deep, mathematically sound analysis. Address developer's qu
   app.use("/api/v1/inventory", apiAuthenticate, inventoryRouter);
   app.use("/api/v1/support", authenticate, supportRouter);
   app.use("/api/v1/payments", apiAuthenticate, paymentRouter);
+  app.use("/api/v1/documents", apiAuthenticate, documentRouter);
   app.use("/api/v1/invoices/public", expressRateLimit({
     windowMs: 15 * 60 * 1000,
     max: 50,
     message: "Too many requests to public invoice endpoints."
   }), publicInvoiceRouter);
   app.use("/api/v1/invoices/email", apiAuthenticate, invoiceEmailRouter);
+
+  // Data Retention Cleanup Job (Runs every 24h)
+  setInterval(async () => {
+    try {
+      console.log("[Data Lifecycle] Running data retention cleanup job...");
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 90); // 90 days default
+      const cutoffStr = cutoff.toISOString();
+
+      const snap = await admin.firestore().collection('auditLogs').where('timestamp', '<', cutoffStr).get();
+      if (!snap.empty) {
+        const batch = admin.firestore().batch();
+        snap.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        console.log(`[Data Lifecycle] Purged ${snap.size} expired audit logs.`);
+      }
+    } catch (e) {
+      console.error("[Data Lifecycle] Cleanup job failed", e);
+    }
+  }, 24 * 60 * 60 * 1000);
 
   const http = await import('http');
   const httpServer = http.createServer(app);

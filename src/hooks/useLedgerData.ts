@@ -6,6 +6,7 @@ import {
   onSnapshot, 
   doc, 
   setDoc,
+  addDoc,
   limit,
   orderBy
 } from 'firebase/firestore';
@@ -140,6 +141,21 @@ export function useLedgerData() {
   // Main Entities (Workspace Scoped)
   useEffect(() => {
     if (!user || !currentWorkspaceId) return;
+
+    // Login Audit
+    const sessionLoginKey = `login_logged_${currentWorkspaceId}_${user.uid}`;
+    if (!sessionStorage.getItem(sessionLoginKey)) {
+      sessionStorage.setItem(sessionLoginKey, 'true');
+      addDoc(collection(db, 'auditLogs'), {
+        action: 'USER_LOGIN',
+        details: 'User authenticated and entered workspace session',
+        severity: 'info',
+        uid: user.uid,
+        userEmail: user.email,
+        workspaceId: currentWorkspaceId,
+        timestamp: new Date().toISOString()
+      }).catch(err => console.error('Failed to write login audit:', err));
+    }
 
     // Clear data immediately to prevent ghosting between workspaces
     useLedgerStore.setState({

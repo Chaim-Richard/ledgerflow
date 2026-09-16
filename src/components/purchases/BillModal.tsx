@@ -6,6 +6,7 @@ import { Bill, Vendor, ChartAccount } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import AsyncButton from '../ui/AsyncButton';
 
 interface BillModalProps {
@@ -37,7 +38,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     if (isOpen) {
       const fetchNextNumber = async () => {
         try {
-          const wsId = useLedgerStore.getState().activeWorkspaceId;
+          const wsId = useAuthStore.getState().currentWorkspaceId;
           if (!wsId) return;
           const res = await fetch(`/api/v1/workspaces/${wsId}/next-number?type=bill`);
           if (res.ok) {

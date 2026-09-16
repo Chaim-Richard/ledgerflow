@@ -1,0 +1,118 @@
+import React, { useMemo, useState } from 'react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { formatCurrency, parseLocalDate, cn } from '../../lib/utils';
+import { format } from 'date-fns';
+import { DollarSign, Search, Filter } from 'lucide-react';
+
+export default function PaymentsView() {
+  const payments = useLedgerStore(s => s.payments) || [];
+  const customers = useLedgerStore(s => s.customers) || [];
+  const vendors = useLedgerStore(s => s.vendors) || [];
+  
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredPayments = useMemo(() => {
+    return payments.filter(p => {
+      const term = searchTerm.toLowerCase();
+      if (!term) return true;
+      const searchStr = `${p.contactName || p.contactId} ${p.method} ${p.reference || ''}`.toLowerCase();
+      return searchStr.includes(term);
+    }).sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
+  }, [payments, searchTerm]);
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div>
+          <h1 className="text-4xl font-black tracking-tighter text-[var(--text)]">Payments Register</h1>
+          <p className="text-slate-500 mt-2 font-medium">Global ledger of settled capital flows</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-4 mb-8">
+        <div className="relative flex-1 group">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+            <Search size={18} className="text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search payments by entity, method, or reference..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-4 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-[var(--text)] font-medium placeholder:text-slate-400 shadow-sm"
+          />
+        </div>
+      </div>
+
+      <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse min-w-[800px]">
+            <thead>
+              <tr className="text-left border-b border-[var(--line)]/50">
+                <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Date</th>
+                <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Entity</th>
+                <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Method & Ref</th>
+                <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap text-right">Amount</th>
+                <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Allocations</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ledger-line/30">
+              {filteredPayments.map(payment => (
+                <tr key={payment.id} className="group hover:bg-[var(--ink)]/30 transition-all">
+                  <td className="p-4 md:p-8 font-mono font-bold text-slate-500 group-hover:text-[var(--text)] transition-colors">
+                    {format(parseLocalDate(payment.date), 'MMM dd, yyyy')}
+                  </td>
+                  <td className="p-4 md:p-8">
+                    <div className="flex flex-col">
+                      <span className="font-black text-[var(--text)] text-base tracking-tight">{payment.contactName || payment.contactId}</span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                        {payment.direction === 'received' ? 'Customer' : payment.direction === 'made' ? 'Vendor' : 'Entity'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="p-4 md:p-8">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-[var(--text)] capitalize">{payment.method}</span>
+                      {payment.reference && (
+                        <span className="text-[10px] font-mono text-slate-500 mt-1">{payment.reference}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-lg tracking-tighter tabular-nums">
+                    <span className={cn(
+                      payment.direction === 'received' ? "text-emerald-500" : "text-rose-500"
+                    )}>
+                      {payment.direction === 'received' ? '+' : '-'}{formatCurrency(payment.amountCents || 0)}
+                    </span>
+                  </td>
+                  <td className="p-4 md:p-8">
+                    <div className="flex flex-col gap-1">
+                      {payment.allocations?.map((alloc: any, i: number) => (
+                        <span key={i} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-[var(--surface)] px-2 py-1 rounded-md border border-[var(--line)]">
+                          {alloc.documentType}: {alloc.documentId.split('-')[1]} ({formatCurrency(alloc.amountCents)})
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredPayments.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-24 text-center relative overflow-hidden">
+                    <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
+                    <div className="relative z-10 flex flex-col items-center gap-4">
+                      <div className="w-20 h-20 bg-slate-200/20 rounded-[32px] flex items-center justify-center text-slate-500/30">
+                        <DollarSign size={40} />
+                      </div>
+                      <p className="text-base font-black text-slate-500/40 uppercase tracking-[0.5em]">No Payments Recorded</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

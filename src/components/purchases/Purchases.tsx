@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   Package,
   TrendingDown,
-  Trash2
+  Trash2,
+  DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
@@ -26,6 +27,8 @@ import { format, differenceInDays, addDays, startOfDay } from 'date-fns';
 
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
+import { EmptyState } from '../ui/EmptyState';
+import ReceivePaymentModal from '../sales/ReceivePaymentModal';
 
 
 
@@ -77,6 +80,9 @@ export default function Purchases() {
   const [activeSubTab, setActiveSubTab] = useState<'bills' | 'vendors' | 'pipeline'>('pipeline');
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+  const [paymentDocumentId, setPaymentDocumentId] = useState<string | null>(null);
+  const [paymentContactId, setPaymentContactId] = useState<string | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const agingBuckets = useMemo(() => {
@@ -371,6 +377,15 @@ export default function Purchases() {
           setIsVendorModalOpen(false);
         }}
       />
+      {isPaymentModalOpen && paymentDocumentId && paymentContactId && (
+        <ReceivePaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          defaultDirection="made"
+          defaultDocumentId={paymentDocumentId}
+          defaultContactId={paymentContactId}
+        />
+      )}
 
       
 
@@ -434,11 +449,19 @@ export default function Purchases() {
                       <div className="flex items-center gap-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
                         {bill.status !== 'paid' && (
                           <button 
-                            onClick={() => onUpdateBill(bill.id, { status: 'paid' })}
+                            onClick={() => {
+                              if (bill.vendorId) {
+                                setPaymentContactId(bill.vendorId);
+                                setPaymentDocumentId(bill.id);
+                                setIsPaymentModalOpen(true);
+                              } else {
+                                toast.error('Bill is missing a vendor.');
+                              }
+                            }}
                             className="p-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
-                            title="Execute Settlement"
+                            title="Pay Bill"
                           >
-                            <Zap size={16} />
+                            <DollarSign size={16} />
                           </button>
                         )}
                         <button 
@@ -465,14 +488,14 @@ export default function Purchases() {
                 ))}
                 {filteredBills.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-24 text-center relative overflow-hidden">
-                       <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-                       <div className="relative z-10 flex flex-col items-center gap-4">
-                          <div className="w-20 h-20 bg-slate-200/20 rounded-[32px] flex items-center justify-center text-slate-500/30">
-                             <Package size={40} />
-                          </div>
-                          <p className="text-base font-black text-slate-500/40 uppercase tracking-[0.5em]">No Financial Liabilities Detected</p>
-                       </div>
+                    <td colSpan={7} className="p-12">
+                      <EmptyState 
+                        title="No Bills Detected" 
+                        description="There are currently no accounts payable in this view. Create a new bill or seed demo data to populate."
+                        actionLabel="RECORD BILL"
+                        onAction={() => setIsBillModalOpen(true)}
+                        showSeedData={true}
+                      />
                     </td>
                   </tr>
                 )}

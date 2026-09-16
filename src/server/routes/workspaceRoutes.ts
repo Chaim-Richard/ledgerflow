@@ -194,3 +194,130 @@ workspaceRouter.post('/:workspaceId/roles', requireWorkspaceRole(['owner']), asy
     sendError(res, 'Failed to update workspace role', 500, err.message);
   }
 });
+
+/**
+ * Task 4: Delete workspace (Owner only)
+ */
+workspaceRouter.delete('/:workspaceId', requireWorkspaceRole(['owner']), async (req, res) => {
+  const { workspaceId } = req.params;
+  try {
+    const db = getDb();
+    
+    // We could delete all nested collections, but typically we want to leave this to a background job or just delete the top-level document
+    // For now, we will delete the top level workspace doc. In a real environment we would spawn a background function to delete all data.
+    await db.collection('workspaces').doc(workspaceId).delete();
+    
+    // Adding a basic deletion of all core entities in this workspace (not recursively complete for huge datasets without a batch loop, but sufficient for standard scale)
+    const collectionsToClear = [
+      'transactions', 'accounts', 'journalEntries', 'projects', 'budgets', 
+      'vendors', 'customers', 'invoices', 'bills', 'inventory', 'assets', 
+      'recurring', 'employees', 'payRuns', 'taxRates', 'auditLogs'
+    ];
+    
+    // In background
+    (async () => {
+      try {
+        for (const coll of collectionsToClear) {
+          const snapshot = await db.collection(coll).where('workspaceId', '==', workspaceId).get();
+          const batch = db.batch();
+          snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          if (snapshot.size > 0) {
+            await batch.commit();
+          }
+        }
+      } catch (e) {
+        console.error('Failed to cleanup workspace data', e);
+      }
+    })();
+    
+    res.json({ status: 'success', message: 'Workspace deleted successfully.' });
+  } catch (err: any) {
+    sendError(res, 'Failed to delete workspace', 500, err.message);
+  }
+});
+
+/**
+ * Task 5: Seed Demo Data
+ */
+workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
+  const { workspaceId } = req.params;
+  const db = getDb();
+  
+  try {
+    const batch = db.batch();
+    
+    // Add Demo Customer
+    const customerRef = db.collection('customers').doc();
+    batch.set(customerRef, {
+      uid: (req as any).user.uid,
+      workspaceId,
+      name: 'Acme Corporation',
+      email: 'billing@acme.com',
+      status: 'active'
+    });
+
+    // Add Demo Vendor
+    const vendorRef = db.collection('vendors').doc();
+    batch.set(vendorRef, {
+      uid: (req as any).user.uid,
+      workspaceId,
+      name: 'Cloud Services Ltd',
+      category: 'Software',
+      status: 'active'
+    });
+    
+    // Add Demo Invoice
+    const invoiceRef = db.collection('invoices').doc();
+    batch.set(invoiceRef, {
+      uid: (req as any).user.uid,
+      workspaceId,
+      customerId: customerRef.id,
+      customerName: 'Acme Corporation',
+      number: `INV-DEMO-001`,
+      amountCents: 500000,
+      totalCents: 500000,
+      date: new Date().toISOString().slice(0,10),
+      dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0,10),
+      status: 'sent',
+      type: 'standard',
+      items: [
+        {
+          id: 'item-1',
+          description: 'Consulting Services',
+          quantity: 1,
+          rateCents: 500000,
+          amountCents: 500000,
+          accountId: 'income-acct'
+        }
+      ]
+    });
+
+    // Add Demo Bill
+    const billRef = db.collection('bills').doc();
+    batch.set(billRef, {
+      uid: (req as any).user.uid,
+      workspaceId,
+      vendorId: vendorRef.id,
+      vendorName: 'Cloud Services Ltd',
+      number: `BILL-DEMO-001`,
+      amountCents: 120000,
+      date: new Date().toISOString().slice(0,10),
+      dueDate: new Date(Date.now() + 15 * 86400000).toISOString().slice(0,10),
+      status: 'pending',
+      splits: [
+        {
+          amountCents: 120000,
+          accountId: 'expense-acct',
+          description: 'Server Hosting'
+        }
+      ]
+    });
+
+    await batch.commit();
+    res.json({ status: 'success', message: 'Demo data seeded' });
+  } catch (e: any) {
+    sendError(res, 'Failed to seed demo data', 500, e.message);
+  }
+});

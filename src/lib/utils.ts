@@ -213,6 +213,30 @@ export async function safeAsync<T>(
 }
 
 /**
+ * Reliability Engine: Execute async function with exponential backoff retry logic.
+ */
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelayMs: number = 500
+): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      attempt++;
+      if (attempt > maxRetries || (error?.code && error.code === 'permission-denied')) {
+        throw error;
+      }
+      const delay = baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 200;
+      console.warn(`[RETRY] Operation failed (Attempt ${attempt}/${maxRetries}). Retrying in ${delay.toFixed(0)}ms...`, error);
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+}
+
+/**
  * Safe confirmation modal dialog helper.
  * Degrades gracefully inside sandboxed browser iframes where window.confirm causes SecurityError.
  * Fails closed (returns false) to prevent accidental execution of destructive actions.

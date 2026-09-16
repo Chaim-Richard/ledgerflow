@@ -18,7 +18,7 @@ import {
   Package,
   RefreshCw,
   Kanban,
-  Trash2, Zap,
+  Trash2, Zap, DollarSign,
   Check
 } from 'lucide-react';
 import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
@@ -28,9 +28,12 @@ import { format, differenceInDays } from 'date-fns';
 import { motion } from 'motion/react';
 
 import InvoiceModal from './InvoiceModal';
+import { EmptyState } from '../ui/EmptyState';
 import CustomerModal from './CustomerModal';
 
 
+
+import ReceivePaymentModal from './ReceivePaymentModal';
 
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -113,6 +116,9 @@ export default function Sales() {
   const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'customers' | 'pipeline'>('pipeline');
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [paymentDocumentId, setPaymentDocumentId] = useState<string | null>(null);
+  const [paymentContactId, setPaymentContactId] = useState<string | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const agingBuckets = useMemo(() => {
@@ -324,11 +330,19 @@ export default function Sales() {
                       <div className="flex items-center gap-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
                         {inv.status !== 'paid' && (
                           <button 
-                            onClick={() => onAddInvoice({ id: inv.id, status: 'paid' })}
+                            onClick={() => {
+                              if (inv.customerId) {
+                                setPaymentContactId(inv.customerId);
+                                setPaymentDocumentId(inv.id);
+                                setIsPaymentModalOpen(true);
+                              } else {
+                                toast.error('Invoice is missing a customer.');
+                              }
+                            }}
                             className="p-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
-                            title="Execute Settlement"
+                            title="Receive Payment"
                           >
-                            <Zap size={16} />
+                            <DollarSign size={16} />
                           </button>
                         )}
                         <button 
@@ -349,20 +363,29 @@ export default function Sales() {
                         >
                            <Trash2 size={16} />
                         </button>
+                        {inv.status !== 'paid' && (
+                          <button 
+                            onClick={() => onAddInvoice({ id: inv.id, status: 'paid' })}
+                            className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-emerald-500 transition-all"
+                            title="Write Off"
+                          >
+                            <Zap size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))}
                 {filteredInvoices.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-24 text-center relative overflow-hidden">
-                       <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-                       <div className="relative z-10 flex flex-col items-center gap-4">
-                          <div className="w-20 h-20 bg-slate-200/20 rounded-[32px] flex items-center justify-center text-slate-500/30">
-                             <Package size={40} />
-                          </div>
-                          <p className="text-base font-black text-slate-500/40 uppercase tracking-[0.5em]">No Financial Liabilities Detected</p>
-                       </div>
+                    <td colSpan={7} className="p-12">
+                      <EmptyState 
+                        title="No Invoices Detected" 
+                        description="There are currently no accounts receivable in this view. Create a new invoice or seed demo data to populate."
+                        actionLabel="CREATE INVOICE"
+                        onAction={() => setIsInvoiceModalOpen(true)}
+                        showSeedData={true}
+                      />
                     </td>
                   </tr>
                 )}
@@ -456,6 +479,15 @@ export default function Sales() {
           setIsCustomerModalOpen(false);
         }}
       />
+      {isPaymentModalOpen && paymentDocumentId && paymentContactId && (
+        <ReceivePaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          defaultDirection="received"
+          defaultDocumentId={paymentDocumentId}
+          defaultContactId={paymentContactId}
+        />
+      )}
     </div>
   );
 }

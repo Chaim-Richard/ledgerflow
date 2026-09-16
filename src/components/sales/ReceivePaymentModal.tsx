@@ -187,7 +187,10 @@ export default function ReceivePaymentModal({
         }
       });
 
-      const token = await getIdToken();
+      const token = await user?.getIdToken();
+      const contactType = direction === 'received' ? 'customer' : 'vendor';
+      const memo = '';
+
       const res = await fetch('/api/v1/payments', {
         method: 'POST',
         headers: {
