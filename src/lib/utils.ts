@@ -212,6 +212,13 @@ export function parseLocalDate(s: string): Date {
   return new Date(s);
 }
 
+export function formatDate(dateStr: string | Date | undefined | null): string {
+  if (!dateStr) return '';
+  const d = typeof dateStr === 'string' ? parseLocalDate(dateStr) : dateStr;
+  if (isNaN(d.getTime())) return String(dateStr);
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

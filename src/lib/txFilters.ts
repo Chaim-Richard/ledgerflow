@@ -107,16 +107,29 @@ export function isCashAccount(account?: ChartAccount): boolean {
 }
 
 /**
+ * Checks if a transaction represents an internal account transfer
+ */
+export function isTransferTransaction(tx: Transaction): boolean {
+  if (!tx) return false;
+  if (tx.isTransfer) return true;
+  if (tx.metadata?.isTransfer) return true;
+  if (tx.lines && tx.lines.length >= 2 && tx.lines.every(l => l.isTransfer)) return true;
+  return false;
+}
+
+/**
  * Determines whether a transaction is predominantly an Income transaction
  */
 export function isIncomeTransaction(tx: Transaction, accountMap?: Map<string, ChartAccount>): boolean {
   if (!isPostable(tx)) return false;
+  if (isTransferTransaction(tx)) return false;
   if (tx.type === 'income') return true;
   if (tx.type === 'expense') return false;
   
   // If lines are present, check if any line credits a revenue account
   if (Array.isArray(tx.lines) && tx.lines.length > 0) {
     for (const line of tx.lines) {
+      if (line.isTransfer) continue;
       const acc = accountMap?.get(line.accountId);
       if (acc && isRevenueAccount(acc) && line.amountCents < 0) {
         return true;
@@ -131,11 +144,13 @@ export function isIncomeTransaction(tx: Transaction, accountMap?: Map<string, Ch
  */
 export function isExpenseTransaction(tx: Transaction, accountMap?: Map<string, ChartAccount>): boolean {
   if (!isPostable(tx)) return false;
+  if (isTransferTransaction(tx)) return false;
   if (tx.type === 'expense') return true;
   if (tx.type === 'income') return false;
   
   if (Array.isArray(tx.lines) && tx.lines.length > 0) {
     for (const line of tx.lines) {
+      if (line.isTransfer) continue;
       const acc = accountMap?.get(line.accountId);
       if (acc && isExpenseAccount(acc) && line.amountCents > 0) {
         return true;
@@ -150,6 +165,7 @@ export function isExpenseTransaction(tx: Transaction, accountMap?: Map<string, C
  */
 export function isOutflow(t: Transaction, accounts?: ChartAccount[] | Map<string, ChartAccount>): boolean {
   if (!isPostable(t)) return false;
+  if (isTransferTransaction(t)) return false;
   if (t.type === 'expense' || (t.type as string) === 'cost_of_goods') return true;
   if (t.type === 'income' || (t.type as string) === 'revenue') return false;
   
@@ -159,6 +175,7 @@ export function isOutflow(t: Transaction, accounts?: ChartAccount[] | Map<string
     
   if (t.lines && t.lines.length > 0) {
     const hasExpenseLine = t.lines.some(l => {
+      if (l.isTransfer) return false;
       const acc = map?.get(l.accountId);
       return acc ? isExpenseAccount(acc) : false;
     });

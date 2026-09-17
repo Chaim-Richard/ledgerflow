@@ -118,6 +118,7 @@ export interface TransactionLine {
   isHeuristicTagged?: boolean; // Pattern match
   isAnalyticalTagged?: boolean; // Analytical telemetry tagging
   confidence?: number;
+  isTransfer?: boolean; // Exclude from P&L and operating expense/income calculations
 }
 
 export interface Transaction {
@@ -141,6 +142,14 @@ export interface Transaction {
   exchangeRate?: number;
   schemaVersion?: string; // "1.1" for multi-year tracking
   
+  // Transfers & Inter-Account Movements
+  isTransfer?: boolean;
+  transferDetails?: {
+    fromAccountId: string;
+    toAccountId: string;
+    transferId?: string;
+  };
+
   // Source Document Storage
   fileUrls?: string[];
   
@@ -576,13 +585,18 @@ export interface AutoRule {
   id: string;
   uid: string;
   workspaceId?: string;
+  name?: string;
+  groupName?: string;
   condition: {
     vendor?: string;
     project?: string;
     category?: string;
     descriptionContains?: string;
+    descriptionStartsWith?: string;
     amountThreshold?: number;
     exactAmount?: number;
+    minAmountCents?: number;
+    maxAmountCents?: number;
     dateRange?: { start: string, end: string };
   };
   action: {
@@ -594,12 +608,89 @@ export interface AutoRule {
     targetDimensions?: Record<string, string>;
     targetTags?: string[];
     flagForReview?: boolean;
+    descriptionPrefix?: string;
+    descriptionSuffix?: string;
+    setNotes?: string;
+    addTags?: string[];
+    removeTags?: string[];
+    setAmountCents?: number;
+    deleteTransaction?: boolean;
   };
   confidence: number; // 0 to 1
   isHardened: boolean; // True if user confirmed
   priority?: number;
   isActive?: boolean;
+  stopProcessingOnMatch?: boolean;
+  hitCount?: number;
+  lastTriggeredAt?: string;
   createdAt: string;
+}
+
+export interface PurchaseOrderItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPriceCents: number;
+  totalCents: number;
+  receivedQuantity?: number;
+  accountId?: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  uid: string;
+  workspaceId: string;
+  poNumber: string;
+  vendorId: string;
+  vendorName: string;
+  issueDate: string;
+  expectedDeliveryDate?: string;
+  status: 'draft' | 'pending_approval' | 'approved' | 'partially_received' | 'received' | 'billed' | 'closed' | 'cancelled';
+  items: PurchaseOrderItem[];
+  totalAmountCents: number;
+  notes?: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  approvedBy?: string;
+  approvedAt?: string;
+  createdAt: string;
+}
+
+export interface GoodsReceiptItem {
+  poItemId: string;
+  description: string;
+  quantityReceived: number;
+  unitPriceCents: number;
+  condition: 'good' | 'damaged' | 'rejected';
+  notes?: string;
+}
+
+export interface GoodsReceipt {
+  id: string;
+  uid: string;
+  workspaceId: string;
+  receiptNumber: string;
+  poId: string;
+  poNumber: string;
+  vendorId: string;
+  vendorName?: string;
+  receivedDate: string;
+  receivedBy?: string;
+  items: GoodsReceiptItem[];
+  notes?: string;
+  status: 'received' | 'discrepancy' | 'verified';
+  createdAt: string;
+}
+
+export interface ThreeWayMatchResult {
+  poId: string;
+  poNumber: string;
+  billId?: string;
+  receiptId?: string;
+  status: 'matched' | 'price_variance' | 'quantity_variance' | 'unreceived' | 'missing_bill';
+  poAmountCents: number;
+  receiptAmountCents: number;
+  billAmountCents: number;
+  discrepancies: string[];
 }
 
 export interface AccountingPeriod {

@@ -317,12 +317,7 @@ const shortcutMap = useMemo(() => {
   if (isInviteRoute) {
     return (
       <Suspense fallback={<InitializationScreen language={language} />}>
-        <RootLayout
-          onLogout={handleLogout}
-          onLoginPrompt={() => setIsGuest(false)}
-          activeTab={'accept-invite' as any}
-          setActiveTab={setActiveTabStore}
-        />
+        <RootLayout />
       </Suspense>
     );
   }

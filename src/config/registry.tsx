@@ -16,7 +16,7 @@ import {
   ArrowDownRight, ArrowUpRight, FolderKanban, Users, RefreshCw, 
   ShieldCheck, Terminal as TerminalIcon, Settings, Building, Cpu as CpuIcon,
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
-  TrendingUp, TrendingDown, DollarSign, Calendar, Sliders,
+  TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag
 , Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen } from 'lucide-react';
 
@@ -67,6 +67,9 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'ledger': lazy(() => import('../components/ledger/TwoLensesLedger')),
   'sales': lazy(() => import('../components/sales/Sales')),
   'purchases': lazy(() => import('../components/purchases/Purchases')),
+  'purchase-orders': lazy(() => import('../components/purchases/PurchaseOrdersView')),
+  'payroll': lazy(() => import('../components/hr/PayrollView')),
+  'assets': lazy(() => import('../components/assets/FixedAssetsView')),
   'settings': lazy(() => import('../components/platform/Settings')),
   'api-hub': lazy(() => import('../components/platform/ApiHub')),
   'reconciliation': lazy(() => import('../components/ledger/Reconciliation')),
@@ -108,6 +111,7 @@ export const APP_TABS: AppTabDefinition[] = [
 
   { id: 'transactions', label: { en: 'Transactions', he: 'תנועות' }, icon: Layers, groupId: 'transactions' },
   { id: 'credit-notes', label: { en: 'Credit Notes & Vendor Credits', he: 'זיכויים וזיכויי ספק' }, icon: RotateCcw, groupId: 'transactions' },
+  { id: 'assets', label: { en: 'Fixed Asset Register', he: 'רכוש קבוע' }, icon: Building, groupId: 'transactions' },
   { id: 'register', label: { en: 'Account Register', he: 'יומן חשבון' }, icon: BookOpen, groupId: 'transactions' },
   { id: 'ledger', label: { en: 'Ledger & Journal', he: 'ספר ראשי ויומן' }, icon: Database, groupId: 'transactions' },
   { id: 'query-builder', label: { en: 'BQL Query Builder', he: 'בונה שאילתות' }, icon: Filter, groupId: 'transactions' },
@@ -122,6 +126,8 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'payments', label: { en: 'Payments', he: 'תשלומים' }, icon: DollarSign, groupId: 'money_in' },
   
   { id: 'purchases', label: { en: 'Purchases', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'money_out' },
+  { id: 'purchase-orders', label: { en: 'Purchase Orders', he: 'הזמנות רכש' }, icon: ShoppingCart, groupId: 'money_out' },
+  { id: 'payroll', label: { en: 'Payroll & Wages', he: 'שכר עובדים' }, icon: Users, groupId: 'money_out' },
 
   { id: 'reports', label: { en: 'Reports', he: 'דוחות' }, icon: FileText, groupId: 'reports' },
   { id: 'charts', label: { en: 'Visual Analytics', he: 'ניתוח חזותי' }, icon: PieChart, groupId: 'reports' },
@@ -304,6 +310,11 @@ export const REPORT_COMPONENTS: Record<string, any> = {
   'GeneralLedgerView': lazy(() => import('../components/ledger/GeneralLedgerView')),
   'StatementView': lazy(() => import('../components/reporting/StatementView')),
   'TaxLiabilityView': lazy(() => import('../components/reporting/TaxLiabilityView')),
+  'ExpenseByCategoryReportView': lazy(() => import('../components/reporting/ExpenseByCategoryReportView')),
+  'IncomeBySourceReportView': lazy(() => import('../components/reporting/IncomeBySourceReportView')),
+  'TopExpensesIncomeReportView': lazy(() => import('../components/reporting/TopExpensesIncomeReportView')),
+  'AverageMonthlyReportView': lazy(() => import('../components/reporting/AverageMonthlyReportView')),
+  'TagBreakdownReportView': lazy(() => import('../components/reporting/TagBreakdownReportView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = [
@@ -318,6 +329,11 @@ export const REPORT_TABS_REGISTRY = [
   { id: 'pnl', label: { en: 'Profit & Loss', he: 'רווח והפסד' }, componentName: 'PNLView', icon: Activity },
   { id: 'balance-sheet', label: { en: 'Balance Sheet', he: 'מאזן' }, componentName: 'BalanceSheetReportView', icon: Layers },
   { id: 'cash-flow', label: { en: 'Cash Flow', he: 'תזרים' }, componentName: 'CashFlowView', icon: RefreshCw },
+  { id: 'expense-by-category', label: { en: 'Expense by Category', he: 'הוצאות לפי קטגוריה' }, componentName: 'ExpenseByCategoryReportView', icon: PieChart },
+  { id: 'income-by-source', label: { en: 'Income by Source', he: 'הכנסות לפי מקור' }, componentName: 'IncomeBySourceReportView', icon: TrendingUp },
+  { id: 'top-expenses-income', label: { en: 'Top Line Items', he: 'הוצאות והכנסות מובילות' }, componentName: 'TopExpensesIncomeReportView', icon: BarChart3 },
+  { id: 'monthly-averages', label: { en: 'Monthly Averages', he: 'ממוצעים חודשיים' }, componentName: 'AverageMonthlyReportView', icon: Calendar },
+  { id: 'tag-breakdown', label: { en: 'Tag Breakdown', he: 'דוח תגיות' }, componentName: 'TagBreakdownReportView', icon: Tag },
   { id: 'ar-aging', label: { en: 'A/R Aging', he: 'גיול לקוחות' }, componentName: 'ARAgingReportView', icon: Users },
   { id: 'ap-aging', label: { en: 'A/P Aging', he: 'גיול ספקים' }, componentName: 'APAgingReportView', icon: Building },
   { id: 'general-ledger', label: { en: 'General Ledger', he: 'ספר ראשי' }, componentName: 'GeneralLedgerView', icon: BookOpen },
@@ -326,19 +342,21 @@ export const REPORT_TABS_REGISTRY = [
 ];
 
 export const SETTINGS_TABS_REGISTRY = [
+  { id: 'rules', label: { en: 'Rules & Automation', he: 'חוקים ואוטומציה' }, componentName: 'RulesSettingsView', icon: SlidersHorizontal },
   { id: 'dimensions', label: { en: 'Dimensions & Labels', he: 'ממדים ותגיות' }, componentName: 'DimensionsView', icon: Tag },
   { id: 'appearance', label: { en: 'Appearance & Display', he: 'מראה ותצוגה' }, componentName: 'AppearanceSettingsView', icon: Sliders },
   { id: 'team', label: { en: 'Team & Invites', he: 'צוות והרשאות' }, componentName: 'TeamView', icon: Users },
   { id: 'billing', label: { en: 'Billing & Plan', he: 'תוכניות וחיוב' }, componentName: 'BillingView', icon: CreditCard },
   { id: 'templates', label: { en: 'Custom Templates', he: 'תבניות' }, componentName: 'TemplatesView', icon: FileText },
   { id: 'security', label: { en: 'Security', he: 'אבטחה' }, componentName: 'SecurityView', icon: ShieldCheck },
-  { id: 'rule', label: { en: 'AI & Rules', he: 'בינה מלאכותית' }, componentName: 'AISettingsView', icon: CpuIcon },
+  { id: 'rule', label: { en: 'AI & Copilot', he: 'בינה מלאכותית' }, componentName: 'AISettingsView', icon: CpuIcon },
   { id: 'developer', label: { en: 'Developer', he: 'מפתחים' }, componentName: 'DeveloperView', icon: TerminalIcon },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ];
 
 export const SETTINGS_COMPONENTS: Record<string, any> = {
+  'RulesSettingsView': lazy(() => import('../components/platform/settings/RulesSettings')),
   'DimensionsView': lazy(() => import('../components/platform/settings/DimensionsSettings')),
   'AppearanceSettingsView': lazy(() => import('../components/platform/settings/AppearanceSettings')),
   'TeamView': lazy(() => import('../components/platform/settings/TeamSettings')),
