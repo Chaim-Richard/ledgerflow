@@ -1,21 +1,10 @@
-import { ChartAccount, Transaction, Invoice, Bill } from '../types';
+import { ChartAccount } from '../types';
 
 export interface XeroAccountRow {
   Code: string;
   Name: string;
   Type: string;
   TaxRate?: string;
-}
-
-export interface XeroInvoiceRow {
-  InvoiceNumber: string;
-  ContactName: string;
-  Date: string;
-  DueDate: string;
-  UnitAmount: string;
-  Quantity: string;
-  AccountCode: string;
-  TaxType?: string;
 }
 
 /**
@@ -38,9 +27,11 @@ export function convertXeroAccounts(rows: XeroAccountRow[], workspaceId: string)
 
   return rows.map((r, idx) => ({
     id: `acc_xero_${r.Code || idx}`,
+    uid: 'usr_import',
+    workspaceId,
     code: r.Code || `99${idx}`,
     name: r.Name || 'Imported Xero Account',
     type: typeMapping[(r.Type || '').toUpperCase()] || 'expense',
-    workspaceId
+    balanceCents: 0
   }));
 }

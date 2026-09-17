@@ -8,13 +8,17 @@ export interface DepreciationPeriodEntry {
 }
 
 /**
- * Calculates straight-line depreciation schedule for a fixed asset.
+ * Calculates straight-line depreciation schedule for a fixed asset using canonical FixedAsset fields:
+ * - purchasePriceCents
+ * - salvageValueCents
+ * - usefulLifeYears
+ * - depreciationMethod ('straight-line')
  */
 export function calculateStraightLineDepreciation(
   asset: FixedAsset,
   currentDateIso: string = new Date().toISOString().split('T')[0]
 ): DepreciationPeriodEntry[] {
-  const cost = asset.costCents;
+  const cost = asset.purchasePriceCents || 0;
   const salvage = asset.salvageValueCents || 0;
   const usefulLifeMonths = (asset.usefulLifeYears || 1) * 12;
 
@@ -58,13 +62,13 @@ export function generateDepreciationLedgerEntry(
   return {
     workspaceId: asset.workspaceId,
     date: periodEntry.periodDate,
-    description: `Depreciation Expense - ${asset.name} (${asset.assetNumber || asset.id})`,
+    description: `Depreciation Expense - ${asset.name} (${asset.id})`,
     totalAmountCents: periodEntry.depreciationAmountCents,
     status: 'completed',
     type: 'journal',
     lines: [
-      { accountId: 'acc_depreciation_expense', amountCents: periodEntry.depreciationAmountCents },
-      { accountId: 'acc_accumulated_depreciation', amountCents: -periodEntry.depreciationAmountCents }
+      { accountId: 'acc_depreciation_expense', accountName: 'Depreciation Expense', amountCents: periodEntry.depreciationAmountCents },
+      { accountId: 'acc_accumulated_depreciation', accountName: 'Accumulated Depreciation', amountCents: -periodEntry.depreciationAmountCents }
     ]
   };
 }

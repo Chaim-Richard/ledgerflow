@@ -74,19 +74,35 @@ describe('Integrations & File Formats Suite (Items 147 - 150)', () => {
       const candidates: Transaction[] = [
         {
           id: 'tx_exact',
+          uid: 'usr_1',
           workspaceId: 'ws_test',
           date: '2026-09-10',
           description: 'Home Depot Store #412',
           totalAmountCents: 14999,
-          status: 'completed'
+          currency: 'USD',
+          status: 'completed',
+          type: 'expense',
+          createdAt: '2026-09-10T00:00:00Z',
+          lines: [
+            { accountId: 'acc_exp', accountName: 'Office Expense', amountCents: 14999 },
+            { accountId: 'acc_cash', accountName: 'Cash', amountCents: -14999 }
+          ]
         },
         {
           id: 'tx_different_amount',
+          uid: 'usr_1',
           workspaceId: 'ws_test',
           date: '2026-09-10',
           description: 'Office Depot',
           totalAmountCents: 5000,
-          status: 'completed'
+          currency: 'USD',
+          status: 'completed',
+          type: 'expense',
+          createdAt: '2026-09-10T00:00:00Z',
+          lines: [
+            { accountId: 'acc_exp', accountName: 'Office Expense', amountCents: 5000 },
+            { accountId: 'acc_cash', accountName: 'Cash', amountCents: -5000 }
+          ]
         }
       ];
 

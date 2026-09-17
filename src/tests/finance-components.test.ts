@@ -2,10 +2,9 @@ import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { IntercompanyEliminationEngine } from '../lib/intercompanyElimination';
 import { calculateSafeToSpend } from '../lib/algorithms/tax-set-aside';
-import { resolveAccountRole } from '../lib/accountUtils';
 import { isPostable, lineAmount } from '../lib/txFilters';
-import { ChartAccount, Transaction, Payment, CreditNote, VendorCredit, TaxRate } from '../types';
-import { parseLocalDate, getLocalDateISO, formatCurrency } from '../lib/utils';
+import { ChartAccount, Transaction, Payment } from '../types';
+import { parseLocalDate } from '../lib/utils';
 
 describe('Finance Components & Modules Suite (src/components/finance)', () => {
 
@@ -13,17 +12,19 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
     const mockPayments: Payment[] = [
       {
         id: 'pay_001',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         date: '2026-09-10',
         amountCents: 150000,
         currency: 'USD',
+        direction: 'received',
         contactId: 'cust_acme',
         contactName: 'Acme Corp',
-        contactType: 'customer',
-        paymentType: 'received',
-        method: 'wire',
+        method: 'bank_transfer',
         reference: 'WIRE-9921',
-        status: 'completed',
+        depositAccountId: 'acc_bank',
+        unappliedCents: 0,
+        status: 'posted',
         createdAt: '2026-09-10T10:00:00Z',
         allocations: [
           { documentId: 'inv_101', documentType: 'invoice', amountCents: 100000 },
@@ -32,17 +33,19 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
       },
       {
         id: 'pay_002',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         date: '2026-09-12',
         amountCents: 45000,
         currency: 'USD',
+        direction: 'made',
         contactId: 'vend_aws',
         contactName: 'Amazon Web Services',
-        contactType: 'vendor',
-        paymentType: 'disbursed',
-        method: 'credit_card',
+        method: 'card',
         reference: 'CC-4482',
-        status: 'completed',
+        depositAccountId: 'acc_bank',
+        unappliedCents: 0,
+        status: 'posted',
         createdAt: '2026-09-12T14:00:00Z',
         allocations: [
           { documentId: 'bill_201', documentType: 'bill', amountCents: 45000 }
@@ -62,7 +65,7 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
       assert.equal(search('Acme').length, 1);
       assert.equal(search('Acme')[0].id, 'pay_001');
 
-      assert.equal(search('wire').length, 1);
+      assert.equal(search('bank_transfer').length, 1);
       assert.equal(search('CC-4482').length, 1);
       assert.equal(search('NonExistent').length, 0);
     });
@@ -75,7 +78,7 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
       assert.equal(sorted[1].id, 'pay_001'); // Sept 10
     });
 
-    test('Payment allocation sum strictly matches or is within payment totalAmountCents', () => {
+    test('Payment allocation sum strictly matches or is within payment amountCents', () => {
       mockPayments.forEach(p => {
         const allocTotal = (p.allocations || []).reduce((sum, a) => sum + a.amountCents, 0);
         assert.ok(allocTotal <= p.amountCents, `Allocations ${allocTotal} exceeded payment amount ${p.amountCents}`);
@@ -92,9 +95,9 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
         return {
           id: `cn_${Date.now()}`,
           customerId: params.customerId,
-          totalAmountCents: params.amountCents,
-          remainingAmountCents: params.amountCents,
-          status: 'issued' as const,
+          amountCents: params.amountCents,
+          remainingCents: params.amountCents,
+          status: 'open' as const,
           invoiceId: params.invoiceId
         };
       };
@@ -104,8 +107,8 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
       assert.throws(() => createCustomerCreditNote({ customerId: 'cust_1', amountCents: -500 }), /Positive amount required/);
 
       const cn = createCustomerCreditNote({ customerId: 'cust_1', amountCents: 12000, invoiceId: 'inv_50' });
-      assert.equal(cn.totalAmountCents, 12000);
-      assert.equal(cn.status, 'issued');
+      assert.equal(cn.amountCents, 12000);
+      assert.equal(cn.status, 'open');
     });
 
     test('Vendor Credit requires valid positive amount and target vendor', () => {
@@ -115,8 +118,8 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
         return {
           id: `vc_${Date.now()}`,
           vendorId: params.vendorId,
-          totalAmountCents: params.amountCents,
-          remainingAmountCents: params.amountCents,
+          amountCents: params.amountCents,
+          remainingCents: params.amountCents,
           status: 'applied' as const,
           billId: params.billId
         };
@@ -126,12 +129,11 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
       assert.throws(() => createVendorCredit({ vendorId: 'vend_1', amountCents: -200 }), /Positive amount required/);
 
       const vc = createVendorCredit({ vendorId: 'vend_1', amountCents: 8500 });
-      assert.equal(vc.totalAmountCents, 8500);
+      assert.equal(vc.amountCents, 8500);
       assert.equal(vc.status, 'applied');
     });
 
     test('Double-entry ledger lines for credit note creation balance to zero', () => {
-      const amountCents = 15000;
       // Customer Credit Note: DR Sales Returns (Expense/Contra-Revenue), CR Accounts Receivable
       const lines = [
         { accountId: 'acc_sales_returns', accountName: 'Sales Returns & Allowances', amountCents: 15000 },
@@ -145,67 +147,92 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
 
   describe('3. TaxManager Calculation Engine', () => {
     const mockAccounts: ChartAccount[] = [
-      { id: 'acc_bank', code: '1010', name: 'Operating Bank', type: 'asset', workspaceId: 'ws_test' },
-      { id: 'acc_sales', code: '4010', name: 'Software Sales', type: 'income', workspaceId: 'ws_test' },
-      { id: 'acc_consulting', code: '4020', name: 'Consulting Revenue', type: 'income', workspaceId: 'ws_test' },
-      { id: 'acc_hosting', code: '5010', name: 'Cloud Hosting', type: 'expense', workspaceId: 'ws_test' },
-      { id: 'acc_contractors', code: '5020', name: '1099 Contractors', type: 'expense', workspaceId: 'ws_test' }
+      { id: 'acc_bank', uid: 'usr_1', code: '1010', name: 'Operating Bank', type: 'asset', workspaceId: 'ws_test', balanceCents: 0 },
+      { id: 'acc_sales', uid: 'usr_1', code: '4010', name: 'Software Sales', type: 'income', workspaceId: 'ws_test', balanceCents: 0 },
+      { id: 'acc_consulting', uid: 'usr_1', code: '4020', name: 'Consulting Revenue', type: 'income', workspaceId: 'ws_test', balanceCents: 0 },
+      { id: 'acc_hosting', uid: 'usr_1', code: '5010', name: 'Cloud Hosting', type: 'expense', workspaceId: 'ws_test', balanceCents: 0 },
+      { id: 'acc_contractors', uid: 'usr_1', code: '5020', name: '1099 Contractors', type: 'expense', workspaceId: 'ws_test', balanceCents: 0 }
     ];
 
     const mockTransactions: Transaction[] = [
       {
         id: 'tx_tax_1',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         date: '2026-03-15',
+        description: 'Software Sales Revenue',
         totalAmountCents: 1000000, // $10,000 Sales
+        currency: 'USD',
         status: 'completed',
+        type: 'income',
+        createdAt: '2026-03-15T00:00:00Z',
         lines: [
-          { accountId: 'acc_bank', amountCents: 1000000 },
-          { accountId: 'acc_sales', amountCents: -1000000 }
+          { accountId: 'acc_bank', accountName: 'Operating Bank', amountCents: 1000000 },
+          { accountId: 'acc_sales', accountName: 'Software Sales', amountCents: -1000000 }
         ]
       },
       {
         id: 'tx_tax_2',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         date: '2026-05-20',
+        description: 'Consulting Income',
         totalAmountCents: 500000, // $5,000 Consulting
+        currency: 'USD',
         status: 'completed',
+        type: 'income',
+        createdAt: '2026-05-20T00:00:00Z',
         lines: [
-          { accountId: 'acc_bank', amountCents: 500000 },
-          { accountId: 'acc_consulting', amountCents: -500000 }
+          { accountId: 'acc_bank', accountName: 'Operating Bank', amountCents: 500000 },
+          { accountId: 'acc_consulting', accountName: 'Consulting Revenue', amountCents: -500000 }
         ]
       },
       {
         id: 'tx_tax_3',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         date: '2026-06-10',
+        description: 'Cloud Hosting Expense',
         totalAmountCents: 300000, // $3,000 Hosting Expense
+        currency: 'USD',
         status: 'completed',
+        type: 'expense',
+        createdAt: '2026-06-10T00:00:00Z',
         lines: [
-          { accountId: 'acc_hosting', amountCents: 300000 },
-          { accountId: 'acc_bank', amountCents: -300000 }
+          { accountId: 'acc_hosting', accountName: 'Cloud Hosting', amountCents: 300000 },
+          { accountId: 'acc_bank', accountName: 'Operating Bank', amountCents: -300000 }
         ]
       },
       {
         id: 'tx_tax_4',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         date: '2026-07-01',
+        description: 'Contractor Payment',
         totalAmountCents: 200000, // $2,000 Contractor Expense
+        currency: 'USD',
         status: 'completed',
+        type: 'expense',
+        createdAt: '2026-07-01T00:00:00Z',
         lines: [
-          { accountId: 'acc_contractors', amountCents: 200000 },
-          { accountId: 'acc_bank', amountCents: -200000 }
+          { accountId: 'acc_contractors', accountName: '1099 Contractors', amountCents: 200000 },
+          { accountId: 'acc_bank', accountName: 'Operating Bank', amountCents: -200000 }
         ]
       },
       {
         id: 'tx_tax_draft',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         date: '2026-08-01',
+        description: 'Draft Sales Transaction',
         totalAmountCents: 999999,
+        currency: 'USD',
         status: 'draft', // Ignored because isPostable = false
+        type: 'income',
+        createdAt: '2026-08-01T00:00:00Z',
         lines: [
-          { accountId: 'acc_sales', amountCents: -999999 },
-          { accountId: 'acc_bank', amountCents: 999999 }
+          { accountId: 'acc_sales', accountName: 'Software Sales', amountCents: -999999 },
+          { accountId: 'acc_bank', accountName: 'Operating Bank', amountCents: 999999 }
         ]
       }
     ];
@@ -244,42 +271,47 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
 
   describe('4. TaxReserveWidget Safe-to-Spend Math', () => {
     const mockAccounts: ChartAccount[] = [
-      { id: 'acc_bank', code: '1010', name: 'Operating Bank', type: 'asset', workspaceId: 'ws_test' },
-      { id: 'acc_sales', code: '4010', name: 'Software Sales', type: 'income', workspaceId: 'ws_test' },
-      { id: 'acc_hosting', code: '5010', name: 'Cloud Hosting', type: 'expense', workspaceId: 'ws_test' }
+      { id: 'acc_bank', uid: 'usr_1', code: '1010', name: 'Operating Bank', type: 'asset', workspaceId: 'ws_test', balanceCents: 0 },
+      { id: 'acc_sales', uid: 'usr_1', code: '4010', name: 'Software Sales', type: 'income', workspaceId: 'ws_test', balanceCents: 0 },
+      { id: 'acc_hosting', uid: 'usr_1', code: '5010', name: 'Cloud Hosting', type: 'expense', workspaceId: 'ws_test', balanceCents: 0 }
     ];
 
     const mockTransactions: Transaction[] = [
       {
         id: 'tx_safe_1',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         date: '2026-09-01',
+        description: 'Revenue Receipt',
         totalAmountCents: 5000000, // $50,000 Cash
+        currency: 'USD',
         status: 'completed',
+        type: 'income',
+        createdAt: '2026-09-01T00:00:00Z',
         lines: [
-          { accountId: 'acc_bank', amountCents: 5000000 },
-          { accountId: 'acc_sales', amountCents: -5000000 }
+          { accountId: 'acc_bank', accountName: 'Operating Bank', amountCents: 5000000 },
+          { accountId: 'acc_sales', accountName: 'Software Sales', amountCents: -5000000 }
         ]
       },
       {
         id: 'tx_safe_2',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         date: '2026-09-05',
+        description: 'Hosting Invoice',
         totalAmountCents: 1000000, // $10,000 Expense
+        currency: 'USD',
         status: 'completed',
+        type: 'expense',
+        createdAt: '2026-09-05T00:00:00Z',
         lines: [
-          { accountId: 'acc_hosting', amountCents: 1000000 },
-          { accountId: 'acc_bank', amountCents: -1000000 }
+          { accountId: 'acc_hosting', accountName: 'Cloud Hosting', amountCents: 1000000 },
+          { accountId: 'acc_bank', accountName: 'Operating Bank', amountCents: -1000000 }
         ]
       }
     ];
 
     test('calculateSafeToSpend calculates tax reserve, recommended operating reserve, and disposable cash', () => {
-      // Raw Cash = 5,000,000 + 1,000,000 = 6,000,000 cents ($60,000)
-      // Net profit = 50,000 - 10,000 = $40,000 (4,000,000 cents)
-      // C-Corp tax = 21% of 40,000 = $8,400 (840,000 cents)
-      // Monthly expense = $10,000 -> 2 months operating reserve = $20,000 (2,000,000 cents)
-      // Safe to spend = 60,000 - 8,400 - 20,000 = $31,600 (3,160,000 cents)
       const result = calculateSafeToSpend(mockTransactions, mockAccounts, 'c_corp');
 
       assert.equal(result.revenueCents, 5000000);
@@ -292,8 +324,6 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
 
     test('calculateSafeToSpend pass_through tax rate calculates 25% blended tax', () => {
       const result = calculateSafeToSpend(mockTransactions, mockAccounts, 'pass_through');
-      // 25% of $40,000 = $10,000 (1,000,000 cents)
-      // Safe to spend = 60,000 - 10,000 - 20,000 = $30,000 (3,000,000 cents)
       assert.equal(result.estimatedTaxCents, 1000000);
       assert.equal(result.safeToSpendCents, 3000000);
     });
@@ -303,27 +333,36 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
     const multiEntityTx: Transaction[] = [
       {
         id: 'tx_sub1_sales',
+        uid: 'usr_1',
         workspaceId: 'ws_sub1',
         date: '2026-09-01',
+        description: 'Sub1 Sales',
         totalAmountCents: 500000,
+        currency: 'USD',
         status: 'completed',
-        worldId: 'world_entity_a',
+        type: 'income',
+        createdAt: '2026-09-01T00:00:00Z',
+        dimensions: { world: 'world_entity_a' },
         lines: [
-          { accountId: 'acc_bank_a', amountCents: 500000 },
-          { accountId: 'acc_rev_a', category: 'Operating Revenue', amountCents: -500000 }
+          { accountId: 'acc_bank_a', accountName: 'Bank A', amountCents: 500000 },
+          { accountId: 'acc_rev_a', accountName: 'Revenue A', category: 'Operating Revenue', amountCents: -500000 }
         ]
       },
       {
         id: 'tx_intercompany_transfer',
+        uid: 'usr_1',
         workspaceId: 'ws_parent',
         date: '2026-09-02',
+        description: 'Intercompany Transfer',
         totalAmountCents: 100000,
+        currency: 'USD',
         status: 'completed',
-        worldId: 'world_entity_a',
-        targetWorldId: 'world_entity_b',
+        type: 'journal',
+        createdAt: '2026-09-02T00:00:00Z',
+        dimensions: { world: 'world_entity_a', targetWorld: 'world_entity_b' },
         lines: [
-          { accountId: 'acc_due_from_b', category: 'Intercompany Receivables', amountCents: 100000 },
-          { accountId: 'acc_cash_a', amountCents: -100000 }
+          { accountId: 'acc_due_from_b', accountName: 'Due From B', category: 'Intercompany Receivables', amountCents: 100000 },
+          { accountId: 'acc_cash_a', accountName: 'Cash A', amountCents: -100000 }
         ]
       }
     ];
@@ -368,11 +407,9 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
       const inILS = convert(amountUSD, 'USD', 'ILS');
       assert.equal(inILS, 3750);
 
-      // Cross currency: EUR -> ILS
       const eurToIls = convert(inEUR, 'EUR', 'ILS');
       assert.ok(Math.abs(eurToIls - inILS) < 0.0001);
 
-      // Invert back: ILS -> USD
       const invertedUSD = convert(inILS, 'ILS', 'USD');
       assert.equal(invertedUSD, 1000);
     });

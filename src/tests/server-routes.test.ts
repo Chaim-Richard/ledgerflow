@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-import { isPostable, lineAmount } from '../lib/txFilters';
+import { isPostable } from '../lib/txFilters';
 import { Transaction } from '../types';
 
 describe('Server Routes & API Logic Suite (src/server/routes)', () => {
@@ -25,8 +25,8 @@ describe('Server Routes & API Logic Suite (src/server/routes)', () => {
         date: '2026-09-17',
         totalAmountCents: 1000,
         lines: [
-          { accountId: 'acc_1', amountCents: 1000 },
-          { accountId: 'acc_2', amountCents: -1000 }
+          { accountId: 'acc_1', accountName: 'Cash', amountCents: 1000 },
+          { accountId: 'acc_2', accountName: 'Revenue', amountCents: -1000 }
         ]
       };
       assert.equal(validateTransactionPayload(validTx).valid, true);
@@ -35,10 +35,19 @@ describe('Server Routes & API Logic Suite (src/server/routes)', () => {
     test('isPostable accurately filters draft, void, and soft-deleted transactions', () => {
       const activeTx: Transaction = {
         id: 'tx_1',
+        uid: 'usr_1',
         workspaceId: 'ws_1',
         date: '2026-09-17',
+        description: 'Test active transaction',
         totalAmountCents: 1000,
-        status: 'completed'
+        currency: 'USD',
+        status: 'completed',
+        type: 'income',
+        createdAt: '2026-09-17T00:00:00Z',
+        lines: [
+          { accountId: 'acc_1', accountName: 'Cash', amountCents: 1000 },
+          { accountId: 'acc_2', accountName: 'Sales', amountCents: -1000 }
+        ]
       };
 
       const draftTx: Transaction = { ...activeTx, id: 'tx_2', status: 'draft' };

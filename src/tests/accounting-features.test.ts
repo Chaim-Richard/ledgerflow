@@ -13,31 +13,35 @@ describe('Accounting Features & Engines Suite (Items 118 - 130)', () => {
     test('applyCreditNoteToInvoice applies partial credit and updates status and AR line', () => {
       const creditNote: CreditNote = {
         id: 'cn_100',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         customerId: 'cust_1',
-        totalAmountCents: 10000,
-        remainingAmountCents: 10000,
-        status: 'issued'
+        amountCents: 10000,
+        remainingCents: 10000,
+        date: '2026-09-01',
+        status: 'open',
+        createdAt: '2026-09-01T00:00:00Z'
       };
 
       const invoice: Invoice = {
         id: 'inv_200',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
-        invoiceNumber: 'INV-200',
+        number: 'INV-200',
         customerId: 'cust_1',
         date: '2026-09-01',
         dueDate: '2026-10-01',
-        totalAmountCents: 25000,
-        paidAmountCents: 0,
+        amountCents: 25000,
+        amountPaidCents: 0,
         status: 'sent'
       };
 
       const res = applyCreditNoteToInvoice(creditNote, invoice, 10000);
 
-      assert.equal(res.updatedCreditNote.remainingAmountCents, 0);
+      assert.equal(res.updatedCreditNote.remainingCents, 0);
       assert.equal(res.updatedCreditNote.status, 'applied');
-      assert.equal(res.updatedInvoice.paidAmountCents, 10000);
-      assert.equal(res.updatedInvoice.status, 'sent');
+      assert.equal(res.updatedInvoice.amountPaidCents, 10000);
+      assert.equal(res.updatedInvoice.status, 'partially_paid');
       assert.equal(res.ledgerTransaction.totalAmountCents, 10000);
       assert.equal(res.ledgerTransaction.lines?.length, 2);
     });
@@ -45,29 +49,33 @@ describe('Accounting Features & Engines Suite (Items 118 - 130)', () => {
     test('applyVendorCreditToBill applies vendor credit to bill', () => {
       const vendorCredit: VendorCredit = {
         id: 'vc_300',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         vendorId: 'vend_1',
-        totalAmountCents: 5000,
-        remainingAmountCents: 5000,
-        status: 'issued'
+        amountCents: 5000,
+        remainingCents: 5000,
+        date: '2026-09-01',
+        status: 'open',
+        createdAt: '2026-09-01T00:00:00Z'
       };
 
       const bill: Bill = {
         id: 'bill_400',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
-        billNumber: 'BILL-400',
+        number: 'BILL-400',
         vendorId: 'vend_1',
         date: '2026-09-01',
         dueDate: '2026-10-01',
-        totalAmountCents: 5000,
-        paidAmountCents: 0,
-        status: 'received'
+        amountCents: 5000,
+        amountPaidCents: 0,
+        status: 'pending'
       };
 
       const res = applyVendorCreditToBill(vendorCredit, bill, 5000);
 
-      assert.equal(res.updatedVendorCredit.remainingAmountCents, 0);
-      assert.equal(res.updatedBill.paidAmountCents, 5000);
+      assert.equal(res.updatedVendorCredit.remainingCents, 0);
+      assert.equal(res.updatedBill.amountPaidCents, 5000);
       assert.equal(res.updatedBill.status, 'paid');
     });
   });
@@ -76,13 +84,17 @@ describe('Accounting Features & Engines Suite (Items 118 - 130)', () => {
     test('calculateStraightLineDepreciation builds exact monthly schedule and salvage value bound', () => {
       const asset: FixedAsset = {
         id: 'asset_laptop',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
         name: 'MacBook Pro M3',
-        costCents: 240000, // $2,400
+        purchasePriceCents: 240000, // $2,400
         salvageValueCents: 0,
         usefulLifeYears: 2, // 24 months ($100/mo)
         purchaseDate: '2026-01-01',
-        depreciationMethod: 'straight_line'
+        depreciationMethod: 'straight-line',
+        accumulatedDepreciationCents: 0,
+        status: 'active',
+        createdAt: '2026-01-01T00:00:00Z'
       };
 
       const schedule = calculateStraightLineDepreciation(asset, '2026-01-01');
@@ -137,12 +149,15 @@ describe('Accounting Features & Engines Suite (Items 118 - 130)', () => {
     test('convertEstimateToInvoice creates valid draft invoice from estimate', () => {
       const estimate: Estimate = {
         id: 'est_10',
+        uid: 'usr_1',
         workspaceId: 'ws_test',
-        estimateNumber: 'EST-001',
+        number: 'EST-001',
         customerId: 'cust_9',
         customerName: 'Wayne Enterprises',
-        totalAmountCents: 150000,
+        amountCents: 150000,
+        date: '2026-09-01',
         status: 'accepted',
+        createdAt: '2026-09-01T00:00:00Z',
         lines: [
           { description: 'Security Consulting', quantity: 1, unitPriceCents: 150000, amountCents: 150000 }
         ]
@@ -151,8 +166,8 @@ describe('Accounting Features & Engines Suite (Items 118 - 130)', () => {
       const invoice = convertEstimateToInvoice(estimate);
 
       assert.equal(invoice.status, 'draft');
-      assert.equal(invoice.totalAmountCents, 150000);
-      assert.equal(invoice.lines?.length, 1);
+      assert.equal(invoice.amountCents, 150000);
+      assert.equal(invoice.items?.length, 1);
     });
   });
 });

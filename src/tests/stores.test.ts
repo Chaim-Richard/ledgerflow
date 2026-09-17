@@ -14,13 +14,7 @@ describe('Client Stores State & Mutator Suite (src/stores)', () => {
       useLedgerStore.setState({
         transactions: [],
         accounts: [],
-        workspaceId: 'ws_test_store',
-        selectedWorkspace: {
-          id: 'ws_test_store',
-          name: 'Test Store Workspace',
-          currency: 'USD',
-          createdAt: new Date().toISOString()
-        } as any
+        baseCurrency: 'USD'
       });
     });
 
@@ -28,13 +22,18 @@ describe('Client Stores State & Mutator Suite (src/stores)', () => {
       const mockTx: Transaction[] = [
         {
           id: 'tx_store_1',
+          uid: 'usr_1',
           workspaceId: 'ws_test_store',
           date: '2026-09-17',
+          description: 'Store Test Transaction',
           totalAmountCents: 10000,
+          currency: 'USD',
           status: 'completed',
+          type: 'income',
+          createdAt: '2026-09-17T00:00:00Z',
           lines: [
-            { accountId: 'acc_cash', amountCents: 10000 },
-            { accountId: 'acc_rev', amountCents: -10000 }
+            { accountId: 'acc_cash', accountName: 'Cash', amountCents: 10000 },
+            { accountId: 'acc_rev', accountName: 'Revenue', amountCents: -10000 }
           ]
         }
       ];
@@ -49,8 +48,8 @@ describe('Client Stores State & Mutator Suite (src/stores)', () => {
 
     test('setAccounts preserves chart of accounts hierarchy', () => {
       const mockAccounts: ChartAccount[] = [
-        { id: 'acc_100', code: '1000', name: 'Cash On Hand', type: 'asset', workspaceId: 'ws_test_store' },
-        { id: 'acc_400', code: '4000', name: 'Sales Income', type: 'income', workspaceId: 'ws_test_store' }
+        { id: 'acc_100', uid: 'usr_1', code: '1000', name: 'Cash On Hand', type: 'asset', workspaceId: 'ws_test_store', balanceCents: 10000 },
+        { id: 'acc_400', uid: 'usr_1', code: '4000', name: 'Sales Income', type: 'income', workspaceId: 'ws_test_store', balanceCents: 10000 }
       ];
 
       useLedgerStore.getState().setAccounts(mockAccounts);
@@ -74,8 +73,7 @@ describe('Client Stores State & Mutator Suite (src/stores)', () => {
     test('guest authentication flags correctly state guest status', () => {
       useAuthStore.setState({
         user: null,
-        isGuest: true,
-        loading: false
+        isGuest: true
       });
 
       const state = useAuthStore.getState();
@@ -118,7 +116,7 @@ describe('Client Stores State & Mutator Suite (src/stores)', () => {
 
   describe('4. useSavedViewsStore View Customization', () => {
     test('savedViewsStore holds and manages custom saved views', () => {
-      const views = useSavedViewsStore.getState().savedViews || [];
+      const views = useSavedViewsStore.getState().views || [];
       assert.ok(Array.isArray(views));
     });
   });
