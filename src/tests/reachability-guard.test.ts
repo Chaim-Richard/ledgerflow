@@ -114,26 +114,23 @@ test('Reachability Guard: True import graph walk from entry points (static + dyn
   });
 
   const ignoredFiles = [
-    'vite-env.d.ts',
-    'setupTests.ts',
-    'constants.ts',
-    'EmptyState.tsx',
-    'Money.tsx',
-    'Accounts.ts',
-    'FirebaseAuthAdapter.ts',
-    'paymentTerms.ts',
-    'auth.ts',
-    'index.ts',
-    'types.ts',
-    'vite.config.ts'
+    'src/types.ts', // Global type definitions module
+    'src/vite-env.d.ts', // Vite type declarations
+    'src/domain/Accounts.ts', // Domain model type definitions
+    'src/infra/auth/FirebaseAuthAdapter.ts', // Infrastructure auth adapter interface implementation
+    'src/lib/paymentTerms.ts', // Pure payment terms definition constants
+    'src/constants.ts', // Global application constants
+    'src/services/auth/index.ts', // Auth service singleton exports
+    'src/services/auth/types.ts', // Auth service type definitions
+    'vite.config.ts' // Vite bundler configuration file
   ];
 
   const orphanedFiles: string[] = [];
   for (const file of codeFiles) {
-    const bn = path.basename(file);
-    if (ignoredFiles.includes(bn)) continue;
+    const relPath = path.relative(rootDir, file);
+    if (ignoredFiles.includes(relPath)) continue;
     if (!visited.has(path.resolve(file))) {
-      orphanedFiles.push(path.relative(rootDir, file));
+      orphanedFiles.push(relPath);
     }
   }
 

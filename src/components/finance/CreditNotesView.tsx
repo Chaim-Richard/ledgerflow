@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { CreditNote, VendorCredit } from '../../types';
+import { applyCreditNoteToInvoice, applyVendorCreditToBill } from '../../lib/creditNoteEngine';
+import { EmptyState } from '../ui/EmptyState';
+import { Money } from '../ui/Money';
 import { 
   FileText, 
   Plus, 
@@ -172,11 +175,12 @@ export default function CreditNotesView() {
       {activeTab === 'customer' ? (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
           {creditNotes.length === 0 ? (
-            <div className="p-12 text-center text-gray-500 dark:text-gray-400">
-              <FileText className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-              <p className="font-semibold text-lg text-gray-700 dark:text-gray-300">No Customer Credit Notes</p>
-              <p className="text-sm mt-1">Issue credit notes for refunds or overbilling adjustments.</p>
-            </div>
+            <EmptyState
+              title="No Customer Credit Notes"
+              description="Issue credit notes for refunds or overbilling adjustments."
+              actionLabel="New Credit Note"
+              onAction={() => setShowCreateModal(true)}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -199,8 +203,8 @@ export default function CreditNotesView() {
                       <td className="p-3 font-medium text-gray-900 dark:text-white">{cn.customerName}</td>
                       <td className="p-3 text-gray-600 dark:text-gray-400">{cn.date}</td>
                       <td className="p-3 text-gray-600 dark:text-gray-400">{cn.reason}</td>
-                      <td className="p-3 text-right font-semibold text-gray-900 dark:text-white">{formatCurrency(cn.amountCents)}</td>
-                      <td className="p-3 text-right font-medium text-indigo-600 dark:text-indigo-400">{formatCurrency(cn.remainingCents)}</td>
+                      <td className="p-3 text-right font-semibold text-gray-900 dark:text-white"><Money cents={cn.amountCents} colored /></td>
+                      <td className="p-3 text-right font-medium text-indigo-600 dark:text-indigo-400"><Money cents={cn.remainingCents} colored /></td>
                       <td className="p-3 text-center">
                         <span className="px-2 py-1 text-xs rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 font-semibold">
                           {cn.status.toUpperCase()}
@@ -234,11 +238,12 @@ export default function CreditNotesView() {
       ) : (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
           {vendorCredits.length === 0 ? (
-            <div className="p-12 text-center text-gray-500 dark:text-gray-400">
-              <Building2 className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-              <p className="font-semibold text-lg text-gray-700 dark:text-gray-300">No Vendor Credits</p>
-              <p className="text-sm mt-1">Record rebates, returned goods, or price adjustments from suppliers.</p>
-            </div>
+            <EmptyState
+              title="No Vendor Credits"
+              description="Record rebates, returned goods, or price adjustments from suppliers."
+              actionLabel="New Vendor Credit"
+              onAction={() => setShowCreateModal(true)}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -260,8 +265,8 @@ export default function CreditNotesView() {
                       <td className="p-3 font-medium text-gray-900 dark:text-white">{vc.vendorName}</td>
                       <td className="p-3 text-gray-600 dark:text-gray-400">{vc.date}</td>
                       <td className="p-3 text-gray-600 dark:text-gray-400">{vc.reason}</td>
-                      <td className="p-3 text-right font-semibold text-gray-900 dark:text-white">{formatCurrency(vc.amountCents)}</td>
-                      <td className="p-3 text-right font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(vc.remainingCents)}</td>
+                      <td className="p-3 text-right font-semibold text-gray-900 dark:text-white"><Money cents={vc.amountCents} colored /></td>
+                      <td className="p-3 text-right font-medium text-emerald-600 dark:text-emerald-400"><Money cents={vc.remainingCents} colored /></td>
                       <td className="p-3 text-center">
                         <span className="px-2 py-1 text-xs rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 font-semibold">
                           {vc.status.toUpperCase()}
