@@ -1445,7 +1445,7 @@ fetch(url, {
     'Content-Type': 'application/json'
   },
   body: JSON.stringify(payload)
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
 
@@ -1500,7 +1500,7 @@ fetch("https://api.ledgerflow.io/api/v1/brain/analyze", {
     workspaceId: "${currentWorkspace?.id || 'ws_123'}",
     prompt: "Scan recent transactions for duplicated software subscriptions."
   })
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                </div>
@@ -1559,7 +1559,7 @@ fetch("https://api.ledgerflow.io/api/v1/brain/classify", {
     description: "AWS cloud server hosting billing",
     targetFeatures: []
   })
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                   </div>
 
@@ -1598,7 +1598,7 @@ print(response.json())` :
 
 fetch("https://api.ledgerflow.io/api/v1/ledger?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                </div>
@@ -1646,7 +1646,7 @@ fetch("https://api.ledgerflow.io/api/v1/ledger", {
     type: "asset",
     code: "1520"
   })
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                </div>
@@ -1671,7 +1671,7 @@ print(response.json())` :
 
 fetch("https://api.ledgerflow.io/api/v1/transactions?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                </div>
@@ -1700,7 +1700,7 @@ print(response.json())` :
 fetch("https://api.ledgerflow.io/api/v1/transactions/api-1701234567-abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   method: 'DELETE',
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                </div>
@@ -1725,7 +1725,7 @@ print(response.json())` :
 
 fetch("https://api.ledgerflow.io/api/v1/logs?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                </div>
@@ -1750,7 +1750,7 @@ print(response.json())` :
 
 fetch("https://api.ledgerflow.io/api/v1/metrics/summary?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                  
@@ -1792,7 +1792,7 @@ print(response.json())` :
 
 fetch("https://api.ledgerflow.io/api/v1/metrics?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                  
@@ -1861,7 +1861,7 @@ fetch("https://api.ledgerflow.io/api/v1/audit/deep", {
     "Content-Type": "application/json"
   },
   body: JSON.stringify({ workspaceId: "${currentWorkspace?.id || 'ws_123'}" })
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                  
@@ -1896,7 +1896,7 @@ print(response.json())` :
 
 fetch("https://api.ledgerflow.io/api/v1/audit/jobs/job_1701234567_abcd?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                  
@@ -1987,7 +1987,7 @@ fetch(url, {
     'Content-Type': 'application/json'
   },
   body: JSON.stringify(payload)
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                </div>
@@ -2264,7 +2264,7 @@ print(response.json())` :
 
 fetch("https://api.ledgerflow.io/api/v1/workspaces", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                </div>
@@ -2297,7 +2297,7 @@ print(response.json())` :
 
 fetch("https://api.ledgerflow.io/api/v1/projects?workspaceId=${currentWorkspace?.id || 'ws_123'}", {
   headers: { 'Authorization': 'Bearer <YOUR_API_KEY>' }
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                </div>
@@ -2357,7 +2357,7 @@ fetch(url, {
     'Content-Type': 'application/json'
   },
   body: JSON.stringify(payload)
-}).then(res => res.json()).then(console.log);`}
+}).then(res => res.json()).then(data => console.info(data));`}
 </pre>
                  </div>
                </div>
@@ -2761,7 +2761,7 @@ fetch(url, {
   }${sandboxEndpoint.startsWith('POST_') ? `,\n  body: JSON.stringify(${JSON.stringify(getSandboxPayload(sandboxEndpoint), null, 2).replace(/\n/g, '\n  ')})` : ''}
 })
 .then(res => res.json())
-.then(console.log)
+.then(data => console.info(data))
 .catch(console.error);`
 )}
                 </pre>

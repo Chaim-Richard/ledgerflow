@@ -20,7 +20,7 @@ export interface ProcessRecurringResult {
 
 export async function processAllRecurring(): Promise<ProcessRecurringResult> {
   const db = getDb();
-  console.log('[RecurringService] Starting background recurring processing...');
+  console.info('[RecurringService] Starting background recurring processing...');
 
   const result: ProcessRecurringResult = {
     processedCount: 0,
@@ -42,7 +42,7 @@ export async function processAllRecurring(): Promise<ProcessRecurringResult> {
     })) as RecurringTransaction[];
 
     if (recurringList.length === 0) {
-      console.log('[RecurringService] No active recurring transactions found.');
+      console.info('[RecurringService] No active recurring transactions found.');
       return result;
     }
 
@@ -51,11 +51,11 @@ export async function processAllRecurring(): Promise<ProcessRecurringResult> {
     result.totalDue = generatedTransactions.length;
 
     if (generatedTransactions.length === 0) {
-      console.log('[RecurringService] No recurring transactions due today.');
+      console.info('[RecurringService] No recurring transactions due today.');
       return result;
     }
 
-    console.log(`[RecurringService] Found ${generatedTransactions.length} transactions to generate.`);
+    console.info(`[RecurringService] Found ${generatedTransactions.length} transactions to generate.`);
 
     // 3. Process each generated transaction within a single atomic Firestore transaction per operation
     for (const item of generatedTransactions) {
@@ -109,7 +109,7 @@ export async function processAllRecurring(): Promise<ProcessRecurringResult> {
           return { txId, templateId, date: txDate };
         });
 
-        console.log(`[RecurringService] Successfully processed ${scopedKey}`);
+        console.info(`[RecurringService] Successfully processed ${scopedKey}`);
         result.processedCount++;
         result.details.push({
           operationId: scopedKey,
@@ -118,7 +118,7 @@ export async function processAllRecurring(): Promise<ProcessRecurringResult> {
         });
       } catch (err: any) {
         if (err.message?.includes('already succeeded') || err.status === 409) {
-          console.log(`[RecurringService] Skipping ${scopedKey} - already processed.`);
+          console.info(`[RecurringService] Skipping ${scopedKey} - already processed.`);
           result.skippedCount++;
           result.details.push({
             operationId: scopedKey,
@@ -136,7 +136,7 @@ export async function processAllRecurring(): Promise<ProcessRecurringResult> {
       }
     }
 
-    console.log(`[RecurringService] Completed. Processed: ${result.processedCount}, Skipped: ${result.skippedCount}, Failed: ${result.failedCount}`);
+    console.info(`[RecurringService] Completed. Processed: ${result.processedCount}, Skipped: ${result.skippedCount}, Failed: ${result.failedCount}`);
     return result;
   } catch (error: any) {
     console.error('[RecurringService] Error processing recurring transactions:', error);

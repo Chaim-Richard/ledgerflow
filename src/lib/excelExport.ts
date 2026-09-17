@@ -11,6 +11,14 @@ export interface ExportToExcelOptions {
 }
 
 /**
+ * Creates a raw initialized ExcelJS workbook.
+ */
+export async function createWorkbook(): Promise<any> {
+  const ExcelJS = await import('exceljs');
+  return new ExcelJS.Workbook();
+}
+
+/**
  * Downloads an ExcelJS workbook in the browser environment.
  */
 export async function downloadWorkbook(workbook: any, fileName: string): Promise<void> {
@@ -33,8 +41,7 @@ export async function createStyledWorkbook(
   sheetName: string,
   columns: ExcelColumn[]
 ): Promise<{ workbook: any; worksheet: any }> {
-  const ExcelJS = await import('exceljs');
-  const workbook = new ExcelJS.Workbook();
+  const workbook = await createWorkbook();
   const worksheet = workbook.addWorksheet(sheetName);
   worksheet.columns = columns.map(c => ({
     header: c.header,
@@ -42,6 +49,34 @@ export async function createStyledWorkbook(
     width: c.width || 20
   }));
   return { workbook, worksheet };
+}
+
+/**
+ * Reads 2D rows from an Excel file ArrayBuffer.
+ */
+export async function parseExcelToRows(data: ArrayBuffer): Promise<any[][]> {
+  const workbook = await createWorkbook();
+  await workbook.xlsx.load(data);
+  const worksheet = workbook.worksheets[0];
+  const rows: any[][] = [];
+  if (worksheet) {
+    worksheet.eachRow((row: any) => {
+      const rowData: any[] = [];
+      if (Array.isArray(row.values)) {
+        // row.values is 1-indexed in ExcelJS
+        for (let i = 1; i < row.values.length; i++) {
+          let val = row.values[i];
+          if (val && typeof val === 'object') {
+            if ('result' in val) val = val.result;
+            else if (val instanceof Date) val = val.toISOString().split('T')[0];
+          }
+          rowData.push(val || '');
+        }
+      }
+      rows.push(rowData);
+    });
+  }
+  return rows;
 }
 
 /**

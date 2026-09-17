@@ -21,6 +21,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { ChartAccount, Transaction } from '../../types';
 import { formatCurrency, parseLocalDate, getLocalDateISO } from '../../lib/utils';
+import { parseExcelToRows } from '../../lib/excelExport';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { format } from 'date-fns';
 
@@ -84,27 +85,8 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
           return row;
         });
       } else {
-        const ExcelJS = await import('exceljs');
-        const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(data as ArrayBuffer);
-        const worksheet = workbook.worksheets[0];
-        if (worksheet) {
-          worksheet.eachRow((row: any) => {
-            const rowData: any[] = [];
-            if (Array.isArray(row.values)) {
-              // row.values is 1-indexed in ExcelJS
-              for (let i = 1; i < row.values.length; i++) {
-                let val = row.values[i];
-                if (val && typeof val === 'object') {
-                  if ('result' in val) val = val.result;
-                  else if (val instanceof Date) val = val.toISOString().split('T')[0];
-                }
-                rowData.push(val || '');
-              }
-            }
-            json.push(rowData);
-          });
-        }
+        const excelRows = await parseExcelToRows(data as ArrayBuffer);
+        json.push(...excelRows);
       }
 
       if (json.length === 0) {

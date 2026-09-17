@@ -4,7 +4,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { CheckCircle2, Circle, AlertTriangle, ArrowRight, BookOpen, Lock, ShieldCheck, Download } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../../lib/utils';
-import { downloadWorkbook } from '../../lib/excelExport';
+import { downloadWorkbook, createWorkbook } from '../../lib/excelExport';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { Transaction } from '../../types';
 import { toast } from 'sonner';
@@ -122,8 +122,7 @@ export default function MonthEndCloseView() {
   const handleExportAccountantPackage = async () => {
     try {
       const toastId = toast.loading('Compiling accountant package workbook...');
-      const ExcelJS = await import('exceljs');
-      const workbook = new ExcelJS.Workbook();
+      const workbook = await createWorkbook();
 
       const periodTx = transactions.filter(t => !t.deletedAt && t.status !== 'void' && (t.date || '').startsWith(selectedMonth));
       const cumulativeTx = transactions.filter(t => !t.deletedAt && t.status !== 'void' && (t.date || '') <= `${selectedMonth}-31`);
