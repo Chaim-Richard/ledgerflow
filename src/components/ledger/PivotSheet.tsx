@@ -33,7 +33,7 @@ type PeriodFilter = 'all' | 'this_year' | 'last_year' | 'this_quarter' | 'this_m
 export default function PivotSheet({ transactions, isEmbedded = false }: PivotSheetProps) {
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
   const accounts = useLedgerStore(s => s.accounts);
-  const dimensionNodes = currentWorkspace?.dimensionNodes || [];
+  const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
   const activeDimensions = useMemo(() => {
     const custom = currentWorkspace?.dimensions || DEFAULT_WORKSPACE_DIMENSIONS;
     const baseIds = custom.map(d => ({ id: d.id, name: d.name }));

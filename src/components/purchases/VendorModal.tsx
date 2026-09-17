@@ -27,8 +27,8 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
   const autoRules = useLedgerStore(s => s.autoRules);
   const accounts = useLedgerStore(s => s.accounts);
   const matchingThreshold = useLedgerStore(s => s.matchingThreshold);
-  const workspace = useAuthStore(s => s.getCurrentWorkspace());
-  const engine = useMemo(() => new MatchingEngine(autoRules, analyticalPatternCache, undefined, matchingThreshold, transactions, workspace?.dimensionNodes, accounts), [autoRules, analyticalPatternCache, transactions, matchingThreshold, workspace?.dimensionNodes, accounts]);
+  const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
+  const engine = useMemo(() => new MatchingEngine(autoRules, analyticalPatternCache, undefined, matchingThreshold, transactions, dimensionNodes, accounts), [autoRules, analyticalPatternCache, transactions, matchingThreshold, dimensionNodes, accounts]);
 
   const handleNameChange = (name: string) => {
     setVendor(prev => ({ ...prev, name }));

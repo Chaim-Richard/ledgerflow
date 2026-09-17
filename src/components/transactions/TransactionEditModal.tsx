@@ -51,6 +51,7 @@ export default function TransactionEditModal({
   onReverseAndCorrect
 }: TransactionEditModalProps) {
   const baseCurrency = useLedgerStore(s => s.baseCurrency) || 'USD';
+  const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
   const todayISO = getLocalDateISO();
   const [isReverseMode, setIsReverseMode] = useState(initialReverseMode);
   const [reversalDate, setReversalDate] = useState(() => todayISO);
@@ -638,10 +639,10 @@ export default function TransactionEditModal({
 
                     {/* Bottom Row: Additional Dimensions */}
                     {activeDimensions.filter(d => d.id !== 'category').map(dim => {
-                      const dimVal = getLineDimension(line, transaction, dim.id, currentWorkspace?.dimensionNodes);
+                      const dimVal = getLineDimension(line, transaction, dim.id, dimensionNodes);
                       const displayVal = dimVal === 'Unassigned' ? '' : dimVal;
                       const pathOptions = Array.from(new Set([
-                        ...(currentWorkspace?.dimensionNodes || [])
+                        ...(dimensionNodes || [])
                           .filter(n => n.dimensionId === dim.id && n.status !== 'archived')
                           .map(n => n.description),
                         ...extractUniqueDimensionPaths(transactions, dim.id)
@@ -655,7 +656,7 @@ export default function TransactionEditModal({
                               value={displayVal}
                               disabled={isLocked}
                               onChange={(e) => {
-                                const updatedLine = setLineDimension(line, dim.id, e.target.value, currentWorkspace?.dimensionNodes);
+                                const updatedLine = setLineDimension(line, dim.id, e.target.value, dimensionNodes);
                                 handleLineChange(idx, updatedLine);
                               }}
                               placeholder={`Type or select ${dim.name.toLowerCase()}`}

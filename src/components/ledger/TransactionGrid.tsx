@@ -633,8 +633,7 @@ export default function TransactionGrid() {
     const state = useLedgerStore.getState();
     const rules = state.autoRules;
     const accounts = state.accounts;
-    const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
-    const engine = new MatchingEngine(rules, state.analyticalPatternCache, undefined, state.matchingThreshold, transactionsWithBalance as any, currentWorkspace?.dimensionNodes, accounts);
+    const engine = new MatchingEngine(rules, state.analyticalPatternCache, undefined, state.matchingThreshold, transactionsWithBalance as any, state.dimensionNodes, accounts);
     
     const suggestions = await engine.suggestCategoriesAsync(transactionsWithBalance as any, Math.round);
     

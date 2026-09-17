@@ -32,7 +32,7 @@ export default function FinancialChartsDashboard() {
 
       (tx.lines || []).forEach(l => {
         const acc = accounts.find(a => a.id === l.accountId);
-        const amount = lineAmount(l) / 100;
+        const amount = lineAmount(l, tx) / 100;
 
         if (l.accountId) {
           accountBalances[l.accountId] = (accountBalances[l.accountId] || 0) + amount;

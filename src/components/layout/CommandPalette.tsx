@@ -8,7 +8,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { parseNaturalLanguageEntry, ParsedCommandIntent } from '../../lib/algorithms/nl-parser';
 import { useShallow } from 'zustand/react/shallow';
-import { Transaction, Project } from '../../types';
+import { Transaction, Project, DimensionNode } from '../../types';
 import { getLocalDateISO, resolveAccountName } from '../../lib/utils';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
@@ -149,14 +149,13 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       return searchTerms.every(term => str.includes(term));
     };
 
-    const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
-    const dimensionNodes = currentWorkspace?.dimensionNodes || [];
+    const dimensionNodes: DimensionNode[] = useLedgerStore.getState().dimensionNodes || [];
     const accounts = useLedgerStore.getState().accounts;
     
     // Check if the query matches a DimensionNode
-    const matchedDimensionNodes = dimensionNodes.filter(n => 
+    const matchedDimensionNodes = dimensionNodes.filter((n: DimensionNode) => 
       match(n.id) || match(n.description) || matchArray(n.aliases)
-    ).map(n => n.id);
+    ).map((n: DimensionNode) => n.id);
 
     // 1. Transactions
     ledger.transactions.forEach(t => {
@@ -194,7 +193,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
     });
 
     // 1.5. Dimension Nodes
-    dimensionNodes.forEach(node => {
+    dimensionNodes.forEach((node: DimensionNode) => {
       if (match(node.id) || match(node.description) || matchArray(node.aliases)) {
         results.push({
           id: `dim-${node.id}`,

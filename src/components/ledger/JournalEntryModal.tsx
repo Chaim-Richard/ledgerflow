@@ -109,8 +109,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   const analyticalPatternCache = useLedgerStore(s => s.analyticalPatternCache);
   const autoRules = useLedgerStore(s => s.autoRules);
   const matchingThreshold = useLedgerStore(s => s.matchingThreshold);
+  const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
   
-  const engine = useMemo(() => new MatchingEngine(autoRules, analyticalPatternCache, undefined, matchingThreshold, transactions.filter(isPostable), workspace?.dimensionNodes, accounts), [autoRules, analyticalPatternCache, transactions, matchingThreshold, workspace?.dimensionNodes, accounts]);
+  const engine = useMemo(() => new MatchingEngine(autoRules, analyticalPatternCache, undefined, matchingThreshold, transactions.filter(isPostable), dimensionNodes, accounts), [autoRules, analyticalPatternCache, transactions, matchingThreshold, dimensionNodes, accounts]);
   
   const spellChecker = useMemo(() => {
     const dictionary = [

@@ -24,7 +24,8 @@ import {
   PayRun, 
   TaxRate,
   CustomTemplate,
-  BankStatementLine
+  BankStatementLine,
+  DimensionNode
 } from '../types';
 
 
@@ -54,6 +55,7 @@ export interface LedgerState {
   classes: string[];
   locations: string[];
   customFields: { name: string, type: string, showOnSales: boolean, showOnExpenses: boolean }[];
+  dimensionNodes: DimensionNode[];
   auditLogs: any[];
   bankLines: BankStatementLine[];
   partners: any[];
@@ -125,6 +127,7 @@ export interface LedgerState {
   setLocations: (data: string[]) => void;
   setCustomFields: (data: { name: string, type: string, showOnSales: boolean, showOnExpenses: boolean }[]) => void;
   setAuditLogs: (data: any[]) => void;
+  setDimensionNodes: (data: DimensionNode[]) => void;
   setPartners: (data: any[]) => void;
   setReconciliations: (data: any[]) => void;
   setBankLines: (data: BankStatementLine[]) => void;
@@ -168,6 +171,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   classes: [],
   locations: [],
   customFields: [],
+  dimensionNodes: [],
   auditLogs: [],
   partners: [],
   reconciliations: [],
@@ -498,6 +502,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   setLocations: (locations) => set({ locations }),
   setCustomFields: (customFields) => set({ customFields }),
   setAuditLogs: (auditLogs) => set({ auditLogs }),
+  setDimensionNodes: (dimensionNodes) => set({ dimensionNodes }),
   setPartners: (partners) => set({ partners }),
   setReconciliations: (reconciliations) => set({ reconciliations }),
   setBankLines: (bankLines) => set({ bankLines }),
@@ -573,6 +578,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       classes: [],
       locations: [],
       customFields: [],
+      dimensionNodes: [],
       auditLogs: [],
       partners: [],
       reconciliations: [],

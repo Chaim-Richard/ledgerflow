@@ -95,7 +95,7 @@ service cloud.firestore {
         (!("computeCreditBalance" in request.resource.data) || request.resource.data.computeCreditBalance <= 100) &&
         (!("bypassBilling" in request.resource.data) || request.resource.data.bypassBilling == false) &&
         (!("maxSeats" in request.resource.data) || request.resource.data.maxSeats <= 5) &&
-        affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "roles", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore", "defaultAccountMappings", "dimensions", "dimensionNodes", "allowedWorldPaths", "bypassBilling", "members"]);
+        affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "roles", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore", "defaultAccountMappings", "dimensions", "allowedWorldPaths", "bypassBilling", "members"]);
       allow update: if isSignedIn() && (
         isPlatformAdmin() ||
         (
@@ -108,7 +108,7 @@ service cloud.firestore {
         )
       ) &&
       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["lockDate"]) || canAdmin(workspaceId)) &&
-      affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "roles", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore", "defaultAccountMappings", "dimensions", "dimensionNodes", "allowedWorldPaths", "bypassBilling", "members"]);
+      affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "roles", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore", "defaultAccountMappings", "dimensions", "allowedWorldPaths", "bypassBilling", "members"]);
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 

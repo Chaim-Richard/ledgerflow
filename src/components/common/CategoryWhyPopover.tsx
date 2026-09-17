@@ -18,6 +18,7 @@ export default function CategoryWhyPopover({ description, accountName, className
   const matchingThreshold = useLedgerStore(s => s.matchingThreshold);
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
+  const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
   const user = useAuthStore(s => s.user);
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
 
@@ -28,10 +29,10 @@ export default function CategoryWhyPopover({ description, accountName, className
       user?.uid,
       matchingThreshold || 0.8,
       transactions || [],
-      currentWorkspace?.dimensionNodes,
+      dimensionNodes,
       accounts || []
     );
-  }, [autoRules, analyticalPatternCache, user?.uid, matchingThreshold, transactions, currentWorkspace?.dimensionNodes, accounts]);
+  }, [autoRules, analyticalPatternCache, user?.uid, matchingThreshold, transactions, dimensionNodes, accounts]);
 
   const debugInfo = useMemo(() => {
     if (!description) return null;

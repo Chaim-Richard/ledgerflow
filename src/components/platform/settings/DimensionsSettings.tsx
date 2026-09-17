@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Tag, 
   Plus, 
@@ -109,14 +109,20 @@ export default function DimensionsSettings() {
   const setWorkspaces = useAuthStore(s => s.setWorkspaces);
   const transactions = useLedgerStore(s => s.transactions);
   const setTransactions = useLedgerStore(s => s.setTransactions);
+  const storeDimensionNodes = useLedgerStore(s => s.dimensionNodes);
+  const storeSetDimensionNodes = useLedgerStore(s => s.setDimensionNodes);
 
   const [dimensions, setDimensions] = useState<DimensionDefinition[]>(() => {
     return currentWorkspace?.dimensions || DEFAULT_WORKSPACE_DIMENSIONS;
   });
 
-  const [dimensionNodes, setDimensionNodes] = useState<DimensionNode[]>(() => {
-    return currentWorkspace?.dimensionNodes || [];
-  });
+  const [dimensionNodes, setDimensionNodes] = useState<DimensionNode[]>(storeDimensionNodes);
+
+  useEffect(() => {
+    if (storeDimensionNodes && storeDimensionNodes.length > 0) {
+      setDimensionNodes(storeDimensionNodes);
+    }
+  }, [storeDimensionNodes]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
@@ -256,11 +262,14 @@ export default function DimensionsSettings() {
         await batch.commit();
       }
 
+      // Update store slice
+      storeSetDimensionNodes(dimensionNodes);
+
       // Update local workspace store
       const allWorkspaces = useAuthStore.getState().workspaces;
       const updated = allWorkspaces.map(w => {
         if (w.id === currentWorkspaceId) {
-          return { ...w, dimensions, dimensionNodes };
+          return { ...w, dimensions };
         }
         return w;
       });
@@ -326,11 +335,14 @@ export default function DimensionsSettings() {
         }
       }
 
+      // Update store slice
+      storeSetDimensionNodes(updatedNodes);
+
       // Update local workspace store
       const allWorkspaces = useAuthStore.getState().workspaces;
       const updated = allWorkspaces.map(w => {
         if (w.id === currentWorkspaceId) {
-          return { ...w, dimensionNodes: updatedNodes };
+          return { ...w, dimensions };
         }
         return w;
       });
@@ -376,10 +388,13 @@ export default function DimensionsSettings() {
         await batch.commit();
       }
 
+      // Update store slice
+      storeSetDimensionNodes(allNodes);
+
       const allWorkspaces = useAuthStore.getState().workspaces;
       const updated = allWorkspaces.map(w => {
         if (w.id === currentWorkspaceId) {
-          return { ...w, dimensionNodes: allNodes };
+          return { ...w, dimensions };
         }
         return w;
       });

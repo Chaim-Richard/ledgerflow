@@ -49,6 +49,7 @@ export function useTransactionActions() {
   const accounts = useLedgerStore(s => s.accounts);
   const analyticalPatternCache = useLedgerStore(s => s.analyticalPatternCache);
   const matchingThreshold = useLedgerStore(s => s.matchingThreshold);
+  const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
   
   const userKey = userProfile?.geminiApiKey;
   const { setIsSyncing } = useUIStore.getState();
@@ -156,8 +157,7 @@ export function useTransactionActions() {
       );
       const rulesSnap = await getDocs(qRules);
       const activeRules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-      const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
-      const engine = new MatchingEngine(activeRules, analyticalPatternCache, user.uid, matchingThreshold, existingTransactions, currentWorkspace?.dimensionNodes, accounts);
+      const engine = new MatchingEngine(activeRules, analyticalPatternCache, user.uid, matchingThreshold, existingTransactions, dimensionNodes, accounts);
 
       const accountsByName = new Map<string, any>();
       const accountsById = new Map<string, any>();
@@ -929,7 +929,7 @@ export function useTransactionActions() {
         user?.uid || '',
         matchingThreshold || 0.85,
         existingTransactions || [],
-        currentWorkspace?.dimensionNodes,
+        dimensionNodes,
         accounts
       );
 

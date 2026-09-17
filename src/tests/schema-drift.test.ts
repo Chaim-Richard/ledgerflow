@@ -33,7 +33,7 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
       'notifications', 'plan', 'billingCycle', 'concurrentUserLimit', 'activeUserCount',
       'maxSeats', 'seatCount', 'totalQueriesThisMonth', 'computeHardnessScore',
       'billingLedgerChain', 'apiQuotaTotalCentsUsed', 'apiQuotaMonthlyLimitCents',
-      'computeCreditBalance', 'dimensions', 'dimensionNodes', 'allowedWorldPaths',
+      'computeCreditBalance', 'dimensions', 'allowedWorldPaths',
       'bypassBilling', 'stripeCustomerId', 'stripeSubscriptionId', 'status', 'adminCount', 'admins', 'roles', 'members'
     ];
 

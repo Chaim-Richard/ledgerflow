@@ -127,8 +127,8 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       const historySnap = await getDocs(qHistory);
       const historicalTxs = historySnap.docs.map(d => d.data() as Transaction);
 
-      const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
-      const localEngine = new MatchingEngine(activeRules, {}, '', Math.max(0.5, matchingThreshold - 0.03), historicalTxs, currentWorkspace?.dimensionNodes, accounts);
+      const dimensionNodes = useLedgerStore.getState().dimensionNodes;
+      const localEngine = new MatchingEngine(activeRules, {}, '', Math.max(0.5, matchingThreshold - 0.03), historicalTxs, dimensionNodes, accounts);
 
       const resolvedBatch: any[] = [];
       const outstandingForAI: any[] = [];

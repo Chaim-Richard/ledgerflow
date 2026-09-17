@@ -38,6 +38,7 @@ import {
   UserProfile,
   DimensionNode
 } from '../types';
+import { migrateWorkspaceDimensionNodesToCollection } from '../lib/migrations/dimensionNodesMigration';
 
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 
@@ -305,18 +306,16 @@ export function useLedgerData() {
         let nodes = snapDimensionNodes.docs.map(d => ({ ...d.data() } as DimensionNode));
         if (snapDimensionNodes.empty) {
           const currentWorkspace = useAuthStore.getState().workspaces.find(w => w.id === currentWorkspaceId);
-          if (currentWorkspace?.dimensionNodes && currentWorkspace.dimensionNodes.length > 0) {
-            nodes = currentWorkspace.dimensionNodes;
+          if ((currentWorkspace as any)?.dimensionNodes && (currentWorkspace as any).dimensionNodes.length > 0) {
+            nodes = (currentWorkspace as any).dimensionNodes;
+            if (db && currentWorkspaceId) {
+              migrateWorkspaceDimensionNodesToCollection(db, currentWorkspaceId).catch(e => {
+                console.warn('[Firebase Ledger] Background dimension migration error:', e);
+              });
+            }
           }
         }
-        const allWorkspaces = useAuthStore.getState().workspaces;
-        const updated = allWorkspaces.map(w => {
-          if (w.id === currentWorkspaceId) {
-            return { ...w, dimensionNodes: nodes };
-          }
-          return w;
-        });
-        useAuthStore.getState().setWorkspaces(updated);
+        useLedgerStore.getState().setDimensionNodes(nodes);
       } catch (err) {
         console.warn("[Firebase Ledger] Error loading static configs:", err);
       }

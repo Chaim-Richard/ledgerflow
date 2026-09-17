@@ -1,5 +1,12 @@
 import { RecurringTransaction, Transaction } from '../types';
-import { parseLocalDate } from './utils';
+
+function parseDateStrToMs(dateStr: string): number {
+  if (!dateStr) return NaN;
+  const cleanStr = dateStr.slice(0, 10);
+  const [y, m, d] = cleanStr.split('-').map(Number);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return NaN;
+  return Date.UTC(y, m - 1, d);
+}
 
 export function calculateNextOccurrence(
   currentDateStr: string,
@@ -48,7 +55,7 @@ export interface DueRecurringResult {
 
 export function findDueRecurring(recurringList: RecurringTransaction[], asOfDateStr?: string): DueRecurringResult {
   const todayStr = asOfDateStr || new Date().toISOString().slice(0, 10);
-  const asOfTime = parseLocalDate(todayStr).getTime();
+  const asOfTime = parseDateStrToMs(todayStr);
 
   const dueTemplates: RecurringTransaction[] = [];
   const generatedTransactions: DueRecurringResult['generatedTransactions'] = [];
@@ -57,7 +64,7 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
     if (!item.isActive) continue;
     
     const currentNextOccStr = item.nextOccurrence || item.createdAt.slice(0, 10);
-    let nextOccTime = parseLocalDate(currentNextOccStr).getTime();
+    let nextOccTime = parseDateStrToMs(currentNextOccStr);
 
     if (!isNaN(nextOccTime) && nextOccTime <= asOfTime) {
       dueTemplates.push(item);
@@ -113,7 +120,7 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
         };
 
         latestNextOccStr = calculateNextOccurrence(latestNextOccStr, item.frequency, anchorDay);
-        nextOccTime = parseLocalDate(latestNextOccStr).getTime();
+        nextOccTime = parseDateStrToMs(latestNextOccStr);
 
         generatedTransactions.push({
           transaction: newTx,

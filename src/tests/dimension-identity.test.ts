@@ -389,7 +389,30 @@ describe('Stable Dimension Identity & Label Node Management', () => {
   });
 
   test('9. Serialized workspace document size stays under 900 KB even with 10,000 dimension nodes (moved to separate collection)', () => {
-    // A mock workspace document containing dimensions but NOT nested dimensionNodes
+    // Generate 10,000 nodes in the workspace ecosystem
+    const nodes: DimensionNode[] = [];
+    for (let i = 0; i < 10000; i++) {
+      nodes.push({
+        id: `node-${i}`,
+        dimensionId: i % 2 === 0 ? 'category' : 'project',
+        description: `Operational Node Description Item ${i} with extended audit detail`,
+        aliases: [`ALIAS_${i}`, `CODE_${i}`],
+        status: 'active'
+      });
+    }
+
+    // If naively nested inside the workspace document (the legacy architecture):
+    const naiveNestedDoc = {
+      id: 'ws-test',
+      uid: 'user-test',
+      name: 'Bloated Workspace',
+      dimensions: [{ id: 'category', name: 'Category' }],
+      dimensionNodes: nodes
+    };
+    const naiveBytes = Buffer.byteLength(JSON.stringify(naiveNestedDoc), 'utf8');
+    assert.ok(naiveBytes > 900 * 1024, `Expected 10,000 nested nodes to exceed 900KB, was ${naiveBytes} bytes`);
+
+    // Under the separate collection architecture, the workspace document only holds configuration
     const workspaceDoc = {
       id: 'ws-test',
       uid: 'user-test',
@@ -400,15 +423,13 @@ describe('Stable Dimension Identity & Label Node Management', () => {
         { id: 'category', name: 'Category', sortOrder: 0 },
         { id: 'project', name: 'Project', sortOrder: 1 }
       ]
-      // dimensionNodes is omitted or empty on the workspace document itself
     };
 
-    // Serialize the workspace document as it would be stored in Firestore
+    // Serialize the workspace document as stored in Firestore
     const serialized = JSON.stringify(workspaceDoc);
     const sizeInBytes = Buffer.byteLength(serialized, 'utf8');
 
-    // It should be extremely small (less than 5 KB), well under the 900 KB ceiling
-    assert.ok(sizeInBytes < 5000); 
-    assert.ok(sizeInBytes < 900 * 1024); 
+    assert.ok(sizeInBytes < 900 * 1024, `Workspace doc size ${sizeInBytes} bytes exceeds 900 KB ceiling`);
+    assert.ok(sizeInBytes < 5000, `Workspace doc should be compact (< 5KB)`);
   });
 });

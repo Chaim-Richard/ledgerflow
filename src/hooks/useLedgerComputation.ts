@@ -4,6 +4,7 @@ import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
 import { isPostable, lineAmount, isInflow, isOutflow, isRevenueAccount, isExpenseAccount, calculateFilteredTotals } from '../lib/txFilters';
 import { useScenarioStore } from '../lib/scenarioStore';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useLedgerStore } from '../stores/useLedgerStore';
 import { useSavedViewsStore } from '../stores/useSavedViewsStore';
 import { addDays, addWeeks, addMonths, addYears, format } from 'date-fns';
 import { parseLocalDate } from '../lib/utils';
@@ -18,7 +19,7 @@ export function useLedgerComputation(
 ) {
   const user = useAuthStore(s => s.user);
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
-  const dimensionNodes = currentWorkspace?.dimensionNodes || [];
+  const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
   
   const scenarios = useScenarioStore(state => state.scenarios);
   const activeScenarioId = useScenarioStore(state => state.activeScenarioId);

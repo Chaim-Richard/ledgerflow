@@ -64,7 +64,6 @@ export interface Workspace {
   fiscalYearStartMonth?: number;
   fiscalYearStartDay?: number;
   dimensions?: DimensionDefinition[]; // Dynamic workspace dimensional coordinate schema
-  dimensionNodes?: DimensionNode[];   // Nodes/labels within dimensions (e.g., P1 under property)
   allowedWorldPaths?: string[];       // Coordinate-scoped permissions for sub-ledgers
   numberingSeries?: Record<string, { prefix: string; nextNumber: number; padding: number }>;
   roles?: Record<string, 'owner' | 'accountant' | 'bookkeeper' | 'viewer'>;
