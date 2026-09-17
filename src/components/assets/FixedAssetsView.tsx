@@ -4,7 +4,6 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { calculateStraightLineDepreciation, generateDepreciationLedgerEntry, DepreciationPeriodEntry } from '../../lib/depreciationEngine';
 import { formatCurrency, formatDate } from '../../lib/utils';
-import { isPostable, lineAmount } from '../../lib/txFilters';
 import { toast } from 'sonner';
 import { 
   Building, 

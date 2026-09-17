@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { Building, AlertTriangle, CheckCircle2, Clock, RefreshCw, Landmark, ArrowUpRight } from 'lucide-react';
+import { Building, AlertTriangle, CheckCircle2, Clock, RefreshCw, Landmark, ArrowRightLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { getIdToken } from '../../firebase';
 import { cn } from '../../lib/utils';
 import PlaidConnectButton from '../finance/PlaidConnectButton';
 import { parseCamt053Statement } from '../../lib/camt053Parser';
 import { scoreReceiptMatches } from '../../lib/receiptMatcher';
+import { TransferModal } from './TransferModal';
 
 export default function Banking() {
   const accounts = useLedgerStore(s => s.accounts).filter(a => 
@@ -20,6 +21,7 @@ export default function Banking() {
   );
   
   const [syncingAccountId, setSyncingAccountId] = useState<string | null>(null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   const handleSyncNow = async (accountName: string, accountId: string) => {
     setSyncingAccountId(accountId);
@@ -67,7 +69,14 @@ export default function Banking() {
               Manage your connected financial institutions, live feeds, and reconciliation pipelines.
             </p>
           </div>
-          <div className="shrink-0">
+          <div className="shrink-0 flex items-center gap-2">
+            <button
+              onClick={() => setIsTransferModalOpen(true)}
+              className="px-4 py-2 bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-bold rounded-xl border border-neutral-200 transition-all flex items-center gap-2 shadow-xs cursor-pointer"
+            >
+              <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
+              <span>Transfer Funds</span>
+            </button>
             <PlaidConnectButton onSuccessSync={handleSyncSuccess} />
           </div>
         </div>
@@ -126,6 +135,7 @@ export default function Banking() {
           )}
         </div>
       </div>
+      <TransferModal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} />
     </div>
   );
 }

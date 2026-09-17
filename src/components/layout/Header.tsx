@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
-import { Menu, Search, Sun, Moon, Plus, Compass, ShieldCheck, HelpCircle, Bell } from 'lucide-react';
+import { Menu, Search, Sun, Moon, Plus, Compass, ShieldCheck, HelpCircle, Bell, Users } from 'lucide-react';
 import QuickCreateMenu from './QuickCreateMenu';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import NotificationDrawer from './NotificationDrawer';
 import { t } from '../../locales/i18n';
+import { useCollaborators } from '../../hooks/useCollaborators';
 
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 
@@ -23,6 +24,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
   const theme = useUIStore(s => s.theme);
   const setTheme = useUIStore(s => s.setTheme);
   const currentRole = useCurrentRole();
+  const collaborators = useCollaborators();
 
   const { notifications, setDrawerOpen, runScheduledChecks } = useNotificationStore();
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -76,6 +78,24 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           }`} title={`Your current role in this workspace is ${currentRole}`}>
             {currentRole}
           </span>
+          {collaborators.length > 0 && (
+            <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-[var(--line)]">
+              <Users size={13} className="text-[var(--brass)]" />
+              <div className="flex -space-x-1.5">
+                {collaborators.slice(0, 3).map(c => (
+                  <div 
+                    key={c.id} 
+                    className="w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center text-white ring-1 ring-white" 
+                    style={{ backgroundColor: c.color }}
+                    title={`${c.name} (${c.email})`}
+                  >
+                    {c.name.charAt(0).toUpperCase()}
+                  </div>
+                ))}
+              </div>
+              <span className="text-[11px] font-mono text-[var(--muted)]">{collaborators.length} active</span>
+            </div>
+          )}
         </div>
       </div>
 
