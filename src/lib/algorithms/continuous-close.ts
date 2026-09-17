@@ -1,9 +1,10 @@
 import { AlgorithmDefinition } from './types';
 import { Transaction } from '../../types';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export function runContinuousCloseCheck(transactions: readonly Transaction[]) {
   const totalCount = transactions.length;
-  const postedCount = transactions.filter(t => t.status === 'completed' || t.status === 'reconciled' || t.status === 'approved').length;
+  const postedCount = transactions.filter(isPostable).length;
   const pendingCount = totalCount - postedCount;
   
   // Calculate debits and credits balance
@@ -11,9 +12,11 @@ export function runContinuousCloseCheck(transactions: readonly Transaction[]) {
   let totalCreditsCents = 0;
 
   transactions.forEach(tx => {
+    if (!isPostable(tx)) return;
     tx.lines.forEach(line => {
-      if (line.amountCents > 0) totalDebitsCents += line.amountCents;
-      else totalCreditsCents += Math.abs(line.amountCents);
+      const amt = lineAmount(line, tx);
+      if (amt > 0) totalDebitsCents += amt;
+      else totalCreditsCents += Math.abs(amt);
     });
   });
 

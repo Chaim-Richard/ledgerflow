@@ -56,7 +56,7 @@ import {
 import { BayesianClassifier, sha256Sync } from "./src/lib/algorithms.ts";
 import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
 import { TruthEngine } from "./src/modules/integrity/TruthEngine.ts";
-import { calculateNetIncome } from "./src/lib/txFilters.ts";
+import { calculateNetIncome, isPostable, lineAmount } from "./src/lib/txFilters.ts";
 import { TransactionValidator } from "./src/kernel/validation/TransactionValidator.ts";
 import { assertWorkspaceAccess } from "./src/server/db/firestore.ts";
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
@@ -2447,11 +2447,13 @@ async function startServer() {
       });
 
       transactions.forEach((tx: any) => {
+        if (!isPostable(tx)) return;
         const txLines = tx.lines || [];
         txLines.forEach((line: any) => {
-          globalNetBalanceCents += (line.amountCents || 0);
+          const amt = lineAmount(line, tx);
+          globalNetBalanceCents += amt;
           if (line.accountId) {
-            accountBalances[line.accountId] = (accountBalances[line.accountId] || 0) + (line.amountCents || 0);
+            accountBalances[line.accountId] = (accountBalances[line.accountId] || 0) + amt;
           }
         });
       });
@@ -2880,9 +2882,9 @@ async function startServer() {
       const accountBalances: Record<string, number> = {};
 
       transactions.forEach(tx => {
-         if (tx.status === 'void' || tx.status === 'voided') return;
+         if (!isPostable(tx)) return;
          tx.lines?.forEach((line: any) => {
-             accountBalances[line.accountId] = (accountBalances[line.accountId] || 0) + line.amountCents;
+             accountBalances[line.accountId] = (accountBalances[line.accountId] || 0) + lineAmount(line, tx);
          });
       });
 
@@ -2902,7 +2904,7 @@ async function startServer() {
           const tDate = new Date(t.date);
           const limitDate = new Date();
           limitDate.setMonth(limitDate.getMonth() - 3);
-          return t.status !== 'void' && tDate >= limitDate;
+          return isPostable(t) && tDate >= limitDate;
         }).reduce((acc, t) => {
           let sumRev = 0;
           t.lines?.forEach((l: any) => {
@@ -2931,11 +2933,12 @@ async function startServer() {
         };
       } else if (businessType === 'realestate' || businessType === 'real_estate') {
         const rentalRevenueCents = transactions.reduce((acc, t) => {
+          if (!isPostable(t)) return acc;
           let sumRental = 0;
           t.lines?.forEach((l: any) => {
              const accObj = accounts.find(a => a.id === l.accountId);
              if (accObj?.type === 'revenue' && (accObj.name.toLowerCase().includes('rent') || accObj.name.toLowerCase().includes('lease'))) {
-               sumRental -= l.amountCents;
+               sumRental -= lineAmount(l, t);
              }
           });
           return acc + sumRental;
@@ -2958,11 +2961,12 @@ async function startServer() {
         };
       } else if (businessType === 'retail' || businessType === 'manufacturing' || businessType === 'inventory') {
         const cogsCents = transactions.reduce((acc, t) => {
+          if (!isPostable(t)) return acc;
           let sumCogs = 0;
           t.lines?.forEach((l: any) => {
              const accObj = accounts.find(a => a.id === l.accountId);
              if (accObj?.type === 'expense' && (accObj.name.toLowerCase().includes('cogs') || accObj.name.toLowerCase().includes('cost of goods') || accObj.name.toLowerCase().includes('inventory'))) {
-                sumCogs += l.amountCents;
+                sumCogs += lineAmount(l, t);
              }
           });
           return acc + sumCogs;
@@ -3151,9 +3155,9 @@ async function startServer() {
 
       const balances: Record<string, number> = {};
       transactions.forEach(t => {
-        if (t.status === 'void' || t.status === 'voided') return;
+        if (!isPostable(t)) return;
         t.lines?.forEach((l: any) => {
-          balances[l.accountId] = (balances[l.accountId] || 0) + l.amountCents;
+          balances[l.accountId] = (balances[l.accountId] || 0) + lineAmount(l, t);
         });
       });
 
@@ -3169,7 +3173,7 @@ async function startServer() {
          const invDateStr = inv.dueDate || inv.date || new Date().toISOString();
          const txDateMs = new Date(invDateStr).getTime();
          const daysOutstanding = Math.max(0, Math.floor((nowMs - txDateMs) / (1000 * 60 * 60 * 24)));
-         const totalAmount = inv.totalCents || inv.amountCents || 0;
+         const totalAmount = lineAmount(inv as any);
          const impliedCostOfCapitalCents = Math.round(totalAmount * (0.08 / 365) * daysOutstanding);
          return {
            invoiceId: inv.id,
@@ -3185,11 +3189,11 @@ async function startServer() {
       // 2. Customer Overconcentration (trigger multiplier haircut)
       const clientRevenues: Record<string, number> = {};
       transactions.forEach(t => {
-        if (t.status === 'void' || t.status === 'voided') return;
+        if (!isPostable(t)) return;
         let revVal = 0;
         t.lines?.forEach((l: any) => {
            const a = accounts.find(x => x.id === l.accountId);
-           if (a?.type === 'revenue') revVal -= l.amountCents;
+           if (a?.type === 'revenue') revVal -= lineAmount(l, t);
         });
         if (revVal > 0) {
            const payeeName = t.payee?.trim() || "Independent Channel";

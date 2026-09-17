@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import { motion } from 'motion/react';
 import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isPostable, lineAmount, isOpenBill } from '../../lib/txFilters';
 import { format, differenceInDays, addDays, startOfDay } from 'date-fns';
 
 import BillModal from './BillModal';
@@ -47,8 +47,8 @@ export default function Purchases() {
   const vendorBalances = useMemo(() => {
     const map: Record<string, number> = {};
     (bills || []).forEach(b => {
-      if (b.vendorId && b.status !== 'paid' && b.status !== 'void') {
-        map[b.vendorId] = (map[b.vendorId] || 0) + (b.amountCents || 0);
+      if (b.vendorId && isOpenBill(b)) {
+        map[b.vendorId] = (map[b.vendorId] || 0) + lineAmount(b as any);
       }
     });
 
@@ -96,17 +96,18 @@ export default function Purchases() {
     };
 
     bills.forEach(bill => {
-      if (bill.status === 'paid' || bill.status === 'void') return;
+      if (!isOpenBill(bill)) return;
       
       const dueDate = parseLocalDate(bill.dueDate);
       const daysDiff = differenceInDays(dueDate, today);
+      const amt = lineAmount(bill as any);
 
-      if (daysDiff < 0) buckets.overdue += bill.amountCents;
-      else if (daysDiff <= 30) buckets.due30 += bill.amountCents;
-      else if (daysDiff <= 60) buckets.due60 += bill.amountCents;
-      else buckets.due90 += bill.amountCents;
+      if (daysDiff < 0) buckets.overdue += amt;
+      else if (daysDiff <= 30) buckets.due30 += amt;
+      else if (daysDiff <= 60) buckets.due60 += amt;
+      else buckets.due90 += amt;
       
-      buckets.current += bill.amountCents;
+      buckets.current += amt;
     });
 
     return buckets;
@@ -118,12 +119,12 @@ export default function Purchases() {
     
     return days.map(day => {
       const dayBills = bills.filter(b => 
-        b.status !== 'paid' && 
+        isOpenBill(b) && 
         format(parseLocalDate(b.dueDate), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
       );
       return {
         date: day,
-        amountCents: dayBills.reduce((sum, b) => sum + b.amountCents, 0),
+        amountCents: dayBills.reduce((sum, b) => sum + lineAmount(b as any), 0),
         count: dayBills.length
       };
     });

@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isPostable, lineAmount, isOpenInvoice } from '../../lib/txFilters';
 import { format, differenceInDays } from 'date-fns';
 import { motion } from 'motion/react';
 
@@ -57,8 +57,8 @@ export default function Sales() {
     
     // 1. Unpaid invoices
     (invoices || []).forEach(inv => {
-      if (inv.customerId && inv.status !== 'paid' && inv.status !== 'rejected' && inv.status !== 'void') {
-        map[inv.customerId] = (map[inv.customerId] || 0) + (inv.amountCents || inv.totalCents || 0);
+      if (inv.customerId && isOpenInvoice(inv)) {
+        map[inv.customerId] = (map[inv.customerId] || 0) + lineAmount(inv as any);
       }
     });
 
@@ -133,13 +133,13 @@ export default function Sales() {
   const agingBuckets = useMemo(() => {
     const now = new Date();
     return {
-      overdue: invoices.filter(i => i.status !== 'paid' && i.status !== 'void' && i.status !== 'rejected' && (i.status === 'overdue' || parseLocalDate(i.dueDate) < now)).reduce((sum, i) => sum + (i.totalCents || i.amountCents || 0), 0),
+      overdue: invoices.filter(i => isOpenInvoice(i) && (i.status === 'overdue' || parseLocalDate(i.dueDate) < now)).reduce((sum, i) => sum + lineAmount(i as any), 0),
       dueSoon: invoices.filter(i => {
         const dueDate = parseLocalDate(i.dueDate);
         const diff = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-        return (i.status === 'sent' || i.status === 'pending') && diff >= 0 && diff <= 30;
-      }).reduce((sum, i) => sum + (i.totalCents || i.amountCents || 0), 0),
-      total: invoices.filter(i => i.status !== 'paid' && i.status !== 'void' && i.status !== 'rejected').reduce((sum, i) => sum + (i.totalCents || i.amountCents || 0), 0)
+        return isOpenInvoice(i) && (i.status === 'sent' || i.status === 'pending') && diff >= 0 && diff <= 30;
+      }).reduce((sum, i) => sum + lineAmount(i as any), 0),
+      total: invoices.filter(isOpenInvoice).reduce((sum, i) => sum + lineAmount(i as any), 0)
     };
   }, [invoices]);
 

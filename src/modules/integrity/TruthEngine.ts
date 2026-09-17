@@ -5,6 +5,8 @@ import { TemporalValidity } from '../../types';
 import Decimal from 'decimal.js';
 import { evaluateAmountExpression } from '../../lib/amountExpression';
 
+import { lineAmount } from '../../lib/txFilters';
+
 export class TruthEngine {
   static resolveEffectiveValue(timeSeries: TemporalValidity[], targetDateStr: string): number {
     const targetTime = parseLocalDate(targetDateStr).getTime();
@@ -47,7 +49,7 @@ export class TruthEngine {
         return acc && acc.type === 'asset';
       });
       if (assetLines.length > 0) {
-        return assetLines.reduce((sum, l) => sum + (l.amountCents || 0), 0);
+        return assetLines.reduce((sum, l) => sum + lineAmount(l as any), 0);
       }
       
       const liabilityLines = lines.filter(l => {
@@ -56,15 +58,15 @@ export class TruthEngine {
       });
       if (liabilityLines.length > 0) {
         // Liability increasing (credit/negative) means inflow of cash
-        return -liabilityLines.reduce((sum, l) => sum + (l.amountCents || 0), 0);
+        return -liabilityLines.reduce((sum, l) => sum + lineAmount(l as any), 0);
       }
     }
     
     // Fallback when accounts context is absent: sum of debit legs
     const debitSum = lines
       .filter(l => (l.amountCents || 0) > 0)
-      .reduce((sum, l) => sum + (l.amountCents || 0), 0);
-    return debitSum || Math.abs(lines[0]?.amountCents || 0);
+      .reduce((sum, l) => sum + lineAmount(l as any), 0);
+    return debitSum || Math.abs(lineAmount(lines[0] as any));
   }
 
   static parseAmountToCents(amountString: string | number | null | undefined): number {
@@ -482,7 +484,7 @@ export class TruthEngine {
             transactionId: tx.id || '',
             date: tx.date || '',
             accountId: line.accountId,
-            amountCents: line.amountCents || 0
+            amountCents: lineAmount(line, tx)
           });
         }
       });

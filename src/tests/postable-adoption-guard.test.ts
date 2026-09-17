@@ -23,9 +23,7 @@ test('Adoption Guard: Files iterating transactions and reading amountCents/lines
   const srcFiles = walkDir('src');
 
   for (const file of srcFiles) {
-    if (!file.includes('src/lib/') && !file.includes('src/kernel/')) {
-      continue;
-    }
+    // Audit both business logic (lib/kernel) AND UI components that compute totals
     if (
       file.includes('src/tests') || 
       file.endsWith('useLedgerStore.ts') || 
@@ -40,17 +38,24 @@ test('Adoption Guard: Files iterating transactions and reading amountCents/lines
     const content = readFileSync(file, 'utf8');
 
     const usesLedgerStore = content.includes('useLedgerStore');
-    // Check if it references transactions and iterates / reduces / loops over them
     const referencesTransactions = content.includes('transactions');
     
-    // Check if it reads amountCents, totalAmountCents, or lines off transaction objects or sums them
-    const readsTransactionAmountsOrLines = 
-      /(\b[a-zA-Z0-9_]*tx[a-zA-Z0-9_]*|\bitem|\btransaction)\.(amountCents|totalAmountCents|lines)/.test(content) ||
-      content.includes('.amountCents') ||
-      content.includes('.totalAmountCents') ||
+    // We only flag files that actually perform summation/reduction on financial totals 
+    // from the ledger store. This avoids false positives for files that just pass 
+    // transactions around or capitalization logic (FixedAssetsView).
+    const performsLedgerSummation = 
+      /transactions.*\.reduce/.test(content) || 
+      /transactions.*\.forEach/.test(content) ||
+      /transactions.*\.map/.test(content) ||
+      /for.*of.*transactions/.test(content);
+
+    const readsLinesOrAmounts = 
+      content.includes('.amountCents') || 
+      content.includes('.totalAmountCents') || 
       content.includes('.lines');
 
-    if (usesLedgerStore && referencesTransactions && readsTransactionAmountsOrLines) {
+    if (usesLedgerStore && referencesTransactions && performsLedgerSummation && readsLinesOrAmounts) {
+      // Must CALL isPostable, not just import it
       const callsIsPostable = content.includes('isPostable(');
       assert.ok(
         callsIsPostable,

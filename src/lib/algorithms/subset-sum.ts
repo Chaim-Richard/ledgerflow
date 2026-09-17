@@ -75,7 +75,10 @@ export const SUBSET_SUM_RECONCILIATION: AlgorithmDefinition = {
       candidates = transactions
         .filter(t => isPostable(t) && Math.abs(t.totalAmountCents) > 0)
         .slice(0, numInvoices)
-        .map(t => ({ id: t.id || `TX-${t.date}`, amountCents: Math.abs(t.totalAmountCents) }));
+        .map(t => ({ 
+          id: t.id || `TX-${t.date}`, 
+          amountCents: Math.abs(Math.round((t.totalAmountCents || 0) * (t.exchangeRate || 1))) 
+        }));
     }
 
     let isSynthetic = false;

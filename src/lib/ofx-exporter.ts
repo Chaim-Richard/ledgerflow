@@ -1,5 +1,6 @@
 import { Transaction, ChartAccount } from '../types';
 import { resolveAccountRole } from './accountUtils';
+import { lineAmount } from './txFilters';
 
 /**
  * Open Financial Exchange (OFX) Export Utility
@@ -66,7 +67,7 @@ NEWFILEUID:NONE
   const body = transactions.map(tx => {
     // Find the line corresponding to this account to get the specific amount
     const accountLine = tx.lines.find(l => l.accountId === account.id);
-    const amountCents = accountLine?.amountCents || 0;
+    const amountCents = accountLine ? lineAmount(accountLine, tx) : 0;
     const amount = amountCents / 100;
     
     // OFX uses bank/statement perspective:

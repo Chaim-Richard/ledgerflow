@@ -46,7 +46,8 @@ function daysBetween(a: string, b: string): number {
 function findDuplicates(transactions: readonly Transaction[], windowDays = 3) {
   const groups = new Map<string, Transaction[]>();
   for (const tx of transactions) {
-    const key = `${tx.totalAmountCents}|${normalizeDescription(tx.description)}`;
+    const amt = Math.round((tx.totalAmountCents || 0) * (tx.exchangeRate || 1));
+    const key = `${amt}|${normalizeDescription(tx.description)}`;
     const group = groups.get(key) ?? [];
     group.push(tx);
     groups.set(key, group);
@@ -59,10 +60,11 @@ function findDuplicates(transactions: readonly Transaction[], windowDays = 3) {
     let cluster: Transaction[] = [sorted[0]!];
     const flush = () => {
       if (cluster.length > 1) {
+        const amt = Math.round((cluster[0]!.totalAmountCents || 0) * (cluster[0]!.exchangeRate || 1));
         candidates.push({
           transactionIds: cluster.map((c) => c.id),
           date: cluster[0]!.date,
-          amountCents: cluster[0]!.totalAmountCents,
+          amountCents: amt,
           description: cluster[0]!.description,
           reason: `${cluster.length} transactions with the same amount and description within ${windowDays} day(s) of each other.`,
         });

@@ -1088,8 +1088,9 @@ export function useTransactionActions() {
     const rows: string[][] = [];
     transactions.forEach(t => {
       t.lines.forEach(l => {
-        const debit = l.amountCents > 0 ? formatDecimal(l.amountCents) : '0.00';
-        const credit = l.amountCents < 0 ? formatDecimal(Math.abs(l.amountCents)) : '0.00';
+        const amt = lineAmount(l, t);
+        const debit = amt > 0 ? formatDecimal(amt) : '0.00';
+        const credit = amt < 0 ? formatDecimal(Math.abs(amt)) : '0.00';
         rows.push([
           sanitizeCsvCell(t.date),
           sanitizeCsvCell(t.id),
@@ -1792,7 +1793,8 @@ export function useTransactionActions() {
           let score = 0;
           
           // Amount Match
-          if (Math.abs(bl.amountCents) === Math.abs(tx.totalAmountCents)) {
+          const tTotal = Math.round(Math.abs(tx.totalAmountCents || 0) * (tx.exchangeRate || 1));
+          if (Math.abs(bl.amountCents) === tTotal) {
             score += 65;
           }
 
@@ -1988,7 +1990,7 @@ export function useTransactionActions() {
 
         // Feature Engineering: Normalized Amount and Normalized Time
         const maxAmount = txs.reduce((max, t) => {
-          const amt = Math.abs(t.totalAmountCents);
+          const amt = Math.abs(Math.round((t.totalAmountCents || 0) * (t.exchangeRate || 1)));
           return amt > max ? amt : max;
         }, 0);
         
@@ -2006,7 +2008,7 @@ export function useTransactionActions() {
 
         const clusterData = uncategorized.map(t => ({
           id: t.id,
-          x: Math.abs(t.totalAmountCents) / (maxAmount || 1),
+          x: Math.abs(Math.round((t.totalAmountCents || 0) * (t.exchangeRate || 1))) / (maxAmount || 1),
           y: (parseLocalDate(t.date).getTime() - minTime) / timeRange
         }));
 

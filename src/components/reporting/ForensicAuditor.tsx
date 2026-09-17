@@ -15,7 +15,11 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
   const [isRunning, setIsRunning] = useState(false);
 
   const forensicData = useMemo(() => {
-    const amounts = transactions.filter(isPostable).map(t => Math.abs(t.totalAmountCents) / 100);
+    const amounts = transactions.filter(isPostable).map(t => {
+      const absTotal = Math.abs(t.totalAmountCents || 0);
+      const normalized = Math.round(absTotal * (t.exchangeRate || 1));
+      return normalized / 100;
+    });
     return AnomalyDetector.detectBenfordAnomaly(amounts);
   }, [transactions]);
 

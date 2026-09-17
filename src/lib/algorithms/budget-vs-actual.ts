@@ -1,7 +1,7 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction } from '../../types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
-import { isPostable } from '../../lib/txFilters';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
   id: 'budget-vs-actual',
@@ -62,8 +62,9 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
         tx.lines.forEach(e => {
           if (e.accountId === accountId) {
             const isDebitNormal = account ? (accounting.isAsset(account.id) || accounting.isExpense(account.id) || accounting.isCOGS(account.id)) : true;
-            const debit = e.amountCents > 0 ? e.amountCents : 0;
-            const credit = e.amountCents < 0 ? Math.abs(e.amountCents) : 0;
+            const amt = lineAmount(e, tx);
+            const debit = amt > 0 ? amt : 0;
+            const credit = amt < 0 ? Math.abs(amt) : 0;
             
             actualCents += isDebitNormal ? (debit - credit) : (credit - debit);
             sourceTransactionIds.add(tx.id);

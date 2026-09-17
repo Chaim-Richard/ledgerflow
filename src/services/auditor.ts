@@ -1,4 +1,4 @@
-import { isPostable } from '../lib/txFilters';
+import { isPostable, lineAmount } from '../lib/txFilters';
 import { Transaction, ChartAccount, JournalEntry } from '../types';
 import { MerkleTree, MinHash, sha256Sync } from '../lib/algorithms';
 import { PerformanceTelemetry } from '../lib/telemetry';
@@ -96,7 +96,7 @@ export const DoubleEntryAuditor = {
             missingAccounts.push({ id: t.id, accountName: line.accountName || line.accountId, lineIdx: lIdx });
           }
           
-          const amt = Number(line.amountCents) || 0;
+          const amt = lineAmount(line, t);
           if (amt > 0) txDebit += amt;
           else txCredit += Math.abs(amt);
         }

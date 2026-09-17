@@ -1,5 +1,6 @@
 import { Transaction, ChartAccount } from '../../types';
 import { AlgorithmDefinition } from './types';
+import { isPostable, lineAmount } from '../txFilters';
 
 function normalize(description: string): string {
   return description
@@ -49,7 +50,7 @@ export const CATEGORIZATION_CONSISTENCY_ALGO: AlgorithmDefinition = {
           description: tx.description,
           accountId: targetLine.accountId,
           txId: tx.id,
-          amountCents: tx.totalAmountCents,
+          amountCents: Math.round((tx.totalAmountCents || 0) * (tx.exchangeRate || 1)),
           date: tx.date
         });
       }

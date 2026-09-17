@@ -1,7 +1,7 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { Transaction } from '../../types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
-import { isPostable } from '../../lib/txFilters';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
   id: '1099-totals',
@@ -67,7 +67,7 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
           // Check actual payment date (cash basis)
           const paymentDateStr = bill.paidAt || bill.paymentDate || bill.paidDate || bill.date || '';
           if (paymentDateStr.startsWith(year)) {
-            paidCents += bill.amountCents || 0;
+            paidCents += lineAmount(bill as any);
           }
         }
       });
@@ -82,7 +82,7 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
 
         if (isVendorMatch) {
           // Check if tx is cash-out to expense without a bill
-          const isCashOut = tx.lines?.some(e => e.amountCents < 0);
+          const isCashOut = tx.lines?.some(e => lineAmount(e, tx) < 0);
           const hasExpense = tx.lines?.some(e => accounting.isExpense(e.accountId) || accounting.isCOGS(e.accountId));
 
           if (isCashOut && hasExpense) {
@@ -90,8 +90,8 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
             const isBillTx = (tx as any).billId || (tx as any).source === 'bill';
             if (!isBillTx) {
               const expCents = tx.lines
-                .filter(l => l.amountCents > 0)
-                .reduce((s, l) => s + l.amountCents, 0);
+                .filter(l => (l.amountCents || 0) > 0)
+                .reduce((s, l) => s + lineAmount(l, tx), 0);
               paidCents += expCents;
               sourceTransactionIds.add(tx.id);
             }

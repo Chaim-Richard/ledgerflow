@@ -1,4 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { lineAmount } from '../txFilters';
 
 export const PROFITABILITY_HEATMAP_ALGO: AlgorithmDefinition = {
   id: 'intelligence_5',
@@ -29,12 +30,14 @@ export const PROFITABILITY_HEATMAP_ALGO: AlgorithmDefinition = {
              
              if (!projectData[projectId]) projectData[projectId] = { revenue: 0, costs: 0 };
              
+             const amt = Math.abs(lineAmount(l, tx));
+             
              if (type === 'income' || type === 'revenue' || cat === 'revenue') {
-                projectData[projectId].revenue += Math.abs(l.amountCents);
-                totalRevenue += Math.abs(l.amountCents);
+                projectData[projectId].revenue += amt;
+                totalRevenue += amt;
              } else if (type === 'expense' || type === 'cost_of_goods' || cat === 'cogs') {
-                projectData[projectId].costs += Math.abs(l.amountCents);
-                totalCosts += Math.abs(l.amountCents);
+                projectData[projectId].costs += amt;
+                totalCosts += amt;
              }
           }
        });

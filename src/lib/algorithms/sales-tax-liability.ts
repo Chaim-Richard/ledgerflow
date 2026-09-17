@@ -1,5 +1,6 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 /**
  * Normalizes taxRate input into a canonical decimal fraction (e.g. 8.25% -> 0.0825).
@@ -124,12 +125,17 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
         return;
       }
 
-      const totalInvCents = inv.totalCents || inv.amountCents || 0;
+      const totalInvCents = inv.totalCents 
+        ? Math.round(inv.totalCents * (inv.exchangeRate || 1)) 
+        : lineAmount(inv as any);
+        
       let salesCents = totalInvCents;
       if (basis === 'cash') {
         const paidCents = typeof inv.amountPaidCents === 'number' 
-          ? inv.amountPaidCents 
-          : (typeof inv.paidAmountCents === 'number' ? inv.paidAmountCents : (inv.status === 'paid' ? totalInvCents : 0));
+          ? Math.round(inv.amountPaidCents * (inv.exchangeRate || 1))
+          : (typeof inv.paidAmountCents === 'number' 
+            ? Math.round(inv.paidAmountCents * (inv.exchangeRate || 1)) 
+            : (inv.status === 'paid' ? totalInvCents : 0));
         salesCents = paidCents;
       }
 

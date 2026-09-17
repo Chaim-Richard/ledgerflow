@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { LedgerPostService } from '../services/LedgerPostService';
 
+import { isOpenInvoice, isOpenBill, lineAmount } from '../lib/txFilters';
+
 export function useEntityOperations() {
   const user = useAuthStore(s => s.user);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -37,10 +39,8 @@ export function useEntityOperations() {
           where('customerId', '==', entityId)
         );
         const snap = await getDocs(q);
-        const customerInvoices = snap.docs.map(d => d.data()).filter(
-          inv => (inv.status as string) !== 'paid' && (inv.status as string) !== 'void' && (inv.status as string) !== 'rejected'
-        );
-        balanceCents = customerInvoices.reduce((sum, inv) => sum + (inv.amountCents || 0), 0);
+        const customerInvoices = snap.docs.map(d => d.data()).filter(isOpenInvoice);
+        balanceCents = customerInvoices.reduce((sum, inv) => sum + lineAmount(inv as any), 0);
       } else {
         const q = query(
           collection(db, 'bills'),
@@ -48,10 +48,8 @@ export function useEntityOperations() {
           where('vendorId', '==', entityId)
         );
         const snap = await getDocs(q);
-        const vendorBills = snap.docs.map(d => d.data()).filter(
-          b => (b.status as string) !== 'paid' && (b.status as string) !== 'void'
-        );
-        balanceCents = vendorBills.reduce((sum, b) => sum + (b.amountCents || 0), 0);
+        const vendorBills = snap.docs.map(d => d.data()).filter(isOpenBill);
+        balanceCents = vendorBills.reduce((sum, b) => sum + lineAmount(b as any), 0);
       }
 
       await updateDoc(doc(db, entityType, entityId), {

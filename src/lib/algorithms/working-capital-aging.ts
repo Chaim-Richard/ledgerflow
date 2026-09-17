@@ -1,6 +1,7 @@
 import { parseLocalDate } from '../../lib/utils';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { resolveAccountRole } from '../accountUtils';
+import { isPostable, lineAmount, isOpenInvoice, isOpenBill } from '../../lib/txFilters';
 
 export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
   id: 'ops_2',
@@ -31,12 +32,12 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
     // 1. Process explicit Invoices from context
     if (ctx.entities?.invoices && ctx.entities.invoices.length > 0) {
       ctx.entities.invoices.forEach(inv => {
-        if (inv.status === 'paid' || inv.status === 'void' || inv.status === 'draft') return;
+        if (!isOpenInvoice(inv)) return;
         hasProcessedData = true;
         const dueDateStr = inv.dueDate || inv.date;
         const dueDate = dueDateStr ? parseLocalDate(dueDateStr).getTime() : now;
         const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
-        const amount = Math.abs(inv.amountCents || inv.totalCents || 0);
+        const amount = Math.abs(lineAmount(inv as any));
 
         arPending += amount;
         if (daysOverdue > thresholdDays) arOverdue += amount;
@@ -51,12 +52,12 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
     // 2. Process explicit Bills from context
     if (ctx.entities?.bills && ctx.entities.bills.length > 0) {
       ctx.entities.bills.forEach(bill => {
-        if (bill.status === 'paid' || bill.status === 'void' || bill.status === 'draft') return;
+        if (!isOpenBill(bill)) return;
         hasProcessedData = true;
         const dueDateStr = bill.dueDate || bill.date;
         const dueDate = dueDateStr ? parseLocalDate(dueDateStr).getTime() : now;
         const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
-        const amount = Math.abs(bill.amountCents || 0);
+        const amount = Math.abs(lineAmount(bill as any));
 
         apPending += amount;
         if (daysOverdue > thresholdDays) apOverdue += amount;
@@ -76,7 +77,7 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
       let apDecreases = 0;
 
       transactions.forEach(tx => {
-        if (tx.status === 'void' || tx.status === 'reconciled') return;
+        if (!isPostable(tx)) return;
 
         const dueDateStr = tx.metadata?.dueDate || tx.date;
         const dueDate = dueDateStr ? parseLocalDate(dueDateStr).getTime() : now;
@@ -85,17 +86,18 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
           const acc = accounts.find(a => a.id === l.accountId);
           if (acc) {
             const role = resolveAccountRole(acc);
+            const amt = lineAmount(l, tx);
             if (role === 'ar') {
-              if (l.amountCents > 0) {
-                arIncreases.push({ amount: l.amountCents, dueDate });
+              if (amt > 0) {
+                arIncreases.push({ amount: amt, dueDate });
               } else {
-                arDecreases += Math.abs(l.amountCents);
+                arDecreases += Math.abs(amt);
               }
             } else if (role === 'ap') {
-              if (l.amountCents < 0) {
-                apIncreases.push({ amount: Math.abs(l.amountCents), dueDate });
+              if (amt < 0) {
+                apIncreases.push({ amount: Math.abs(amt), dueDate });
               } else {
-                apDecreases += Math.abs(l.amountCents);
+                apDecreases += Math.abs(amt);
               }
             }
           }

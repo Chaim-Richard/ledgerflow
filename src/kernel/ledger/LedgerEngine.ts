@@ -36,13 +36,13 @@ export class LedgerEngine {
       // Robust Deterministic Cache Key
       // We hash the lines to keep the key length manageable while ensuring any line change invalidates the cache
       const linesSignature = (t.lines || []).map(l => `${l.accountId}:${l.amountCents}`).join('|');
-      const cacheKey = `${t.id}-${t.totalAmountCents}-${t.date}-${t.status}-${t.description || ''}-${t.isCleared ? 1 : 0}-${t.tags?.join(',')}-${t.project || ''}-${linesSignature}`;
+      const cacheKey = `${t.id}-${t.totalAmountCents}-${t.exchangeRate || 1}-${t.date}-${t.status}-${t.description || ''}-${t.isCleared ? 1 : 0}-${t.tags?.join(',')}-${t.project || ''}-${linesSignature}`;
       
       if (this.normalizationCache.has(cacheKey)) {
         return this.normalizationCache.get(cacheKey);
       }
 
-      const absAmount = Math.abs(t.totalAmountCents || 0) / 100;
+      const absAmount = Math.abs(Math.round((t.totalAmountCents || 0) * (t.exchangeRate || 1))) / 100;
       const tDate = t.date || '';
       
       const norm = {

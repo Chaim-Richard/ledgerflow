@@ -1,5 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
-import { isPostable, isOutflow } from '../../lib/txFilters';
+import { isPostable, isOutflow, lineAmount } from '../../lib/txFilters';
 
 export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
   id: 'intelligence_4',
@@ -31,7 +31,6 @@ export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
          const payee = (tx.payee || tx.description || 'Unknown Vendor').toUpperCase().trim();
          if (!vendorSpend[payee]) vendorSpend[payee] = 0;
          
-         const rate = tx.exchangeRate || 1;
          const expCents = tx.lines
            .filter(l => {
              const acc = accounts.find(a => a.id === l.accountId);
@@ -39,9 +38,9 @@ export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
              const catLower = (acc.category || '').toLowerCase();
              return acc.type === 'expense' || acc.type === 'cost_of_goods' || catLower === 'cogs' || catLower === 'expense';
            })
-           .reduce((s, l) => s + Math.abs(l.amountCents), 0) || Math.abs(tx.totalAmountCents);
+           .reduce((s, l) => s + Math.abs(lineAmount(l, tx)), 0) || Math.abs(Math.round((tx.totalAmountCents || 0) * (tx.exchangeRate || 1)));
 
-         const convertedAmt = Math.round(expCents * rate);
+         const convertedAmt = expCents;
          vendorSpend[payee] += convertedAmt;
          totalSpend += convertedAmt;
       }
