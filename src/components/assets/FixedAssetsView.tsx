@@ -4,6 +4,8 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { calculateStraightLineDepreciation, generateDepreciationLedgerEntry, DepreciationPeriodEntry } from '../../lib/depreciationEngine';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
+import { toast } from 'sonner';
 import { 
   Building, 
   Plus, 
@@ -106,7 +108,7 @@ export const FixedAssetsView: React.FC = () => {
     const schedule = calculateStraightLineDepreciation(asset, todayStr);
     
     if (!schedule || schedule.length === 0) {
-      alert('No depreciation schedule available for this asset.');
+      toast.error('No depreciation schedule available for this asset.');
       return;
     }
 
@@ -114,7 +116,7 @@ export const FixedAssetsView: React.FC = () => {
     const monthlyDepAmount = firstPeriod.depreciationAmountCents;
 
     if (monthlyDepAmount <= 0 || (asset.accumulatedDepreciationCents >= (asset.purchasePriceCents - asset.salvageValueCents))) {
-      alert('Asset is already fully depreciated.');
+      toast.error('Asset is already fully depreciated.');
       return;
     }
 

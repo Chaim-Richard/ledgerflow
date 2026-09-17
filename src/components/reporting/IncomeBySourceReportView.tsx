@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { computeIncomeBySource } from '../../lib/reportGenerators';
+import { isPostable } from '../../lib/txFilters';
 import { TrendingUp, Users, ArrowUpRight } from 'lucide-react';
 
 interface Props {
@@ -15,7 +16,7 @@ export const IncomeBySourceReportView: React.FC<Props> = ({
   startDate,
   endDate
 }) => {
-  const transactions = useLedgerStore(s => s.transactions);
+  const transactions = useLedgerStore(s => s.transactions.filter(isPostable));
   const accounts = useLedgerStore(s => s.accounts);
 
   const start = startDate || (selectedYear ? `${selectedYear}-01-01` : undefined);
