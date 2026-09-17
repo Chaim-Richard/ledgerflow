@@ -9,6 +9,7 @@ import { isPostable, lineAmount } from '../../lib/txFilters';
 import { Transaction } from '../../types';
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
+import { RequireRole } from '../ui/RequireRole';
 
 export default function MonthEndCloseView() {
   const transactions = useLedgerStore(s => s.transactions) || [];
@@ -345,19 +346,21 @@ export default function MonthEndCloseView() {
                     <Lock className="w-4 h-4" /> Period Locked
                   </div>
                 ) : (
-                  <AsyncButton
-                    disabled={!isReady || isClosing}
-                    onClick={handleClosePeriod}
-                    loadingText="Locking Period..."
-                    className={`px-6 py-2.5 rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 ${
-                      isReady 
-                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200' 
-                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                    }`}
-                  >
-                    Close Month
-                    {!isClosing && <ArrowRight className="w-4 h-4" />}
-                  </AsyncButton>
+                  <RequireRole role="accountant" disableOnly tooltip="Only an accountant can close the period">
+                    <AsyncButton
+                      disabled={!isReady || isClosing}
+                      onClick={handleClosePeriod}
+                      loadingText="Locking Period..."
+                      className={`px-6 py-2.5 rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 ${
+                        isReady 
+                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200' 
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Close Month
+                      {!isClosing && <ArrowRight className="w-4 h-4" />}
+                    </AsyncButton>
+                  </RequireRole>
                 )}
               </div>
             </div>

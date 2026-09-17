@@ -4,6 +4,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { performThreeWayMatch, ThreeWayMatchSummary } from '../../lib/threeWayMatchEngine';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import { RequireRole } from '../ui/RequireRole';
 import { 
   ShoppingCart, 
   Plus, 
@@ -385,10 +386,17 @@ export const PurchaseOrdersView: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-neutral-600 text-[11px]">
                       {res.discrepancies.length > 0 ? (
-                        <div className="space-y-0.5 text-amber-700">
-                          {res.discrepancies.map((d, i) => (
-                            <div key={i}>&bull; {d}</div>
-                          ))}
+                        <div className="flex flex-col gap-2">
+                          <div className="space-y-0.5 text-amber-700">
+                            {res.discrepancies.map((d, i) => (
+                              <div key={i}>&bull; {d}</div>
+                            ))}
+                          </div>
+                          <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can override exceptions">
+                            <button className="self-start px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded font-bold uppercase tracking-wider text-[9px] transition-colors">
+                              Approve Anyway
+                            </button>
+                          </RequireRole>
                         </div>
                       ) : (
                         <span className="text-emerald-600 flex items-center gap-1 font-medium">

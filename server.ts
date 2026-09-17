@@ -13,6 +13,7 @@ import { paymentRouter } from "./src/server/routes/paymentRoutes";
 import { documentRouter } from "./src/server/routes/documentRoutes";
 import { requirePlanCapacity } from "./src/server/middleware/planCapacity";
 import express from "express";
+import { safeFetch } from "./src/server/utils/safeFetch.js";
 import cors from "cors";
 import Stripe from "stripe";
 import rateLimit from "express-rate-limit";
@@ -4653,7 +4654,7 @@ You MUST output a valid JSON object matching this schema exactly:
     }
     
     console.debug(`[Cache Miss] Fetching from API: ${cacheKey}`);
-    const response = await fetch(url, { method: "GET", headers });
+    const response = await safeFetch(url, { method: 'GET', headers, allowedHostnames: ['api.apilayer.com'] });
     
     if (!response.ok) {
       throw new Error(`API responded with ${response.status}: ${await response.text()}`);

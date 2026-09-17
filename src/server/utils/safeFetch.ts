@@ -184,6 +184,7 @@ export async function safeFetch(inputUrl: string, options: SafeFetchOptions = {}
   fetchConfig.signal = controller.signal;
 
   try {
+    // eslint-disable-next-line no-restricted-syntax
     const response = await fetch(inputUrl, fetchConfig);
     return response;
   } finally {

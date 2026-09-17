@@ -5,6 +5,7 @@ import { auth } from '../../../firebase';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { WorkspaceRole, ROLE_DESCRIPTIONS } from '../../../hooks/useCurrentRole';
 import { WorkspaceInvite, AuditLog } from '../../../types';
+import { RequireRole } from '../../ui/RequireRole';
 
 export default function TeamSettings() {
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
@@ -260,65 +261,67 @@ export default function TeamSettings() {
       </div>
 
       {/* Invite Form */}
-      <form onSubmit={handleSendInvite} className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-5">
-        <div className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-          <UserPlus size={15} className="text-indigo-500" /> Invite Team Member or Accountant
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          <div className="relative sm:col-span-6">
-            <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="email"
-              required
-              value={inviteInput}
-              onChange={(e) => setInviteInput(e.target.value)}
-              placeholder="colleague@company.com"
-              className="w-full pl-10 pr-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-semibold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+      <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can invite new members">
+        <form onSubmit={handleSendInvite} className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-5">
+          <div className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <UserPlus size={15} className="text-indigo-500" /> Invite Team Member or Accountant
           </div>
 
-          <div className="sm:col-span-4">
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value as WorkspaceRole)}
-              className="w-full px-3 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 capitalize"
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div className="relative sm:col-span-6">
+              <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="email"
+                required
+                value={inviteInput}
+                onChange={(e) => setInviteInput(e.target.value)}
+                placeholder="colleague@company.com"
+                className="w-full pl-10 pr-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-semibold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="sm:col-span-4">
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value as WorkspaceRole)}
+                className="w-full px-3 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 capitalize"
+              >
+                <option value="viewer">Viewer (Read-Only)</option>
+                <option value="bookkeeper">Bookkeeper (Transactions/Invoices)</option>
+                <option value="accountant">Accountant (Close Periods/Chart of Accounts)</option>
+                <option value="owner">Owner (Full Admin)</option>
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting || !inviteInput.trim() || isSeatLimitReached}
+              className="sm:col-span-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
-              <option value="viewer">Viewer (Read-Only)</option>
-              <option value="bookkeeper">Bookkeeper (Transactions/Invoices)</option>
-              <option value="accountant">Accountant (Close Periods/Chart of Accounts)</option>
-              <option value="owner">Owner (Full Admin)</option>
-            </select>
+              {submitting ? <RefreshCw size={14} className="animate-spin" /> : <UserPlus size={14} />}
+              <span>Invite</span>
+            </button>
           </div>
 
-          <button
-            type="submit"
-            disabled={submitting || !inviteInput.trim() || isSeatLimitReached}
-            className="sm:col-span-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
-          >
-            {submitting ? <RefreshCw size={14} className="animate-spin" /> : <UserPlus size={14} />}
-            <span>Invite</span>
-          </button>
-        </div>
-
-        {/* Selected Role Powers Explainer */}
-        <div className="p-4 bg-[var(--ink)]/40 border border-[var(--line)] rounded-2xl space-y-2">
-          <div className="flex items-center justify-between text-xs font-black text-indigo-400 uppercase tracking-wider">
-            <span>Role Powers: {ROLE_DESCRIPTIONS[selectedRole].title}</span>
-            <Shield size={14} />
+          {/* Selected Role Powers Explainer */}
+          <div className="p-4 bg-[var(--ink)]/40 border border-[var(--line)] rounded-2xl space-y-2">
+            <div className="flex items-center justify-between text-xs font-black text-indigo-400 uppercase tracking-wider">
+              <span>Role Powers: {ROLE_DESCRIPTIONS[selectedRole].title}</span>
+              <Shield size={14} />
+            </div>
+            <p className="text-xs text-slate-300">
+              {ROLE_DESCRIPTIONS[selectedRole].summary}
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {ROLE_DESCRIPTIONS[selectedRole].permissions.map((perm, idx) => (
+                <span key={idx} className="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-semibold rounded-md flex items-center gap-1">
+                  <Check size={10} className="text-indigo-400" /> {perm}
+                </span>
+              ))}
+            </div>
           </div>
-          <p className="text-xs text-slate-300">
-            {ROLE_DESCRIPTIONS[selectedRole].summary}
-          </p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            {ROLE_DESCRIPTIONS[selectedRole].permissions.map((perm, idx) => (
-              <span key={idx} className="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-semibold rounded-md flex items-center gap-1">
-                <Check size={10} className="text-indigo-400" /> {perm}
-              </span>
-            ))}
-          </div>
-        </div>
-      </form>
+        </form>
+      </RequireRole>
 
       {/* Pending Invites Section */}
       {invites.length > 0 && (
@@ -351,14 +354,16 @@ export default function TeamSettings() {
                     <Copy size={12} />
                     <span>Copy Link</span>
                   </button>
-                  <button
-                    onClick={() => handleRevokeInvite(inv.id || inv.inviteId || '')}
-                    className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
-                    title="Revoke invitation"
-                  >
-                    <Trash2 size={14} />
-                    <span className="text-[10px] uppercase">Revoke</span>
-                  </button>
+                  <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can revoke invites">
+                    <button
+                      onClick={() => handleRevokeInvite(inv.id || inv.inviteId || '')}
+                      className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
+                      title="Revoke invitation"
+                    >
+                      <Trash2 size={14} />
+                      <span className="text-[10px] uppercase">Revoke</span>
+                    </button>
+                  </RequireRole>
                 </div>
               </div>
             ))}
@@ -445,27 +450,31 @@ export default function TeamSettings() {
                     </button>
 
                     {/* Role Picker Dropdown */}
-                    <select
-                      value={currentRole}
-                      onChange={(e) => handleRoleChange(mUid, e.target.value as WorkspaceRole)}
-                      disabled={isOwner}
-                      className="px-2.5 py-1 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500 capitalize disabled:opacity-50"
-                    >
-                      <option value="owner">Owner</option>
-                      <option value="accountant">Accountant</option>
-                      <option value="bookkeeper">Bookkeeper</option>
-                      <option value="viewer">Viewer</option>
-                    </select>
+                    <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can change roles">
+                      <select
+                        value={currentRole}
+                        onChange={(e) => handleRoleChange(mUid, e.target.value as WorkspaceRole)}
+                        disabled={isOwner}
+                        className="px-2.5 py-1 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500 capitalize disabled:opacity-50"
+                      >
+                        <option value="owner">Owner</option>
+                        <option value="accountant">Accountant</option>
+                        <option value="bookkeeper">Bookkeeper</option>
+                        <option value="viewer">Viewer</option>
+                      </select>
+                    </RequireRole>
 
                     {!isOwner && (
-                      <button
-                        onClick={() => handleRemoveMember(mUid)}
-                        className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
-                        title="Revoke workspace access"
-                      >
-                        <Trash2 size={14} />
-                        <span className="text-[10px] uppercase">Revoke</span>
-                      </button>
+                      <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can remove members">
+                        <button
+                          onClick={() => handleRemoveMember(mUid)}
+                          className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
+                          title="Revoke workspace access"
+                        >
+                          <Trash2 size={14} />
+                          <span className="text-[10px] uppercase">Revoke</span>
+                        </button>
+                      </RequireRole>
                     )}
                   </div>
                 </div>

@@ -41,5 +41,17 @@ export default tseslint.config(
       'jsx-a11y/no-noninteractive-element-interactions': 'warn',
       'jsx-a11y/control-has-associated-label': 'warn',
     },
+  },
+  {
+    files: ['src/server/**/*.{ts,tsx}', 'server.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'CallExpression[callee.name="fetch"]',
+          message: 'Raw fetch is forbidden on the server. Use safeFetch from src/server/utils/safeFetch.ts to prevent SSRF vulnerabilities.',
+        }
+      ]
+    }
   }
 );

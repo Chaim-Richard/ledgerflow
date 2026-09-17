@@ -1,4 +1,5 @@
 import { getDb } from '../db/firestore';
+import { safeFetch } from '../utils/safeFetch';
 
 export interface SendEmailWithSuppressionParams {
   workspaceId: string;
@@ -167,7 +168,7 @@ export async function sendSupportNotification(params: SupportNotificationParams)
 
   // 1. Resend API
   if (process.env.RESEND_API_KEY) {
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await safeFetch('https://api.resend.com/emails', { allowedHostnames: ['api.resend.com'],
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
@@ -195,7 +196,7 @@ export async function sendSupportNotification(params: SupportNotificationParams)
 
   // 2. Postmark API
   if (process.env.POSTMARK_SERVER_TOKEN) {
-    const res = await fetch('https://api.postmarkapp.com/email', {
+    const res = await safeFetch('https://api.postmarkapp.com/email', { allowedHostnames: ['api.postmarkapp.com'],
       method: 'POST',
       headers: {
         'X-Postmark-Server-Token': process.env.POSTMARK_SERVER_TOKEN,
@@ -223,7 +224,7 @@ export async function sendSupportNotification(params: SupportNotificationParams)
 
   // 3. SendGrid API
   if (process.env.SENDGRID_API_KEY) {
-    const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    const res = await safeFetch('https://api.sendgrid.com/v3/mail/send', { allowedHostnames: ['api.sendgrid.com'],
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
@@ -293,7 +294,7 @@ export async function deliverInvoiceEmail(params: SendInvoiceEmailParams): Promi
 
   // 1. Resend API
   if (process.env.RESEND_API_KEY) {
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await safeFetch('https://api.resend.com/emails', { allowedHostnames: ['api.resend.com'],
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
@@ -325,7 +326,7 @@ export async function deliverInvoiceEmail(params: SendInvoiceEmailParams): Promi
 
   // 2. Postmark API
   if (process.env.POSTMARK_SERVER_TOKEN) {
-    const res = await fetch('https://api.postmarkapp.com/email', {
+    const res = await safeFetch('https://api.postmarkapp.com/email', { allowedHostnames: ['api.postmarkapp.com'],
       method: 'POST',
       headers: {
         'X-Postmark-Server-Token': process.env.POSTMARK_SERVER_TOKEN,
@@ -358,7 +359,7 @@ export async function deliverInvoiceEmail(params: SendInvoiceEmailParams): Promi
 
   // 3. SendGrid API
   if (process.env.SENDGRID_API_KEY) {
-    const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    const res = await safeFetch('https://api.sendgrid.com/v3/mail/send', { allowedHostnames: ['api.sendgrid.com'],
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
@@ -482,7 +483,7 @@ export async function sendErrorDigestEmail(params: ErrorDigestEmailParams): Prom
 
   // 1. Resend API
   if (process.env.RESEND_API_KEY) {
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await safeFetch('https://api.resend.com/emails', { allowedHostnames: ['api.resend.com'],
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
@@ -510,7 +511,7 @@ export async function sendErrorDigestEmail(params: ErrorDigestEmailParams): Prom
 
   // 2. Postmark API
   if (process.env.POSTMARK_SERVER_TOKEN) {
-    const res = await fetch('https://api.postmarkapp.com/email', {
+    const res = await safeFetch('https://api.postmarkapp.com/email', { allowedHostnames: ['api.postmarkapp.com'],
       method: 'POST',
       headers: {
         'X-Postmark-Server-Token': process.env.POSTMARK_SERVER_TOKEN,
@@ -538,7 +539,7 @@ export async function sendErrorDigestEmail(params: ErrorDigestEmailParams): Prom
 
   // 3. SendGrid API
   if (process.env.SENDGRID_API_KEY) {
-    const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    const res = await safeFetch('https://api.sendgrid.com/v3/mail/send', { allowedHostnames: ['api.sendgrid.com'],
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,

@@ -9,6 +9,7 @@ import { db } from '../../../firebase';
 import { multiFactor, TotpMultiFactorGenerator } from 'firebase/auth';
 import { auth } from '../../../firebase';
 import { toast } from 'sonner';
+import { RequireRole } from '../../ui/RequireRole';
 
 export default function SecuritySettings() {
   const lockDate = useLedgerStore(s => s.lockDate);
@@ -249,14 +250,16 @@ export default function SecuritySettings() {
                     CRITICAL: This protocol will permanently decommission all topological nodes, transactions, and audit logs within this workspace.
                   </p>
                 </div>
-                <button 
-                  onClick={handleSystemPurge}
-                  disabled={isResetting}
-                  className="px-6 py-3 bg-rose-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-rose-600 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
-                >
-                  {isResetting ? <RefreshCw size={14} className="animate-spin" /> : <AlertCircle size={14} />}
-                  {isResetting ? 'DECOMMISSIONING...' : 'INITIATE PURGE'}
-                </button>
+                <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can initiate a workspace purge">
+                  <button 
+                    onClick={handleSystemPurge}
+                    disabled={isResetting}
+                    className="px-6 py-3 bg-rose-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-rose-600 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
+                  >
+                    {isResetting ? <RefreshCw size={14} className="animate-spin" /> : <AlertCircle size={14} />}
+                    {isResetting ? 'DECOMMISSIONING...' : 'INITIATE PURGE'}
+                  </button>
+                </RequireRole>
             </div>
           </div>
         </div>
