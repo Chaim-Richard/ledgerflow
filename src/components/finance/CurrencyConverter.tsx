@@ -51,8 +51,7 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
   const [amount, setAmount] = useState<number>(100);
   const [fromCurrency, setFromCurrency] = useState<string>('USD');
   const [toCurrency, setToCurrency] = useState<string>('EUR');
-  
-  const exchangeRates: Record<string, number> = {
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({
     'USD': 1.0,
     'EUR': 0.92,
     'GBP': 0.79,
@@ -60,11 +59,29 @@ export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: Cur
     'JPY': 151.2,
     'AUD': 1.54,
     'CAD': 1.36
-  };
+  });
+
+  React.useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        const user = useAuthStore.getState().user;
+        const token = user ? await user.getIdToken() : '';
+        const response = await fetch(`/api/v1/fx/rates/${fromCurrency}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setExchangeRates(data.rates);
+        }
+      } catch (e) {
+        console.error('Failed to fetch live rates:', e);
+      }
+    };
+    fetchRates();
+  }, [fromCurrency]);
 
   const calculateConversion = () => {
-    const amountInUsd = amount / (exchangeRates[fromCurrency] || 1);
-    return (amountInUsd * (exchangeRates[toCurrency] || 1)).toFixed(2);
+    return (amount * (exchangeRates[toCurrency] || 1)).toFixed(2);
   };
 
   const innerContent = (

@@ -120,6 +120,10 @@ export function useEntityOperations() {
         if (finalData.vendorId) {
           syncEntityBalance('vendors', finalData.vendorId);
         }
+      } else if (path === 'creditNotes') {
+        await LedgerPostService.postCreditNoteLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
+      } else if (path === 'vendorCredits') {
+        await LedgerPostService.postVendorCreditLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
       } else {
         await setDoc(doc(db, path, docId), finalData);
       }
@@ -220,6 +224,14 @@ export function useEntityOperations() {
         if (targetVendId) {
           syncEntityBalance('vendors', targetVendId);
         }
+      } else if (path === 'creditNotes' && user && currentWorkspaceId) {
+        const existing = useLedgerStore.getState().creditNotes.find(c => c.id === id) || {};
+        const mergedData = { ...existing, ...finalData };
+        await LedgerPostService.postCreditNoteLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
+      } else if (path === 'vendorCredits' && user && currentWorkspaceId) {
+        const existing = useLedgerStore.getState().vendorCredits.find(v => v.id === id) || {};
+        const mergedData = { ...existing, ...finalData };
+        await LedgerPostService.postVendorCreditLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
       } else {
         await updateDoc(doc(db, path, id), finalData);
       }
@@ -244,6 +256,10 @@ export function useEntityOperations() {
         if (existingBill?.vendorId) {
           syncEntityBalance('vendors', existingBill.vendorId);
         }
+      } else if (path === 'creditNotes' && currentWorkspaceId) {
+        await LedgerPostService.deletePostings(id, 'creditNoteId' as any, currentWorkspaceId, { collection: path, docId: id, action: 'delete' });
+      } else if (path === 'vendorCredits' && currentWorkspaceId) {
+        await LedgerPostService.deletePostings(id, 'vendorCreditId' as any, currentWorkspaceId, { collection: path, docId: id, action: 'delete' });
       } else {
         await deleteDoc(doc(db, path, id));
       }

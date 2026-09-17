@@ -119,7 +119,7 @@ inventoryRouter.post('/cogs', async (req, res) => {
       // Re-fetch item inside transaction for race-condition safety
       const itemSnap = await t.get(db.collection('inventory').doc(itemId));
       const currentItemData = itemSnap.data();
-      const currentQty = typeof currentItemData?.quantityOnHand === 'number' ? currentItemData.quantityOnHand : 0;
+      const currentQty = typeof currentItemData?.quantityAtHand === 'number' ? currentItemData.quantityAtHand : 0;
       
       if (quantitySold > currentQty) {
         throw new Error(`Insufficient inventory stock. Requested ${quantitySold}, available ${currentQty}.`);
@@ -140,7 +140,7 @@ inventoryRouter.post('/cogs', async (req, res) => {
       // Reduce on-hand inventory quantity
       const itemRef = db.collection('inventory').doc(itemId);
       t.update(itemRef, {
-        quantityOnHand: FieldValue.increment(-quantitySold),
+        quantityAtHand: FieldValue.increment(-quantitySold),
         updatedAt: FieldValue.serverTimestamp()
       });
 
@@ -194,7 +194,7 @@ inventoryRouter.post('/adjust', async (req, res) => {
         throw new Error('Security Violation: Item not found in workspace.');
       }
 
-      const oldQty = new Decimal(itemData.quantityOnHand || 0);
+      const oldQty = new Decimal(itemData.quantityAtHand || 0);
       const newQty = oldQty.plus(quantityChange);
       
       // Negative inventory check for adjustments
@@ -254,7 +254,7 @@ inventoryRouter.post('/adjust', async (req, res) => {
       t.set(db.collection('transactions').doc(validatedTx.id), { ...validatedTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       
       t.update(itemRef, {
-        quantityOnHand: newQty.toNumber(),
+        quantityAtHand: newQty.toNumber(),
         unitCostCents: newWAC.round().toNumber(),
         updatedAt: FieldValue.serverTimestamp()
       });

@@ -9,7 +9,7 @@ import { TransactionTemplates } from '../../kernel/templates/TransactionTemplate
 import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchema, BankLineUpdateSchema } from '../../schemas';
 import { Transaction } from '../../types';
 import { parseLocalDate } from '../../lib/utils';
-import { getDb } from '../db/firestore';
+import { getDb, assertWorkspaceAccess } from '../db/firestore';
 import { isPostable, getAbsoluteTotal, isTransactionInDateRange } from '../../lib/txFilters';
 import { optimizedTransactionSimilarity } from '../../lib/algorithms';
 import { executeCommand } from '../utils/commandExecutor';
@@ -1015,6 +1015,8 @@ transactionRouter.post('/reconciliation/clear', async (req, res) => {
 });
 
 
+import { FxService } from "../services/FxService";
+
 // ==========================================
 // MONTH-END REVALUATION API
 // ==========================================
@@ -1027,10 +1029,17 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
 
     const wsData = wsDoc.data();
+    const baseCurrency = wsData?.currency || 'USD';
+    const targetCurr = (targetCurrency || baseCurrency).toUpperCase();
+
     const today = new Date().toLocaleDateString('en-CA');
     if (wsData?.lockDate && today <= wsData.lockDate) {
       return res.status(400).json({ error: `Period Locked: Cannot post revaluation adjustment in locked period ${wsData.lockDate}.` });
     }
+
+    // --- LIVE FX FETCH ---
+    const liveRates = await FxService.getRatesForBase(baseCurrency);
+    const marketRate = liveRates[targetCurr] || 1.0;
 
     // Ensure real chartAccounts exist for Unrealized FX and Foreign Clearing
     const accSnap = await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get();
@@ -1077,13 +1086,6 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
     const txSnap = await db.collection('transactions').where('workspaceId', '==', workspaceId).get();
     const transactions = txSnap.docs.map(d => d.data());
     
-    const baseCurrency = wsData?.currency || 'USD';
-    const targetCurr = (targetCurrency || baseCurrency).toUpperCase();
-    
-    // In a real production system, we would fetch live rates here.
-    // For this audit fix, we use a 1.05 simulated market rate factor to demonstrate the calculation logic.
-    const SIMULATED_MARKET_RATE = 1.05; 
-
     const revalLines: any[] = [];
     let totalAdjustmentCents = 0;
 
@@ -1109,7 +1111,7 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
       if (stats.foreignCents === 0) continue;
 
       // Expected functional balance at current market rates
-      const expectedFunctionalCents = Math.round(stats.foreignCents * SIMULATED_MARKET_RATE);
+      const expectedFunctionalCents = Math.round(stats.foreignCents * marketRate);
       const adjustment = expectedFunctionalCents - stats.functionalCents;
 
       if (adjustment !== 0) {
@@ -1704,5 +1706,170 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
   } catch (e: any) {
     const statusCode = e.statusCode || (e.message === 'Transaction not found' ? 404 : (e.message?.includes('Forbidden') || e.message === 'Not a member' ? 403 : 400));
     res.status(statusCode).json({ error: e.message });
+  }
+});
+
+/**
+ * ATOMIC INTERCOMPANY TRANSFER ENGINE
+ * Posts reciprocal balancing entries in two workspaces simultaneously.
+ * Uses a Due To / Due From logic to maintain group-wide reconciliation.
+ */
+transactionRouter.post('/intercompany/post', async (req, res) => {
+  try {
+    const { 
+      sourceWorkspaceId, 
+      targetWorkspaceId, 
+      amountCents, 
+      description, 
+      date,
+      sourceAccountId, // e.g. Cash account in Source
+      targetAccountId  // e.g. Inventory/Expense in Target
+    } = req.body;
+    
+    if (!sourceWorkspaceId || !targetWorkspaceId || !amountCents) {
+      return res.status(400).json({ error: 'Missing required intercompany parameters (source, target, amount)' });
+    }
+
+    const user = (req as any).user;
+    const db = getDb();
+
+    // 1. Validate permissions for BOTH entities (Intercompany requires group-level access)
+    const [sourceAuth, targetAuth] = await Promise.all([
+      assertWorkspaceAccess(db, sourceWorkspaceId, user),
+      assertWorkspaceAccess(db, targetWorkspaceId, user)
+    ]);
+    
+    const sourceWsData = sourceAuth.data;
+    const targetWsData = targetAuth.data;
+
+    // 2. Resolve Reciprocal Clearing Accounts
+    // We look for accounts marked as 'intercompany' role or named 'Intercompany'
+    const [sourceAccsSnap, targetAccsSnap] = await Promise.all([
+      db.collection('chartAccounts').where('workspaceId', '==', sourceWorkspaceId).get(),
+      db.collection('chartAccounts').where('workspaceId', '==', targetWorkspaceId).get()
+    ]);
+
+    const sourceAccounts = sourceAccsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    const targetAccounts = targetAccsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+
+    let sourceClearing = sourceAccounts.find(a => a.role === 'intercompany' || (a.name || '').toLowerCase().includes('intercompany'));
+    let targetClearing = targetAccounts.find(a => a.role === 'intercompany' || (a.name || '').toLowerCase().includes('intercompany'));
+
+    // Create clearing accounts if missing
+    const batch = db.batch();
+    if (!sourceClearing) {
+      const ref = db.collection('chartAccounts').doc();
+      sourceClearing = {
+        id: ref.id,
+        workspaceId: sourceWorkspaceId,
+        name: `Intercompany Due From ${targetWsData.name || 'Target'}`,
+        code: '1300',
+        type: 'asset',
+        subtype: 'other_current_asset',
+        category: 'Receivables',
+        balanceCents: 0,
+        createdAt: new Date().toISOString()
+      };
+      batch.set(ref, sourceClearing);
+    }
+
+    if (!targetClearing) {
+      const ref = db.collection('chartAccounts').doc();
+      targetClearing = {
+        id: ref.id,
+        workspaceId: targetWorkspaceId,
+        name: `Intercompany Due To ${sourceWsData.name || 'Source'}`,
+        code: '2300',
+        type: 'liability',
+        subtype: 'other_current_liability',
+        category: 'Payables',
+        balanceCents: 0,
+        createdAt: new Date().toISOString()
+      };
+      batch.set(ref, targetClearing);
+    }
+
+    // 3. Prepare Reciprocal Transactions
+    const sourceTxId = db.collection('transactions').doc().id;
+    const targetTxId = db.collection('transactions').doc().id;
+
+    // SOURCE: Dr Intercompany Clearing / Cr Cash (Asset Transfer Out)
+    const sourceTx: any = {
+      id: sourceTxId,
+      uid: user.uid,
+      workspaceId: sourceWorkspaceId,
+      date: date || new Date().toISOString().split('T')[0],
+      description: description || `Intercompany Transfer to ${targetWsData.name}`,
+      totalAmountCents: amountCents,
+      currency: sourceWsData.currency || 'USD',
+      exchangeRate: 1,
+      status: 'completed',
+      type: 'actual',
+      metadata: { isIntercompany: true, targetWorkspaceId, targetTxId },
+      lines: [
+        {
+          accountId: sourceClearing.id,
+          accountName: sourceClearing.name,
+          amountCents: amountCents, // Debit Due From (Asset Up)
+          description: `Due From ${targetWsData.name}`
+        },
+        {
+          accountId: sourceAccountId || sourceAccounts.find(a => a.role === 'cash' || a.subtype === 'cash')?.id,
+          accountName: 'Cash/Bank',
+          amountCents: -amountCents, // Credit Cash (Asset Down)
+          description: `Transfer Out`
+        }
+      ]
+    };
+
+    // TARGET: Dr Asset/Expense / Cr Intercompany Clearing (Liability Up)
+    const targetTx: any = {
+      id: targetTxId,
+      uid: user.uid,
+      workspaceId: targetWorkspaceId,
+      date: date || new Date().toISOString().split('T')[0],
+      description: description || `Intercompany Receipt from ${sourceWsData.name}`,
+      totalAmountCents: amountCents,
+      currency: targetWsData.currency || 'USD',
+      exchangeRate: 1,
+      status: 'completed',
+      type: 'actual',
+      metadata: { isIntercompany: true, sourceWorkspaceId, sourceTxId },
+      lines: [
+        {
+          accountId: targetAccountId || targetAccounts.find(a => a.type === 'expense' || a.type === 'asset')?.id,
+          accountName: 'Target Account',
+          amountCents: amountCents, // Debit Asset/Expense (Asset Up / Expense Up)
+          description: `Intercompany Receipt`
+        },
+        {
+          accountId: targetClearing.id,
+          accountName: targetClearing.name,
+          amountCents: -amountCents, // Credit Due To (Liability Up)
+          description: `Due To ${sourceWsData.name}`
+        }
+      ]
+    };
+
+    // 4. Validate both transactions before posting
+    const [validSource, validTarget] = await Promise.all([
+      TransactionValidator.validateAndPrepare(sourceTx, { workspaceId: sourceWorkspaceId, user, wsData: sourceWsData }),
+      TransactionValidator.validateAndPrepare(targetTx, { workspaceId: targetWorkspaceId, user, wsData: targetWsData })
+    ]);
+
+    // 5. Commit Atomically
+    batch.set(db.collection('transactions').doc(sourceTxId), { ...validSource, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    batch.set(db.collection('transactions').doc(targetTxId), { ...validTarget, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    
+    await batch.commit();
+
+    res.json({
+      status: 'ok',
+      message: 'Intercompany reciprocal entries posted successfully',
+      sourceTxId,
+      targetTxId
+    });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ error: err.message });
   }
 });

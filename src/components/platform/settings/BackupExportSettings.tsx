@@ -5,6 +5,7 @@ import { useAuthStore } from '../../../stores/useAuthStore';
 import { toast } from 'sonner';
 import { formatDecimal, resolveAccountName } from '../../../lib/utils';
 import { recordBackupCompleted } from '../../../lib/ledgerBackupHealth';
+import { isPostable } from '../../../lib/txFilters';
 
 export default function BackupExportSettings() {
   const [isExporting, setIsExporting] = useState(false);
@@ -63,7 +64,8 @@ export default function BackupExportSettings() {
           reconciliations: state.reconciliations,
           autoRules: state.autoRules,
           metadata: {
-            transactionCount: state.transactions.length,
+            transactionCount: state.transactions.filter(isPostable).length,
+            totalCount: state.transactions.length,
             currency: state.baseCurrency || 'USD',
             serverAuthoritative: false
           }
@@ -135,7 +137,7 @@ export default function BackupExportSettings() {
       if (!downloadedViaServer) {
         const { transactions, accounts } = useLedgerStore.getState();
         let csvContent = "Date,Amount,Description,Category,Type,Status,Reference\n";
-        transactions.forEach(t => {
+        transactions.filter(isPostable).forEach(t => {
           const categoryName = t.lines && t.lines.length > 0 ? resolveAccountName(accounts, t.lines[0].accountId, t.lines[0].accountName) : 'Uncategorized';
           const amountStr = formatDecimal(t.totalAmountCents || 0);
           const row = [

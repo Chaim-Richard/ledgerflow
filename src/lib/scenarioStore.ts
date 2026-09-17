@@ -22,6 +22,8 @@ export interface Scenario {
 interface ScenarioState {
   scenarios: Scenario[];
   activeScenarioId: string | null;
+  setScenarios: (scenarios: Scenario[]) => void;
+  setActiveScenarioId: (id: string | null) => void;
   addScenario: (name: string, description: string) => void;
   deleteScenario: (id: string) => void;
   toggleScenario: (id: string) => void;
@@ -30,29 +32,30 @@ interface ScenarioState {
   deleteGhost: (scenarioId: string, ghostId: string) => void;
 }
 
-export const useScenarioStore = create<ScenarioState>()(
-  persist(
-    (set) => ({
-      scenarios: [
-        {
-          id: 'default-scenario',
-          name: 'Base Evolution',
-          description: 'The natural trajectory of current operations.',
-          ghosts: [],
-          isActive: true
-        }
-      ],
-      activeScenarioId: 'default-scenario',
+export const useScenarioStore = create<ScenarioState>((set) => ({
+  scenarios: [
+    {
+      id: 'default-scenario',
+      name: 'Base Evolution',
+      description: 'The natural trajectory of current operations.',
+      ghosts: [],
+      isActive: true
+    }
+  ],
+  activeScenarioId: 'default-scenario',
 
-      addScenario: (name, description) => set((state) => ({
-        scenarios: [...state.scenarios, {
-          id: crypto.randomUUID(),
-          name,
-          description,
-          ghosts: [],
-          isActive: false
-        }]
-      })),
+  setScenarios: (scenarios) => set({ scenarios }),
+  setActiveScenarioId: (id) => set({ activeScenarioId: id }),
+
+  addScenario: (name, description) => set((state) => ({
+    scenarios: [...state.scenarios, {
+      id: crypto.randomUUID(),
+      name,
+      description,
+      ghosts: [],
+      isActive: false
+    }]
+  })),
 
       deleteScenario: (id) => set((state) => ({
         scenarios: state.scenarios.filter(s => s.id !== id),
@@ -84,7 +87,5 @@ export const useScenarioStore = create<ScenarioState>()(
           ghosts: s.ghosts.filter(g => g.id !== ghostId)
         } : s)
       }))
-    }),
-    { name: 'ledger-scenarios' }
-  )
+    })
 );

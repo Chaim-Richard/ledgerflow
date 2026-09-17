@@ -19,7 +19,7 @@ export function isSimulationTransaction(t: Transaction): boolean {
  * Filters out void, failed, draft, soft-deleted, and by default simulation/ghost transactions.
  */
 export function isPostable(t: Transaction): boolean;
-export function isPostable(t: Transaction, options: { includeSimulations?: boolean }): boolean;
+export function isPostable(t: Transaction, options: { includeSimulations?: boolean, periods?: any[] }): boolean;
 export function isPostable(t: Transaction, options?: any): boolean {
   if (!t) return false;
   if (t.status === 'void' || t.status === 'failed' || (t as any).status === 'draft' || t.deletedAt) {
@@ -29,6 +29,12 @@ export function isPostable(t: Transaction, options?: any): boolean {
   if (!includeSimulations && isSimulationTransaction(t)) {
     return false;
   }
+
+  // Period Lock Check
+  if (options?.periods && isPeriodLocked(t.date, options.periods)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -49,6 +55,19 @@ export function isTransactionInDateRange(t: Pick<Transaction, 'date'>, start?: s
   const startDate = start?.slice(0, 10);
   const endDate = end?.slice(0, 10);
   return (!startDate || date >= startDate) && (!endDate || date <= endDate);
+}
+
+/**
+ * Checks if a date falls within any closed accounting period.
+ */
+export function isPeriodLocked(date: string, periods: any[]): boolean {
+  if (!date || !Array.isArray(periods)) return false;
+  const d = date.slice(0, 10);
+  return periods.some(p => 
+    p.status === 'closed' && 
+    d >= p.startDate.slice(0, 10) && 
+    d <= p.endDate.slice(0, 10)
+  );
 }
 
 /**

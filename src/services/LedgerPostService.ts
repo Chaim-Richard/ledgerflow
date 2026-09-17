@@ -216,6 +216,58 @@ export class LedgerPostService {
     };
     txsToPost.push(accrualTx);
 
+    // 2.5 AUTO-COGS RECOGNITION (New Requirement D17)
+    // If invoice contains items that match inventory SKUs/IDs, post reciprocal COGS entries
+    if (invoiceData.items && invoiceData.items.length > 0) {
+      const inventoryAcc = this.resolveAccount(
+        accounts,
+        mappings,
+        ['inventory', 'stock', 'inventory asset'],
+        a => resolveAccountRole(a) === 'inventory' || a.category === 'Inventory',
+        'Inventory Asset'
+      );
+
+      const cogsAcc = this.resolveAccount(
+        accounts,
+        mappings,
+        ['cogs', 'cost of goods sold', 'direct costs'],
+        a => resolveAccountRole(a) === 'cogs' || a.category === 'COGS' || a.category === 'Direct Costs',
+        'Cost of Goods Sold (COGS)'
+      );
+
+      // We need to fetch unit costs for these items. 
+      // In a real production system, we'd fetch from Firestore. 
+      // Here, we check if they are in the items metadata or we trigger a background sync.
+      for (const item of invoiceData.items) {
+        // If the item has a unitCostCents or we can identify it as inventory
+        const unitCost = item.unitCostCents || item.metadata?.unitCostCents;
+        if (unitCost && unitCost > 0) {
+          const totalCogs = roundCents(unitCost * item.quantity * rate);
+          txsToPost.push({
+            uid,
+            workspaceId,
+            date: invoiceDate,
+            description: `COGS: ${item.description} (Qty: ${item.quantity})`,
+            totalAmountCents: totalCogs,
+            currency: invoiceData.currency || 'USD',
+            exchangeRate: rate,
+            status: 'completed',
+            type: 'actual',
+            createdAt: new Date().toISOString(),
+            metadata: {
+              invoiceId,
+              itemId: item.id,
+              type: 'invoice-cogs-auto'
+            },
+            lines: [
+              { accountId: cogsAcc.id, accountName: cogsAcc.name, debitCents: totalCogs, creditCents: 0, description: `COGS for ${item.description}` },
+              { accountId: inventoryAcc.id, accountName: inventoryAcc.name, debitCents: 0, creditCents: totalCogs, description: `Inventory reduction for ${item.description}` }
+            ]
+          });
+        }
+      }
+    }
+
     // 3. Transaction 2: Payment Posting (DR Cash, CR A/R)
     if (status === 'paid' || status === 'partially_paid') {
       const paidAmtCents = roundCents((invoiceData.amountPaidCents || invoiceData.paidAmountCents || (status === 'paid' ? rawAmount : 0)) * rate);
@@ -425,6 +477,212 @@ export class LedgerPostService {
     }
 
     // Atomic post via Server API
+    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+  }
+
+  /**
+   * Post double-entry journal entries for a Customer Credit Note.
+   */
+  static async postCreditNoteLedger(creditNoteId: string, creditNoteData: any, workspaceId: string, uid: string, entityMutation?: any, context?: any) {
+    if (!workspaceId || !creditNoteId) return;
+
+    const cnDate = creditNoteData.date || getLocalDateISO();
+    this.verifyLockDate(cnDate, context);
+
+    const accounts = this.getAccounts(context);
+    const workspaces = this.getWorkspaces(context);
+    const currentWs = workspaces.find(w => w.id === workspaceId);
+    const mappings = currentWs?.defaultAccountMappings || {};
+
+    const arAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['ar', 'accounts receivable', 'receivables', 'receivable'],
+      a => a.type === 'asset' && (a.category === 'Receivables' || a.name.toLowerCase().includes('receivable') || a.code === '1100'),
+      'Accounts Receivable (A/R)'
+    );
+
+    const salesReturnAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['revenue', 'sales', 'income', 'sales returns'],
+      a => a.type === 'income' || a.category === 'Revenue',
+      'Sales Returns / Revenue'
+    );
+
+    // Reversals of prior CN postings
+    const allTxs = this.getTransactions(context).filter(t => t.metadata?.creditNoteId === creditNoteId);
+    const reversedIds = new Set(allTxs.filter(t => t.metadata?.isReversal).map(t => t.metadata?.reversesTxId || t.metadata?.reversedTransactionId));
+    
+    const existingTxs = allTxs.filter(t => 
+      isPostable(t) && 
+      !t.metadata?.isReversal &&
+      !reversedIds.has(t.id)
+    );
+
+    const txsToPost: any[] = [];
+    const today = getLocalDateISO();
+
+    for (const prevTx of existingTxs) {
+      txsToPost.push({
+        uid,
+        workspaceId,
+        date: today,
+        description: `Reversal of prior credit note posting (CN ${creditNoteId})`,
+        totalAmountCents: prevTx.totalAmountCents,
+        currency: prevTx.currency || 'USD',
+        exchangeRate: prevTx.exchangeRate || 1,
+        status: 'completed',
+        type: 'actual',
+        createdAt: new Date().toISOString(),
+        metadata: {
+          creditNoteId,
+          type: 'credit-note-reversal',
+          reversesTxId: prevTx.id,
+          isReversal: true
+        },
+        lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
+      });
+    }
+
+    if (creditNoteData.status === 'void') {
+      if (txsToPost.length > 0) {
+        await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+      }
+      return;
+    }
+
+    const rawAmount = creditNoteData.amountCents || 0;
+    const rate = creditNoteData.exchangeRate || 1;
+    const amount = roundCents(rawAmount * rate);
+    if (amount <= 0) return;
+
+    const cnTx = {
+      uid,
+      workspaceId,
+      date: cnDate,
+      description: `Credit Note ${creditNoteData.number || creditNoteId}: ${creditNoteData.customerName || 'Customer'}`,
+      totalAmountCents: amount,
+      currency: creditNoteData.currency || 'USD',
+      exchangeRate: rate,
+      status: 'completed',
+      type: 'actual',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        creditNoteId,
+        customerId: creditNoteData.customerId,
+        type: 'credit-note-issuance'
+      },
+      lines: [
+        { accountId: salesReturnAccount.id, accountName: salesReturnAccount.name, debitCents: amount, creditCents: 0, description: 'Sales Return / Discount' },
+        { accountId: arAccount.id, accountName: arAccount.name, debitCents: 0, creditCents: amount, description: 'Accounts Receivable Credit' }
+      ]
+    };
+    txsToPost.push(cnTx);
+
+    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+  }
+
+  /**
+   * Post double-entry journal entries for a Vendor Credit.
+   */
+  static async postVendorCreditLedger(vendorCreditId: string, vendorCreditData: any, workspaceId: string, uid: string, entityMutation?: any, context?: any) {
+    if (!workspaceId || !vendorCreditId) return;
+
+    const vcDate = vendorCreditData.date || getLocalDateISO();
+    this.verifyLockDate(vcDate, context);
+
+    const accounts = this.getAccounts(context);
+    const workspaces = this.getWorkspaces(context);
+    const currentWs = workspaces.find(w => w.id === workspaceId);
+    const mappings = currentWs?.defaultAccountMappings || {};
+
+    const apAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['ap', 'accounts payable', 'payables', 'payable'],
+      a => a.type === 'liability' && (a.category === 'Payables' || a.name.toLowerCase().includes('payable') || a.code === '2000'),
+      'Accounts Payable (A/P)'
+    );
+
+    const expenseAccount = this.resolveAccount(
+      accounts,
+      mappings,
+      ['expense', 'purchase rebates', 'cogs'],
+      a => a.type === 'expense' || a.category === 'Expense' || a.category === 'COGS',
+      'Purchase Rebates / Expense'
+    );
+
+    // Reversals of prior VC postings
+    const allTxs = this.getTransactions(context).filter(t => t.metadata?.vendorCreditId === vendorCreditId);
+    const reversedIds = new Set(allTxs.filter(t => t.metadata?.isReversal).map(t => t.metadata?.reversesTxId || t.metadata?.reversedTransactionId));
+    
+    const existingTxs = allTxs.filter(t => 
+      isPostable(t) && 
+      !t.metadata?.isReversal &&
+      !reversedIds.has(t.id)
+    );
+
+    const txsToPost: any[] = [];
+    const today = getLocalDateISO();
+
+    for (const prevTx of existingTxs) {
+      txsToPost.push({
+        uid,
+        workspaceId,
+        date: today,
+        description: `Reversal of prior vendor credit posting (VC ${vendorCreditId})`,
+        totalAmountCents: prevTx.totalAmountCents,
+        currency: prevTx.currency || 'USD',
+        exchangeRate: prevTx.exchangeRate || 1,
+        status: 'completed',
+        type: 'actual',
+        createdAt: new Date().toISOString(),
+        metadata: {
+          vendorCreditId,
+          type: 'vendor-credit-reversal',
+          reversesTxId: prevTx.id,
+          isReversal: true
+        },
+        lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
+      });
+    }
+
+    if (vendorCreditData.status === 'void') {
+      if (txsToPost.length > 0) {
+        await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+      }
+      return;
+    }
+
+    const rawAmount = vendorCreditData.amountCents || 0;
+    const rate = vendorCreditData.exchangeRate || 1;
+    const amount = roundCents(rawAmount * rate);
+    if (amount <= 0) return;
+
+    const vcTx = {
+      uid,
+      workspaceId,
+      date: vcDate,
+      description: `Vendor Credit ${vendorCreditData.number || vendorCreditId}: ${vendorCreditData.vendorName || 'Vendor'}`,
+      totalAmountCents: amount,
+      currency: vendorCreditData.currency || 'USD',
+      exchangeRate: rate,
+      status: 'completed',
+      type: 'actual',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        vendorCreditId,
+        vendorId: vendorCreditData.vendorId,
+        type: 'vendor-credit-issuance'
+      },
+      lines: [
+        { accountId: apAccount.id, accountName: apAccount.name, debitCents: amount, creditCents: 0, description: 'Accounts Payable Reduction' },
+        { accountId: expenseAccount.id, accountName: expenseAccount.name, debitCents: 0, creditCents: amount, description: 'Purchase Rebate / Expense Discount' }
+      ]
+    };
+    txsToPost.push(vcTx);
+
     await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
   }
 

@@ -1,62 +1,120 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { usePerformanceTrace } from '../../hooks/usePerformanceTrace';
 import { 
   History, 
   Search, 
   Download,
   User,
-  Activity
+  Activity,
+  Info,
+  ChevronRight,
+  Shield,
+  Filter
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface AuditTrailProps {
-  auditLogs: any[];
+  auditLogs?: any[];
 }
 
-const Row = ({ index, style, data }: { index: number, style: React.CSSProperties, data: any[] }) => {
-  const log = data[index];
+const Row = ({ index, style, data }: { index: number, style: React.CSSProperties, data: { logs: any[], expandedId: string | null, setExpandedId: (id: string | null) => void } }) => {
+  const log = data.logs[index];
   if (!log) return null;
 
+  const isExpanded = data.expandedId === log.id;
+
   return (
-    <div style={style} className="px-8 flex items-center">
-      <div className="w-full flex items-center justify-between p-5 bg-[var(--ink)]/20 rounded-[32px] border border-[var(--line)] hover:border-indigo-600/30 transition-all group">
-        <div className="flex items-center gap-6 overflow-hidden">
-          <div className="w-10 h-10 bg-[var(--ink)] rounded-xl flex items-center justify-center text-slate-500 shrink-0 border border-[var(--line)]">
-            <Activity size={18} />
+    <div style={style} className="px-8 py-2">
+      <div 
+        className={cn(
+          "w-full flex flex-col p-5 bg-[var(--surface)] rounded-[32px] border transition-all group overflow-hidden",
+          isExpanded ? "border-indigo-600 ring-1 ring-indigo-600/20" : "border-[var(--line)] hover:border-zinc-400"
+        )}
+      >
+        <div 
+          className="flex items-center justify-between cursor-pointer"
+          onClick={() => data.setExpandedId(isExpanded ? null : log.id)}
+        >
+          <div className="flex items-center gap-6 overflow-hidden">
+            <div className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-[var(--line)] transition-colors",
+              log.action?.includes('ERROR') || log.action?.includes('DRIFT') ? "bg-rose-500/10 text-rose-500" : "bg-[var(--bg)] text-slate-500"
+            )}>
+              <Activity size={18} />
+            </div>
+            <div className="overflow-hidden">
+              <div className="flex items-center gap-3 mb-1">
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-[8px] font-medium uppercase tracking-wider",
+                  log.action?.toLowerCase() === 'create' ? "bg-emerald-500/20 text-emerald-500" :
+                  log.action?.toLowerCase() === 'update' ? "bg-indigo-600/20 text-indigo-600" :
+                  log.action?.includes('DRIFT') ? "bg-rose-500/20 text-rose-500" :
+                  "bg-zinc-500/20 text-zinc-500"
+                )}>
+                  {log.action}
+                </span>
+                <p className="text-xs font-black text-[var(--text)] uppercase tracking-tight truncate">
+                  {log.entityType} <span className="opacity-20 mx-1">/</span> {log.details?.description || log.entityId || 'SYSTEM'}
+                </p>
+              </div>
+              <div className="flex items-center gap-4 text-[9px] font-black text-slate-500 uppercase tracking-widest italic opacity-60">
+                <span className="flex items-center gap-1.5"><History size={10} />{log.timestamp ? format(new Date(log.timestamp), 'MMM dd, HH:mm:ss') : 'N/A'}</span>
+                <span className="flex items-center gap-1.5"><User size={10} />{log.userEmail || log.email || log.uid?.substring(0, 8) || 'SYSTEM'}</span>
+              </div>
+            </div>
           </div>
-          <div className="overflow-hidden">
-            <div className="flex items-center gap-3 mb-1">
-              <span className={cn(
-                "px-2 py-0.5 rounded text-[8px] font-medium uppercase tracking-wider",
-                log.action?.toLowerCase() === 'create' ? "bg-emerald-500/20 text-emerald-500" :
-                log.action?.toLowerCase() === 'update' ? "bg-indigo-600/20 text-indigo-600" :
-                "bg-rose-500/20 text-rose-500"
-              )}>
-                {log.action}
-              </span>
-              <p className="text-xs font-black text-[var(--text)] uppercase tracking-tight truncate">
-                {log.entityType} <span className="opacity-20 mx-1">/</span> {log.details?.description || log.entityId}
-              </p>
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex flex-col items-end gap-1">
+              <div className="px-2 py-0.5 bg-[var(--bg)] rounded border border-[var(--line)]">
+                <p className="text-[9px] font-mono font-bold text-indigo-600">
+                  0x{(log.id || 'xxxxxx').substring(0, 8).toUpperCase()}
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-[9px] font-black text-slate-500 uppercase tracking-widest italic opacity-60">
-              <span className="flex items-center gap-1.5"><History size={10} />{log.timestamp ? format(new Date(log.timestamp), 'MMM dd, HH:mm:ss') : 'N/A'}</span>
-              <span className="flex items-center gap-1.5"><User size={10} />{log.userEmail || log.email || log.uid?.substring(0, 8)}</span>
-            </div>
+            <ChevronRight size={18} className={cn("text-zinc-400 transition-transform", isExpanded && "rotate-90")} />
           </div>
         </div>
-        <div className="text-right shrink-0">
-          <div className="hidden md:flex flex-col items-end gap-1">
-            <div className="px-2 py-0.5 bg-[var(--ink)] rounded border border-[var(--line)]">
-              <p className="text-[9px] font-mono font-bold text-indigo-600">
-                0x{(log.id || 'xxxxxx').substring(0, 8).toUpperCase()}
-              </p>
+
+        {isExpanded && (
+          <div className="mt-4 pt-4 border-t border-[var(--line)] animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Payload Context</p>
+                <div className="bg-[var(--bg)] rounded-2xl p-4 border border-[var(--line)] overflow-auto max-h-64">
+                  <pre className="text-[11px] font-mono text-indigo-400 whitespace-pre-wrap">
+                    {JSON.stringify(log.details || {}, null, 2)}
+                  </pre>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Session Fingerprint</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-[var(--bg)] p-3 rounded-xl border border-[var(--line)]">
+                      <p className="text-[9px] text-zinc-500 uppercase mb-1">Entity ID</p>
+                      <p className="text-xs font-mono truncate">{log.entityId || 'SYSTEM'}</p>
+                    </div>
+                    <div className="bg-[var(--bg)] p-3 rounded-xl border border-[var(--line)]">
+                      <p className="text-[9px] text-zinc-500 uppercase mb-1">Target ID</p>
+                      <p className="text-xs font-mono truncate">{log.targetId || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10 flex items-start gap-3">
+                  <Shield size={16} className="text-indigo-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-indigo-400 leading-relaxed italic">
+                    This event is locked and cryptographically anchored to the ledger history. Any tampering will be detected by the shadow reconciler.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -68,6 +126,7 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
   const storeLogs = useLedgerStore(state => state.auditLogs || []);
   const auditLogs = passedLogs || storeLogs;
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [expandedId, setExpandedId] = React.useState<string | null>(null);
 
   const filteredLogs = useMemo(() => {
     let base = auditLogs.map(log => ({
@@ -81,7 +140,8 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
         (log.action?.toLowerCase() || '').includes(term) ||
         (log.entityType?.toLowerCase() || '').includes(term) ||
         (log.userEmail?.toLowerCase() || '').includes(term) ||
-        (log.email?.toLowerCase() || '').includes(term)
+        (log.email?.toLowerCase() || '').includes(term) ||
+        (log.entityId?.toLowerCase() || '').includes(term)
       );
     }
     
@@ -98,23 +158,29 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
     URL.revokeObjectURL(url);
   };
 
+  const itemData = useMemo(() => ({
+    logs: filteredLogs,
+    expandedId,
+    setExpandedId
+  }), [filteredLogs, expandedId]);
+
   return (
-    <div className="h-full flex flex-col space-y-8">
+    <div className="h-full flex flex-col space-y-8 animate-in fade-in duration-500">
       <div className="flex items-center justify-between shrink-0">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate mb-4">
-            <History size={14} />
+            <Shield size={14} />
             Verified Audit Stream
           </div>
           <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Audit Trail</h2>
-          <p className="text-slate-500 font-normal text-lg mt-2 max-w-xl leading-relaxed">Continuous cryptographic observability of legal and fiscal vectors.</p>
+          <p className="text-slate-500 font-normal text-lg mt-2 max-w-xl leading-relaxed italic opacity-80">Continuous cryptographic observability of legal and fiscal vectors.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative group/search">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-hover/search:text-indigo-600 transition-colors" size={18} />
             <input 
               type="text"
-              placeholder="Search feed..."
+              placeholder="Search history..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full sm:w-80 h-14 pl-14 pr-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-xs font-bold text-[var(--text)] focus:outline-none focus:border-indigo-600 transition-all shadow-sm"
@@ -122,16 +188,15 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
           </div>
           <button 
             onClick={downloadAuditLog}
-            className="h-14 px-8 bg-slate-900 text-white hover:bg-zinc-800 rounded-[32px] flex items-center gap-3 text-[10px] font-medium uppercase tracking-wider transition-all shadow-xl shadow-ledger-ink/10"
+            className="h-14 px-8 bg-zinc-900 text-white hover:bg-zinc-800 rounded-[32px] flex items-center gap-3 text-[10px] font-medium uppercase tracking-wider transition-all shadow-xl"
            aria-label="Export Core">
             <Download size={18} />
-            Export Core
+            Export
           </button>
         </div>
       </div>
 
       <div className="flex-1 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] overflow-hidden shadow-2xl relative min-h-[500px]">
-        <div className="absolute technical-grid pointer-events-none opacity-[0.05] inset-0" />
         <div className="absolute inset-0 z-10">
           {filteredLogs.length > 0 ? (
             <AutoSizer>
@@ -139,10 +204,10 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
                 <List
                   height={height}
                   itemCount={filteredLogs.length}
-                  itemSize={100}
+                  itemSize={expandedId ? 320 : 120} // Dynamic size would be better but react-window needs fixed for List
                   width={width}
-                  className="py-8"
-                  itemData={filteredLogs}
+                  className="py-8 scrollbar-hide"
+                  itemData={itemData}
                 >
                   {Row}
                 </List>

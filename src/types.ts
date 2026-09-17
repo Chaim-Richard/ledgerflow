@@ -724,6 +724,8 @@ export interface PeriodStatus {
   status: 'open' | 'closed';
   closedAt?: string;
   closedBy?: string;
+  startDate: string;
+  endDate: string;
 }
 
 export interface CorrectionEvent {
@@ -826,6 +828,10 @@ export interface RecurringTransaction {
   nextOccurrence: string;
   anchorDay?: number;
   isActive: boolean;
+  status?: 'active' | 'paused' | 'completed';
+  lastOccurrence?: string;
+  payee?: string;
+  type?: string;
   template: Partial<Transaction>;
   createdAt: string;
   generatedCount?: number;

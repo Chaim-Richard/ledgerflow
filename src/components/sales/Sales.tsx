@@ -43,6 +43,8 @@ import { detectDuplicateContacts } from '../../lib/contactUtils';
 import { getDefaultTaxConfig, generateDefaultTaxRates } from '../../lib/taxRateDefaults';
 import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
+import CustomerDetailView from './CustomerDetailView';
+
 export default function Sales() {
   const user = useAuthStore(s => s.user);
   const invoices = useLedgerStore(s => s.invoices);
@@ -51,6 +53,7 @@ export default function Sales() {
   const { addEntity, updateEntity } = useEntityOperations();
 
   const transactions = useLedgerStore(s => s.transactions);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   const customerBalances = useMemo(() => {
     const map: Record<string, number> = {};
@@ -164,6 +167,10 @@ export default function Sales() {
       default: return 'bg-[var(--ink)] text-zinc-650 border-[var(--line)]';
     }
   };
+
+  if (selectedCustomerId) {
+    return <CustomerDetailView customerId={selectedCustomerId} onBack={() => setSelectedCustomerId(null)} />;
+  }
 
   return (
     <div className="space-y-8 pb-12">
@@ -435,7 +442,11 @@ export default function Sales() {
               </thead>
               <tbody className="divide-y divide-ledger-line/30">
                 {customers.map((cust) => (
-                  <tr key={cust.id} className="group hover:bg-[var(--ink)]/30 transition-all cursor-pointer">
+                  <tr 
+                    key={cust.id} 
+                    onClick={() => setSelectedCustomerId(cust.id)}
+                    className="group hover:bg-[var(--ink)]/30 transition-all cursor-pointer"
+                  >
                     <td className="p-4 md:p-8">
                        <div className="flex items-center gap-5">
                           <div className="w-14 h-14 bg-slate-900 rounded-[32px] flex items-center justify-center text-white font-black text-xl border border-white/10 shadow-2xl">

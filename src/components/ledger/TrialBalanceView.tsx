@@ -25,6 +25,7 @@ type SortDir = 'asc' | 'desc';
 
 export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown }: TrialBalanceViewProps) {
   const transactions = useLedgerStore(s => s.transactions || []);
+  const journalEntries = useLedgerStore(s => s.journalEntries || []);
   
   const [asOfDate, setAsOfDate] = useState<string>(() => format(new Date(), 'yyyy-MM-dd'));
   const [sortField, setSortField] = useState<SortField>('code');
@@ -118,6 +119,30 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       });
     });
 
+    // 4. Accumulate manual journal entries
+    journalEntries.forEach(je => {
+      if (je.deletedAt || !isTransactionInDateRange(je, undefined, asOfDate)) return;
+      // Skip JEs that are auto-generated from transactions (already handled in step 3)
+      if ((je as any).transactionId || (je as any).parentEventId) return;
+
+      je.lines?.forEach(line => {
+        const acc = accountById.get(line.accountId) || accountByName.get(line.accountName || '');
+        if (!acc) return;
+        
+        if (!accountTotals[acc.id]) {
+          accountTotals[acc.id] = { debitCents: 0, creditCents: 0, netSigned: 0 };
+        }
+        
+        const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
+        const debit = line.debit || 0;
+        const credit = line.credit || 0;
+        
+        accountTotals[acc.id].debitCents += debit;
+        accountTotals[acc.id].creditCents += credit;
+        accountTotals[acc.id].netSigned += (isDebitNature ? (debit - credit) : (credit - debit));
+      });
+    });
+
     const lines = accounts.map(acc => {
       const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
       const totals = accountTotals[acc.id];
@@ -174,7 +199,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
     const isBalanced = Math.abs(totalDebits - totalCredits) < 1; // within 1 cent tolerance
 
     return { lines, totalDebits, totalCredits, isBalanced };
-  }, [accounts, transactions, asOfDate, sortField, sortDir]);
+  }, [accounts, transactions, journalEntries, asOfDate, sortField, sortDir]);
 
   const trialBalance = useMemo(() => {
     if (isServerAuthoritative && serverData) {

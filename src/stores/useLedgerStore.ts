@@ -25,7 +25,8 @@ import {
   TaxRate,
   CustomTemplate,
   BankStatementLine,
-  DimensionNode
+  DimensionNode,
+  PeriodStatus
 } from '../types';
 
 
@@ -58,6 +59,7 @@ export interface LedgerState {
   dimensionNodes: DimensionNode[];
   auditLogs: any[];
   bankLines: BankStatementLine[];
+  periods: PeriodStatus[];
   partners: any[];
   reconciliations: any[];
   customTemplates: CustomTemplate[];
@@ -131,6 +133,7 @@ export interface LedgerState {
   setPartners: (data: any[]) => void;
   setReconciliations: (data: any[]) => void;
   setBankLines: (data: BankStatementLine[]) => void;
+  setPeriods: (data: PeriodStatus[]) => void;
   setCustomTemplates: (data: CustomTemplate[]) => void;
   setAutoRules: (data: any[]) => void;
   setAnalyticalPatternCache: (data: Record<string, any>) => void;
@@ -176,6 +179,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   partners: [],
   reconciliations: [],
   bankLines: [],
+  periods: [],
   customTemplates: [],
   autoRules: [],
   activityFeed: [],
@@ -506,6 +510,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   setPartners: (partners) => set({ partners }),
   setReconciliations: (reconciliations) => set({ reconciliations }),
   setBankLines: (bankLines) => set({ bankLines }),
+  setPeriods: (periods) => set({ periods }),
   setCustomTemplates: (customTemplates) => set({ customTemplates }),
   setAutoRules: (autoRules) => set({ autoRules }),
   setAnalyticalPatternCache: (analyticalPatternCache) => set({ analyticalPatternCache }),

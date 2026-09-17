@@ -17,10 +17,10 @@ import {
   Eye,
   Download
 } from 'lucide-react';
-import { formatCurrency, getLocalDateISO, parseLocalDate } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { toast } from 'sonner';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
-import { applyCreditNoteToInvoice, applyVendorCreditToBill } from '../../lib/creditNoteEngine';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
 
 export default function CreditNotesView() {
   const [activeTab, setActiveTab] = useState<'customer' | 'vendor'>('customer');
@@ -30,15 +30,10 @@ export default function CreditNotesView() {
 
   const customers = useLedgerStore(s => s.customers);
   const vendors = useLedgerStore(s => s.vendors);
-  const invoices = useLedgerStore(s => s.invoices);
-  const bills = useLedgerStore(s => s.bills);
   const creditNotes = useLedgerStore(s => s.creditNotes || []);
   const vendorCredits = useLedgerStore(s => s.vendorCredits || []);
-  const setCreditNotes = useLedgerStore(s => s.setCreditNotes);
-  const setVendorCredits = useLedgerStore(s => s.setVendorCredits);
-  const setTransactions = useLedgerStore(s => s.setTransactions);
-  const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
+  
+  const { addEntity } = useEntityOperations();
 
   // Form State
   const [customerId, setCustomerId] = useState('');
@@ -49,7 +44,7 @@ export default function CreditNotesView() {
   const [reason, setReason] = useState('');
   const [dateStr, setDateStr] = useState(getLocalDateISO(new Date()));
 
-  const handleCreateCustomerCreditNote = (e: React.FormEvent) => {
+  const handleCreateCustomerCreditNote = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountCents = Math.round(parseFloat(amountStr || '0') * 100);
     if (!customerId) {
@@ -62,10 +57,7 @@ export default function CreditNotesView() {
     }
 
     const customer = customers.find(c => c.id === customerId);
-    const newCreditNote: CreditNote = {
-      id: `cn_${Date.now()}`,
-      uid: 'user_1',
-      workspaceId: 'default',
+    const newCreditNote: Partial<CreditNote> = {
       customerId,
       customerName: customer?.name || 'Customer',
       number: `CN-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -75,41 +67,14 @@ export default function CreditNotesView() {
       date: dateStr,
       reason: reason || 'Customer Refund / Return Credit',
       status: 'open',
-      currency: 'USD',
-      createdAt: new Date().toISOString()
+      currency: 'USD'
     };
 
-    // Auto-create double-entry ledger transaction (Debit Sales Returns / Revenue, Credit AR)
-    const arAccount = accounts.find(a => a.category === 'Receivables' || a.name.toLowerCase().includes('receivable')) || accounts[0];
-    const salesReturnAccount = accounts.find(a => a.category === 'Revenue' || a.name.toLowerCase().includes('sales') || a.name.toLowerCase().includes('revenue')) || accounts[0];
-
-    if (arAccount && salesReturnAccount) {
-      const newTx = {
-        id: `tx_cn_${Date.now()}`,
-        uid: 'user_1',
-        workspaceId: 'default',
-        date: dateStr,
-        description: `Customer Credit Note ${newCreditNote.number}: ${customer?.name}`,
-        payee: customer?.name,
-        totalAmountCents: amountCents,
-        currency: 'USD',
-        status: 'completed' as const,
-        type: 'actual' as const,
-        lines: [
-          { accountId: salesReturnAccount.id, accountName: salesReturnAccount.name, amountCents: amountCents, description: 'Sales Return / Discount' },
-          { accountId: arAccount.id, accountName: arAccount.name, amountCents: -amountCents, description: 'Accounts Receivable Credit' }
-        ],
-        createdAt: new Date().toISOString()
-      };
-      setTransactions([newTx, ...transactions]);
-    }
-
-    setCreditNotes([newCreditNote, ...creditNotes]);
-    toast.success(`Credit Note ${newCreditNote.number} issued successfully!`);
+    await addEntity('creditNotes', newCreditNote, `Credit Note ${newCreditNote.number} issued successfully!`);
     resetForm();
   };
 
-  const handleCreateVendorCredit = (e: React.FormEvent) => {
+  const handleCreateVendorCredit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountCents = Math.round(parseFloat(amountStr || '0') * 100);
     if (!vendorId) {
@@ -122,10 +87,7 @@ export default function CreditNotesView() {
     }
 
     const vendor = vendors.find(v => v.id === vendorId);
-    const newVendorCredit: VendorCredit = {
-      id: `vc_${Date.now()}`,
-      uid: 'user_1',
-      workspaceId: 'default',
+    const newVendorCredit: Partial<VendorCredit> = {
       vendorId,
       vendorName: vendor?.name || 'Vendor',
       number: `VC-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -135,37 +97,10 @@ export default function CreditNotesView() {
       date: dateStr,
       reason: reason || 'Vendor Rebate / Supplier Credit',
       status: 'open',
-      currency: 'USD',
-      createdAt: new Date().toISOString()
+      currency: 'USD'
     };
 
-    // Auto-create double-entry ledger transaction (Debit AP, Credit Expense / Purchase Rebate)
-    const apAccount = accounts.find(a => a.category === 'Payables' || a.name.toLowerCase().includes('payable')) || accounts[0];
-    const expenseAccount = accounts.find(a => a.category === 'COGS' || a.category === 'Expense' || a.name.toLowerCase().includes('expense')) || accounts[0];
-
-    if (apAccount && expenseAccount) {
-      const newTx = {
-        id: `tx_vc_${Date.now()}`,
-        uid: 'user_1',
-        workspaceId: 'default',
-        date: dateStr,
-        description: `Vendor Credit ${newVendorCredit.number}: ${vendor?.name}`,
-        payee: vendor?.name,
-        totalAmountCents: amountCents,
-        currency: 'USD',
-        status: 'completed' as const,
-        type: 'actual' as const,
-        lines: [
-          { accountId: apAccount.id, accountName: apAccount.name, amountCents: amountCents, description: 'Accounts Payable Reduction' },
-          { accountId: expenseAccount.id, accountName: expenseAccount.name, amountCents: -amountCents, description: 'Purchase Rebate / Expense Discount' }
-        ],
-        createdAt: new Date().toISOString()
-      };
-      setTransactions([newTx, ...transactions]);
-    }
-
-    setVendorCredits([newVendorCredit, ...vendorCredits]);
-    toast.success(`Vendor Credit ${newVendorCredit.number} logged successfully!`);
+    await addEntity('vendorCredits', newVendorCredit, `Vendor Credit ${newVendorCredit.number} logged successfully!`);
     resetForm();
   };
 

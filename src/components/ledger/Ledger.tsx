@@ -205,6 +205,8 @@ const Ledger = React.memo(() => {
         type: newAccount.type,
         category: newAccount.category || newAccount.type,
         description: newAccount.description || "",
+        openingBalanceCents: newAccount.openingBalanceCents || 0,
+        asOfDate: newAccount.asOfDate || new Date().toISOString(),
         balanceCents: 0,
         createdAt: new Date().toISOString()
       });

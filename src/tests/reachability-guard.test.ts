@@ -55,7 +55,7 @@ function expandGlob(importerPath: string, globPattern: string): string[] {
   const targetDir = path.resolve(importerDir, globClean);
   if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) return [];
 
-  const files = fs.readdirNames ? fs.readdirSync(targetDir) : fs.readdirSync(targetDir);
+  const files = fs.readdirSync(targetDir);
   return files.map(f => path.join(targetDir, f)).filter(f => fs.existsSync(f) && fs.statSync(f).isFile());
 }
 

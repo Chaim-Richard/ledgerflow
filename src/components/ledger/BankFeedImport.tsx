@@ -10,6 +10,7 @@ import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { db, getIdToken } from '../../firebase';
 import { MatchingEngine } from '../../lib/MatchingEngine';
 import { generateImportIdentity } from '../../lib/algorithms';
+import { isPostable } from '../../lib/txFilters';
 import CategoryWhyPopover from '../common/CategoryWhyPopover';
 import PlaidConnectButton from '../finance/PlaidConnectButton';
 
@@ -125,7 +126,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
         limit(1000)
       );
       const historySnap = await getDocs(qHistory);
-      const historicalTxs = historySnap.docs.map(d => d.data() as Transaction);
+      const historicalTxs = historySnap.docs.map(d => d.data() as Transaction).filter(isPostable);
 
       const dimensionNodes = useLedgerStore.getState().dimensionNodes;
       const localEngine = new MatchingEngine(activeRules, {}, '', Math.max(0.5, matchingThreshold - 0.03), historicalTxs, dimensionNodes, accounts);

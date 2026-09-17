@@ -1,3 +1,4 @@
+import { fxRouter } from "./src/server/routes/fxRoutes";
 import { reportRouter } from "./src/server/routes/reportRoutes";
 import { workspaceRouter, countWorkspaceOwners } from "./src/server/routes/workspaceRoutes";
 import { invitePublicRouter } from "./src/server/routes/invitePublicRoutes";
@@ -5154,6 +5155,7 @@ You MUST output a valid JSON object matching this schema exactly:
   app.use("/api/v1/consolidation", apiAuthenticate, consolidationRouter);
   app.use("/api/v1/lease", apiAuthenticate, leaseRouter);
   app.use("/api/v1/inventory", apiAuthenticate, inventoryRouter);
+  app.use("/api/v1/fx", apiAuthenticate, fxRouter);
   app.use("/api/v1/support", authenticate, supportRouter);
   app.use("/api/v1/payments", apiAuthenticate, paymentRouter);
   app.use("/api/v1/documents", apiAuthenticate, documentRouter);

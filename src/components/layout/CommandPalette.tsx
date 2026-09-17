@@ -13,7 +13,7 @@ import { getLocalDateISO, resolveAccountName } from '../../lib/utils';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { resolveAccountRole } from '../../lib/accountUtils';
-import { isCashAccount } from '../../lib/txFilters';
+import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -158,14 +158,15 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
     ).map((n: DimensionNode) => n.id);
 
     // 1. Transactions
-    ledger.transactions.forEach(t => {
+    ledger.transactions.filter(isPostable).forEach(t => {
       const hasMatchedDim = t.dimensions && matchedDimensionNodes.length > 0 && Object.values(t.dimensions).some(val => matchedDimensionNodes.includes(val as string));
       
       if (match(t.description) || matchArray(t.tags) || match(t.payee) || match(t.id) || hasMatchedDim) {
+        const absAmount = Math.abs(t.totalAmountCents || 0);
         results.push({
           id: `tx-${t.id}`,
           type: 'data',
-          label: `${t.description || 'Transaction'} - ${(t.totalAmountCents / 100).toLocaleString('en-US', { style: 'currency', currency: t.currency || 'USD' })}`,
+          label: `${t.description || 'Transaction'} - ${(absAmount / 100).toLocaleString('en-US', { style: 'currency', currency: t.currency || 'USD' })}`,
           category: `Transaction • ${t.date} ${t.tags ? '• ' + t.tags.join(', ') : ''}`,
           actionId: 'switch-tab',
           payload: { tab: 'transactions', id: t.id },
@@ -177,11 +178,12 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           const accName = resolveAccountName(accounts, line.accountId, line.accountName);
           const lineHasMatchedDim = line.dimensions && matchedDimensionNodes.length > 0 && Object.values(line.dimensions).some(val => matchedDimensionNodes.includes(val as string));
           if (match(line.description) || match(accName) || matchArray(line.tags) || match(line.project) || match(line.class) || match(line.location) || lineHasMatchedDim) {
+            const amount = lineAmount(line, t);
             results.push({
               id: `tx-line-${t.id}-${line.accountId}`,
               type: 'data',
               label: `${line.description || t.description} (in ${accName})`,
-              category: `Transaction Line • ${(line.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: t.currency || 'USD' })} ${line.tags ? '• ' + line.tags.join(', ') : ''}`,
+              category: `Transaction Line • ${(Math.abs(amount) / 100).toLocaleString('en-US', { style: 'currency', currency: t.currency || 'USD' })} ${line.tags ? '• ' + line.tags.join(', ') : ''}`,
               actionId: 'switch-tab',
               payload: { tab: 'transactions', id: t.id },
               icon: <FileText size={16} className="text-blue-500 shrink-0" />

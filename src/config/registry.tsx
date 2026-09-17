@@ -17,7 +17,7 @@ import {
   ShieldCheck, Terminal as TerminalIcon, Settings, Building, Cpu as CpuIcon,
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
-  Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag
+  Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
 , Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen } from 'lucide-react';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
@@ -79,13 +79,16 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'time-machine': lazy(() => import('../components/ledger/TimeMachine')),
   'inbox': lazy(() => import('../components/ledger/InboxView')),
   'month-end-close': lazy(() => import('../components/ledger/MonthEndCloseView')),
+  'fiscal-periods': lazy(() => import('../components/finance/FiscalPeriodManager')),
   'ask': lazy(() => import('../components/ledger/AskLoop')),
   'magic': lazy(() => import('../components/ledger/MagicEntry')),
   'vault': lazy(() => import('../components/forensics/Vault')),
   'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
+  'recurring': lazy(() => import('../components/ledger/RecurringTransactionsView')),
   'system-command-center': lazy(() => import('../components/platform/SystemCommandCenter')),
   'consolidation': lazy(() => import('../components/finance/Consolidation')),
   'credit-notes': lazy(() => import('../components/finance/CreditNotesView')),
+  'intercompany': lazy(() => import('../components/finance/IntercompanyManager')),
   'taxes': lazy(() => import('../components/finance/TaxManager')),
   'support': lazy(() => import('../components/support/SupportView')),
   'help': lazy(() => import('../components/support/HelpGuideView')),
@@ -114,12 +117,15 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'assets', label: { en: 'Fixed Asset Register', he: 'רכוש קבוע' }, icon: Building, groupId: 'transactions' },
   { id: 'register', label: { en: 'Account Register', he: 'יומן חשבון' }, icon: BookOpen, groupId: 'transactions' },
   { id: 'ledger', label: { en: 'Ledger & Journal', he: 'ספר ראשי ויומן' }, icon: Database, groupId: 'transactions' },
+  { id: 'intercompany', label: { en: 'Intercompany', he: 'בין-חברתי' }, icon: ArrowLeftRight, groupId: 'transactions' },
+  { id: 'recurring', label: { en: 'Recurring Items', he: 'פריטים מחזוריים' }, icon: RefreshCw, groupId: 'transactions' },
   { id: 'query-builder', label: { en: 'BQL Query Builder', he: 'בונה שאילתות' }, icon: Filter, groupId: 'transactions' },
   { id: 'banking', label: { en: 'Bank Connections', he: 'חיבורי בנק' }, icon: Building, groupId: 'transactions' },
   { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת' }, icon: Search, groupId: 'transactions' },
 
   { id: 'reconciliation', label: { en: 'Reconcile', he: 'התאמות' }, icon: RefreshCw, groupId: 'reconcile' },
   { id: 'month-end-close', label: { en: 'Month-End Close', he: 'סגירת חודש' }, icon: ClipboardCheck, groupId: 'reconcile' },
+  { id: 'fiscal-periods', label: { en: 'Fiscal Periods', he: 'תקופות פיסקליות' }, icon: CalendarDays, groupId: 'reconcile' },
 
   { id: 'sales', label: { en: 'Sales', he: 'כסף נכנס' }, icon: ArrowUpRight, groupId: 'money_in' },
   { id: 'estimates', label: { en: 'Estimates & Quotes', he: 'הצעות מחיר' }, icon: FileSignature, groupId: 'money_in' },
@@ -240,6 +246,7 @@ export const SYSTEM_COMMANDS: CommandDefinition[] = [
   { id: 'switch-tab-ledger', label: { en: 'Go to General Ledger', he: 'מעבר לספר ראשי' }, category: 'Navigation', actionId: 'switch-tab', payload: { tab: 'ledger' } },
   { id: 'switch-tab-reports', label: { en: 'Go to Financial Reports', he: 'מעבר לדוחות' }, category: 'Navigation', actionId: 'switch-tab', payload: { tab: 'reports' } },
   { id: 'health-check', label: { en: 'Ledger Health Check', he: 'בדיקת בריאות' }, category: 'System', actionId: 'open-health-check' },
+  { id: 'fiscal-periods', label: { en: 'Manage Fiscal Periods', he: 'ניהול תקופות פיסקליות' }, category: 'System', actionId: 'switch-tab', payload: { tab: 'fiscal-periods' } },
   { id: 'run-audit', label: { en: 'Ledger Integrity Auditor', he: 'ביקורת תקינות ספר ראשי' }, category: 'System', actionId: 'open-integrity' },
   { id: 'system-center', label: { en: 'Admin Panel', he: 'פתיחת מרכז ניהול מערכת' }, category: 'System', actionId: 'open-command-center' },
   { id: 'settings-currency', label: { en: 'Change Currency (Settings)', he: 'שינוי מטבע (הגדרות)' }, category: 'Settings', actionId: 'switch-tab', payload: { tab: 'settings', subTab: 'localization' } },

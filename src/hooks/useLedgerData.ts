@@ -36,8 +36,12 @@ import {
   Workspace,
   CustomTemplate,
   UserProfile,
-  DimensionNode
+  DimensionNode,
+  CreditNote,
+  VendorCredit,
+  PeriodStatus
 } from '../types';
+import { Scenario, useScenarioStore } from '../lib/scenarioStore';
 import { migrateWorkspaceDimensionNodesToCollection } from '../lib/migrations/dimensionNodesMigration';
 
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
@@ -337,12 +341,16 @@ export function useLedgerData() {
   // 1. Sales & Invoicing Hub
   useEffect(() => {
     if (!user || !currentWorkspaceId) return;
-    if (activeTab !== 'sales' && activeTab !== 'estimates' && activeTab !== 'payments') return;
+    if (activeTab !== 'sales' && activeTab !== 'estimates' && activeTab !== 'payments' && activeTab !== 'credit-notes' && activeTab !== 'audit-trail') return;
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubInvoices = onSnapshot(query(collection(db, 'invoices'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
       useLedgerStore.getState().setInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() } as Invoice)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'invoices'));
+
+    const unsubCreditNotes = onSnapshot(query(collection(db, 'creditNotes'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setCreditNotes(snap.docs.map(d => ({ id: d.id, ...d.data() } as CreditNote)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'creditNotes'));
 
     const unsubPayments = onSnapshot(query(collection(db, 'payments'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
       useLedgerStore.getState().setPayments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment)));
@@ -358,6 +366,7 @@ export function useLedgerData() {
 
     return () => {
       unsubInvoices();
+      unsubCreditNotes();
       unsubPayments();
       unsubEstimates();
       unsubCustomers();
@@ -367,12 +376,16 @@ export function useLedgerData() {
   // 2. Purchases, Bills & Vendors
   useEffect(() => {
     if (!user || !currentWorkspaceId) return;
-    if (activeTab !== 'purchases' && activeTab !== 'inventory') return;
+    if (activeTab !== 'purchases' && activeTab !== 'inventory' && activeTab !== 'credit-notes') return;
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubBills = onSnapshot(query(collection(db, 'bills'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
       useLedgerStore.getState().setBills(snap.docs.map(d => ({ id: d.id, ...d.data() } as Bill)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'bills'));
+
+    const unsubVendorCredits = onSnapshot(query(collection(db, 'vendorCredits'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setVendorCredits(snap.docs.map(d => ({ id: d.id, ...d.data() } as VendorCredit)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'vendorCredits'));
 
     const unsubVendors = onSnapshot(query(collection(db, 'vendors'), ...filter, limit(2000)), (snap) => {
       useLedgerStore.getState().setVendors(snap.docs.map(d => ({ id: d.id, ...d.data() } as Vendor)));
@@ -380,6 +393,7 @@ export function useLedgerData() {
 
     return () => {
       unsubBills();
+      unsubVendorCredits();
       unsubVendors();
     };
   }, [user, currentWorkspaceId, activeTab]);
@@ -460,23 +474,51 @@ export function useLedgerData() {
     if (activeTab !== 'audit-trail') return;
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
+    const unsubPeriods = onSnapshot(query(collection(db, 'periods'), ...filter, limit(100)), (snap) => {
+      useLedgerStore.getState().setPeriods(snap.docs.map(d => ({ id: d.id, ...d.data() } as PeriodStatus)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'periods'));
+
+    const unsubScenarios = onSnapshot(query(collection(db, 'scenarios'), ...filter, limit(100)), (snap) => {
+      const scenarios = snap.docs.map(d => ({ id: d.id, ...d.data() } as Scenario));
+      useScenarioStore.getState().setScenarios(scenarios.length > 0 ? scenarios : [
+        {
+          id: 'default-scenario',
+          name: 'Base Evolution',
+          description: 'The natural trajectory of current operations.',
+          ghosts: [],
+          isActive: true
+        }
+      ]);
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'scenarios'));
+
     const unsubAuditLogs = onSnapshot(query(collection(db, 'auditLogs'), ...filter, orderBy('timestamp', 'desc'), limit(500)), (snap) => {
       useLedgerStore.getState().setAuditLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'auditLogs'));
 
     return () => {
       unsubAuditLogs();
+      unsubPeriods();
+      unsubScenarios();
     };
   }, [user, currentWorkspaceId, activeTab]);
 
   // 8. Recurring rules & fixed assets (Settings/Appearance/Data Health Views)
   useEffect(() => {
     if (!user || !currentWorkspaceId) return;
-    if (activeTab !== 'settings' && activeTab !== 'data-health' && activeTab !== 'system-command-center') return;
+    if (activeTab !== 'settings' && activeTab !== 'data-health' && activeTab !== 'system-command-center' && activeTab !== 'recurring') return;
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubRecurring = onSnapshot(query(collection(db, 'recurring'), ...filter, limit(1000)), (snap) => {
-      useLedgerStore.getState().setRecurring(snap.docs.map(d => ({ id: d.id, ...d.data() } as RecurringTransaction)));
+      useLedgerStore.getState().setRecurring(snap.docs.map(d => {
+        const data = d.data() as any;
+        return {
+          id: d.id,
+          ...data,
+          status: data.status || (data.isActive ? 'active' : 'paused'),
+          payee: data.payee || data.template?.payee || '',
+          lastOccurrence: data.lastOccurrence || data.lastTriggeredAt || ''
+        } as RecurringTransaction;
+      }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'recurring'));
 
     const unsubAssets = onSnapshot(query(collection(db, 'assets'), ...filter, limit(2000)), (snap) => {

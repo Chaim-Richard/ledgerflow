@@ -36,6 +36,8 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 
+import VendorDetailView from './VendorDetailView';
+
 export default function Purchases() {
   const user = useAuthStore(s => s.user);
   const bills = useLedgerStore(s => s.bills);
@@ -43,6 +45,8 @@ export default function Purchases() {
   const accounts = useLedgerStore(s => s.accounts);
   const transactions = useLedgerStore(s => s.transactions);
   const { addEntity, updateEntity } = useEntityOperations();
+
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
 
   const vendorBalances = useMemo(() => {
     const map: Record<string, number> = {};
@@ -150,6 +154,10 @@ export default function Purchases() {
       default: return 'bg-[var(--ink)] text-zinc-650 border-[var(--line)]';
     }
   };
+
+  if (selectedVendorId) {
+    return <VendorDetailView vendorId={selectedVendorId} onBack={() => setSelectedVendorId(null)} />;
+  }
 
   return (
     <div className="space-y-8 pb-20">
@@ -520,7 +528,11 @@ export default function Purchases() {
               </thead>
               <tbody className="divide-y divide-ledger-line/30">
                 {vendors.map((vend) => (
-                  <tr key={vend.id} className="group hover:bg-[var(--ink)]/30 transition-all cursor-pointer">
+                  <tr 
+                    key={vend.id} 
+                    onClick={() => setSelectedVendorId(vend.id)}
+                    className="group hover:bg-[var(--ink)]/30 transition-all cursor-pointer"
+                  >
                     <td className="p-4 md:p-8">
                        <div className="flex items-center gap-5">
                           <div className="w-14 h-14 bg-slate-900 rounded-[32px] flex items-center justify-center text-white font-black text-xl border border-white/10 shadow-2xl">

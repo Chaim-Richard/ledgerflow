@@ -380,9 +380,10 @@ export default function TransactionGrid() {
   // High volume pre-computations
   const totalBalancedSum = useMemo(() => {
     let sum = 0;
-    const len = transactionsWithBalance.length;
+    const filtered = transactionsWithBalance.filter(isPostable);
+    const len = filtered.length;
     for (let i = 0; i < len; i++) {
-      sum += (transactionsWithBalance[i].totalAmountCents || 0);
+      sum += (filtered[i].totalAmountCents || 0);
     }
     return sum;
   }, [transactionsWithBalance]);
@@ -391,9 +392,10 @@ export default function TransactionGrid() {
     if (selectedIds.size === 0) return { sum: 0, mean: 0 };
     let sum = 0;
     let count = 0;
-    const len = transactionsWithBalance.length;
+    const filtered = transactionsWithBalance.filter(isPostable);
+    const len = filtered.length;
     for (let i = 0; i < len; i++) {
-      const t = transactionsWithBalance[i];
+      const t = filtered[i];
       if (selectedIds.has(t.id)) {
         sum += (t.totalAmountCents || 0);
         count++;
@@ -418,9 +420,10 @@ export default function TransactionGrid() {
     const projectsSet = new Set<string>();
     const statusesSet = new Set<string>();
 
-    const len = safeTransactions.length;
+    const filtered = safeTransactions.filter(isPostable);
+    const len = filtered.length;
     for (let i = 0; i < len; i++) {
-      const t = safeTransactions[i];
+      const t = filtered[i];
       categoriesSet.add(resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName));
       projectsSet.add(t.project || 'Global');
       statusesSet.add(t.status || 'Active');
@@ -550,7 +553,7 @@ export default function TransactionGrid() {
 
   const pivotData = useMemo(() => {
     const groups: Record<string, { total: number, count: number }> = {};
-    smartFilteredTransactions.forEach(t => {
+    smartFilteredTransactions.filter(isPostable).forEach(t => {
       const key = resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName);
       if (!groups[key]) groups[key] = { total: 0, count: 0 };
       groups[key].total += t.totalAmountCents;
