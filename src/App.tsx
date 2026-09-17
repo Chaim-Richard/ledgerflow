@@ -313,6 +313,20 @@ const shortcutMap = useMemo(() => {
     return <PublicInvoicePage />;
   }
 
+  const isInviteRoute = window.location.pathname.startsWith('/invite/');
+  if (isInviteRoute) {
+    return (
+      <Suspense fallback={<InitializationScreen language={language} />}>
+        <RootLayout
+          onLogout={handleLogout}
+          onLoginPrompt={() => setIsGuest(false)}
+          activeTab={'accept-invite' as any}
+          setActiveTab={setActiveTabStore}
+        />
+      </Suspense>
+    );
+  }
+
   if (isInitializing) {
     return <InitializationScreen language={language} />;
   }

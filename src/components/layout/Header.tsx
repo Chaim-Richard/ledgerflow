@@ -7,6 +7,8 @@ import { useNotificationStore } from '../../stores/useNotificationStore';
 import NotificationDrawer from './NotificationDrawer';
 import { t } from '../../locales/i18n';
 
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+
 interface HeaderProps {
   onLogout?: () => void;
   onLoginPrompt?: () => void;
@@ -20,6 +22,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
   const setCommandPaletteOpen = useUIStore(s => s.setCommandPaletteOpen);
   const theme = useUIStore(s => s.theme);
   const setTheme = useUIStore(s => s.setTheme);
+  const currentRole = useCurrentRole();
 
   const { notifications, setDrawerOpen, runScheduledChecks } = useNotificationStore();
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -64,7 +67,15 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
         <div className="hidden lg:flex items-center gap-2 font-mono text-[12px] text-[var(--muted)]">
           <Compass size={15} className="text-[var(--brass)]" />
           <span className="text-[var(--text)] font-semibold">{currentWorkspace?.name || 'Main Ledger'}</span>
-          <span className="text-[var(--faint)]">· 42.36°N 71.06°W</span>
+          <span className="text-[var(--faint)]">·</span>
+          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+            currentRole === 'owner' ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20' :
+            currentRole === 'accountant' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+            currentRole === 'bookkeeper' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+            'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+          }`} title={`Your current role in this workspace is ${currentRole}`}>
+            {currentRole}
+          </span>
         </div>
       </div>
 

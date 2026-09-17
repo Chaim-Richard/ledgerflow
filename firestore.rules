@@ -156,6 +156,11 @@ service cloud.firestore {
       allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
+    match /invites/{inviteId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create, update, delete: if false; // Managed via server-side API only
+    }
+
     match /auditLogs/{logId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || request.resource.data.userId == request.auth.uid) && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(logId) &&
@@ -356,7 +361,7 @@ service cloud.firestore {
     }
 
     function isProtectedCollection(name) {
-      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages", "invoices", "bills", "inventory", "recurring", "budgets", "autoRules", "fixedAssets", "assets", "taxRates", "vendors", "customers", "employees", "payRuns", "partners", "errorLogs", "dimensionNodes", "workspaceShards"];
+      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages", "invoices", "bills", "inventory", "recurring", "budgets", "autoRules", "fixedAssets", "assets", "taxRates", "vendors", "customers", "employees", "payRuns", "partners", "errorLogs", "dimensionNodes", "workspaceShards", "invites"];
     }
 
     match /supportTickets/{ticketId} {

@@ -1,100 +1,155 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Trash2, Mail, ShieldCheck, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { Users, UserPlus, Trash2, Mail, ShieldCheck, Check, AlertCircle, RefreshCw, Copy, ExternalLink, Shield, Activity, Clock, Info, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { auth } from '../../../firebase';
 import { useAuthStore } from '../../../stores/useAuthStore';
-import { generateInviteToken } from '../../../lib/inviteManager';
+import { WorkspaceRole, ROLE_DESCRIPTIONS } from '../../../hooks/useCurrentRole';
+import { WorkspaceInvite, AuditLog } from '../../../types';
 
 export default function TeamSettings() {
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
   const workspaceId = currentWorkspace?.id || 'default_workspace';
+  const maxSeats = currentWorkspace?.maxSeats || 5;
 
   const [members, setMembers] = useState<string[]>([]);
+  const [roles, setRoles] = useState<Record<string, WorkspaceRole>>({});
+  const [invites, setInvites] = useState<WorkspaceInvite[]>([]);
   const [ownerUid, setOwnerUid] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  
   const [inviteInput, setInviteInput] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState<WorkspaceRole>('viewer');
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  const fetchMembers = async () => {
+  // Member activity drawer state
+  const [selectedMemberForLogs, setSelectedMemberForLogs] = useState<{ uid: string; email?: string } | null>(null);
+  const [memberLogs, setMemberLogs] = useState<AuditLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState<boolean>(false);
+
+  const fetchTeamData = async () => {
     try {
       setLoading(true);
       const token = await auth.currentUser?.getIdToken();
       if (!token) return;
 
-      const res = await fetch(`/api/v1/workspaces/${workspaceId}/members`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        setMembers(data.members || []);
-        if (data.ownerUid) setOwnerUid(data.ownerUid);
+      const headers = { 'Authorization': `Bearer ${token}` };
+
+      const [membersRes, rolesRes, invitesRes] = await Promise.all([
+        fetch(`/api/v1/workspaces/${workspaceId}/members`, { headers }),
+        fetch(`/api/v1/workspaces/${workspaceId}/roles`, { headers }),
+        fetch(`/api/v1/workspaces/${workspaceId}/invites`, { headers })
+      ]);
+
+      const [membersData, rolesData, invitesData] = await Promise.all([
+        membersRes.json(),
+        rolesRes.json(),
+        invitesRes.json()
+      ]);
+
+      if (membersData.status === 'success') {
+        setMembers(membersData.members || []);
+        if (membersData.ownerUid) setOwnerUid(membersData.ownerUid);
+      }
+
+      if (rolesData.roles) {
+        setRoles(rolesData.roles);
+      }
+
+      if (invitesData.status === 'success' && Array.isArray(invitesData.invites)) {
+        setInvites(invitesData.invites.filter((i: WorkspaceInvite) => i.status === 'pending'));
       }
     } catch (err: any) {
-      toast.error('Failed to load workspace team members', { description: err.message });
+      toast.error('Failed to load team settings', { description: err.message });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const token = await auth.currentUser?.getIdToken();
-        if (!token || !active) return;
-
-        const res = await fetch(`/api/v1/workspaces/${workspaceId}/members`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.status === 'success' && active) {
-          setMembers(data.members || []);
-          if (data.ownerUid) setOwnerUid(data.ownerUid);
-        }
-      } catch (err: any) {
-        if (active) toast.error('Failed to load workspace team members', { description: err.message });
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
+    fetchTeamData();
   }, [workspaceId]);
 
-  const handleAddMember = async (e: React.FormEvent) => {
+  const activeSeatCount = members.length + 1; // plus primary owner
+  const seatsRemaining = Math.max(0, maxSeats - activeSeatCount);
+  const isSeatLimitReached = activeSeatCount >= maxSeats;
+
+  const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteInput.trim()) return;
+
+    if (isSeatLimitReached) {
+      toast.error('Workspace seat limit reached', {
+        description: `Your workspace plan permits ${maxSeats} seats. Upgrade plan to invite additional team members.`
+      });
+      return;
+    }
 
     try {
       setSubmitting(true);
       const token = await auth.currentUser?.getIdToken();
       if (!token) return;
 
-      const isEmail = inviteInput.includes('@');
-      const body = isEmail ? { email: inviteInput.trim() } : { memberUid: inviteInput.trim() };
-
-      const res = await fetch(`/api/v1/workspaces/${workspaceId}/members`, {
+      const res = await fetch(`/api/v1/workspaces/${workspaceId}/invites`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          email: inviteInput.trim(),
+          role: selectedRole
+        })
       });
+
       const data = await res.json();
 
-      if (data.status === 'success') {
-        toast.success(`Member invited/added to workspace.`);
+      if (res.ok && data.status === 'success') {
+        toast.success(`Invitation created for ${inviteInput.trim()}`);
         setInviteInput('');
-        setMembers(data.members || []);
+        fetchTeamData();
+
+        // Copy invite link if available
+        if (data.invite?.token) {
+          const inviteUrl = `${window.location.origin}/invite/${data.invite.token}`;
+          navigator.clipboard?.writeText(inviteUrl);
+          toast.info('Invitation link copied to clipboard!', { description: inviteUrl });
+        }
       } else {
-        toast.error('Failed to invite member', { description: data.error || 'Unknown error' });
+        toast.error('Failed to send invitation', { description: data.message || data.error || 'Unknown error' });
       }
     } catch (err: any) {
-      toast.error('Error adding member', { description: err.message });
+      toast.error('Error creating invitation', { description: err.message });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRoleChange = async (targetUid: string, newRole: WorkspaceRole) => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
+
+      const res = await fetch(`/api/v1/workspaces/${workspaceId}/roles/${targetUid}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ role: newRole })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.status === 'success') {
+        toast.success(`Role updated to ${newRole.toUpperCase()}`);
+        setRoles(prev => ({ ...prev, [targetUid]: newRole }));
+      } else {
+        toast.error('Failed to update role', { description: data.message || data.error || 'Could not change role' });
+        fetchTeamData(); // revert UI state
+      }
+    } catch (err: any) {
+      toast.error('Error updating role', { description: err.message });
+      fetchTeamData();
     }
   };
 
@@ -109,65 +164,217 @@ export default function TeamSettings() {
       });
       const data = await res.json();
 
-      if (data.status === 'success') {
+      if (res.ok && data.status === 'success') {
         toast.success('Member removed from workspace.');
         setMembers(data.members || []);
+        fetchTeamData();
       } else {
-        toast.error('Failed to remove member', { description: data.error || 'Unknown error' });
+        toast.error('Failed to remove member', { description: data.message || data.error || 'Unknown error' });
       }
     } catch (err: any) {
       toast.error('Error removing member', { description: err.message });
     }
   };
 
-  return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <h3 className="text-xl font-black text-[var(--text)] tracking-tight flex items-center gap-2">
-          <Users size={20} className="text-indigo-600" />
-          Workspace Members & Bookkeeper Invites
-        </h3>
-        <p className="text-sm text-slate-500 max-w-xl">
-          Grant bookkeepers and finance team members access to <span className="font-bold text-[var(--text)]">{currentWorkspace?.name || 'this workspace'}</span>. Top-level Firestore rules authorize all assigned members.
-        </p>
-      </div>
+  const handleRevokeInvite = async (inviteId: string) => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
 
-      {/* Invite form */}
-      <form onSubmit={handleAddMember} className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-4">
-        <div className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-          <UserPlus size={14} className="text-indigo-500" /> Invite Team Member or Bookkeeper
+      const res = await fetch(`/api/v1/workspaces/${workspaceId}/invites/${inviteId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (res.ok && data.status === 'success') {
+        toast.success('Invite revoked successfully.');
+        setInvites(prev => prev.filter(i => (i.id || i.inviteId) !== inviteId));
+      } else {
+        toast.error('Failed to revoke invite', { description: data.message || 'Error revoking invite' });
+      }
+    } catch (err: any) {
+      toast.error('Error revoking invite', { description: err.message });
+    }
+  };
+
+  const handleCopyInviteLink = (inviteToken: string) => {
+    const link = `${window.location.origin}/invite/${inviteToken}`;
+    navigator.clipboard?.writeText(link);
+    toast.success('Invite link copied to clipboard!');
+  };
+
+  const handleOpenMemberActivity = async (uid: string, email?: string) => {
+    setSelectedMemberForLogs({ uid, email });
+    setLogsLoading(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
+
+      const res = await fetch(`/api/v1/reports/audit-logs?workspaceId=${workspaceId}&uid=${uid}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.status === 'success' || Array.isArray(data.logs)) {
+        setMemberLogs(data.logs || data.auditLogs || []);
+      }
+    } catch (err) {
+      toast.error('Failed to load member activity history');
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8 max-w-5xl">
+      {/* Header & Seat Gauge */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px]">
+        <div className="space-y-1">
+          <h3 className="text-xl font-black text-[var(--text)] tracking-tight flex items-center gap-2">
+            <Users size={22} className="text-indigo-600" />
+            Workspace Team & Role Management
+          </h3>
+          <p className="text-xs text-slate-500 max-w-xl">
+            Control member roles and permissions for <span className="font-bold text-[var(--text)]">{currentWorkspace?.name || 'this workspace'}</span>. Role gates enforce access across reports, transactions, period locks, and administration.
+          </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
+        {/* Seat Limit Badge */}
+        <div className="p-4 bg-[var(--ink)]/50 border border-[var(--line)] rounded-2xl shrink-0 space-y-2 min-w-[200px]">
+          <div className="flex items-center justify-between text-xs font-bold">
+            <span className="text-slate-400 uppercase tracking-wider text-[10px]">Seat Capacity</span>
+            <span className={isSeatLimitReached ? "text-amber-500 font-mono" : "text-emerald-500 font-mono"}>
+              {activeSeatCount} / {maxSeats} Used
+            </span>
+          </div>
+          <div className="w-full h-2 bg-[var(--surface)] rounded-full overflow-hidden border border-[var(--line)]">
+            <div
+              className={`h-full transition-all ${isSeatLimitReached ? "bg-amber-500" : "bg-indigo-600"}`}
+              style={{ width: `${Math.min(100, (activeSeatCount / maxSeats) * 100)}%` }}
+            />
+          </div>
+          <div className="text-[10px] text-slate-400 font-medium text-right">
+            {isSeatLimitReached ? "Limit reached · Upgrade required" : `${seatsRemaining} available seats`}
+          </div>
+        </div>
+      </div>
+
+      {/* Invite Form */}
+      <form onSubmit={handleSendInvite} className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-5">
+        <div className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <UserPlus size={15} className="text-indigo-500" /> Invite Team Member or Accountant
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div className="relative sm:col-span-6">
             <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
-              type="text"
+              type="email"
+              required
               value={inviteInput}
               onChange={(e) => setInviteInput(e.target.value)}
-              placeholder="Enter bookkeeper email address or User ID"
+              placeholder="colleague@company.com"
               className="w-full pl-10 pr-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-semibold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+
+          <div className="sm:col-span-4">
+            <select
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value as WorkspaceRole)}
+              className="w-full px-3 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 capitalize"
+            >
+              <option value="viewer">Viewer (Read-Only)</option>
+              <option value="bookkeeper">Bookkeeper (Transactions/Invoices)</option>
+              <option value="accountant">Accountant (Close Periods/Chart of Accounts)</option>
+              <option value="owner">Owner (Full Admin)</option>
+            </select>
+          </div>
+
           <button
             type="submit"
-            disabled={submitting || !inviteInput.trim()}
-            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            disabled={submitting || !inviteInput.trim() || isSeatLimitReached}
+            className="sm:col-span-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
           >
             {submitting ? <RefreshCw size={14} className="animate-spin" /> : <UserPlus size={14} />}
-            <span>Grant Access</span>
+            <span>Invite</span>
           </button>
+        </div>
+
+        {/* Selected Role Powers Explainer */}
+        <div className="p-4 bg-[var(--ink)]/40 border border-[var(--line)] rounded-2xl space-y-2">
+          <div className="flex items-center justify-between text-xs font-black text-indigo-400 uppercase tracking-wider">
+            <span>Role Powers: {ROLE_DESCRIPTIONS[selectedRole].title}</span>
+            <Shield size={14} />
+          </div>
+          <p className="text-xs text-slate-300">
+            {ROLE_DESCRIPTIONS[selectedRole].summary}
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {ROLE_DESCRIPTIONS[selectedRole].permissions.map((perm, idx) => (
+              <span key={idx} className="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-semibold rounded-md flex items-center gap-1">
+                <Check size={10} className="text-indigo-400" /> {perm}
+              </span>
+            ))}
+          </div>
         </div>
       </form>
 
-      {/* Active Members List */}
+      {/* Pending Invites Section */}
+      {invites.length > 0 && (
+        <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-4">
+          <div className="text-xs font-black uppercase tracking-wider text-amber-500 flex items-center gap-2">
+            <Clock size={16} /> Pending Invitations ({invites.length})
+          </div>
+
+          <div className="space-y-2">
+            {invites.map((inv) => (
+              <div key={inv.id || inv.inviteId} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-[var(--ink)]/30 border border-[var(--line)] gap-3">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold font-mono text-[var(--text)]">{inv.email}</span>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                      {inv.role}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 flex items-center gap-2">
+                    <span>Expires: {new Date(inv.expiresAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleCopyInviteLink(inv.token)}
+                    className="px-2.5 py-1.5 bg-[var(--surface)] border border-[var(--line)] hover:border-indigo-500 text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all"
+                    title="Copy invite acceptance link"
+                  >
+                    <Copy size={12} />
+                    <span>Copy Link</span>
+                  </button>
+                  <button
+                    onClick={() => handleRevokeInvite(inv.id || inv.inviteId || '')}
+                    className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
+                    title="Revoke invitation"
+                  >
+                    <Trash2 size={14} />
+                    <span className="text-[10px] uppercase">Revoke</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Active Workspace Members List */}
       <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-4">
         <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
-          <div className="text-xs font-black uppercase tracking-wider text-slate-400">
-            Authorized Workspace Members ({members.length + 1})
+          <div className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <Users size={16} className="text-indigo-500" />
+            Authorized Active Workspace Members ({activeSeatCount})
           </div>
           <button
-            onClick={fetchMembers}
+            onClick={fetchTeamData}
             className="text-[10px] font-bold text-slate-400 hover:text-slate-200 flex items-center gap-1"
           >
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
@@ -175,62 +382,155 @@ export default function TeamSettings() {
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-xs text-slate-500 font-mono">Loading team manifest...</div>
+          <div className="py-8 text-center text-xs text-slate-500 font-mono">Loading team members and roles...</div>
         ) : (
           <div className="space-y-2">
-            {/* Owner item */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--ink)]/40 border border-[var(--line)]">
+            {/* Owner Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-[var(--ink)]/40 border border-[var(--line)] gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-indigo-600/10 border border-indigo-500/20 text-indigo-600 font-bold flex items-center justify-center text-xs">
+                <div className="w-9 h-9 rounded-full bg-indigo-600/10 border border-indigo-500/30 text-indigo-500 font-black flex items-center justify-center text-xs">
                   OW
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-[var(--text)] font-mono">
-                    {ownerUid || auth.currentUser?.uid || 'Workspace Owner'}
+                  <div className="text-xs font-bold text-[var(--text)] font-mono flex items-center gap-2">
+                    {ownerUid || auth.currentUser?.uid || 'Primary Owner'}
+                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                      Primary
+                    </span>
                   </div>
                   <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                    <ShieldCheck size={10} className="text-indigo-500" /> Primary Owner / Admin
+                    <ShieldCheck size={10} className="text-indigo-500" /> Workspace Creator & Owner
                   </div>
                 </div>
               </div>
-              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-200">
-                Owner
-              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleOpenMemberActivity(ownerUid || auth.currentUser?.uid || '')}
+                  className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] hover:border-indigo-500 text-slate-300 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all"
+                >
+                  <Activity size={12} /> Activity Log
+                </button>
+                <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  Owner
+                </span>
+              </div>
             </div>
 
-            {/* Invited Members */}
-            {members.map((mUid) => (
-              <div key={mUid} className="flex items-center justify-between p-3 rounded-xl bg-[var(--ink)]/20 border border-[var(--line)]">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-600/10 border border-emerald-500/20 text-emerald-600 font-bold flex items-center justify-center text-xs">
-                    BK
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-[var(--text)] font-mono">{mUid}</div>
-                    <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                      <Check size={10} className="text-emerald-500" /> Active Member
+            {/* Invited Members Rows */}
+            {members.map((mUid) => {
+              const currentRole = roles[mUid] || (mUid === ownerUid ? 'owner' : 'viewer');
+              const isOwner = mUid === ownerUid;
+
+              return (
+                <div key={mUid} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-[var(--ink)]/20 border border-[var(--line)] gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-emerald-600/10 border border-emerald-500/30 text-emerald-500 font-bold flex items-center justify-center text-xs font-mono">
+                      {currentRole.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[var(--text)] font-mono">{mUid}</div>
+                      <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                        <Check size={10} className="text-emerald-500" /> Active Member
+                      </div>
                     </div>
                   </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleOpenMemberActivity(mUid)}
+                      className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] hover:border-indigo-500 text-slate-300 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all"
+                    >
+                      <Activity size={12} /> Activity
+                    </button>
+
+                    {/* Role Picker Dropdown */}
+                    <select
+                      value={currentRole}
+                      onChange={(e) => handleRoleChange(mUid, e.target.value as WorkspaceRole)}
+                      disabled={isOwner}
+                      className="px-2.5 py-1 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500 capitalize disabled:opacity-50"
+                    >
+                      <option value="owner">Owner</option>
+                      <option value="accountant">Accountant</option>
+                      <option value="bookkeeper">Bookkeeper</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+
+                    {!isOwner && (
+                      <button
+                        onClick={() => handleRemoveMember(mUid)}
+                        className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
+                        title="Revoke workspace access"
+                      >
+                        <Trash2 size={14} />
+                        <span className="text-[10px] uppercase">Revoke</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleRemoveMember(mUid)}
-                  className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
-                  title="Revoke workspace access"
-                >
-                  <Trash2 size={14} />
-                  <span className="text-[10px] uppercase">Revoke</span>
-                </button>
-              </div>
-            ))}
+              );
+            })}
 
             {members.length === 0 && (
               <div className="py-6 text-center text-xs text-slate-400 italic">
-                No additional bookkeepers or team members invited yet. Invite your bookkeeper above to allow parallel month-end verification.
+                No additional bookkeepers or team members joined yet. Send an invitation above to collaborate.
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Member Activity Modal */}
+      {selectedMemberForLogs && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="p-4 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/40">
+              <div className="flex items-center gap-2">
+                <Activity size={18} className="text-indigo-500" />
+                <h4 className="text-sm font-bold text-[var(--text)] uppercase tracking-wider">
+                  Member Activity History — {selectedMemberForLogs.email || selectedMemberForLogs.uid}
+                </h4>
+              </div>
+              <button
+                onClick={() => setSelectedMemberForLogs(null)}
+                className="p-1 text-slate-400 hover:text-slate-100 rounded-lg"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 space-y-3">
+              {logsLoading ? (
+                <div className="py-8 text-center text-xs text-slate-500 font-mono">Loading activity history...</div>
+              ) : memberLogs.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400 italic">
+                  No activity logs recorded for this member.
+                </div>
+              ) : (
+                memberLogs.map((log) => (
+                  <div key={log.id} className="p-3 bg-[var(--ink)]/30 border border-[var(--line)] rounded-xl flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-bold text-[var(--text)] uppercase tracking-tight flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[8px] bg-indigo-500/10 text-indigo-400 font-black">
+                          {log.action}
+                        </span>
+                        <span>{log.entityType}</span>
+                      </div>
+                      <p className="text-slate-400 text-[11px] mt-1 font-mono">
+                        {log.details?.description || log.entityId}
+                      </p>
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

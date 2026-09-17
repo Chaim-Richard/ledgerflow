@@ -148,6 +148,21 @@ workspaceRouter.all('/:workspaceId/next-number', async (req, res) => {
   }
 });
 
+import { generateInviteToken } from '../../lib/inviteManager';
+
+export function countWorkspaceOwners(workspaceData: any): { count: number; ownerUids: string[] } {
+  const ownerUids: string[] = [];
+  if (workspaceData.uid) ownerUids.push(workspaceData.uid);
+  if (workspaceData.roles) {
+    for (const [uid, role] of Object.entries(workspaceData.roles)) {
+      if (role === 'owner' && !ownerUids.includes(uid)) {
+        ownerUids.push(uid);
+      }
+    }
+  }
+  return { count: ownerUids.length, ownerUids };
+}
+
 /**
  * Task 6: Get workspace user roles map
  */
@@ -162,6 +177,7 @@ workspaceRouter.get('/:workspaceId/roles', async (req, res) => {
     if (!wsDoc.exists) return sendError(res, 'Workspace not found', 404);
     const data = wsDoc.data() || {};
     res.json({
+      status: 'success',
       ownerUid: data.uid,
       roles: data.roles || {}
     });
@@ -172,35 +188,174 @@ workspaceRouter.get('/:workspaceId/roles', async (req, res) => {
 });
 
 /**
- * Task 6: Update workspace user role (Owner only)
+ * Update workspace user role (Owner only) - Supports POST and PATCH /:workspaceId/roles/:uid
  */
-workspaceRouter.post('/:workspaceId/roles', requireWorkspaceRole(['owner']), async (req, res) => {
+const handleUpdateRole = async (req: express.Request, res: express.Response) => {
   const { workspaceId } = req.params;
+  const targetUid = req.params.uid || req.body.targetUid;
   const schema = z.object({
-    targetUid: z.string().min(1),
     role: z.enum(['owner', 'accountant', 'bookkeeper', 'viewer'])
   });
 
   const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return sendError(res, 'Invalid role payload', 400, parsed.error.issues);
-  const { targetUid, role } = parsed.data;
+  if (!parsed.success || !targetUid) return sendError(res, 'Invalid role payload or target user ID', 400, parsed.error?.issues);
+  const { role } = parsed.data;
 
   try {
     const db = getDb();
     const wsRef = db.collection('workspaces').doc(workspaceId);
-    
+
+    let previousRole = 'viewer';
+
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(wsRef);
       if (!snap.exists) throw new Error('NOT_FOUND');
       const data = snap.data() || {};
-      const roles = data.roles || {};
+      const { count, ownerUids } = countWorkspaceOwners(data);
+
+      previousRole = data.roles?.[targetUid] || (data.uid === targetUid ? 'owner' : 'viewer');
+
+      // Protect last owner from demotion
+      if (role !== 'owner' && ownerUids.includes(targetUid) && count <= 1) {
+        throw new Error('LAST_OWNER_PROTECTION');
+      }
+
+      const roles = { ...(data.roles || {}) };
       roles[targetUid] = role;
       tx.update(wsRef, { roles, updatedAt: new Date().toISOString() });
+
+      // Record audit log entry
+      const auditRef = db.collection('auditLogs').doc();
+      tx.set(auditRef, {
+        id: auditRef.id,
+        uid: (req as any).user.uid,
+        email: (req as any).user.email || '',
+        workspaceId,
+        action: 'ROLE_CHANGE',
+        entityType: 'workspace',
+        entityId: workspaceId,
+        details: {
+          targetUid,
+          beforeRole: previousRole,
+          afterRole: role,
+          description: `User ${targetUid} role updated from ${previousRole} to ${role}`
+        },
+        timestamp: new Date().toISOString()
+      });
     });
 
-    res.json({ status: 'success', targetUid, role });
+    res.json({ status: 'success', targetUid, role, previousRole });
   } catch (err: any) {
+    if (err.message === 'LAST_OWNER_PROTECTION') {
+      return sendError(res, 'Cannot demote or remove the last owner of the workspace.', 400);
+    }
+    if (err.message === 'NOT_FOUND') return sendError(res, 'Workspace not found', 404);
     sendError(res, 'Failed to update workspace role', 500, err.message);
+  }
+};
+
+workspaceRouter.post('/:workspaceId/roles', requireWorkspaceRole(['owner']), handleUpdateRole);
+workspaceRouter.patch('/:workspaceId/roles/:uid', requireWorkspaceRole(['owner']), handleUpdateRole);
+
+/**
+ * Invites Endpoints
+ */
+workspaceRouter.get('/:workspaceId/invites', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
+  const { workspaceId } = req.params;
+  try {
+    const db = getDb();
+    const snap = await db.collection('invites').where('workspaceId', '==', workspaceId).get();
+    const invites = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json({ status: 'success', invites });
+  } catch (err: any) {
+    sendError(res, 'Failed to fetch invites', 500, err.message);
+  }
+});
+
+workspaceRouter.post('/:workspaceId/invites', requireWorkspaceRole(['owner']), async (req, res) => {
+  const { workspaceId } = req.params;
+  const schema = z.object({
+    email: z.string().email(),
+    role: z.enum(['owner', 'accountant', 'bookkeeper', 'viewer']).default('viewer')
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return sendError(res, 'Invalid invite payload', 400, parsed.error.issues);
+  const { email, role } = parsed.data;
+
+  try {
+    const db = getDb();
+    const wsRef = db.collection('workspaces').doc(workspaceId);
+    const wsSnap = await wsRef.get();
+    if (!wsSnap.exists) return sendError(res, 'Workspace not found', 404);
+
+    const wsData = wsSnap.data() || {};
+    const members: string[] = Array.isArray(wsData.members) ? wsData.members : [];
+    const maxSeats = wsData.maxSeats || 5;
+    const currentSeatCount = members.length + 1; // plus primary owner
+
+    if (currentSeatCount >= maxSeats) {
+      return sendError(
+        res,
+        `Payment Required: Workspace seat limit reached (${currentSeatCount}/${maxSeats} seats used). Upgrade plan to invite more team members.`,
+        402
+      );
+    }
+
+    const invite = generateInviteToken(workspaceId, email, role);
+    const inviteRef = db.collection('invites').doc(invite.id || invite.token);
+
+    await inviteRef.set({
+      ...invite,
+      invitedByUid: (req as any).user.uid,
+      createdAt: new Date().toISOString()
+    });
+
+    // Write audit log entry
+    const auditRef = db.collection('auditLogs').doc();
+    await auditRef.set({
+      id: auditRef.id,
+      uid: (req as any).user.uid,
+      email: (req as any).user.email || '',
+      workspaceId,
+      action: 'INVITE_SENT',
+      entityType: 'workspace',
+      entityId: workspaceId,
+      details: {
+        email: invite.email,
+        role: invite.role,
+        inviteId: invite.id,
+        description: `Invite sent to ${invite.email} with role ${invite.role}`
+      },
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({ status: 'success', invite });
+  } catch (err: any) {
+    sendError(res, 'Failed to create workspace invite', 500, err.message);
+  }
+});
+
+workspaceRouter.delete('/:workspaceId/invites/:inviteId', requireWorkspaceRole(['owner']), async (req, res) => {
+  const { workspaceId, inviteId } = req.params;
+  try {
+    const db = getDb();
+    const inviteRef = db.collection('invites').doc(inviteId);
+    const snap = await inviteRef.get();
+    if (!snap.exists) return sendError(res, 'Invite not found', 404);
+
+    if (snap.data()?.workspaceId !== workspaceId) {
+      return sendError(res, 'Forbidden', 403);
+    }
+
+    await inviteRef.update({
+      status: 'revoked',
+      updatedAt: new Date().toISOString()
+    });
+
+    res.json({ status: 'success', message: 'Invite revoked successfully' });
+  } catch (err: any) {
+    sendError(res, 'Failed to revoke invite', 500, err.message);
   }
 });
 

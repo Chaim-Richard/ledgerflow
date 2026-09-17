@@ -1,5 +1,6 @@
 import { reportRouter } from "./src/server/routes/reportRoutes";
-import { workspaceRouter } from "./src/server/routes/workspaceRoutes";
+import { workspaceRouter, countWorkspaceOwners } from "./src/server/routes/workspaceRoutes";
+import { invitePublicRouter } from "./src/server/routes/invitePublicRoutes";
 import { invoiceEmailRouter } from "./src/server/routes/invoiceEmailRoutes";
 import { publicInvoiceRouter } from "./src/server/routes/publicInvoiceRoutes";
 import { transactionRouter } from "./src/server/routes/transactionRoutes";
@@ -2194,12 +2195,39 @@ async function startServer() {
         }
 
         const data = wsDoc.data() || {};
+        const { count, ownerUids } = countWorkspaceOwners(data);
+
+        // Refuse to remove last owner
+        if (ownerUids.includes(memberUid) && count <= 1) {
+          return sendError(res, "Cannot demote or remove the last owner of the workspace.", 400);
+        }
+
         const existingMembers: string[] = Array.isArray(data.members) ? data.members : [];
         const updatedMembers = existingMembers.filter(m => m !== memberUid);
+        const updatedRoles = { ...(data.roles || {}) };
+        delete updatedRoles[memberUid];
 
         await wsRef.update({
           members: updatedMembers,
+          roles: updatedRoles,
           updatedAt: new Date().toISOString()
+        });
+
+        // Write audit log
+        const auditRef = db.collection("auditLogs").doc();
+        await auditRef.set({
+          id: auditRef.id,
+          uid: authReq.user.uid,
+          email: authReq.user.email || '',
+          workspaceId,
+          action: 'MEMBER_REMOVED',
+          entityType: 'workspace',
+          entityId: workspaceId,
+          details: {
+            removedUid: memberUid,
+            description: `Member ${memberUid} removed from workspace`
+          },
+          timestamp: new Date().toISOString()
         });
 
         res.json({
@@ -5126,6 +5154,7 @@ You MUST output a valid JSON object matching this schema exactly:
   app.use("/api/v1/documents", apiAuthenticate, documentRouter);
   app.use("/api/v1/invoices/public", publicInvoiceLimiter, publicInvoiceRouter);
   app.use("/api/v1/invoices/email", apiAuthenticate, invoiceEmailRouter);
+  app.use("/api/v1/invites", invitePublicRouter);
 
   // Data Retention Cleanup Job (Runs every 24h)
   setInterval(async () => {

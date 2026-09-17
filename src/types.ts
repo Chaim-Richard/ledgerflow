@@ -656,6 +656,16 @@ export interface Partner {
   createdAt: string;
 }
 
+export interface AuditLogDetails {
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  changedFields?: string[];
+  description?: string;
+  email?: string;
+  role?: string;
+  [key: string]: unknown;
+}
+
 export interface AuditLog {
   id: string;
   uid: string;
@@ -664,8 +674,22 @@ export interface AuditLog {
   action: string;
   entityType: string;
   entityId: string;
-  details: any;
+  details: AuditLogDetails;
   timestamp: string;
+}
+
+export interface WorkspaceInvite {
+  id?: string;
+  inviteId?: string;
+  workspaceId: string;
+  email: string;
+  role: 'owner' | 'accountant' | 'bookkeeper' | 'viewer';
+  expiresAt: string;
+  createdAt?: string;
+  token: string;
+  signature?: string;
+  invitedByUid?: string;
+  status: 'pending' | 'accepted' | 'revoked' | 'expired';
 }
 
 export interface InventoryItem {

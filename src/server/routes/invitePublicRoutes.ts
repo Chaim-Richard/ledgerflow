@@ -1,0 +1,197 @@
+import express from 'express';
+import admin from 'firebase-admin';
+import { getDb } from '../db/firestore';
+import { verifyInviteTokenSignature } from '../../lib/inviteManager';
+
+export const invitePublicRouter = express.Router();
+
+const populateUserAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split('Bearer ')[1];
+    try {
+      const decoded = await admin.auth().verifyIdToken(token);
+      (req as any).user = decoded;
+    } catch (e) {
+      // Ignore token decoding failure for public GET lookup
+    }
+  }
+  next();
+};
+
+invitePublicRouter.use(populateUserAuth);
+
+function sendError(res: express.Response, message: string, status: number = 500, details?: any) {
+  res.status(status).json({
+    status: 'error',
+    message,
+    ...(details && { details })
+  });
+}
+
+/**
+ * Public route to lookup an invite by token signature and check validity
+ */
+invitePublicRouter.get('/:token', async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const db = getDb();
+    const snap = await db.collection('invites').where('token', '==', token).limit(1).get();
+
+    if (snap.empty) {
+      return sendError(res, 'Invite not found or invalid token', 404);
+    }
+
+    const doc = snap.docs[0];
+    const invite = doc.data() as any;
+
+    if (invite.status !== 'pending') {
+      return sendError(res, `Invite has already been ${invite.status}`, 400);
+    }
+
+    if (new Date() > new Date(invite.expiresAt)) {
+      return sendError(res, 'Invite has expired', 400);
+    }
+
+    const isValidSig = verifyInviteTokenSignature(invite);
+    if (!isValidSig) {
+      return sendError(res, 'Invalid invite token signature', 400);
+    }
+
+    // Get workspace name for display
+    const wsDoc = await db.collection('workspaces').doc(invite.workspaceId).get();
+    const workspaceName = wsDoc.exists ? (wsDoc.data()?.name || 'LedgerFlow Workspace') : 'LedgerFlow Workspace';
+
+    res.json({
+      status: 'success',
+      invite: {
+        id: doc.id,
+        workspaceId: invite.workspaceId,
+        workspaceName,
+        email: invite.email,
+        role: invite.role,
+        expiresAt: invite.expiresAt,
+        status: invite.status
+      }
+    });
+  } catch (err: any) {
+    sendError(res, 'Failed to lookup invite', 500, err.message);
+  }
+});
+
+/**
+ * Authenticated endpoint to accept an invite
+ */
+invitePublicRouter.post('/:token/accept', async (req, res) => {
+  const { token } = req.params;
+  const user = (req as any).user;
+
+  if (!user || !user.uid) {
+    return sendError(res, 'Authentication required to accept invite', 401);
+  }
+
+  try {
+    const db = getDb();
+    const snap = await db.collection('invites').where('token', '==', token).limit(1).get();
+
+    if (snap.empty) {
+      return sendError(res, 'Invite not found or invalid token', 404);
+    }
+
+    const inviteDoc = snap.docs[0];
+    const invite = inviteDoc.data() as any;
+
+    if (invite.status !== 'pending') {
+      return sendError(res, `Invite is no longer pending (currently ${invite.status})`, 400);
+    }
+
+    if (new Date() > new Date(invite.expiresAt)) {
+      return sendError(res, 'Invite has expired', 400);
+    }
+
+    const isValidSig = verifyInviteTokenSignature(invite);
+    if (!isValidSig) {
+      return sendError(res, 'Invalid invite token signature', 400);
+    }
+
+    // Email binding verification
+    const userEmail = (user.email || '').toLowerCase().trim();
+    const inviteEmail = (invite.email || '').toLowerCase().trim();
+
+    if (userEmail !== inviteEmail) {
+      return sendError(
+        res,
+        `This invitation was issued to ${invite.email}, but you are currently signed in as ${user.email}. Please sign in with ${invite.email} to accept this invite.`,
+        403
+      );
+    }
+
+    const wsRef = db.collection('workspaces').doc(invite.workspaceId);
+    
+    await db.runTransaction(async (tx) => {
+      const wsSnap = await tx.get(wsRef);
+      if (!wsSnap.exists) throw new Error('WORKSPACE_NOT_FOUND');
+
+      const wsData = wsSnap.data() || {};
+      const members: string[] = Array.isArray(wsData.members) ? [...wsData.members] : [];
+      const maxSeats = wsData.maxSeats || 5;
+
+      if (!members.includes(user.uid) && members.length + 1 >= maxSeats) {
+        throw new Error('SEAT_LIMIT_EXCEEDED');
+      }
+
+      if (!members.includes(user.uid)) {
+        members.push(user.uid);
+      }
+
+      const roles = { ...(wsData.roles || {}) };
+      roles[user.uid] = invite.role;
+
+      tx.update(wsRef, {
+        members,
+        roles,
+        updatedAt: new Date().toISOString()
+      });
+
+      tx.update(inviteDoc.ref, {
+        status: 'accepted',
+        acceptedAt: new Date().toISOString(),
+        acceptedByUid: user.uid,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Audit log entry
+      const auditRef = db.collection('auditLogs').doc();
+      tx.set(auditRef, {
+        id: auditRef.id,
+        uid: user.uid,
+        email: user.email || '',
+        workspaceId: invite.workspaceId,
+        action: 'INVITE_ACCEPTED',
+        entityType: 'workspace',
+        entityId: invite.workspaceId,
+        details: {
+          email: invite.email,
+          role: invite.role,
+          inviteId: inviteDoc.id,
+          description: `User ${user.email} accepted workspace invitation as ${invite.role}`
+        },
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    res.json({
+      status: 'success',
+      workspaceId: invite.workspaceId,
+      role: invite.role,
+      message: 'Successfully joined workspace'
+    });
+  } catch (err: any) {
+    if (err.message === 'WORKSPACE_NOT_FOUND') return sendError(res, 'Workspace not found', 404);
+    if (err.message === 'SEAT_LIMIT_EXCEEDED') {
+      return sendError(res, 'Payment Required: Workspace seat limit reached. The workspace owner must upgrade the plan.', 402);
+    }
+    sendError(res, 'Failed to accept invite', 500, err.message);
+  }
+});

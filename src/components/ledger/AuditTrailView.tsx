@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AuditLog } from '../../types';
-import { ShieldCheck, History, User, Activity } from 'lucide-react';
+import { ShieldCheck, History, User, Activity, Search, Filter, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
@@ -25,8 +25,9 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
             <div className="flex items-center gap-2 mb-1">
               <span className={cn(
                 "px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider",
-                log.action?.toLowerCase() === 'create' ? "bg-[var(--pos)]/10 text-[var(--pos)]" :
-                log.action?.toLowerCase() === 'update' ? "bg-amber-500/10 text-amber-500" :
+                log.action?.toLowerCase().includes('create') ? "bg-[var(--pos)]/10 text-[var(--pos)]" :
+                log.action?.toLowerCase().includes('update') || log.action?.includes('ROLE') ? "bg-amber-500/10 text-amber-500" :
+                log.action?.includes('INVITE') ? "bg-indigo-500/10 text-indigo-400" :
                 "bg-rose-500/10 text-rose-500"
               )}>
                 {log.action}
@@ -55,37 +56,143 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
 };
 
 const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
-  const sortedLogs = useMemo(() => {
-    return [...auditLogs].sort((a, b) => {
-        const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-        const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-        return timeB - timeA;
+  const [searchTerm, setSearchTerm] = useState('');
+  const [userFilter, setUserFilter] = useState('ALL');
+  const [actionFilter, setActionFilter] = useState('ALL');
+
+  // Extract unique users and actions for filter dropdowns
+  const uniqueUsers = useMemo(() => {
+    const users = new Set<string>();
+    auditLogs.forEach(l => {
+      const u = l.email || l.userEmail || l.uid;
+      if (u) users.add(u);
     });
+    return Array.from(users);
   }, [auditLogs]);
+
+  const uniqueActions = useMemo(() => {
+    const actions = new Set<string>();
+    auditLogs.forEach(l => {
+      if (l.action) actions.add(l.action);
+    });
+    return Array.from(actions);
+  }, [auditLogs]);
+
+  const filteredLogs = useMemo(() => {
+    return auditLogs.filter(log => {
+      const userMatch = userFilter === 'ALL' || (log.email === userFilter || log.userEmail === userFilter || log.uid === userFilter);
+      const actionMatch = actionFilter === 'ALL' || log.action === actionFilter;
+      
+      const search = searchTerm.toLowerCase();
+      const textMatch = !searchTerm ||
+        log.entityType?.toLowerCase().includes(search) ||
+        log.action?.toLowerCase().includes(search) ||
+        log.entityId?.toLowerCase().includes(search) ||
+        log.email?.toLowerCase().includes(search) ||
+        log.details?.description?.toLowerCase().includes(search);
+
+      return userMatch && actionMatch && textMatch;
+    }).sort((a, b) => {
+      const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [auditLogs, userFilter, actionFilter, searchTerm]);
+
+  const handleExportCSV = () => {
+    const headers = ['Timestamp', 'Action', 'User/Email', 'Entity Type', 'Entity ID', 'Description'];
+    const rows = filteredLogs.map(l => [
+      l.timestamp ? new Date(l.timestamp).toISOString() : '',
+      l.action || '',
+      l.email || l.userEmail || l.uid || '',
+      l.entityType || '',
+      l.entityId || '',
+      (l.details?.description || '').replace(/,/g, ';')
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `audit_trail_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden flex-1 min-h-[500px] flex flex-col">
-      <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30 shrink-0">
+      <div className="p-4 md:p-6 border-b border-[var(--line)] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--ink)]/30 shrink-0">
         <div>
           <h3 className="text-lg font-black text-[var(--text)] uppercase tracking-tight">Audit Trail Matrix</h3>
           <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-0.5">Immutable cryptographic record of system directives</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-[var(--brass-soft)] text-[var(--brass)] rounded-xl border border-[var(--brass-line)] shadow-sm">
-          <ShieldCheck size={16} />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Authenticity Verified</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="px-3 py-1.5 bg-[var(--surface)] hover:bg-[var(--elevated)] border border-[var(--line)] text-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+          >
+            <Download size={14} /> Export CSV
+          </button>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--brass-soft)] text-[var(--brass)] rounded-xl border border-[var(--brass-line)] shadow-sm">
+            <ShieldCheck size={16} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Authenticity Verified</span>
+          </div>
         </div>
       </div>
+
+      {/* Filter Controls Bar */}
+      <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)]/10 grid grid-cols-1 sm:grid-cols-12 gap-3 shrink-0">
+        <div className="relative sm:col-span-5">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search audit trail by description, entity, or ID..."
+            className="w-full pl-9 pr-3 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-semibold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div className="sm:col-span-4 flex items-center gap-2">
+          <Filter size={14} className="text-slate-400 shrink-0" />
+          <select
+            value={userFilter}
+            onChange={(e) => setUserFilter(e.target.value)}
+            className="w-full px-2.5 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          >
+            <option value="ALL">All Users / Service Accounts</option>
+            {uniqueUsers.map(u => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="sm:col-span-3">
+          <select
+            value={actionFilter}
+            onChange={(e) => setActionFilter(e.target.value)}
+            className="w-full px-2.5 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          >
+            <option value="ALL">All Action Directives</option>
+            {uniqueActions.map(a => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="flex-1 min-h-0 bg-[var(--surface)]">
-        {sortedLogs.length > 0 ? (
+        {filteredLogs.length > 0 ? (
           <AutoSizer>
             {({ height, width }) => (
               <List
                 height={height}
-                itemCount={sortedLogs.length}
+                itemCount={filteredLogs.length}
                 itemSize={100}
                 width={width}
                 className="py-4"
-                itemData={sortedLogs}
+                itemData={filteredLogs}
               >
                 {Row}
               </List>
@@ -96,7 +203,7 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
             <div className="w-16 h-16 bg-[var(--ink)] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[var(--line)]">
               <ShieldCheck size={32} className="text-[var(--muted)]" />
             </div>
-            <p className="font-bold uppercase tracking-wider text-[10px] text-[var(--muted)]">Zero directives detected in current mesh</p>
+            <p className="font-bold uppercase tracking-wider text-[10px] text-[var(--muted)]">No matching audit directives found</p>
           </div>
         )}
       </div>

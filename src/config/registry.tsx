@@ -48,6 +48,7 @@ for (const path in pluginModules) {
 // 1. Definition of all View Components
 export const VIEW_COMPONENTS: Record<string, any> = {
   'inventory': lazy(() => import('../components/inventory/Inventory')),
+  'accept-invite': lazy(() => import('../components/auth/AcceptInviteView')),
   ...dynamicComponents,
   'dashboard': lazy(() => import('../components/Dashboard')),
   'architecture': lazy(() => import('../components/system/ArchitectureViewer')),
