@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeStatement } from '../../server/reports/computeReports';
 import { FileText, Printer, Mail, Calendar, User, Building2, Eye, Download } from 'lucide-react';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
@@ -18,7 +18,7 @@ export default function StatementView() {
   const [type, setType] = useState<'customer' | 'vendor'>('customer');
   const [contactId, setContactId] = useState<string>('');
   const [startDate, setStartDate] = useState('2026-01-01');
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(getLocalDateISO());
 
   // Default to first contact
   const selectedContact = useMemo(() => {

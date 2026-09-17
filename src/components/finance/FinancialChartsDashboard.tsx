@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { isPostable } from '../../lib/txFilters';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { formatDecimal } from '../../lib/utils';
 import { 
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
@@ -32,7 +32,7 @@ export default function FinancialChartsDashboard() {
 
       (tx.lines || []).forEach(l => {
         const acc = accounts.find(a => a.id === l.accountId);
-        const amount = (l.amountCents || 0) / 100;
+        const amount = lineAmount(l) / 100;
 
         if (l.accountId) {
           accountBalances[l.accountId] = (accountBalances[l.accountId] || 0) + amount;

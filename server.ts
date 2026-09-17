@@ -67,6 +67,14 @@ import {
   extractCanonicalOperationId, 
   deriveScopedOperationKey 
 } from "./src/server/utils/idempotency.ts";
+import { csrfProtection } from "./src/server/middleware/csrf.ts";
+import { 
+  publicInvoiceLimiter, 
+  pdfGenerationLimiter, 
+  brainRateLimiter 
+} from "./src/server/middleware/rateLimiters.ts";
+import { validateUploadedFile } from "./src/server/utils/fileValidation.ts";
+import { recordAuthEvent } from "./src/server/services/authAuditService.ts";
 
 dotenv.config();
 
@@ -983,6 +991,7 @@ async function startServer() {
   });
 
   app.use(express.json({ limit: "50mb" })); // Increased limit to securely support ~100,000 transaction bulk imports
+  app.use(csrfProtection({ isAllowedOrigin }));
 
   // Rate Limiting - Increased for production SPA load
   const limiter = rateLimit({
@@ -995,6 +1004,8 @@ async function startServer() {
   
   // Apply to API routes
   app.use("/api/", limiter);
+  app.use("/api/v1/brain", brainRateLimiter);
+  app.use("/api/v1/documents", pdfGenerationLimiter);
     // --- Enterprise: AI Intelligence Hub ---
   
   // Rate limiter specifically for transaction matching to prevent abuse / DOS (Strategic Key Protection)
@@ -4483,6 +4494,12 @@ You MUST output a valid JSON object matching this schema exactly:
     const authReq = req as AuthenticatedRequest;
     if (!req.file) return sendError(res, "No file uploaded", 400);
 
+    const validation = await validateUploadedFile(req.file.path);
+    if (!validation.valid) {
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return sendError(res, validation.error || "Invalid file content", 400);
+    }
+
     try {
       const csvData = fs.readFileSync(req.file.path, "utf8");
       const records: Array<Record<string, string>> = parseCsv(csvData, {
@@ -5076,6 +5093,26 @@ You MUST output a valid JSON object matching this schema exactly:
     }
   });
 
+  // Auth Audit Event Recording
+  app.post("/api/v1/auth/audit", async (req: any, res) => {
+    try {
+      const { uid, event, email, metadata } = req.body || {};
+      if (!uid || !event) {
+        return res.status(400).json({ error: 'Missing uid or event' });
+      }
+      const allowedEvents = ['login', 'logout', 'failed_login', 'password_reset', 'token_refresh'];
+      if (!allowedEvents.includes(event)) {
+        return res.status(400).json({ error: 'Invalid event type' });
+      }
+      const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+      const userAgent = (req.headers['user-agent'] as string) || 'unknown';
+      const id = await recordAuthEvent({ uid, event, ip, userAgent, email, metadata });
+      res.json({ success: true, id });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Mount kernel routes
   app.use("/api/v1/reports", apiAuthenticate, reportRouter);
   app.use("/api/v1/workspaces", apiAuthenticate, workspaceRouter);
@@ -5087,11 +5124,7 @@ You MUST output a valid JSON object matching this schema exactly:
   app.use("/api/v1/support", authenticate, supportRouter);
   app.use("/api/v1/payments", apiAuthenticate, paymentRouter);
   app.use("/api/v1/documents", apiAuthenticate, documentRouter);
-  app.use("/api/v1/invoices/public", expressRateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 50,
-    message: "Too many requests to public invoice endpoints."
-  }), publicInvoiceRouter);
+  app.use("/api/v1/invoices/public", publicInvoiceLimiter, publicInvoiceRouter);
   app.use("/api/v1/invoices/email", apiAuthenticate, invoiceEmailRouter);
 
   // Data Retention Cleanup Job (Runs every 24h)

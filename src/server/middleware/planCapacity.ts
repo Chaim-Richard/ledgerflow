@@ -9,7 +9,7 @@ export const PLAN_LIMITS: Record<string, { transactions: number; seats: number }
   enterprise: { transactions: 1000000, seats: 1000 }
 };
 
-export function requirePlanCapacity(resource: 'transactions' | 'seats', dbOverride?: any) {
+export function requirePlanCapacity(resource: 'transactions' | 'seats' | 'storage', dbOverride?: any) {
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
       const workspaceId =
@@ -63,6 +63,18 @@ export function requirePlanCapacity(resource: 'transactions' | 'seats', dbOverri
             code: 'SEAT_CAPACITY_EXCEEDED',
             cap: seatCap,
             current: memberCount
+          });
+        }
+      } else if (resource === 'storage') {
+        const storageCapMb = wsData.maxStorageMb || (plan === 'enterprise' ? 100000 : plan === 'pro' ? 25000 : plan === 'growth' ? 5000 : 500);
+        const currentStorageMb = wsData.currentStorageMb || 0;
+        if (currentStorageMb >= storageCapMb) {
+          return res.status(402).json({
+            status: 'error',
+            message: `Payment Required: Plan storage limit reached (${currentStorageMb}/${storageCapMb} MB). Upgrade workspace plan for additional document storage.`,
+            code: 'STORAGE_CAPACITY_EXCEEDED',
+            cap: storageCapMb,
+            current: currentStorageMb
           });
         }
       }

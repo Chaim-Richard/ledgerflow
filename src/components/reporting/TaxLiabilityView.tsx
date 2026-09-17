@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeTaxLiability } from '../../server/reports/computeReports';
 import { Receipt, DollarSign, Calculator, Download } from 'lucide-react';
 
@@ -9,7 +9,7 @@ export default function TaxLiabilityView() {
   const bills = useLedgerStore(s => s.bills);
 
   const [startDate, setStartDate] = useState('2026-01-01');
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(getLocalDateISO());
 
   const taxData = useMemo(() => {
     return computeTaxLiability(invoices, bills, startDate, endDate);

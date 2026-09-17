@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
-import { isPostable } from '../../lib/txFilters';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 import { formatDecimal } from '../../lib/utils';
 import { 
   ShieldCheck, AlertTriangle, CheckCircle2, Wrench, RefreshCw, 
@@ -42,7 +42,7 @@ export default function DataHealthView() {
       const lines = tx.lines || [];
       if (lines.length === 0) return;
 
-      const lineSum = lines.reduce((sum, l) => sum + (l.amountCents || 0), 0);
+      const lineSum = lines.reduce((sum, l) => sum + lineAmount(l), 0);
       
       if (Math.abs(lineSum) > 0.01) {
         issues.push({

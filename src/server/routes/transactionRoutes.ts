@@ -17,6 +17,23 @@ import { requirePlanCapacity } from '../middleware/planCapacity';
 
 export const transactionRouter = express.Router();
 
+export function formatTzDate(d: Date = new Date(), timezone = 'UTC'): string {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone || 'UTC',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const parts = formatter.formatToParts(d);
+    const y = parts.find(p => p.type === 'year')?.value;
+    const m = parts.find(p => p.type === 'month')?.value;
+    const day = parts.find(p => p.type === 'day')?.value;
+    if (y && m && day) return `${y}-${m}-${day}`;
+  } catch (_e) {}
+  return d.toISOString().split('T')[0];
+}
+
 export function enforceDoubleEntrySafety(req: Request, res: Response, next: NextFunction) {
   const transaction = req.body.transaction;
   // Let /batch bypass this middleware
@@ -1184,7 +1201,7 @@ transactionRouter.post('/close-year', async (req, res) => {
       return res.status(400).json({ error: `Cannot close year: Period is already locked through ${wsData.lockDate}.` });
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatTzDate(new Date(), wsData?.timezone);
     if (closingDate > today) {
       return res.status(400).json({ error: `Cannot close future accounting period. Closing date (${closingDate}) is ahead of current date (${today}).` });
     }
@@ -1304,7 +1321,7 @@ transactionRouter.post('/close-month', async (req, res) => {
       return res.status(400).json({ error: `Period ${month} is already closed (locked through ${wsData.lockDate}).` });
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatTzDate(new Date(), wsData?.timezone);
     if (closingDate > today) {
       return res.status(400).json({ error: `Cannot close future accounting period. Closing date (${closingDate}) is ahead of current date (${today}).` });
     }
@@ -1511,7 +1528,7 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
       }
 
       // Validate reversal date against period lock (must land in an open period)
-      const revDate = reversalDate || new Date().toISOString().split('T')[0];
+      const revDate = reversalDate || formatTzDate(new Date(), wsData?.timezone);
       if (wsData?.lockDate && revDate <= wsData.lockDate) {
         const err: any = new Error(`Period Locked: Reversal date (${revDate}) cannot be in a closed period (<= ${wsData.lockDate}).`);
         err.statusCode = 400;
