@@ -7,6 +7,7 @@ import { useUIStore } from '../../stores/useUIStore';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
 import { AlgorithmContext, buildAlgorithmContext } from '../../lib/algorithms/types';
 import { isPostable } from '../../lib/txFilters';
+import { exportToExcel } from '../../lib/excelExport';
 
 interface ToolSandboxProps {
   toolId: string;
@@ -92,9 +93,6 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
 
   const handleExportXLSX = async () => {
     if (!results.rows || results.rows.length === 0) return;
-    const ExcelJS = await import('exceljs');
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Report');
 
     const columns = Object.keys(results.rows[0])
       .filter(k => k !== 'id' && k !== 'sourceIds')
@@ -104,18 +102,11 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
         width: 20
       }));
 
-    worksheet.columns = columns;
-    results.rows.forEach(row => worksheet.addRow(row));
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
     const sanitizedName = algorithm.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-    anchor.download = `${sanitizedName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
+    await exportToExcel(columns, results.rows, {
+      sheetName: 'Report',
+      fileName: `${sanitizedName}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    });
   };
 
   const handleExportCSV = () => {

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { parseLocalDate, cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
+import { exportToExcel as exportToExcelHelper } from '../../lib/excelExport';
 import { isPostable, lineAmount, calculateNetIncome, isTransactionInDateRange } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -221,78 +222,71 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
   const data = isServerAuthoritative && serverData ? serverData : localCalculation.data;
   const prevData = isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
 
-  const formatCurrency = (cents: number) => 
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
-
   const exportToExcel = async () => {
     if (!data) return;
-    const ExcelJS = await import('exceljs');
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Statement');
-
     const isComp = isComparative;
 
-    worksheet.columns = [
+    const columns = [
       { header: 'Account', key: 'account', width: 30 },
       { header: 'Amount', key: 'amount', width: 20 },
       { header: isComp ? 'Prior Amount' : '', key: 'priorAmount', width: 20 },
       { header: isComp ? 'Variance %' : '', key: 'variance', width: 20 },
     ];
 
-    worksheet.addRow([labels.title]);
-    worksheet.addRow([`Period: ${dateRange.start} to ${dateRange.end}`]);
-    worksheet.addRow([]);
+    const titleRows = [
+      [labels.title],
+      [`Period: ${dateRange.start} to ${dateRange.end}`]
+    ];
 
-    worksheet.addRow([labels.revenueStreams.toUpperCase()]);
+    const rows: any[] = [];
+
+    rows.push([labels.revenueStreams.toUpperCase()]);
     Object.entries(data.income?.accounts || {}).forEach(([id, acc]: [string, any]) => {
       const pBal = (prevData?.income?.accounts as any)[id]?.balance || 0;
       const varPct = pBal !== 0 ? (((acc.balance || 0) - pBal) / Math.abs(pBal)) * 100 : 0;
-      worksheet.addRow({
+      rows.push({
         account: acc.name,
         amount: (acc.balance || 0) / 100,
         priorAmount: isComp ? pBal / 100 : null,
         variance: isComp && pBal !== 0 ? varPct.toFixed(2) + '%' : null
       });
     });
-    worksheet.addRow({
+    rows.push({
       account: `Total ${labels.revenueStreams}`,
       amount: (data.income?.total || 0) / 100,
       priorAmount: isComp ? (prevData?.income?.total || 0) / 100 : null
     });
 
-    worksheet.addRow([]);
-    worksheet.addRow([labels.expenseClusters.toUpperCase()]);
+    rows.push([]);
+    rows.push([labels.expenseClusters.toUpperCase()]);
     Object.entries(data.expense?.accounts || {}).forEach(([id, acc]: [string, any]) => {
       const pBal = (prevData?.expense?.accounts as any)[id]?.balance || 0;
       const varPct = pBal !== 0 ? (((acc.balance || 0) - pBal) / Math.abs(pBal)) * 100 : 0;
-      worksheet.addRow({
+      rows.push({
         account: acc.name,
         amount: (acc.balance || 0) / 100,
         priorAmount: isComp ? pBal / 100 : null,
         variance: isComp && pBal !== 0 ? varPct.toFixed(2) + '%' : null
       });
     });
-    worksheet.addRow({
+    rows.push({
       account: `Total ${labels.expenseClusters}`,
       amount: (data.expense?.total || 0) / 100,
       priorAmount: isComp ? (prevData?.expense?.total || 0) / 100 : null
     });
 
-    worksheet.addRow([]);
-    worksheet.addRow({
+    rows.push([]);
+    rows.push({
       account: labels.netLabel.toUpperCase(),
       amount: (data.netIncome || 0) / 100,
       priorAmount: isComp ? (prevData?.netIncome || 0) / 100 : null
     });
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${labels.exportName}_${dateRange.start}_${dateRange.end}.xlsx`;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
+    await exportToExcelHelper(columns, rows, {
+      sheetName: 'Statement',
+      fileName: `${labels.exportName}_${dateRange.start}_${dateRange.end}.xlsx`,
+      titleRows
+    });
   };
 
   if (!data) return null;

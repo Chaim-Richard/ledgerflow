@@ -23,7 +23,7 @@ import {
   Zap
 } from 'lucide-react';
 import { Transaction, ChartAccount, JournalEntry, Budget, TaxRate } from '../../types';
-import { cn, reportError, OperationType } from '../../lib/utils';
+import { cn, reportError, OperationType, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -189,13 +189,6 @@ const Ledger = React.memo(() => {
     openingBalanceCents: 0,
     asOfDate: format(new Date(), 'yyyy-MM-dd')
   });
-
-  const formatCurrency = useCallback((cents: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(cents / 100);
-  }, []);
 
   const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault();

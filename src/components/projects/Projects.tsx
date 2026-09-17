@@ -18,7 +18,7 @@ import {
   List
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, safeConfirm, parseAmountToCents } from '../../lib/utils';
+import { cn, safeConfirm, parseAmountToCents, formatCurrency } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
@@ -186,13 +186,6 @@ export default function Projects() {
 
     return stats;
   }, [projects, transactions, accounts]);
-
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('en-US', { 
-      style: 'currency', 
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(val / 100);
 
   const selectedProject = useMemo(() => 
     projects.find(p => p.id === selectedProjectId), 

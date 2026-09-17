@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { FileText, CheckCircle2, ArrowRight, Tag, DollarSign, Calendar, Building2, ShieldCheck } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
 
 interface DocumentEntanglementProps {
   isOpen: boolean;
@@ -26,13 +26,6 @@ interface DocumentEntanglementProps {
 export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, parsedData, onVerify }: DocumentEntanglementProps) {
   if (!isOpen) return null;
   if (!parsedData) return null;
-
-  const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: parsedData.currency || 'USD',
-    }).format(cents / 100);
-  };
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:p-4 md:p-10">
@@ -111,7 +104,7 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
                   <DollarSign className="text-zinc-400" size={20} />
                   <div>
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total</p>
-                    <p className="font-bold text-[var(--text)] tabular-nums">{formatCurrency(parsedData.totalAmountCents)}</p>
+                    <p className="font-bold text-[var(--text)] tabular-nums">{formatCurrency(parsedData.totalAmountCents, parsedData.currency)}</p>
                   </div>
                 </div>
               </div>
@@ -125,7 +118,7 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
                 <div key={idx} className="group p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] hover:border-zinc-900 transition-all">
                   <div className="flex justify-between items-start mb-2">
                     <p className="font-bold text-[var(--text)] text-sm leading-tight">{item.description}</p>
-                    <p className="font-mono font-bold text-[var(--text)] tabular-nums">{formatCurrency(item.amountCents)}</p>
+                    <p className="font-mono font-bold text-[var(--text)] tabular-nums">{formatCurrency(item.amountCents, parsedData.currency)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Tag size={12} className="text-zinc-400" />
@@ -141,7 +134,7 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
                 <span className="text-xs font-medium uppercase tracking-wider">Tax Detected</span>
               </div>
               <p className="text-sm text-emerald-800 font-medium tabular-nums">
-                AI identified {formatCurrency(parsedData.taxAmountCents)} in sales tax. A tax split will be automatically generated.
+                AI identified {formatCurrency(parsedData.taxAmountCents, parsedData.currency)} in sales tax. A tax split will be automatically generated.
               </p>
             </div>
           </div>

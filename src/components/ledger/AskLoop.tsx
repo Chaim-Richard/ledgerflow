@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { MessageSquare, CheckCircle2, Building2, User, ChevronDown, Check, Tag } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
+import { formatCurrency } from '../../lib/utils';
 import { toast } from 'sonner';
 
 export default function AskLoop() {
@@ -9,13 +10,6 @@ export default function AskLoop() {
   const accounts = useLedgerStore(s => s.accounts);
   const { handleUpdateTransaction } = useTransactionActions();
   const [selectedAccounts, setSelectedAccounts] = useState<Record<string, string>>({});
-
-  const formatCurrency = (amountCents: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(Math.abs(amountCents) / 100);
-  };
 
   // Find real transactions that need clarification/action:
   // 1. uncategorized/unassigned account

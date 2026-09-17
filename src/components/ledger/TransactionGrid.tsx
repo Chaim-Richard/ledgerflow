@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
-import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName } from '../../lib/utils';
+import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName, formatCurrency } from '../../lib/utils';
 import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
@@ -547,7 +547,6 @@ export default function TransactionGrid() {
   }, []);
 
   const onProjectClick = (projectName: string) => onFilterApplied({ ...filterCriteria, project: projectName });
-  const formatCurrency = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 
   const pivotData = useMemo(() => {
     const groups: Record<string, { total: number, count: number }> = {};

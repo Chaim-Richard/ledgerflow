@@ -2,6 +2,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { parseLocalDate, formatDecimal, formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
+import { exportToExcel } from '../../lib/excelExport';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
 import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -217,52 +218,47 @@ export default function CashFlowView() {
 
   const exportCashFlow = async () => {
     const isComp = isComparative;
-    const ExcelJS = await import('exceljs');
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Cash Flows');
-
-    worksheet.columns = [
+    const columns = [
       { header: 'Metric', key: 'metric', width: 40 },
       { header: 'Amount ($)', key: 'amount', width: 20 },
       { header: isComp ? 'Prior Period ($)' : '', key: 'prior', width: 20 },
       { header: isComp ? 'Variance %' : '', key: 'variance', width: 15 },
     ];
 
-    worksheet.addRow([labels.title]);
-    worksheet.addRow([`Period: ${dateRange.start} to ${dateRange.end}`]);
-    worksheet.addRow([]);
+    const titleRows = [
+      [labels.title],
+      [`Period: ${dateRange.start} to ${dateRange.end}`]
+    ];
 
-    worksheet.addRow({
-      metric: `CASH FLOWS FROM ${labels.operating.toUpperCase()}`,
-      amount: currentData.operating.total / 100,
-      prior: isComp ? prevData.operating.total / 100 : null
-    });
-    worksheet.addRow({
-      metric: `CASH FLOWS FROM ${labels.investing.toUpperCase()}`,
-      amount: currentData.investing.total / 100,
-      prior: isComp ? prevData.investing.total / 100 : null
-    });
-    worksheet.addRow({
-      metric: `CASH FLOWS FROM ${labels.financing.toUpperCase()}`,
-      amount: currentData.financing.total / 100,
-      prior: isComp ? prevData.financing.total / 100 : null
-    });
+    const rows = [
+      {
+        metric: `CASH FLOWS FROM ${labels.operating.toUpperCase()}`,
+        amount: currentData.operating.total / 100,
+        prior: isComp ? prevData.operating.total / 100 : null
+      },
+      {
+        metric: `CASH FLOWS FROM ${labels.investing.toUpperCase()}`,
+        amount: currentData.investing.total / 100,
+        prior: isComp ? prevData.investing.total / 100 : null
+      },
+      {
+        metric: `CASH FLOWS FROM ${labels.financing.toUpperCase()}`,
+        amount: currentData.financing.total / 100,
+        prior: isComp ? prevData.financing.total / 100 : null
+      },
+      [],
+      {
+        metric: labels.netChange.toUpperCase(),
+        amount: currentData.netChange / 100,
+        prior: isComp ? prevData.netChange / 100 : null
+      }
+    ];
 
-    worksheet.addRow([]);
-    worksheet.addRow({
-      metric: labels.netChange.toUpperCase(),
-      amount: currentData.netChange / 100,
-      prior: isComp ? prevData.netChange / 100 : null
+    await exportToExcel(columns, rows, {
+      sheetName: 'Cash Flows',
+      fileName: `Cash_Flow_Statement_${dateRange.start}_${dateRange.end}.xlsx`,
+      titleRows
     });
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `Cash_Flow_Statement_${dateRange.start}_${dateRange.end}.xlsx`;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
   };
 
   return (

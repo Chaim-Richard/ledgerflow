@@ -7,6 +7,7 @@ import {
   Calendar, FileSpreadsheet, RefreshCw 
 } from 'lucide-react';
 import { formatDecimal, sanitizeCsvCell, cn } from '../../lib/utils';
+import { exportToExcel } from '../../lib/excelExport';
 import { motion } from 'motion/react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
@@ -235,11 +236,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   };
 
   const handleExportExcel = async () => {
-    const ExcelJS = await import('exceljs');
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Trial Balance');
-
-    worksheet.columns = [
+    const columns = [
       { header: 'Account Code', key: 'code', width: 15 },
       { header: 'Account Name', key: 'name', width: 35 },
       { header: 'Classification', key: 'type', width: 18 },
@@ -247,17 +244,15 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       { header: 'Credit ($)', key: 'credit', width: 16 },
     ];
 
-    trialBalance.lines.forEach(line => {
-      worksheet.addRow({
-        code: line.code || '',
-        name: line.name || '',
-        type: line.type || '',
-        debit: line.debit / 100,
-        credit: line.credit / 100
-      });
-    });
+    const rows = trialBalance.lines.map(line => ({
+      code: line.code || '',
+      name: line.name || '',
+      type: line.type || '',
+      debit: line.debit / 100,
+      credit: line.credit / 100
+    }));
 
-    worksheet.addRow({
+    rows.push({
       code: 'TOTAL',
       name: '',
       type: '',
@@ -265,14 +260,10 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       credit: trialBalance.totalCredits / 100
     });
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `trial_balance_as_of_${asOfDate}.xlsx`;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
+    await exportToExcel(columns, rows, {
+      sheetName: 'Trial Balance',
+      fileName: `trial_balance_as_of_${asOfDate}.xlsx`
+    });
   };
 
   const renderSortIcon = (field: SortField) => {

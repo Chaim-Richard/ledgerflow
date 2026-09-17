@@ -18,6 +18,7 @@ import {
 
 import { toast } from 'sonner';
 import { cn, formatCurrency, parseLocalDate } from '../../lib/utils';
+import { exportToExcel } from '../../lib/excelExport';
 
 interface VendorAgingSummary {
   vendorId: string;
@@ -180,11 +181,7 @@ export default function APAgingReportView() {
   };
 
   const handleExport = async () => {
-    const ExcelJS = await import('exceljs');
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('AP Aging Summary');
-
-    worksheet.columns = [
+    const columns = [
       { header: 'Vendor Name', key: 'vendorName', width: 30 },
       { header: 'Current (0-30d)', key: 'current', width: 20 },
       { header: '31-60 Days', key: 'days31To60', width: 20 },
@@ -194,19 +191,17 @@ export default function APAgingReportView() {
       { header: 'Total Due', key: 'total', width: 20 },
     ];
 
-    filteredData.forEach(v => {
-      worksheet.addRow({
-        vendorName: v.vendorName,
-        current: (v.currentCents / 100).toFixed(2),
-        days31To60: (v.days31To60Cents / 100).toFixed(2),
-        days61To90: (v.days61To90Cents / 100).toFixed(2),
-        days90Plus: (v.days90PlusCents / 100).toFixed(2),
-        dueThisWeek: (v.dueThisWeekCents / 100).toFixed(2),
-        total: (v.totalCents / 100).toFixed(2)
-      });
-    });
+    const rows = filteredData.map(v => ({
+      vendorName: v.vendorName,
+      current: (v.currentCents / 100).toFixed(2),
+      days31To60: (v.days31To60Cents / 100).toFixed(2),
+      days61To90: (v.days61To90Cents / 100).toFixed(2),
+      days90Plus: (v.days90PlusCents / 100).toFixed(2),
+      dueThisWeek: (v.dueThisWeekCents / 100).toFixed(2),
+      total: (v.totalCents / 100).toFixed(2)
+    }));
 
-    worksheet.addRow({
+    rows.push({
       vendorName: 'TOTAL ACCOUNTS PAYABLE',
       current: (overallTotals.current / 100).toFixed(2),
       days31To60: (overallTotals.days31To60 / 100).toFixed(2),
@@ -216,14 +211,10 @@ export default function APAgingReportView() {
       total: (overallTotals.total / 100).toFixed(2)
     });
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `AP_Aging_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
+    await exportToExcel(columns, rows, {
+      sheetName: 'AP Aging Summary',
+      fileName: `AP_Aging_Report_${new Date().toISOString().slice(0, 10)}.xlsx`
+    });
     
     toast.success('A/P Aging report exported successfully');
   };

@@ -12,7 +12,7 @@ import {
   Type as TypeIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, getLocalDateISO } from '../../lib/utils';
+import { cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 import { db, getIdToken } from '../../firebase';
 import { toast } from 'sonner';
@@ -297,11 +297,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
     }
   };
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('en-US', { 
-      style: 'currency', 
-      currency: (transactionCurrency && /^[A-Z]{3}$/.test(transactionCurrency)) ? transactionCurrency : (baseCurrency || 'USD') 
-    }).format((val || 0) / 100);
+  const activeCurrency = (transactionCurrency && /^[A-Z]{3}$/.test(transactionCurrency)) ? transactionCurrency : (baseCurrency || 'USD');
 
   return (
     <AnimatePresence>
@@ -563,8 +559,8 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                     <tfoot>
                       <tr className="bg-[var(--ink)]/50 font-bold">
                         <td className="p-4 text-right uppercase tracking-widest text-[10px] text-[var(--muted)]" colSpan={showDimensions ? 4 : 1}>Totals</td>
-                        <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{formatCurrency(totals.debit)}</td>
-                        <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{formatCurrency(totals.credit)}</td>
+                        <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{formatCurrency(totals.debit, activeCurrency)}</td>
+                        <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{formatCurrency(totals.credit, activeCurrency)}</td>
                         <td></td>
                       </tr>
                     </tfoot>
@@ -592,7 +588,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 </div>
                 <div className="text-left sm:text-right shrink-0">
                   <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Delta</p>
-                  <p className="text-lg font-bold font-mono tracking-tight tabular-nums">{formatCurrency(Math.abs(totals.debit - totals.credit))}</p>
+                  <p className="text-lg font-bold font-mono tracking-tight tabular-nums">{formatCurrency(Math.abs(totals.debit - totals.credit), activeCurrency)}</p>
                 </div>
               </div>
             </form>

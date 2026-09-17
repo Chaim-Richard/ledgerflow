@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Layers, Download, BarChart3, TrendingUp, Globe } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { IntercompanyEliminationEngine } from '../../lib/intercompanyElimination';
 
@@ -19,14 +19,6 @@ export default function Consolidation() {
   }, [transactions, accounts]);
 
   const [activeTab, setActiveTab] = useState<'matrix' | 'adjustments'>('matrix');
-
-  const formatCurrency = (amountCents: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0
-    }).format(amountCents / 100);
-  };
 
   return (
     <div className="h-full flex flex-col bg-[var(--ink)] text-[var(--text)]">

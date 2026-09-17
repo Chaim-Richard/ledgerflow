@@ -18,6 +18,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { formatDecimal, cn, getLocalDateISO, formatCurrency as utilsFormatCurrency } from '../../lib/utils';
+import { exportToExcel } from '../../lib/excelExport';
 import { isPostable, isTransactionInDateRange, lineAmount, calculateNetIncome } from '../../lib/txFilters';
 import { motion } from 'motion/react';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -218,11 +219,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
   const prevData = isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
 
   const exportBalanceSheet = async () => {
-    const ExcelJS = await import('exceljs');
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Balance Sheet');
-
-    worksheet.columns = [
+    const columns = [
       { header: 'Account Name', key: 'name', width: 30 },
       { header: 'Code', key: 'code', width: 10 },
       { header: 'Current Balance', key: 'balance', width: 20 },
@@ -231,17 +228,20 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
       { header: isComparative ? 'Variance %' : '', key: 'variancePct', width: 15 },
     ];
 
-    worksheet.addRow(['Balance Sheet Statement']);
-    worksheet.addRow([`Reporting Date: As of ${asOfDate}`, isComparative ? `Prior Reference: As of ${priorDate}` : '']);
-    worksheet.addRow([]);
+    const titleRows = [
+      ['Balance Sheet Statement'],
+      [`Reporting Date: As of ${asOfDate}`, isComparative ? `Prior Reference: As of ${priorDate}` : '']
+    ];
 
-    worksheet.addRow([labels.assetsLabel.toUpperCase()]);
+    const rows: any[] = [];
+
+    rows.push([labels.assetsLabel.toUpperCase()]);
     accounts.filter(a => a.type === 'asset').forEach(acc => {
       const curBal = currentData.assets[acc.id] || 0;
       const prvBal = isComparative ? prevData.assets[acc.id] || 0 : 0;
       const variance = curBal - prvBal;
       const variancePct = prvBal !== 0 ? (variance / Math.abs(prvBal)) * 100 : 0;
-      worksheet.addRow({
+      rows.push({
         name: acc.name,
         code: acc.code,
         balance: curBal / 100,
@@ -250,20 +250,20 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
         variancePct: isComparative && prvBal !== 0 ? variancePct.toFixed(1) + '%' : null
       });
     });
-    worksheet.addRow({
+    rows.push({
       name: `Total ${labels.assetsLabel}`,
       balance: currentData.totalAssets / 100,
       prior: isComparative ? prevData.totalAssets / 100 : null
     });
-    worksheet.addRow([]);
+    rows.push([]);
 
-    worksheet.addRow([labels.liabilitiesLabel.toUpperCase()]);
+    rows.push([labels.liabilitiesLabel.toUpperCase()]);
     accounts.filter(a => a.type === 'liability').forEach(acc => {
       const curBal = currentData.liabilities[acc.id] || 0;
       const prvBal = isComparative ? prevData.liabilities[acc.id] || 0 : 0;
       const variance = curBal - prvBal;
       const variancePct = prvBal !== 0 ? (variance / Math.abs(prvBal)) * 100 : 0;
-      worksheet.addRow({
+      rows.push({
         name: acc.name,
         code: acc.code,
         balance: curBal / 100,
@@ -272,20 +272,20 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
         variancePct: isComparative && prvBal !== 0 ? variancePct.toFixed(1) + '%' : null
       });
     });
-    worksheet.addRow({
+    rows.push({
       name: `Total ${labels.liabilitiesLabel}`,
       balance: currentData.totalLiabilities / 100,
       prior: isComparative ? prevData.totalLiabilities / 100 : null
     });
-    worksheet.addRow([]);
+    rows.push([]);
 
-    worksheet.addRow([labels.equityLabel.toUpperCase()]);
+    rows.push([labels.equityLabel.toUpperCase()]);
     accounts.filter(a => a.type === 'equity').forEach(acc => {
       const curBal = currentData.equity[acc.id] || 0;
       const prvBal = isComparative ? prevData.equity[acc.id] || 0 : 0;
       const variance = curBal - prvBal;
       const variancePct = prvBal !== 0 ? (variance / Math.abs(prvBal)) * 100 : 0;
-      worksheet.addRow({
+      rows.push({
         name: acc.name,
         code: acc.code,
         balance: curBal / 100,
@@ -299,7 +299,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
     const prvRetEarn = isComparative ? prevData.netIncome : 0;
     const reVariance = curRetEarn - prvRetEarn;
     const reVariancePct = prvRetEarn !== 0 ? (reVariance / Math.abs(prvRetEarn)) * 100 : 0;
-    worksheet.addRow({
+    rows.push({
       name: labels.retainedEarningsLabel,
       code: 'INC',
       balance: curRetEarn / 100,
@@ -308,26 +308,23 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
       variancePct: isComparative && prvRetEarn !== 0 ? reVariancePct.toFixed(1) + '%' : null
     });
 
-    worksheet.addRow({
+    rows.push({
       name: `Total ${labels.equityLabel}`,
       balance: (currentData.totalEquity + currentData.netIncome) / 100,
       prior: isComparative ? (prevData.totalEquity + prevData.netIncome) / 100 : null
     });
-    worksheet.addRow([]);
-    worksheet.addRow({
+    rows.push([]);
+    rows.push({
       name: labels.totalClaimsLabel,
       balance: currentData.totalClaims / 100,
       prior: isComparative ? prevData.totalClaims / 100 : null
     });
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `Balance_Sheet_As_Of_${asOfDate}.xlsx`;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
+    await exportToExcel(columns, rows, {
+      sheetName: 'Balance Sheet',
+      fileName: `Balance_Sheet_As_Of_${asOfDate}.xlsx`,
+      titleRows
+    });
   };
 
   const getVarianceAndPct = (curVal: number, prVal: number) => {

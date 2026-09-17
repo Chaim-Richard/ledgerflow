@@ -7,7 +7,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
-import { cn } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
 const DrillDownModal = React.lazy(() => import('../layout/DrillDownModal'));
 
 import { REPORT_TABS_REGISTRY, REPORT_COMPONENTS } from '../../config/registry';
@@ -149,13 +149,6 @@ const Reports = React.memo(() => {
     if (timeframe === 'quarter') return `${quarterNames[selectedQuarter]} ${selectedYear}`;
     return `FY ${selectedYear}`;
   }, [timeframe, selectedMonth, selectedYear, selectedQuarter]);
-
-  const formatCurrency = useCallback((cents: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(cents / 100);
-  }, []);
 
   const drillDownTransactions = useMemo(() => {
     if (!drillDownAccount || !transactions) return [];

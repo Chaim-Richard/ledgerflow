@@ -17,6 +17,7 @@ import {
 
 import { toast } from 'sonner';
 import { cn, formatCurrency, parseLocalDate } from '../../lib/utils';
+import { exportToExcel } from '../../lib/excelExport';
 import DrillDownModal from '../layout/DrillDownModal';
 
 interface CustomerAgingSummary {
@@ -166,11 +167,7 @@ export default function ARAgingReportView() {
   };
 
   const handleExport = async () => {
-    const ExcelJS = await import('exceljs');
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('AR Aging Summary');
-
-    worksheet.columns = [
+    const columns = [
       { header: 'Customer Name', key: 'customerName', width: 30 },
       { header: 'Current (0-30d)', key: 'current', width: 20 },
       { header: '31-60 Days', key: 'days31To60', width: 20 },
@@ -180,19 +177,17 @@ export default function ARAgingReportView() {
       { header: 'Max Days Overdue', key: 'oldestDays', width: 20 },
     ];
 
-    filteredData.forEach(c => {
-      worksheet.addRow({
-        customerName: c.customerName,
-        current: (c.currentCents / 100).toFixed(2),
-        days31To60: (c.days31To60Cents / 100).toFixed(2),
-        days61To90: (c.days61To90Cents / 100).toFixed(2),
-        days90Plus: (c.days90PlusCents / 100).toFixed(2),
-        total: (c.totalCents / 100).toFixed(2),
-        oldestDays: c.oldestInvoiceDays
-      });
-    });
+    const rows: Array<Record<string, any>> = filteredData.map(c => ({
+      customerName: c.customerName,
+      current: (c.currentCents / 100).toFixed(2),
+      days31To60: (c.days31To60Cents / 100).toFixed(2),
+      days61To90: (c.days61To90Cents / 100).toFixed(2),
+      days90Plus: (c.days90PlusCents / 100).toFixed(2),
+      total: (c.totalCents / 100).toFixed(2),
+      oldestDays: c.oldestInvoiceDays
+    }));
 
-    worksheet.addRow({
+    rows.push({
       customerName: 'TOTAL ACCOUNTS RECEIVABLE',
       current: (overallTotals.current / 100).toFixed(2),
       days31To60: (overallTotals.days31To60 / 100).toFixed(2),
@@ -202,14 +197,10 @@ export default function ARAgingReportView() {
       oldestDays: '-'
     });
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `AR_Aging_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
+    await exportToExcel(columns, rows, {
+      sheetName: 'AR Aging Summary',
+      fileName: `AR_Aging_Report_${new Date().toISOString().slice(0, 10)}.xlsx`
+    });
     
     toast.success('A/R Aging report exported successfully');
   };

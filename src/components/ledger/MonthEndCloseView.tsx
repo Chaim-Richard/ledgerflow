@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { CheckCircle2, Circle, AlertTriangle, ArrowRight, BookOpen, Lock, ShieldCheck, Download } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../../lib/utils';
+import { downloadWorkbook } from '../../lib/excelExport';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { Transaction } from '../../types';
 import { toast } from 'sonner';
@@ -250,14 +251,7 @@ export default function MonthEndCloseView() {
 
       // Write file
       const fileName = `Accountant_Package_${selectedMonth}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = window.URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = fileName;
-      anchor.click();
-      window.URL.revokeObjectURL(url);
+      await downloadWorkbook(workbook, fileName);
       
       toast.success(`Accountant Package exported: ${fileName}`, { id: toastId });
     } catch (err: any) {
