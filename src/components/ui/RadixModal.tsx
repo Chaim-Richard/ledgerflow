@@ -14,7 +14,7 @@ interface ModalProps {
 
 export function RadixModal({ isOpen, onClose, title, description, children, maxWidth = 'max-w-2xl' }: ModalProps) {
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog.Root open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 transition-opacity animate-in fade-in" />
         <Dialog.Content
