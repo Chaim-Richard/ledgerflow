@@ -284,6 +284,20 @@ service cloud.firestore {
       allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
+    match /dimensionNodes/{nodeId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(nodeId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
+    }
+
+    match /workspaceShards/{shardId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(shardId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if false;
+    }
+
     match /vendors/{vendorId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(vendorId);
@@ -342,7 +356,7 @@ service cloud.firestore {
     }
 
     function isProtectedCollection(name) {
-      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages", "invoices", "bills", "inventory", "recurring", "budgets", "autoRules", "fixedAssets", "assets", "taxRates", "vendors", "customers", "employees", "payRuns", "partners", "errorLogs"];
+      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages", "invoices", "bills", "inventory", "recurring", "budgets", "autoRules", "fixedAssets", "assets", "taxRates", "vendors", "customers", "employees", "payRuns", "partners", "errorLogs", "dimensionNodes", "workspaceShards"];
     }
 
     match /supportTickets/{ticketId} {

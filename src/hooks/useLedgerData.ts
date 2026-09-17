@@ -8,7 +8,8 @@ import {
   setDoc,
   addDoc,
   limit,
-  orderBy
+  orderBy,
+  getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -34,7 +35,8 @@ import {
   TaxRate,
   Workspace,
   CustomTemplate,
-  UserProfile
+  UserProfile,
+  DimensionNode
 } from '../types';
 
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
@@ -51,6 +53,7 @@ export function useLedgerData() {
   const setUserProfile = useAuthStore(s => s.setUserProfile);
   const startDate = useUIStore(s => s.filterCriteria?.startDate);
   const endDate = useUIStore(s => s.filterCriteria?.endDate);
+  const activeTab = useUIStore(s => s.activeTab);
   useSnapshotBridge();
 
 
@@ -240,9 +243,16 @@ export function useLedgerData() {
 
     const TX_PAGE_LIMIT = 2000;
     const txConstraints: any[] = [...filter];
-    if (startDate) {
-      txConstraints.push(where('date', '>=', startDate));
-    }
+    
+    // Narrow date window optimization: default to trailing 12 months if no custom window is specified
+    const finalStartDate = startDate || (() => {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() - 1);
+      return d.toISOString().split('T')[0];
+    })();
+
+    txConstraints.push(where('date', '>=', finalStartDate));
+    
     if (endDate) {
       txConstraints.push(where('date', '<=', endDate));
     }
@@ -260,91 +270,225 @@ export function useLedgerData() {
       onSnapshot(query(collection(db, 'projects'), ...filter, limit(1000)), (snap) => {
         scheduleUpdate('projects', snap.docs.map(d => ({ id: d.id, ...d.data() } as Project)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'projects')),
-      onSnapshot(query(collection(db, 'rulePatterns'), ...filter, limit(2000)), (snap) => {
+    ];
+
+    // Slow-moving configurations: Switch to one-time getDocs fetches on workspace load
+    const loadSlowMovingData = async () => {
+      try {
+        const qTaxRates = query(collection(db, 'taxRates'), ...filter, limit(500));
+        const snapTaxRates = await getDocs(qTaxRates);
+        scheduleUpdate('taxRates', snapTaxRates.docs.map(d => ({ id: d.id, ...d.data() } as TaxRate)), false);
+
+        const qTemplates = query(collection(db, 'customTemplates'), where('uid', '==', user.uid), limit(500));
+        const snapTemplates = await getDocs(qTemplates);
+        scheduleUpdate('customTemplates', snapTemplates.docs.map(d => ({ id: d.id, ...d.data() } as CustomTemplate)), false);
+
+        const qPartners = query(collection(db, 'partners'), ...filter, limit(500));
+        const snapPartners = await getDocs(qPartners);
+        scheduleUpdate('partners', snapPartners.docs.map(d => ({ id: d.id, ...d.data() })), false);
+
+        const qAutoRules = query(collection(db, 'autoRules'), ...filter, limit(1000));
+        const snapAutoRules = await getDocs(qAutoRules);
+        scheduleUpdate('autoRules', snapAutoRules.docs.map(d => ({ id: d.id, ...d.data() })), false);
+
+        const qRulePatterns = query(collection(db, 'rulePatterns'), ...filter, limit(2000));
+        const snapRulePatterns = await getDocs(qRulePatterns);
         const cache: Record<string, any> = {};
-        snap.docs.forEach(d => {
+        snapRulePatterns.docs.forEach(d => {
           const data = d.data();
           cache[(data.description || '').toLowerCase().trim()] = data;
         });
         useLedgerStore.getState().setAnalyticalPatternCache(cache);
-      }, (err) => handleFirestoreError(err, OperationType.LIST, 'rulePatterns')),
-    ];
+
+        const qDimensionNodes = query(collection(db, 'dimensionNodes'), ...filter, limit(10000));
+        const snapDimensionNodes = await getDocs(qDimensionNodes);
+        let nodes = snapDimensionNodes.docs.map(d => ({ ...d.data() } as DimensionNode));
+        if (snapDimensionNodes.empty) {
+          const currentWorkspace = useAuthStore.getState().workspaces.find(w => w.id === currentWorkspaceId);
+          if (currentWorkspace?.dimensionNodes && currentWorkspace.dimensionNodes.length > 0) {
+            nodes = currentWorkspace.dimensionNodes;
+          }
+        }
+        const allWorkspaces = useAuthStore.getState().workspaces;
+        const updated = allWorkspaces.map(w => {
+          if (w.id === currentWorkspaceId) {
+            return { ...w, dimensionNodes: nodes };
+          }
+          return w;
+        });
+        useAuthStore.getState().setWorkspaces(updated);
+      } catch (err) {
+        console.warn("[Firebase Ledger] Error loading static configs:", err);
+      }
+    };
+    loadSlowMovingData();
 
     const isCurrent = { active: true };
     const allUnsubs = [...criticalListeners];
 
-    // Defer non-critical listeners to prioritize initial paint and dashboard readiness
-    const secondaryTimer = setTimeout(() => {
-      if (!isCurrent.active) return;
-      const secondaryUnsubs = [
-        onSnapshot(query(collection(db, 'budgets'), ...filter, limit(1000)), (snap) => {
-          scheduleUpdate('budgets', snap.docs.map(d => ({ id: d.id, ...d.data() } as Budget)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'budgets')),
-        onSnapshot(query(collection(db, 'vendors'), ...filter, limit(2000)), (snap) => {
-          scheduleUpdate('vendors', snap.docs.map(d => ({ id: d.id, ...d.data() } as Vendor)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'vendors')),
-        onSnapshot(query(collection(db, 'customers'), ...filter, limit(2000)), (snap) => {
-          scheduleUpdate('customers', snap.docs.map(d => ({ id: d.id, ...d.data() } as Customer)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'customers')),
-        onSnapshot(query(collection(db, 'invoices'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
-          scheduleUpdate('invoices', snap.docs.map(d => ({ id: d.id, ...d.data() } as Invoice)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'invoices')),
-        onSnapshot(query(collection(db, 'payments'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
-          scheduleUpdate('payments', snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'payments')),
-        onSnapshot(query(collection(db, 'estimates'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
-          scheduleUpdate('estimates', snap.docs.map(d => ({ id: d.id, ...d.data() } as Estimate)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'estimates')),
-        onSnapshot(query(collection(db, 'bills'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
-          scheduleUpdate('bills', snap.docs.map(d => ({ id: d.id, ...d.data() } as Bill)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'bills')),
-        onSnapshot(query(collection(db, 'inventory'), ...filter, limit(2000)), (snap) => {
-          scheduleUpdate('inventory', snap.docs.map(d => ({ id: d.id, ...d.data() } as InventoryItem)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'inventory')),
-        onSnapshot(query(collection(db, 'assets'), ...filter, limit(2000)), (snap) => {
-          scheduleUpdate('assets', snap.docs.map(d => ({ id: d.id, ...d.data() } as FixedAsset)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'assets')),
-        onSnapshot(query(collection(db, 'recurring'), ...filter, limit(1000)), (snap) => {
-          scheduleUpdate('recurring', snap.docs.map(d => ({ id: d.id, ...d.data() } as RecurringTransaction)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'recurring')),
-        onSnapshot(query(collection(db, 'employees'), ...filter, limit(1000)), (snap) => {
-          scheduleUpdate('employees', snap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'employees')),
-        onSnapshot(query(collection(db, 'payRuns'), ...filter, limit(1000)), (snap) => {
-          scheduleUpdate('payRuns', snap.docs.map(d => ({ id: d.id, ...d.data() } as PayRun)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'payRuns')),
-        onSnapshot(query(collection(db, 'taxRates'), ...filter, limit(500)), (snap) => {
-          scheduleUpdate('taxRates', snap.docs.map(d => ({ id: d.id, ...d.data() } as TaxRate)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'taxRates')),
-        onSnapshot(query(collection(db, 'customTemplates'), where('uid', '==', user.uid), limit(500)), (snap) => {
-          scheduleUpdate('customTemplates', snap.docs.map(d => ({ id: d.id, ...d.data() } as CustomTemplate)), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'customTemplates')),
-        onSnapshot(query(collection(db, 'auditLogs'), ...filter, orderBy('timestamp', 'desc'), limit(500)), (snap) => {
-          scheduleUpdate('auditLogs', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'auditLogs')),
-        onSnapshot(query(collection(db, 'partners'), ...filter, limit(500)), (snap) => {
-          scheduleUpdate('partners', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'partners')),
-        onSnapshot(query(collection(db, 'reconciliations'), ...filter, limit(1000)), (snap) => {
-          scheduleUpdate('reconciliations', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'reconciliations')),
-        onSnapshot(query(collection(db, 'autoRules'), ...filter, limit(1000)), (snap) => {
-          scheduleUpdate('autoRules', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'autoRules')),
-        onSnapshot(query(collection(db, 'bankLines'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
-          scheduleUpdate('bankLines', snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.metadata.hasPendingWrites);
-        }, (err) => handleFirestoreError(err, OperationType.LIST, 'bankLines')),
-      ];
-      allUnsubs.push(...secondaryUnsubs);
-    }, 500);
-
     return () => {
       isCurrent.active = false;
       allUnsubs.forEach(unsub => unsub());
-      clearTimeout(secondaryTimer);
       if (updateTimer) clearTimeout(updateTimer);
     };
   }, [user, currentWorkspaceId, startDate, endDate]);
+
+  // Lazy-load other high-frequency/route-specific collections dynamically based on route activeTab
+  
+  // 1. Sales & Invoicing Hub
+  useEffect(() => {
+    if (!user || !currentWorkspaceId) return;
+    if (activeTab !== 'sales' && activeTab !== 'estimates' && activeTab !== 'payments') return;
+
+    const filter = [where('workspaceId', '==', currentWorkspaceId)];
+    const unsubInvoices = onSnapshot(query(collection(db, 'invoices'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() } as Invoice)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'invoices'));
+
+    const unsubPayments = onSnapshot(query(collection(db, 'payments'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setPayments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'payments'));
+
+    const unsubEstimates = onSnapshot(query(collection(db, 'estimates'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setEstimates(snap.docs.map(d => ({ id: d.id, ...d.data() } as Estimate)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'estimates'));
+
+    const unsubCustomers = onSnapshot(query(collection(db, 'customers'), ...filter, limit(2000)), (snap) => {
+      useLedgerStore.getState().setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'customers'));
+
+    return () => {
+      unsubInvoices();
+      unsubPayments();
+      unsubEstimates();
+      unsubCustomers();
+    };
+  }, [user, currentWorkspaceId, activeTab]);
+
+  // 2. Purchases, Bills & Vendors
+  useEffect(() => {
+    if (!user || !currentWorkspaceId) return;
+    if (activeTab !== 'purchases' && activeTab !== 'inventory') return;
+
+    const filter = [where('workspaceId', '==', currentWorkspaceId)];
+    const unsubBills = onSnapshot(query(collection(db, 'bills'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setBills(snap.docs.map(d => ({ id: d.id, ...d.data() } as Bill)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'bills'));
+
+    const unsubVendors = onSnapshot(query(collection(db, 'vendors'), ...filter, limit(2000)), (snap) => {
+      useLedgerStore.getState().setVendors(snap.docs.map(d => ({ id: d.id, ...d.data() } as Vendor)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'vendors'));
+
+    return () => {
+      unsubBills();
+      unsubVendors();
+    };
+  }, [user, currentWorkspaceId, activeTab]);
+
+  // 3. Inventory Stock
+  useEffect(() => {
+    if (!user || !currentWorkspaceId) return;
+    if (activeTab !== 'inventory') return;
+
+    const filter = [where('workspaceId', '==', currentWorkspaceId)];
+    const unsubInventory = onSnapshot(query(collection(db, 'inventory'), ...filter, limit(2000)), (snap) => {
+      useLedgerStore.getState().setInventory(snap.docs.map(d => ({ id: d.id, ...d.data() } as InventoryItem)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'inventory'));
+
+    return () => {
+      unsubInventory();
+    };
+  }, [user, currentWorkspaceId, activeTab]);
+
+  // 4. Budgets and forecasting
+  useEffect(() => {
+    if (!user || !currentWorkspaceId) return;
+    if (activeTab !== 'budgets' && activeTab !== 'forecaster' && activeTab !== 'reports' && activeTab !== 'charts' && activeTab !== 'intelligence') return;
+
+    const filter = [where('workspaceId', '==', currentWorkspaceId)];
+    const unsubBudgets = onSnapshot(query(collection(db, 'budgets'), ...filter, limit(1000)), (snap) => {
+      useLedgerStore.getState().setBudgets(snap.docs.map(d => ({ id: d.id, ...d.data() } as Budget)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'budgets'));
+
+    return () => {
+      unsubBudgets();
+    };
+  }, [user, currentWorkspaceId, activeTab]);
+
+  // 5. Month End Close & Payroll HR
+  useEffect(() => {
+    if (!user || !currentWorkspaceId) return;
+    if (activeTab !== 'month-end-close') return;
+
+    const filter = [where('workspaceId', '==', currentWorkspaceId)];
+    const unsubPayRuns = onSnapshot(query(collection(db, 'payRuns'), ...filter, limit(1000)), (snap) => {
+      useLedgerStore.getState().setPayRuns(snap.docs.map(d => ({ id: d.id, ...d.data() } as PayRun)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'payRuns'));
+
+    const unsubEmployees = onSnapshot(query(collection(db, 'employees'), ...filter, limit(1000)), (snap) => {
+      useLedgerStore.getState().setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'employees'));
+
+    return () => {
+      unsubPayRuns();
+      unsubEmployees();
+    };
+  }, [user, currentWorkspaceId, activeTab]);
+
+  // 6. Banking Feed & Reconciliations
+  useEffect(() => {
+    if (!user || !currentWorkspaceId) return;
+    if (activeTab !== 'banking' && activeTab !== 'reconciliation') return;
+
+    const filter = [where('workspaceId', '==', currentWorkspaceId)];
+    const unsubBankLines = onSnapshot(query(collection(db, 'bankLines'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setBankLines(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'bankLines'));
+
+    const unsubReconciliations = onSnapshot(query(collection(db, 'reconciliations'), ...filter, limit(1000)), (snap) => {
+      useLedgerStore.getState().setReconciliations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'reconciliations'));
+
+    return () => {
+      unsubBankLines();
+      unsubReconciliations();
+    };
+  }, [user, currentWorkspaceId, activeTab]);
+
+  // 7. Forensic Audit Trail logs
+  useEffect(() => {
+    if (!user || !currentWorkspaceId) return;
+    if (activeTab !== 'audit-trail') return;
+
+    const filter = [where('workspaceId', '==', currentWorkspaceId)];
+    const unsubAuditLogs = onSnapshot(query(collection(db, 'auditLogs'), ...filter, orderBy('timestamp', 'desc'), limit(500)), (snap) => {
+      useLedgerStore.getState().setAuditLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'auditLogs'));
+
+    return () => {
+      unsubAuditLogs();
+    };
+  }, [user, currentWorkspaceId, activeTab]);
+
+  // 8. Recurring rules & fixed assets (Settings/Appearance/Data Health Views)
+  useEffect(() => {
+    if (!user || !currentWorkspaceId) return;
+    if (activeTab !== 'settings' && activeTab !== 'data-health' && activeTab !== 'system-command-center') return;
+
+    const filter = [where('workspaceId', '==', currentWorkspaceId)];
+    const unsubRecurring = onSnapshot(query(collection(db, 'recurring'), ...filter, limit(1000)), (snap) => {
+      useLedgerStore.getState().setRecurring(snap.docs.map(d => ({ id: d.id, ...d.data() } as RecurringTransaction)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'recurring'));
+
+    const unsubAssets = onSnapshot(query(collection(db, 'assets'), ...filter, limit(2000)), (snap) => {
+      useLedgerStore.getState().setAssets(snap.docs.map(d => ({ id: d.id, ...d.data() } as FixedAsset)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'assets'));
+
+    return () => {
+      unsubRecurring();
+      unsubAssets();
+    };
+  }, [user, currentWorkspaceId, activeTab]);
 
   return null;
 }

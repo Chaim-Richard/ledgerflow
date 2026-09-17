@@ -38,6 +38,7 @@ export interface Workspace {
   dateFormat?: string;
   aiModel?: string;
   matchingThreshold?: number;
+  timezone?: string;
   notifications?: {
     largeTransactionAlert: boolean;
     largeTransactionThreshold: number;

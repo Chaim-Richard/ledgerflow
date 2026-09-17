@@ -179,6 +179,12 @@ export default function BackupExportSettings() {
 
     setIsRestoring(true);
     try {
+      const authState = useAuthStore.getState();
+      const workspaceId = authState.currentWorkspaceId;
+      if (!workspaceId) {
+        throw new Error("No active workspace selected");
+      }
+
       const text = await file.text();
       const payload = JSON.parse(text);
 
@@ -205,8 +211,25 @@ export default function BackupExportSettings() {
          throw new Error("Backup file invalid: Missing core ledger collections.");
       }
 
-      toast.success(`Backup validated! Ready to restore ${payload.transactions.length} transactions. (Restore execution pending implementation)`);
-      // NOTE: Actual firestore replacement would go here.
+      const token = await authState.user?.getIdToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`/api/v1/workspaces/${workspaceId}/restore`, {
+        method: 'POST',
+        headers,
+        body: text
+      });
+
+      if (!res.ok) {
+        const errorJson = await res.json().catch(() => ({}));
+        throw new Error(errorJson.message || "Failed to restore backup via server endpoint");
+      }
+
+      const result = await res.json();
+      toast.success(result.message || "Workspace general ledger successfully restored from backup snapshot.");
     } catch (e: any) {
       console.error("Restore failed:", e);
       toast.error(`Restore failed: ${e.message}`);

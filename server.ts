@@ -249,6 +249,42 @@ function calculateWorkspaceCharges(wsData: any, baseCredits: number, baseCents: 
   return { credits, cents };
 }
 
+async function incrementShardedCounter(db: any, workspaceId: string, metric: 'totalQueriesThisMonth' | 'computeCreditBalance', value: number) {
+  try {
+    const numShards = 10;
+    const shardId = Math.floor(Math.random() * numShards);
+    const docId = `shard_${workspaceId}_${metric}_${shardId}`;
+    const shardRef = db.collection('workspaceShards').doc(docId);
+    await shardRef.set({
+      workspaceId,
+      metric,
+      shardId,
+      value: admin.firestore.FieldValue.increment(value)
+    }, { merge: true });
+  } catch (err: any) {
+    console.error("Failed to increment sharded counter:", err);
+  }
+}
+
+async function getShardedCounterValue(db: any, workspaceId: string, metric: 'totalQueriesThisMonth' | 'computeCreditBalance', baseline: number): Promise<number> {
+  try {
+    const snapshot = await db.collection('workspaceShards')
+      .where('workspaceId', '==', workspaceId)
+      .where('metric', '==', metric)
+      .get();
+    
+    let shardSum = 0;
+    snapshot.forEach((doc: any) => {
+      shardSum += (doc.data()?.value || 0);
+    });
+    
+    return baseline + shardSum;
+  } catch (err: any) {
+    console.error("Failed to get sharded counter value:", err);
+    return baseline;
+  }
+}
+
 /**
  * Period Lock Enforcement
  * Prevents modifications to closed fiscal periods
@@ -363,7 +399,8 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
 
       if (isCreditSensitive) {
         // 2. Compute credit balance checking
-        const creditBalance = data?.computeCreditBalance !== undefined ? Number(data.computeCreditBalance) : 100000;
+        const baseline = data?.computeCreditBalance !== undefined ? Number(data.computeCreditBalance) : 100000;
+        const creditBalance = await getShardedCounterValue(db, workspaceId, 'computeCreditBalance', baseline);
         if (creditBalance <= 0) {
           throw new Error("PAYMENT_REQUIRED: This workspace has exhausted its compute credit balance (0 left). Please upgrade your plan or top up in settings.");
         }
@@ -1296,7 +1333,8 @@ async function startServer() {
           const wsRef = db.collection("workspaces").doc(workspaceIdPattern);
           const wsData = (await wsRef.get()).data() || {};
           const bypass = wsData.bypassBilling === true || globalAdminConfig.bypassBilling === true;
-          const currentCredit = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000;
+          const baseline = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000;
+          const currentCredit = await getShardedCounterValue(db, workspaceIdPattern, 'computeCreditBalance', baseline);
           
           if (!bypass && currentCredit <= 0) {
             return res.status(402).json({
@@ -1947,6 +1985,125 @@ async function startServer() {
   app.get("/api/v1/workspaces/:workspaceId/export", apiAuthenticate, handleWorkspaceExport);
   app.get("/api/workspaces/:workspaceId/export", apiAuthenticate, handleWorkspaceExport);
 
+  app.post("/api/v1/workspaces/:workspaceId/restore", apiAuthenticate, async (req: express.Request, res: express.Response) => {
+    try {
+      const { workspaceId } = req.params;
+      const authReq = req as AuthenticatedRequest;
+      await authorizeWorkspace(authReq, workspaceId);
+
+      const backup = req.body;
+      if (!backup || typeof backup !== 'object') {
+        return sendError(res, "Invalid backup payload", 400);
+      }
+
+      // Basic schema and target checks
+      if (backup.workspace && backup.workspace.id !== workspaceId) {
+        return sendError(res, "Backup workspace ID does not match target workspace ID", 400);
+      }
+
+      if (backup.schemaVersion && Number(backup.schemaVersion) !== 1) {
+        return sendError(res, "Unsupported schema version", 400);
+      }
+
+      const db = getDb();
+
+      // Wipe existing collection records for this workspace to do a clean restore
+      const collectionsToRestore = [
+        { key: 'transactions', coll: 'transactions' },
+        { key: 'accounts', coll: 'chartAccounts' },
+        { key: 'projects', coll: 'projects' },
+        { key: 'budgets', coll: 'budgets' },
+        { key: 'vendors', coll: 'vendors' },
+        { key: 'customers', coll: 'customers' },
+        { key: 'invoices', coll: 'invoices' },
+        { key: 'bills', coll: 'bills' },
+        { key: 'payments', coll: 'payments' },
+        { key: 'estimates', coll: 'estimates' },
+        { key: 'inventory', coll: 'inventory' },
+        { key: 'assets', coll: 'assets' },
+        { key: 'recurringRules', coll: 'recurring' },
+        { key: 'recurring', coll: 'recurring' },
+        { key: 'taxRates', coll: 'taxRates' },
+        { key: 'autoRules', coll: 'autoRules' },
+        { key: 'reconciliations', coll: 'reconciliations' }
+      ];
+
+      // Helper to batch delete existing documents in chunks of 400
+      const deleteExisting = async (collName: string) => {
+        const snapshot = await db.collection(collName).where("workspaceId", "==", workspaceId).get();
+        if (snapshot.empty) return;
+        
+        const chunks = [];
+        for (let i = 0; i < snapshot.docs.length; i += 400) {
+          chunks.push(snapshot.docs.slice(i, i + 400));
+        }
+
+        for (const chunk of chunks) {
+          const batch = db.batch();
+          chunk.forEach((doc: any) => batch.delete(doc.ref));
+          await batch.commit();
+        }
+      };
+
+      // Wipe all related collections
+      await Promise.all(
+        Array.from(new Set(collectionsToRestore.map(c => c.coll))).map(coll => deleteExisting(coll))
+      );
+
+      // Helper to batch write restored documents in chunks of 400
+      const restoreCollection = async (items: any[], collName: string) => {
+        if (!Array.isArray(items) || items.length === 0) return;
+
+        const cleanedItems = items.map(item => {
+          const { id, ...data } = item;
+          return {
+            id: id || db.collection(collName).doc().id,
+            data: {
+              ...data,
+              workspaceId // Tenant Guard
+            }
+          };
+        });
+
+        const chunks = [];
+        for (let i = 0; i < cleanedItems.length; i += 400) {
+          chunks.push(cleanedItems.slice(i, i + 400));
+        }
+
+        for (const chunk of chunks) {
+          const batch = db.batch();
+          chunk.forEach(item => {
+            const ref = db.collection(collName).doc(item.id);
+            batch.set(ref, item.data, { merge: true });
+          });
+          await batch.commit();
+        }
+      };
+
+      // Restore each collection
+      for (const mapping of collectionsToRestore) {
+        const items = backup[mapping.key];
+        if (items) {
+          await restoreCollection(items, mapping.coll);
+        }
+      }
+
+      // Restore workspace metadata properties
+      if (backup.workspace) {
+        const { id, uid, createdAt, ...rest } = backup.workspace;
+        await db.collection("workspaces").doc(workspaceId).set(rest, { merge: true });
+      }
+
+      return res.json({
+        success: true,
+        message: "General ledger workspace successfully restored from backup.",
+        restoredCollections: Array.from(new Set(collectionsToRestore.map(c => c.key)))
+      });
+    } catch (err: any) {
+      handleApiError(res, err);
+    }
+  });
+
   app.post("/api/v1/workspaces/:workspaceId/members", apiAuthenticate, requirePlanCapacity('seats'), async (req: express.Request, res: express.Response) => {
     try {
       const { workspaceId } = req.params;
@@ -2401,10 +2558,11 @@ async function startServer() {
 
           await wsRef.update({
             apiQuotaTotalCentsUsed: currentCents + deltaCents,
-            totalQueriesThisMonth: currentQueries + 1,
-            computeHardnessScore: currentHardness + weightScore,
-            computeCreditBalance: Math.max(0, currentCredit - weightScore)
+            computeHardnessScore: currentHardness + weightScore
           });
+
+          await incrementShardedCounter(db, workspaceId, 'totalQueriesThisMonth', 1);
+          await incrementShardedCounter(db, workspaceId, 'computeCreditBalance', -weightScore);
 
           // Log trace audit record
           const traceId = `trace-${crypto.randomUUID()}`;
@@ -3112,10 +3270,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
       const wsRef = db.collection("workspaces").doc(workspaceId);
       const wsDocCurrent = await wsRef.get();
       if (wsDocCurrent.exists) {
-         const currentCredit = wsDocCurrent.data()?.computeCreditBalance !== undefined ? wsDocCurrent.data()?.computeCreditBalance : 100000;
-         await wsRef.update({
-            computeCreditBalance: Math.max(0, currentCredit - 1200)
-         });
+         await incrementShardedCounter(db, workspaceId, 'computeCreditBalance', -1200);
       }
 
     } catch (e: any) {
@@ -3189,7 +3344,8 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         return sendError(res, "Workspace does not exist", 404);
       }
       const wsData = wsDoc.data() || {};
-      const creditBalance = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000;
+      const baseline = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000;
+      const creditBalance = await getShardedCounterValue(db, workspaceId, 'computeCreditBalance', baseline);
       if (creditBalance <= 0) {
         return sendError(res, "This workspace has exhausted its Monthly AI Compute Token Budget/Credit Balance. Please upgrade your plan or top up credits.", 402);
       }
@@ -3317,10 +3473,11 @@ You MUST output a valid JSON object matching this schema exactly:
 
         await wsRef.update({
           apiQuotaTotalCentsUsed: currentCents + deltaCents,
-          totalQueriesThisMonth: currentQueries + 1,
-          computeHardnessScore: currentHardness + weightScore,
-          computeCreditBalance: Math.max(0, currentCredit - weightScore)
+          computeHardnessScore: currentHardness + weightScore
         });
+
+        await incrementShardedCounter(db, workspaceId, 'totalQueriesThisMonth', 1);
+        await incrementShardedCounter(db, workspaceId, 'computeCreditBalance', -weightScore);
 
         // Log trace audit record
         const traceId = `trace-${crypto.randomUUID()}`;
@@ -3411,10 +3568,11 @@ You MUST output a valid JSON object matching this schema exactly:
 
           await wsRef.update({
             apiQuotaTotalCentsUsed: currentCents + deltaCents,
-            totalQueriesThisMonth: currentQueries + 1,
-            computeHardnessScore: currentHardness + weightScore,
-            computeCreditBalance: Math.max(0, currentCredit - weightScore)
+            computeHardnessScore: currentHardness + weightScore
           });
+
+          await incrementShardedCounter(db, workspaceId, 'totalQueriesThisMonth', 1);
+          await incrementShardedCounter(db, workspaceId, 'computeCreditBalance', -weightScore);
 
           // Log trace audit record
           const traceId = `trace-${crypto.randomUUID()}`;
@@ -3463,6 +3621,29 @@ You MUST output a valid JSON object matching this schema exactly:
       if (wsIds.length > 0) {
           transactionsSnap = await db.collection("transactions").where("workspaceId", "in", wsIds).get();
       }
+
+      // Fetch all shards for these workspaces
+      const shardsSnap = wsIds.length > 0 
+        ? await db.collection("workspaceShards").where("workspaceId", "in", wsIds).get()
+        : { docs: [] };
+
+      const shardSums: Record<string, { totalQueriesThisMonth: number; computeCreditBalance: number }> = {};
+      wsIds.forEach(id => {
+        shardSums[id] = { totalQueriesThisMonth: 0, computeCreditBalance: 0 };
+      });
+      shardsSnap.docs.forEach((doc: any) => {
+        const sData = doc.data() || {};
+        const wsId = sData.workspaceId;
+        const metric = sData.metric;
+        const val = sData.value || 0;
+        if (wsId && shardSums[wsId]) {
+          if (metric === 'totalQueriesThisMonth') {
+            shardSums[wsId].totalQueriesThisMonth += val;
+          } else if (metric === 'computeCreditBalance') {
+            shardSums[wsId].computeCreditBalance += val;
+          }
+        }
+      });
       
       const transactions = transactionsSnap.docs.map(doc => doc.data() as any);
       
@@ -3490,6 +3671,7 @@ You MUST output a valid JSON object matching this schema exactly:
       workspacesSnap.docs.forEach(doc => {
          const data = doc.data() || {};
          const cacheVal = typeof billingFallbackCache !== "undefined" ? (billingFallbackCache.get(doc.id) || {}) : {};
+         const baseCredit = data.computeCreditBalance !== undefined ? data.computeCreditBalance : (cacheVal.computeCreditBalance !== undefined ? cacheVal.computeCreditBalance : 100000);
          tenants[doc.id] = { 
             id: doc.id, 
             name: data.name || cacheVal.name || "Default Workspace",
@@ -3498,7 +3680,7 @@ You MUST output a valid JSON object matching this schema exactly:
             activeUserCount: data.activeUserCount || cacheVal.activeUserCount || 1,
             seatCount: data.seatCount || cacheVal.seatCount || 1,
             maxSeats: data.maxSeats || cacheVal.maxSeats || 3,
-            computeCreditBalance: data.computeCreditBalance !== undefined ? data.computeCreditBalance : (cacheVal.computeCreditBalance !== undefined ? cacheVal.computeCreditBalance : 100000),
+            computeCreditBalance: baseCredit + (shardSums[doc.id]?.computeCreditBalance || 0),
             apiQuotaTotalCentsUsed: data.apiQuotaTotalCentsUsed || cacheVal.apiQuotaTotalCentsUsed || 0,
             apiQuotaMonthlyLimitCents: data.apiQuotaMonthlyLimitCents || cacheVal.apiQuotaMonthlyLimitCents || 0,
             creditCostMultiplier: data.creditCostMultiplier !== undefined ? Number(data.creditCostMultiplier) : (cacheVal.creditCostMultiplier !== undefined ? Number(cacheVal.creditCostMultiplier) : 1.0),
@@ -4131,6 +4313,13 @@ You MUST output a valid JSON object matching this schema exactly:
         wsData = billingFallbackCache.get(workspaceId) || {};
       }
 
+      const db = getDb();
+      const baselineQueries = wsData.totalQueriesThisMonth || 0;
+      const baselineCredit = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000;
+
+      const shardedQueries = await getShardedCounterValue(db, workspaceId, 'totalQueriesThisMonth', baselineQueries);
+      const shardedCredit = await getShardedCounterValue(db, workspaceId, 'computeCreditBalance', baselineCredit);
+
       // Populate secure default development limits if missing to maintain continuous operations
       const statusData = {
         workspaceId,
@@ -4140,9 +4329,9 @@ You MUST output a valid JSON object matching this schema exactly:
         activeUserCount: wsData.activeUserCount || 1,
         seatCount: wsData.seatCount || 1,
         maxSeats: wsData.maxSeats || 3,
-        totalQueriesThisMonth: wsData.totalQueriesThisMonth || 0,
+        totalQueriesThisMonth: shardedQueries,
         computeHardnessScore: wsData.computeHardnessScore || 0,
-        computeCreditBalance: wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000, // 100k compute units default
+        computeCreditBalance: Math.max(0, shardedCredit), // 100k compute units default
         apiQuotaTotalCentsUsed: wsData.apiQuotaTotalCentsUsed || 0,
         apiQuotaMonthlyLimitCents: wsData.apiQuotaMonthlyLimitCents || 0, // Sandbox has no real dollar limits, just credit limits
       };
@@ -4217,16 +4406,21 @@ You MUST output a valid JSON object matching this schema exactly:
       const currentValueHardness = wsData.computeHardnessScore !== undefined ? wsData.computeHardnessScore : 0;
       const currentValueCredit = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 1000000;
 
+      const db = getDb();
+      await incrementShardedCounter(db, workspaceId, 'totalQueriesThisMonth', 1);
+      await incrementShardedCounter(db, workspaceId, 'computeCreditBalance', -sanitizedWeight);
+
+      const shardedQueries = await getShardedCounterValue(db, workspaceId, 'totalQueriesThisMonth', currentValueQueries);
+      const shardedCredit = await getShardedCounterValue(db, workspaceId, 'computeCreditBalance', currentValueCredit);
+
       const currentQuotaUsed = currentValueQuota + Math.round(sanitizedWeight * 0.1); // 0.1 cent per complexity score
-      const newQueriesCount = currentValueQueries + 1;
       const newComputeHardness = currentValueHardness + sanitizedWeight;
-      const newCreditBalance = Math.max(0, currentValueCredit - sanitizedWeight);
 
       const updatedMetrics = {
         apiQuotaTotalCentsUsed: currentQuotaUsed,
-        totalQueriesThisMonth: newQueriesCount,
+        totalQueriesThisMonth: shardedQueries,
         computeHardnessScore: newComputeHardness,
-        computeCreditBalance: newCreditBalance
+        computeCreditBalance: Math.max(0, shardedCredit)
       };
 
       // Always write to the fallback in-memory cache to maintain locally consistent simulation state
@@ -4238,9 +4432,11 @@ You MUST output a valid JSON object matching this schema exactly:
 
       if (wsFetchedFromDb) {
         try {
-          const db = getDb();
           const wsRef = db.collection("workspaces").doc(workspaceId);
-          await wsRef.update(updatedMetrics);
+          await wsRef.update({
+            apiQuotaTotalCentsUsed: currentQuotaUsed,
+            computeHardnessScore: newComputeHardness
+          });
         } catch (dbErr: any) {
           console.warn("[Firebase Admin] Failed workspace Firestore update, continuing via active in-memory billing cache:", dbErr.message);
         }
@@ -4906,12 +5102,33 @@ You MUST output a valid JSON object matching this schema exactly:
       cutoff.setDate(cutoff.getDate() - 90); // 90 days default
       const cutoffStr = cutoff.toISOString();
 
+      // 1. Purge expired audit logs
       const snap = await admin.firestore().collection('auditLogs').where('timestamp', '<', cutoffStr).get();
       if (!snap.empty) {
         const batch = admin.firestore().batch();
         snap.docs.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
         console.log(`[Data Lifecycle] Purged ${snap.size} expired audit logs.`);
+      }
+
+      // 2. Backup retention: Purge expired job run logs older than 90 days
+      const oldJobRuns = await admin.firestore().collection('jobRuns').where('finishedAt', '<', cutoffStr).get();
+      if (!oldJobRuns.empty) {
+        const batch = admin.firestore().batch();
+        oldJobRuns.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        console.log(`[Data Lifecycle] Purged ${oldJobRuns.size} expired job runs.`);
+      }
+
+      // 3. Cap strategicAdvice array on all workspaces to maximum 15 items to prevent database bloat
+      const workspacesSnap = await admin.firestore().collection('workspaces').get();
+      for (const doc of workspacesSnap.docs) {
+        const data = doc.data() || {};
+        if (Array.isArray(data.strategicAdvice) && data.strategicAdvice.length > 15) {
+          const cappedAdvice = data.strategicAdvice.slice(-15); // Keep the most recent 15
+          await doc.ref.update({ strategicAdvice: cappedAdvice });
+          console.log(`[Data Lifecycle] Capped strategicAdvice for workspace ${doc.id} to 15 items.`);
+        }
       }
     } catch (e) {
       console.error("[Data Lifecycle] Cleanup job failed", e);

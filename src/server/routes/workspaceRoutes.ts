@@ -59,54 +59,62 @@ export function requireWorkspaceRole(allowedRoles: string[]) {
 }
 
 export async function allocateNextNumber(db: any, workspaceId: string, type: 'invoice' | 'bill' | 'estimate'): Promise<string> {
+  const nsDocRef = db.collection('numberingSeries').doc(`${workspaceId}_${type}`);
   const wsRef = db.collection('workspaces').doc(workspaceId);
 
   return await db.runTransaction(async (tx: any) => {
-    const wsSnap = await tx.get(wsRef);
-    const wsData = wsSnap.exists ? (wsSnap.data() || {}) : {};
-
-    const ns = JSON.parse(JSON.stringify(wsData.numberingSeries || {}));
+    const nsSnap = await tx.get(nsDocRef);
     
     let prefix = '';
     let nextNum = 1;
     let padding = 4;
 
-    if (ns[type] && typeof ns[type] === 'object') {
-      prefix = ns[type].prefix ?? (type === 'invoice' ? 'INV-2026-' : type === 'bill' ? 'BIL-2026-' : 'EST-2026-');
-      nextNum = ns[type].nextNumber ?? 1;
-      padding = ns[type].padding ?? 4;
-      ns[type] = {
-        prefix,
-        nextNumber: nextNum + 1,
-        padding
-      };
-    } else {
-      if (type === 'invoice') {
-        prefix = ns.invoicePrefix || 'INV-2026-';
-        nextNum = ns.invoiceNextNumber || 1;
-        ns.invoiceNextNumber = nextNum + 1;
-      } else if (type === 'bill') {
-        prefix = ns.billPrefix || 'BIL-2026-';
-        nextNum = ns.billNextNumber || 1;
-        ns.billNextNumber = nextNum + 1;
-      } else if (type === 'estimate') {
-        prefix = ns.estimatePrefix || 'EST-2026-';
-        nextNum = ns.estimateNextNumber || 1;
-        ns.estimateNextNumber = nextNum + 1;
-      }
-    }
+    if (nsSnap.exists) {
+      const data = nsSnap.data() || {};
+      prefix = data.prefix ?? (type === 'invoice' ? 'INV-2026-' : type === 'bill' ? 'BIL-2026-' : 'EST-2026-');
+      nextNum = data.nextNumber ?? 1;
+      padding = data.padding ?? 4;
 
-    if (wsSnap.exists) {
-      tx.update(wsRef, {
-        numberingSeries: ns,
+      tx.update(nsDocRef, {
+        nextNumber: nextNum + 1,
         updatedAt: new Date().toISOString()
       });
     } else {
-      tx.set(wsRef, {
-        id: workspaceId,
-        numberingSeries: ns,
+      // Read-through fallback: try to load numberingSeries from the Workspace document
+      const wsSnap = await tx.get(wsRef);
+      const wsData = wsSnap.exists ? (wsSnap.data() || {}) : {};
+      const ns = wsData.numberingSeries || {};
+
+      if (ns[type] && typeof ns[type] === 'object') {
+        prefix = ns[type].prefix ?? (type === 'invoice' ? 'INV-2026-' : type === 'bill' ? 'BIL-2026-' : 'EST-2026-');
+        nextNum = ns[type].nextNumber ?? 1;
+        padding = ns[type].padding ?? 4;
+      } else {
+        // Fallback for legacy simple fields
+        if (type === 'invoice') {
+          prefix = ns.invoicePrefix || 'INV-2026-';
+          nextNum = ns.invoiceNextNumber || 1;
+        } else if (type === 'bill') {
+          prefix = ns.billPrefix || 'BIL-2026-';
+          nextNum = ns.billNextNumber || 1;
+        } else if (type === 'estimate') {
+          prefix = ns.estimatePrefix || 'EST-2026-';
+          nextNum = ns.estimateNextNumber || 1;
+        } else {
+          prefix = type === 'invoice' ? 'INV-2026-' : type === 'bill' ? 'BIL-2026-' : 'EST-2026-';
+          nextNum = 1;
+        }
+      }
+
+      tx.set(nsDocRef, {
+        workspaceId,
+        type,
+        prefix,
+        nextNumber: nextNum + 1,
+        padding,
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      }, { merge: true });
+      });
     }
 
     return `${prefix}${String(nextNum).padStart(padding, '0')}`;

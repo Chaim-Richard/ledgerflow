@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { toast } from 'sonner';
 import Decimal from 'decimal.js';
+import { useAuthStore } from '../stores/useAuthStore';
 
 // Set default rounding mode to HALF_UP (standard financial rounding)
 Decimal.set({ rounding: Decimal.ROUND_HALF_UP });
@@ -110,9 +111,38 @@ export function formatDecimal(cents: number): string {
 }
 
 /**
- * Returns YYYY-MM-DD string in local user timezone to prevent UTC shift off-by-one errors
+ * Returns YYYY-MM-DD string in workspace or local user timezone to prevent UTC shift off-by-one errors
  */
 export function getLocalDateISO(d: Date = new Date()): string {
+  let timezone = 'UTC';
+  try {
+    const state = useAuthStore.getState();
+    const activeWorkspace = state?.workspaces?.find((w: any) => w.id === state?.currentWorkspaceId);
+    if (activeWorkspace?.timezone) {
+      timezone = activeWorkspace.timezone;
+    }
+  } catch (_e) {
+    // Fallback if store is not yet accessible
+  }
+
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const parts = formatter.formatToParts(d);
+    const y = parts.find(p => p.type === 'year')?.value;
+    const m = parts.find(p => p.type === 'month')?.value;
+    const day = parts.find(p => p.type === 'day')?.value;
+    if (y && m && day) {
+      return `${y}-${m}-${day}`;
+    }
+  } catch (_e) {
+    // Fallback to standard local Date string formatting
+  }
+
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -120,16 +150,64 @@ export function getLocalDateISO(d: Date = new Date()): string {
 }
 
 /**
- * Parses a YYYY-MM-DD string into a local midnight Date object
+ * Parses a YYYY-MM-DD string into a timezone-midnight Date object
  * Prevents UTC off-by-one errors from standard new Date('YYYY-MM-DD')
  */
 export function parseLocalDate(s: string): Date {
   if (!s) return new Date();
-  if (s.includes('T')) return new Date(s); // Handle full ISO strings if they somehow appear
-  const parts = s.split('-');
+  let parts: number[] = [];
+  if (s.includes('T')) {
+    const dObj = new Date(s);
+    parts = [dObj.getFullYear(), dObj.getMonth() + 1, dObj.getDate()];
+  } else {
+    const splitParts = s.split('-');
+    if (splitParts.length === 3) {
+      parts = splitParts.map(Number);
+    }
+  }
+
   if (parts.length === 3) {
-    const [y, m, d] = parts.map(Number);
-    return new Date(y, m - 1, d);
+    const [y, m, d] = parts;
+    const localDate = new Date(y, m - 1, d, 0, 0, 0, 0);
+
+    let timezone = 'UTC';
+    try {
+      const state = useAuthStore.getState();
+      const activeWorkspace = state?.workspaces?.find((w: any) => w.id === state?.currentWorkspaceId);
+      if (activeWorkspace?.timezone) {
+        timezone = activeWorkspace.timezone;
+      }
+    } catch (_e) {}
+
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        hour12: false,
+      });
+
+      const utcDateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T00:00:00Z`;
+      const tempDate = new Date(utcDateStr);
+      
+      const partsArr = formatter.formatToParts(tempDate);
+      const fY = Number(partsArr.find(p => p.type === 'year')?.value);
+      const fM = Number(partsArr.find(p => p.type === 'month')?.value);
+      const fD = Number(partsArr.find(p => p.type === 'day')?.value);
+      const fH = Number(partsArr.find(p => p.type === 'hour')?.value);
+      const fMin = Number(partsArr.find(p => p.type === 'minute')?.value);
+
+      const formattedDate = new Date(fY, fM - 1, fD, fH, fMin, 0, 0);
+      const offsetMs = tempDate.getTime() - formattedDate.getTime();
+      
+      return new Date(localDate.getTime() + offsetMs);
+    } catch (_e) {
+      return localDate;
+    }
   }
   return new Date(s);
 }

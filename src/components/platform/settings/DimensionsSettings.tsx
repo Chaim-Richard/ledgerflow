@@ -240,9 +240,20 @@ export default function DimensionsSettings() {
       if (db) {
         const wsRef = doc(db, 'workspaces', currentWorkspaceId);
         await updateDoc(wsRef, {
-          dimensions,
-          dimensionNodes
+          dimensions
         });
+
+        // Write individual nodes in batch
+        const batch = writeBatch(db);
+        dimensionNodes.forEach(node => {
+          const docId = `${currentWorkspaceId}_${node.dimensionId}_${node.id}`;
+          const nodeRef = doc(db, 'dimensionNodes', docId);
+          batch.set(nodeRef, {
+            ...node,
+            workspaceId: currentWorkspaceId
+          });
+        });
+        await batch.commit();
       }
 
       // Update local workspace store
@@ -283,28 +294,34 @@ export default function DimensionsSettings() {
       setDimensionNodes(updatedNodes);
       setTransactions(updatedTransactions);
 
-      // Persist workspace nodes
+      // Persist nodes
       if (db) {
-        const wsRef = doc(db, 'workspaces', currentWorkspaceId);
-        await updateDoc(wsRef, {
-          dimensionNodes: updatedNodes
+        const batch = writeBatch(db);
+        updatedNodes.forEach(node => {
+          const docId = `${currentWorkspaceId}_${node.dimensionId}_${node.id}`;
+          const nodeRef = doc(db, 'dimensionNodes', docId);
+          batch.set(nodeRef, {
+            ...node,
+            workspaceId: currentWorkspaceId
+          });
         });
+        await batch.commit();
 
         // Batch update modified transactions in chunks of 450
         const chunkSize = 450;
         for (let i = 0; i < updatedTransactions.length; i += chunkSize) {
           const chunk = updatedTransactions.slice(i, i + chunkSize);
-          const batch = writeBatch(db);
+          const tBatch = writeBatch(db);
           let batchHasWrites = false;
           chunk.forEach(tx => {
             if (tx.id) {
               const txRef = doc(db, 'transactions', tx.id);
-              batch.update(txRef, { lines: tx.lines });
+              tBatch.update(txRef, { lines: tx.lines });
               batchHasWrites = true;
             }
           });
           if (batchHasWrites) {
-            await batch.commit();
+            await tBatch.commit();
           }
         }
       }
@@ -347,10 +364,16 @@ export default function DimensionsSettings() {
       setDimensionNodes(allNodes);
 
       if (db) {
-        const wsRef = doc(db, 'workspaces', currentWorkspaceId);
-        await updateDoc(wsRef, {
-          dimensionNodes: allNodes
+        const batch = writeBatch(db);
+        allNodes.forEach(node => {
+          const docId = `${currentWorkspaceId}_${node.dimensionId}_${node.id}`;
+          const nodeRef = doc(db, 'dimensionNodes', docId);
+          batch.set(nodeRef, {
+            ...node,
+            workspaceId: currentWorkspaceId
+          });
         });
+        await batch.commit();
       }
 
       const allWorkspaces = useAuthStore.getState().workspaces;

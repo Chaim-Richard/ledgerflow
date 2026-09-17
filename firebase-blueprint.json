@@ -329,6 +329,21 @@
         "name": { "type": "string" },
         "share": { "type": "number" }
       }
+    },
+    "DimensionNode": {
+      "title": "Dimension Node",
+      "description": "Stable node representing an analytical dimension label",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "dimensionId": { "type": "string" },
+        "description": { "type": "string" },
+        "aliases": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["active", "archived"] },
+        "workspaceId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "dimensionId", "description", "workspaceId"]
     }
   },
   "firestore": {
@@ -423,6 +438,10 @@
     "taxRates/{rateId}": {
       "schema": "TaxRate",
       "description": "Tax configuration"
+    },
+    "dimensionNodes/{nodeId}": {
+      "schema": "DimensionNode",
+      "description": "Analytical axis tags and codes"
     },
     "partners/{partnerId}": {
       "schema": "Partner",

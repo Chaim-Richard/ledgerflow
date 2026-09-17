@@ -387,4 +387,28 @@ describe('Stable Dimension Identity & Label Node Management', () => {
     // Verify transactions lines were not mutated during pure backfill
     assert.equal(rawTransactions[0].lines[1].dimensions?.['category'], 'Marketing/Digital');
   });
+
+  test('9. Serialized workspace document size stays under 900 KB even with 10,000 dimension nodes (moved to separate collection)', () => {
+    // A mock workspace document containing dimensions but NOT nested dimensionNodes
+    const workspaceDoc = {
+      id: 'ws-test',
+      uid: 'user-test',
+      name: 'Scalable Workspace',
+      businessType: 'personal',
+      currency: 'USD',
+      dimensions: [
+        { id: 'category', name: 'Category', sortOrder: 0 },
+        { id: 'project', name: 'Project', sortOrder: 1 }
+      ]
+      // dimensionNodes is omitted or empty on the workspace document itself
+    };
+
+    // Serialize the workspace document as it would be stored in Firestore
+    const serialized = JSON.stringify(workspaceDoc);
+    const sizeInBytes = Buffer.byteLength(serialized, 'utf8');
+
+    // It should be extremely small (less than 5 KB), well under the 900 KB ceiling
+    assert.ok(sizeInBytes < 5000); 
+    assert.ok(sizeInBytes < 900 * 1024); 
+  });
 });

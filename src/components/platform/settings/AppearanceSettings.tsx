@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Type, 
   Sliders, 
@@ -8,10 +8,15 @@ import {
   Palette, 
   Check, 
   Grid, 
-  Calendar 
+  Calendar,
+  Clock,
+  Globe
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useUIStore } from '../../../stores/useUIStore';
+import { useAuthStore } from '../../../stores/useAuthStore';
+import { db } from '../../../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 export default function AppearanceSettings() {
   const theme = useUIStore(state => state.theme);
@@ -34,6 +39,35 @@ export default function AppearanceSettings() {
   const setDateFormatPref = useUIStore(state => state.setDateFormatPref);
   const numberDecimals = useUIStore(state => state.numberDecimals);
   const setNumberDecimals = useUIStore(state => state.setNumberDecimals);
+
+  const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
+  const workspaces = useAuthStore(state => state.workspaces);
+  const setWorkspaces = useAuthStore(state => state.setWorkspaces);
+
+  const activeWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
+  const currentTimezone = activeWorkspace?.timezone || 'UTC';
+  const [isUpdatingZone, setIsUpdatingZone] = useState(false);
+
+  const handleTimezoneChange = async (newZone: string) => {
+    if (!currentWorkspaceId) return;
+    setIsUpdatingZone(true);
+    try {
+      await updateDoc(doc(db, 'workspaces', currentWorkspaceId), {
+        timezone: newZone
+      });
+      const updated = workspaces.map(w => {
+        if (w.id === currentWorkspaceId) {
+          return { ...w, timezone: newZone };
+        }
+        return w;
+      });
+      setWorkspaces(updated);
+    } catch (err) {
+      console.error("[Settings] Failed to save workspace timezone:", err);
+    } finally {
+      setIsUpdatingZone(false);
+    }
+  };
 
   const fontPresets = [
     { id: 'small', label: 'Small', scale: 90, desc: 'Compact data view (90%)' },
@@ -298,6 +332,39 @@ export default function AppearanceSettings() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Workspace Timezone */}
+          <div className="p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl space-y-3 md:col-span-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-[var(--text)] flex items-center gap-2">
+              <Clock size={15} className="text-[var(--brass)]" />
+              Workspace Timezone
+            </label>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <select
+                id="timezone-select"
+                value={currentTimezone}
+                onChange={(e) => handleTimezoneChange(e.target.value)}
+                disabled={isUpdatingZone}
+                className="flex-1 bg-[var(--surface)] text-[var(--text)] text-sm font-medium p-2.5 rounded-lg border border-[var(--line)] focus:outline-none focus:ring-1 focus:ring-[var(--brass)] cursor-pointer"
+              >
+                <option value="UTC">UTC (Coordinated Universal Time)</option>
+                <option value="America/New_York">America/New_York (Eastern Time)</option>
+                <option value="America/Chicago">America/Chicago (Central Time)</option>
+                <option value="America/Denver">America/Denver (Mountain Time)</option>
+                <option value="America/Los_Angeles">America/Los_Angeles (Pacific Time)</option>
+                <option value="Europe/London">Europe/London (Greenwich Mean Time / BST)</option>
+                <option value="Europe/Paris">Europe/Paris (Central European Time)</option>
+                <option value="Asia/Jerusalem">Asia/Jerusalem (Israel Standard Time)</option>
+                <option value="Asia/Tokyo">Asia/Tokyo (Japan Standard Time)</option>
+                <option value="Australia/Sydney">Australia/Sydney (Australian Eastern Time)</option>
+              </select>
+              <div className="flex items-center gap-2 text-xs text-[var(--muted)] px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg">
+                <Globe size={14} className="text-[var(--brass)]" />
+                <span>Active: <strong>{currentTimezone}</strong></span>
+              </div>
+            </div>
+            <p className="text-[10px] text-[var(--muted)]">Lock the general ledger transaction entry timestamps, lock periods, and reports specifically to your entity's operational timezone.</p>
           </div>
 
           {/* High Contrast Toggle */}
