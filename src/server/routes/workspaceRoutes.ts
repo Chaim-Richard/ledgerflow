@@ -2,6 +2,7 @@ import express from 'express';
 import admin from 'firebase-admin';
 import { z } from 'zod';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
+import { seedDemoWorkspace } from '../../lib/demoWorkspaceSeeder';
 
 export const workspaceRouter = express.Router();
 
@@ -254,7 +255,20 @@ workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accou
   const db = getDb();
   
   try {
+    const demoData = seedDemoWorkspace(workspaceId);
     const batch = db.batch();
+
+    // Write demo chart accounts
+    demoData.accounts.forEach(acc => {
+      const ref = db.collection('chartAccounts').doc(`${workspaceId}_${acc.id}`);
+      batch.set(ref, { ...acc, uid: (req as any).user.uid, workspaceId });
+    });
+
+    // Write demo transactions
+    demoData.transactions.forEach(tx => {
+      const ref = db.collection('transactions').doc(`${workspaceId}_${tx.id}`);
+      batch.set(ref, { ...tx, uid: (req as any).user.uid, workspaceId });
+    });
     
     // Add Demo Customer
     const customerRef = db.collection('customers').doc();

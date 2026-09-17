@@ -5,6 +5,7 @@ import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { format } from 'date-fns';
 import { parseLocalDate, resolveAccountName } from '../lib/utils';
 import { isSimulationTransaction, isTransactionInDateRange } from './txFilters';
+import { searchTransactions, generateSearchTokens } from './serverSearch';
 
 // RULES PATTERN ENGINE: Pre-compiled static regex for maximum pipeline throughput
 export const PATTERNS = {
@@ -79,6 +80,13 @@ export class TransactionQueryEngine {
     }
 
     const lowerSearch = effectiveSearchTerm.toLowerCase().trim();
+    // Fast path N-gram token search for single word queries
+    if (lowerSearch && !lowerSearch.includes(':') && !PATTERNS.OP.test(lowerSearch)) {
+      const fastMatches = searchTransactions(normalized, lowerSearch);
+      if (fastMatches.length > 0 && !hasFilter) {
+        return fastMatches;
+      }
+    }
     
     // Parse Key-Value directives, amount operators, temporal context, and free-text terms
     const keyValues: Record<string, string> = {};

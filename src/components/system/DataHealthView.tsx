@@ -3,6 +3,8 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { formatDecimal } from '../../lib/utils';
+import { calculateDepreciationSchedule } from '../../lib/depreciationEngine';
+import { getFiscalPeriodLabel } from '../../lib/fiscalCalendar';
 import { 
   ShieldCheck, AlertTriangle, CheckCircle2, Wrench, RefreshCw, 
   FileWarning, Database, Scale, ArrowRight, Activity

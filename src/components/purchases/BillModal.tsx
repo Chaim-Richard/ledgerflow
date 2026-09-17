@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import AsyncButton from '../ui/AsyncButton';
+import { evaluateApprovalRequirement } from '../../lib/approvalWorkflow';
+import { addComment, getCommentsForEntity } from '../../lib/commentService';
 
 interface BillModalProps {
   isOpen: boolean;
@@ -125,9 +127,30 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
       toast.success(`${attachments.length} file(s) attached`);
     }
 
+    const wsId = useAuthStore.getState().currentWorkspaceId || 'default';
+    const userEmail = useAuthStore.getState().user?.email || 'user';
+    const approval = evaluateApprovalRequirement(
+      { ...bill, amountCents: total } as Bill,
+      'bill',
+      { id: 'rule_1', workspaceId: wsId, entityType: 'bill', thresholdCents: 500000, approverRoles: ['owner', 'accountant'], autoApproveBelowThreshold: true }
+    );
+
+    let finalStatus = actionStatus;
+    if (approval.requiresApproval && actionStatus === 'approved') {
+      finalStatus = 'pending';
+      toast.info('Bill amount exceeds threshold ($5,000). Submitted for management approval.');
+      addComment({
+        workspaceId: wsId,
+        entityType: 'bill',
+        entityId: bill.number || 'bill_new',
+        authorEmail: userEmail,
+        comment: 'Bill held for dual approval threshold.'
+      });
+    }
+
     await onSave({
       ...bill,
-      status: actionStatus as any,
+      status: finalStatus as any,
       amountCents: total,
       splits,
       metadata: {

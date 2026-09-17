@@ -12,6 +12,7 @@ const DrillDownModal = React.lazy(() => import('../layout/DrillDownModal'));
 
 import { REPORT_TABS_REGISTRY, REPORT_COMPONENTS } from '../../config/registry';
 import { useUIStore } from '../../stores/useUIStore';
+import { getCachedReport, setCachedReport } from '../../lib/reportCache';
 
 
 
@@ -126,7 +127,11 @@ const Reports = React.memo(() => {
 
   const filteredReportTransactions = useMemo(() => {
     if (!transactions) return [];
-    return transactions.filter(t => {
+    const cacheKey = `report_tx_${selectedYear}_${selectedMonth}_${timeframe}_${transactions.length}`;
+    const cached = getCachedReport<Transaction[]>(cacheKey);
+    if (cached) return cached;
+
+    const filtered = transactions.filter(t => {
       if (!t.date || t.date.length < 10) return false;
       const txYear = parseInt(t.date.slice(0, 4), 10);
       if (txYear !== selectedYear) return false;
@@ -142,6 +147,9 @@ const Reports = React.memo(() => {
       }
       return true; // For 'year', match current year block
     });
+
+    setCachedReport(cacheKey, filtered);
+    return filtered;
   }, [transactions, timeframe, selectedYear, selectedMonth, selectedQuarter]);
 
   const periodLabel = useMemo(() => {

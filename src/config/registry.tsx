@@ -88,6 +88,7 @@ export const VIEW_COMPONENTS: Record<string, any> = {
   'data-health': lazy(() => import('../components/system/DataHealthView')),
   'charts': lazy(() => import('../components/finance/FinancialChartsDashboard')),
   'query-builder': lazy(() => import('../components/ledger/QueryView')),
+  'pricing': lazy(() => import('../components/commercial/PricingPage').then(m => ({ default: m.PricingPage }))),
 };
 
 export interface AppTabDefinition {
@@ -131,6 +132,7 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'support', label: { en: 'Support', he: 'תמיכה' }, icon: Headphones, groupId: 'settings' },
   { id: 'help', label: { en: 'Help & Guide', he: 'מדריך ועזרה' }, icon: BookOpen, groupId: 'settings' },
   { id: 'vault', label: { en: 'Documents', he: 'מסמכים' }, icon: ShieldCheck, groupId: 'settings' },
+  { id: 'pricing', label: { en: 'Pricing & Plans', he: 'תמחור ומסלולים' }, icon: Zap, groupId: 'settings' },
   { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'settings' },
   { id: 'system-command-center', label: { en: 'Admin Panel', he: 'ניהול' }, icon: Building, groupId: 'settings', requiresOwner: true }
 ];

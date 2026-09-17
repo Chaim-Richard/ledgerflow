@@ -6,5 +6,7 @@
   "firestoreDatabaseId": "ai-studio-da2d934a-0001-4f9d-9851-f9071cad18c0",
   "storageBucket": "macro-potion-lln7n.firebasestorage.app",
   "messagingSenderId": "581856411620",
-  "measurementId": ""
+  "measurementId": "",
+  "oAuthClientId": "581856411620-6chl0fq52cl4duf3slgool4c8pksvcbs.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
 }

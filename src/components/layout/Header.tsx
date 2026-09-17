@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import NotificationDrawer from './NotificationDrawer';
+import { t } from '../../locales/i18n';
 
 interface HeaderProps {
   onLogout?: () => void;
@@ -46,6 +47,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
 
 
+  const language = useUIStore(s => s.language) || 'en';
   const isAdmin = useAuthStore(state => state.isAdmin);
   const setActiveTab = useUIStore(state => state.setActiveTab);
 

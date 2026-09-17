@@ -3,6 +3,7 @@ import { Users, UserPlus, Trash2, Mail, ShieldCheck, Check, AlertCircle, Refresh
 import { toast } from 'sonner';
 import { auth } from '../../../firebase';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import { generateInviteToken } from '../../../lib/inviteManager';
 
 export default function TeamSettings() {
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());

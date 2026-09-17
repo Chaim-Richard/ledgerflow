@@ -20,6 +20,7 @@ import {
 import { formatCurrency, getLocalDateISO, parseLocalDate } from '../../lib/utils';
 import { toast } from 'sonner';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
+import { applyCreditNoteToInvoice, applyVendorCreditToBill } from '../../lib/creditNoteEngine';
 
 export default function CreditNotesView() {
   const [activeTab, setActiveTab] = useState<'customer' | 'vendor'>('customer');

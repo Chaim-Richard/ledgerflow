@@ -38,6 +38,9 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { printInvoice } from '../../lib/printInvoice';
+import { convertEstimateToInvoice } from '../../lib/estimateConverter';
+import { detectDuplicateContacts } from '../../lib/contactUtils';
+import { getDefaultTaxConfig, generateDefaultTaxRates } from '../../lib/taxRateDefaults';
 import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
 export default function Sales() {

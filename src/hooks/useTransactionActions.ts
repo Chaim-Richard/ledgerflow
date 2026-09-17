@@ -38,6 +38,9 @@ import { safeAsync, safeConfirm, getLocalDateISO } from '../lib/utils';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { useBillingStore } from '../modules/billing/BillingService';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
+import { retryWithBackoff } from '../lib/retryUtils';
+import { checkVersionConflict, resolveConflictLWW } from '../lib/conflictEngine';
+import { addComment, getCommentsForEntity } from '../lib/commentService';
 
 export function useTransactionActions() {
   const user = useAuthStore(s => s.user);
@@ -65,7 +68,7 @@ export function useTransactionActions() {
     if (!user || !currentWorkspaceId) return;
     try {
       setIsSyncing(true);
-      await addDoc(collection(db, 'auditLogs'), {
+      await retryWithBackoff(() => addDoc(collection(db, 'auditLogs'), {
         uid: user.uid,
         workspaceId: currentWorkspaceId,
         email: user.email,
@@ -74,7 +77,7 @@ export function useTransactionActions() {
         entityId,
         details,
         timestamp: new Date().toISOString()
-      });
+      }));
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, 'auditLogs');
     }
