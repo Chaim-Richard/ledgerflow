@@ -599,8 +599,9 @@ export default function Inventory() {
               </div>
               <form onSubmit={editingItem ? handleUpdate : handleAdd} className="p-4 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="col-span-2 space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Item Name</label>
+                  <label htmlFor="inv-item-name" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Item Name</label>
                   <input 
+                    id="inv-item-name"
                     name="name" 
                     defaultValue={editingItem?.name}
                     required 
@@ -608,8 +609,9 @@ export default function Inventory() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">SKU</label>
+                  <label htmlFor="inv-sku" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">SKU</label>
                   <input 
+                    id="inv-sku"
                     name="sku" 
                     defaultValue={editingItem?.sku}
                     required 
@@ -617,16 +619,18 @@ export default function Inventory() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Category</label>
+                  <label htmlFor="inv-category" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Category</label>
                   <input 
+                    id="inv-category"
                     name="category" 
                     defaultValue={editingItem?.category}
                     className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unit Cost ($)</label>
+                  <label htmlFor="inv-unit-cost" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unit Cost ($)</label>
                   <input 
+                    id="inv-unit-cost"
                     name="unitCost" 
                     type="number" 
                     step="0.01" 
@@ -636,8 +640,9 @@ export default function Inventory() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unit Price ($)</label>
+                  <label htmlFor="inv-unit-price" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unit Price ($)</label>
                   <input 
+                    id="inv-unit-price"
                     name="unitPrice" 
                     type="number" 
                     step="0.01" 
@@ -647,8 +652,9 @@ export default function Inventory() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Quantity at Hand</label>
+                  <label htmlFor="inv-quantity" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Quantity at Hand</label>
                   <input 
+                    id="inv-quantity"
                     name="quantity" 
                     type="number" 
                     defaultValue={editingItem?.quantityAtHand}
@@ -657,8 +663,9 @@ export default function Inventory() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Reorder Point</label>
+                  <label htmlFor="inv-reorder-point" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Reorder Point</label>
                   <input 
+                    id="inv-reorder-point"
                     name="reorderPoint" 
                     type="number" 
                     defaultValue={editingItem?.reorderPoint}
@@ -667,8 +674,9 @@ export default function Inventory() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">UOM (e.g. pack, kg)</label>
+                  <label htmlFor="inv-uom" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">UOM (e.g. pack, kg)</label>
                   <input 
+                    id="inv-uom"
                     name="measurementUnit" 
                     type="text" 
                     defaultValue={editingItem?.measurementUnit}
@@ -677,8 +685,9 @@ export default function Inventory() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Units per Package</label>
+                  <label htmlFor="inv-units-per-pkg" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Units per Package</label>
                   <input 
+                    id="inv-units-per-pkg"
                     name="unitsPerPackage" 
                     type="number" 
                     defaultValue={editingItem?.unitsPerPackage}
