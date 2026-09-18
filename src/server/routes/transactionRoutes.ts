@@ -14,6 +14,7 @@ import { isPostable, getAbsoluteTotal, isTransactionInDateRange } from '../../li
 import { optimizedTransactionSimilarity } from '../../lib/algorithms';
 import { executeCommand } from '../utils/commandExecutor';
 import { requirePlanCapacity } from '../middleware/planCapacity';
+import { requireOpenPeriod } from '../middleware/periodLock';
 
 export const transactionRouter = express.Router();
 
@@ -155,7 +156,7 @@ transactionRouter.get('/', async (req, res) => {
   }
 });
 
-transactionRouter.post('/', requirePlanCapacity('transactions'), enforceDoubleEntrySafety, async (req, res) => {
+transactionRouter.post('/', requirePlanCapacity('transactions'), requireOpenPeriod(), enforceDoubleEntrySafety, async (req, res) => {
   const { transaction } = req.body || {};
   const workspaceId = transaction?.workspaceId || req.body?.workspaceId;
   if (!workspaceId) {
@@ -223,7 +224,7 @@ transactionRouter.post('/', requirePlanCapacity('transactions'), enforceDoubleEn
   });
 });
 
-transactionRouter.put('/:id', enforceDoubleEntrySafety, async (req, res) => {
+transactionRouter.put('/:id', requireOpenPeriod(), enforceDoubleEntrySafety, async (req, res) => {
   try {
     const { id } = req.params;
     const { partialUpdate } = req.body;

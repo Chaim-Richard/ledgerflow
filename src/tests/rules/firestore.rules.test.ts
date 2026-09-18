@@ -514,4 +514,318 @@ describe('Firestore Security Rules Unit Tests', () => {
       });
     });
   });
+
+  test('All 29 subscribed collections enforce member isolation, owner read/write, and viewer write restrictions', async () => {
+    const aliceDb = getFirestoreContext({ uid: 'alice-owner' });
+    const bobViewerDb = getFirestoreContext({ uid: 'bob-viewer' });
+    const daveForeignDb = getFirestoreContext({ uid: 'dave-foreign' });
+
+    // 1. Setup workspace A owned by Alice, with Bob as viewer
+    await aliceDb.doc('workspaces/ws-coverage-a').set({
+      id: 'ws-coverage-a',
+      uid: 'alice-owner',
+      name: 'Coverage Workspace A',
+      roles: {
+        'bob-viewer': 'viewer'
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    // 2. Setup workspace B owned by Dave
+    await daveForeignDb.doc('workspaces/ws-coverage-b').set({
+      id: 'ws-coverage-b',
+      uid: 'dave-foreign',
+      name: 'Coverage Workspace B',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    const docFactories: Record<string, (wsId: string, uid: string, id: string) => Record<string, any>> = {
+      transactions: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, date: '2026-09-01', description: 'Test Tx', totalAmountCents: 1000, lines: []
+      }),
+      chartAccounts: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'Cash Acc', code: '1010', type: 'asset', category: 'Cash', subtype: 'checking'
+      }),
+      projects: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'Proj A', status: 'active'
+      }),
+      budgets: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'Budget A', year: 2026, currency: 'USD', categories: []
+      }),
+      vendors: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'Vendor A'
+      }),
+      customers: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'Customer A', email: 'cust@a.com'
+      }),
+      invoices: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, customerId: 'cust-1', customerName: 'Customer A', number: 'INV-A-1', date: '2026-09-01', totalAmountCents: 1000, status: 'draft', lines: []
+      }),
+      bills: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, vendorId: 'vend-1', vendorName: 'Vendor A', number: 'BILL-A-1', date: '2026-09-01', totalAmountCents: 1000, status: 'draft', lines: []
+      }),
+      payments: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, paymentNumber: 'PMT-A-1', type: 'customer', direction: 'inflow', amountCents: 1000, currency: 'USD', date: '2026-09-01'
+      }),
+      estimates: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, customerId: 'cust-1', customerName: 'Customer A', estimateNumber: 'EST-A-1', date: '2026-09-01', status: 'draft', totalAmountCents: 1000, lines: []
+      }),
+      inventory: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'Item A', sku: 'SKU-A'
+      }),
+      assets: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'Laptop A', code: 'AST-A-1', type: 'equipment'
+      }),
+      recurring: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, type: 'invoice', name: 'Monthly A', interval: 'monthly', frequency: 'monthly', dayOfMonth: 1, startDate: '2026-09-01', amountCents: 1000, status: 'active'
+      }),
+      employees: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'Employee A', email: 'emp@a.com'
+      }),
+      payRuns: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, period: '2026-09', status: 'draft'
+      }),
+      taxRates: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'VAT A', code: 'VAT-A', rate: 0.20
+      }),
+      dimensionNodes: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, code: 'DN-A', name: 'Node A', dimensionType: 'department', path: '/DN-A', level: 1, isActive: true
+      }),
+      creditNotes: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, customerId: 'cust-1', customerName: 'Customer A', number: 'CN-A-1', amountCents: 500, remainingCents: 500, date: '2026-09-01', reason: 'Refund', status: 'draft', currency: 'USD', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+      }),
+      vendorCredits: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, vendorId: 'vend-1', vendorName: 'Vendor A', number: 'VC-A-1', amountCents: 500, remainingCents: 500, date: '2026-09-01', reason: 'Credit', status: 'draft', currency: 'USD', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+      }),
+      periods: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, periodId: '2026-09', status: 'open', startDate: '2026-09-01', endDate: '2026-09-30'
+      }),
+      scenarios: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'Scenario A', description: 'Test', ghosts: [], isActive: true
+      }),
+      reconciliations: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, bankAccountId: 'acc-1', statementDate: '2026-09-30', statementBalanceCents: 10000, ledgerBalanceCents: 10000, status: 'draft', reconciledTransactions: []
+      }),
+      auditLogs: (wsId, uid, id) => ({
+        id, uid, userId: uid, workspaceId: wsId, action: 'CREATE', details: 'Audit A', severity: 'info', timestamp: new Date().toISOString()
+      }),
+      bankLines: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, date: '2026-09-01', description: 'Bank Line A', amountCents: 5000
+      }),
+      autoRules: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'Rule A', pattern: 'Vendor', accountId: 'acc-1', accountName: 'Expenses', enabled: true
+      }),
+      rulePatterns: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, description: 'pattern a', accountId: 'acc-1', accountName: 'Expenses', count: 1
+      }),
+      partners: (wsId, uid, id) => ({
+        id, uid, workspaceId: wsId, name: 'Partner A'
+      })
+    };
+
+    // Test all 27 standard workspace-scoped collections
+    for (const [colName, factory] of Object.entries(docFactories)) {
+      const docId = `doc-${colName}-1`;
+      const docRefAlice = aliceDb.doc(`${colName}/${docId}`);
+      const docRefBob = bobViewerDb.doc(`${colName}/${docId}`);
+      const docRefDave = daveForeignDb.doc(`${colName}/${docId}`);
+
+      const payload = factory('ws-coverage-a', 'alice-owner', docId);
+
+      // 1. Owner can write
+      await assert.doesNotReject(async () => {
+        await docRefAlice.set(payload);
+      }, `Owner failed to write to collection: ${colName}`);
+
+      // 2. Owner can read
+      const snapAlice = await docRefAlice.get();
+      assert.equal(snapAlice.exists, true, `Owner could not read created document in ${colName}`);
+
+      // 3. Viewer in workspace A can read, but cannot write or mutate
+      const snapBob = await docRefBob.get();
+      assert.equal(snapBob.exists, true, `Viewer in workspace should be able to read ${colName}`);
+
+      const bobPayload = factory('ws-coverage-a', 'bob-viewer', `doc-${colName}-bob`);
+      const docRefBobNew = bobViewerDb.doc(`${colName}/doc-${colName}-bob`);
+      await assert.rejects(async () => {
+        await docRefBobNew.set(bobPayload);
+      }, /permission-denied/i, `Viewer was incorrectly permitted to write in ${colName}`);
+
+      // 4. Foreign workspace member (Dave in ws-coverage-b) cannot read workspace A's document
+      await assert.rejects(async () => {
+        await docRefDave.get();
+      }, /permission-denied/i, `Foreign workspace member was able to read ${colName} in another workspace`);
+    }
+
+    // 28. customTemplates (user-scoped collection)
+    const tmplAliceRef = aliceDb.doc('customTemplates/tmpl-alice-1');
+    await assert.doesNotReject(async () => {
+      await tmplAliceRef.set({
+        name: 'Template A',
+        industry: 'Software',
+        accounts: [],
+        analyticalTopology: {},
+        uid: 'alice-owner',
+        createdAt: new Date().toISOString()
+      });
+    }, 'Owner should be able to create customTemplate');
+    const tmplSnap = await tmplAliceRef.get();
+    assert.equal(tmplSnap.exists, true);
+
+    // Foreign user Dave cannot read Alice's template
+    const tmplDaveRef = daveForeignDb.doc('customTemplates/tmpl-alice-1');
+    await assert.rejects(async () => {
+      await tmplDaveRef.get();
+    }, /permission-denied/i, 'Foreign user should not read customTemplate of another user');
+
+    // 29. workspaces collection
+    const wsRefAlice = aliceDb.doc('workspaces/ws-coverage-a');
+    const wsSnap = await wsRefAlice.get();
+    assert.equal(wsSnap.exists, true);
+
+    const wsRefDave = daveForeignDb.doc('workspaces/ws-coverage-a');
+    await assert.rejects(async () => {
+      await wsRefDave.get();
+    }, /permission-denied/i, 'Foreign workspace member should not read foreign workspace');
+  });
+
+  test('P1.1 Period Locking: Invoices, bills, credit notes and transactions enforce lockDate', async () => {
+    const aliceDb = getFirestoreContext({ uid: 'alice-period' });
+
+    // Workspace locked through 2026-06-30
+    await aliceDb.doc('workspaces/ws-locked').set({
+      id: 'ws-locked',
+      uid: 'alice-period',
+      name: 'Locked Workspace',
+      lockDate: '2026-06-30',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    // 1. Transaction dated 2026-05-15 (prior to lockDate) -> MUST BE REJECTED
+    await assert.rejects(async () => {
+      await aliceDb.doc('transactions/tx-locked').set({
+        id: 'tx-locked',
+        uid: 'alice-period',
+        workspaceId: 'ws-locked',
+        date: '2026-05-15',
+        description: 'Locked Tx',
+        totalAmountCents: 1000,
+        lines: []
+      });
+    }, /permission-denied/i, 'Creating transaction in closed period must be denied');
+
+    // 2. Transaction dated 2026-07-15 (after lockDate) -> MUST SUCCEED
+    await assert.doesNotReject(async () => {
+      await aliceDb.doc('transactions/tx-open').set({
+        id: 'tx-open',
+        uid: 'alice-period',
+        workspaceId: 'ws-locked',
+        date: '2026-07-15',
+        description: 'Open Tx',
+        totalAmountCents: 1000,
+        lines: []
+      });
+    }, 'Creating transaction in open period must be permitted');
+
+    // 3. Invoice dated 2026-05-15 (prior to lockDate) -> MUST BE REJECTED
+    await assert.rejects(async () => {
+      await aliceDb.doc('invoices/inv-locked').set({
+        id: 'inv-locked',
+        uid: 'alice-period',
+        workspaceId: 'ws-locked',
+        customerId: 'c-1',
+        customerName: 'Cust',
+        number: 'INV-001',
+        date: '2026-05-15',
+        totalAmountCents: 1000,
+        status: 'draft',
+        lines: []
+      });
+    }, /permission-denied/i, 'Creating invoice in closed period must be denied');
+
+    // 4. Invoice dated 2026-07-15 (after lockDate) -> MUST SUCCEED
+    await assert.doesNotReject(async () => {
+      await aliceDb.doc('invoices/inv-open').set({
+        id: 'inv-open',
+        uid: 'alice-period',
+        workspaceId: 'ws-locked',
+        customerId: 'c-1',
+        customerName: 'Cust',
+        number: 'INV-002',
+        date: '2026-07-15',
+        totalAmountCents: 1000,
+        status: 'draft',
+        lines: []
+      });
+    }, 'Creating invoice in open period must be permitted');
+  });
+
+  test('P1.2 Hard-Delete Prevention: Posted financial documents cannot be hard-deleted', async () => {
+    const aliceDb = getFirestoreContext({ uid: 'alice-delete' });
+
+    await aliceDb.doc('workspaces/ws-delete-test').set({
+      id: 'ws-delete-test',
+      uid: 'alice-delete',
+      name: 'Delete Test Workspace',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    // 1. Create a draft invoice -> Should be deletable
+    await aliceDb.doc('invoices/inv-draft').set({
+      id: 'inv-draft',
+      uid: 'alice-delete',
+      workspaceId: 'ws-delete-test',
+      customerId: 'c-1',
+      customerName: 'Cust',
+      number: 'INV-DRAFT',
+      date: '2026-09-01',
+      totalAmountCents: 1000,
+      status: 'draft',
+      lines: []
+    });
+
+    await assert.doesNotReject(async () => {
+      await aliceDb.doc('invoices/inv-draft').delete();
+    }, 'Draft invoice should be deletable');
+
+    // 2. Create a posted/sent invoice -> MUST NOT BE DELETABLE
+    await aliceDb.doc('invoices/inv-posted').set({
+      id: 'inv-posted',
+      uid: 'alice-delete',
+      workspaceId: 'ws-delete-test',
+      customerId: 'c-1',
+      customerName: 'Cust',
+      number: 'INV-POSTED',
+      date: '2026-09-01',
+      totalAmountCents: 1000,
+      status: 'sent',
+      lines: []
+    });
+
+    await assert.rejects(async () => {
+      await aliceDb.doc('invoices/inv-posted').delete();
+    }, /permission-denied/i, 'Posted invoice deletion must be rejected');
+
+    // 3. Create a posted bill -> MUST NOT BE DELETABLE
+    await aliceDb.doc('bills/bill-posted').set({
+      id: 'bill-posted',
+      uid: 'alice-delete',
+      workspaceId: 'ws-delete-test',
+      vendorId: 'v-1',
+      vendorName: 'Vend',
+      number: 'BILL-POSTED',
+      date: '2026-09-01',
+      totalAmountCents: 1000,
+      status: 'approved',
+      lines: []
+    });
+
+    await assert.rejects(async () => {
+      await aliceDb.doc('bills/bill-posted').delete();
+    }, /permission-denied/i, 'Posted bill deletion must be rejected');
+  });
 });

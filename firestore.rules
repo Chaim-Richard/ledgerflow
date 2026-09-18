@@ -214,9 +214,14 @@ service cloud.firestore {
 
     match /invoices/{invoiceId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(invoiceId);
-      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
-      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(invoiceId) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
     }
 
     match /payments/{paymentId} {
@@ -235,9 +240,14 @@ service cloud.firestore {
 
     match /bills/{billId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(billId);
-      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
-      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(billId) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
     }
 
     match /inventory/{itemId} {
@@ -310,21 +320,67 @@ service cloud.firestore {
       allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
+    match /customers/{customerId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(customerId) &&
+        affectedKeys(["id", "uid", "workspaceId", "name", "email", "phone", "balanceCents", "pipelineStage", "customerSegment", "expectedRevenueCents", "probability", "score", "tags", "metadata", "notes", "isForeign", "address", "taxId", "taxNumber", "currency", "paymentTerms", "createdAt", "updatedAt", "billingAddress", "website"]);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") &&
+        affectedKeys(["id", "uid", "workspaceId", "name", "email", "phone", "balanceCents", "pipelineStage", "customerSegment", "expectedRevenueCents", "probability", "score", "tags", "metadata", "notes", "isForeign", "address", "taxId", "taxNumber", "currency", "paymentTerms", "createdAt", "updatedAt", "billingAddress", "website"]);
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
+    }
+
     match /creditNotes/{creditNoteId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(creditNoteId) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date)) &&
         affectedKeys(["id", "uid", "workspaceId", "customerId", "customerName", "number", "invoiceId", "amountCents", "remainingCents", "date", "reason", "status", "currency", "createdAt", "updatedAt"]);
       allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date)) &&
         affectedKeys(["id", "uid", "workspaceId", "customerId", "customerName", "number", "invoiceId", "amountCents", "remainingCents", "date", "reason", "status", "currency", "createdAt", "updatedAt"]);
-      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
     }
 
     match /vendorCredits/{vendorCreditId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(vendorCreditId) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date)) &&
         affectedKeys(["id", "uid", "workspaceId", "vendorId", "vendorName", "number", "billId", "amountCents", "remainingCents", "date", "reason", "status", "currency", "createdAt", "updatedAt"]);
       allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date)) &&
         affectedKeys(["id", "uid", "workspaceId", "vendorId", "vendorName", "number", "billId", "amountCents", "remainingCents", "date", "reason", "status", "currency", "createdAt", "updatedAt"]);
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
+    }
+
+    match /periods/{periodId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(periodId) &&
+        affectedKeys(["id", "uid", "workspaceId", "periodId", "status", "closedAt", "closedBy", "startDate", "endDate", "reopenedAt", "reopenedBy", "reopenReason", "notes", "createdAt", "updatedAt"]);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") &&
+        affectedKeys(["id", "uid", "workspaceId", "periodId", "status", "closedAt", "closedBy", "startDate", "endDate", "reopenedAt", "reopenedBy", "reopenReason", "notes", "createdAt", "updatedAt"]);
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
+    }
+
+    match /rulePatterns/{patternId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(patternId) &&
+        affectedKeys(["id", "uid", "workspaceId", "description", "accountId", "accountName", "count", "lastUpdated", "createdAt", "updatedAt"]);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") &&
+        affectedKeys(["id", "uid", "workspaceId", "description", "accountId", "accountName", "count", "lastUpdated", "createdAt", "updatedAt"]);
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
+    }
+
+    match /scenarios/{scenarioId} {
+      allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(scenarioId) &&
+        affectedKeys(["id", "uid", "workspaceId", "name", "description", "ghosts", "isActive", "createdAt", "updatedAt"]);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") &&
+        affectedKeys(["id", "uid", "workspaceId", "name", "description", "ghosts", "isActive", "createdAt", "updatedAt"]);
       allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
@@ -372,7 +428,7 @@ service cloud.firestore {
     }
 
     function isProtectedCollection(name) {
-      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages", "invoices", "bills", "inventory", "recurring", "budgets", "autoRules", "fixedAssets", "assets", "taxRates", "vendors", "customers", "employees", "payRuns", "partners", "errorLogs", "dimensionNodes", "workspaceShards", "invites", "creditNotes", "vendorCredits"];
+      return name in ["users", "workspaces", "apiKeys", "presence", "transactions", "chartAccounts", "projects", "auditLogs", "learnedDeltas", "customTemplates", "journalEntries", "idempotencyKeys", "bankLines", "billingLedgerTraces", "deepAuditJobs", "stripeProcessedEvents", "admins", "external_api_cache", "reconciliations", "supportTickets", "supportMessages", "invoices", "bills", "payments", "inventory", "recurring", "budgets", "autoRules", "fixedAssets", "assets", "taxRates", "vendors", "customers", "employees", "payRuns", "partners", "errorLogs", "dimensionNodes", "workspaceShards", "invites", "creditNotes", "vendorCredits", "estimates", "periods", "rulePatterns", "scenarios"];
     }
 
     match /supportTickets/{ticketId} {

@@ -726,7 +726,15 @@ export interface PeriodStatus {
   closedBy?: string;
   startDate: string;
   endDate: string;
+  reopenedAt?: string;
+  reopenedBy?: string;
+  reopenReason?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
+
+export type FiscalPeriod = PeriodStatus;
 
 export interface CorrectionEvent {
   id: string;
