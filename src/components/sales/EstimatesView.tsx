@@ -4,7 +4,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { Plus, ArrowRight, FileText, CheckCircle, Clock, Eye, Download } from 'lucide-react';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { db, getIdToken } from '../../firebase';
 import { toast } from 'sonner';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 
@@ -41,7 +41,15 @@ export default function EstimatesView() {
       const customerObj = customers.find(c => c.id === customerId);
       let allocatedEstNumber = `EST-${Math.floor(1000 + Math.random() * 9000)}`;
       try {
-        const res = await fetch(`/api/v1/workspaces/${currentWorkspaceId}/next-number?type=estimate`);
+        const token = await getIdToken().catch(() => '');
+        const res = await fetch(`/api/v1/workspaces/${currentWorkspaceId}/next-number`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ type: 'estimate' })
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.number) allocatedEstNumber = data.number;
@@ -84,7 +92,15 @@ export default function EstimatesView() {
     try {
       let allocatedInvNumber = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
       try {
-        const res = await fetch(`/api/v1/workspaces/${currentWorkspaceId}/next-number?type=invoice`);
+        const token = await getIdToken().catch(() => '');
+        const res = await fetch(`/api/v1/workspaces/${currentWorkspaceId}/next-number`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ type: 'invoice' })
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.number) allocatedInvNumber = data.number;

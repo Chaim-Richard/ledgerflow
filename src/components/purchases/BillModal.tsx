@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import { evaluateApprovalRequirement } from '../../lib/approvalWorkflow';
 import { addComment, getCommentsForEntity } from '../../lib/commentService';
@@ -42,7 +43,15 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
         try {
           const wsId = useAuthStore.getState().currentWorkspaceId;
           if (!wsId) return;
-          const res = await fetch(`/api/v1/workspaces/${wsId}/next-number?type=bill`);
+          const token = await getIdToken().catch(() => '');
+          const res = await fetch(`/api/v1/workspaces/${wsId}/next-number`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ type: 'bill' })
+          });
           if (res.ok) {
             const data = await res.json();
             if (data.number) {

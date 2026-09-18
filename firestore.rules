@@ -109,7 +109,7 @@ service cloud.firestore {
       ) &&
       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["lockDate"]) || canAdmin(workspaceId)) &&
       affectedKeys(["id", "uid", "name", "businessType", "type", "description", "createdAt", "updatedAt", "lockDate", "currency", "matchingThreshold", "isDemoLoaded", "plan", "billingCycle", "concurrentUserLimit", "activeUserCount", "maxSeats", "billingLedgerChain", "apiQuotaTotalCentsUsed", "apiQuotaMonthlyLimitCents", "computeCreditBalance", "strategicAdvice", "lockedUntilDate", "seatCount", "stripeCustomerId", "stripeSubscriptionId", "status", "adminCount", "admins", "roles", "dateFormat", "aiModel", "notifications", "analyticalTopology", "totalQueriesThisMonth", "computeHardnessScore", "defaultAccountMappings", "dimensions", "allowedWorldPaths", "bypassBilling", "members"]);
-      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow delete: if false; // Workspace deletion is soft-delete via server-side API only
     }
 
     // Presence collection rules for multi-user collaboration

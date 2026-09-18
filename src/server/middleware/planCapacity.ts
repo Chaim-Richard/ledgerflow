@@ -39,8 +39,17 @@ export function requirePlanCapacity(resource: 'transactions' | 'seats' | 'storag
 
       if (resource === 'transactions') {
         const txCap = wsData.apiQuotaMonthlyLimitCents ? Math.floor(wsData.apiQuotaMonthlyLimitCents / 100) : limits.transactions;
-        const txSnap = await db.collection('transactions').where('workspaceId', '==', workspaceId).get();
-        const txCount = txSnap.size;
+        const txQuery = db.collection('transactions').where('workspaceId', '==', workspaceId);
+        
+        let txCount = 0;
+        if (typeof (txQuery as any).count === 'function') {
+          const countSnap = await (txQuery as any).count().get();
+          txCount = typeof countSnap.data === 'function' ? (countSnap.data()?.count ?? 0) : (countSnap.data?.count ?? 0);
+        } else {
+          // Fallback for test mocks lacking native count aggregation
+          const txSnap = await txQuery.get();
+          txCount = txSnap.size ?? (txSnap.docs ? txSnap.docs.length : 0);
+        }
 
         if (txCount >= txCap) {
           return res.status(402).json({

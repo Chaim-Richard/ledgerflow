@@ -2,7 +2,14 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { WorkspaceInvite } from '../types';
 
 export function getInviteSecret(): string {
-  return process.env.INVITE_SECRET || process.env.JWT_SECRET || 'ledgerflow-production-invite-secret';
+  const secret = process.env.INVITE_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'test') {
+      return 'test-invite-secret-only-for-automated-tests';
+    }
+    throw new Error('INVITE_SECRET or JWT_SECRET environment variable is required for signing and verifying workspace invites.');
+  }
+  return secret;
 }
 
 export function generateInviteToken(

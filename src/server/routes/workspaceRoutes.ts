@@ -124,20 +124,19 @@ export async function allocateNextNumber(db: any, workspaceId: string, type: 'in
 
 /**
  * Task 5: Allocate next document number atomically within Firestore transaction.
+ * POST only to prevent prefetching/crawlers from mutating state (Finding E).
  */
-workspaceRouter.all('/:workspaceId/next-number', async (req, res) => {
-  const authReq = req as unknown as AuthenticatedRequest;
+workspaceRouter.post('/:workspaceId/next-number', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
   const { workspaceId } = req.params;
-  const rawType = (req.query.type || req.body?.type) as string;
+  const rawType = req.body?.type;
 
   const schema = z.enum(['invoice', 'bill', 'estimate']);
   const parsed = schema.safeParse(rawType);
-  if (!parsed.success) return sendError(res, 'Invalid request parameters', 400, parsed.error.issues);
+  if (!parsed.success) return sendError(res, 'Invalid request parameters. "type" (invoice, bill, estimate) is required in request body.', 400, parsed.error.issues);
   const type = parsed.data;
 
   try {
     const db = getDb();
-    await validateWorkspaceMember(db, workspaceId, authReq.user);
     const formattedNumber = await allocateNextNumber(db, workspaceId, type);
 
     res.json({ number: formattedNumber });
@@ -146,6 +145,12 @@ workspaceRouter.all('/:workspaceId/next-number', async (req, res) => {
     if (err.message === 'NOT_FOUND') return sendError(res, 'Workspace not found', 404);
     sendError(res, 'Failed to allocate next document number', 500, err.message);
   }
+});
+
+// Explicit 405 Method Not Allowed for GET/other methods on /:workspaceId/next-number
+workspaceRouter.all('/:workspaceId/next-number', (req, res) => {
+  res.setHeader('Allow', 'POST');
+  return sendError(res, 'Method Not Allowed: allocate next document number must be called via POST.', 405);
 });
 
 import { generateInviteToken } from '../../lib/inviteManager';
@@ -360,45 +365,104 @@ workspaceRouter.delete('/:workspaceId/invites/:inviteId', requireWorkspaceRole([
 });
 
 /**
- * Task 4: Delete workspace (Owner only)
+ * Task 4: Soft-delete workspace with 30-day retention (Owner only)
+ * Never hard-deletes financial records or auditLogs (Finding Section 13A).
  */
 workspaceRouter.delete('/:workspaceId', requireWorkspaceRole(['owner']), async (req, res) => {
   const { workspaceId } = req.params;
   try {
     const db = getDb();
-    
-    // We could delete all nested collections, but typically we want to leave this to a background job or just delete the top-level document
-    // For now, we will delete the top level workspace doc. In a real environment we would spawn a background function to delete all data.
-    await db.collection('workspaces').doc(workspaceId).delete();
-    
-    // Adding a basic deletion of all core entities in this workspace (not recursively complete for huge datasets without a batch loop, but sufficient for standard scale)
-    const collectionsToClear = [
-      'transactions', 'accounts', 'journalEntries', 'projects', 'budgets', 
-      'vendors', 'customers', 'invoices', 'bills', 'inventory', 'assets', 
-      'recurring', 'employees', 'payRuns', 'taxRates', 'auditLogs'
-    ];
-    
-    // In background
-    (async () => {
-      try {
-        for (const coll of collectionsToClear) {
-          const snapshot = await db.collection(coll).where('workspaceId', '==', workspaceId).get();
-          const batch = db.batch();
-          snapshot.docs.forEach(doc => {
-            batch.delete(doc.ref);
-          });
-          if (snapshot.size > 0) {
-            await batch.commit();
-          }
-        }
-      } catch (e) {
-        console.error('Failed to cleanup workspace data', e);
-      }
-    })();
-    
-    res.json({ status: 'success', message: 'Workspace deleted successfully.' });
+    const wsRef = db.collection('workspaces').doc(workspaceId);
+    const wsSnap = await wsRef.get();
+    if (!wsSnap.exists) {
+      return sendError(res, 'Workspace not found', 404);
+    }
+
+    const now = new Date();
+    const scheduledPurgeAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    await wsRef.update({
+      status: 'pending_deletion',
+      deletedAt: now.toISOString(),
+      scheduledPurgeAt,
+      updatedAt: now.toISOString()
+    });
+
+    // Audit log entry - auditLogs must NEVER be deleted
+    const auditRef = db.collection('auditLogs').doc();
+    await auditRef.set({
+      id: auditRef.id,
+      uid: (req as any).user.uid,
+      email: (req as any).user.email || '',
+      workspaceId,
+      action: 'WORKSPACE_DELETION_SCHEDULED',
+      entityType: 'workspace',
+      entityId: workspaceId,
+      details: {
+        description: `Workspace marked for deletion, scheduled for purge on ${scheduledPurgeAt}`,
+        scheduledPurgeAt
+      },
+      timestamp: now.toISOString()
+    });
+
+    res.json({
+      status: 'success',
+      message: 'Workspace marked as pending deletion with a 30-day recovery window.',
+      scheduledPurgeAt
+    });
   } catch (err: any) {
     sendError(res, 'Failed to delete workspace', 500, err.message);
+  }
+});
+
+/**
+ * Restore workspace within retention window (Owner only)
+ */
+workspaceRouter.post('/:workspaceId/restore', requireWorkspaceRole(['owner']), async (req, res) => {
+  const { workspaceId } = req.params;
+  try {
+    const db = getDb();
+    const wsRef = db.collection('workspaces').doc(workspaceId);
+    const wsSnap = await wsRef.get();
+    if (!wsSnap.exists) {
+      return sendError(res, 'Workspace not found', 404);
+    }
+
+    const wsData = wsSnap.data() || {};
+    if (wsData.status !== 'pending_deletion') {
+      return sendError(res, 'Workspace is not pending deletion', 400);
+    }
+
+    const now = new Date();
+    await wsRef.update({
+      status: 'active',
+      deletedAt: admin.firestore.FieldValue.delete(),
+      scheduledPurgeAt: admin.firestore.FieldValue.delete(),
+      updatedAt: now.toISOString()
+    });
+
+    // Audit log entry
+    const auditRef = db.collection('auditLogs').doc();
+    await auditRef.set({
+      id: auditRef.id,
+      uid: (req as any).user.uid,
+      email: (req as any).user.email || '',
+      workspaceId,
+      action: 'WORKSPACE_RESTORED',
+      entityType: 'workspace',
+      entityId: workspaceId,
+      details: {
+        description: 'Workspace restored from pending deletion'
+      },
+      timestamp: now.toISOString()
+    });
+
+    res.json({
+      status: 'success',
+      message: 'Workspace restored successfully.'
+    });
+  } catch (err: any) {
+    sendError(res, 'Failed to restore workspace', 500, err.message);
   }
 });
 

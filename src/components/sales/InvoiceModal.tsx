@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 
@@ -54,7 +55,15 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
         try {
           const wsId = useAuthStore.getState().currentWorkspaceId;
           if (!wsId) return;
-          const res = await fetch(`/api/v1/workspaces/${wsId}/next-number?type=invoice`);
+          const token = await getIdToken().catch(() => '');
+          const res = await fetch(`/api/v1/workspaces/${wsId}/next-number`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ type: 'invoice' })
+          });
           if (res.ok) {
             const data = await res.json();
             if (data.number) {

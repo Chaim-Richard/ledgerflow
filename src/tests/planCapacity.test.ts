@@ -65,6 +65,74 @@ describe('Server Plan Capacity Middleware (402 Payment Required Enforcement)', (
     assert.strictEqual(nextCalled, false);
   });
 
+  it('uses native count aggregation when available without scanning collections', async () => {
+    const mockReq = {
+      body: { workspaceId: 'ws-free-cap-count-test' }
+    } as any;
+
+    const mockRes = {
+      statusCode: 200,
+      jsonBody: null as any,
+      status(code: number) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body: any) {
+        this.jsonBody = body;
+        return this;
+      }
+    } as any;
+
+    let nextCalled = false;
+    const next = () => { nextCalled = true; };
+
+    let countCalled = false;
+    let fullScanCalled = false;
+
+    const fakeDbWithCount = {
+      collection: (col: string) => {
+        if (col === 'workspaces') {
+          return {
+            doc: (id: string) => ({
+              get: async () => ({
+                exists: true,
+                data: () => ({ plan: 'free', workspaceId: id })
+              })
+            })
+          };
+        }
+        if (col === 'transactions') {
+          return {
+            where: () => ({
+              count: () => {
+                countCalled = true;
+                return {
+                  get: async () => ({
+                    data: () => ({ count: 100 })
+                  })
+                };
+              },
+              get: async () => {
+                fullScanCalled = true;
+                return { size: 100 };
+              }
+            })
+          };
+        }
+        return {};
+      }
+    };
+
+    const middleware = requirePlanCapacity('transactions', fakeDbWithCount);
+    await middleware(mockReq, mockRes, next);
+
+    assert.strictEqual(mockRes.statusCode, 402);
+    assert.strictEqual(mockRes.jsonBody.code, 'PLAN_CAPACITY_EXCEEDED');
+    assert.strictEqual(countCalled, true, 'Should use count() aggregation');
+    assert.strictEqual(fullScanCalled, false, 'Must NOT perform full scan get() when count() is available');
+    assert.strictEqual(nextCalled, false);
+  });
+
   it('rejects member invitation with 402 when free workspace is at seat cap', async () => {
     const mockReq = {
       params: { workspaceId: 'ws-seat-cap-test' }

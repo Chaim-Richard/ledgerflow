@@ -80,4 +80,41 @@ describe('Atomic Gapless Numbering Series Test Suite (Task 3)', () => {
 
     assert.deepEqual(sorted, expected, 'Allocated numbers must be strictly sequential (INV-2026-0001 through INV-2026-0050) with no gaps');
   });
+
+  test('GET /:workspaceId/next-number returns 405 Method Not Allowed and does not change nextNumber (Finding E)', async () => {
+    const express = (await import('express')).default;
+    const { workspaceRouter } = await import('../server/routes/workspaceRoutes');
+
+    const app = express();
+    app.use(express.json());
+
+    // Inject authenticated test user into req.user
+    app.use((req, _res, next) => {
+      (req as any).user = { uid: 'test-user-owner', email: 'owner@example.com' };
+      next();
+    });
+
+    app.use('/api/v1/workspaces', workspaceRouter);
+
+    const server = await new Promise<any>((resolve) => {
+      const s = app.listen(0, '127.0.0.1', () => resolve(s));
+    });
+    const port = server.address().port;
+
+    try {
+      // 1. Send GET request - MUST return 405 Method Not Allowed
+      const getRes = await fetch(`http://127.0.0.1:${port}/api/v1/workspaces/ws-test-e/next-number?type=invoice`, {
+        method: 'GET'
+      });
+
+      assert.equal(getRes.status, 405, 'GET request on /next-number MUST return 405 Method Not Allowed');
+      assert.equal(getRes.headers.get('allow'), 'POST', 'Allow header must specify POST');
+
+      const body = await getRes.json();
+      assert.equal(body.status, 'error');
+      assert.match(body.message, /Method Not Allowed/i);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
 });
