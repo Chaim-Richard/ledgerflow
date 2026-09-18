@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { WORKSPACE_SCOPED_COLLECTIONS } from '../constants/collections';
 
 describe('Firestore Rules Coverage Structural Guard (P-1)', () => {
   test('Every subscribed and protected collection has a dedicated rule block in firestore.rules without duplicates', () => {
@@ -74,6 +75,17 @@ describe('Firestore Rules Coverage Structural Guard (P-1)', () => {
       missingSubscribedFromProtected,
       [],
       `Subscribed collections in useLedgerData.ts missing from isProtectedCollection() in firestore.rules: ${missingSubscribedFromProtected.join(', ')}`
+    );
+
+    // 8. ASSERT: WORKSPACE_SCOPED_COLLECTIONS in src/constants/collections.ts matches subscribed collections in useLedgerData.ts
+    const scopedSet = new Set(WORKSPACE_SCOPED_COLLECTIONS);
+    const expectedScoped = Array.from(subscribedCollections).filter(c => c !== 'users' && c !== 'workspaces' && c !== 'auditLogs');
+
+    const missingFromScoped = expectedScoped.filter(c => !scopedSet.has(c as any));
+    assert.deepStrictEqual(
+      missingFromScoped,
+      [],
+      `Subscribed collections in useLedgerData.ts missing from WORKSPACE_SCOPED_COLLECTIONS in src/constants/collections.ts: ${missingFromScoped.join(', ')}`
     );
   });
 });

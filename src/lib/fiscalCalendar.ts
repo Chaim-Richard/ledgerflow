@@ -53,7 +53,7 @@ export function getFiscalYearBounds(
   // End date is 1 day before the next fiscal year start
   const endTargetDate = new Date(Date.UTC(fyStartYear + 1, startMonth - 1, startDay));
   endTargetDate.setUTCDate(endTargetDate.getUTCDate() - 1);
-  const endDate = endTargetDate.toISOString().split('T')[0];
+  const endDate = getLocalDateISO(endTargetDate);
 
   return {
     startDate,
@@ -83,12 +83,12 @@ export function getFiscalQuarter(
 
   const qStartDateObj = new Date(fyStart);
   qStartDateObj.setUTCMonth(qStartDateObj.getUTCMonth() + quarterIndex * 3);
-  const qStartDate = qStartDateObj.toISOString().split('T')[0];
+  const qStartDate = getLocalDateISO(qStartDateObj);
 
   const qEndDateObj = new Date(fyStart);
   qEndDateObj.setUTCMonth(qEndDateObj.getUTCMonth() + (quarterIndex + 1) * 3);
   qEndDateObj.setUTCDate(qEndDateObj.getUTCDate() - 1);
-  const qEndDate = qEndDateObj.toISOString().split('T')[0];
+  const qEndDate = getLocalDateISO(qEndDateObj);
 
   return {
     quarter: quarterNumber,
@@ -127,7 +127,7 @@ export function getPrevPeriod(startDate: string, endDate: string): { startDate: 
   prevStart.setUTCDate(prevStart.getUTCDate() - diffDays);
 
   return {
-    startDate: prevStart.toISOString().split('T')[0],
-    endDate: prevEnd.toISOString().split('T')[0]
+    startDate: getLocalDateISO(prevStart),
+    endDate: getLocalDateISO(prevEnd)
   };
 }

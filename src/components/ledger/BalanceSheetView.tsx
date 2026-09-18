@@ -204,7 +204,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
       totalEquity,
       netIncome,
       totalClaims,
-      isBalanced: Math.abs(totalAssets - totalClaims) < 1, // check for integer equality
+      isBalanced: totalAssets === totalClaims,
       orphanedLines
     };
   }, [transactions, accounts]);

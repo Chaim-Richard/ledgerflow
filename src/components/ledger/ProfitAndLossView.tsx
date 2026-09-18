@@ -17,6 +17,7 @@ interface PLData {
   expense: { total: number; accounts: Record<string, any> };
   grossProfit: number;
   netIncome: number;
+  orphanedLines?: Array<{ accountId: string; transactionId?: string; date?: string; amountCents: number }>;
 }
 
 interface ProfitAndLossViewProps {
@@ -167,10 +168,13 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
         const lines = t.lines || [];
         for (let j = 0; j < lines.length; j++) {
           const l = lines[j];
-          const acc = accountMap.get(l.accountId);
-          if (!acc) continue;
-
           const amt = lineAmount(l, t);
+          const acc = accountMap.get(l.accountId);
+          if (!acc) {
+            pl.orphanedLines = pl.orphanedLines || [];
+            pl.orphanedLines.push({ accountId: l.accountId, transactionId: t.id, date: t.date, amountCents: amt });
+            continue;
+          }
 
           const isCogs = acc.type === 'cost_of_goods' || acc.category === 'COGS' || acc.category === 'Direct Costs' || resolveAccountRole(acc) === 'cogs';
 

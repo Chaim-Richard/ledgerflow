@@ -226,7 +226,7 @@ const TransactionRow = React.memo(({
           )}>
             <div className="flex flex-col gap-1 w-full">
               {tx.lines?.slice(0, 2).map((line, idx) => (
-                <div key={idx} className="flex items-center justify-between gap-1 w-full">
+                <div key={line.id || `${line.accountId}-${idx}`} className="flex items-center justify-between gap-1 w-full">
                   <span 
                     dir="auto"
                     className={cn(

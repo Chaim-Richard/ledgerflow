@@ -573,7 +573,7 @@ export default function TransactionEditModal({
               <div className="space-y-3">
                 {lines.map((line, idx) => (
                   <div 
-                    key={idx}
+                    key={line.id || `line-${line.accountId || idx}`}
                     className="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-[32px] border border-[var(--line)] bg-[var(--ink)]/20 hover:bg-[var(--ink)]/50 transition-colors"
                   >
                     {/* Top Row: Account & Amount & Delete */}

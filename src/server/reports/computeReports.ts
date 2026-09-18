@@ -117,7 +117,7 @@ export function computeBalanceSheet(accounts: any[], transactions: any[], endDat
 
   // totalEquity stays equity-accounts-only, matching BalanceSheetView.tsx:182
   const totalClaims = totalLiabilities + totalEquity + netIncome;
-  const isBalanced = Math.abs(totalAssets - totalClaims) <= 1;
+  const isBalanced = totalAssets === totalClaims;
 
   return {
     assets,
@@ -174,7 +174,7 @@ export function computeTrialBalance(accounts: any[], transactions: any[], asOfDa
     credit: acc.credit,
     netSigned: acc.netSigned
   }));
-  return { accounts: accountsArray, totalDebit, totalCredit, isBalanced: Math.abs(totalDebit - totalCredit) <= 1 };
+  return { accounts: accountsArray, totalDebit, totalCredit, isBalanced: totalDebit === totalCredit };
 }
 
 export function computeCashFlow(accounts: any[], transactions: any[], startDate?: string, endDate?: string) {

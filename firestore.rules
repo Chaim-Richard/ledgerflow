@@ -104,7 +104,8 @@ service cloud.firestore {
           isUnchanged("plan") && isUnchanged("computeCreditBalance") && isUnchanged("apiQuotaMonthlyLimitCents") && isUnchanged("maxSeats") && isUnchanged("concurrentUserLimit") &&
           isUnchanged("apiQuotaTotalCentsUsed") && isUnchanged("stripeCustomerId") && isUnchanged("seatCount") &&
           isUnchanged("status") && isUnchanged("lockedUntilDate") &&
-          isUnchanged("bypassBilling") && isUnchanged("stripeSubscriptionId")
+          isUnchanged("bypassBilling") && isUnchanged("stripeSubscriptionId") &&
+          isUnchanged("billingLedgerChain") && isUnchanged("allowedWorldPaths")
         )
       ) &&
       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["lockDate"]) || canAdmin(workspaceId)) &&

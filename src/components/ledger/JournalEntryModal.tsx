@@ -482,7 +482,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                     </thead>
                     <tbody className="divide-y divide-[var(--line)]">
                       {lines.map((line, idx) => (
-                        <tr key={idx} className="group hover:bg-[var(--ink)]/50 transition-colors">
+                        <tr key={line.id || `je-line-${line.accountId || idx}`} className="group hover:bg-[var(--ink)]/50 transition-colors">
                           <td className="p-2.5">
                             <div className="relative">
                               <input 

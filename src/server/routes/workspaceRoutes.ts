@@ -269,7 +269,7 @@ workspaceRouter.get('/:workspaceId/invites', requireWorkspaceRole(['owner', 'acc
   const { workspaceId } = req.params;
   try {
     const db = getDb();
-    const snap = await db.collection('invites').where('workspaceId', '==', workspaceId).get();
+    const snap = await db.collection('invites').where('workspaceId', '==', workspaceId).limit(100).get();
     const invites = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     res.json({ status: 'success', invites });
   } catch (err: any) {

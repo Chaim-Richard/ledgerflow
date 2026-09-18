@@ -196,7 +196,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       return sortDir === 'asc' ? comp : -comp;
     });
 
-    const isBalanced = Math.abs(totalDebits - totalCredits) < 1; // within 1 cent tolerance
+    const isBalanced = totalDebits === totalCredits;
 
     return { lines, totalDebits, totalCredits, isBalanced };
   }, [accounts, transactions, journalEntries, asOfDate, sortField, sortDir]);

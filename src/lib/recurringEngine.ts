@@ -11,10 +11,10 @@ function parseDateStrToMs(dateStr: string): number {
 export function calculateNextOccurrence(
   currentDateStr: string,
   frequency: RecurringTransaction['frequency'],
-  anchorDay?: number
+  anchorDay: number
 ): string {
   const [y, m, d] = (currentDateStr || new Date().toISOString().slice(0, 10)).split('-').map(Number);
-  const anchor = anchorDay ?? d;
+  const anchor = anchorDay;
 
   const addMonths = (n: number) => {
     const targetMonth = m - 1 + n;
@@ -39,8 +39,10 @@ export function calculateNextOccurrence(
       return addMonths(3);
     case 'yearly':
       return addMonths(12);
-    default:
+    default: {
+      const _exhaustive: never = frequency;
       return addMonths(1);
+    }
   }
 }
 

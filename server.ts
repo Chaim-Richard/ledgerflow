@@ -5192,22 +5192,34 @@ You MUST output a valid JSON object matching this schema exactly:
       cutoff.setDate(cutoff.getDate() - 90); // 90 days default
       const cutoffStr = cutoff.toISOString();
 
-      // 1. Purge expired audit logs
-      const snap = await admin.firestore().collection('auditLogs').where('timestamp', '<', cutoffStr).get();
-      if (!snap.empty) {
+      // 1. Purge expired audit logs in chunks of 450
+      let purgedAuditLogs = 0;
+      while (true) {
+        const snap = await admin.firestore().collection('auditLogs').where('timestamp', '<', cutoffStr).limit(450).get();
+        if (snap.empty) break;
         const batch = admin.firestore().batch();
         snap.docs.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
-        console.log(`[Data Lifecycle] Purged ${snap.size} expired audit logs.`);
+        purgedAuditLogs += snap.size;
+        if (snap.size < 450) break;
+      }
+      if (purgedAuditLogs > 0) {
+        console.log(`[Data Lifecycle] Purged ${purgedAuditLogs} expired audit logs.`);
       }
 
-      // 2. Backup retention: Purge expired job run logs older than 90 days
-      const oldJobRuns = await admin.firestore().collection('jobRuns').where('finishedAt', '<', cutoffStr).get();
-      if (!oldJobRuns.empty) {
+      // 2. Backup retention: Purge expired job run logs older than 90 days in chunks of 450
+      let purgedJobRuns = 0;
+      while (true) {
+        const oldJobRuns = await admin.firestore().collection('jobRuns').where('finishedAt', '<', cutoffStr).limit(450).get();
+        if (oldJobRuns.empty) break;
         const batch = admin.firestore().batch();
         oldJobRuns.docs.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
-        console.log(`[Data Lifecycle] Purged ${oldJobRuns.size} expired job runs.`);
+        purgedJobRuns += oldJobRuns.size;
+        if (oldJobRuns.size < 450) break;
+      }
+      if (purgedJobRuns > 0) {
+        console.log(`[Data Lifecycle] Purged ${purgedJobRuns} expired job runs.`);
       }
 
       // 3. Cap strategicAdvice array on all workspaces to maximum 15 items to prevent database bloat
