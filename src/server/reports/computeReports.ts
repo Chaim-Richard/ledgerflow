@@ -1,5 +1,6 @@
 import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount, isTransactionInDateRange } from "../../lib/txFilters";
 import { resolveAccountRole } from "../../lib/accountUtils";
+import { calculateDocumentTax, calculateDocumentNet } from "../../lib/documentMath";
 import type { Invoice, Bill } from "../../types";
 
 export const INVOICE_IS_ISSUED = new Set<Invoice['status']>([
@@ -426,15 +427,22 @@ export function computeTaxLiability(invoices: any[], bills: any[], startDate?: s
 
   invoices.forEach((inv: any) => {
     if (inv.date >= start && inv.date <= end && INVOICE_COUNTS_FOR_TAX.has(inv.status)) {
-      const total = inv.amountCents ?? inv.totalCents ?? 0;
-      const rate = (inv.taxRate ?? 0) / 100;
-      const tax = inv.taxAmountCents ?? (
-        rate === 0 ? 0
-        : inv.taxInclusive
-          ? Math.round(total - total / (1 + rate))
-          : Math.round(total * rate)
-      );
-      const net = inv.taxInclusive ? total - tax : total;
+      const tax = calculateDocumentTax({
+        amountCents: inv.amountCents,
+        totalCents: inv.totalCents ?? inv.amountCents,
+        taxAmountCents: inv.taxAmountCents,
+        taxRate: inv.taxRate,
+        taxInclusive: inv.taxInclusive,
+        discountCents: inv.discountCents
+      });
+      const net = calculateDocumentNet({
+        amountCents: inv.amountCents,
+        totalCents: inv.totalCents ?? inv.amountCents,
+        taxAmountCents: inv.taxAmountCents,
+        taxRate: inv.taxRate,
+        taxInclusive: inv.taxInclusive,
+        discountCents: inv.discountCents
+      });
       taxableSalesCents += net;
       taxCollectedCents += tax;
     }
@@ -443,15 +451,22 @@ export function computeTaxLiability(invoices: any[], bills: any[], startDate?: s
   bills.forEach((b: any) => {
     const bDate = b.date || b.issueDate || '';
     if (bDate >= start && bDate <= end && BILL_COUNTS_FOR_TAX.has(b.status)) {
-      const total = b.amountCents ?? 0;
-      const rate = (b.taxRate ?? 0) / 100;
-      const tax = b.taxAmountCents ?? (
-        rate === 0 ? 0
-        : b.taxInclusive
-          ? Math.round(total - total / (1 + rate))
-          : Math.round(total * rate)
-      );
-      const net = b.taxInclusive ? total - tax : total;
+      const tax = calculateDocumentTax({
+        amountCents: b.amountCents,
+        totalCents: b.totalCents ?? b.amountCents,
+        taxAmountCents: b.taxAmountCents,
+        taxRate: b.taxRate,
+        taxInclusive: b.taxInclusive,
+        discountCents: b.discountCents
+      });
+      const net = calculateDocumentNet({
+        amountCents: b.amountCents,
+        totalCents: b.totalCents ?? b.amountCents,
+        taxAmountCents: b.taxAmountCents,
+        taxRate: b.taxRate,
+        taxInclusive: b.taxInclusive,
+        discountCents: b.discountCents
+      });
       taxablePurchasesCents += net;
       taxPaidCents += tax;
     }

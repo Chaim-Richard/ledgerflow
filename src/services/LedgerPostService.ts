@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { ChartAccount } from '../types';
 import { isPostable } from '../lib/txFilters';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
+import { calculateDocumentTax } from '../lib/documentMath';
 
 export class LedgerPostService {
   private static getAccounts(context?: any): ChartAccount[] {
@@ -153,7 +154,16 @@ export class LedgerPostService {
     const invoiceNum = invoiceData.number || invoiceId;
     const customer = invoiceData.customerName || 'Customer';
 
-    const taxAmount = roundCents((invoiceData.taxAmountCents || invoiceData.salesTaxCents || (invoiceData.taxRate ? (rawAmount / (1 + invoiceData.taxRate / 100)) * (invoiceData.taxRate / 100) : 0)) * rate);
+    const docTax = calculateDocumentTax({
+      amountCents: invoiceData.amountCents,
+      totalCents: invoiceData.totalCents || invoiceData.amountCents,
+      taxAmountCents: invoiceData.taxAmountCents,
+      salesTaxCents: invoiceData.salesTaxCents,
+      taxRate: invoiceData.taxRate,
+      taxInclusive: invoiceData.taxInclusive,
+      discountCents: invoiceData.discountCents
+    });
+    const taxAmount = roundCents(docTax * rate);
     const discountAmount = roundCents((invoiceData.discountCents || 0) * rate);
     const retainageAmount = roundCents((invoiceData.retainageCents || 0) * rate);
 
@@ -408,7 +418,15 @@ export class LedgerPostService {
     );
 
     // 2. Transaction 1: Accrual Posting
-    const taxAmount = roundCents((billData.taxAmountCents || (billData.taxRate ? (rawAmount / (1 + billData.taxRate / 100)) * (billData.taxRate / 100) : 0)) * rate);
+    const billDocTax = calculateDocumentTax({
+      amountCents: billData.amountCents,
+      totalCents: billData.totalCents || billData.amountCents,
+      taxAmountCents: billData.taxAmountCents,
+      taxRate: billData.taxRate,
+      taxInclusive: billData.taxInclusive,
+      discountCents: billData.discountCents
+    });
+    const taxAmount = roundCents(billDocTax * rate);
 
     const accrualLines = TransactionTemplates.buildBillLines({
       billNumber: String(billNum),

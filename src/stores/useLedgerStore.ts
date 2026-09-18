@@ -85,6 +85,7 @@ export interface LedgerState {
   baseCurrency: string;
   matchingThreshold: number;
   isDataTruncated: boolean;
+  truncatedCollections: Record<string, boolean>;
   runningBalances: {
     totalIncome: number;
     totalExpense: number;
@@ -103,6 +104,7 @@ export interface LedgerState {
   setMatchingThreshold: (threshold: number) => void;
   setPrivacyMode: (active: boolean) => void;
   setIsDataTruncated: (isTruncated: boolean) => void;
+  setCollectionTruncated: (collectionName: string, isTruncated: boolean) => void;
   validateTransaction: (tx: Transaction) => { success: boolean, error?: string };
   setAccounts: (data: ChartAccount[]) => void;
   updateAccount: (id: string, updates: Partial<ChartAccount>) => void;
@@ -219,13 +221,23 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   baseCurrency: 'USD',
   matchingThreshold: 0.8,
   isDataTruncated: false,
+  truncatedCollections: {},
   isPrivacyMode: false,
 
   setLockDate: (date) => set({ lockDate: date }),
   setBaseCurrency: (currency) => set({ baseCurrency: currency }),
   setMatchingThreshold: (threshold) => set({ matchingThreshold: threshold }),
   setPrivacyMode: (active) => set({ isPrivacyMode: active }),
-  setIsDataTruncated: (isTruncated) => set({ isDataTruncated: isTruncated }),
+  setIsDataTruncated: (isTruncated) => set((state) => {
+    const nextTruncated = { ...state.truncatedCollections, transactions: isTruncated };
+    const hasAnyTruncated = isTruncated || Object.values(nextTruncated).some(Boolean);
+    return { isDataTruncated: hasAnyTruncated, truncatedCollections: nextTruncated };
+  }),
+  setCollectionTruncated: (colName, isTruncated) => set((state) => {
+    const nextTruncated = { ...state.truncatedCollections, [colName]: isTruncated };
+    const hasAnyTruncated = Object.values(nextTruncated).some(Boolean);
+    return { isDataTruncated: hasAnyTruncated, truncatedCollections: nextTruncated };
+  }),
 
   recomputeBalances: () => {
     if (typeof window !== 'undefined') {

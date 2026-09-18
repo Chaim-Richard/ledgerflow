@@ -38,6 +38,7 @@ export default function APAgingReportView() {
   const bills = useLedgerStore(s => s.bills);
   const vendorCredits = useLedgerStore(s => s.vendorCredits || []);
   const vendors = useLedgerStore(s => s.vendors);
+  const isDataTruncated = useLedgerStore(s => s.isDataTruncated || s.truncatedCollections?.bills);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [payThisWeekOnly, setPayThisWeekOnly] = useState(false);
@@ -221,6 +222,15 @@ export default function APAgingReportView() {
 
   return (
     <div className="space-y-6">
+      {isDataTruncated && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl flex items-center gap-3 text-xs font-semibold shadow-xs">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+          <span>
+            Data Truncation Warning: The dataset has exceeded the active query limit (2,000 records). Aging totals and vendor obligations may reflect partial ledger history. Please filter by a narrower window for full completeness.
+          </span>
+        </div>
+      )}
+
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[var(--color-ledger-line)] shadow-xs">
         <div>

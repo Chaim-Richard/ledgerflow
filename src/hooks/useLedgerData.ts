@@ -270,9 +270,11 @@ export function useLedgerData() {
         scheduleUpdate('transactions', snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'transactions')),
       onSnapshot(query(collection(db, 'chartAccounts'), ...filter, limit(1000)), (snap) => {
+        useLedgerStore.getState().setCollectionTruncated('chartAccounts', snap.docs.length >= 1000);
         scheduleUpdate('accounts', snap.docs.map(d => ({ id: d.id, ...d.data() } as ChartAccount)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'chartAccounts')),
       onSnapshot(query(collection(db, 'projects'), ...filter, limit(1000)), (snap) => {
+        useLedgerStore.getState().setCollectionTruncated('projects', snap.docs.length >= 1000);
         scheduleUpdate('projects', snap.docs.map(d => ({ id: d.id, ...d.data() } as Project)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'projects')),
     ];
@@ -282,22 +284,27 @@ export function useLedgerData() {
       try {
         const qTaxRates = query(collection(db, 'taxRates'), ...filter, limit(500));
         const snapTaxRates = await getDocs(qTaxRates);
+        useLedgerStore.getState().setCollectionTruncated('taxRates', snapTaxRates.docs.length >= 500);
         scheduleUpdate('taxRates', snapTaxRates.docs.map(d => ({ id: d.id, ...d.data() } as TaxRate)), false);
 
-        const qTemplates = query(collection(db, 'customTemplates'), where('uid', '==', user.uid), limit(500));
+        const qTemplates = query(collection(db, 'customTemplates'), ...filter, limit(500));
         const snapTemplates = await getDocs(qTemplates);
+        useLedgerStore.getState().setCollectionTruncated('customTemplates', snapTemplates.docs.length >= 500);
         scheduleUpdate('customTemplates', snapTemplates.docs.map(d => ({ id: d.id, ...d.data() } as CustomTemplate)), false);
 
         const qPartners = query(collection(db, 'partners'), ...filter, limit(500));
         const snapPartners = await getDocs(qPartners);
+        useLedgerStore.getState().setCollectionTruncated('partners', snapPartners.docs.length >= 500);
         scheduleUpdate('partners', snapPartners.docs.map(d => ({ id: d.id, ...d.data() })), false);
 
         const qAutoRules = query(collection(db, 'autoRules'), ...filter, limit(1000));
         const snapAutoRules = await getDocs(qAutoRules);
+        useLedgerStore.getState().setCollectionTruncated('autoRules', snapAutoRules.docs.length >= 1000);
         scheduleUpdate('autoRules', snapAutoRules.docs.map(d => ({ id: d.id, ...d.data() })), false);
 
         const qRulePatterns = query(collection(db, 'rulePatterns'), ...filter, limit(2000));
         const snapRulePatterns = await getDocs(qRulePatterns);
+        useLedgerStore.getState().setCollectionTruncated('rulePatterns', snapRulePatterns.docs.length >= 2000);
         const cache: Record<string, any> = {};
         snapRulePatterns.docs.forEach(d => {
           const data = d.data();
@@ -345,22 +352,27 @@ export function useLedgerData() {
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubInvoices = onSnapshot(query(collection(db, 'invoices'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('invoices', snap.docs.length >= 2000);
       useLedgerStore.getState().setInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() } as Invoice)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'invoices'));
 
     const unsubCreditNotes = onSnapshot(query(collection(db, 'creditNotes'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('creditNotes', snap.docs.length >= 2000);
       useLedgerStore.getState().setCreditNotes(snap.docs.map(d => ({ id: d.id, ...d.data() } as CreditNote)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'creditNotes'));
 
     const unsubPayments = onSnapshot(query(collection(db, 'payments'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('payments', snap.docs.length >= 2000);
       useLedgerStore.getState().setPayments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'payments'));
 
     const unsubEstimates = onSnapshot(query(collection(db, 'estimates'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('estimates', snap.docs.length >= 2000);
       useLedgerStore.getState().setEstimates(snap.docs.map(d => ({ id: d.id, ...d.data() } as Estimate)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'estimates'));
 
     const unsubCustomers = onSnapshot(query(collection(db, 'customers'), ...filter, limit(2000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('customers', snap.docs.length >= 2000);
       useLedgerStore.getState().setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'customers'));
 
@@ -380,14 +392,17 @@ export function useLedgerData() {
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubBills = onSnapshot(query(collection(db, 'bills'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('bills', snap.docs.length >= 2000);
       useLedgerStore.getState().setBills(snap.docs.map(d => ({ id: d.id, ...d.data() } as Bill)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'bills'));
 
     const unsubVendorCredits = onSnapshot(query(collection(db, 'vendorCredits'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('vendorCredits', snap.docs.length >= 2000);
       useLedgerStore.getState().setVendorCredits(snap.docs.map(d => ({ id: d.id, ...d.data() } as VendorCredit)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'vendorCredits'));
 
     const unsubVendors = onSnapshot(query(collection(db, 'vendors'), ...filter, limit(2000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('vendors', snap.docs.length >= 2000);
       useLedgerStore.getState().setVendors(snap.docs.map(d => ({ id: d.id, ...d.data() } as Vendor)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'vendors'));
 
@@ -405,6 +420,7 @@ export function useLedgerData() {
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubInventory = onSnapshot(query(collection(db, 'inventory'), ...filter, limit(2000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('inventory', snap.docs.length >= 2000);
       useLedgerStore.getState().setInventory(snap.docs.map(d => ({ id: d.id, ...d.data() } as InventoryItem)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'inventory'));
 
@@ -420,6 +436,7 @@ export function useLedgerData() {
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubBudgets = onSnapshot(query(collection(db, 'budgets'), ...filter, limit(1000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('budgets', snap.docs.length >= 1000);
       useLedgerStore.getState().setBudgets(snap.docs.map(d => ({ id: d.id, ...d.data() } as Budget)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'budgets'));
 
@@ -435,10 +452,12 @@ export function useLedgerData() {
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubPayRuns = onSnapshot(query(collection(db, 'payRuns'), ...filter, limit(1000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('payRuns', snap.docs.length >= 1000);
       useLedgerStore.getState().setPayRuns(snap.docs.map(d => ({ id: d.id, ...d.data() } as PayRun)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'payRuns'));
 
     const unsubEmployees = onSnapshot(query(collection(db, 'employees'), ...filter, limit(1000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('employees', snap.docs.length >= 1000);
       useLedgerStore.getState().setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'employees'));
 
@@ -455,10 +474,12 @@ export function useLedgerData() {
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubBankLines = onSnapshot(query(collection(db, 'bankLines'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('bankLines', snap.docs.length >= 2000);
       useLedgerStore.getState().setBankLines(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'bankLines'));
 
     const unsubReconciliations = onSnapshot(query(collection(db, 'reconciliations'), ...filter, limit(1000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('reconciliations', snap.docs.length >= 1000);
       useLedgerStore.getState().setReconciliations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'reconciliations'));
 
@@ -475,6 +496,7 @@ export function useLedgerData() {
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubPeriods = onSnapshot(query(collection(db, 'periods'), ...filter, limit(100)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('periods', snap.docs.length >= 100);
       useLedgerStore.getState().setPeriods(snap.docs.map(d => ({ id: d.id, ...d.data() } as PeriodStatus)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'periods'));
 
@@ -492,6 +514,7 @@ export function useLedgerData() {
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'scenarios'));
 
     const unsubAuditLogs = onSnapshot(query(collection(db, 'auditLogs'), ...filter, orderBy('timestamp', 'desc'), limit(500)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('auditLogs', snap.docs.length >= 500);
       useLedgerStore.getState().setAuditLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'auditLogs'));
 
@@ -509,6 +532,7 @@ export function useLedgerData() {
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubRecurring = onSnapshot(query(collection(db, 'recurring'), ...filter, limit(1000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('recurring', snap.docs.length >= 1000);
       useLedgerStore.getState().setRecurring(snap.docs.map(d => {
         const data = d.data() as any;
         return {
@@ -522,6 +546,7 @@ export function useLedgerData() {
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'recurring'));
 
     const unsubAssets = onSnapshot(query(collection(db, 'assets'), ...filter, limit(2000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('assets', snap.docs.length >= 2000);
       useLedgerStore.getState().setAssets(snap.docs.map(d => ({ id: d.id, ...d.data() } as FixedAsset)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'assets'));
 
