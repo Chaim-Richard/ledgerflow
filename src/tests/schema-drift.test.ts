@@ -95,6 +95,23 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
     assert.ok(keys.includes('isActive'), 'firestore.rules chartAccounts allowlist missing key "isActive"');
   });
 
+  test('workspaces rule enforces isUnchanged() protection on system & sensitive billing fields', () => {
+    const isUnchangedMatches = Array.from(rulesText.matchAll(/isUnchanged\(["']([^"']+)["']\)/g)).map(m => m[1]);
+    const expectedProtectedFields = [
+      'uid', 'plan', 'computeCreditBalance', 'apiQuotaMonthlyLimitCents', 'maxSeats',
+      'concurrentUserLimit', 'apiQuotaTotalCentsUsed', 'stripeCustomerId', 'seatCount',
+      'status', 'lockedUntilDate', 'bypassBilling', 'stripeSubscriptionId',
+      'billingLedgerChain', 'allowedWorldPaths', 'analyticalTopology', 'computeHardnessScore'
+    ];
+
+    for (const field of expectedProtectedFields) {
+      assert.ok(
+        isUnchangedMatches.includes(field),
+        `firestore.rules workspace update protection missing isUnchanged("${field}")`
+      );
+    }
+  });
+
   test('firestore.indexes.json includes composite indexes for workspaceId + order field queries', () => {
     const requiredIndexes = [
       { collectionGroup: 'transactions', field: 'date' },

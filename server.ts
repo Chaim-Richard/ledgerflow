@@ -5327,6 +5327,10 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('⚠️ [Server] Unhandled Promise Rejection caught at:', promise, 'reason:', reason);
 });
 
+process.on('uncaughtException', (error) => {
+  console.error('💥 [Server] Uncaught Exception caught:', error);
+});
+
 if (process.env.NODE_ENV !== "test") {
   console.debug("🌀 [Server] Booting LedgerFlow Backend...");
   startServer().catch(err => {

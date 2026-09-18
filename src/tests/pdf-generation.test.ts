@@ -78,15 +78,20 @@ class MockPdfDb {
           };
         }
       }),
-      where: () => ({
-        get: async () => {
-          const docs = Object.entries(collData).map(([id, val]) => ({
-            id,
-            data: () => JSON.parse(JSON.stringify(val))
-          }));
-          return { docs, empty: docs.length === 0, size: docs.length };
-        }
-      })
+      where: function queryWhere() {
+        const queryObj = {
+          where: queryWhere,
+          limit: () => queryObj,
+          get: async () => {
+            const docs = Object.entries(collData).map(([id, val]) => ({
+              id,
+              data: () => JSON.parse(JSON.stringify(val))
+            }));
+            return { docs, empty: docs.length === 0, size: docs.length };
+          }
+        };
+        return queryObj;
+      }
     };
   }
 }

@@ -6,6 +6,7 @@ import Decimal from 'decimal.js';
 import { evaluateAmountExpression } from '../../lib/amountExpression';
 
 import { lineAmount } from '../../lib/txFilters';
+import { computeBalanceSheet } from '../../server/reports/computeReports';
 
 export class TruthEngine {
   static resolveEffectiveValue(timeSeries: TemporalValidity[], targetDateStr: string): number {
@@ -471,31 +472,22 @@ export class TruthEngine {
     }>;
     totalOrphanedAmountCents: number;
   } {
-    const knownAccountIds = new Set(accounts.map(a => a.id));
-    const orphanedLines: Array<{ transactionId: string; date: string; accountId: string; amountCents: number }> = [];
+    const { orphanedLines } = computeBalanceSheet(accounts, transactions);
     const orphanedAccountIdsSet = new Set<string>();
-
-    for (const tx of transactions) {
-      if (tx.status === 'void' || tx.status === 'rejected' || tx.deletedAt) continue;
-      tx.lines?.forEach((line: any) => {
-        if (line.accountId && !knownAccountIds.has(line.accountId)) {
-          orphanedAccountIdsSet.add(line.accountId);
-          orphanedLines.push({
-            transactionId: tx.id || '',
-            date: tx.date || '',
-            accountId: line.accountId,
-            amountCents: lineAmount(line, tx)
-          });
-        }
-      });
-    }
-
-    const totalOrphanedAmountCents = orphanedLines.reduce((sum, l) => sum + Math.abs(l.amountCents), 0);
+    const formattedOrphanedLines = orphanedLines.map(l => {
+      orphanedAccountIdsSet.add(l.accountId);
+      return {
+        transactionId: l.transactionId || '',
+        date: l.date || '',
+        accountId: l.accountId,
+        amountCents: l.amountCents
+      };
+    });
 
     return {
       orphanedAccountIds: Array.from(orphanedAccountIdsSet),
-      orphanedLines,
-      totalOrphanedAmountCents
+      orphanedLines: formattedOrphanedLines,
+      totalOrphanedAmountCents: formattedOrphanedLines.reduce((sum, l) => sum + Math.abs(l.amountCents), 0)
     };
   }
 }
