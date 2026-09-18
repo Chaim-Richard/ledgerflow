@@ -1,24 +1,35 @@
 import express from 'express';
+import { z } from 'zod';
 import { FieldValue } from 'firebase-admin/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { getDb, assertPeriodOpen } from '../db/firestore';
 import { Transaction } from '../../types';
 
+const CapitalizeLeaseSchema = z.object({
+  workspaceId: z.string().min(1, 'workspaceId is required'),
+  leaseName: z.string().optional(),
+  pvAmountCents: z.number().int().positive('pvAmountCents must be a positive integer'),
+  rouAssetAccountId: z.string().min(1, 'rouAssetAccountId is required'),
+  leaseLiabilityAccountId: z.string().min(1, 'leaseLiabilityAccountId is required'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD format').optional()
+});
+
 export const leaseRouter = express.Router();
 
 leaseRouter.post('/capitalize', async (req, res) => {
   try {
-    const { workspaceId, leaseName, pvAmountCents, rouAssetAccountId, leaseLiabilityAccountId, date } = req.body;
-    const user = (req as any).user;
-    const db = getDb();
-    
-    if (!workspaceId || !pvAmountCents || !rouAssetAccountId || !leaseLiabilityAccountId) {
-      return res.status(400).json({ error: "Missing required fields for ASC 842 capitalization." });
+    const parseResult = CapitalizeLeaseSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        error: 'Validation failed',
+        details: parseResult.error.issues
+      });
     }
 
-    if (!Number.isInteger(pvAmountCents) || pvAmountCents <= 0) {
-      return res.status(400).json({ error: "pvAmountCents must be a positive integer." });
-    }
+    const { workspaceId, leaseName, pvAmountCents, rouAssetAccountId, leaseLiabilityAccountId, date } = parseResult.data;
+    const user = (req as any).user;
+    const db = getDb();
 
     // 1. Authorize workspace membership FIRST before checking idempotency (#82)
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();

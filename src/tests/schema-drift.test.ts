@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { readFileSync } from 'node:fs';
+import { WORKSPACE_SCOPED_COLLECTIONS } from '../constants/collections';
 
 const rulesText = readFileSync('firestore.rules', 'utf8');
 const indexesJson = JSON.parse(readFileSync('firestore.indexes.json', 'utf8'));
@@ -137,6 +138,16 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
       assert.ok(
         matchFound,
         `firestore.indexes.json missing composite index for ${req.collectionGroup} (workspaceId ASC, ${req.field} DESC)`
+      );
+    }
+  });
+
+  test('A-15: All WORKSPACE_SCOPED_COLLECTIONS have corresponding rules in firestore.rules', () => {
+    for (const collName of WORKSPACE_SCOPED_COLLECTIONS) {
+      const hasMatch = rulesText.includes(`match /${collName}/{`);
+      assert.ok(
+        hasMatch,
+        `firestore.rules missing rules definition block for collection "${collName}"`
       );
     }
   });

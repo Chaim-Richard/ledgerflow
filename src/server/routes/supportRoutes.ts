@@ -1,8 +1,18 @@
 import express from 'express';
+import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import { SupportMessage, SupportTicket, AuditLog } from '../../types';
 import { sendSupportNotification } from '../services/emailService';
+
+const AddSupportMessageSchema = z.object({
+  body: z.string().min(1, 'Message body is required').max(5000, 'Message body must be under 5000 characters'),
+  authorRole: z.enum(['user', 'admin'])
+});
+
+const UpdateSupportStatusSchema = z.object({
+  status: z.enum(['open', 'pending_user', 'pending_support', 'resolved', 'closed'])
+});
 
 export const supportRouter = express.Router();
 
@@ -13,12 +23,17 @@ export const supportRouter = express.Router();
 supportRouter.post('/tickets/:id/messages', async (req, res) => {
   try {
     const { id: ticketId } = req.params;
-    const { body, authorRole } = req.body;
-    const user = (req as any).user;
-
-    if (!body || !authorRole || !['user', 'admin'].includes(authorRole)) {
-      return res.status(400).json({ error: 'Invalid payload' });
+    const parseResult = AddSupportMessageSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        error: 'Validation failed',
+        details: parseResult.error.issues
+      });
     }
+
+    const { body, authorRole } = parseResult.data;
+    const user = (req as any).user;
 
     const db = getDb();
     const ticketRef = db.collection('supportTickets').doc(ticketId);
@@ -133,16 +148,21 @@ supportRouter.post('/tickets/:id/messages', async (req, res) => {
 supportRouter.patch('/tickets/:id/status', async (req, res) => {
   try {
     const { id: ticketId } = req.params;
-    const { status } = req.body;
+    const parseResult = UpdateSupportStatusSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        error: 'Validation failed',
+        details: parseResult.error.issues
+      });
+    }
+
+    const { status } = parseResult.data;
     const user = (req as any).user;
 
     const isAdminUser = Boolean(user?.admin || user?.role === 'admin');
     if (!isAdminUser) {
       return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    if (!status || !['open', 'pending_user', 'pending_support', 'resolved', 'closed'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
     }
 
     const db = getDb();

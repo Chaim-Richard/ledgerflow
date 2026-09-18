@@ -1,24 +1,36 @@
 import express from 'express';
+import { z } from 'zod';
 import { FieldValue } from 'firebase-admin/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { getDb, assertPeriodOpen } from '../db/firestore';
 import { Transaction } from '../../types';
 
+const RecognizeRevenueSchema = z.object({
+  workspaceId: z.string().min(1, 'workspaceId is required'),
+  contractId: z.string().optional(),
+  periodId: z.string().optional(),
+  amountCents: z.number().int().positive('amountCents must be a positive integer'),
+  deferredAccountId: z.string().min(1, 'deferredAccountId is required'),
+  revenueAccountId: z.string().min(1, 'revenueAccountId is required'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD format').optional()
+});
+
 export const revenueRouter = express.Router();
 
 revenueRouter.post('/recognize', async (req, res) => {
   try {
-    const { workspaceId, contractId, periodId, amountCents, deferredAccountId, revenueAccountId, date } = req.body;
-    const user = (req as any).user;
-    const db = getDb();
-    
-    if (!workspaceId || !amountCents || !deferredAccountId || !revenueAccountId) {
-      return res.status(400).json({ error: "Missing required fields (workspaceId, amountCents, deferredAccountId, revenueAccountId)." });
+    const parseResult = RecognizeRevenueSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        error: 'Validation failed',
+        details: parseResult.error.issues
+      });
     }
 
-    if (!Number.isInteger(amountCents) || amountCents <= 0) {
-      return res.status(400).json({ error: "amountCents must be a positive integer." });
-    }
+    const { workspaceId, contractId, periodId, amountCents, deferredAccountId, revenueAccountId, date } = parseResult.data;
+    const user = (req as any).user;
+    const db = getDb();
 
     // 1. Authorize workspace membership FIRST before checking idempotency (#82)
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();

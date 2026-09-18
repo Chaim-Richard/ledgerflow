@@ -63,18 +63,23 @@ export default function DataHealthView() {
 
     // 2. Check Orphaned Account References in Transactions
     transactions.forEach(tx => {
-      (tx.lines || []).forEach(l => {
+      if (!isPostable(tx)) return;
+      (tx.lines || []).forEach((l, idx) => {
         if (l.accountId && !activeAccountIds.has(l.accountId)) {
+          const amt = lineAmount(l, tx);
           issues.push({
-            id: `orphaned-${tx.id}-${l.accountId}`,
+            id: `orphaned-${tx.id}-${l.accountId}-${idx}`,
             category: 'orphaned_account',
             severity: 'high',
-            title: `Orphaned Account Reference`,
-            description: `Transaction ${tx.id} references non-existent account ID "${l.accountId}".`,
+            title: `Orphaned Account Reference in Tx #${tx.id}`,
+            description: `Transaction ${tx.id} on ${tx.date || 'unknown date'} contains line for $${formatDecimal(Math.abs(amt) / 100)} referencing missing account ID "${l.accountId}" (${l.accountName || 'Unknown'}).`,
             entityId: tx.id,
             entityType: 'transaction',
-            fixLabel: 'Review Accounts',
-            fixAction: () => setActiveTab('ledger')
+            fixLabel: 'Reassign Account',
+            fixAction: () => {
+              setActiveTab('transactions');
+              toast.info(`Navigate to Transaction #${tx.id} to reassign account "${l.accountId}".`);
+            }
           });
         }
       });

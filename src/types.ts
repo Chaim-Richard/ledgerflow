@@ -95,6 +95,7 @@ export interface SplitAllocation {
 }
 
 export interface TransactionLine {
+  id?: string;
   accountId: string;
   accountName: string;
   amountCents: number; // Positive for Debit, Negative for Credit
@@ -560,6 +561,7 @@ export interface JournalEntry {
 }
 
 export interface JournalLine {
+  id?: string;
   accountId: string;
   accountName: string;
   debit: number;

@@ -1,33 +1,34 @@
 import express from 'express';
 import crypto from 'crypto';
+import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { getTrustedAppUrl } from '../utils/urlHelper';
 import { deliverInvoiceEmail } from '../services/emailService';
 import { generateDocumentPdf } from '../services/pdfService';
 
+const SendInvoiceEmailSchema = z.object({
+  workspaceId: z.string().min(1, 'workspaceId is required'),
+  toEmail: z.string().email('Invalid recipient email format'),
+  subject: z.string().max(200, 'Subject must be under 200 characters').optional(),
+  body: z.string().max(5000, 'Body must be under 5000 characters').optional()
+});
+
 export const invoiceEmailRouter = express.Router();
 
 invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
   try {
-    const { workspaceId, toEmail, subject, body } = req.body;
+    const parseResult = SendInvoiceEmailSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        error: 'Validation failed',
+        details: parseResult.error.issues
+      });
+    }
+
+    const { workspaceId, toEmail, subject, body } = parseResult.data;
     const invoiceId = req.params.invoiceId;
     const user = (req as any).user;
-
-    if (!workspaceId || !toEmail || typeof toEmail !== 'string') {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(toEmail.trim())) {
-      return res.status(400).json({ error: 'Invalid recipient email format' });
-    }
-
-    if (subject && (typeof subject !== 'string' || subject.length > 200)) {
-      return res.status(400).json({ error: 'Subject must be under 200 characters' });
-    }
-    if (body && (typeof body !== 'string' || body.length > 5000)) {
-      return res.status(400).json({ error: 'Body must be under 5000 characters' });
-    }
 
     const db = getDb();
     
