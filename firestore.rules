@@ -172,14 +172,19 @@ service cloud.firestore {
 
     match /journalEntries/{entryId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create, update, delete: if false; // Server-side append-only
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(entryId) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
     }
 
     match /bankLines/{lineId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(lineId);
-      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
-      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
+      allow create, update, delete: if false; // Server-side managed
     }
 
     match /billingLedgerTraces/{traceId} {

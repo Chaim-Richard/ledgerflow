@@ -1,9 +1,14 @@
 import express from 'express';
 import admin from 'firebase-admin';
+import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { verifyInviteTokenSignature } from '../../lib/inviteManager';
 
 export const invitePublicRouter = express.Router();
+
+const inviteTokenParamsSchema = z.object({
+  token: z.string().min(10, 'Token too short').max(256, 'Token too long')
+});
 
 const populateUserAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
@@ -33,7 +38,11 @@ function sendError(res: express.Response, message: string, status: number = 500,
  * Public route to lookup an invite by token signature and check validity
  */
 invitePublicRouter.get('/:token', async (req, res) => {
-  const { token } = req.params;
+  const parsedParams = inviteTokenParamsSchema.safeParse(req.params);
+  if (!parsedParams.success) {
+    return sendError(res, 'Invalid invite token format', 400, parsedParams.error.issues);
+  }
+  const { token } = parsedParams.data;
 
   try {
     const db = getDb();
@@ -84,7 +93,11 @@ invitePublicRouter.get('/:token', async (req, res) => {
  * Authenticated endpoint to accept an invite
  */
 invitePublicRouter.post('/:token/accept', async (req, res) => {
-  const { token } = req.params;
+  const parsedParams = inviteTokenParamsSchema.safeParse(req.params);
+  if (!parsedParams.success) {
+    return sendError(res, 'Invalid invite token format', 400, parsedParams.error.issues);
+  }
+  const { token } = parsedParams.data;
   const user = (req as any).user;
 
   if (!user || !user.uid) {

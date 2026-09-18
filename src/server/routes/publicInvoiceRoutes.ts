@@ -1,4 +1,5 @@
 import express from 'express';
+import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { getTrustedAppUrl } from '../utils/urlHelper';
 import Stripe from 'stripe';
@@ -14,12 +15,21 @@ function getStripe(): Stripe {
 
 export const publicInvoiceRouter = express.Router();
 
+const publicInvoiceTokenParamsSchema = z.object({
+  token: z.string().regex(/^pay_[a-zA-Z0-9_-]{10,128}$/, 'Invalid payment token format')
+});
+
+const publicInvoicePayBodySchema = z.object({
+  paymentMethod: z.string().optional()
+}).passthrough();
+
 publicInvoiceRouter.get('/:token', async (req, res) => {
   try {
-    const token = req.params.token;
-    if (!token || typeof token !== 'string' || !/^pay_[a-zA-Z0-9_-]{10,128}$/.test(token)) {
-      return res.status(400).json({ error: 'Invalid token format' });
+    const parsedParams = publicInvoiceTokenParamsSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+      return res.status(400).json({ error: 'Invalid token format', details: parsedParams.error.issues });
     }
+    const { token } = parsedParams.data;
     const db = getDb();
     
     // Check top-level collection first, with collectionGroup fallback
@@ -83,10 +93,17 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
 
 publicInvoiceRouter.post('/:token/pay', async (req, res) => {
   try {
-    const token = req.params.token;
-    if (!token || typeof token !== 'string' || !/^pay_[a-zA-Z0-9_-]{10,128}$/.test(token)) {
-      return res.status(400).json({ error: 'Invalid token format' });
+    const parsedParams = publicInvoiceTokenParamsSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+      return res.status(400).json({ error: 'Invalid token format', details: parsedParams.error.issues });
     }
+    const { token } = parsedParams.data;
+
+    const parsedBody = publicInvoicePayBodySchema.safeParse(req.body || {});
+    if (!parsedBody.success) {
+      return res.status(400).json({ error: 'Invalid request payload', details: parsedBody.error.issues });
+    }
+
     const db = getDb();
     
     let snapshot = await db.collection('invoices').where('paymentToken', '==', token).limit(1).get();

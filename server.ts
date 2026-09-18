@@ -11,8 +11,10 @@ import { leaseRouter } from "./src/server/routes/leaseRoutes";
 import { inventoryRouter } from "./src/server/routes/inventoryRoutes";
 import { supportRouter } from "./src/server/routes/supportRoutes";
 import { paymentRouter } from "./src/server/routes/paymentRoutes";
-import { documentRouter, invoiceRouter, billRouter, creditNoteRouter, vendorCreditRouter } from "./src/server/routes/documentRoutes";
+import { documentRouter } from "./src/server/routes/documentRoutes";
 import { requirePlanCapacity } from "./src/server/middleware/planCapacity";
+import { assertStartupConfig } from "./src/server/config/assertStartupConfig";
+import { purgePendingWorkspaces } from "./src/server/services/workspacePurgeService";
 import express from "express";
 import { safeFetch } from "./src/server/utils/safeFetch.js";
 import cors from "cors";
@@ -129,6 +131,15 @@ if (!envResult.success) {
 
 // Ensure validated/defaulted values propagate to process.env
 process.env.NODE_ENV = envResult.data.NODE_ENV;
+
+try {
+  assertStartupConfig();
+} catch (err: any) {
+  console.error("❌ Startup config assertion failed:", err.message);
+  if (process.env.NODE_ENV !== "test") {
+    process.exit(1);
+  }
+}
 
 // --- Types ---
 interface AuthUser extends admin.auth.DecodedIdToken {
@@ -5159,10 +5170,6 @@ You MUST output a valid JSON object matching this schema exactly:
   app.use("/api/v1/support", authenticate, supportRouter);
   app.use("/api/v1/payments", apiAuthenticate, paymentRouter);
   app.use("/api/v1/documents", apiAuthenticate, documentRouter);
-  app.use("/api/v1/invoices", apiAuthenticate, invoiceRouter);
-  app.use("/api/v1/bills", apiAuthenticate, billRouter);
-  app.use("/api/v1/credit-notes", apiAuthenticate, creditNoteRouter);
-  app.use("/api/v1/vendor-credits", apiAuthenticate, vendorCreditRouter);
   app.use("/api/v1/invoices/public", publicInvoiceLimiter, publicInvoiceRouter);
   app.use("/api/v1/invoices/email", apiAuthenticate, invoiceEmailRouter);
   app.use("/api/v1/invites", invitePublicRouter);
@@ -5202,6 +5209,15 @@ You MUST output a valid JSON object matching this schema exactly:
           await doc.ref.update({ strategicAdvice: cappedAdvice });
           console.log(`[Data Lifecycle] Capped strategicAdvice for workspace ${doc.id} to 15 items.`);
         }
+      }
+
+      // 4. Workspace deletion purge job
+      const purgeResult = await purgePendingWorkspaces(getDb());
+      if (purgeResult.purgedWorkspaces.length > 0) {
+        console.log(`[Data Lifecycle] Purged ${purgeResult.purgedWorkspaces.length} pending workspaces: ${purgeResult.purgedWorkspaces.join(', ')}`);
+      }
+      if (purgeResult.errors.length > 0) {
+        console.error(`[Data Lifecycle] Workspace purge encountered errors: ${purgeResult.errors.join('; ')}`);
       }
     } catch (e) {
       console.error("[Data Lifecycle] Cleanup job failed", e);
