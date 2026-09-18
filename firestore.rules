@@ -175,7 +175,9 @@ service cloud.firestore {
 
     match /bankLines/{lineId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create, update, delete: if false; // Server-side managed
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(lineId);
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
     }
 
     match /billingLedgerTraces/{traceId} {

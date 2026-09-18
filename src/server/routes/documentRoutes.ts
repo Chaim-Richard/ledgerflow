@@ -102,3 +102,128 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
 
 documentRouter.post('/:type/:id/pdf', handlePdfRequest);
 documentRouter.get('/:type/:id/pdf', handlePdfRequest);
+
+import { requireOpenPeriod } from '../middleware/periodLock';
+
+export function createLedgerDocumentRouter(collectionName: string) {
+  const router = express.Router();
+
+  router.post('/', requireOpenPeriod(collectionName), async (req, res) => {
+    try {
+      const authReq = req as any;
+      const { workspaceId, ...payload } = req.body;
+      if (!workspaceId) {
+        return res.status(400).json({ status: 'error', message: 'workspaceId is required' });
+      }
+      const db = getDb();
+      await validateWorkspaceMember(db, workspaceId, authReq.user);
+      const docRef = payload.id ? db.collection(collectionName).doc(payload.id) : db.collection(collectionName).doc();
+      const docData = {
+        ...payload,
+        id: docRef.id,
+        workspaceId,
+        uid: authReq.user?.uid || 'system',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      await docRef.set(docData);
+      res.json({ status: 'success', data: docData });
+    } catch (err: any) {
+      if (err.message === 'FORBIDDEN') return res.status(403).json({ status: 'error', message: 'Forbidden' });
+      res.status(400).json({ status: 'error', message: err.message });
+    }
+  });
+
+  router.put('/:id', requireOpenPeriod(collectionName), async (req, res) => {
+    try {
+      const authReq = req as any;
+      const { id } = req.params;
+      const db = getDb();
+      const docRef = db.collection(collectionName).doc(id);
+      const snap = await docRef.get();
+      if (!snap.exists) return res.status(404).json({ status: 'error', message: 'Not found' });
+      const currentData = snap.data();
+      await validateWorkspaceMember(db, currentData?.workspaceId, authReq.user);
+      const updateData = { ...req.body, updatedAt: new Date().toISOString() };
+      delete updateData.id;
+      delete updateData.workspaceId;
+      await docRef.update(updateData);
+      res.json({ status: 'success', data: { ...currentData, ...updateData } });
+    } catch (err: any) {
+      if (err.message === 'FORBIDDEN') return res.status(403).json({ status: 'error', message: 'Forbidden' });
+      res.status(400).json({ status: 'error', message: err.message });
+    }
+  });
+
+  router.delete('/:id', requireOpenPeriod(collectionName), async (req, res) => {
+    try {
+      const authReq = req as any;
+      const { id } = req.params;
+      const db = getDb();
+      const docRef = db.collection(collectionName).doc(id);
+      const snap = await docRef.get();
+      if (!snap.exists) {
+        return res.status(404).json({ status: 'error', message: `${collectionName} document not found` });
+      }
+      const data = snap.data();
+      await validateWorkspaceMember(db, data?.workspaceId, authReq.user);
+
+      if (data?.status && data.status !== 'draft') {
+        return res.status(403).json({
+          status: 'error',
+          code: 'CANNOT_DELETE_POSTED',
+          message: `Forbidden: Only draft documents can be deleted. Current status: ${data.status}. Posted documents must be voided, never deleted.`
+        });
+      }
+
+      await docRef.delete();
+      res.json({ status: 'success', message: `${collectionName} document deleted` });
+    } catch (err: any) {
+      if (err.message === 'FORBIDDEN') return res.status(403).json({ status: 'error', message: 'Forbidden' });
+      res.status(400).json({ status: 'error', message: err.message });
+    }
+  });
+
+  return router;
+}
+
+export const invoiceRouter = createLedgerDocumentRouter('invoices');
+export const billRouter = createLedgerDocumentRouter('bills');
+export const creditNoteRouter = createLedgerDocumentRouter('creditNotes');
+export const vendorCreditRouter = createLedgerDocumentRouter('vendorCredits');
+
+documentRouter.delete('/:type/:id', async (req, res) => {
+  const typeMap: Record<string, string> = {
+    invoice: 'invoices',
+    bill: 'bills',
+    creditNote: 'creditNotes',
+    vendorCredit: 'vendorCredits',
+    payment: 'payments',
+    transaction: 'transactions'
+  };
+  const col = typeMap[req.params.type];
+  if (!col) return res.status(400).json({ status: 'error', message: `Invalid document type: ${req.params.type}` });
+  return requireOpenPeriod(col)(req, res, async () => {
+    try {
+      const authReq = req as any;
+      const db = getDb();
+      const docRef = db.collection(col).doc(req.params.id);
+      const snap = await docRef.get();
+      if (!snap.exists) return res.status(404).json({ status: 'error', message: 'Document not found' });
+      const data = snap.data();
+      await validateWorkspaceMember(db, data?.workspaceId, authReq.user);
+      if (data?.status && data.status !== 'draft') {
+        return res.status(403).json({
+          status: 'error',
+          code: 'CANNOT_DELETE_POSTED',
+          message: `Forbidden: Only draft documents can be deleted. Current status: ${data.status}. Posted documents must be voided, never deleted.`
+        });
+      }
+      await docRef.delete();
+      return res.json({ status: 'success', message: 'Document deleted' });
+    } catch (err: any) {
+      if (err.message === 'FORBIDDEN') return res.status(403).json({ status: 'error', message: 'Forbidden' });
+      return res.status(400).json({ status: 'error', message: err.message });
+    }
+  });
+});

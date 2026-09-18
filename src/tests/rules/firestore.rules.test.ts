@@ -691,141 +691,188 @@ describe('Firestore Security Rules Unit Tests', () => {
     }, /permission-denied/i, 'Foreign workspace member should not read foreign workspace');
   });
 
-  test('P1.1 Period Locking: Invoices, bills, credit notes and transactions enforce lockDate', async () => {
-    const aliceDb = getFirestoreContext({ uid: 'alice-period' });
+  test('P1.1 Table-Driven Period Locking: 7 ledger-posting collections enforce lockDate (21 rejected closed, 21 succeed open)', async () => {
+    const aliceDb = getFirestoreContext({ uid: 'alice-period-table' });
+    const wsId = 'ws-table-locked';
 
-    // Workspace locked through 2026-06-30
-    await aliceDb.doc('workspaces/ws-locked').set({
-      id: 'ws-locked',
-      uid: 'alice-period',
-      name: 'Locked Workspace',
-      lockDate: '2026-06-30',
+    // 1. Set workspace.lockDate to 2026-01-31
+    await aliceDb.doc(`workspaces/${wsId}`).set({
+      id: wsId,
+      uid: 'alice-period-table',
+      name: 'Period Table Workspace',
+      lockDate: '2026-01-31',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
 
-    // 1. Transaction dated 2026-05-15 (prior to lockDate) -> MUST BE REJECTED
-    await assert.rejects(async () => {
-      await aliceDb.doc('transactions/tx-locked').set({
-        id: 'tx-locked',
-        uid: 'alice-period',
-        workspaceId: 'ws-locked',
-        date: '2026-05-15',
-        description: 'Locked Tx',
-        totalAmountCents: 1000,
-        lines: []
-      });
-    }, /permission-denied/i, 'Creating transaction in closed period must be denied');
+    interface LedgerCollectionRow {
+      collection: string;
+      makeDoc: (date: string, id: string) => Record<string, any>;
+    }
 
-    // 2. Transaction dated 2026-07-15 (after lockDate) -> MUST SUCCEED
-    await assert.doesNotReject(async () => {
-      await aliceDb.doc('transactions/tx-open').set({
-        id: 'tx-open',
-        uid: 'alice-period',
-        workspaceId: 'ws-locked',
-        date: '2026-07-15',
-        description: 'Open Tx',
-        totalAmountCents: 1000,
-        lines: []
-      });
-    }, 'Creating transaction in open period must be permitted');
+    const ledgerCollections: LedgerCollectionRow[] = [
+      {
+        collection: 'transactions',
+        makeDoc: (date, id) => ({
+          id, uid: 'alice-period-table', workspaceId: wsId, date,
+          description: `Tx ${id}`, totalAmountCents: 1000, status: 'draft', lines: []
+        })
+      },
+      {
+        collection: 'invoices',
+        makeDoc: (date, id) => ({
+          id, uid: 'alice-period-table', workspaceId: wsId, customerId: 'cust-1', customerName: 'Customer A',
+          number: `INV-${id}`, date, totalAmountCents: 1000, status: 'draft', lines: []
+        })
+      },
+      {
+        collection: 'bills',
+        makeDoc: (date, id) => ({
+          id, uid: 'alice-period-table', workspaceId: wsId, vendorId: 'vend-1', vendorName: 'Vendor A',
+          number: `BILL-${id}`, date, totalAmountCents: 1000, status: 'draft', lines: []
+        })
+      },
+      {
+        collection: 'payments',
+        makeDoc: (date, id) => ({
+          id, uid: 'alice-period-table', workspaceId: wsId, paymentNumber: `PMT-${id}`,
+          type: 'customer', direction: 'inflow', amountCents: 1000, currency: 'USD', date, status: 'draft'
+        })
+      },
+      {
+        collection: 'creditNotes',
+        makeDoc: (date, id) => ({
+          id, uid: 'alice-period-table', workspaceId: wsId, customerId: 'cust-1', customerName: 'Customer A',
+          number: `CN-${id}`, amountCents: 500, remainingCents: 500, date, reason: 'Credit', status: 'draft',
+          currency: 'USD', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+        })
+      },
+      {
+        collection: 'vendorCredits',
+        makeDoc: (date, id) => ({
+          id, uid: 'alice-period-table', workspaceId: wsId, vendorId: 'vend-1', vendorName: 'Vendor A',
+          number: `VC-${id}`, amountCents: 500, remainingCents: 500, date, reason: 'Credit', status: 'draft',
+          currency: 'USD', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+        })
+      },
+      {
+        collection: 'journalEntries',
+        makeDoc: (date, id) => ({
+          id, uid: 'alice-period-table', workspaceId: wsId, date, description: `JE ${id}`,
+          status: 'draft', lines: []
+        })
+      }
+    ];
 
-    // 3. Invoice dated 2026-05-15 (prior to lockDate) -> MUST BE REJECTED
-    await assert.rejects(async () => {
-      await aliceDb.doc('invoices/inv-locked').set({
-        id: 'inv-locked',
-        uid: 'alice-period',
-        workspaceId: 'ws-locked',
-        customerId: 'c-1',
-        customerName: 'Cust',
-        number: 'INV-001',
-        date: '2026-05-15',
-        totalAmountCents: 1000,
-        status: 'draft',
-        lines: []
-      });
-    }, /permission-denied/i, 'Creating invoice in closed period must be denied');
+    assert.equal(ledgerCollections.length, 7, 'Must test exactly 7 ledger-posting collections');
 
-    // 4. Invoice dated 2026-07-15 (after lockDate) -> MUST SUCCEED
-    await assert.doesNotReject(async () => {
-      await aliceDb.doc('invoices/inv-open').set({
-        id: 'inv-open',
-        uid: 'alice-period',
-        workspaceId: 'ws-locked',
-        customerId: 'c-1',
-        customerName: 'Cust',
-        number: 'INV-002',
-        date: '2026-07-15',
-        totalAmountCents: 1000,
-        status: 'draft',
-        lines: []
+    // Part A: Closed period 2026-01-15 (All 21 operations must be rejected)
+    let rejectedCount = 0;
+    for (const row of ledgerCollections) {
+      const col = row.collection;
+      const idClosed = `doc-${col}-closed`;
+      const docRef = aliceDb.doc(`${col}/${idClosed}`);
+
+      // 1. Create document dated 2026-01-15 -> MUST BE REJECTED
+      await assert.rejects(async () => {
+        await docRef.set(row.makeDoc('2026-01-15', idClosed));
+      }, /permission-denied/i, `Create in closed period (2026-01-15) must be rejected for ${col}`);
+      rejectedCount++;
+
+      // Seed the document with security rules disabled to test update and delete
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await ctx.firestore().doc(`${col}/${idClosed}`).set(row.makeDoc('2026-01-15', idClosed));
       });
-    }, 'Creating invoice in open period must be permitted');
+
+      // 2. Update document dated 2026-01-15 -> MUST BE REJECTED
+      await assert.rejects(async () => {
+        await docRef.update({ status: 'draft' });
+      }, /permission-denied/i, `Update in closed period (2026-01-15) must be rejected for ${col}`);
+      rejectedCount++;
+
+      // 3. Delete document dated 2026-01-15 -> MUST BE REJECTED
+      await assert.rejects(async () => {
+        await docRef.delete();
+      }, /permission-denied/i, `Delete in closed period (2026-01-15) must be rejected for ${col}`);
+      rejectedCount++;
+    }
+    assert.equal(rejectedCount, 21, 'All 21 operations in closed period must be rejected');
+
+    // Part B: Open period 2026-02-15 (All 21 operations must succeed)
+    let succeededCount = 0;
+    for (const row of ledgerCollections) {
+      const col = row.collection;
+      const idOpen = `doc-${col}-open`;
+      const docRef = aliceDb.doc(`${col}/${idOpen}`);
+
+      // 1. Create document dated 2026-02-15 -> MUST SUCCEED
+      await assert.doesNotReject(async () => {
+        await docRef.set(row.makeDoc('2026-02-15', idOpen));
+      }, `Create in open period (2026-02-15) failed for ${col}`);
+      succeededCount++;
+
+      // 2. Update document dated 2026-02-15 -> MUST SUCCEED
+      await assert.doesNotReject(async () => {
+        await docRef.update({ status: 'draft' });
+      }, `Update in open period (2026-02-15) failed for ${col}`);
+      succeededCount++;
+
+      // 3. Delete document dated 2026-02-15 -> MUST SUCCEED
+      await assert.doesNotReject(async () => {
+        await docRef.delete();
+      }, `Delete in open period (2026-02-15) failed for ${col}`);
+      succeededCount++;
+    }
+    assert.equal(succeededCount, 21, 'All 21 operations in open period must succeed');
   });
 
-  test('P1.2 Hard-Delete Prevention: Posted financial documents cannot be hard-deleted', async () => {
+  test('P1.2 Hard-Delete Prevention: Posted financial documents cannot be hard-deleted across all ledger collections', async () => {
     const aliceDb = getFirestoreContext({ uid: 'alice-delete' });
+    const wsId = 'ws-delete-test';
 
-    await aliceDb.doc('workspaces/ws-delete-test').set({
-      id: 'ws-delete-test',
+    await aliceDb.doc(`workspaces/${wsId}`).set({
+      id: wsId,
       uid: 'alice-delete',
       name: 'Delete Test Workspace',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
 
-    // 1. Create a draft invoice -> Should be deletable
-    await aliceDb.doc('invoices/inv-draft').set({
-      id: 'inv-draft',
-      uid: 'alice-delete',
-      workspaceId: 'ws-delete-test',
-      customerId: 'c-1',
-      customerName: 'Cust',
-      number: 'INV-DRAFT',
-      date: '2026-09-01',
-      totalAmountCents: 1000,
-      status: 'draft',
-      lines: []
-    });
+    const nonDraftItems = [
+      { col: 'transactions', status: 'posted', doc: { id: 'tx-p', uid: 'alice-delete', workspaceId: wsId, date: '2026-09-01', description: 'Tx', totalAmountCents: 1000, status: 'posted', lines: [] } },
+      { col: 'invoices', status: 'sent', doc: { id: 'inv-p', uid: 'alice-delete', workspaceId: wsId, customerId: 'c1', customerName: 'Cust', number: 'INV-1', date: '2026-09-01', totalAmountCents: 1000, status: 'sent', lines: [] } },
+      { col: 'bills', status: 'approved', doc: { id: 'bill-p', uid: 'alice-delete', workspaceId: wsId, vendorId: 'v1', vendorName: 'Vend', number: 'B-1', date: '2026-09-01', totalAmountCents: 1000, status: 'approved', lines: [] } },
+      { col: 'payments', status: 'posted', doc: { id: 'pmt-p', uid: 'alice-delete', workspaceId: wsId, paymentNumber: 'P-1', type: 'customer', direction: 'inflow', amountCents: 1000, currency: 'USD', date: '2026-09-01', status: 'posted' } },
+      { col: 'creditNotes', status: 'open', doc: { id: 'cn-p', uid: 'alice-delete', workspaceId: wsId, customerId: 'c1', customerName: 'Cust', number: 'CN-1', amountCents: 500, remainingCents: 500, date: '2026-09-01', reason: 'Credit', status: 'open', currency: 'USD', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } },
+      { col: 'vendorCredits', status: 'open', doc: { id: 'vc-p', uid: 'alice-delete', workspaceId: wsId, vendorId: 'v1', vendorName: 'Vend', number: 'VC-1', amountCents: 500, remainingCents: 500, date: '2026-09-01', reason: 'Credit', status: 'open', currency: 'USD', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } },
+      { col: 'invoices', status: 'void', doc: { id: 'inv-v', uid: 'alice-delete', workspaceId: wsId, customerId: 'c1', customerName: 'Cust', number: 'INV-V', date: '2026-09-01', totalAmountCents: 1000, status: 'void', lines: [] } },
+    ];
 
-    await assert.doesNotReject(async () => {
-      await aliceDb.doc('invoices/inv-draft').delete();
-    }, 'Draft invoice should be deletable');
+    for (const item of nonDraftItems) {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await ctx.firestore().doc(`${item.col}/${item.doc.id}`).set(item.doc);
+      });
 
-    // 2. Create a posted/sent invoice -> MUST NOT BE DELETABLE
-    await aliceDb.doc('invoices/inv-posted').set({
-      id: 'inv-posted',
-      uid: 'alice-delete',
-      workspaceId: 'ws-delete-test',
-      customerId: 'c-1',
-      customerName: 'Cust',
-      number: 'INV-POSTED',
-      date: '2026-09-01',
-      totalAmountCents: 1000,
-      status: 'sent',
-      lines: []
-    });
+      await assert.rejects(async () => {
+        await aliceDb.doc(`${item.col}/${item.doc.id}`).delete();
+      }, /permission-denied/i, `Deleting document with status '${item.status}' in ${item.col} must be rejected`);
+    }
 
-    await assert.rejects(async () => {
-      await aliceDb.doc('invoices/inv-posted').delete();
-    }, /permission-denied/i, 'Posted invoice deletion must be rejected');
+    // Now verify draft documents CAN be deleted
+    const draftItems = [
+      { col: 'transactions', doc: { id: 'tx-d', uid: 'alice-delete', workspaceId: wsId, date: '2026-09-01', description: 'Draft Tx', totalAmountCents: 1000, status: 'draft', lines: [] } },
+      { col: 'invoices', doc: { id: 'inv-d', uid: 'alice-delete', workspaceId: wsId, customerId: 'c1', customerName: 'Cust', number: 'INV-D', date: '2026-09-01', totalAmountCents: 1000, status: 'draft', lines: [] } },
+      { col: 'bills', doc: { id: 'bill-d', uid: 'alice-delete', workspaceId: wsId, vendorId: 'v1', vendorName: 'Vend', number: 'B-D', date: '2026-09-01', totalAmountCents: 1000, status: 'draft', lines: [] } },
+      { col: 'payments', doc: { id: 'pmt-d', uid: 'alice-delete', workspaceId: wsId, paymentNumber: 'P-D', type: 'customer', direction: 'inflow', amountCents: 1000, currency: 'USD', date: '2026-09-01', status: 'draft' } },
+      { col: 'creditNotes', doc: { id: 'cn-d', uid: 'alice-delete', workspaceId: wsId, customerId: 'c1', customerName: 'Cust', number: 'CN-D', amountCents: 500, remainingCents: 500, date: '2026-09-01', reason: 'Credit', status: 'draft', currency: 'USD', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } },
+      { col: 'vendorCredits', doc: { id: 'vc-d', uid: 'alice-delete', workspaceId: wsId, vendorId: 'v1', vendorName: 'Vend', number: 'VC-D', amountCents: 500, remainingCents: 500, date: '2026-09-01', reason: 'Credit', status: 'draft', currency: 'USD', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } }
+    ];
 
-    // 3. Create a posted bill -> MUST NOT BE DELETABLE
-    await aliceDb.doc('bills/bill-posted').set({
-      id: 'bill-posted',
-      uid: 'alice-delete',
-      workspaceId: 'ws-delete-test',
-      vendorId: 'v-1',
-      vendorName: 'Vend',
-      number: 'BILL-POSTED',
-      date: '2026-09-01',
-      totalAmountCents: 1000,
-      status: 'approved',
-      lines: []
-    });
-
-    await assert.rejects(async () => {
-      await aliceDb.doc('bills/bill-posted').delete();
-    }, /permission-denied/i, 'Posted bill deletion must be rejected');
+    for (const item of draftItems) {
+      await aliceDb.doc(`${item.col}/${item.doc.id}`).set(item.doc);
+      await assert.doesNotReject(async () => {
+        await aliceDb.doc(`${item.col}/${item.doc.id}`).delete();
+      }, `Draft document deletion failed for ${item.col}`);
+    }
   });
 });

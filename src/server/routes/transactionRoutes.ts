@@ -31,7 +31,9 @@ export function formatTzDate(d: Date = new Date(), timezone = 'UTC'): string {
     const m = parts.find(p => p.type === 'month')?.value;
     const day = parts.find(p => p.type === 'day')?.value;
     if (y && m && day) return `${y}-${m}-${day}`;
-  } catch (_e) {}
+  } catch (_e) {
+    // fallback to toISOString
+  }
   return d.toISOString().split('T')[0];
 }
 
@@ -156,7 +158,7 @@ transactionRouter.get('/', async (req, res) => {
   }
 });
 
-transactionRouter.post('/', requirePlanCapacity('transactions'), requireOpenPeriod(), enforceDoubleEntrySafety, async (req, res) => {
+transactionRouter.post('/', requirePlanCapacity('transactions'), requireOpenPeriod('transactions'), enforceDoubleEntrySafety, async (req, res) => {
   const { transaction } = req.body || {};
   const workspaceId = transaction?.workspaceId || req.body?.workspaceId;
   if (!workspaceId) {
@@ -224,7 +226,7 @@ transactionRouter.post('/', requirePlanCapacity('transactions'), requireOpenPeri
   });
 });
 
-transactionRouter.put('/:id', requireOpenPeriod(), enforceDoubleEntrySafety, async (req, res) => {
+transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEntrySafety, async (req, res) => {
   try {
     const { id } = req.params;
     const { partialUpdate } = req.body;
@@ -377,7 +379,7 @@ transactionRouter.put('/:id', requireOpenPeriod(), enforceDoubleEntrySafety, asy
   }
 });
 
-transactionRouter.delete('/:id', async (req, res) => {
+transactionRouter.delete('/:id', requireOpenPeriod('transactions'), async (req, res) => {
   try {
     const { id } = req.params;
     const workspaceId = (req.query.workspaceId as string) || (req.body?.workspaceId as string);
