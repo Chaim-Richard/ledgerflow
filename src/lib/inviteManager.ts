@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { WorkspaceInvite } from '../types';
 
 export function getInviteSecret(): string {
-  const secret = process.env.INVITE_SECRET || process.env.JWT_SECRET || (process.env.NODE_ENV === 'test' ? process.env.SYSTEM_SALT : undefined);
+  const secret = process.env.INVITE_SECRET || process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? (process.env.SYSTEM_SALT || 'dev-invite-secret-key-12345') : undefined);
   if (!secret) {
     throw new Error('INVITE_SECRET or JWT_SECRET environment variable is required for signing and verifying workspace invites.');
   }

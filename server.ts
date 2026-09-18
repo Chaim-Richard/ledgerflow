@@ -111,6 +111,16 @@ import { isSystemJobAuthorized } from "./src/server/auth/systemJobAuth.ts";
 // Determine default NODE_ENV: fail-safe to "production" unless explicitly set to "development" or running ts source directly
 const isTsSourceRun = Boolean(process.argv[1]?.endsWith(".ts"));
 const defaultNodeEnv = process.env.NODE_ENV || (isTsSourceRun ? "development" : "production");
+process.env.NODE_ENV = defaultNodeEnv;
+
+if (process.env.NODE_ENV !== "production") {
+  process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "sk_test_dev_dummy_stripe_key_12345";
+  process.env.SESSION_SECRET = process.env.SESSION_SECRET || "dev_session_secret_32bytes_long_123456789";
+  process.env.CURRENCY_API_KEY = process.env.CURRENCY_API_KEY || "dev_currency_api_key_12345";
+  process.env.TAX_API_KEY = process.env.TAX_API_KEY || "dev_tax_api_key_12345";
+  process.env.SYSTEM_SALT = process.env.SYSTEM_SALT || "dev_system_salt_12345";
+  process.env.INVITE_SECRET = process.env.INVITE_SECRET || "dev_invite_secret_12345";
+}
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default(defaultNodeEnv as "development" | "production" | "test"),
