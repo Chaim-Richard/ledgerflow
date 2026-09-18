@@ -133,7 +133,9 @@ service cloud.firestore {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
       allow create: if canWrite(request.resource.data.workspaceId) && isValidId(transactionId) && isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date);
       allow update: if canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") && isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date);
-      allow delete: if canWrite(resource.data.workspaceId);
+      allow delete: if canWrite(resource.data.workspaceId) &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
     }
 
     match /chartAccounts/{accountId} {
@@ -228,9 +230,14 @@ service cloud.firestore {
 
     match /payments/{paymentId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(paymentId);
-      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId");
-      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId);
+      allow create: if isSignedIn() && canWrite(request.resource.data.workspaceId) && isValidId(paymentId) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
+      allow update: if isSignedIn() && canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
+      allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
+        (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
+        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
     }
 
     match /estimates/{estimateId} {
