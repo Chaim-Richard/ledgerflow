@@ -3,30 +3,69 @@ import { getIdToken } from '../firebase';
 import { getLocalDateISO, roundCents } from '../lib/utils';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useAuthStore } from '../stores/useAuthStore';
-import { ChartAccount } from '../types';
+import { 
+  ChartAccount, 
+  Transaction, 
+  TransactionLine,
+  Workspace, 
+  Invoice, 
+  Bill, 
+  CreditNote, 
+  VendorCredit, 
+  Payment 
+} from '../types';
 import { isPostable } from '../lib/txFilters';
 import { calculateDocumentTax } from '../lib/documentMath';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
 
+export interface EntityMutation {
+  collection: string;
+  docId: string;
+  action: 'create' | 'update' | 'delete';
+  data?: Record<string, unknown>;
+}
+
+export interface LedgerPostContext {
+  accounts?: ChartAccount[];
+  lockDate?: string | null;
+  transactions?: Transaction[];
+  workspaces?: Workspace[];
+  idempotencyKey?: string;
+  bypassPost?: boolean;
+  uid?: string;
+}
+
+export type PostableTransaction = Omit<Partial<Transaction>, 'lines' | 'status' | 'type'> & {
+  uid: string;
+  workspaceId: string;
+  date: string;
+  description: string;
+  totalAmountCents: number;
+  currency?: string;
+  status?: Transaction['status'] | string;
+  type?: Transaction['type'] | string;
+  lines: TransactionLine[];
+};
+
 export class LedgerPostService {
-  private static getAccounts(context?: any): ChartAccount[] {
+  private static getAccounts(context?: LedgerPostContext): ChartAccount[] {
     return context?.accounts || useLedgerStore.getState().accounts || [];
   }
-  private static getLockDate(context?: any): string | null {
+  private static getLockDate(context?: LedgerPostContext): string | null {
     if (context && context.lockDate !== undefined) return context.lockDate;
     return useLedgerStore.getState().lockDate;
   }
-  private static getTransactions(context?: any): any[] {
+  private static getTransactions(context?: LedgerPostContext): Transaction[] {
     return context?.transactions || useLedgerStore.getState().transactions || [];
   }
-  private static getWorkspaces(context?: any): any[] {
+  private static getWorkspaces(context?: LedgerPostContext): Workspace[] {
     return context?.workspaces || useAuthStore.getState().workspaces || [];
   }
 
   /**
    * Period Lock Guard
    */
-  public static verifyLockDate(dateStr: string, context?: any) {
+  public static verifyLockDate(dateStr: string, context?: LedgerPostContext): void {
     if (!dateStr) return;
     const lockDate = this.getLockDate(context);
     if (lockDate && dateStr <= lockDate) {
@@ -65,7 +104,14 @@ export class LedgerPostService {
    * Post standard double-entry journal entries for an invoice.
    * Reverses prior postings instead of deleting them.
    */
-  static async postInvoiceLedger(invoiceId: string, invoiceData: any, workspaceId: string, uid: string, entityMutation?: any, context?: any) {
+  static async postInvoiceLedger(
+    invoiceId: string, 
+    invoiceData: Partial<Invoice>, 
+    workspaceId: string, 
+    uid: string, 
+    entityMutation?: EntityMutation, 
+    context?: LedgerPostContext
+  ) {
     if (!workspaceId || !invoiceId) return;
 
     const invoiceDate = invoiceData.date || getLocalDateISO();
@@ -111,7 +157,7 @@ export class LedgerPostService {
       !reversedIds.has(t.id)
     );
 
-    const txsToPost: any[] = [];
+    const txsToPost: PostableTransaction[] = [];
     const today = getLocalDateISO();
 
     // 1. Reversing entries for existing postings
@@ -261,8 +307,8 @@ export class LedgerPostService {
               type: 'invoice-cogs-auto'
             },
             lines: [
-              { accountId: cogsAcc.id, accountName: cogsAcc.name, debitCents: totalCogs, creditCents: 0, description: `COGS for ${item.description}` },
-              { accountId: inventoryAcc.id, accountName: inventoryAcc.name, debitCents: 0, creditCents: totalCogs, description: `Inventory reduction for ${item.description}` }
+              { accountId: cogsAcc.id, accountName: cogsAcc.name, amountCents: totalCogs, debitCents: totalCogs, creditCents: 0, description: `COGS for ${item.description}` },
+              { accountId: inventoryAcc.id, accountName: inventoryAcc.name, amountCents: -totalCogs, debitCents: 0, creditCents: totalCogs, description: `Inventory reduction for ${item.description}` }
             ]
           });
         }
@@ -305,14 +351,21 @@ export class LedgerPostService {
     }
 
     // Atomic post via Server API
-    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
   }
 
   /**
    * Post standard double-entry journal entries for a bill.
    * Reverses prior postings instead of deleting them.
    */
-  static async postBillLedger(billId: string, billData: any, workspaceId: string, uid: string, entityMutation?: any, context?: any) {
+  static async postBillLedger(
+    billId: string, 
+    billData: Partial<Bill>, 
+    workspaceId: string, 
+    uid: string, 
+    entityMutation?: EntityMutation, 
+    context?: LedgerPostContext
+  ) {
     if (!workspaceId || !billId) return;
 
     const billDate = billData.date || getLocalDateISO();
@@ -358,7 +411,7 @@ export class LedgerPostService {
       !reversedIds.has(t.id)
     );
 
-    const txsToPost: any[] = [];
+    const txsToPost: PostableTransaction[] = [];
     const today = getLocalDateISO();
 
     // 1. Reversing entries for existing postings
@@ -478,13 +531,20 @@ export class LedgerPostService {
     }
 
     // Atomic post via Server API
-    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
   }
 
   /**
    * Post double-entry journal entries for a Customer Credit Note.
    */
-  static async postCreditNoteLedger(creditNoteId: string, creditNoteData: any, workspaceId: string, uid: string, entityMutation?: any, context?: any) {
+  static async postCreditNoteLedger(
+    creditNoteId: string, 
+    creditNoteData: Partial<CreditNote>, 
+    workspaceId: string, 
+    uid: string, 
+    entityMutation?: EntityMutation, 
+    context?: LedgerPostContext
+  ) {
     if (!workspaceId || !creditNoteId) return;
 
     const cnDate = creditNoteData.date || getLocalDateISO();
@@ -521,7 +581,7 @@ export class LedgerPostService {
       !reversedIds.has(t.id)
     );
 
-    const txsToPost: any[] = [];
+    const txsToPost: PostableTransaction[] = [];
     const today = getLocalDateISO();
 
     for (const prevTx of existingTxs) {
@@ -548,7 +608,7 @@ export class LedgerPostService {
 
     if (creditNoteData.status === 'void') {
       if (txsToPost.length > 0) {
-        await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+        await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
       }
       return;
     }
@@ -575,19 +635,26 @@ export class LedgerPostService {
         type: 'credit-note-issuance'
       },
       lines: [
-        { accountId: salesReturnAccount.id, accountName: salesReturnAccount.name, debitCents: amount, creditCents: 0, description: 'Sales Return / Discount' },
-        { accountId: arAccount.id, accountName: arAccount.name, debitCents: 0, creditCents: amount, description: 'Accounts Receivable Credit' }
+        { accountId: salesReturnAccount.id, accountName: salesReturnAccount.name, amountCents: amount, debitCents: amount, creditCents: 0, description: 'Sales Return / Discount' },
+        { accountId: arAccount.id, accountName: arAccount.name, amountCents: -amount, debitCents: 0, creditCents: amount, description: 'Accounts Receivable Credit' }
       ]
     };
     txsToPost.push(cnTx);
 
-    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
   }
 
   /**
    * Post double-entry journal entries for a Vendor Credit.
    */
-  static async postVendorCreditLedger(vendorCreditId: string, vendorCreditData: any, workspaceId: string, uid: string, entityMutation?: any, context?: any) {
+  static async postVendorCreditLedger(
+    vendorCreditId: string, 
+    vendorCreditData: Partial<VendorCredit>, 
+    workspaceId: string, 
+    uid: string, 
+    entityMutation?: EntityMutation, 
+    context?: LedgerPostContext
+  ) {
     if (!workspaceId || !vendorCreditId) return;
 
     const vcDate = vendorCreditData.date || getLocalDateISO();
@@ -624,7 +691,7 @@ export class LedgerPostService {
       !reversedIds.has(t.id)
     );
 
-    const txsToPost: any[] = [];
+    const txsToPost: PostableTransaction[] = [];
     const today = getLocalDateISO();
 
     for (const prevTx of existingTxs) {
@@ -651,7 +718,7 @@ export class LedgerPostService {
 
     if (vendorCreditData.status === 'void') {
       if (txsToPost.length > 0) {
-        await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+        await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
       }
       return;
     }
@@ -678,19 +745,26 @@ export class LedgerPostService {
         type: 'vendor-credit-issuance'
       },
       lines: [
-        { accountId: apAccount.id, accountName: apAccount.name, debitCents: amount, creditCents: 0, description: 'Accounts Payable Reduction' },
-        { accountId: expenseAccount.id, accountName: expenseAccount.name, debitCents: 0, creditCents: amount, description: 'Purchase Rebate / Expense Discount' }
+        { accountId: apAccount.id, accountName: apAccount.name, amountCents: amount, debitCents: amount, creditCents: 0, description: 'Accounts Payable Reduction' },
+        { accountId: expenseAccount.id, accountName: expenseAccount.name, amountCents: -amount, debitCents: 0, creditCents: amount, description: 'Purchase Rebate / Expense Discount' }
       ]
     };
     txsToPost.push(vcTx);
 
-    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
   }
 
   /**
    * Post double-entry journal entries for a payment document.
    */
-  static async postPaymentLedger(paymentId: string, paymentData: any, workspaceId: string, uid: string, entityMutation?: any, context?: any) {
+  static async postPaymentLedger(
+    paymentId: string, 
+    paymentData: Partial<Payment>, 
+    workspaceId: string, 
+    uid: string, 
+    entityMutation?: EntityMutation, 
+    context?: LedgerPostContext
+  ) {
     if (!workspaceId || !paymentId) return;
 
     const paymentDate = paymentData.date || getLocalDateISO();
@@ -736,7 +810,7 @@ export class LedgerPostService {
       !reversedIds.has(t.id)
     );
 
-    const txsToPost: any[] = [];
+    const txsToPost: PostableTransaction[] = [];
     const today = getLocalDateISO();
 
     for (const prevTx of existingTxs) {
@@ -763,7 +837,7 @@ export class LedgerPostService {
 
     if (paymentData.status === 'void') {
       if (txsToPost.length > 0) {
-        await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+        await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
       }
       return;
     }
@@ -805,13 +879,23 @@ export class LedgerPostService {
     };
     txsToPost.push(paymentTx);
 
-    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
+    await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
   }
 
   /**
    * Post bad debt write-off entry.
    */
-  static async postWriteOffLedger(invoiceId: string, invoiceData: any, writeOffCents: number, workspaceId: string, uid: string, reason?: string, entityMutation?: any, context?: any, badDebtAccountId?: string) {
+  static async postWriteOffLedger(
+    invoiceId: string, 
+    invoiceData: Partial<Invoice>, 
+    writeOffCents: number, 
+    workspaceId: string, 
+    uid: string, 
+    reason?: string, 
+    entityMutation?: EntityMutation, 
+    context?: LedgerPostContext, 
+    badDebtAccountId?: string
+  ) {
     if (!workspaceId || !invoiceId || writeOffCents <= 0) return;
 
     const today = getLocalDateISO();
@@ -861,6 +945,7 @@ export class LedgerPostService {
         {
           accountId: badDebtAccount.id,
           accountName: badDebtAccount.name,
+          amountCents: writeOffCents,
           debitCents: writeOffCents,
           creditCents: 0,
           description: `Write-off expense: Invoice ${invNum}`
@@ -868,6 +953,7 @@ export class LedgerPostService {
         {
           accountId: arAccount.id,
           accountName: arAccount.name,
+          amountCents: -writeOffCents,
           debitCents: 0,
           creditCents: writeOffCents,
           description: `Reduce A/R for written-off Invoice ${invNum}`
@@ -875,13 +961,19 @@ export class LedgerPostService {
       ]
     };
 
-    await this.postTxsServerApi([writeOffTx], workspaceId, entityMutation);
+    await this.postTxsServerApi([writeOffTx], workspaceId, entityMutation, context);
   }
 
   /**
    * Reverse all postings when an invoice or bill is deleted.
    */
-  static async deletePostings(id: string, keyName: 'invoiceId' | 'billId', workspaceId: string, entityMutation?: any, context?: any) {
+  static async deletePostings(
+    id: string, 
+    keyName: 'invoiceId' | 'billId' | 'creditNoteId' | 'vendorCreditId', 
+    workspaceId: string, 
+    entityMutation?: EntityMutation, 
+    context?: LedgerPostContext
+  ) {
     if (!workspaceId || !id) return;
 
     const allTxs = this.getTransactions(context).filter(t => t.metadata?.[keyName] === id);
@@ -927,7 +1019,12 @@ export class LedgerPostService {
   /**
    * Send transactions array to Server API endpoint (/api/v1/transactions/bulk) atomically.
    */
-  private static async postTxsServerApi(txs: any[], workspaceId: string, entityMutation?: any, context?: any) {
+  private static async postTxsServerApi(
+    txs: PostableTransaction[], 
+    workspaceId: string, 
+    entityMutation?: EntityMutation, 
+    context?: LedgerPostContext
+  ) {
     if ((!txs || txs.length === 0) && !entityMutation) return;
 
     // Server-side bypass: if context has a bypassPost flag or if we are executing server-side,
@@ -954,7 +1051,7 @@ export class LedgerPostService {
       const store = useLedgerStore.getState();
       if (store && store.setTransactions) {
         const currentTxs = store.transactions || [];
-        store.setTransactions([...txs, ...currentTxs]);
+        store.setTransactions([...(txs as unknown as Transaction[]), ...currentTxs]);
       }
     } catch (e) {
       // Fallback if useLedgerStore or DOM APIs are unavailable (e.g. Server-Side Execution)

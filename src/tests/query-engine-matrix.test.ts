@@ -105,7 +105,7 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
           id: 'inv-exclusive',
           status: 'paid',
           date: '2026-06-01',
-          totalCents: 10000,
+          amountCents: 10000,
           taxRate: 8.25, // 8.25%
           taxInclusive: false
         }
@@ -123,7 +123,7 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
           id: 'inv-inclusive',
           status: 'paid',
           date: '2026-06-01',
-          totalCents: 11000,
+          amountCents: 11000,
           taxRate: 10, // 10%
           taxInclusive: true
         }
@@ -143,7 +143,7 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
           id: 'inv-zero',
           status: 'paid',
           date: '2026-06-01',
-          totalCents: 5000,
+          amountCents: 5000,
           taxRate: 0,
           taxInclusive: false
         }
@@ -159,7 +159,7 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
           id: 'inv-100',
           status: 'paid',
           date: '2026-06-01',
-          totalCents: 10000,
+          amountCents: 10000,
           taxRate: 100, // 100%
           taxInclusive: false
         }

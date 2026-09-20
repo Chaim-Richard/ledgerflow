@@ -126,15 +126,20 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
         return;
       }
 
-      const totalInvCents = inv.amountCents 
-        ? Math.round(inv.amountCents * (inv.exchangeRate || 1)) 
+      const rawAmount = typeof inv.amountCents === 'number' 
+        ? inv.amountCents 
+        : (typeof inv.totalCents === 'number' ? inv.totalCents : undefined);
+      const totalInvCents = rawAmount !== undefined
+        ? Math.round(rawAmount * (inv.exchangeRate || 1)) 
         : lineAmount(inv as any);
         
       let salesCents = totalInvCents;
       if (basis === 'cash') {
         const paidCents = typeof inv.amountPaidCents === 'number' 
           ? Math.round(inv.amountPaidCents * (inv.exchangeRate || 1))
-          : (inv.status === 'paid' ? totalInvCents : 0);
+          : (typeof inv.paidAmountCents === 'number'
+            ? Math.round(inv.paidAmountCents * (inv.exchangeRate || 1))
+            : (inv.status === 'paid' ? totalInvCents : 0));
         salesCents = paidCents;
       }
 
@@ -155,7 +160,6 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
       } else {
         const docInput = {
           amountCents: salesCents,
-          totalCents: salesCents,
           taxAmountCents: inv.taxAmountCents,
           salesTaxCents: inv.salesTaxCents,
           taxRate: inv.taxRate,

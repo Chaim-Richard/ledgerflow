@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatCurrency, cn } from '../../lib/utils';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 
 export interface MoneyProps {
   cents: number | undefined | null;
@@ -20,8 +21,11 @@ export const Money: React.FC<MoneyProps> = ({
   sign = false,
   prefix = '',
   suffix = '',
-  isPrivacyMode = false
+  isPrivacyMode: explicitPrivacyMode
 }) => {
+  const storePrivacyMode = useLedgerStore(s => s.isPrivacyMode);
+  const isPrivacyMode = explicitPrivacyMode !== undefined ? explicitPrivacyMode : (storePrivacyMode || false);
+
   const safeCents = cents ?? 0;
   const isPositive = safeCents > 0;
   const isNegative = safeCents < 0;

@@ -99,6 +99,8 @@ export interface TransactionLine {
   accountId: string;
   accountName: string;
   amountCents: number; // Positive for Debit, Negative for Credit
+  debitCents?: number;
+  creditCents?: number;
   exchangeRate?: number;
   description?: string;
   category?: string;    // Category for price intel / account category
@@ -253,6 +255,7 @@ export interface Bill {
   vendorName?: string;
   number?: string;
   amountCents: number;
+  currency?: string;
   exchangeRate?: number;
   taxAmountCents?: number;
   taxRate?: number;
@@ -270,8 +273,10 @@ export interface Bill {
   issueDate?: string;
   date?: string;
   dueDate: string;
-  status: 'draft' | 'pending' | 'approved' | 'paid' | 'partially_paid' | 'overdue' | 'unpaid' | 'void';
+  status: 'draft' | 'pending' | 'approved' | 'paid' | 'partially_paid' | 'overdue' | 'unpaid' | 'void' | 'rejected' | 'cancelled';
   amountPaidCents?: number;
+  paymentDate?: string;
+  paidAt?: string;
   reversalEventId?: string;
   isLocked?: boolean;
   lockedAt?: string;
@@ -292,7 +297,7 @@ export interface Invoice {
   dueDate: string;
   tags?: string[];
   metadata?: Record<string, any>;
-  status: 'pending' | 'paid' | 'partially_paid' | 'overdue' | 'sent' | 'draft' | 'approved' | 'rejected' | 'invoiced' | 'void';
+  status: 'pending' | 'paid' | 'partially_paid' | 'overdue' | 'sent' | 'draft' | 'approved' | 'rejected' | 'invoiced' | 'void' | 'cancelled';
   type?: 'standard' | 'recurring' | 'progress' | 'estimate' | 'quote' | 'change-order' | 'time-materials'; // For advanced billing workflows
   recurringInterval?: 'monthly' | 'weekly' | 'yearly';
   paymentTerms?: string; // 'net_15', 'net_30', 'net_60', 'due_on_receipt', etc.
@@ -304,6 +309,8 @@ export interface Invoice {
     amountCents: number;
     accountId: string;
     taxRate?: number;
+    unitCostCents?: number;
+    metadata?: Record<string, any>;
   }>;
   progressPercentage?: number;
   discountCents?: number;
@@ -312,6 +319,8 @@ export interface Invoice {
   taxRate?: number;
   taxInclusive?: boolean;
   currency?: string;
+  paymentDate?: string;
+  paidAt?: string;
   milestone?: string;
   isLocked?: boolean;
   lockedAt?: string;

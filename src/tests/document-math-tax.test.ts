@@ -19,7 +19,6 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
     // $100.00 base (10,000 cents) at 20% tax rate
     const tax = calculateDocumentTax({
       amountCents: 10000,
-      totalCents: 10000,
       taxRate: 20,
       taxInclusive: false
     });
@@ -28,7 +27,6 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
 
     const net = calculateDocumentNet({
       amountCents: 10000,
-      totalCents: 10000,
       taxRate: 20,
       taxInclusive: false
     });
@@ -39,14 +37,14 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
     // $120.00 total inclusive (12,000 cents) at 20% tax rate
     // Tax = 120 - 120 / 1.2 = 20 (2,000 cents)
     const tax = calculateDocumentTax({
-      totalCents: 12000,
+      amountCents: 12000,
       taxRate: 20,
       taxInclusive: true
     });
     assert.equal(tax, 2000);
 
     const net = calculateDocumentNet({
-      totalCents: 12000,
+      amountCents: 12000,
       taxRate: 20,
       taxInclusive: true
     });
@@ -55,7 +53,7 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
 
   test('respects explicit taxAmountCents over computed rate', () => {
     const tax = calculateDocumentTax({
-      totalCents: 10000,
+      amountCents: 10000,
       taxRate: 20,
       taxAmountCents: 1550 // manual override
     });
@@ -65,7 +63,7 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
   test('handles discounts prior to tax computation in tax-exclusive mode', () => {
     // $100 base - $10 discount = $90 taxable base. 10% tax = $9.00 (900 cents)
     const tax = calculateDocumentTax({
-      totalCents: 10000,
+      amountCents: 10000,
       discountCents: 1000,
       taxRate: 10,
       taxInclusive: false

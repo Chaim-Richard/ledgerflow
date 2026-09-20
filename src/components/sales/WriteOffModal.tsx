@@ -28,7 +28,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
 
   if (!isOpen || !invoice) return null;
 
-  const total = invoice.amountCents || invoice.totalCents || 0;
+  const total = invoice.amountCents || 0;
   const paid = invoice.amountPaidCents || 0;
   const remainingCents = Math.max(0, total - paid);
 

@@ -38,6 +38,33 @@ export function parseAmountToCents(val: string | number | undefined | null): num
 }
 
 /**
+ * Known 3-decimal currencies per ISO 4217:
+ * KWD (Kuwaiti Dinar), BHD (Bahraini Dinar), OMR (Omani Rial),
+ * JOD (Jordanian Dinar), TND (Tunisian Dinar), LYD (Libyan Dinar), IQD (Iraqi Dinar).
+ */
+export const THREE_DECIMAL_CURRENCIES = new Set(['BHD', 'JOD', 'KWD', 'LYD', 'OMR', 'TND', 'IQD']);
+
+export function getCurrencyFractionDigits(currency?: string): number {
+  const code = currency?.toUpperCase();
+  if (code && THREE_DECIMAL_CURRENCIES.has(code)) {
+    return 3;
+  }
+  if (!code) return 2;
+  try {
+    const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: code });
+    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits;
+    return typeof fractionDigits === 'number' ? fractionDigits : 2;
+  } catch {
+    return 2;
+  }
+}
+
+export function getCurrencyDivisor(currency?: string): number {
+  const digits = getCurrencyFractionDigits(currency);
+  return Math.pow(10, digits);
+}
+
+/**
  * Safe currency formatter with fallback
  */
 export function formatCurrency(cents: number | undefined | null, currency?: string): string {
@@ -51,29 +78,28 @@ export function formatCurrency(cents: number | undefined | null, currency?: stri
   }
 
   const safeCents = (cents === undefined || cents === null || isNaN(cents)) ? 0 : cents;
+  const digits = getCurrencyFractionDigits(targetCurrency);
+  const divisor = Math.pow(10, digits);
 
-  let divisor = 100;
   try {
-    const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: targetCurrency });
-    if (formatter.resolvedOptions().maximumFractionDigits === 0) {
-      divisor = 1;
-    }
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: targetCurrency,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(safeCents / divisor);
   } catch (_e) {
-    // Unsupported currency fallback
+    return `${targetCurrency} ${(safeCents / divisor).toFixed(digits)}`;
   }
-
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: targetCurrency,
-  }).format(safeCents / divisor);
 }
 
 /**
- * Safe currency formatter for amounts already in dollars
+ * Safe currency formatter for amounts already in dollars / major units
  */
 export function formatDollars(dollars: number | undefined | null, currency?: string): string {
   const safeDollars = (dollars === undefined || dollars === null || isNaN(dollars)) ? 0 : dollars;
-  return formatCurrency(safeDollars * 100, currency);
+  const divisor = getCurrencyDivisor(currency);
+  return formatCurrency(safeDollars * divisor, currency);
 }
 
 /**

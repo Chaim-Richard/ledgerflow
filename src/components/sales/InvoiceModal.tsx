@@ -105,7 +105,6 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       await onSave({
         ...invoice,
         status: actionStatus as any,
-        totalCents: total,
         amountCents: total,
         items,
         metadata: {

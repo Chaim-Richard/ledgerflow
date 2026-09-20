@@ -224,7 +224,7 @@ export default function MonthEndCloseView() {
           date: i.date,
           dueDate: i.dueDate,
           status: i.status,
-          total: ((i.totalCents || i.amountCents || 0) / 100).toFixed(2)
+          total: ((i.amountCents || 0) / 100).toFixed(2)
         });
       });
 
