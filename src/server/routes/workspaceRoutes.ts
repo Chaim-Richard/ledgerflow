@@ -518,7 +518,6 @@ workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accou
       customerName: 'Acme Corporation',
       number: `INV-DEMO-001`,
       amountCents: 500000,
-      totalCents: 500000,
       date: new Date().toISOString().slice(0,10),
       dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0,10),
       status: 'sent',

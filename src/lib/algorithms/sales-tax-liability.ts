@@ -1,6 +1,7 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
+import { calculateDocumentTax, calculateDocumentNet } from '../documentMath';
 
 /**
  * Normalizes taxRate input into a canonical decimal fraction (e.g. 8.25% -> 0.0825).
@@ -125,17 +126,15 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
         return;
       }
 
-      const totalInvCents = inv.totalCents 
-        ? Math.round(inv.totalCents * (inv.exchangeRate || 1)) 
+      const totalInvCents = inv.amountCents 
+        ? Math.round(inv.amountCents * (inv.exchangeRate || 1)) 
         : lineAmount(inv as any);
         
       let salesCents = totalInvCents;
       if (basis === 'cash') {
         const paidCents = typeof inv.amountPaidCents === 'number' 
           ? Math.round(inv.amountPaidCents * (inv.exchangeRate || 1))
-          : (typeof inv.paidAmountCents === 'number' 
-            ? Math.round(inv.paidAmountCents * (inv.exchangeRate || 1)) 
-            : (inv.status === 'paid' ? totalInvCents : 0));
+          : (inv.status === 'paid' ? totalInvCents : 0);
         salesCents = paidCents;
       }
 
@@ -147,27 +146,24 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
         inv.paymentTransactionIds.forEach((ptId: string) => sourceTransactionIds.add(ptId));
       }
 
-      const taxRate = normalizeTaxRate(inv.taxRate);
       let taxCents: number;
       let taxableSalesCents: number;
 
-      // Prefer exact recorded taxAmountCents if present on invoice
-      if (typeof inv.taxAmountCents === 'number' && inv.taxAmountCents > 0) {
-        taxCents = basis === 'cash' && totalInvCents > 0 
-          ? Math.round((salesCents / totalInvCents) * inv.taxAmountCents) 
-          : inv.taxAmountCents;
+      if (basis === 'cash' && totalInvCents > 0 && typeof inv.taxAmountCents === 'number' && inv.taxAmountCents > 0) {
+        taxCents = Math.round((salesCents / totalInvCents) * inv.taxAmountCents);
         taxableSalesCents = inv.taxInclusive ? (salesCents - taxCents) : salesCents;
-      } else if (taxRate > 0) {
-        if (inv.taxInclusive) {
-          taxCents = Math.round(salesCents - (salesCents / (1 + taxRate)));
-          taxableSalesCents = salesCents - taxCents;
-        } else {
-          taxableSalesCents = salesCents;
-          taxCents = Math.round(salesCents * taxRate);
-        }
       } else {
-        taxableSalesCents = salesCents;
-        taxCents = 0;
+        const docInput = {
+          amountCents: salesCents,
+          totalCents: salesCents,
+          taxAmountCents: inv.taxAmountCents,
+          salesTaxCents: inv.salesTaxCents,
+          taxRate: inv.taxRate,
+          taxInclusive: inv.taxInclusive,
+          discountCents: inv.discountCents
+        };
+        taxCents = calculateDocumentTax(docInput);
+        taxableSalesCents = calculateDocumentNet(docInput);
       }
 
       totalSales += salesCents;

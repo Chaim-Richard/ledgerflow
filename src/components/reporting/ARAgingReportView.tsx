@@ -37,7 +37,6 @@ export default function ARAgingReportView() {
   const invoices = useLedgerStore(s => s.invoices);
   const creditNotes = useLedgerStore(s => s.creditNotes || []);
   const customers = useLedgerStore(s => s.customers);
-  const isDataTruncated = useLedgerStore(s => s.isDataTruncated || s.truncatedCollections?.invoices);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'customerName' | 'totalCents' | 'days90PlusCents' | 'oldestInvoiceDays'>('totalCents');
@@ -91,7 +90,7 @@ export default function ARAgingReportView() {
       const summary = customerMap.get(custId)!;
       summary.invoices.push(inv);
 
-      const invAmount = inv.totalCents || inv.amountCents || 0;
+      const invAmount = inv.amountCents || 0;
       const dueDate = inv.dueDate ? parseLocalDate(inv.dueDate) : (inv.date ? parseLocalDate(inv.date) : asOfDate);
       const diffTime = asOfDate.getTime() - dueDate.getTime();
       const daysOverdue = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
@@ -208,15 +207,6 @@ export default function ARAgingReportView() {
 
   return (
     <div className="space-y-6">
-      {isDataTruncated && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl flex items-center gap-3 text-xs font-semibold shadow-xs">
-          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-          <span>
-            Data Truncation Warning: The dataset has exceeded the active query limit (2,000 records). Aging totals and customer balances may reflect partial ledger history. Please filter by a narrower date or customer window for full completeness.
-          </span>
-        </div>
-      )}
-
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[var(--color-ledger-line)] shadow-xs">
         <div>
@@ -421,7 +411,7 @@ export default function ARAgingReportView() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-mono font-bold text-sm text-slate-900 tabular-nums">{formatCurrency(inv.totalCents || inv.amountCents || 0)}</p>
+                      <p className="font-mono font-bold text-sm text-slate-900 tabular-nums">{formatCurrency(inv.amountCents || 0)}</p>
                       <span className="text-[10px] font-semibold text-slate-400 capitalize">{inv.status}</span>
                     </div>
                   </div>

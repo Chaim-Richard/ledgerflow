@@ -12,7 +12,7 @@ export async function generateDocumentPdf(
   const docNum = String(docData?.number || docData?.id || 'N/A').replace(/[()\\]/g, ' ');
   const date = String(docData?.date || new Date().toISOString().slice(0, 10)).replace(/[()\\]/g, ' ');
   const recipient = String(docData?.customerName || docData?.vendorName || docData?.contactName || 'Valued Client').replace(/[()\\]/g, ' ');
-  const totalCents = docData?.totalCents ?? docData?.amountCents ?? 0;
+  const totalCents = docData?.amountCents || 0;
   const totalFormatted = (totalCents / 100).toFixed(2);
 
   const items = docData?.items || docData?.transactions || [];

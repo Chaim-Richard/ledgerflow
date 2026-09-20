@@ -1,5 +1,8 @@
 import { Transaction, ChartAccount } from '../types';
 import { isPostable, isExpenseAccount, isRevenueAccount, lineAmount, isTransactionInDateRange, isTransferTransaction } from './txFilters';
+import { calculateDocumentTax, calculateDocumentNet, calculateAmountDue } from './documentMath';
+
+export { calculateDocumentTax, calculateDocumentNet, calculateAmountDue };
 
 export interface CategoryExpenseBreakdown {
   category: string;
@@ -296,4 +299,72 @@ export function computeTagReport(
       count: data.count
     }))
     .sort((a, b) => b.expenseCents + b.incomeCents - (a.expenseCents + a.incomeCents));
+}
+
+export interface DocumentTaxReport {
+  taxableSalesCents: number;
+  taxCollectedCents: number;
+  taxablePurchasesCents: number;
+  taxPaidCents: number;
+  netTaxLiabilityCents: number;
+}
+
+export function computeDocumentTaxReport(
+  invoices: Array<{ date: string; status: string; amountCents?: number; taxRate?: number; taxAmountCents?: number; salesTaxCents?: number; taxInclusive?: boolean }>,
+  bills: Array<{ date?: string; issueDate?: string; status: string; amountCents?: number; taxRate?: number; taxAmountCents?: number; taxInclusive?: boolean }>,
+  startDate?: string,
+  endDate?: string
+): DocumentTaxReport {
+  const start = startDate || "1900-01-01";
+  const end = endDate || "2099-12-31";
+  let taxableSalesCents = 0;
+  let taxCollectedCents = 0;
+  let taxablePurchasesCents = 0;
+  let taxPaidCents = 0;
+
+  for (const inv of invoices) {
+    if (inv.date >= start && inv.date <= end && ['sent', 'paid', 'approved', 'partially_paid'].includes(inv.status)) {
+      const tax = calculateDocumentTax(inv);
+      const net = calculateDocumentNet(inv);
+      taxableSalesCents += net;
+      taxCollectedCents += tax;
+    }
+  }
+
+  for (const b of bills) {
+    const bDate = b.date || b.issueDate || '';
+    if (bDate >= start && bDate <= end && ['sent', 'paid', 'approved', 'partially_paid'].includes(b.status)) {
+      const tax = calculateDocumentTax(b);
+      const net = calculateDocumentNet(b);
+      taxablePurchasesCents += net;
+      taxPaidCents += tax;
+    }
+  }
+
+  return {
+    taxableSalesCents,
+    taxCollectedCents,
+    taxablePurchasesCents,
+    taxPaidCents,
+    netTaxLiabilityCents: taxCollectedCents - taxPaidCents
+  };
+}
+
+export function computeDocumentBalances(
+  documents: Array<{ amountCents?: number; amountPaidCents?: number }>
+): { totalAmountCents: number; totalPaidCents: number; totalDueCents: number } {
+  let totalAmountCents = 0;
+  let totalPaidCents = 0;
+  let totalDueCents = 0;
+
+  for (const doc of documents) {
+    const total = doc.amountCents || 0;
+    const paid = doc.amountPaidCents || 0;
+    const due = calculateAmountDue(doc);
+    totalAmountCents += total;
+    totalPaidCents += paid;
+    totalDueCents += due;
+  }
+
+  return { totalAmountCents, totalPaidCents, totalDueCents };
 }

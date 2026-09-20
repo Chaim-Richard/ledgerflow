@@ -76,7 +76,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     // Check overdue invoices
     (invoices || []).forEach(inv => {
-      const invTotal = inv.totalCents ?? inv.amountCents ?? 0;
+      const invTotal = inv.amountCents || 0;
       if (inv.status !== 'paid' && inv.dueDate && inv.dueDate < todayStr) {
         const notifId = `notif-overdue-${inv.id}-${inv.dueDate}`;
         if (!existing.some(n => n.id === notifId)) {

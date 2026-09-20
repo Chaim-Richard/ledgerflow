@@ -87,7 +87,7 @@ export default function DataHealthView() {
 
     // 3. Overpaid Invoices Check
     (invoices || []).forEach(inv => {
-      const invTotal = inv.totalCents ?? inv.amountCents ?? 0;
+      const invTotal = inv.amountCents || 0;
       if (inv.amountPaidCents && inv.amountPaidCents > invTotal) {
         issues.push({
           id: `overpaid-inv-${inv.id}`,

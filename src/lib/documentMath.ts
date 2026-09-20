@@ -10,8 +10,8 @@
 
 export interface DocumentTaxInput {
   amountCents?: number;
-  totalCents?: number;
   taxAmountCents?: number;
+  salesTaxCents?: number;
   taxRate?: number;
   taxInclusive?: boolean;
   discountCents?: number;
@@ -36,6 +36,9 @@ export function calculateDocumentTax(doc: DocumentTaxInput): number {
   if (doc.taxAmountCents !== undefined && doc.taxAmountCents !== null && !isNaN(doc.taxAmountCents)) {
     return Math.max(0, Math.round(doc.taxAmountCents));
   }
+  if (doc.salesTaxCents !== undefined && doc.salesTaxCents !== null && !isNaN(doc.salesTaxCents)) {
+    return Math.max(0, Math.round(doc.salesTaxCents));
+  }
 
   const rate = normalizeTaxRate(doc.taxRate);
   if (rate === 0) return 0;
@@ -44,13 +47,13 @@ export function calculateDocumentTax(doc: DocumentTaxInput): number {
 
   if (doc.taxInclusive) {
     // Total is tax inclusive (Total = Net + Tax)
-    const grossTotal = Math.max(0, (doc.totalCents ?? doc.amountCents ?? 0) - discount);
+    const grossTotal = Math.max(0, (doc.amountCents || 0) - discount);
     if (grossTotal === 0) return 0;
     const computedTax = grossTotal - (grossTotal / (1 + rate));
     return Math.max(0, Math.round(computedTax));
   } else {
     // Total/Amount is tax exclusive (Tax = Base * Rate)
-    const taxableBase = Math.max(0, (doc.amountCents ?? doc.totalCents ?? 0) - discount);
+    const taxableBase = Math.max(0, (doc.amountCents || 0) - discount);
     if (taxableBase === 0) return 0;
     return Math.max(0, Math.round(taxableBase * rate));
   }
@@ -63,11 +66,11 @@ export function calculateDocumentNet(doc: DocumentTaxInput): number {
   const discount = Math.max(0, doc.discountCents || 0);
 
   if (doc.taxInclusive) {
-    const grossTotal = Math.max(0, (doc.totalCents ?? doc.amountCents ?? 0) - discount);
+    const grossTotal = Math.max(0, (doc.amountCents || 0) - discount);
     const tax = calculateDocumentTax(doc);
     return Math.max(0, grossTotal - tax);
   } else {
-    const base = Math.max(0, (doc.amountCents ?? doc.totalCents ?? 0) - discount);
+    const base = Math.max(0, (doc.amountCents || 0) - discount);
     return base;
   }
 }
@@ -76,11 +79,10 @@ export function calculateDocumentNet(doc: DocumentTaxInput): number {
  * Computes remaining amount due for invoices or bills considering payments made.
  */
 export function calculateAmountDue(doc: {
-  totalCents?: number;
+  amountCents?: number;
   amountPaidCents?: number;
-  paidAmountCents?: number;
 }): number {
-  const total = Math.max(0, doc.totalCents || 0);
-  const paid = Math.max(0, doc.amountPaidCents ?? doc.paidAmountCents ?? 0);
+  const total = Math.max(0, doc.amountCents || 0);
+  const paid = Math.max(0, doc.amountPaidCents || 0);
   return Math.max(0, total - paid);
 }

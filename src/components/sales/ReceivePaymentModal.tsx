@@ -69,11 +69,11 @@ export default function ReceivePaymentModal({
     if (direction === 'received') {
       return (invoices || []).filter(inv => {
         if (contactId && inv.customerId !== contactId) return false;
-        const total = inv.amountCents || inv.totalCents || 0;
+        const total = inv.amountCents || 0;
         const paid = inv.amountPaidCents || 0;
         return (total - paid) > 0 && inv.status !== 'void' && inv.status !== 'rejected';
       }).map(inv => {
-        const total = inv.amountCents || inv.totalCents || 0;
+        const total = inv.amountCents || 0;
         const paid = inv.amountPaidCents || 0;
         return {
           id: inv.id,

@@ -288,7 +288,6 @@ export interface Invoice {
   amountCents: number;
   amountPaidCents?: number;
   exchangeRate?: number;
-  totalCents?: number;
   date?: string;
   dueDate: string;
   tags?: string[];

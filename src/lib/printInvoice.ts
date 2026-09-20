@@ -2,7 +2,7 @@ import { Invoice, Customer, ChartAccount, Transaction } from '../types';
 import { formatCurrency } from './utils';
 
 export function printInvoice(invoice: Invoice, customer?: Customer, workspaceName: string = 'My Company') {
-  const amountDue = ((invoice.totalCents || invoice.amountCents || 0) || invoice.amountCents || 0) - ((invoice.metadata && invoice.metadata.amountPaidCents) || 0);
+  const amountDue = (invoice.amountCents || 0) - ((invoice.metadata && invoice.metadata.amountPaidCents) || invoice.amountPaidCents || 0);
   const statusColor = invoice.status === 'paid' ? 'green' : invoice.status === 'rejected' ? 'red' : 'orange';
   
   const html = `
@@ -83,7 +83,7 @@ export function printInvoice(invoice: Invoice, customer?: Customer, workspaceNam
 
       <div class="totals-section">
         <table class="totals-table">
-          <tr><td>Subtotal</td><td>${formatCurrency(invoice.totalCents)}</td></tr>
+          <tr><td>Subtotal</td><td>${formatCurrency(invoice.amountCents)}</td></tr>
           ${(invoice.metadata && invoice.metadata.amountPaidCents) ? `<tr><td>Amount Paid</td><td>-${formatCurrency((invoice.metadata && invoice.metadata.amountPaidCents))}</td></tr>` : ''}
           <tr class="total-row"><td>Amount Due</td><td>${formatCurrency(amountDue)}</td></tr>
         </table>

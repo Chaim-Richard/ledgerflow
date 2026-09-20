@@ -91,10 +91,16 @@ export async function purgePendingWorkspaces(db: admin.firestore.Firestore): Pro
         // 2. Purge Storage files associated with this workspace
         try {
           const bucket = admin.storage().bucket();
-          await bucket.deleteFiles({ prefix: `workspaces/${workspaceId}/` }).catch(() => {});
-          await bucket.deleteFiles({ prefix: `${workspaceId}/` }).catch(() => {});
-        } catch {
-          // Ignore storage errors if storage bucket is not configured in local/test environment
+          await bucket.deleteFiles({ prefix: `workspaces/${workspaceId}/` });
+          await bucket.deleteFiles({ prefix: `${workspaceId}/` });
+        } catch (storageErr: any) {
+          if (process.env.NODE_ENV !== 'production' && (!admin.apps?.length || storageErr?.code === 'storage/unknown' || storageErr?.message?.includes('bucket') || storageErr?.message?.includes('storage is not') || storageErr?.message?.includes('default bucket'))) {
+            // Tolerate unconfigured storage bucket only in non-production/test environments
+            console.warn(`[Workspace Purge] Non-production storage tolerance for workspace ${workspaceId}:`, storageErr?.message);
+          } else {
+            console.error(`[Workspace Purge] Storage file deletion failed for workspace ${workspaceId}:`, storageErr);
+            throw new Error(`Storage purge failed: ${storageErr?.message || String(storageErr)}`);
+          }
         }
 
         // 3. Write permanent purge audit log before deleting workspace document

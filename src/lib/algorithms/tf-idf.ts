@@ -25,9 +25,9 @@ export function computeTFIDFWeights(transactions: readonly Transaction[]): Map<s
     const idf = new Map<string, number>();
     // Calculate IDF
     for (const [token, count] of df.entries()) {
-        // Standard IDF formula: log(N / (1 + count))
+        // Standard IDF formula: log(N / (count + 1))
         // The +1 prevents division by zero
-        idf.set(token, Math.log(N / (1 + count)));
+        idf.set(token, Math.log(N / (count + 1)));
     }
 
     return idf;

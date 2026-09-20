@@ -54,12 +54,12 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
         }, 0)
       : 0;
 
-    const totalInvoiceAmount = typeof invoice.totalCents === 'number'
-      ? invoice.totalCents
-      : (typeof invoice.amountCents === 'number' ? invoice.amountCents : lineTotal);
+    const totalInvoiceAmount = typeof invoice.amountCents === 'number'
+      ? invoice.amountCents
+      : lineTotal;
     const amountPaid = typeof invoice.amountPaidCents === 'number' 
       ? invoice.amountPaidCents 
-      : (typeof invoice.paidAmountCents === 'number' ? invoice.paidAmountCents : 0);
+      : 0;
     const remainingBalance = Math.max(0, totalInvoiceAmount - amountPaid);
 
     res.json({
@@ -70,7 +70,6 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
         dueDate: invoice.dueDate,
         status: invoice.status,
         amountCents: totalInvoiceAmount,
-        totalCents: totalInvoiceAmount,
         amountPaidCents: amountPaid,
         remainingBalanceCents: remainingBalance,
         currency: invoice.currency || 'USD',
@@ -135,12 +134,12 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
         }, 0)
       : 0;
 
-    const totalInvoiceAmount = typeof invoice.totalCents === 'number'
-      ? invoice.totalCents
-      : (typeof invoice.amountCents === 'number' ? invoice.amountCents : lineTotal);
+    const totalInvoiceAmount = typeof invoice.amountCents === 'number'
+      ? invoice.amountCents
+      : lineTotal;
     const amountPaid = typeof invoice.amountPaidCents === 'number' 
       ? invoice.amountPaidCents 
-      : (typeof invoice.paidAmountCents === 'number' ? invoice.paidAmountCents : 0);
+      : 0;
     const remainingBalance = totalInvoiceAmount - amountPaid;
 
     if (!Number.isInteger(remainingBalance) || remainingBalance <= 0) {

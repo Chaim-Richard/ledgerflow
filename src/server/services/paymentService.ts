@@ -75,8 +75,8 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
       }
 
       const docData = docSnap.data() || {};
-      const currentPaid = docData.amountPaidCents || docData.paidAmountCents || 0;
-      const total = docData.amountCents || docData.totalCents || 0;
+      const currentPaid = docData.amountPaidCents || 0;
+      const total = docData.amountCents || 0;
       const newPaid = currentPaid + alloc.amountCents;
 
       let newStatus = docData.status;
@@ -90,7 +90,6 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
         ref: docRef,
         updates: {
           amountPaidCents: newPaid,
-          paidAmountCents: newPaid,
           status: newStatus,
           updatedAt: new Date().toISOString()
         }

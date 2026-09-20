@@ -84,9 +84,9 @@ invoiceEmailRouter.post('/:invoiceId/send', async (req, res) => {
     }
 
     // Format amount for display if cents available
-    const totalAmount = typeof invoice.totalCents === 'number'
-      ? `$${(invoice.totalCents / 100).toFixed(2)}`
-      : (typeof invoice.amountCents === 'number' ? `$${(invoice.amountCents / 100).toFixed(2)}` : undefined);
+    const totalAmount = typeof invoice.amountCents === 'number'
+      ? `$${(invoice.amountCents / 100).toFixed(2)}`
+      : undefined;
 
     // Generate PDF attachment for outgoing invoice email
     let pdfAttachment;

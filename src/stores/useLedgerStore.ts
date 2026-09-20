@@ -228,15 +228,11 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   setBaseCurrency: (currency) => set({ baseCurrency: currency }),
   setMatchingThreshold: (threshold) => set({ matchingThreshold: threshold }),
   setPrivacyMode: (active) => set({ isPrivacyMode: active }),
-  setIsDataTruncated: (isTruncated) => set((state) => {
-    const nextTruncated = { ...state.truncatedCollections, transactions: isTruncated };
-    const hasAnyTruncated = isTruncated || Object.values(nextTruncated).some(Boolean);
-    return { isDataTruncated: hasAnyTruncated, truncatedCollections: nextTruncated };
-  }),
-  setCollectionTruncated: (colName, isTruncated) => set((state) => {
-    const nextTruncated = { ...state.truncatedCollections, [colName]: isTruncated };
-    const hasAnyTruncated = Object.values(nextTruncated).some(Boolean);
-    return { isDataTruncated: hasAnyTruncated, truncatedCollections: nextTruncated };
+  setIsDataTruncated: (isTruncated) => set({ isDataTruncated: isTruncated }),
+  setCollectionTruncated: (collectionName, isTruncated) => set((state) => {
+    const next = { ...state.truncatedCollections, [collectionName]: isTruncated };
+    const isAnyTruncated = Object.values(next).some(Boolean);
+    return { truncatedCollections: next, isDataTruncated: isAnyTruncated };
   }),
 
   recomputeBalances: () => {

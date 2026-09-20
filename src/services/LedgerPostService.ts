@@ -5,8 +5,8 @@ import { useLedgerStore } from '../stores/useLedgerStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { ChartAccount } from '../types';
 import { isPostable } from '../lib/txFilters';
-import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
 import { calculateDocumentTax } from '../lib/documentMath';
+import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
 
 export class LedgerPostService {
   private static getAccounts(context?: any): ChartAccount[] {
@@ -146,7 +146,7 @@ export class LedgerPostService {
       return;
     }
 
-    const rawAmount = invoiceData.totalCents || invoiceData.amountCents || 0;
+    const rawAmount = invoiceData.amountCents || 0;
     const rate = invoiceData.exchangeRate || 1;
     const amount = roundCents(rawAmount * rate);
     if (amount <= 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation); } return; }
@@ -154,16 +154,7 @@ export class LedgerPostService {
     const invoiceNum = invoiceData.number || invoiceId;
     const customer = invoiceData.customerName || 'Customer';
 
-    const docTax = calculateDocumentTax({
-      amountCents: invoiceData.amountCents,
-      totalCents: invoiceData.totalCents || invoiceData.amountCents,
-      taxAmountCents: invoiceData.taxAmountCents,
-      salesTaxCents: invoiceData.salesTaxCents,
-      taxRate: invoiceData.taxRate,
-      taxInclusive: invoiceData.taxInclusive,
-      discountCents: invoiceData.discountCents
-    });
-    const taxAmount = roundCents(docTax * rate);
+    const taxAmount = roundCents(calculateDocumentTax(invoiceData) * rate);
     const discountAmount = roundCents((invoiceData.discountCents || 0) * rate);
     const retainageAmount = roundCents((invoiceData.retainageCents || 0) * rate);
 
@@ -280,7 +271,7 @@ export class LedgerPostService {
 
     // 3. Transaction 2: Payment Posting (DR Cash, CR A/R)
     if (status === 'paid' || status === 'partially_paid') {
-      const paidAmtCents = roundCents((invoiceData.amountPaidCents || invoiceData.paidAmountCents || (status === 'paid' ? rawAmount : 0)) * rate);
+      const paidAmtCents = roundCents((invoiceData.amountPaidCents || (status === 'paid' ? rawAmount : 0)) * rate);
       if (paidAmtCents > 0) {
         const paymentDate = invoiceData.paymentDate || invoiceData.paidAt || today;
         const paymentTx = {
@@ -401,7 +392,7 @@ export class LedgerPostService {
       return;
     }
 
-    const rawAmount = billData.amountCents || billData.totalCents || 0;
+    const rawAmount = billData.amountCents || 0;
     const rate = billData.exchangeRate || 1;
     const amount = roundCents(rawAmount * rate);
     if (amount <= 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation); } return; }
@@ -418,15 +409,7 @@ export class LedgerPostService {
     );
 
     // 2. Transaction 1: Accrual Posting
-    const billDocTax = calculateDocumentTax({
-      amountCents: billData.amountCents,
-      totalCents: billData.totalCents || billData.amountCents,
-      taxAmountCents: billData.taxAmountCents,
-      taxRate: billData.taxRate,
-      taxInclusive: billData.taxInclusive,
-      discountCents: billData.discountCents
-    });
-    const taxAmount = roundCents(billDocTax * rate);
+    const taxAmount = roundCents(calculateDocumentTax(billData) * rate);
 
     const accrualLines = TransactionTemplates.buildBillLines({
       billNumber: String(billNum),
@@ -461,7 +444,7 @@ export class LedgerPostService {
 
     // 3. Transaction 2: Payment Posting (DR A/P, CR Cash)
     if (status === 'paid' || status === 'partially_paid') {
-      const paidAmtCents = roundCents((billData.amountPaidCents || billData.paidAmountCents || (status === 'paid' ? rawAmount : 0)) * rate);
+      const paidAmtCents = roundCents((billData.amountPaidCents || (status === 'paid' ? rawAmount : 0)) * rate);
       if (paidAmtCents > 0) {
         const paymentDate = billData.paymentDate || billData.paidAt || today;
         const paymentTx = {

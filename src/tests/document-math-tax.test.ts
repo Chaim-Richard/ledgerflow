@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { calculateDocumentTax, calculateDocumentNet, normalizeTaxRate, calculateAmountDue } from '../lib/documentMath';
 import { computeTaxLiability } from '../server/reports/computeReports';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
@@ -139,9 +141,75 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
     assert.equal(totalDebits, totalCredits);
   });
 
+  test('invoice carrying only salesTaxCents posts and reports the same number', () => {
+    const invoice = {
+      id: 'inv-sales-tax-only',
+      number: 'INV-ST-1',
+      customerName: 'Gamma Corp',
+      date: '2026-03-10',
+      amountCents: 10000,
+      totalCents: 10000,
+      salesTaxCents: 825, // explicit legacy salesTaxCents without taxAmountCents
+      status: 'approved' as const
+    };
+
+    const calculatedTax = calculateDocumentTax(invoice);
+    assert.equal(calculatedTax, 825);
+
+    const report = computeTaxLiability([invoice], [], '2026-03-01', '2026-03-31');
+    assert.equal(report.taxCollectedCents, 825);
+
+    const postingLines = TransactionTemplates.buildInvoiceLines({
+      invoiceNumber: invoice.number,
+      customerName: invoice.customerName,
+      totalCents: invoice.totalCents,
+      taxCents: calculatedTax,
+      arAccount: { id: 'ar', name: 'A/R' },
+      revenueAccount: { id: 'rev', name: 'Revenue' },
+      taxAccount: { id: 'tax', name: 'Tax Payable' }
+    });
+
+    const taxLine = postingLines.find(l => l.accountId === 'tax');
+    assert.ok(taxLine, 'Tax line must exist');
+    assert.equal(Math.abs(taxLine.amountCents), 825);
+  });
+
   test('calculates amount due with partial payments accurately', () => {
-    assert.equal(calculateAmountDue({ totalCents: 15000, amountPaidCents: 5000 }), 10000);
-    assert.equal(calculateAmountDue({ totalCents: 15000, paidAmountCents: 15000 }), 0);
-    assert.equal(calculateAmountDue({ totalCents: 15000, amountPaidCents: 20000 }), 0);
+    assert.equal(calculateAmountDue({ amountCents: 15000, amountPaidCents: 5000 }), 10000);
+    assert.equal(calculateAmountDue({ amountCents: 15000, amountPaidCents: 15000 }), 0);
+    assert.equal(calculateAmountDue({ amountCents: 15000, amountPaidCents: 20000 }), 0);
+  });
+
+  test('guard: no file except src/lib/documentMath.ts may contain "/ (1 +"', () => {
+    function getFiles(dir: string): string[] {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      const files: string[] = [];
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          files.push(...getFiles(fullPath));
+        } else if (entry.isFile() && (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx'))) {
+          files.push(fullPath);
+        }
+      }
+      return files;
+    }
+
+    const srcDir = path.resolve(process.cwd(), 'src');
+    const allFiles = getFiles(srcDir);
+    const violatingFiles: string[] = [];
+
+    for (const filePath of allFiles) {
+      const relPath = path.relative(process.cwd(), filePath).replace(/\\/g, '/');
+      if (relPath === 'src/lib/documentMath.ts' || relPath === 'src/tests/document-math-tax.test.ts') {
+        continue;
+      }
+      const content = fs.readFileSync(filePath, 'utf-8');
+      if (content.includes('/ (1 +')) {
+        violatingFiles.push(relPath);
+      }
+    }
+
+    assert.deepEqual(violatingFiles, [], `Found inline tax division arithmetic in: ${violatingFiles.join(', ')}. Use calculateDocumentTax from src/lib/documentMath.ts instead.`);
   });
 });

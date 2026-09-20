@@ -1228,7 +1228,7 @@ export class RootOptimizer {
     const stdDev = Math.sqrt(variance);
     // Coefficient of variation = stdDev / mean. Stability = 1 / CV (scaled)
     const cv = Math.abs(stdDev / mean);
-    return Math.max(0, Math.min(100, 100 * (1 / (1 + cv))));
+    return Math.max(0, Math.min(100, 100 * (1 / (cv + 1))));
   }
 
   /**

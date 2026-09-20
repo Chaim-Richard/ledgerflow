@@ -316,7 +316,7 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
 
       case 'npv': {
         const r = discountRate / 100;
-        const npvVal = -initialInv + (cashFlow1 / (1 + r)) + (cashFlow2 / Math.pow(1 + r, 2)) + (cashFlow3 / Math.pow(1 + r, 3));
+        const npvVal = -initialInv + (cashFlow1 / Math.pow(1 + r, 1)) + (cashFlow2 / Math.pow(1 + r, 2)) + (cashFlow3 / Math.pow(1 + r, 3));
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

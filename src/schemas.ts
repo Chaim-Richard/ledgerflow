@@ -206,8 +206,6 @@ export const InvoiceSchema = z.object({
   vendorId: z.string().optional(),
   number: z.string().max(100).optional(),
   amountCents: z.number().int().nonnegative().optional(),
-  totalCents: z.number().int().nonnegative().optional(),
-  paidAmountCents: z.number().int().nonnegative().optional(),
   amountPaidCents: z.number().int().nonnegative().optional(),
   currency: z.string().max(10).optional(),
   exchangeRate: z.number().positive().finite().optional(),
@@ -251,7 +249,7 @@ export const BillSchema = z.object({
   isLocked: z.boolean().optional(),
   lockedAt: z.string().optional(),
   paymentToken: z.string().optional(),
-  paidAmountCents: z.number().int().nonnegative().optional(),
+  amountPaidCents: z.number().int().nonnegative().optional(),
 });
 
 export const OrderSchema = z.object({

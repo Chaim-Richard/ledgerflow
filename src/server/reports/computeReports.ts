@@ -328,7 +328,7 @@ export function computeStatement(
 
   if (isCustomer) {
     invoices.filter((inv: any) => inv.customerId === contactId && inv.date < start && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv: any) => {
-      openingBalanceCents += (inv.amountCents || inv.totalCents || 0);
+      openingBalanceCents += (inv.amountCents || 0);
     });
     payments.filter((p: any) => p.contactId === contactId && p.date < start && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p: any) => {
       openingBalanceCents -= (p.amountCents || 0);
@@ -352,9 +352,9 @@ export function computeStatement(
         date: inv.date,
         type: 'Invoice',
         reference: inv.number || inv.id,
-        amountCents: (inv.amountCents || inv.totalCents || 0),
+        amountCents: (inv.amountCents || 0),
         creditCents: 0,
-        debitCents: (inv.amountCents || inv.totalCents || 0)
+        debitCents: (inv.amountCents || 0)
       });
     });
     payments.filter((p: any) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p: any) => {
@@ -427,22 +427,8 @@ export function computeTaxLiability(invoices: any[], bills: any[], startDate?: s
 
   invoices.forEach((inv: any) => {
     if (inv.date >= start && inv.date <= end && INVOICE_COUNTS_FOR_TAX.has(inv.status)) {
-      const tax = calculateDocumentTax({
-        amountCents: inv.amountCents,
-        totalCents: inv.totalCents ?? inv.amountCents,
-        taxAmountCents: inv.taxAmountCents,
-        taxRate: inv.taxRate,
-        taxInclusive: inv.taxInclusive,
-        discountCents: inv.discountCents
-      });
-      const net = calculateDocumentNet({
-        amountCents: inv.amountCents,
-        totalCents: inv.totalCents ?? inv.amountCents,
-        taxAmountCents: inv.taxAmountCents,
-        taxRate: inv.taxRate,
-        taxInclusive: inv.taxInclusive,
-        discountCents: inv.discountCents
-      });
+      const tax = calculateDocumentTax(inv);
+      const net = calculateDocumentNet(inv);
       taxableSalesCents += net;
       taxCollectedCents += tax;
     }
@@ -451,22 +437,8 @@ export function computeTaxLiability(invoices: any[], bills: any[], startDate?: s
   bills.forEach((b: any) => {
     const bDate = b.date || b.issueDate || '';
     if (bDate >= start && bDate <= end && BILL_COUNTS_FOR_TAX.has(b.status)) {
-      const tax = calculateDocumentTax({
-        amountCents: b.amountCents,
-        totalCents: b.totalCents ?? b.amountCents,
-        taxAmountCents: b.taxAmountCents,
-        taxRate: b.taxRate,
-        taxInclusive: b.taxInclusive,
-        discountCents: b.discountCents
-      });
-      const net = calculateDocumentNet({
-        amountCents: b.amountCents,
-        totalCents: b.totalCents ?? b.amountCents,
-        taxAmountCents: b.taxAmountCents,
-        taxRate: b.taxRate,
-        taxInclusive: b.taxInclusive,
-        discountCents: b.discountCents
-      });
+      const tax = calculateDocumentTax(b);
+      const net = calculateDocumentNet(b);
       taxablePurchasesCents += net;
       taxPaidCents += tax;
     }

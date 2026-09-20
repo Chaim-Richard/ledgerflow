@@ -144,8 +144,8 @@ reportRouter.get("/aging", async (req, res) => {
     };
 
     items.forEach((item: any) => {
-      const rawTotal = item.amountCents || item.totalCents || item.amountTotalCents || 0;
-      const rawPaid = item.amountPaidCents || item.paidAmountCents || 0;
+      const rawTotal = item.amountCents || 0;
+      const rawPaid = item.amountPaidCents || 0;
       const outstanding = Math.max(0, rawTotal - rawPaid);
       if (outstanding <= 0) return;
 

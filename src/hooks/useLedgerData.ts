@@ -266,7 +266,9 @@ export function useLedgerData() {
 
     const criticalListeners = [
       onSnapshot(query(collection(db, 'transactions'), ...txConstraints), (snap) => {
-        useLedgerStore.getState().setIsDataTruncated(snap.docs.length >= TX_PAGE_LIMIT);
+        const isTrunc = snap.docs.length >= TX_PAGE_LIMIT;
+        useLedgerStore.getState().setIsDataTruncated(isTrunc);
+        useLedgerStore.getState().setCollectionTruncated('transactions', isTrunc);
         scheduleUpdate('transactions', snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'transactions')),
       onSnapshot(query(collection(db, 'chartAccounts'), ...filter, limit(1000)), (snap) => {
@@ -287,7 +289,7 @@ export function useLedgerData() {
         useLedgerStore.getState().setCollectionTruncated('taxRates', snapTaxRates.docs.length >= 500);
         scheduleUpdate('taxRates', snapTaxRates.docs.map(d => ({ id: d.id, ...d.data() } as TaxRate)), false);
 
-        const qTemplates = query(collection(db, 'customTemplates'), ...filter, limit(500));
+        const qTemplates = query(collection(db, 'customTemplates'), where('uid', '==', user.uid), limit(500));
         const snapTemplates = await getDocs(qTemplates);
         useLedgerStore.getState().setCollectionTruncated('customTemplates', snapTemplates.docs.length >= 500);
         scheduleUpdate('customTemplates', snapTemplates.docs.map(d => ({ id: d.id, ...d.data() } as CustomTemplate)), false);
@@ -314,6 +316,7 @@ export function useLedgerData() {
 
         const qDimensionNodes = query(collection(db, 'dimensionNodes'), ...filter, limit(10000));
         const snapDimensionNodes = await getDocs(qDimensionNodes);
+        useLedgerStore.getState().setCollectionTruncated('dimensionNodes', snapDimensionNodes.docs.length >= 10000);
         let nodes = snapDimensionNodes.docs.map(d => ({ ...d.data() } as DimensionNode));
         if (snapDimensionNodes.empty) {
           const currentWorkspace = useAuthStore.getState().workspaces.find(w => w.id === currentWorkspaceId);
@@ -501,6 +504,7 @@ export function useLedgerData() {
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'periods'));
 
     const unsubScenarios = onSnapshot(query(collection(db, 'scenarios'), ...filter, limit(100)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('scenarios', snap.docs.length >= 100);
       const scenarios = snap.docs.map(d => ({ id: d.id, ...d.data() } as Scenario));
       useScenarioStore.getState().setScenarios(scenarios.length > 0 ? scenarios : [
         {
