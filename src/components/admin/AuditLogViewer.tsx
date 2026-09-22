@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { auth } from '../../firebase';
+import { useCollection } from '../../hooks/useCollection';
 
 const fetchWithAuth = async (url: string, options: any = {}) => {
   const token = await auth.currentUser?.getIdToken();

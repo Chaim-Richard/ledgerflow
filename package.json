@@ -96,6 +96,7 @@
     "esbuild": "^0.28.2",
     "eslint": "^10.3.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "eslint-plugin-unused-imports": "^4.4.1",
@@ -119,7 +120,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "csv-parse": "^7.0.2",
-    "stream-json": "^3.7.0",
     "esbuild": "^0.28.2"
   },
   "lint-staged": {
