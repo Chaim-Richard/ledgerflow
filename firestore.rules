@@ -127,7 +127,8 @@ service cloud.firestore {
     // Helper to check if a transaction date is on or before the workspace's lockDate
     function isTransactionPeriodOpen(workspaceId, txDate) {
       let wsData = get(/databases/$(database)/documents/workspaces/$(workspaceId)).data;
-      return wsData.lockDate == null || wsData.lockDate == "" || txDate > wsData.lockDate;
+      let lock = wsData.get("lockDate", null);
+      return lock == null || lock == "" || txDate > lock;
     }
 
     // Specific rules for all tenant-scoped ledger resources to eliminate the general pattern loophole
@@ -137,7 +138,7 @@ service cloud.firestore {
       allow update: if canWrite(resource.data.workspaceId) && isUnchanged("workspaceId") && isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date);
       allow delete: if canWrite(resource.data.workspaceId) &&
         (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
-        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
+        (resource.data.status == null || resource.data.status == "draft");
     }
 
     match /chartAccounts/{accountId} {
@@ -167,7 +168,16 @@ service cloud.firestore {
 
     match /auditLogs/{logId} {
       allow read: if isSignedIn() && (resource == null || isWorkspaceMember(resource.data.workspaceId));
-      allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || request.resource.data.userId == request.auth.uid) && isWorkspaceMember(request.resource.data.workspaceId) && isValidId(logId) &&
+      allow create: if isSignedIn() &&
+        isWorkspaceMember(request.resource.data.workspaceId) &&
+        isValidId(logId) &&
+        (!("uid" in request.resource.data) || request.resource.data.uid == request.auth.uid) &&
+        (!("userId" in request.resource.data) || request.resource.data.userId == request.auth.uid) &&
+        (!("actorUid" in request.resource.data) || request.resource.data.actorUid == request.auth.uid) &&
+        (!("userEmail" in request.resource.data) || request.resource.data.userEmail == request.auth.token.get("email", "")) &&
+        (!("email" in request.resource.data) || request.resource.data.email == request.auth.token.get("email", "")) &&
+        (!("actorEmail" in request.resource.data) || request.resource.data.actorEmail == request.auth.token.get("email", "")) &&
+        (canWrite(request.resource.data.workspaceId) || request.resource.data.action == "USER_LOGIN") &&
         affectedKeys(["id", "uid", "userId", "workspaceId", "action", "details", "severity", "userEmail", "email", "actorUid", "actorEmail", "documentId", "entityId", "collectionName", "entityType", "metadata", "timestamp"]);
       allow update, delete: if false; // Forensically immutable audit trail
     }
@@ -181,7 +191,7 @@ service cloud.firestore {
         (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
       allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
         (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
-        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
+        (resource.data.status == null || resource.data.status == "draft");
     }
 
     match /bankLines/{lineId} {
@@ -232,7 +242,7 @@ service cloud.firestore {
         (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
       allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
         (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
-        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
+        (resource.data.status == null || resource.data.status == "draft");
     }
 
     match /payments/{paymentId} {
@@ -244,7 +254,7 @@ service cloud.firestore {
         (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
       allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
         (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
-        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
+        (resource.data.status == null || resource.data.status == "draft");
     }
 
     match /estimates/{estimateId} {
@@ -263,7 +273,7 @@ service cloud.firestore {
         (!("date" in request.resource.data) || isTransactionPeriodOpen(request.resource.data.workspaceId, request.resource.data.date));
       allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
         (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
-        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
+        (resource.data.status == null || resource.data.status == "draft");
     }
 
     match /inventory/{itemId} {
@@ -356,7 +366,7 @@ service cloud.firestore {
         affectedKeys(["id", "uid", "workspaceId", "customerId", "customerName", "number", "invoiceId", "amountCents", "remainingCents", "date", "reason", "status", "currency", "createdAt", "updatedAt"]);
       allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
         (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
-        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
+        (resource.data.status == null || resource.data.status == "draft");
     }
 
     match /vendorCredits/{vendorCreditId} {
@@ -370,7 +380,7 @@ service cloud.firestore {
         affectedKeys(["id", "uid", "workspaceId", "vendorId", "vendorName", "number", "billId", "amountCents", "remainingCents", "date", "reason", "status", "currency", "createdAt", "updatedAt"]);
       allow delete: if isSignedIn() && canWrite(resource.data.workspaceId) &&
         (!("date" in resource.data) || isTransactionPeriodOpen(resource.data.workspaceId, resource.data.date)) &&
-        (resource.data.status == null || resource.data.status == "draft" || resource.data.status == "void");
+        (resource.data.status == null || resource.data.status == "draft");
     }
 
     match /periods/{periodId} {

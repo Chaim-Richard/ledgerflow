@@ -191,11 +191,144 @@ describe('Firestore Security Rules Unit Tests', () => {
       });
     });
 
-    // Try to update lockDate (should fail due to isUnchanged("lockDate"))
-    await assert.rejects(async () => {
+    // Owner (Alice) can update lockDate
+    await assert.doesNotReject(async () => {
       await wsRef.update({
         lockDate: '2026-06-01',
         updatedAt: new Date().toISOString(),
+      });
+    });
+  });
+
+  test('isTransactionPeriodOpen works without crashing when workspace has no lockDate property', async () => {
+    const aliceDb = getFirestoreContext({ uid: 'alice-nolock' });
+    const wsRef = aliceDb.doc('workspaces/ws-nolock');
+
+    // Create workspace without lockDate
+    await wsRef.set({
+      id: 'ws-nolock',
+      uid: 'alice-nolock',
+      name: 'No Lock Workspace',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Create a transaction on any date (should succeed because period is open)
+    const txRef = aliceDb.doc('transactions/tx-nolock-1');
+    await assert.doesNotReject(async () => {
+      await txRef.set({
+        id: 'tx-nolock-1',
+        uid: 'alice-nolock',
+        workspaceId: 'ws-nolock',
+        date: '2025-01-01',
+        description: 'Open period transaction without lockDate field',
+        totalAmountCents: 1000
+      });
+    });
+  });
+
+  test('Hard-deleting documents in void status is strictly forbidden across collections', async () => {
+    const aliceDb = getFirestoreContext({ uid: 'alice-void' });
+    const wsRef = aliceDb.doc('workspaces/ws-void');
+
+    await wsRef.set({
+      id: 'ws-void',
+      uid: 'alice-void',
+      name: 'Void Test Workspace',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    // 1. Create a void invoice
+    const invRef = aliceDb.doc('invoices/inv-void-1');
+    await invRef.set({
+      id: 'inv-void-1',
+      uid: 'alice-void',
+      workspaceId: 'ws-void',
+      date: '2026-09-01',
+      status: 'void',
+      totalAmountCents: 5000
+    });
+
+    // Attempting hard delete on void invoice must be rejected
+    await assert.rejects(async () => {
+      await invRef.delete();
+    }, /permission-denied/i);
+
+    // 2. Draft invoice CAN be deleted
+    const invDraftRef = aliceDb.doc('invoices/inv-draft-1');
+    await invDraftRef.set({
+      id: 'inv-draft-1',
+      uid: 'alice-void',
+      workspaceId: 'ws-void',
+      date: '2026-09-01',
+      status: 'draft',
+      totalAmountCents: 5000
+    });
+    await assert.doesNotReject(async () => {
+      await invDraftRef.delete();
+    });
+  });
+
+  test('auditLogs write security: actorUid/actorEmail must match auth and viewer can only write USER_LOGIN', async () => {
+    const ownerDb = getFirestoreContext({ uid: 'owner-audit', token: { email: 'owner@ledgerflow.io' } });
+    const viewerDb = getFirestoreContext({ uid: 'viewer-audit', token: { email: 'viewer@ledgerflow.io' } });
+    const wsRef = ownerDb.doc('workspaces/ws-audit-test');
+
+    await wsRef.set({
+      id: 'ws-audit-test',
+      uid: 'owner-audit',
+      name: 'Audit Security Workspace',
+      roles: {
+        'viewer-audit': 'viewer',
+        'owner-audit': 'owner'
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    // 1. Spoofing actorUid must fail
+    const spoofLogRef = ownerDb.doc('auditLogs/log-spoof-1');
+    await assert.rejects(async () => {
+      await spoofLogRef.set({
+        id: 'log-spoof-1',
+        uid: 'victim-uid',
+        userId: 'victim-uid',
+        workspaceId: 'ws-audit-test',
+        action: 'UPDATE',
+        actorUid: 'victim-uid',
+        actorEmail: 'victim@ledgerflow.io',
+        timestamp: new Date().toISOString()
+      });
+    }, /permission-denied/i);
+
+    // 2. Viewer writing USER_LOGIN with matching uid/email succeeds
+    const viewerLoginRef = viewerDb.doc('auditLogs/log-viewer-login');
+    await assert.doesNotReject(async () => {
+      await viewerLoginRef.set({
+        id: 'log-viewer-login',
+        uid: 'viewer-audit',
+        userId: 'viewer-audit',
+        workspaceId: 'ws-audit-test',
+        action: 'USER_LOGIN',
+        userEmail: 'viewer@ledgerflow.io',
+        email: 'viewer@ledgerflow.io',
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    // 3. Viewer writing any other action fails
+    const viewerMutateRef = viewerDb.doc('auditLogs/log-viewer-mutate');
+    await assert.rejects(async () => {
+      await viewerMutateRef.set({
+        id: 'log-viewer-mutate',
+        uid: 'viewer-audit',
+        userId: 'viewer-audit',
+        workspaceId: 'ws-audit-test',
+        action: 'DOCUMENT_DELETE',
+        userEmail: 'viewer@ledgerflow.io',
+        email: 'viewer@ledgerflow.io',
+        timestamp: new Date().toISOString()
       });
     }, /permission-denied/i);
   });

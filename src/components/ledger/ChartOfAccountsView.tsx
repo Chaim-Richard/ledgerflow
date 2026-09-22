@@ -3,6 +3,8 @@ import { ChartAccount } from '../../types';
 import { BookOpen, MoreVertical, ChevronRight, ChevronDown, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { Field } from '../common/Field';
+import { SchemaForm } from '../common/SchemaForm';
 
 interface ChartOfAccountsViewProps {
   accounts: ChartAccount[];
