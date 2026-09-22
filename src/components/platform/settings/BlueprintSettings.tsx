@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import AsyncButton from '../../ui/AsyncButton';
+import { useTimeout } from '../../../hooks/useTimeout';
 
 export default function BlueprintSettings() {
   const language = useUIStore(state => state.language);
@@ -60,13 +61,14 @@ export default function BlueprintSettings() {
   const [newCatAccountId, setNewCatAccountId] = useState('');
   const [isSavingMappings, setIsSavingMappings] = useState(false);
   const [hasInitializedMappings, setHasInitializedMappings] = useState(false);
+  const { setSafeTimeout } = useTimeout();
 
   // Sync mappings with workspace document
   React.useEffect(() => {
     if (currentWorkspace) {
-      setTimeout(() => setMappings(currentWorkspace.defaultAccountMappings || {}), 0);
+      setSafeTimeout(() => setMappings(currentWorkspace.defaultAccountMappings || {}), 0);
     }
-  }, [currentWorkspaceId]);
+  }, [currentWorkspaceId, currentWorkspace, setSafeTimeout]);
 
   const handleUpdateMappingField = (key: string, value: string) => {
     setMappings(prev => ({ ...prev, [key]: value }));

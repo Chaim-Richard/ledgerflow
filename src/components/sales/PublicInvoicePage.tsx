@@ -4,18 +4,20 @@ import { parseLocalDate, formatCurrency } from '../../lib/utils';
 import { CheckCircle2, AlertCircle, Building2, Download } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
+import { useTimeout } from '../../hooks/useTimeout';
 
 export default function PublicInvoicePage() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
     const token = window.location.pathname.split('/i/')[1];
     if (!token) {
-      setTimeout(() => setError('Invalid invoice link'), 0);
-      setTimeout(() => setLoading(false), 0);
+      setSafeTimeout(() => setError('Invalid invoice link'), 0);
+      setSafeTimeout(() => setLoading(false), 0);
       return;
     }
 

@@ -8,6 +8,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { toast } from 'sonner';
+import { useTimeout } from '../../hooks/useTimeout';
 
 interface HealthCheckModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
 
   const [isScanning, setIsScanning] = useState(false);
   const [report, setReport] = useState<any>(null);
+  const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -105,7 +107,7 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
   const handleManualScan = () => {
     setIsScanning(true);
     setReport(null);
-    setTimeout(() => {
+    setSafeTimeout(() => {
       let tbNet = 0;
       transactions.filter(isPostable).forEach(t => {
         t.lines?.forEach(l => { tbNet += lineAmount(l, t); });

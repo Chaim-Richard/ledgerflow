@@ -24,6 +24,7 @@ import { SpellChecker } from '../../lib/algorithms';
 import { TemporalValidity } from '../../types';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
+import { useTimeout } from '../../hooks/useTimeout';
 
 // Temporal series for various currencies (to ensure we use 'rate of date of change' as requested)
 const getTemporalRatesFor = (currency: string): TemporalValidity[] => {
@@ -59,6 +60,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   
   const [transactionCurrency, setTransactionCurrency] = useState(baseCurrency || 'USD');
   const [exchangeRate, setExchangeRate] = useState<number>(1.0);
+  const { setSafeTimeout } = useTimeout();
   
   const isLocked = !!(lockDate && date <= lockDate);
 
@@ -96,14 +98,14 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         const series = getTemporalRatesFor(transactionCurrency);
         const rate = TruthEngine.resolveEffectiveValue(series, date);
         const fixedRate = Number(rate.toFixed(6));
-        setTimeout(() => setExchangeRate(fixedRate), 0);
+        setSafeTimeout(() => setExchangeRate(fixedRate), 0);
       } catch (err) {
-        setTimeout(() => setExchangeRate(1.0), 0);
+        setSafeTimeout(() => setExchangeRate(1.0), 0);
       }
     } else {
-      setTimeout(() => setExchangeRate(1.0), 0);
+      setSafeTimeout(() => setExchangeRate(1.0), 0);
     }
-  }, [transactionCurrency, date, baseCurrency]);
+  }, [transactionCurrency, date, baseCurrency, setSafeTimeout]);
 
   const transactions = useLedgerStore(s => s.transactions);
   const analyticalPatternCache = useLedgerStore(s => s.analyticalPatternCache);

@@ -27,6 +27,7 @@ import {
   ShoppingCart
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useTimeout } from '../../hooks/useTimeout';
 import { 
   collection, 
   query, 
@@ -56,10 +57,11 @@ export default function Inventory() {
   const [cogsItem, setCogsItem] = useState<InventoryItem | null>(null);
   const [cogsQty, setCogsQty] = useState<number>(1);
   const [isPostingCogs, setIsPostingCogs] = useState(false);
+  const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
     if (!workspaceId || !uid) {
-      setTimeout(() => setLoading(false), 0);
+      setSafeTimeout(() => setLoading(false), 0);
       return;
     }
 

@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { createAccountTransfer, detectPotentialTransfers, TransferMatchCandidate } from '../../lib/transferEngine';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { isCashAccount } from '../../lib/txFilters';
+import { useTimeout } from '../../hooks/useTimeout';
 import { 
   ArrowRightLeft, 
   Check, 
@@ -45,6 +46,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { setSafeTimeout } = useTimeout();
 
   // Cash / Bank accounts filter
   const cashAccounts = useMemo(() => {
@@ -94,7 +96,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
     setTransactions([...transactions, fullTx]);
     setSuccessMessage(`Transferred $${amount} from ${fromAcc.name} to ${toAcc.name}`);
-    setTimeout(() => {
+    setSafeTimeout(() => {
       setSuccessMessage(null);
       onClose();
     }, 1500);

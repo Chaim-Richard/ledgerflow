@@ -72,7 +72,7 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
       dueTemplates.push(item);
 
       const template = (item.template || {}) as Partial<Transaction>;
-      const amount = item.amountCents || template.totalAmountCents || 0;
+      const amount = item.amountCents || 0;
       const currency = template.currency || 'USD';
       
       let lines = template.lines;

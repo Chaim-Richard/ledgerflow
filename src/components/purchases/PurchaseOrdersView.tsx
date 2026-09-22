@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { performThreeWayMatch, ThreeWayMatchSummary } from '../../lib/threeWayMatchEngine';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { RequireRole } from '../ui/RequireRole';
+import { useTimeout } from '../../hooks/useTimeout';
 import { 
   ShoppingCart, 
   Plus, 
@@ -88,6 +89,7 @@ export const PurchaseOrdersView: React.FC = () => {
   const [isCreatingPO, setIsCreatingPO] = useState(false);
   const [receivingPO, setReceivingPO] = useState<PurchaseOrder | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { setSafeTimeout } = useTimeout();
 
   // Form State
   const [poVendor, setPoVendor] = useState('');
@@ -144,7 +146,7 @@ export const PurchaseOrdersView: React.FC = () => {
     setPoVendor('');
     setPoItems([{ desc: '', qty: '1', unitPrice: '' }]);
     setSuccessMessage(`Created Purchase Order ${newPO.poNumber} for ${poVendor}`);
-    setTimeout(() => setSuccessMessage(null), 4000);
+    setSafeTimeout(() => setSuccessMessage(null), 4000);
   };
 
   const handleOpenReceive = (po: PurchaseOrder) => {
@@ -189,7 +191,7 @@ export const PurchaseOrdersView: React.FC = () => {
     setPurchaseOrders(updatedPOs);
     setReceivingPO(null);
     setSuccessMessage(`Goods Receipt ${newReceipt.receiptNumber} recorded. Ready for 3-Way Match.`);
-    setTimeout(() => setSuccessMessage(null), 4000);
+    setSafeTimeout(() => setSuccessMessage(null), 4000);
   };
 
   return (

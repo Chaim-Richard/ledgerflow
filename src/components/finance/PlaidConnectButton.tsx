@@ -3,9 +3,11 @@ import { usePlaidLink } from 'react-plaid-link';
 import { toast } from 'sonner';
 import { Link2 } from 'lucide-react';
 import { getIdToken } from '../../firebase';
+import { useTimeout } from '../../hooks/useTimeout';
 
 export default function PlaidConnectButton({ onSuccessSync }: { onSuccessSync?: () => void }) {
   const [linkToken, setLinkToken] = useState<string | null>(null);
+  const { setSafeTimeout } = useTimeout();
 
   const generateToken = useCallback(async () => {
     try {
@@ -25,10 +27,10 @@ export default function PlaidConnectButton({ onSuccessSync }: { onSuccessSync?: 
   }, []);
 
   useEffect(() => {
-    setTimeout(() => {
+    setSafeTimeout(() => {
       generateToken();
     }, 0);
-  }, [generateToken]);
+  }, [generateToken, setSafeTimeout]);
 
   const onSuccess = useCallback(
     async (public_token: string, metadata: any) => {

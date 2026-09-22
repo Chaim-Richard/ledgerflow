@@ -10,6 +10,7 @@ import {
   FileWarning, Database, Scale, ArrowRight, Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTimeout } from '../../hooks/useTimeout';
 
 export interface HealthIssue {
   id: string;
@@ -32,6 +33,7 @@ export default function DataHealthView() {
 
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { setSafeTimeout } = useTimeout();
 
   // Compute all health issues
   const healthAnalysis = useMemo(() => {
@@ -152,7 +154,7 @@ export default function DataHealthView() {
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    setSafeTimeout(() => {
       setIsRefreshing(false);
       toast.success('Data Health Diagnostic Complete', {
         description: `Scanned ${healthAnalysis.totalChecks} records. Health Score: ${healthAnalysis.score}%`

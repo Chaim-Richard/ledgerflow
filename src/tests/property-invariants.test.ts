@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import Decimal from 'decimal.js';
 import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
@@ -158,5 +160,68 @@ describe('A-04 & H-30: Property Invariants & Double-Entry Equality Suite', () =>
 
       assert.doesNotThrow(() => DoubleEntryValidator.validateJournalEntry(tx));
     }
+  });
+
+  test('§AG Guard: No money field may be read via a ??/|| fallback to a second field name', () => {
+    function getFiles(dir: string): string[] {
+      const results: string[] = [];
+      const list = readdirSync(dir);
+      for (const file of list) {
+        const fullPath = join(dir, file);
+        const stat = statSync(fullPath);
+        if (stat.isDirectory()) {
+          if (file !== 'node_modules' && file !== 'dist' && file !== 'tests') {
+            results.push(...getFiles(fullPath));
+          }
+        } else if (file.endsWith('.ts') || file.endsWith('.tsx')) {
+          results.push(fullPath);
+        }
+      }
+      return results;
+    }
+
+    const srcFiles = getFiles('src');
+    const moneyFallbackPattern = /\.(amountCents|totalAmountCents|totalCents|amountPaidCents|paidAmountCents)\s*(\?\?|\|\|)\s*[\w.]*\.(amountCents|totalAmountCents|totalCents|amountPaidCents|paidAmountCents)/;
+
+    const violations: string[] = [];
+    const phantomReads: string[] = [];
+
+    for (const filePath of srcFiles) {
+      const content = readFileSync(filePath, 'utf8');
+      const lines = content.split('\n');
+      lines.forEach((line, idx) => {
+        if (moneyFallbackPattern.test(line)) {
+          violations.push(`${filePath}:${idx + 1} -> ${line.trim()}`);
+        }
+        if (line.includes('paidAmountCents')) {
+          phantomReads.push(`${filePath}:${idx + 1} -> ${line.trim()}`);
+        }
+      });
+    }
+
+    assert.equal(
+      violations.length,
+      0,
+      `Detected forbidden money fallback across second field name:\n${violations.join('\n')}`
+    );
+
+    assert.equal(
+      phantomReads.length,
+      0,
+      `Detected phantom paidAmountCents read (must use amountPaidCents):\n${phantomReads.join('\n')}`
+    );
+
+    // Verify PurchaseOrderItem.totalCents in types.ts is strictly preserved as a line-item total (quantity * unitPrice)
+    const typesContent = readFileSync('src/types.ts', 'utf8');
+    assert.ok(
+      typesContent.includes('totalCents: number;'),
+      'PurchaseOrderItem.totalCents must be present in src/types.ts'
+    );
+    const totalCentsMatches = typesContent.match(/totalCents\??:\s*number/g) || [];
+    assert.equal(
+      totalCentsMatches.length,
+      1,
+      'PurchaseOrderItem should be the ONLY interface in src/types.ts with totalCents'
+    );
   });
 });

@@ -33,6 +33,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { aiService } from '../../services/aiService';
 import { resolveAccountRole } from '../../lib/accountUtils';
+import { useTimeout } from '../../hooks/useTimeout';
 import { buildBalancedReceiptTransaction, validateReceiptPayload, resolveDeepAccount } from '../../lib/receiptIngestion';
 
 
@@ -52,10 +53,11 @@ export default function Vault() {
   const [selectedDoc, setSelectedDoc] = useState<CloudDocument | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [extractedData, setExtractedData] = useState<any>(null);
+  const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
     if (!workspaceId || !uid) {
-      setTimeout(() => setLoading(false), 0);
+      setSafeTimeout(() => setLoading(false), 0);
       return;
     }
 
@@ -154,7 +156,7 @@ export default function Vault() {
       
       const parsedData = await aiService.parseReceipt(file);
       
-      if (parsedData && (parsedData.totalAmountCents !== undefined || parsedData.amountCents !== undefined)) {
+      if (parsedData && parsedData.totalAmountCents !== undefined) {
         setExtractedData(parsedData);
         toast.success('Document analysis complete', { id: toastId });
       } else {
@@ -176,7 +178,7 @@ export default function Vault() {
     const toastId = toast.loading('Injecting into ledger...');
 
     try {
-      const amountCents = Math.abs(extractedData.totalAmountCents ?? extractedData.amountCents ?? 0);
+      const amountCents = Math.abs(extractedData.totalAmountCents ?? 0);
       const vendor = extractedData.vendorName || extractedData.merchant || extractedData.description || 'Receipt Auto-sync';
 
       const receiptPayload = {
@@ -523,7 +525,7 @@ export default function Vault() {
                            </div>
                            <div>
                               <p className="text-[9px] font-black text-emerald-800/50 uppercase tracking-widest mb-1">Total Amount</p>
-                              <p className="text-sm font-bold font-mono text-emerald-900 tabular-nums">${(((extractedData.totalAmountCents ?? extractedData.amountCents) || 0) / 100).toFixed(2)}</p>
+                              <p className="text-sm font-bold font-mono text-emerald-900 tabular-nums">${((extractedData.totalAmountCents || 0) / 100).toFixed(2)}</p>
                            </div>
                            <div>
                               <p className="text-[9px] font-black text-emerald-800/50 uppercase tracking-widest mb-1">Confidence</p>

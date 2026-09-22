@@ -29,6 +29,7 @@ import { cn, getLocalDateISO } from '../../lib/utils';
 import { convertXeroAccounts } from '../../lib/xeroAdapter';
 import { db, getIdToken } from '../../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useTimeout } from '../../hooks/useTimeout';
 
 const AVAILABLE_SCOPES = [
   { id: 'read:transactions', label: 'Read Transactions', desc: 'Allows querying and reading financial ledger transactions and journal entries.' },
@@ -53,6 +54,7 @@ export default function ApiHub() {
   const [apiLogs, setApiLogs] = useState<any[]>([]);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const { setSafeTimeout } = useTimeout();
   const [activeTab, setActiveTab] = useState<'overview' | 'keys' | 'logs' | 'docs' | 'billing' | 'sandbox'>('overview');
   const [activeDoc, setActiveDoc] = useState('post-transaction');
   const [docLang, setDocLang] = useState<'curl' | 'python' | 'node'>('curl');
@@ -249,7 +251,7 @@ export default function ApiHub() {
       });
 
       loadBillingStatus();
-      setTimeout(fetchLogs, 500); // give server time to flush logs to memory
+      setSafeTimeout(fetchLogs, 500); // give server time to flush logs to memory
     } catch (e: any) {
       toast.error('Stress test trigger failure', { description: e.message || String(e) });
     } finally {
@@ -511,7 +513,7 @@ export default function ApiHub() {
     if (!apiKey) return;
     navigator.clipboard.writeText(apiKey);
     setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+    setSafeTimeout(() => setIsCopied(false), 2000);
     toast.success('Key copied to clipboard');
   };
 

@@ -3,6 +3,7 @@ import { Search, X, Filter, DollarSign, Tag, Shield, Building, FolderKanban, Hel
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { cn } from '../../lib/utils';
+import { useTimeout } from '../../hooks/useTimeout';
 
 interface DeepSearchBarProps {
   value: string;
@@ -33,6 +34,7 @@ export default function DeepSearchBar({ value, onChange, metrics, placeholder = 
   const [isFocused, setIsFocused] = useState(false);
   const [showHelper, setShowHelper] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { setSafeTimeout } = useTimeout();
 
   const handleAppendOperator = (prefix: string) => {
     const nextVal = value ? `${value.trim()} ${prefix}` : prefix;
@@ -60,7 +62,7 @@ export default function DeepSearchBar({ value, onChange, metrics, placeholder = 
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+          onBlur={() => setSafeTimeout(() => setIsFocused(false), 200)}
           placeholder={placeholder}
           className="w-full text-xs font-medium bg-transparent text-[var(--text)] placeholder-[var(--muted)] outline-none"
         />

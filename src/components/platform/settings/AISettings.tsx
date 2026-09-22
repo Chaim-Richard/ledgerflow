@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { db } from '../../../firebase';
 import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import AsyncButton from '../../ui/AsyncButton';
+import { useTimeout } from '../../../hooks/useTimeout';
 
 export default function AISettings() {
   const updateGeminiApiKey = useAuthStore(s => s.updateGeminiApiKey);
@@ -38,20 +39,21 @@ export default function AISettings() {
 
   // Learning speed multiplier (weights incoming transactions train/fine-tune Bayes parameters)
   const [learningScale, setLearningScale] = useState(2.0);
+  const { setSafeTimeout } = useTimeout();
 
   // Sync state values when workspace loads
   useEffect(() => {
     if (currentWorkspace) {
       if (typeof currentWorkspace.matchingThreshold === 'number') {
         const t = currentWorkspace.matchingThreshold;
-        setTimeout(() => setThreshold(t), 0);
+        setSafeTimeout(() => setThreshold(t), 0);
       }
       if (currentWorkspace.aiModel) {
         const m = currentWorkspace.aiModel;
-        setTimeout(() => setSelectedModel(m), 0);
+        setSafeTimeout(() => setSelectedModel(m), 0);
       }
     }
-  }, [currentWorkspaceId, workspaces]);
+  }, [currentWorkspaceId, workspaces, currentWorkspace, setSafeTimeout]);
 
   const MODEL_OPTIONS = [
     {

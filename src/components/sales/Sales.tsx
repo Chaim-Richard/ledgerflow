@@ -105,14 +105,14 @@ export default function Sales() {
       const nextOcc = calculateNextOccurrence(startDateStr, data.recurringInterval || 'monthly', anchorDay);
       await addEntity('recurring', {
         description: `Recurring Invoice: ${data.customerName || 'Customer'} - ${data.number || 'Standard'}`,
-        amountCents: data.totalCents || data.amountCents || 0,
+        amountCents: data.amountCents || 0,
         frequency: data.recurringInterval || 'monthly',
         nextOccurrence: nextOcc,
         anchorDay,
         isActive: true,
         template: {
           description: `Invoice: ${data.customerName || 'Customer'}`,
-          amountCents: data.totalCents || data.amountCents || 0,
+          amountCents: data.amountCents || 0,
           customerId: data.customerId,
           tags: ['recurring', 'invoice', ...(data.tags || [])]
         }

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { parseLocalDate, cn, formatCurrency, resolveAccountName } from '../../lib/utils';
+import { useTimeout } from '../../hooks/useTimeout';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { Transaction, BankStatementLine, ChartAccount, User } from '../../types';
 import { format } from 'date-fns';
@@ -65,6 +66,7 @@ export default function Reconciliation() {
   
   // Granular checkable state for the smart auto-alignment bulk modal
   const [selectedBatchIds, setSelectedBatchIds] = useState<Record<string, boolean>>({});
+  const { setSafeTimeout } = useTimeout();
 
   const safeBankLines = useMemo(() => Array.isArray(bankLines) ? bankLines : [], [bankLines]);
   const safeTransactions = useMemo(() => Array.isArray(transactions) ? transactions : [], [transactions]);
@@ -173,9 +175,9 @@ export default function Reconciliation() {
           state[btx.id] = true;
         }
       });
-      setTimeout(() => setSelectedBatchIds(state), 0);
+      setSafeTimeout(() => setSelectedBatchIds(state), 0);
     }
-  }, [showAutoConfirm, unmatchedBankLines, optimizedMatches]);
+  }, [showAutoConfirm, unmatchedBankLines, optimizedMatches, setSafeTimeout]);
 
   // Execute confirmation for selected batch elements
   const executeSelectedBatchMatches = async () => {

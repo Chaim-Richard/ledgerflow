@@ -243,7 +243,7 @@ export function useTransactionActions() {
             lines = [{
               accountId: account?.id || fallbackAccId,
               accountName: account?.name || targetCategoryResult.accountName,
-              amountCents: tx.amountCents || tx.totalAmountCents || 0,
+              amountCents: tx.amountCents || 0,
               tags: targetCategoryResult.tags || (isSmartTransfer ? ['Auto-Transfer'] : []),
               dimensions: targetCategoryResult.dimensions || undefined,
               description: isSmartTransfer ? 'Auto-Transfer Detection' : (usedAI ? 'Auto-categorized by AI' : 'Auto-categorized by Rule Engine')
@@ -251,7 +251,7 @@ export function useTransactionActions() {
           }
         }
 
-        const balancedLines = balanceTransactionLines(lines, tx.amountCents || tx.totalAmountCents || 0);
+        const balancedLines = balanceTransactionLines(lines, tx.amountCents || 0);
 
         let isResolvedCategory = false;
         if (balancedLines[0].accountId !== 'uncategorized' && balancedLines[0].accountName !== 'Uncategorized' && balancedLines[0].accountName !== 'Manual Review') {
@@ -266,7 +266,7 @@ export function useTransactionActions() {
           uid: user.uid,
           date: tx.date,
           description: tx.description,
-          amountCents: tx.amountCents || tx.totalAmountCents || 0,
+          amountCents: tx.amountCents || 0,
           status: isResolvedCategory ? 'matched' : 'pending',
           matchedTransactionId: null as string | null,
           createdAt: new Date().toISOString()

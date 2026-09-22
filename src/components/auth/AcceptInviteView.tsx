@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { auth } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
+import { useTimeout } from '../../hooks/useTimeout';
 
 interface AcceptInviteViewProps {
   token?: string;
@@ -17,6 +18,7 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<boolean>(false);
   const [accepted, setAccepted] = useState<boolean>(false);
+  const { setSafeTimeout } = useTimeout();
 
   const user = useAuthStore(s => s.user);
   const setCurrentWorkspaceId = useAuthStore(s => s.setCurrentWorkspaceId);
@@ -90,7 +92,7 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
           setCurrentWorkspaceId(data.workspaceId);
         }
 
-        setTimeout(() => {
+        setSafeTimeout(() => {
           if (onSuccess) onSuccess();
           else if (setActiveTab) setActiveTab('executive-overview' as any);
         }, 1200);

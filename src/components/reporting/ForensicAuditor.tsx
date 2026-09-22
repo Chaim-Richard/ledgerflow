@@ -7,12 +7,12 @@ import { AnomalyDetector } from '../../lib/algorithms';
 import { formatDecimal, cn } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { toast } from 'sonner';
-
-
+import { useTimeout } from '../../hooks/useTimeout';
 
 export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: boolean }) {
   const transactions = useLedgerStore(s => s.transactions);
   const [isRunning, setIsRunning] = useState(false);
+  const { setSafeTimeout } = useTimeout();
 
   const forensicData = useMemo(() => {
     const amounts = transactions.filter(isPostable).map(t => {
@@ -61,7 +61,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
   const handleGenerateAuditReport = () => {
     setIsRunning(true);
     
-    setTimeout(() => {
+    setSafeTimeout(() => {
       try {
         const separator = "========================================================\n";
         let logContent = "";

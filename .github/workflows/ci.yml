@@ -72,5 +72,5 @@ jobs:
           java-version: '21'
 
       - name: Run Playwright E2E Tests with Firebase Emulator
-        run: npx firebase emulators:exec --only firestore,auth "npx playwright test"
+        run: npm run test:e2e
 

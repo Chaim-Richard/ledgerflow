@@ -4,6 +4,7 @@ import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { formatCurrency, formatDate } from '../../../lib/utils';
 import { dryRunRules, executeRulesOnTransactions, sortRulesByPriority, evaluateRuleCondition } from '../../../lib/rulesEngine';
+import { useTimeout } from '../../../hooks/useTimeout';
 import { 
   SlidersHorizontal, 
   Plus, 
@@ -43,6 +44,7 @@ export const RulesSettings: React.FC = () => {
   const [isTestingRule, setIsTestingRule] = useState(false);
   const [isApplyingExisting, setIsApplyingExisting] = useState(false);
   const [applySuccessMessage, setApplySuccessMessage] = useState<string | null>(null);
+  const { setSafeTimeout } = useTimeout();
 
   // Form state
   const [formName, setFormName] = useState('');
@@ -251,7 +253,7 @@ export const RulesSettings: React.FC = () => {
 
       setApplySuccessMessage(`Successfully applied automation rules to ${result.modifiedCount} matching transactions.`);
       setIsTestingRule(false);
-      setTimeout(() => setApplySuccessMessage(null), 5000);
+      setSafeTimeout(() => setApplySuccessMessage(null), 5000);
     } finally {
       setIsApplyingExisting(false);
     }

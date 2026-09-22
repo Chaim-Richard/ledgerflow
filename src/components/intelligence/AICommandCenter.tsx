@@ -13,6 +13,7 @@ import { aiService } from '../../services/aiService';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
+import { useTimeout } from '../../hooks/useTimeout';
 
 interface AICommandCenterProps {
   isOpen: boolean;
@@ -26,12 +27,13 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
   const [isProcessing, setIsProcessing] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setSafeTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen]);
+  }, [isOpen, setSafeTimeout]);
 
   const runQuery = async (queryText: string) => {
     if (!queryText.trim() || isProcessing) return;

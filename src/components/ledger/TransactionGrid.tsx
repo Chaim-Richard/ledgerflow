@@ -41,6 +41,7 @@ import TransactionEditModal from '../transactions/TransactionEditModal';
 import SavedViewsBar from '../ui/SavedViewsBar';
 import DeepSearchBar from '../ui/DeepSearchBar';
 import { useSavedViewsStore } from '../../stores/useSavedViewsStore';
+import { useTimeout } from '../../hooks/useTimeout';
 
 
 
@@ -57,6 +58,7 @@ const GridEditor = ({
 }) => {
   const [val, setVal] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { setSafeTimeout } = useTimeout();
   const accounts = useLedgerStore(state => state.accounts);
 
   const suggestions = useMemo(() => {
@@ -106,7 +108,7 @@ const GridEditor = ({
           }}
           onBlur={(_e) => {
              // Delay to allow suggestion click
-             setTimeout(() => handleEvaluateAndSave(val), 200);
+             setSafeTimeout(() => handleEvaluateAndSave(val), 200);
           }}
           className="w-full bg-transparent border-none outline-none font-mono text-xs font-black text-white uppercase tracking-wider placeholder:text-white/10"
         />

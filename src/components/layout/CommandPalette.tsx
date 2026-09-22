@@ -14,6 +14,7 @@ import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
+import { useTimeout } from '../../hooks/useTimeout';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ interface CommandPaletteProps {
 export default function CommandPalette({ isOpen, onClose, onAction }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
+  const { setSafeTimeout } = useTimeout();
   const language = useUIStore(state => state.language);
   const ledger = useLedgerStore(useShallow(state => ({
     transactions: state.transactions,
@@ -322,12 +324,12 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
   useEffect(() => {
     if (!isOpen) {
-      setTimeout(() => {
+      setSafeTimeout(() => {
         setQuery('');
         setIsExecuting(false);
       }, 0);
     }
-  }, [isOpen]);
+  }, [isOpen, setSafeTimeout]);
 
   const filteredCommands = query
     ? localizedCommands.filter((command) =>

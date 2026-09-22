@@ -128,7 +128,7 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
 
       const rawAmount = typeof inv.amountCents === 'number' 
         ? inv.amountCents 
-        : (typeof inv.totalCents === 'number' ? inv.totalCents : undefined);
+        : undefined;
       const totalInvCents = rawAmount !== undefined
         ? Math.round(rawAmount * (inv.exchangeRate || 1)) 
         : lineAmount(inv as any);
@@ -137,9 +137,7 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
       if (basis === 'cash') {
         const paidCents = typeof inv.amountPaidCents === 'number' 
           ? Math.round(inv.amountPaidCents * (inv.exchangeRate || 1))
-          : (typeof inv.paidAmountCents === 'number'
-            ? Math.round(inv.paidAmountCents * (inv.exchangeRate || 1))
-            : (inv.status === 'paid' ? totalInvCents : 0));
+          : (inv.status === 'paid' ? totalInvCents : 0);
         salesCents = paidCents;
       }
 
