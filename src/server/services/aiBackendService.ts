@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SecurityService } from "../../services/securityService";
+import { AutoRuleSchema } from "../../schemas";
 
 export class AIBackendService {
   private static getAiClient() {
@@ -385,19 +386,10 @@ export class AIBackendService {
       case 'build-auto-rule': {
         const sentence = payload.sentence || '';
         if (!ai) {
-          return {
-            rule: {
-              id: `rule_ai_${Date.now()}`,
-              name: `AI Rule: ${sentence || 'Custom Rule'}`,
-              conditions: [],
-              actions: [],
-              isActive: false,
-              createdBy: 'ai'
-            }
-          };
+          throw new Error("Gemini API client is not initialized.");
         }
         try {
-          const prompt = `Generate a structured rule schema matching sentence query: "${sentence}"`;
+          const prompt = `Generate a structured rule schema matching sentence query: "${sentence}". Return only the condition and action matching our schema. Do not try to include any disallowed properties.`;
           const response = await ai.models.generateContent({
             model: 'gemini-3.8-flash',
             contents: prompt,
@@ -409,54 +401,73 @@ export class AIBackendService {
                   rule: {
                     type: Type.OBJECT,
                     properties: {
-                      id: { type: Type.STRING },
-                      name: { type: Type.STRING },
-                      conditions: {
-                        type: Type.ARRAY,
-                        items: {
-                          type: Type.OBJECT,
-                          properties: {
-                            field: { type: Type.STRING },
-                            operator: { type: Type.STRING },
-                            value: { type: Type.STRING }
-                          },
-                          required: ["field", "operator", "value"]
+                      name: { type: Type.STRING, description: "Descriptive name for this rule" },
+                      condition: {
+                        type: Type.OBJECT,
+                        properties: {
+                          vendor: { type: Type.STRING },
+                          project: { type: Type.STRING },
+                          category: { type: Type.STRING },
+                          descriptionContains: { type: Type.STRING },
+                          descriptionStartsWith: { type: Type.STRING },
+                          minAmountCents: { type: Type.INTEGER },
+                          maxAmountCents: { type: Type.INTEGER }
                         }
                       },
-                      actions: {
-                        type: Type.ARRAY,
-                        items: {
-                          type: Type.OBJECT,
-                          properties: {
-                            field: { type: Type.STRING },
-                            value: { type: Type.STRING }
-                          },
-                          required: ["field", "value"]
+                      action: {
+                        type: Type.OBJECT,
+                        properties: {
+                          targetProject: { type: Type.STRING },
+                          targetCategory: { type: Type.STRING },
+                          targetClass: { type: Type.STRING },
+                          targetLocation: { type: Type.STRING },
+                          flagForReview: { type: Type.BOOLEAN },
+                          descriptionPrefix: { type: Type.STRING },
+                          descriptionSuffix: { type: Type.STRING },
+                          setNotes: { type: Type.STRING },
+                          deleteTransaction: { type: Type.BOOLEAN },
+                          setAmountCents: { type: Type.INTEGER }
                         }
-                      },
-                      isActive: { type: Type.BOOLEAN },
-                      createdBy: { type: Type.STRING }
+                      }
                     },
-                    required: ["id", "name", "conditions", "actions", "isActive", "createdBy"]
+                    required: ["name", "condition", "action"]
                   }
                 },
                 required: ["rule"]
               }
             }
           });
-          return JSON.parse(response.text || '{}');
+
+          const parsed = JSON.parse(response.text || '{}');
+          if (!parsed.rule) {
+            throw new Error("Failed to parse rule structure from response.");
+          }
+
+          // Strict Security Guard: strip destructive actions server-side
+          if (parsed.rule.action) {
+            delete parsed.rule.action.deleteTransaction;
+            delete parsed.rule.action.setAmountCents;
+          }
+
+          // Complete remaining missing fields for a valid AutoRule
+          const ruleCandidate = {
+            id: `rule_ai_${Date.now()}`,
+            isActive: false,
+            createdBy: 'ai',
+            createdAt: new Date().toISOString(),
+            ...parsed.rule
+          };
+
+          // Server-side strict Zod Schema validation
+          const validationResult = AutoRuleSchema.safeParse(ruleCandidate);
+          if (!validationResult.success) {
+            throw new Error(`AI generated rule did not meet safety constraints: ${validationResult.error.message}`);
+          }
+
+          return { rule: validationResult.data };
         } catch (err: any) {
           console.warn("Gemini build-auto-rule failed", err);
-          return {
-            rule: {
-              id: `rule_ai_${Date.now()}`,
-              name: `AI Rule: ${sentence}`,
-              conditions: [],
-              actions: [],
-              isActive: false,
-              createdBy: 'ai'
-            }
-          };
+          throw err;
         }
       }
 

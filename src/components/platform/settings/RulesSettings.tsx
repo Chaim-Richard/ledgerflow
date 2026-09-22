@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { AutoRule, Transaction } from '../../../types';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import { useCurrentRole } from '../../../hooks/useCurrentRole';
 import { formatCurrency, formatDate } from '../../../lib/utils';
 import { dryRunRules, executeRulesOnTransactions, sortRulesByPriority, evaluateRuleCondition } from '../../../lib/rulesEngine';
 import { useTimeout } from '../../../hooks/useTimeout';
@@ -29,6 +30,9 @@ import { aiService } from '../../../services/aiService';
 import { AutoRuleSchema } from '../../../schemas';
 
 export const RulesSettings: React.FC = () => {
+  const currentRole = useCurrentRole();
+  const canBuildRules = currentRole === 'owner' || currentRole === 'accountant';
+
   const autoRules = useLedgerStore(s => (s.autoRules || []) as AutoRule[]);
   const setAutoRules = useLedgerStore(s => s.setAutoRules);
   const transactions = useLedgerStore(s => s.transactions);
@@ -258,10 +262,7 @@ export const RulesSettings: React.FC = () => {
       }
 
       const generatedRule = validated.data as AutoRule;
-      const ninetyDaysAgo = new Date();
-      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-      const recentTxs = transactions.filter(t => new Date(t.date) >= ninetyDaysAgo);
-      const dryRunRes = dryRunRules([generatedRule], recentTxs);
+      const dryRunRes = dryRunRules([generatedRule], transactions);
 
       setAiPreview({
         rule: generatedRule,
@@ -361,22 +362,31 @@ export const RulesSettings: React.FC = () => {
           Type what you want to automate (e.g. &quot;Categorize any transaction containing AWS as Software & IT, and tag as Infrastructure&quot;).
         </p>
         <div className="flex flex-col sm:flex-row items-center gap-2">
-          <input
-            type="text"
-            value={aiSentence}
-            onChange={(e) => setAiSentence(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateAiRule(); }}
-            placeholder="e.g. Set category to Marketing when vendor is Google Ads and amount is over $100..."
-            className="flex-1 w-full bg-neutral-800/80 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-400 focus:outline-hidden focus:border-amber-400"
-          />
-          <button
-            onClick={handleGenerateAiRule}
-            disabled={isGeneratingAiRule || !aiSentence.trim()}
-            className="w-full sm:w-auto px-4 py-2 text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-neutral-950 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
-          >
-            {isGeneratingAiRule ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-            Generate Rule
-          </button>
+          {canBuildRules ? (
+            <>
+              <input
+                type="text"
+                value={aiSentence}
+                onChange={(e) => setAiSentence(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateAiRule(); }}
+                placeholder="e.g. Set category to Marketing when vendor is Google Ads and amount is over $100..."
+                className="flex-1 w-full bg-neutral-800/80 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-400 focus:outline-hidden focus:border-amber-400"
+              />
+              <button
+                onClick={handleGenerateAiRule}
+                disabled={isGeneratingAiRule || !aiSentence.trim()}
+                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-neutral-950 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {isGeneratingAiRule ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                Generate Rule
+              </button>
+            </>
+          ) : (
+            <div className="flex-1 text-xs text-amber-300 bg-neutral-950/40 p-2.5 rounded-lg border border-amber-500/20 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+              <span>AI Rule Builder is restricted to Owners and Accountants. Your current role is {currentRole}.</span>
+            </div>
+          )}
         </div>
 
         {aiError && (
@@ -391,7 +401,7 @@ export const RulesSettings: React.FC = () => {
             <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
               <span className="font-semibold text-amber-400">AI Proposed Rule</span>
               <span className="text-neutral-400">
-                Would change <strong className="text-white">{aiPreview.affectedCount}</strong> of your last 90 days of transactions
+                Dry Run Match: <strong className="text-white" id="dryrun-summary-total-matched">{aiPreview.affectedCount}</strong> transaction(s) matched on ledger (dryRun.summary.totalMatched)
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-neutral-300 bg-neutral-900/60 p-3 rounded-md">

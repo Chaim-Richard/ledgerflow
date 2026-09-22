@@ -1,6 +1,7 @@
 import { ChartAccount, Transaction, JournalEntry } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { allocateCents } from '../../lib/Allocation';
+import { resolveAccountRole } from '../../lib/accountUtils';
 
 export class LedgerEngine {
   /**
@@ -139,6 +140,7 @@ export class LedgerEngine {
             const sumConverted = convertedLines.reduce((acc, curr) => acc + curr.amount, 0);
             if (sumConverted !== 0) {
               const roundingAccount = accounts.find(a =>
+                resolveAccountRole(a) === 'fx_rounding' ||
                 a.name.toLowerCase().includes('rounding') ||
                 a.name.toLowerCase().includes('exchange') ||
                 a.name.toLowerCase().includes('fx') ||

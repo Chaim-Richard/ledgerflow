@@ -1008,4 +1008,95 @@ describe('Firestore Security Rules Unit Tests', () => {
       }, `Draft document deletion failed for ${item.col}`);
     }
   });
+
+  test('P1.3 AuditLogs validations: validates present uids, emails, and role permissions for viewers vs writers', async () => {
+    const ownerDb = getFirestoreContext({ uid: 'owner-uid', token: { email: 'owner@test.com' } });
+    const viewerDb = getFirestoreContext({ uid: 'viewer-uid', token: { email: 'viewer@test.com' } });
+    const wsId = 'ws-audit-test';
+
+    // Set up workspace with roles
+    await ownerDb.doc(`workspaces/${wsId}`).set({
+      id: wsId,
+      uid: 'owner-uid',
+      name: 'Audit Test Workspace',
+      roles: {
+        'viewer-uid': 'viewer',
+        'owner-uid': 'owner'
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    // 1. Valid audit log by owner -> MUST SUCCEED
+    const validLogRef = ownerDb.doc('auditLogs/log-valid-owner');
+    await assert.doesNotReject(async () => {
+      await validLogRef.set({
+        id: 'log-valid-owner',
+        workspaceId: wsId,
+        uid: 'owner-uid',
+        userId: 'owner-uid',
+        actorUid: 'owner-uid',
+        userEmail: 'owner@test.com',
+        email: 'owner@test.com',
+        actorEmail: 'owner@test.com',
+        action: 'UPDATE_TRANSACTION',
+        severity: 'info',
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    // 2. Log by owner with mismatched uid -> MUST FAIL
+    const invalidUidLogRef = ownerDb.doc('auditLogs/log-invalid-uid');
+    await assert.rejects(async () => {
+      await invalidUidLogRef.set({
+        id: 'log-invalid-uid',
+        workspaceId: wsId,
+        uid: 'mismatched-uid',
+        action: 'UPDATE_TRANSACTION',
+        severity: 'info',
+        timestamp: new Date().toISOString()
+      });
+    }, /permission-denied/i);
+
+    // 3. Log by owner with mismatched email -> MUST FAIL
+    const invalidEmailLogRef = ownerDb.doc('auditLogs/log-invalid-email');
+    await assert.rejects(async () => {
+      await invalidEmailLogRef.set({
+        id: 'log-invalid-email',
+        workspaceId: wsId,
+        userEmail: 'attacker@test.com',
+        action: 'UPDATE_TRANSACTION',
+        severity: 'info',
+        timestamp: new Date().toISOString()
+      });
+    }, /permission-denied/i);
+
+    // 4. Viewer creates USER_LOGIN action -> MUST SUCCEED
+    const viewerLoginRef = viewerDb.doc('auditLogs/log-viewer-login');
+    await assert.doesNotReject(async () => {
+      await viewerLoginRef.set({
+        id: 'log-viewer-login',
+        workspaceId: wsId,
+        uid: 'viewer-uid',
+        userEmail: 'viewer@test.com',
+        action: 'USER_LOGIN',
+        severity: 'info',
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    // 5. Viewer tries to create another action -> MUST FAIL
+    const viewerActionRef = viewerDb.doc('auditLogs/log-viewer-action');
+    await assert.rejects(async () => {
+      await viewerActionRef.set({
+        id: 'log-viewer-action',
+        workspaceId: wsId,
+        uid: 'viewer-uid',
+        userEmail: 'viewer@test.com',
+        action: 'UPDATE_TRANSACTION',
+        severity: 'info',
+        timestamp: new Date().toISOString()
+      });
+    }, /permission-denied/i);
+  });
 });

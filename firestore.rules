@@ -174,9 +174,9 @@ service cloud.firestore {
         (!("uid" in request.resource.data) || request.resource.data.uid == request.auth.uid) &&
         (!("userId" in request.resource.data) || request.resource.data.userId == request.auth.uid) &&
         (!("actorUid" in request.resource.data) || request.resource.data.actorUid == request.auth.uid) &&
-        (!("userEmail" in request.resource.data) || request.resource.data.userEmail == request.auth.token.get("email", "")) &&
-        (!("email" in request.resource.data) || request.resource.data.email == request.auth.token.get("email", "")) &&
-        (!("actorEmail" in request.resource.data) || request.resource.data.actorEmail == request.auth.token.get("email", "")) &&
+        (!("userEmail" in request.resource.data) || request.resource.data.userEmail == request.auth.token.email) &&
+        (!("email" in request.resource.data) || request.resource.data.email == request.auth.token.email) &&
+        (!("actorEmail" in request.resource.data) || request.resource.data.actorEmail == request.auth.token.email) &&
         (canWrite(request.resource.data.workspaceId) || request.resource.data.action == "USER_LOGIN") &&
         affectedKeys(["id", "uid", "userId", "workspaceId", "action", "details", "severity", "userEmail", "email", "actorUid", "actorEmail", "documentId", "entityId", "collectionName", "entityType", "metadata", "timestamp"]);
       allow update, delete: if false; // Forensically immutable audit trail

@@ -1,6 +1,6 @@
 import { ChartAccount } from '../types';
 
-export type AccountRole = 'cash' | 'ar' | 'ap' | 'inventory' | 'revenue' | 'expense' | 'cogs' | 'equity' | 'liability' | 'asset' | 'unknown';
+export type AccountRole = 'cash' | 'ar' | 'ap' | 'inventory' | 'revenue' | 'expense' | 'cogs' | 'equity' | 'liability' | 'asset' | 'fx_rounding' | 'unknown';
 
 export function resolveAccountRole(account: ChartAccount | undefined | null): AccountRole {
   if (!account) return 'unknown';
@@ -9,6 +9,11 @@ export function resolveAccountRole(account: ChartAccount | undefined | null): Ac
   const category = (account.category || '').toLowerCase();
   const name = (account.name || '').toLowerCase();
   const subtype = (account.subtype || '').toLowerCase();
+
+  // Handle explicit role overrides first
+  if ((account as any).role === 'fx_rounding' || name.includes('rounding') || category.includes('rounding')) {
+    return 'fx_rounding';
+  }
 
   // Handle COGS first (could be type: cost_of_goods or type: expense with category: cogs / direct costs)
   if (type === 'cost_of_goods' || category === 'cogs' || category === 'direct costs' || name.includes('cost of goods') || name.includes('cogs')) {

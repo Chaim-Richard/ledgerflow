@@ -25,6 +25,7 @@ import { TemporalValidity } from '../../types';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useTimeout } from '../../hooks/useTimeout';
+import { resolveAccountRole } from '../../lib/accountUtils';
 
 // Temporal series for various currencies (to ensure we use 'rate of date of change' as requested)
 const getTemporalRatesFor = (currency: string): TemporalValidity[] => {
@@ -235,6 +236,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
       const netImbalanceCents = mappedLines.reduce((sum, l) => sum + l.amountCents, 0);
       if (netImbalanceCents !== 0 && mappedLines.length > 0) {
         const roundingAccount = accounts.find(a =>
+          resolveAccountRole(a) === 'fx_rounding' ||
           a.name.toLowerCase().includes('rounding') ||
           a.name.toLowerCase().includes('exchange') ||
           a.name.toLowerCase().includes('fx') ||
