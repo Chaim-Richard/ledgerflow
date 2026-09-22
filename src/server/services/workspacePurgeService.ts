@@ -99,7 +99,7 @@ export async function purgePendingWorkspaces(db: admin.firestore.Firestore): Pro
             console.warn(`[Workspace Purge] Non-production storage tolerance for workspace ${workspaceId}:`, storageErr?.message);
           } else {
             console.error(`[Workspace Purge] Storage file deletion failed for workspace ${workspaceId}:`, storageErr);
-            throw new Error(`Storage purge failed: ${storageErr?.message || String(storageErr)}`);
+            throw new Error(`Storage purge failed: ${storageErr?.message || String(storageErr)}`, { cause: storageErr });
           }
         }
 

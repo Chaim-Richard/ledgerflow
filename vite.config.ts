@@ -78,8 +78,14 @@ export default defineConfig({
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
   },
+  esbuild: {
+    target: 'esnext'
+  },
   optimizeDeps: {
-    include: ['recharts', 'd3']
+    include: ['recharts', 'd3'],
+    esbuildOptions: {
+      target: 'esnext'
+    }
   },
   build: {
     target: 'esnext',

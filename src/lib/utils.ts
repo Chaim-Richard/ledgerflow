@@ -203,7 +203,9 @@ export function parseLocalDate(s: string): Date {
       if (activeWorkspace?.timezone) {
         timezone = activeWorkspace.timezone;
       }
-    } catch (_e) {}
+    } catch {
+      // Fallback to UTC if auth store is unavailable
+    }
 
     try {
       const formatter = new Intl.DateTimeFormat('en-US', {

@@ -97,8 +97,8 @@ export async function validateSafeUrl(urlString: string, allowedHostnames?: stri
   let url: URL;
   try {
     url = new URL(urlString);
-  } catch (_e) {
-    throw new Error(`Invalid URL: ${urlString}`);
+  } catch (err) {
+    throw new Error(`Invalid URL: ${urlString}`, { cause: err });
   }
 
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
@@ -158,7 +158,7 @@ export async function validateSafeUrl(urlString: string, allowedHostnames?: stri
     if (err.message.includes('SSRF Prevention')) {
       throw err;
     }
-    throw new Error(`DNS resolution failed for host ${hostname}: ${err.message}`);
+    throw new Error(`DNS resolution failed for host ${hostname}: ${err.message}`, { cause: err });
   }
 
   return url;

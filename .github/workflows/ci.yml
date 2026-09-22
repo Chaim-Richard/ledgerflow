@@ -28,8 +28,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Type Check (Lint)
-        run: npm run lint
+      - name: Type check
+        run: npm run lint:types
+
+      - name: ESLint
+        run: npm run lint:eslint
 
       - name: Run Accounting & Security Test Suites
         run: npm test

@@ -3,7 +3,8 @@ import { useCurrentRole, hasRoleAtLeast, WorkspaceRole } from '../../hooks/useCu
 import { ShieldAlert } from 'lucide-react';
 
 interface RequireRoleProps {
-  role: WorkspaceRole;
+  role?: WorkspaceRole;
+  requiredRole?: WorkspaceRole;
   children: React.ReactNode;
   fallback?: React.ReactNode;
   disableOnly?: boolean;
@@ -12,20 +13,22 @@ interface RequireRoleProps {
 
 export const RequireRole: React.FC<RequireRoleProps> = ({
   role,
+  requiredRole,
   children,
   fallback,
   disableOnly = false,
   tooltip
 }) => {
+  const targetRole = requiredRole || role || 'viewer';
   const currentRole = useCurrentRole();
-  const allowed = hasRoleAtLeast(currentRole, role);
+  const allowed = hasRoleAtLeast(currentRole, targetRole);
 
   if (allowed) {
     return <>{children}</>;
   }
 
   if (disableOnly) {
-    const defaultTooltip = tooltip || `${role.toUpperCase()} role required (your role: ${currentRole.toUpperCase()})`;
+    const defaultTooltip = tooltip || `${targetRole.toUpperCase()} role required (your role: ${currentRole.toUpperCase()})`;
     return (
       <div className="relative group inline-block cursor-not-allowed opacity-50 pointer-events-none" title={defaultTooltip}>
         {children}
@@ -41,7 +44,7 @@ export const RequireRole: React.FC<RequireRoleProps> = ({
     <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-600 flex items-center gap-3 text-xs font-semibold">
       <ShieldAlert size={18} className="shrink-0 text-amber-500" />
       <span>
-        {tooltip || `This action requires ${role.toUpperCase()} privileges. Your current role is ${currentRole.toUpperCase()}.`}
+        {tooltip || `This action requires ${targetRole.toUpperCase()} privileges. Your current role is ${currentRole.toUpperCase()}.`}
       </span>
     </div>
   );

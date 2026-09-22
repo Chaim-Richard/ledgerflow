@@ -250,7 +250,7 @@ export default function SecuritySettings() {
                     CRITICAL: This protocol will permanently decommission all topological nodes, transactions, and audit logs within this workspace.
                   </p>
                 </div>
-                <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can initiate a workspace purge">
+                <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can initiate a workspace purge">
                   <button 
                     onClick={handleSystemPurge}
                     disabled={isResetting}

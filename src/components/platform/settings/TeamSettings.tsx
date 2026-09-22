@@ -261,7 +261,7 @@ export default function TeamSettings() {
       </div>
 
       {/* Invite Form */}
-      <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can invite new members">
+      <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can invite new members">
         <form onSubmit={handleSendInvite} className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-5">
           <div className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
             <UserPlus size={15} className="text-indigo-500" /> Invite Team Member or Accountant
@@ -354,7 +354,7 @@ export default function TeamSettings() {
                     <Copy size={12} />
                     <span>Copy Link</span>
                   </button>
-                  <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can revoke invites">
+                  <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can revoke invites">
                     <button
                       onClick={() => handleRevokeInvite(inv.id || inv.inviteId || '')}
                       className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
@@ -450,7 +450,7 @@ export default function TeamSettings() {
                     </button>
 
                     {/* Role Picker Dropdown */}
-                    <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can change roles">
+                    <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can change roles">
                       <select
                         value={currentRole}
                         onChange={(e) => handleRoleChange(mUid, e.target.value as WorkspaceRole)}
@@ -465,7 +465,7 @@ export default function TeamSettings() {
                     </RequireRole>
 
                     {!isOwner && (
-                      <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can remove members">
+                      <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can remove members">
                         <button
                           onClick={() => handleRemoveMember(mUid)}
                           className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"

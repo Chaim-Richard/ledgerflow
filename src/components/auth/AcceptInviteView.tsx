@@ -26,7 +26,7 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
 
   useEffect(() => {
     if (!initialToken && typeof window !== 'undefined') {
-      const match = window.location.pathname.match(/\/invite\/([a-zA-Z0-9_\-]+)/);
+      const match = window.location.pathname.match(/\/invite\/([a-zA-Z0-9_-]+)/);
       if (match && match[1]) {
         setToken(match[1]);
       }

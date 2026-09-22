@@ -56,19 +56,19 @@ export const PayrollView: React.FC = () => {
     let totalTaxWithheldCents = 0;
     let totalEmployerTaxesCents = 0;
 
-    const breakdownItems = activeEmployees.map(emp => {
+    const breakdownItems = [];
+    for (const emp of activeEmployees) {
       const calc = computePeriodPayroll(emp);
-
       totalGrossCents += calc.grossPayCents;
       totalNetCents += calc.netPayCents;
       totalTaxWithheldCents += calc.totalWithholdingCents;
       totalEmployerTaxesCents += calc.totalEmployerTaxCents;
 
-      return {
+      breakdownItems.push({
         employee: emp,
         calc
-      };
-    });
+      });
+    }
 
     return {
       items: breakdownItems,

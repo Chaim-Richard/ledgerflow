@@ -21,7 +21,7 @@ async function authorizeWorkspace(user: any, workspaceId: string) {
     return data;
   } catch (err: any) {
     if (err.message?.includes("Forbidden") || err.message?.includes("not authorized") || err.message?.includes("not a member")) {
-      throw new Error("FORBIDDEN: User does not belong to this workspace.");
+      throw new Error("FORBIDDEN: User does not belong to this workspace.", { cause: err });
     }
     throw err;
   }

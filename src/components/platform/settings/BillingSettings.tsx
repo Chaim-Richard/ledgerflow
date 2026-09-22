@@ -96,7 +96,7 @@ export default function BillingSettings() {
       const data = await res.json();
       if (data.url) {
         toast.dismiss(toastId);
-        window.location.href = data.url;
+        window.location.assign(data.url);
       } else {
         throw new Error(data.message || 'Failed to create checkout session');
       }
@@ -121,7 +121,7 @@ export default function BillingSettings() {
       const data = await res.json();
       if (data.url) {
         toast.dismiss(toastId);
-        window.location.href = data.url;
+        window.location.assign(data.url);
       } else {
         throw new Error(data.message || 'Customer portal unavailable');
       }
@@ -232,7 +232,7 @@ export default function BillingSettings() {
               {activePlan}
             </span>
             {billingStatus?.stripeSubscriptionId && (
-              <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can manage billing">
+              <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can manage billing">
                 <button
                   onClick={handleOpenPortal}
                   className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
@@ -306,7 +306,7 @@ export default function BillingSettings() {
                       Included
                     </button>
                   ) : (
-                    <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can upgrade plans">
+                    <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can upgrade plans">
                       <button
                         onClick={() => handleCheckout(p.id)}
                         className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"

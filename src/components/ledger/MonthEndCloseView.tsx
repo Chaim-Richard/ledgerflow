@@ -346,7 +346,7 @@ export default function MonthEndCloseView() {
                     <Lock className="w-4 h-4" /> Period Locked
                   </div>
                 ) : (
-                  <RequireRole role="accountant" disableOnly tooltip="Only an accountant can close the period">
+                  <RequireRole requiredRole="accountant" disableOnly tooltip="Only an accountant can close the period">
                     <AsyncButton
                       disabled={!isReady || isClosing}
                       onClick={handleClosePeriod}

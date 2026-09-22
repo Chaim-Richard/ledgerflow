@@ -13,8 +13,6 @@ export function parseMT940Statement(rawContent: string): ParsedBankLine[] {
   const lines = rawContent.split(/\r?\n/);
   const parsedLines: ParsedBankLine[] = [];
 
-  let currentDate = '';
-
   for (const line of lines) {
     const trimmed = line.trim();
 
@@ -26,7 +24,7 @@ export function parseMT940Statement(rawContent: string): ParsedBankLine[] {
       const year = '20' + dateRaw.substring(0, 2);
       const month = dateRaw.substring(2, 4);
       const day = dateRaw.substring(4, 6);
-      currentDate = `${year}-${month}-${day}`;
+      const currentDate = `${year}-${month}-${day}`;
 
       // Indicator in :61: comes after date (6 or 10 digits YYMMDD or YYMMDDMMDD)
       const afterDate = data.substring(6);

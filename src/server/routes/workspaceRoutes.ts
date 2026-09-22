@@ -67,8 +67,8 @@ export async function allocateNextNumber(db: any, workspaceId: string, type: 'in
   return await db.runTransaction(async (tx: any) => {
     const nsSnap = await tx.get(nsDocRef);
     
-    let prefix = '';
-    let nextNum = 1;
+    let prefix: string;
+    let nextNum: number;
     let padding = 4;
 
     if (nsSnap.exists) {

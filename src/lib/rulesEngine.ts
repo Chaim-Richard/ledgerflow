@@ -153,7 +153,7 @@ export function applyRuleAction(rule: AutoRule, tx: Transaction): { modifiedTx: 
     return newLine;
   });
 
-  let modifiedTx: Transaction = {
+  const modifiedTx: Transaction = {
     ...tx,
     lines: updatedLines
   };
