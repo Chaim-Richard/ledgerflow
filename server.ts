@@ -4009,6 +4009,7 @@ You MUST output a valid JSON object matching this schema exactly:
       const amountKey = findBestCol([/^amount$/i, /^total$/i, /^net$/i, /^sum$/i, /amount/i], [/balance/i, /account[_\s]?num/i, /debit/i, /credit/i]);
       const categoryKey = findBestCol([/^category$/i, /^account[_\s]?category$/i, /^class$/i, /^label$/i, /category/i]);
 
+      const wsData = (authReq as any).workspace;
       const normalizeDate = (rawDate: string): string => {
         if (!rawDate) return formatTzDate(new Date(), wsData?.settings?.timezone || wsData?.timezone);
         const s = rawDate.trim();

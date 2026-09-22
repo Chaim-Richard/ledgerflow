@@ -244,8 +244,11 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
           accountId: roundingAccount?.id || 'fx-rounding-adjustment',
           accountName: roundingAccount?.name || 'FX Gain/Loss & Rounding',
           amountCents: -netImbalanceCents,
-          description: 'FX Conversion Rounding Difference'
-        });
+          class: undefined,
+          location: undefined,
+          project: undefined,
+          dimensions: undefined
+        } as any);
       }
 
       const totalAmountCents = mappedLines

@@ -1,0 +1,12 @@
+{
+  "anyCount": 1161,
+  "utcDateCount": 31,
+  "arrayIndexKeys": 65,
+  "blankNoOpener": 3,
+  "consoleLog": 0,
+  "serverTsLines": 4717,
+  "filesOver800": 14,
+  "orphanFiles": 0,
+  "eslintWarnings": 0,
+  "untestedViews": 0
+}

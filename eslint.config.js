@@ -5,6 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
+import reactPlugin from 'eslint-plugin-react';
 
 export default tseslint.config(
   { ignores: ['dist', 'node_modules', 'dist/**', 'public/**'] },
@@ -22,6 +23,7 @@ export default tseslint.config(
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      'react': reactPlugin,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
@@ -34,6 +36,9 @@ export default tseslint.config(
       'react-hooks/exhaustive-deps': 'warn',
       'react-hooks/purity': 'warn',
       'react-hooks/set-state-in-effect': 'warn',
+      'react/no-array-index-key': 'warn',
+      'react/jsx-no-target-blank': 'warn',
+      'max-lines': ['warn', { max: 800, skipBlankLines: true, skipComments: true }],
       'jsx-a11y/no-autofocus': 'warn',
       'jsx-a11y/label-has-associated-control': 'warn',
       'jsx-a11y/click-events-have-key-events': 'warn',
