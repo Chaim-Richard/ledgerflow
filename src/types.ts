@@ -238,7 +238,8 @@ export interface Vendor {
   email?: string;
   phone?: string;
   type?: string; // 'subcontractor', 'service_provider', 'supplier', etc.
-  status?: 'active' | 'inactive' | 'blocked' | 'approved';
+  status?: 'active' | 'inactive' | 'blocked' | 'approved' | string;
+  pipelineStage?: string;
   is1099?: boolean;
   isForeign?: boolean;
   rating?: number;
@@ -427,6 +428,7 @@ export interface Customer {
   name: string;
   email?: string;
   phone?: string;
+  status?: 'active' | 'inactive' | 'blocked' | 'approved' | string;
   balanceCents?: number;
   pipelineStage?: 'lead' | 'qualified' | 'proposal' | 'won' | 'lost' | 'delinquent' | 'inactive';
   customerSegment?: 'high-value' | 'repeat' | 'service-tier' | 'standard';

@@ -22,7 +22,7 @@ const AiTaskEnum = z.enum([
 
 const AiProcessSchema = z.object({
   task: AiTaskEnum,
-  payload: z.record(z.any()).optional().default({})
+  payload: z.record(z.string(), z.any()).optional().default({})
 });
 
 aiRouter.post("/process", async (req: express.Request, res: express.Response) => {
@@ -53,7 +53,12 @@ aiRouter.post("/process", async (req: express.Request, res: express.Response) =>
   }
 
   const { task, payload } = parsed.data;
-  const workspaceId = payload.workspaceId || req.headers['x-workspace-id'] || 'default-workspace';
+  const workspaceId =
+    typeof payload.workspaceId === 'string'
+      ? payload.workspaceId
+      : typeof req.headers['x-workspace-id'] === 'string'
+      ? (req.headers['x-workspace-id'] as string)
+      : 'default-workspace';
 
   if (workspaceId && workspaceId !== 'default-workspace' && decodedToken.uid !== 'guest') {
     try {

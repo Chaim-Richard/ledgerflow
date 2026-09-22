@@ -100,7 +100,7 @@ export function SchemaForm<T extends z.ZodObject<any>>({
     const isDisabled = disabledFields.includes(key);
 
     if (currentType instanceof z.ZodEnum) {
-      const options: string[] = currentType._def.values;
+      const options = (currentType.options || (currentType as any)._def?.values || []) as readonly string[];
       return (
         <select
           value={value}

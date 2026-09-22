@@ -265,7 +265,7 @@ export const RulesSettings: React.FC = () => {
 
       setAiPreview({
         rule: generatedRule,
-        affectedCount: dryRunRes.totalAffected
+        affectedCount: dryRunRes.summary.totalMatched
       });
     } catch (err: any) {
       setAiError(err.message || 'Failed to generate AI rule');

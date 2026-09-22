@@ -40,8 +40,8 @@ export function useCollection<T = any>(
   collectionName: string,
   options: UseCollectionOptions = {}
 ): UseCollectionResult<T> {
-  const currentWorkspace = useAuthStore(s => s.currentWorkspace);
-  const targetWorkspaceId = options.workspaceId || currentWorkspace?.id || 'default-workspace';
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const targetWorkspaceId = options.workspaceId || currentWorkspaceId || 'default-workspace';
 
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
