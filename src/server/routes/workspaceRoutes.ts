@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { z } from 'zod';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
 import { seedDemoWorkspace } from '../../lib/demoWorkspaceSeeder';
+import { formatTzDate } from './transactionRoutes';
 
 export const workspaceRouter = express.Router();
 
@@ -474,6 +475,13 @@ workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accou
   const db = getDb();
   
   try {
+    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+    const wsTz = wsDoc.data()?.timezone || 'UTC';
+    const now = new Date();
+    const today = formatTzDate(now, wsTz);
+    const invoiceDue = formatTzDate(new Date(now.getTime() + 30 * 86400000), wsTz);
+    const billDue = formatTzDate(new Date(now.getTime() + 15 * 86400000), wsTz);
+
     const demoData = seedDemoWorkspace(workspaceId);
     const batch = db.batch();
 
@@ -518,8 +526,8 @@ workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accou
       customerName: 'Acme Corporation',
       number: `INV-DEMO-001`,
       amountCents: 500000,
-      date: new Date().toISOString().slice(0,10),
-      dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0,10),
+      date: today,
+      dueDate: invoiceDue,
       status: 'sent',
       type: 'standard',
       items: [
@@ -543,8 +551,8 @@ workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accou
       vendorName: 'Cloud Services Ltd',
       number: `BILL-DEMO-001`,
       amountCents: 120000,
-      date: new Date().toISOString().slice(0,10),
-      dueDate: new Date(Date.now() + 15 * 86400000).toISOString().slice(0,10),
+      date: today,
+      dueDate: billDue,
       status: 'pending',
       splits: [
         {

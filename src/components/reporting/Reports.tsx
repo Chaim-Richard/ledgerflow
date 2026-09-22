@@ -13,6 +13,7 @@ const DrillDownModal = React.lazy(() => import('../layout/DrillDownModal'));
 import { REPORT_TABS_REGISTRY, REPORT_COMPONENTS } from '../../config/registry';
 import { useUIStore } from '../../stores/useUIStore';
 import { getCachedReport, setCachedReport } from '../../lib/reportCache';
+import { ViewErrorBoundary } from '../common/ViewErrorBoundary';
 
 
 
@@ -309,9 +310,13 @@ const Reports = React.memo(() => {
                 onDrillDown: (name: string) => setDrillDownAccount(name)
               };
 
+              const reportTitle = typeof tab.label === 'string' ? tab.label : ((tab.label as any)?.en || tab.id);
+
               return (
-                <Component key={tab.id} {...standardProps} />
-              )
+                <ViewErrorBoundary key={tab.id} viewName={reportTitle}>
+                  <Component {...standardProps} />
+                </ViewErrorBoundary>
+              );
             })}
           </AnimatePresence>
         </React.Suspense>

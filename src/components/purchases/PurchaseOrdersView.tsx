@@ -3,7 +3,7 @@ import { PurchaseOrder, PurchaseOrderItem, GoodsReceipt, GoodsReceiptItem, Bill 
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { performThreeWayMatch, ThreeWayMatchSummary } from '../../lib/threeWayMatchEngine';
-import { formatCurrency, formatDate } from '../../lib/utils';
+import { formatCurrency, formatDate, formatTzDate } from '../../lib/utils';
 import { RequireRole } from '../ui/RequireRole';
 import { useTimeout } from '../../hooks/useTimeout';
 import { 
@@ -93,7 +93,7 @@ export const PurchaseOrdersView: React.FC = () => {
 
   // Form State
   const [poVendor, setPoVendor] = useState('');
-  const [poExpectedDate, setPoExpectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [poExpectedDate, setPoExpectedDate] = useState(() => formatTzDate(new Date(), currentWorkspace?.timezone));
   const [poItems, setPoItems] = useState<Array<{ desc: string; qty: string; unitPrice: string }>>([
     { desc: '', qty: '1', unitPrice: '' }
   ]);
@@ -133,7 +133,7 @@ export const PurchaseOrdersView: React.FC = () => {
       poNumber: `PO-2026-${String(purchaseOrders.length + 1).padStart(3, '0')}`,
       vendorId: `vend_${Date.now()}`,
       vendorName: poVendor,
-      issueDate: new Date().toISOString().split('T')[0],
+      issueDate: formatTzDate(new Date(), currentWorkspace?.timezone),
       expectedDeliveryDate: poExpectedDate,
       status: 'approved',
       items,
@@ -178,7 +178,7 @@ export const PurchaseOrdersView: React.FC = () => {
       poNumber: receivingPO.poNumber,
       vendorId: receivingPO.vendorId,
       vendorName: receivingPO.vendorName,
-      receivedDate: new Date().toISOString().split('T')[0],
+      receivedDate: formatTzDate(new Date(), currentWorkspace?.timezone),
       items: receiptItems,
       status: receivedCondition === 'good' ? 'verified' : 'discrepancy',
       createdAt: new Date().toISOString()
@@ -394,6 +394,7 @@ export const PurchaseOrdersView: React.FC = () => {
                               <div key={i}>&bull; {d}</div>
                             ))}
                           </div>
+                          {/* eslint-disable-next-line jsx-a11y/aria-role */}
                           <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can override exceptions">
                             <button className="self-start px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded font-bold uppercase tracking-wider text-[9px] transition-colors">
                               Approve Anyway

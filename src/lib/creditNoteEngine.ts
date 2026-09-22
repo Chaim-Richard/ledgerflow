@@ -1,4 +1,5 @@
 import { CreditNote, VendorCredit, Invoice, Bill, Transaction } from '../types';
+import { getLocalDateIso } from './utils';
 
 export interface ApplyCreditResult {
   updatedCreditNote: CreditNote;
@@ -53,7 +54,7 @@ export function applyCreditNoteToInvoice(
 
   const ledgerTransaction: Partial<Transaction> = {
     workspaceId: invoice.workspaceId,
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateIso(),
     description: `Applied Credit Note ${creditNote.id} to Invoice ${invoice.number || invoice.id}`,
     totalAmountCents: amountCentsToApply,
     status: 'completed',
@@ -108,7 +109,7 @@ export function applyVendorCreditToBill(
 
   const ledgerTransaction: Partial<Transaction> = {
     workspaceId: bill.workspaceId,
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateIso(),
     description: `Applied Vendor Credit ${vendorCredit.id} to Bill ${bill.number || bill.id}`,
     totalAmountCents: amountCentsToApply,
     status: 'completed',

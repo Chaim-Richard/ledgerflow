@@ -1,10 +1,12 @@
+import { getLocalDateIso } from './utils';
+
 export type PaymentTerm = 'due_on_receipt' | 'net_15' | 'net_30' | 'net_45' | 'net_60' | 'custom';
 
 /**
  * Derives due date from invoice issue date and payment terms.
  */
 export function calculateDueDate(issueDateIso: string, term: PaymentTerm, customDays = 0): string {
-  const date = new Date(issueDateIso);
+  const [y, m, d] = (issueDateIso || getLocalDateIso()).slice(0, 10).split('-').map(Number);
   let daysToAdd = 0;
 
   switch (term) {
@@ -28,7 +30,7 @@ export function calculateDueDate(issueDateIso: string, term: PaymentTerm, custom
       break;
   }
 
-  date.setDate(date.getDate() + daysToAdd);
+  const date = new Date(Date.UTC(y, m - 1, d + daysToAdd));
   return date.toISOString().split('T')[0];
 }
 
@@ -38,7 +40,7 @@ export function calculateDueDate(issueDateIso: string, term: PaymentTerm, custom
 export function calculateLateFee(
   outstandingBalanceCents: number,
   dueDateIso: string,
-  asOfDateIso: string = new Date().toISOString().split('T')[0],
+  asOfDateIso: string = getLocalDateIso(),
   annualInterestRatePct = 18.0,
   flatFeeCents = 2500 // $25.00 default flat fee
 ): { isOverdue: boolean; daysOverdue: number; lateFeeCents: number } {

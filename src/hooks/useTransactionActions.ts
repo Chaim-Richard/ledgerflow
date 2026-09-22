@@ -626,7 +626,7 @@ export function useTransactionActions() {
     const isFirstTimeForNewYear = existingYears.size > 0 && !existingYears.has(txYearNum);
 
     if (isFirstTimeForNewYear) {
-      setTimeout(async () => {
+      queueMicrotask(async () => {
         try {
           const batch = writeBatch(db);
           const defaultRates = [
@@ -654,7 +654,7 @@ export function useTransactionActions() {
         } catch (e) {
           console.warn("Autonomous fiscal setup deferred", e);
         }
-      }, 500);
+      });
     }
 
     // Deferred to ledger integrity stream

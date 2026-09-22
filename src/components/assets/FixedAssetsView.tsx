@@ -3,8 +3,9 @@ import { FixedAsset, Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { calculateStraightLineDepreciation, generateDepreciationLedgerEntry, DepreciationPeriodEntry } from '../../lib/depreciationEngine';
-import { formatCurrency, formatDate } from '../../lib/utils';
+import { formatCurrency, formatDate, formatTzDate } from '../../lib/utils';
 import { toast } from 'sonner';
+import { useTimeout } from '../../hooks/useTimeout';
 import { 
   Building, 
   Plus, 
@@ -24,35 +25,23 @@ export const FixedAssetsView: React.FC = () => {
 
   const [isAddingAsset, setIsAddingAsset] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { setSafeTimeout } = useTimeout();
 
   // Form State
   const [assetName, setAssetName] = useState('');
   const [assetCost, setAssetCost] = useState('');
   const [salvageValue, setSalvageValue] = useState('0');
   const [usefulLifeYears, setUsefulLifeYears] = useState('5');
-  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [purchaseDate, setPurchaseDate] = useState(() => formatTzDate(new Date(), currentWorkspace?.timezone));
 
   // Register Metrics
   const registerMetrics = useMemo(() => {
-    let totalCostCents = 0;
-    let totalAccumulatedDepreciationCents = 0;
-    let totalBookValueCents = 0;
-
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = formatTzDate(new Date(), currentWorkspace?.timezone);
 
     const enhancedAssets = assets.map(asset => {
       const schedule = calculateStraightLineDepreciation(asset, todayStr);
-      const latestEntry = schedule[schedule.length - 1] || {
-        accumulatedDepreciationCents: asset.accumulatedDepreciationCents || 0,
-        bookValueCents: Math.max(0, (asset.purchasePriceCents || 0) - (asset.accumulatedDepreciationCents || 0))
-      };
-
       const effectiveAccum = asset.accumulatedDepreciationCents || 0;
       const effectiveBookValue = Math.max(asset.salvageValueCents || 0, (asset.purchasePriceCents || 0) - effectiveAccum);
-
-      totalCostCents += (asset.purchasePriceCents || 0);
-      totalAccumulatedDepreciationCents += effectiveAccum;
-      totalBookValueCents += effectiveBookValue;
 
       return {
         ...asset,
@@ -62,13 +51,17 @@ export const FixedAssetsView: React.FC = () => {
       };
     });
 
+    const totalCostCents = enhancedAssets.reduce((sum, a) => sum + (a.purchasePriceCents || 0), 0);
+    const totalAccumulatedDepreciationCents = enhancedAssets.reduce((sum, a) => sum + a.effectiveAccum, 0);
+    const totalBookValueCents = enhancedAssets.reduce((sum, a) => sum + a.effectiveBookValue, 0);
+
     return {
       enhancedAssets,
       totalCostCents,
       totalAccumulatedDepreciationCents,
       totalBookValueCents
     };
-  }, [assets]);
+  }, [assets, currentWorkspace?.timezone]);
 
   const handleSaveAsset = () => {
     if (!assetName || !assetCost) return;
@@ -99,11 +92,11 @@ export const FixedAssetsView: React.FC = () => {
     setSalvageValue('0');
     setUsefulLifeYears('5');
     setSuccessMessage(`Capitalized asset "${assetName}" into register.`);
-    setTimeout(() => setSuccessMessage(null), 4000);
+    setSafeTimeout(() => setSuccessMessage(null), 4000);
   };
 
   const handlePostMonthlyDepreciation = (asset: FixedAsset) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = formatTzDate(new Date(), currentWorkspace?.timezone);
     const schedule = calculateStraightLineDepreciation(asset, todayStr);
     
     if (!schedule || schedule.length === 0) {
@@ -152,7 +145,7 @@ export const FixedAssetsView: React.FC = () => {
 
     setAssets(updated);
     setSuccessMessage(`Posted monthly depreciation of ${formatCurrency(monthlyDepAmount)} for "${asset.name}" to ledger.`);
-    setTimeout(() => setSuccessMessage(null), 4000);
+    setSafeTimeout(() => setSuccessMessage(null), 4000);
   };
 
   return (

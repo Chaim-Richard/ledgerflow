@@ -4,6 +4,7 @@ import { useUIStore } from '../../stores/useUIStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { SYSTEM_GLOSSARY } from '../../config/registry';
 import { toast } from 'sonner';
+import { useTimeout } from '../../hooks/useTimeout';
 
 export default function OnboardingView() {
   const setQuickEntryOpen = useUIStore(s => s.setQuickEntryOpen);
@@ -12,6 +13,7 @@ export default function OnboardingView() {
   const language = useUIStore(s => s.language) as 'en' | 'he';
   
   const [isDemoLoading, setIsDemoLoading] = useState(false);
+  const { setSafeTimeout } = useTimeout();
 
   // Helper for translated terms with fallbacks
   const t = (key: string, defaultVal: string) => {
@@ -25,7 +27,7 @@ export default function OnboardingView() {
       success: language === 'he' ? 'סביבת ההדגמה נטענה בהצלחה.' : 'Demo environment fully populated.',
       error: language === 'he' ? 'שגיאה בטעינת נתוני הדגמה.' : 'Failed to load demo.'
     });
-    setTimeout(() => {
+    setSafeTimeout(() => {
       setIsDemoLoading(false);
       setActiveTab('dashboard');
     }, 2500);

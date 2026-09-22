@@ -1,4 +1,5 @@
 import { RecurringTransaction, Transaction } from '../types';
+import { getLocalDateISO } from './utils';
 
 function parseDateStrToMs(dateStr: string): number {
   if (!dateStr) return NaN;
@@ -13,7 +14,7 @@ export function calculateNextOccurrence(
   frequency: RecurringTransaction['frequency'],
   anchorDay: number
 ): string {
-  const [y, m, d] = (currentDateStr || new Date().toISOString().slice(0, 10)).split('-').map(Number);
+  const [y, m, d] = (currentDateStr || getLocalDateISO()).split('-').map(Number);
   const anchor = anchorDay;
 
   const addMonths = (n: number) => {
@@ -56,7 +57,7 @@ export interface DueRecurringResult {
 }
 
 export function findDueRecurring(recurringList: RecurringTransaction[], asOfDateStr?: string): DueRecurringResult {
-  const todayStr = asOfDateStr || new Date().toISOString().slice(0, 10);
+  const todayStr = asOfDateStr || getLocalDateISO();
   const asOfTime = parseDateStrToMs(todayStr);
 
   const dueTemplates: RecurringTransaction[] = [];

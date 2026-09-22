@@ -52,7 +52,7 @@ export function useSupportData() {
       );
     }
 
-    setTimeout(() => setIsSyncing(true), 0);
+    const syncTimer = setTimeout(() => setIsSyncing(true), 0);
     const unsub = onSnapshot(q, (snap) => {
       const tickets = snap.docs.map(d => ({ id: d.id, ...d.data() } as SupportTicket));
       setTickets(tickets);
@@ -62,14 +62,17 @@ export function useSupportData() {
       setIsSyncing(false);
     });
 
-    return () => unsub();
+    return () => {
+      clearTimeout(syncTimer);
+      unsub();
+    };
   }, [user, currentWorkspaceId, isAdmin, setTickets, setIsSyncing]);
 
   // 2. Listen for Messages in Selected Ticket
   useEffect(() => {
     if (!selectedTicketId) {
-      setTimeout(() => setMessages([]), 0);
-      return;
+      const clearTimer = setTimeout(() => setMessages([]), 0);
+      return () => clearTimeout(clearTimer);
     }
 
     const q = query(

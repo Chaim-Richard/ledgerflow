@@ -26,6 +26,7 @@ import ToolSandbox from '../platform/ToolSandbox';
 import FinancialCalculatorView from './FinancialCalculatorView';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
 import { ANALYTICAL_LENSES_REGISTRY, LENS_COMPONENTS } from '../../config/registry';
+import { ViewErrorBoundary } from '../common/ViewErrorBoundary';
 
 // -------------------------------------------------------------
 // Interactive D3 Ledger Volumetric Flow & Activity Visualizer
@@ -996,11 +997,13 @@ export default function AnalyticalCenter() {
 
             {/* ----------------- ALGORITHM TOOL SANDBOX ----------------- */}
             {FINANCIAL_ALGORITHMS[activeChannel] && (
-              <ToolSandbox 
-                toolId={activeChannel} 
-                toolName={FINANCIAL_ALGORITHMS[activeChannel]?.name || 'Algorithm Sandbox'} 
-                onClose={() => setActiveChannel('radar')} 
-              />
+              <ViewErrorBoundary viewName={FINANCIAL_ALGORITHMS[activeChannel]?.name || 'Algorithm Sandbox'}>
+                <ToolSandbox 
+                  toolId={activeChannel} 
+                  toolName={FINANCIAL_ALGORITHMS[activeChannel]?.name || 'Algorithm Sandbox'} 
+                  onClose={() => setActiveChannel('radar')} 
+                />
+              </ViewErrorBoundary>
             )}
 
             {/* ----------------- DYNAMIC REGISTRY REFERRED LENSES ----------------- */}
@@ -1017,20 +1020,22 @@ export default function AnalyticalCenter() {
                       exit={{ opacity: 0 }}
                       className="h-full"
                     >
-                      <React.Suspense fallback={
-                        <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] min-h-[380px] text-center">
-                          <Loader2 className="w-7 h-7 text-indigo-650 animate-spin shrink-0" />
-                          <p className="text-[10px] uppercase font-mono font-bold tracking-widest text-slate-400">Restructuring Lens Component...</p>
-                        </div>
-                      }>
-                        <Component 
-                          accounts={accounts} 
-                          computedAccounts={accounts} 
-                          budgets={budgets} 
-                          projects={projects}
-                          isEmbedded={true}
-                        />
-                      </React.Suspense>
+                      <ViewErrorBoundary viewName={(lensDef as any)?.label?.en || lensDef.id || activeChannel}>
+                        <React.Suspense fallback={
+                          <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] min-h-[380px] text-center">
+                            <Loader2 className="w-7 h-7 text-indigo-650 animate-spin shrink-0" />
+                            <p className="text-[10px] uppercase font-mono font-bold tracking-widest text-slate-400">Restructuring Lens Component...</p>
+                          </div>
+                        }>
+                          <Component 
+                            accounts={accounts} 
+                            computedAccounts={accounts} 
+                            budgets={budgets} 
+                            projects={projects}
+                            isEmbedded={true}
+                          />
+                        </React.Suspense>
+                      </ViewErrorBoundary>
                     </motion.div>
                   );
                 }

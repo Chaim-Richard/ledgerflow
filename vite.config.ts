@@ -82,6 +82,7 @@ export default defineConfig({
     include: ['recharts', 'd3']
   },
   build: {
+    target: 'esnext',
     rollupOptions: {
       output: {
         manualChunks: {

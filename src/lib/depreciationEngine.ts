@@ -1,4 +1,5 @@
 import { FixedAsset, Transaction } from '../types';
+import { getLocalDateIso } from './utils';
 
 export interface DepreciationPeriodEntry {
   periodDate: string;
@@ -16,7 +17,7 @@ export interface DepreciationPeriodEntry {
  */
 export function calculateStraightLineDepreciation(
   asset: FixedAsset,
-  currentDateIso: string = new Date().toISOString().split('T')[0]
+  currentDateIso: string = getLocalDateIso()
 ): DepreciationPeriodEntry[] {
   const cost = asset.purchasePriceCents || 0;
   const salvage = asset.salvageValueCents || 0;
@@ -27,10 +28,11 @@ export function calculateStraightLineDepreciation(
 
   const schedule: DepreciationPeriodEntry[] = [];
   let accumulated = 0;
-  const startDate = new Date(asset.purchaseDate || currentDateIso);
+  const [startY, startM] = (asset.purchaseDate || currentDateIso).slice(0, 10).split('-').map(Number);
 
   for (let month = 1; month <= usefulLifeMonths; month++) {
-    const periodDate = new Date(startDate.getFullYear(), startDate.getMonth() + month, 1)
+    const targetMonth = (startM - 1) + month;
+    const periodDate = new Date(Date.UTC(startY, targetMonth, 1))
       .toISOString().split('T')[0];
 
     const amount = (month === usefulLifeMonths)

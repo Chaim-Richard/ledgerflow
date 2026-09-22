@@ -24,6 +24,7 @@ import { SupportTicket, Priority, SupportMessage } from '../../types';
 import { getLatestErrorDiagnostic } from '../../lib/errorTracker';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
+import { useTimeout } from '../../hooks/useTimeout';
 import { db } from '../../firebase';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 
@@ -50,6 +51,7 @@ export default function SupportView() {
   const [attachDiagnostics, setAttachDiagnostics] = useState(true);
   const [showDiagnosticsDetail, setShowDiagnosticsDetail] = useState(false);
   const [copiedTrace, setCopiedTrace] = useState(false);
+  const { setSafeTimeout } = useTimeout();
 
   const latestError = getLatestErrorDiagnostic();
 
@@ -255,7 +257,7 @@ export default function SupportView() {
     if (!selectedTicket?.errorDiagnostics?.stack) return;
     navigator.clipboard.writeText(selectedTicket.errorDiagnostics.stack);
     setCopiedTrace(true);
-    setTimeout(() => setCopiedTrace(false), 2000);
+    setSafeTimeout(() => setCopiedTrace(false), 2000);
   };
 
   return (

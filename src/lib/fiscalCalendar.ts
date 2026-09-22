@@ -1,5 +1,15 @@
 import { getLocalDateISO } from './utils';
 
+/**
+ * Formats a Date object in UTC to YYYY-MM-DD string
+ */
+function toUtcYMD(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export interface FiscalYearBounds {
   startDate: string; // YYYY-MM-DD
   endDate: string;   // YYYY-MM-DD
@@ -53,7 +63,7 @@ export function getFiscalYearBounds(
   // End date is 1 day before the next fiscal year start
   const endTargetDate = new Date(Date.UTC(fyStartYear + 1, startMonth - 1, startDay));
   endTargetDate.setUTCDate(endTargetDate.getUTCDate() - 1);
-  const endDate = getLocalDateISO(endTargetDate);
+  const endDate = toUtcYMD(endTargetDate);
 
   return {
     startDate,
@@ -83,12 +93,12 @@ export function getFiscalQuarter(
 
   const qStartDateObj = new Date(fyStart);
   qStartDateObj.setUTCMonth(qStartDateObj.getUTCMonth() + quarterIndex * 3);
-  const qStartDate = getLocalDateISO(qStartDateObj);
+  const qStartDate = toUtcYMD(qStartDateObj);
 
   const qEndDateObj = new Date(fyStart);
   qEndDateObj.setUTCMonth(qEndDateObj.getUTCMonth() + (quarterIndex + 1) * 3);
   qEndDateObj.setUTCDate(qEndDateObj.getUTCDate() - 1);
-  const qEndDate = getLocalDateISO(qEndDateObj);
+  const qEndDate = toUtcYMD(qEndDateObj);
 
   return {
     quarter: quarterNumber,
@@ -127,7 +137,7 @@ export function getPrevPeriod(startDate: string, endDate: string): { startDate: 
   prevStart.setUTCDate(prevStart.getUTCDate() - diffDays);
 
   return {
-    startDate: getLocalDateISO(prevStart),
-    endDate: getLocalDateISO(prevEnd)
+    startDate: toUtcYMD(prevStart),
+    endDate: toUtcYMD(prevEnd)
   };
 }

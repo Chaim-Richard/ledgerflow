@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { SETTINGS_TABS_REGISTRY, SETTINGS_COMPONENTS } from '../../config/registry';
 import { useUIStore } from '../../stores/useUIStore';
+import { ViewErrorBoundary } from '../common/ViewErrorBoundary';
 
 export default function Settings() {
   const language = useUIStore(state => state.language);
@@ -58,7 +59,9 @@ export default function Settings() {
             >
               {ActiveComponent && (
                 <Suspense fallback={<div className="h-40 flex items-center justify-center font-bold text-slate-500 uppercase tracking-widest text-xs">Loading module...</div>}>
-                  <ActiveComponent />
+                  <ViewErrorBoundary viewName={(activeTabDef as any)?.label?.en || activeSubTab}>
+                    <ActiveComponent />
+                  </ViewErrorBoundary>
                 </Suspense>
               )}
             </motion.div>

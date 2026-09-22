@@ -1,4 +1,6 @@
 import { Estimate, Invoice } from '../types';
+import { getLocalDateIso } from './utils';
+import { calculateDueDate } from './paymentTerms';
 
 /**
  * Converts an estimate to a formal customer invoice using canonical Invoice & Estimate fields:
@@ -10,8 +12,8 @@ export function convertEstimateToInvoice(estimate: Estimate): Invoice {
     throw new Error('Cannot convert a declined estimate to an invoice');
   }
 
-  const issueDate = new Date().toISOString().split('T')[0];
-  const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Default Net 30
+  const issueDate = getLocalDateIso();
+  const dueDate = calculateDueDate(issueDate, 'net_30');
 
   const invoiceItems = (estimate.lines || []).map(line => ({
     id: `item_${Math.random().toString(36).substr(2, 9)}`,

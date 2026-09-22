@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { computePeriodPayroll, PAYROLL_DISCLAIMER } from '../../lib/payroll-engine';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
+import { useTimeout } from '../../hooks/useTimeout';
 import { 
   Users, 
   Plus, 
@@ -32,6 +33,7 @@ export const PayrollView: React.FC = () => {
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [isGeneratingRun, setIsGeneratingRun] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { setSafeTimeout } = useTimeout();
 
   // New employee form
   const [empName, setEmpName] = useState('');
@@ -104,7 +106,7 @@ export const PayrollView: React.FC = () => {
     setEmpRole('');
     setEmpSalary('');
     setSuccessMessage(`Added employee "${empName}" to roster.`);
-    setTimeout(() => setSuccessMessage(null), 4000);
+    setSafeTimeout(() => setSuccessMessage(null), 4000);
   };
 
   const handlePostPayRunToLedger = () => {
@@ -187,7 +189,7 @@ export const PayrollView: React.FC = () => {
     setPayRuns([...payRuns, record]);
     setIsGeneratingRun(false);
     setSuccessMessage(`Pay Run posted to General Ledger: ${formatCurrency(calculatedPayRun.totalCostCents)} total employer cost.`);
-    setTimeout(() => setSuccessMessage(null), 5000);
+    setSafeTimeout(() => setSuccessMessage(null), 5000);
   };
 
   return (
