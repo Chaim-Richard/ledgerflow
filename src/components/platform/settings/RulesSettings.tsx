@@ -21,8 +21,12 @@ import {
   Search,
   Eye,
   Check,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
+
+import { aiService } from '../../../services/aiService';
+import { AutoRuleSchema } from '../../../schemas';
 
 export const RulesSettings: React.FC = () => {
   const autoRules = useLedgerStore(s => (s.autoRules || []) as AutoRule[]);
@@ -38,6 +42,12 @@ export const RulesSettings: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreatingRule, setIsCreatingRule] = useState(false);
   const [editingRule, setEditingRule] = useState<AutoRule | null>(null);
+
+  // AI Rule Builder State
+  const [aiSentence, setAiSentence] = useState('');
+  const [isGeneratingAiRule, setIsGeneratingAiRule] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiPreview, setAiPreview] = useState<{ rule: AutoRule; affectedCount: number } | null>(null);
 
   // Dry run & Test state
   const [dryRunResult, setDryRunResult] = useState<ReturnType<typeof dryRunRules> | null>(null);
@@ -226,6 +236,55 @@ export const RulesSettings: React.FC = () => {
     setSingleRuleTestResult(matches);
   };
 
+  const handleGenerateAiRule = async () => {
+    if (!aiSentence.trim()) return;
+    setIsGeneratingAiRule(true);
+    setAiError(null);
+    try {
+      const result = await aiService.process('build-auto-rule', { sentence: aiSentence });
+      const rawRule = result?.rule || result;
+      const validated = AutoRuleSchema.safeParse({
+        ...rawRule,
+        id: `rule_ai_${Date.now()}`,
+        workspaceId: currentWorkspace?.id || 'default',
+        createdBy: 'ai',
+        name: rawRule?.name || `AI Rule: ${aiSentence.slice(0, 30)}`
+      });
+
+      if (!validated.success) {
+        setAiError('AI generated an invalid rule structure.');
+        setIsGeneratingAiRule(false);
+        return;
+      }
+
+      const generatedRule = validated.data as AutoRule;
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      const recentTxs = transactions.filter(t => new Date(t.date) >= ninetyDaysAgo);
+      const dryRunRes = dryRunRules([generatedRule], recentTxs);
+
+      setAiPreview({
+        rule: generatedRule,
+        affectedCount: dryRunRes.totalAffected
+      });
+    } catch (err: any) {
+      setAiError(err.message || 'Failed to generate AI rule');
+    } finally {
+      setIsGeneratingAiRule(false);
+    }
+  };
+
+  const handleSaveAiRule = (activate: boolean) => {
+    if (!aiPreview) return;
+    const ruleToSave: AutoRule = {
+      ...aiPreview.rule,
+      isActive: activate
+    };
+    setAutoRules([...autoRules, ruleToSave]);
+    setAiPreview(null);
+    setAiSentence('');
+  };
+
   const handleRunDryRun = () => {
     const result = dryRunRules(autoRules, transactions);
     setDryRunResult(result);
@@ -290,6 +349,104 @@ export const RulesSettings: React.FC = () => {
             Create Rule
           </button>
         </div>
+      </div>
+
+      {/* Describe a Rule (AI Rule Builder) */}
+      <div className="bg-gradient-to-r from-neutral-900 to-neutral-800 text-white p-4 rounded-xl shadow-xs border border-neutral-700">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="w-4 h-4 text-amber-400" />
+          <h3 className="text-sm font-semibold text-white">Describe a Rule in Plain English</h3>
+        </div>
+        <p className="text-xs text-neutral-300 mb-3">
+          Type what you want to automate (e.g. &quot;Categorize any transaction containing AWS as Software & IT, and tag as Infrastructure&quot;).
+        </p>
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+          <input
+            type="text"
+            value={aiSentence}
+            onChange={(e) => setAiSentence(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateAiRule(); }}
+            placeholder="e.g. Set category to Marketing when vendor is Google Ads and amount is over $100..."
+            className="flex-1 w-full bg-neutral-800/80 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-400 focus:outline-hidden focus:border-amber-400"
+          />
+          <button
+            onClick={handleGenerateAiRule}
+            disabled={isGeneratingAiRule || !aiSentence.trim()}
+            className="w-full sm:w-auto px-4 py-2 text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-neutral-950 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
+            {isGeneratingAiRule ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            Generate Rule
+          </button>
+        </div>
+
+        {aiError && (
+          <div className="mt-3 p-2.5 bg-red-900/50 border border-red-700/50 rounded-md text-red-200 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{aiError}</span>
+          </div>
+        )}
+
+        {aiPreview && (
+          <div className="mt-4 p-4 bg-neutral-950/90 border border-neutral-700 rounded-lg text-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+              <span className="font-semibold text-amber-400">AI Proposed Rule</span>
+              <span className="text-neutral-400">
+                Would change <strong className="text-white">{aiPreview.affectedCount}</strong> of your last 90 days of transactions
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-neutral-300 bg-neutral-900/60 p-3 rounded-md">
+              <div>
+                <strong className="text-neutral-400 block text-[10px] uppercase">Rule Name</strong>
+                <span className="text-white font-medium">{aiPreview.rule.name}</span>
+              </div>
+              <div>
+                <strong className="text-neutral-400 block text-[10px] uppercase">Condition</strong>
+                <span>
+                  {aiPreview.rule.condition.vendor && `Vendor: ${aiPreview.rule.condition.vendor} `}
+                  {aiPreview.rule.condition.descriptionContains && `Contains: "${aiPreview.rule.condition.descriptionContains}" `}
+                  {aiPreview.rule.condition.amountThreshold && `> $${aiPreview.rule.condition.amountThreshold}`}
+                </span>
+              </div>
+              <div>
+                <strong className="text-neutral-400 block text-[10px] uppercase">Action Target Category</strong>
+                <span className="text-emerald-400">{aiPreview.rule.action.targetCategory || 'None'}</span>
+              </div>
+              <div>
+                <strong className="text-neutral-400 block text-[10px] uppercase">Action Tags</strong>
+                <span className="text-amber-300">{aiPreview.rule.action.addTags?.join(', ') || 'None'}</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setAiPreview(null)}
+                className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-md text-xs"
+              >
+                Discard
+              </button>
+              <button
+                onClick={() => {
+                  openEditModal(aiPreview.rule);
+                  setAiPreview(null);
+                }}
+                className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-md text-xs"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => handleSaveAiRule(false)}
+                className="px-3 py-1.5 bg-neutral-700 hover:bg-neutral-600 text-white rounded-md text-xs font-medium"
+              >
+                Save (as Inactive)
+              </button>
+              <button
+                onClick={() => handleSaveAiRule(true)}
+                className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 rounded-md text-xs font-semibold"
+              >
+                Save & Activate
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {applySuccessMessage && (

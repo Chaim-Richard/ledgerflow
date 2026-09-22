@@ -1,4 +1,5 @@
 import { fxRouter } from "./src/server/routes/fxRoutes";
+import { aiRouter } from "./src/server/routes/aiRoutes";
 import { reportRouter } from "./src/server/routes/reportRoutes";
 import { workspaceRouter, countWorkspaceOwners } from "./src/server/routes/workspaceRoutes";
 import { invitePublicRouter } from "./src/server/routes/invitePublicRoutes";
@@ -4515,6 +4516,8 @@ You MUST output a valid JSON object matching this schema exactly:
   app.use("/api/v1/documents", apiAuthenticate, documentRouter);
   app.use("/api/v1/invoices/public", publicInvoiceLimiter, publicInvoiceRouter);
   app.use("/api/v1/invoices/email", apiAuthenticate, invoiceEmailRouter);
+  app.use("/api/ai", aiRouter);
+  app.use("/api/v1/ai", aiRouter);
   app.use("/api/v1/invites", invitePublicRouter);
 
   // Data Retention Cleanup Job (Runs every 24h)

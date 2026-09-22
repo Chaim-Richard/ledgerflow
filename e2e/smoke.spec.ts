@@ -198,4 +198,11 @@ test.describe('E2E Smoke Suite', () => {
     expect(debitSum).toBe(creditSum);
     expect(debitSum).toBe(2000);
   });
+
+  test('7. AI Endpoint Validation: Assert /api/ai/process exists on server and returns 401 when unauthenticated', async ({ request }) => {
+    const res = await request.post('/api/ai/process', {
+      data: { task: 'parse-query', payload: { query: 'test' } }
+    });
+    expect(res.status()).toBe(401);
+  });
 });

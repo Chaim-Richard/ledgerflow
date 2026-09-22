@@ -448,6 +448,56 @@ export const VendorCreditSchema = z.object({
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
+export const AutoRuleConditionSchema = z.object({
+  vendor: z.string().optional(),
+  project: z.string().optional(),
+  category: z.string().optional(),
+  descriptionContains: z.string().optional(),
+  descriptionStartsWith: z.string().optional(),
+  amountThreshold: z.number().optional(),
+  exactAmount: z.number().optional(),
+  minAmountCents: z.number().int().optional(),
+  maxAmountCents: z.number().int().optional(),
+  dateRange: z.object({ start: z.string(), end: z.string() }).optional(),
+}).strict();
+
+export const AutoRuleActionSchema = z.object({
+  targetNodeId: z.string().optional(),
+  targetProject: z.string().optional(),
+  targetCategory: z.string().optional(),
+  targetClass: z.string().optional(),
+  targetLocation: z.string().optional(),
+  targetDimensions: z.record(z.string(), z.string()).optional(),
+  targetTags: z.array(z.string()).optional(),
+  flagForReview: z.boolean().optional(),
+  descriptionPrefix: z.string().optional(),
+  descriptionSuffix: z.string().optional(),
+  setNotes: z.string().optional(),
+  addTags: z.array(z.string()).optional(),
+  removeTags: z.array(z.string()).optional(),
+  setAmountCents: z.number().int().optional(),
+  deleteTransaction: z.boolean().optional(),
+}).strict();
+
+export const AutoRuleSchema = z.object({
+  id: z.string().optional(),
+  uid: z.string().optional(),
+  workspaceId: z.string().optional(),
+  name: z.string().optional(),
+  groupName: z.string().optional(),
+  condition: AutoRuleConditionSchema,
+  action: AutoRuleActionSchema,
+  confidence: z.number().min(0).max(1).default(1),
+  isHardened: z.boolean().default(true),
+  priority: z.number().int().optional(),
+  isActive: z.boolean().default(false),
+  stopProcessingOnMatch: z.boolean().optional(),
+  hitCount: z.number().int().optional(),
+  lastTriggeredAt: z.string().optional(),
+  createdBy: z.enum(['user', 'ai', 'system']).optional(),
+  createdAt: z.string().optional(),
+}).strict();
+
 export type ValidatedTransaction = z.infer<typeof TransactionSchema>;
 export type ValidatedChartAccount = z.infer<typeof ChartAccountSchema>;
 export type ValidatedWorkspace = z.infer<typeof WorkspaceSchema>;
