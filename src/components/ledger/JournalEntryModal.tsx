@@ -231,19 +231,21 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         };
       });
 
-      // Absorb any foreign currency rounding difference into the highest value line
+      // Post any foreign currency rounding difference to an explicit rounding account
       const netImbalanceCents = mappedLines.reduce((sum, l) => sum + l.amountCents, 0);
       if (netImbalanceCents !== 0 && mappedLines.length > 0) {
-        let maxIdx = 0;
-        let maxVal = Math.abs(mappedLines[0].amountCents);
-        for (let i = 1; i < mappedLines.length; i++) {
-          const abs = Math.abs(mappedLines[i].amountCents);
-          if (abs > maxVal) {
-            maxVal = abs;
-            maxIdx = i;
-          }
-        }
-        mappedLines[maxIdx].amountCents -= netImbalanceCents;
+        const roundingAccount = accounts.find(a =>
+          a.name.toLowerCase().includes('rounding') ||
+          a.name.toLowerCase().includes('exchange') ||
+          a.name.toLowerCase().includes('fx') ||
+          a.category?.toLowerCase().includes('rounding')
+        );
+        mappedLines.push({
+          accountId: roundingAccount?.id || 'fx-rounding-adjustment',
+          accountName: roundingAccount?.name || 'FX Gain/Loss & Rounding',
+          amountCents: -netImbalanceCents,
+          description: 'FX Conversion Rounding Difference'
+        });
       }
 
       const totalAmountCents = mappedLines

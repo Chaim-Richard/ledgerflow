@@ -87,5 +87,13 @@ describe('Firestore Rules Coverage Structural Guard (P-1)', () => {
       [],
       `Subscribed collections in useLedgerData.ts missing from WORKSPACE_SCOPED_COLLECTIONS in src/constants/collections.ts: ${missingFromScoped.join(', ')}`
     );
+
+    const expectedScopedSet = new Set(expectedScoped);
+    const missingFromSubscribed = WORKSPACE_SCOPED_COLLECTIONS.filter(c => !expectedScopedSet.has(c));
+    assert.deepStrictEqual(
+      missingFromSubscribed,
+      [],
+      `Collections in WORKSPACE_SCOPED_COLLECTIONS missing from useLedgerData.ts subscriptions: ${missingFromSubscribed.join(', ')}`
+    );
   });
 });

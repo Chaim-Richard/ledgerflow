@@ -64,6 +64,11 @@ export interface LedgerState {
   reconciliations: any[];
   customTemplates: CustomTemplate[];
   autoRules: any[];
+  invites: any[];
+  workspaceShards: any[];
+  billingLedgerTraces: any[];
+  supportTickets: any[];
+  supportMessages: any[];
   integrityStatus: {
     lastChecked: string;
     isConsistent: boolean;
@@ -138,6 +143,11 @@ export interface LedgerState {
   setPeriods: (data: PeriodStatus[]) => void;
   setCustomTemplates: (data: CustomTemplate[]) => void;
   setAutoRules: (data: any[]) => void;
+  setInvites: (data: any[]) => void;
+  setWorkspaceShards: (data: any[]) => void;
+  setBillingLedgerTraces: (data: any[]) => void;
+  setSupportTickets: (data: any[]) => void;
+  setSupportMessages: (data: any[]) => void;
   setAnalyticalPatternCache: (data: Record<string, any>) => void;
   updateAnalyticalMatchCache: (description: string, accountId: string, accountName: string, tags?: string[], projectId?: string, projectName?: string, dimensions?: Record<string, string>) => void;
   setActivityFeed: (data: any[]) => void;
@@ -184,6 +194,11 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   periods: [],
   customTemplates: [],
   autoRules: [],
+  invites: [],
+  workspaceShards: [],
+  billingLedgerTraces: [],
+  supportTickets: [],
+  supportMessages: [],
   activityFeed: [],
   analyticalPatternCache: {},
   runningBalances: {
@@ -521,6 +536,11 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   setPeriods: (periods) => set({ periods }),
   setCustomTemplates: (customTemplates) => set({ customTemplates }),
   setAutoRules: (autoRules) => set({ autoRules }),
+  setInvites: (invites) => set({ invites }),
+  setWorkspaceShards: (workspaceShards) => set({ workspaceShards }),
+  setBillingLedgerTraces: (billingLedgerTraces) => set({ billingLedgerTraces }),
+  setSupportTickets: (supportTickets) => set({ supportTickets }),
+  setSupportMessages: (supportMessages) => set({ supportMessages }),
   setAnalyticalPatternCache: (analyticalPatternCache) => set({ analyticalPatternCache }),
   updateAnalyticalMatchCache: (description, accountId, accountName, tags, projectId, projectName, dimensions) => set((state) => {
     const cleanDesc = (description || '').toLowerCase().trim();

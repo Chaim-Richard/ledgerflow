@@ -279,6 +279,10 @@ export function useLedgerData() {
         useLedgerStore.getState().setCollectionTruncated('projects', snap.docs.length >= 1000);
         scheduleUpdate('projects', snap.docs.map(d => ({ id: d.id, ...d.data() } as Project)), snap.metadata.hasPendingWrites);
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'projects')),
+      onSnapshot(query(collection(db, 'journalEntries'), ...filter, limit(2000)), (snap) => {
+        useLedgerStore.getState().setCollectionTruncated('journalEntries', snap.docs.length >= 2000);
+        scheduleUpdate('journalEntries', snap.docs.map(d => ({ id: d.id, ...d.data() } as JournalEntry)), snap.metadata.hasPendingWrites);
+      }, (err) => handleFirestoreError(err, OperationType.LIST, 'journalEntries')),
     ];
 
     // Slow-moving configurations: Switch to one-time getDocs fetches on workspace load
@@ -554,9 +558,39 @@ export function useLedgerData() {
       useLedgerStore.getState().setAssets(snap.docs.map(d => ({ id: d.id, ...d.data() } as FixedAsset)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'assets'));
 
+    const unsubInvites = onSnapshot(query(collection(db, 'invites'), ...filter, limit(500)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('invites', snap.docs.length >= 500);
+      useLedgerStore.getState().setInvites(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'invites'));
+
+    const unsubWorkspaceShards = onSnapshot(query(collection(db, 'workspaceShards'), ...filter, limit(100)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('workspaceShards', snap.docs.length >= 100);
+      useLedgerStore.getState().setWorkspaceShards(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'workspaceShards'));
+
+    const unsubBillingLedgerTraces = onSnapshot(query(collection(db, 'billingLedgerTraces'), ...filter, limit(500)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('billingLedgerTraces', snap.docs.length >= 500);
+      useLedgerStore.getState().setBillingLedgerTraces(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'billingLedgerTraces'));
+
+    const unsubSupportTickets = onSnapshot(query(collection(db, 'supportTickets'), ...filter, limit(500)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('supportTickets', snap.docs.length >= 500);
+      useLedgerStore.getState().setSupportTickets(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'supportTickets'));
+
+    const unsubSupportMessages = onSnapshot(query(collection(db, 'supportMessages'), ...filter, limit(1000)), (snap) => {
+      useLedgerStore.getState().setCollectionTruncated('supportMessages', snap.docs.length >= 1000);
+      useLedgerStore.getState().setSupportMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'supportMessages'));
+
     return () => {
       unsubRecurring();
       unsubAssets();
+      unsubInvites();
+      unsubWorkspaceShards();
+      unsubBillingLedgerTraces();
+      unsubSupportTickets();
+      unsubSupportMessages();
     };
   }, [user, currentWorkspaceId, activeTab]);
 

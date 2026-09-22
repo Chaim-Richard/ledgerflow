@@ -133,22 +133,32 @@ export class LedgerEngine {
             return { line, amount, rawAmount, rate };
           });
 
-          // Fix rounding errors for balanced transactions
+          // Post FX rounding difference to an explicit rounding account
           const sumRaw = convertedLines.reduce((acc, curr) => acc + curr.rawAmount, 0);
           if (sumRaw === 0 && convertedLines.length > 0) {
             const sumConverted = convertedLines.reduce((acc, curr) => acc + curr.amount, 0);
             if (sumConverted !== 0) {
-              // Find the leg with the largest absolute converted amount to absorb the difference
-              let largestIdx = 0;
-              let maxAbs = -1;
-              convertedLines.forEach((item, idx) => {
-                const absAmt = Math.abs(item.amount);
-                if (absAmt > maxAbs) {
-                  maxAbs = absAmt;
-                  largestIdx = idx;
-                }
+              const roundingAccount = accounts.find(a =>
+                a.name.toLowerCase().includes('rounding') ||
+                a.name.toLowerCase().includes('exchange') ||
+                a.name.toLowerCase().includes('fx') ||
+                a.category?.toLowerCase().includes('rounding')
+              );
+              const roundingAccId = roundingAccount?.id || 'fx-rounding-adjustment';
+              const roundingAccName = roundingAccount?.name || 'FX Gain/Loss & Rounding';
+
+              // Post difference to explicit rounding account leg
+              convertedLines.push({
+                line: {
+                  accountId: roundingAccId,
+                  accountName: roundingAccName,
+                  amountCents: -sumConverted,
+                  description: 'FX Rounding Difference'
+                },
+                amount: -sumConverted,
+                rawAmount: 0,
+                rate: 1
               });
-              convertedLines[largestIdx].amount -= sumConverted;
             }
           }
 

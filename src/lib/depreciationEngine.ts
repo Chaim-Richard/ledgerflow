@@ -32,8 +32,10 @@ export function calculateStraightLineDepreciation(
 
   for (let month = 1; month <= usefulLifeMonths; month++) {
     const targetMonth = (startM - 1) + month;
-    const periodDate = new Date(Date.UTC(startY, targetMonth, 1))
-      .toISOString().split('T')[0];
+    const d = new Date(Date.UTC(startY, targetMonth, 1));
+    const year = d.getUTCFullYear();
+    const monthStr = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const periodDate = `${year}-${monthStr}-01`;
 
     const amount = (month === usefulLifeMonths)
       ? depreciableAmount - accumulated // Final adjustment to match exact depreciable amount

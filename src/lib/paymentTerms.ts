@@ -31,7 +31,10 @@ export function calculateDueDate(issueDateIso: string, term: PaymentTerm, custom
   }
 
   const date = new Date(Date.UTC(y, m - 1, d + daysToAdd));
-  return date.toISOString().split('T')[0];
+  const year = date.getUTCFullYear();
+  const monthStr = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const dayStr = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${monthStr}-${dayStr}`;
 }
 
 /**

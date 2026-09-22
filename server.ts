@@ -78,6 +78,28 @@ import {
   deriveScopedOperationKey 
 } from "./src/server/utils/idempotency.ts";
 import { csrfProtection } from "./src/server/middleware/csrf.ts";
+
+function formatTzDate(d: Date = new Date(), timezone = 'UTC'): string {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone || 'UTC',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const parts = formatter.formatToParts(d);
+    const y = parts.find(p => p.type === 'year')?.value;
+    const m = parts.find(p => p.type === 'month')?.value;
+    const day = parts.find(p => p.type === 'day')?.value;
+    if (y && m && day) return `${y}-${m}-${day}`;
+  } catch (_e) {
+    // fallback
+  }
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 import { 
   publicInvoiceLimiter, 
   pdfGenerationLimiter, 
@@ -790,7 +812,7 @@ async function startServer() {
                   id: db.collection('transactions').doc().id,
                   uid: 'system',
                   workspaceId: wsId,
-                  date: new Date().toISOString().split('T')[0],
+                  date: formatTzDate(new Date(), wsData?.settings?.timezone || wsData?.timezone),
                   description: `Invoice ${inv?.number || "Unknown"} Payment via Stripe`,
                   totalAmountCents: amountTotal,
                   currency: inv?.currency || 'USD',
@@ -1667,7 +1689,7 @@ async function startServer() {
       ]);
 
       const format = (req.query.format as string)?.toLowerCase();
-      const todayIso = new Date().toISOString().split("T")[0];
+      const todayIso = formatTzDate(new Date(), wsData?.settings?.timezone || wsData?.timezone);
 
       if (format === "csv") {
         let csvContent = "Date,Amount,Description,Category,Type,Status,Reference\n";
@@ -2979,7 +3001,7 @@ async function startServer() {
 
       // Markdown Strategic narrative
       const markdownReport = `### EXECUTIVE STRATEGIC DECISION AUDIT SUMMARY
-Report generated chronologically for workspace **${wsData.name || 'LedgerFlow Register'}** on **${new Date().toISOString().substring(0, 10)}** via LedgerFlow Deep API.
+Report generated chronologically for workspace **${wsData.name || 'LedgerFlow Register'}** on **${formatTzDate(new Date(), wsData?.settings?.timezone || wsData?.timezone)}** via LedgerFlow Deep API.
 
 #### 1. VELOCITY RECEIVABLES ANALYSIS (DSO & WACC DRAG)
 * Outstanding accounts receivable function effectively as 0% interest lines of credit to clients.
@@ -3988,7 +4010,7 @@ You MUST output a valid JSON object matching this schema exactly:
       const categoryKey = findBestCol([/^category$/i, /^account[_\s]?category$/i, /^class$/i, /^label$/i, /category/i]);
 
       const normalizeDate = (rawDate: string): string => {
-        if (!rawDate) return new Date().toISOString().split('T')[0];
+        if (!rawDate) return formatTzDate(new Date(), wsData?.settings?.timezone || wsData?.timezone);
         const s = rawDate.trim();
         if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
         const usMatch = s.match(/^(\d{1,2})[/|-](\d{1,2})[/|-](\d{2,4})$/);
@@ -4002,9 +4024,9 @@ You MUST output a valid JSON object matching this schema exactly:
         }
         const parsed = new Date(s);
         if (!isNaN(parsed.getTime())) {
-          return parsed.toISOString().split('T')[0];
+          return formatTzDate(parsed, wsData?.settings?.timezone || wsData?.timezone);
         }
-        return new Date().toISOString().split('T')[0];
+        return formatTzDate(new Date(), wsData?.settings?.timezone || wsData?.timezone);
       };
 
       const batchId = crypto.randomUUID().split('-')[0];
@@ -4281,7 +4303,7 @@ You MUST output a valid JSON object matching this schema exactly:
 
       const labeledTransactions = transactions.map((tx: any, idx: number) => {
         const rawDesc = String(tx.description || tx.memo || tx.payee || "").trim();
-        const rawDate = String(tx.date || new Date().toISOString().split('T')[0]);
+        const rawDate = String(tx.date || formatTzDate(new Date()));
         const amountCents = typeof tx.amountCents === "number" ? tx.amountCents : TruthEngine.parseAmountToCents(tx.amount || "0");
         const payeeVal = String(tx.payee || "").trim();
 

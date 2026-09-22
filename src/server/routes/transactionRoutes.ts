@@ -32,9 +32,12 @@ export function formatTzDate(d: Date = new Date(), timezone = 'UTC'): string {
     const day = parts.find(p => p.type === 'day')?.value;
     if (y && m && day) return `${y}-${m}-${day}`;
   } catch (_e) {
-    // fallback to toISOString
+    // fallback to explicit UTC date components
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
-  return d.toISOString().split('T')[0];
 }
 
 export function enforceDoubleEntrySafety(req: Request, res: Response, next: NextFunction) {

@@ -28,11 +28,17 @@ export function calculateNextOccurrence(
   switch (frequency) {
     case 'daily': {
       const dt = new Date(Date.UTC(y, m - 1, d + 1));
-      return dt.toISOString().slice(0, 10);
+      const year = dt.getUTCFullYear();
+      const monthStr = String(dt.getUTCMonth() + 1).padStart(2, '0');
+      const dayStr = String(dt.getUTCDate()).padStart(2, '0');
+      return `${year}-${monthStr}-${dayStr}`;
     }
     case 'weekly': {
       const dt = new Date(Date.UTC(y, m - 1, d + 7));
-      return dt.toISOString().slice(0, 10);
+      const year = dt.getUTCFullYear();
+      const monthStr = String(dt.getUTCMonth() + 1).padStart(2, '0');
+      const dayStr = String(dt.getUTCDate()).padStart(2, '0');
+      return `${year}-${monthStr}-${dayStr}`;
     }
     case 'monthly':
       return addMonths(1);
