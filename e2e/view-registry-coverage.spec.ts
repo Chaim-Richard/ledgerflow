@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 test.describe('View Registry & Navigation Coverage Suite', () => {
 
@@ -47,6 +48,16 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
         const bodyText = await page.locator('body').innerText();
         expect(bodyText).not.toContain('Something went wrong');
         expect(bodyText).not.toContain('Uncaught Error');
+
+        // Run axe accessibility check
+        const accessibilityScanResults = await new AxeBuilder({ page }).analyze();
+        const criticalViolations = accessibilityScanResults.violations.filter(v => 
+          ['critical', 'serious'].includes(v.impact || '')
+        );
+        if (criticalViolations.length > 0) {
+          console.warn(`[A11y] Critical violations in ${view.label}:`, JSON.stringify(criticalViolations, null, 2));
+        }
+        expect(criticalViolations.length).toBe(0);
       }
     });
   }

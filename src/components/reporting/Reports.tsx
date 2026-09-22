@@ -215,6 +215,7 @@ const Reports = React.memo(() => {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
+              aria-label="Select Year"
               className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-[10px] font-bold text-[var(--text)] hover:border-[var(--brass-line)] focus:outline-none focus:ring-1 focus:ring-[var(--brass)] cursor-pointer"
             >
               {availableYears.map(year => (
@@ -227,6 +228,7 @@ const Reports = React.memo(() => {
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                aria-label="Select Month"
                 className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-[10px] font-bold text-[var(--text)] hover:border-[var(--brass-line)] focus:outline-none focus:ring-1 focus:ring-[var(--brass)] cursor-pointer animate-fade-in"
               >
                 {monthNames.map((name, idx) => (
@@ -242,6 +244,7 @@ const Reports = React.memo(() => {
                   const q = Number(e.target.value);
                   setSelectedMonth(q * 3);
                 }}
+                aria-label="Select Quarter"
                 className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-[10px] font-bold text-[var(--text)] hover:border-[var(--brass-line)] focus:outline-none focus:ring-1 focus:ring-[var(--brass)] cursor-pointer animate-fade-in"
               >
                 {quarterNames.map((name, idx) => (

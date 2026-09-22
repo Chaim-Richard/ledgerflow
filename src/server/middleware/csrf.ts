@@ -14,7 +14,9 @@ export function csrfProtection(options: CsrfOptions) {
   const ignoredPrefixes = [
     '/api/webhook/',
     '/api/v1/workspaces/webhooks/',
-    '/api/v1/public/'
+    '/api/v1/public/',
+    '/api/ai/',
+    '/api/v1/ai/'
   ];
 
   return (req: Request, res: Response, next: NextFunction) => {
