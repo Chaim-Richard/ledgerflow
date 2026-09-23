@@ -251,17 +251,12 @@ export class AIBackendService {
 
       case 'parse-receipt': {
         if (!ai || !payload.base64Data) {
-          return {
-            vendorName: "Scanned Merchant",
-            date: new Date().toISOString().split('T')[0],
-            totalAmountCents: 1500,
-            confidence: 85
-          };
+          throw new Error("Cannot parse receipt: Missing receipt data or Gemini AI service unavailable.");
         }
         try {
           const prompt = `Extract standard receipt fields: vendorName, date (YYYY-MM-DD), totalAmountCents (absolute total parsed as integer cents), and confidence score out of 100. Context: ${payload.context || ''}`;
           const response = await ai.models.generateContent({
-            model: 'gemini-3.8-flash',
+            model: 'gemini-2.5-flash',
             contents: [
               { text: prompt },
               { inlineData: { data: payload.base64Data, mimeType: payload.mimeType || 'image/png' } }
@@ -283,23 +278,18 @@ export class AIBackendService {
           return JSON.parse(response.text || '{}');
         } catch (err: any) {
           console.warn("Gemini parse-receipt failed", err);
-          return {
-            vendorName: "Scanned Merchant",
-            date: new Date().toISOString().split('T')[0],
-            totalAmountCents: 1500,
-            confidence: 50
-          };
+          throw err;
         }
       }
 
       case 'parse-statement': {
         if (!ai || !payload.content) {
-          return { transactions: [] };
+          throw new Error("Cannot parse statement: Missing statement content or Gemini AI service unavailable.");
         }
         try {
           const prompt = `Extract all line-item transactions from this bank statement. Return an array of structured transactions. Context: ${payload.context || ''}`;
           const response = await ai.models.generateContent({
-            model: 'gemini-3.8-flash',
+            model: 'gemini-2.5-flash',
             contents: [
               { text: prompt },
               { inlineData: { data: payload.content, mimeType: payload.mimeType || 'application/pdf' } }
@@ -330,28 +320,19 @@ export class AIBackendService {
           return JSON.parse(response.text || '{}');
         } catch (err: any) {
           console.warn("Gemini parse-statement failed", err);
-          return { transactions: [] };
+          throw err;
         }
       }
 
       case 'parse-personal-tax-profile': {
         const msg = payload.message || '';
         if (!ai) {
-          let filingStatus = 'Single';
-          if (msg.includes('married') || msg.includes('jointly')) filingStatus = 'Married Filing Jointly';
-          return {
-            filingStatus,
-            dependentsCount: 0,
-            state: 'NY',
-            annualIncomeCents: 10000000,
-            childTaxCreditAmountCents: 0,
-            explanation: "Parsed tax parameters dynamically."
-          };
+          throw new Error("Cannot parse personal tax profile: Gemini AI service unavailable.");
         }
         try {
           const prompt = `Extract tax profile from details: "${msg}" into filingStatus, dependentsCount, state, annualIncomeCents, and childTaxCreditAmountCents with explanation.`;
           const response = await ai.models.generateContent({
-            model: 'gemini-3.8-flash',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
               responseMimeType: 'application/json',
@@ -372,14 +353,7 @@ export class AIBackendService {
           return JSON.parse(response.text || '{}');
         } catch (err: any) {
           console.warn("Gemini parse-personal-tax-profile failed", err);
-          return {
-            filingStatus: 'Single',
-            dependentsCount: 0,
-            state: 'NY',
-            annualIncomeCents: 10000000,
-            childTaxCreditAmountCents: 0,
-            explanation: "Parsed tax parameters fallback."
-          };
+          throw err;
         }
       }
 
@@ -467,6 +441,95 @@ export class AIBackendService {
           return { rule: validationResult.data };
         } catch (err: any) {
           console.warn("Gemini build-auto-rule failed", err);
+          throw err;
+        }
+      }
+
+      case 'chat': {
+        if (!ai) {
+          throw new Error("Cannot process chat: Gemini AI service unavailable.");
+        }
+        const query = payload.query || '';
+        const summary = payload.ledgerSummary ? JSON.stringify(payload.ledgerSummary) : '';
+        const prompt = `You are an expert ERP and Financial Ledger assistant.
+Ledger Context:
+${summary}
+
+User Question:
+${query}
+
+Provide a concise, direct, helpful, and professional financial response.`;
+        try {
+          const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt
+          });
+          return { answer: response.text || "No response generated." };
+        } catch (err: any) {
+          console.warn("Gemini chat failed", err);
+          throw err;
+        }
+      }
+
+      case 'parse-business-blueprint': {
+        if (!ai) {
+          throw new Error("Cannot generate business blueprint: Gemini AI service unavailable.");
+        }
+        const description = payload.description || '';
+        const prompt = `Generate a business chart of accounts and ERP configuration blueprint based on the following business description: "${description}".
+Return:
+- name: string (business or template name)
+- description: string (summary description)
+- industry: string (industry category)
+- strategicAdvice: array of strings (actionable financial advice)
+- chartOfAccounts: array of objects with { category, code, name, type (asset | liability | equity | revenue | expense) }
+- dashboardSchema: object with { nodes: array of { id, label, role, metrics }, links: array of { source, target, type } }`;
+
+        try {
+          const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  industry: { type: Type.STRING },
+                  strategicAdvice: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  },
+                  chartOfAccounts: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        category: { type: Type.STRING },
+                        code: { type: Type.STRING },
+                        name: { type: Type.STRING },
+                        type: { type: Type.STRING }
+                      },
+                      required: ["category", "code", "name", "type"]
+                    }
+                  },
+                  dashboardSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                      nodes: { type: Type.ARRAY, items: { type: Type.OBJECT } },
+                      links: { type: Type.ARRAY, items: { type: Type.OBJECT } }
+                    },
+                    required: ["nodes", "links"]
+                  }
+                },
+                required: ["name", "description", "industry", "strategicAdvice", "chartOfAccounts", "dashboardSchema"]
+              }
+            }
+          });
+          return JSON.parse(response.text || '{}');
+        } catch (err: any) {
+          console.warn("Gemini parse-business-blueprint failed", err);
           throw err;
         }
       }

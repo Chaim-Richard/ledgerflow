@@ -14,9 +14,17 @@ export const DEFAULT_EQUITY_ACCOUNTS: Partial<ChartAccount>[] = [
   { code: '3200', name: 'Opening Balance Equity', type: 'equity', category: 'Equity' },
 ];
 
-function ensureEquityAccounts(accounts: Partial<ChartAccount>[]): Partial<ChartAccount>[] {
+export const DEFAULT_ROUNDING_ACCOUNT: Partial<ChartAccount> = {
+  code: '8999',
+  name: 'Foreign Exchange Gain/Loss & Rounding',
+  type: 'expense',
+  category: 'Rounding Differences',
+  subtype: 'rounding',
+  role: 'fx_rounding'
+};
+
+function ensureTemplateAccounts(accounts: Partial<ChartAccount>[]): Partial<ChartAccount>[] {
   const existingCodes = new Set(accounts.map(a => a.code));
-  const hasEquityType = accounts.some(a => a.type === 'equity');
   
   const enriched = [...accounts];
   if (!existingCodes.has('3000')) {
@@ -27,6 +35,9 @@ function ensureEquityAccounts(accounts: Partial<ChartAccount>[]): Partial<ChartA
   }
   if (!existingCodes.has('3200')) {
     enriched.push({ code: '3200', name: 'Opening Balance Equity', type: 'equity', category: 'Equity' });
+  }
+  if (!existingCodes.has('8999') && !enriched.some(a => (a as any).role === 'fx_rounding' || a.subtype === 'rounding')) {
+    enriched.push(DEFAULT_ROUNDING_ACCOUNT);
   }
   return enriched;
 }
@@ -741,7 +752,7 @@ export const BUSINESS_TEMPLATES: Record<string, BusinessTemplate> = Object.fromE
     key,
     {
       ...template,
-      accounts: ensureEquityAccounts(template.accounts)
+      accounts: ensureTemplateAccounts(template.accounts)
     }
   ])
 );

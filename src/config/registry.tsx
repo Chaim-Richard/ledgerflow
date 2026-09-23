@@ -18,7 +18,7 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
@@ -323,6 +323,10 @@ export const REPORT_COMPONENTS: Record<string, any> = {
   'TopExpensesIncomeReportView': lazy(() => import('../components/reporting/TopExpensesIncomeReportView')),
   'AverageMonthlyReportView': lazy(() => import('../components/reporting/AverageMonthlyReportView')),
   'TagBreakdownReportView': lazy(() => import('../components/reporting/TagBreakdownReportView')),
+  'CustomerBalanceSummaryView': lazy(() => import('../components/reporting/CustomerBalanceSummaryView')),
+  'VendorBalanceSummaryView': lazy(() => import('../components/reporting/VendorBalanceSummaryView')),
+  'TransactionsByCustomerView': lazy(() => import('../components/reporting/TransactionsByCustomerView')),
+  'TransactionsByVendorView': lazy(() => import('../components/reporting/TransactionsByVendorView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = [
@@ -337,6 +341,10 @@ export const REPORT_TABS_REGISTRY = [
   { id: 'pnl', label: { en: 'Profit & Loss', he: 'רווח והפסד' }, componentName: 'PNLView', icon: Activity },
   { id: 'balance-sheet', label: { en: 'Balance Sheet', he: 'מאזן' }, componentName: 'BalanceSheetReportView', icon: Layers },
   { id: 'cash-flow', label: { en: 'Cash Flow', he: 'תזרים' }, componentName: 'CashFlowView', icon: RefreshCw },
+  { id: 'customer-balance-summary', label: { en: 'Customer Balance Summary', he: 'יתרות לקוחות' }, componentName: 'CustomerBalanceSummaryView', icon: Users },
+  { id: 'vendor-balance-summary', label: { en: 'Vendor Balance Summary', he: 'יתרות ספקים' }, componentName: 'VendorBalanceSummaryView', icon: Building },
+  { id: 'transactions-by-customer', label: { en: 'Transactions by Customer', he: 'עסקאות לפי לקוח' }, componentName: 'TransactionsByCustomerView', icon: FileText },
+  { id: 'transactions-by-vendor', label: { en: 'Transactions by Vendor', he: 'עסקאות לפי ספק' }, componentName: 'TransactionsByVendorView', icon: FileSpreadsheet },
   { id: 'expense-by-category', label: { en: 'Expense by Category', he: 'הוצאות לפי קטגוריה' }, componentName: 'ExpenseByCategoryReportView', icon: PieChart },
   { id: 'income-by-source', label: { en: 'Income by Source', he: 'הכנסות לפי מקור' }, componentName: 'IncomeBySourceReportView', icon: TrendingUp },
   { id: 'top-expenses-income', label: { en: 'Top Line Items', he: 'הוצאות והכנסות מובילות' }, componentName: 'TopExpensesIncomeReportView', icon: BarChart3 },

@@ -117,7 +117,7 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
                   </div>
 
                   <span className="text-[10px] font-bold mt-0.5 text-[var(--text-secondary)] tabular-nums">
-                    ${formatCurrency(metrics.totalMoneyCents / 100)}
+                    {formatCurrency(metrics.totalMoneyCents)}
                     <span className="text-[9px] font-normal text-[var(--muted)] ml-1">
                       ({metrics.matchingCount})
                     </span>

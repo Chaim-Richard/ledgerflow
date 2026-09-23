@@ -31,7 +31,7 @@ describe('Firestore Security Rules Unit Tests', () => {
     }
   });
 
-  function getFirestoreContext(auth: { uid: string; token?: Record<string, any> } | null) {
+  function getFirestoreContext(auth: { uid: string; token?: Record<string, unknown> } | null) {
     if (!testEnv) {
       throw new Error('Rules test environment is not initialized');
     }

@@ -264,7 +264,7 @@ export default function EstimatesView() {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
-                    {formatCurrency(est.amountCents / 100)}
+                    {formatCurrency(est.amountCents)}
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">

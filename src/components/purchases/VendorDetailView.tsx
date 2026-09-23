@@ -107,25 +107,25 @@ export default function VendorDetailView({ vendorId, onBack }: VendorDetailViewP
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Outstanding Payable</span>
           <span className="text-xl font-mono font-black text-slate-900 dark:text-white tracking-tight block mt-1">
-            {formatCurrency(stats.outstanding / 100)}
+            {formatCurrency(stats.outstanding)}
           </span>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Overdue Balance</span>
           <span className="text-xl font-mono font-black text-rose-600 dark:text-rose-400 tracking-tight block mt-1">
-            {formatCurrency(stats.overdue / 100)}
+            {formatCurrency(stats.overdue)}
           </span>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Lifetime Purchases</span>
           <span className="text-xl font-mono font-black text-amber-600 dark:text-amber-500 tracking-tight block mt-1">
-            {formatCurrency(stats.lifetimePurchases / 100)}
+            {formatCurrency(stats.lifetimePurchases)}
           </span>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Disbursements</span>
           <span className="text-xl font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-tight block mt-1">
-            {formatCurrency(stats.totalPayments / 100)}
+            {formatCurrency(stats.totalPayments)}
           </span>
         </div>
       </div>
@@ -167,10 +167,10 @@ export default function VendorDetailView({ vendorId, onBack }: VendorDetailViewP
                   </div>
                   <div className="text-right">
                     <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                      {formatCurrency((b.amountCents || 0) / 100)}
+                      {formatCurrency(b.amountCents || 0)}
                     </div>
                     <div className="text-xs text-slate-400 mt-0.5">
-                      Open: {formatCurrency(outstanding / 100)}
+                      Open: {formatCurrency(outstanding)}
                     </div>
                   </div>
                 </div>
@@ -205,7 +205,7 @@ export default function VendorDetailView({ vendorId, onBack }: VendorDetailViewP
                 </div>
                 <div className="text-right">
                   <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                    -{formatCurrency((p.amountCents || 0) / 100)}
+                    -{formatCurrency(p.amountCents || 0)}
                   </div>
                 </div>
               </div>

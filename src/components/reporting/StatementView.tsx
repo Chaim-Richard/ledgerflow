@@ -176,21 +176,21 @@ export default function StatementView() {
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
               <span className="text-xs text-slate-500 uppercase font-semibold">Opening Balance</span>
               <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
-                {formatCurrency(statementData.openingBalanceCents / 100)}
+                {formatCurrency(statementData.openingBalanceCents)}
               </div>
             </div>
 
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
               <span className="text-xs text-slate-500 uppercase font-semibold">Total Period Billed</span>
               <div className="text-lg font-bold font-mono text-indigo-600 dark:text-indigo-400 mt-1">
-                {formatCurrency(statementData.entries.reduce((sum, e) => sum + (e.debitCents || 0), 0) / 100)}
+                {formatCurrency(statementData.entries.reduce((sum, e) => sum + (e.debitCents || 0), 0))}
               </div>
             </div>
 
             <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
               <span className="text-xs text-purple-600 dark:text-purple-400 uppercase font-bold">Ending Outstanding Balance</span>
               <div className="text-xl font-bold font-mono text-purple-700 dark:text-purple-300 mt-1">
-                {formatCurrency(statementData.endingBalanceCents / 100)}
+                {formatCurrency(statementData.endingBalanceCents)}
               </div>
             </div>
           </div>
@@ -213,7 +213,7 @@ export default function StatementView() {
                   <td className="py-2.5 px-4 text-slate-500">{startDate}</td>
                   <td className="py-2.5 px-4 font-sans italic text-slate-500" colSpan={4}>Opening Balance Brought Forward</td>
                   <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-white">
-                    {formatCurrency(statementData.openingBalanceCents / 100)}
+                    {formatCurrency(statementData.openingBalanceCents)}
                   </td>
                 </tr>
 
@@ -223,13 +223,13 @@ export default function StatementView() {
                     <td className="py-2.5 px-4 font-sans font-medium text-slate-900 dark:text-white">{entry.type}</td>
                     <td className="py-2.5 px-4 text-slate-500">#{entry.reference}</td>
                     <td className="py-2.5 px-4 text-right text-slate-900 dark:text-white">
-                      {entry.debitCents > 0 ? formatCurrency(entry.debitCents / 100) : '-'}
+                      {entry.debitCents > 0 ? formatCurrency(entry.debitCents) : '-'}
                     </td>
                     <td className="py-2.5 px-4 text-right text-emerald-600 dark:text-emerald-400">
-                      {entry.creditCents > 0 ? formatCurrency(entry.creditCents / 100) : '-'}
+                      {entry.creditCents > 0 ? formatCurrency(entry.creditCents) : '-'}
                     </td>
                     <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-white">
-                      {formatCurrency(entry.runningBalanceCents / 100)}
+                      {formatCurrency(entry.runningBalanceCents)}
                     </td>
                   </tr>
                 ))}

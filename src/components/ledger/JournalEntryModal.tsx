@@ -235,16 +235,14 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
       // Post any foreign currency rounding difference to an explicit rounding account
       const netImbalanceCents = mappedLines.reduce((sum, l) => sum + l.amountCents, 0);
       if (netImbalanceCents !== 0 && mappedLines.length > 0) {
-        const roundingAccount = accounts.find(a =>
-          resolveAccountRole(a) === 'fx_rounding' ||
-          a.name.toLowerCase().includes('rounding') ||
-          a.name.toLowerCase().includes('exchange') ||
-          a.name.toLowerCase().includes('fx') ||
-          a.category?.toLowerCase().includes('rounding')
-        );
+        const roundingAccount = accounts.find(a => resolveAccountRole(a) === 'fx_rounding');
+        if (!roundingAccount) {
+          toast.error("Multi-currency rounding difference detected, but no FX rounding account exists. Please add an account with role 'fx_rounding'.");
+          return;
+        }
         mappedLines.push({
-          accountId: roundingAccount?.id || 'fx-rounding-adjustment',
-          accountName: roundingAccount?.name || 'FX Gain/Loss & Rounding',
+          accountId: roundingAccount.id,
+          accountName: roundingAccount.name,
           amountCents: -netImbalanceCents,
           class: undefined,
           location: undefined,

@@ -62,10 +62,10 @@ export default function TaxLiabilityView() {
             <span className="p-1 rounded bg-emerald-500/10 text-emerald-600">Invoices</span>
           </div>
           <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-            {formatCurrency(taxData.taxCollectedCents / 100)}
+            {formatCurrency(taxData.taxCollectedCents)}
           </div>
           <p className="text-xs text-slate-400">
-            From {formatCurrency(taxData.taxableSalesCents / 100)} in net taxable sales
+            From {formatCurrency(taxData.taxableSalesCents)} in net taxable sales
           </p>
         </div>
 
@@ -75,10 +75,10 @@ export default function TaxLiabilityView() {
             <span className="p-1 rounded bg-blue-500/10 text-blue-600">Bills</span>
           </div>
           <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">
-            {formatCurrency(taxData.taxPaidCents / 100)}
+            {formatCurrency(taxData.taxPaidCents)}
           </div>
           <p className="text-xs text-slate-400">
-            From {formatCurrency(taxData.taxablePurchasesCents / 100)} in net taxable purchases
+            From {formatCurrency(taxData.taxablePurchasesCents)} in net taxable purchases
           </p>
         </div>
 
@@ -88,7 +88,7 @@ export default function TaxLiabilityView() {
             <Calculator className="w-4 h-4" />
           </div>
           <div className="text-3xl font-black font-mono text-amber-700 dark:text-amber-300">
-            {formatCurrency(taxData.netTaxLiabilityCents / 100)}
+            {formatCurrency(taxData.netTaxLiabilityCents)}
           </div>
           <p className="text-xs text-amber-600/80 dark:text-amber-400/80">
             {taxData.netTaxLiabilityCents >= 0 ? 'Amount payable to tax authority' : 'Tax refund / credit due'}

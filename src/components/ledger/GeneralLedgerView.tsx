@@ -121,25 +121,25 @@ export default function GeneralLedgerView() {
                 <div>
                   <span className="text-slate-400 mr-1">Opening:</span>
                   <span className="font-semibold text-slate-700 dark:text-slate-300">
-                    {formatCurrency(acc.openingBalanceCents / 100)}
+                    {formatCurrency(acc.openingBalanceCents)}
                   </span>
                 </div>
                 <div>
                   <span className="text-slate-400 mr-1">Period Debits:</span>
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                    +{formatCurrency(acc.periodDebitsCents / 100)}
+                    +{formatCurrency(acc.periodDebitsCents)}
                   </span>
                 </div>
                 <div>
                   <span className="text-slate-400 mr-1">Period Credits:</span>
                   <span className="font-semibold text-rose-600 dark:text-rose-400">
-                    -{formatCurrency(acc.periodCreditsCents / 100)}
+                    -{formatCurrency(acc.periodCreditsCents)}
                   </span>
                 </div>
                 <div className="pl-2 border-l border-slate-300 dark:border-slate-700">
                   <span className="text-slate-400 mr-1">Ending:</span>
                   <span className="font-bold text-slate-900 dark:text-white">
-                    {formatCurrency(acc.endingBalanceCents / 100)}
+                    {formatCurrency(acc.endingBalanceCents)}
                   </span>
                 </div>
               </div>
@@ -170,13 +170,13 @@ export default function GeneralLedgerView() {
                         <td className="py-2 px-4 text-slate-900 dark:text-white font-sans font-medium">{entry.description}</td>
                         <td className="py-2 px-4 text-slate-500">{entry.reference || '-'}</td>
                         <td className="py-2 px-4 text-right text-emerald-600 dark:text-emerald-400">
-                          {entry.debitCents > 0 ? formatCurrency(entry.debitCents / 100) : '-'}
+                          {entry.debitCents > 0 ? formatCurrency(entry.debitCents) : '-'}
                         </td>
                         <td className="py-2 px-4 text-right text-rose-600 dark:text-rose-400">
-                          {entry.creditCents > 0 ? formatCurrency(entry.creditCents / 100) : '-'}
+                          {entry.creditCents > 0 ? formatCurrency(entry.creditCents) : '-'}
                         </td>
                         <td className="py-2 px-4 text-right font-bold text-slate-900 dark:text-white">
-                          {formatCurrency(entry.runningBalanceCents / 100)}
+                          {formatCurrency(entry.runningBalanceCents)}
                         </td>
                       </tr>
                     ))}

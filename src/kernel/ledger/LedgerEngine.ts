@@ -139,15 +139,12 @@ export class LedgerEngine {
           if (sumRaw === 0 && convertedLines.length > 0) {
             const sumConverted = convertedLines.reduce((acc, curr) => acc + curr.amount, 0);
             if (sumConverted !== 0) {
-              const roundingAccount = accounts.find(a =>
-                resolveAccountRole(a) === 'fx_rounding' ||
-                a.name.toLowerCase().includes('rounding') ||
-                a.name.toLowerCase().includes('exchange') ||
-                a.name.toLowerCase().includes('fx') ||
-                a.category?.toLowerCase().includes('rounding')
-              );
-              const roundingAccId = roundingAccount?.id || 'fx-rounding-adjustment';
-              const roundingAccName = roundingAccount?.name || 'FX Gain/Loss & Rounding';
+              const roundingAccount = accounts.find(a => resolveAccountRole(a) === 'fx_rounding');
+              if (!roundingAccount) {
+                throw new Error("Cannot post transaction: Foreign exchange rounding difference detected, but no FX rounding account exists. Please ensure an account with role 'fx_rounding' is configured.");
+              }
+              const roundingAccId = roundingAccount.id;
+              const roundingAccName = roundingAccount.name;
 
               // Post difference to explicit rounding account leg
               convertedLines.push({

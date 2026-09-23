@@ -767,6 +767,39 @@ describe('Firestore Security Rules Unit Tests', () => {
 
       const payload = factory('ws-coverage-a', 'alice-owner', docId);
 
+      if (colName === 'bankLines') {
+        // bankLines is server-side managed: client write is denied
+        await assert.rejects(async () => {
+          await docRefAlice.set(payload);
+        }, /permission-denied/i, `Client write to bankLines should be denied`);
+
+        // Seed bank line document using admin context (rules disabled)
+        await testEnv.withSecurityRulesDisabled(async (ctx) => {
+          await ctx.firestore().doc(`${colName}/${docId}`).set(payload);
+        });
+
+        // 2. Owner can read
+        const snapAlice = await docRefAlice.get();
+        assert.equal(snapAlice.exists, true, `Owner could not read created document in ${colName}`);
+
+        // 3. Viewer in workspace A can read, but cannot write or mutate
+        const snapBob = await docRefBob.get();
+        assert.equal(snapBob.exists, true, `Viewer in workspace should be able to read ${colName}`);
+
+        const bobPayload = factory('ws-coverage-a', 'bob-viewer', `doc-${colName}-bob`);
+        const docRefBobNew = bobViewerDb.doc(`${colName}/doc-${colName}-bob`);
+        await assert.rejects(async () => {
+          await docRefBobNew.set(bobPayload);
+        }, /permission-denied/i, `Viewer was incorrectly permitted to write in ${colName}`);
+
+        // 4. Foreign workspace member (Dave in ws-coverage-b) cannot read workspace A's document
+        await assert.rejects(async () => {
+          await docRefDave.get();
+        }, /permission-denied/i, `Foreign workspace member was able to read ${colName} in another workspace`);
+
+        continue;
+      }
+
       // 1. Owner can write
       await assert.doesNotReject(async () => {
         await docRefAlice.set(payload);

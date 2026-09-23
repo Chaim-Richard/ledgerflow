@@ -221,7 +221,7 @@ export default function ReceivePaymentModal({
         throw new Error(errJson.message || 'Payment processing failed');
       }
 
-      toast.success(`Payment of ${formatCurrency(paymentAmountCents / 100)} recorded successfully!`);
+      toast.success(`Payment of ${formatCurrency(paymentAmountCents)} recorded successfully!`);
       onClose();
     } catch (err: any) {
       console.error('Failed to post payment:', err);
@@ -440,7 +440,7 @@ export default function ReceivePaymentModal({
                       {docItem.date}
                     </div>
                     <div className="col-span-3 font-mono text-slate-700 dark:text-slate-300">
-                      Remaining: {formatCurrency(docItem.remainingCents / 100)}
+                      Remaining: {formatCurrency(docItem.remainingCents)}
                     </div>
                     <div className="col-span-3">
                       <input
@@ -469,16 +469,16 @@ export default function ReceivePaymentModal({
           <div className="flex flex-wrap items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-800 text-xs gap-4">
             <div>
               <span className="text-slate-500">Total Payment:</span>{' '}
-              <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(paymentAmountCents / 100)}</strong>
+              <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(paymentAmountCents)}</strong>
             </div>
             <div>
               <span className="text-slate-500">Total Applied:</span>{' '}
-              <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(totalAllocatedCents / 100)}</strong>
+              <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(totalAllocatedCents)}</strong>
             </div>
             <div>
               <span className="text-slate-500">Unapplied Balance:</span>{' '}
               <strong className={cn("font-mono", unappliedCents > 0 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-slate-900 dark:text-white")}>
-                {formatCurrency(unappliedCents / 100)}
+                {formatCurrency(unappliedCents)}
               </strong>
             </div>
           </div>

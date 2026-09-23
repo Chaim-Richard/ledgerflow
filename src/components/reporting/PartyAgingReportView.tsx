@@ -205,31 +205,31 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Outstanding</span>
           <span className="text-xl font-mono font-black text-slate-900 dark:text-white tracking-tight block mt-1">
-            {formatCurrency(grandTotal / 100)}
+            {formatCurrency(grandTotal)}
           </span>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">0 - 30 Days</span>
           <span className="text-xl font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-tight block mt-1">
-            {formatCurrency(totalCurrent / 100)}
+            {formatCurrency(totalCurrent)}
           </span>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">31 - 60 Days</span>
           <span className="text-xl font-mono font-black text-amber-500 tracking-tight block mt-1">
-            {formatCurrency(total30to60 / 100)}
+            {formatCurrency(total30to60)}
           </span>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">61 - 90 Days</span>
           <span className="text-xl font-mono font-black text-orange-500 tracking-tight block mt-1">
-            {formatCurrency(total60to90 / 100)}
+            {formatCurrency(total60to90)}
           </span>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">91+ Days</span>
           <span className="text-xl font-mono font-black text-rose-600 dark:text-rose-400 tracking-tight block mt-1">
-            {formatCurrency(total90plus / 100)}
+            {formatCurrency(total90plus)}
           </span>
         </div>
       </div>
@@ -306,19 +306,19 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                     {row.partyName}
                   </td>
                   <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
-                    {row.current > 0 ? formatCurrency(row.current / 100) : '-'}
+                    {row.current > 0 ? formatCurrency(row.current) : '-'}
                   </td>
                   <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
-                    {row.thirtyToSixty > 0 ? formatCurrency(row.thirtyToSixty / 100) : '-'}
+                    {row.thirtyToSixty > 0 ? formatCurrency(row.thirtyToSixty) : '-'}
                   </td>
                   <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
-                    {row.sixtyToNinety > 0 ? formatCurrency(row.sixtyToNinety / 100) : '-'}
+                    {row.sixtyToNinety > 0 ? formatCurrency(row.sixtyToNinety) : '-'}
                   </td>
                   <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
-                    {row.overNinety > 0 ? formatCurrency(row.overNinety / 100) : '-'}
+                    {row.overNinety > 0 ? formatCurrency(row.overNinety) : '-'}
                   </td>
                   <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
-                    {formatCurrency(row.total / 100)}
+                    {formatCurrency(row.total)}
                   </td>
                   <td className="p-4 text-right">
                     <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 dark:group-hover:text-white transition-colors" />
@@ -338,11 +338,11 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
               <tfoot>
                 <tr className="bg-slate-50 dark:bg-slate-800/30 font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-800">
                   <td className="p-4">Grand Total</td>
-                  <td className="p-4 text-right font-mono">{formatCurrency(totalCurrent / 100)}</td>
-                  <td className="p-4 text-right font-mono">{formatCurrency(total30to60 / 100)}</td>
-                  <td className="p-4 text-right font-mono">{formatCurrency(total60to90 / 100)}</td>
-                  <td className="p-4 text-right font-mono">{formatCurrency(total90plus / 100)}</td>
-                  <td className="p-4 text-right font-mono text-lg">{formatCurrency(grandTotal / 100)}</td>
+                  <td className="p-4 text-right font-mono">{formatCurrency(totalCurrent)}</td>
+                  <td className="p-4 text-right font-mono">{formatCurrency(total30to60)}</td>
+                  <td className="p-4 text-right font-mono">{formatCurrency(total60to90)}</td>
+                  <td className="p-4 text-right font-mono">{formatCurrency(total90plus)}</td>
+                  <td className="p-4 text-right font-mono text-lg">{formatCurrency(grandTotal)}</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -406,10 +406,10 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-mono font-black text-slate-900 dark:text-white">
-                        {formatCurrency(outstanding / 100)}
+                        {formatCurrency(outstanding)}
                       </div>
                       <div className="text-xs text-slate-400">
-                        Total {formatCurrency(docTotal / 100)} | Paid {formatCurrency(docPaid / 100)}
+                        Total {formatCurrency(docTotal)} | Paid {formatCurrency(docPaid)}
                       </div>
                     </div>
                   </div>

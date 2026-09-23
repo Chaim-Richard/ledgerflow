@@ -232,7 +232,7 @@ export default function Purchases() {
                         </span>
                       </td>
                       <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
-                        {formatCurrency((b.amountCents || 0) / 100)}
+                        {formatCurrency(b.amountCents || 0)}
                       </td>
                       <td className="p-4 text-right flex items-center justify-end gap-2">
                         {b.status !== 'paid' && b.status !== 'void' && (
@@ -317,7 +317,7 @@ export default function Purchases() {
                       {v.phone || 'N/A'}
                     </td>
                     <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
-                      {formatCurrency((v.balanceCents || 0) / 100)}
+                      {formatCurrency(v.balanceCents || 0)}
                     </td>
                   </tr>
                 ))}

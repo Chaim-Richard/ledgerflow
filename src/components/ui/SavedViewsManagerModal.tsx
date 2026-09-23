@@ -564,12 +564,12 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                       <div className="flex items-center justify-between md:justify-end gap-5 w-full md:w-auto border-t md:border-t-0 pt-3 md:pt-0 border-[var(--line)]">
                         <div className="text-right">
                           <div className="text-base font-bold text-[var(--text)] tracking-tight tabular-nums">
-                            ${formatCurrency(metrics.totalMoneyCents / 100)}
+                            {formatCurrency(metrics.totalMoneyCents)}
                           </div>
                           <div className="text-[10px] text-[var(--muted)] flex items-center justify-end gap-2 mt-0.5">
                             <span>{metrics.matchingCount} entries</span>
                             <span>•</span>
-                            <span className="text-emerald-500 font-medium tabular-nums">+${formatCurrency(metrics.moneyInCents / 100)}</span>
+                            <span className="text-emerald-500 font-medium tabular-nums">+{formatCurrency(metrics.moneyInCents)}</span>
                           </div>
                         </div>
 

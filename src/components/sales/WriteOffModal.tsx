@@ -64,7 +64,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
         badDebtAccountId || undefined
       );
 
-      toast.success(`Written off ${formatCurrency(remainingCents / 100)} as Bad Debt`);
+      toast.success(`Written off ${formatCurrency(remainingCents)} as Bad Debt`);
       onClose();
     } catch (err: any) {
       console.error('Write-off failed:', err);
@@ -105,7 +105,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
             <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span>Outstanding Balance:</span>
               <strong className="font-mono text-amber-600 dark:text-amber-400 font-bold">
-                {formatCurrency(remainingCents / 100)}
+                {formatCurrency(remainingCents)}
               </strong>
             </div>
           </div>

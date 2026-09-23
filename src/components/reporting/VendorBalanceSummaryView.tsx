@@ -1,0 +1,164 @@
+import React, { useState, useMemo } from 'react';
+import { Building, Mail, Phone } from 'lucide-react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
+import { formatCurrency } from '../../lib/utils';
+import { toast } from 'sonner';
+
+interface VendorBalanceRow {
+  vendorId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  openBillsCount: number;
+  totalBilledCents: number;
+  totalPaidCents: number;
+  balanceCents: number;
+}
+
+export const VendorBalanceSummaryView: React.FC = () => {
+  const vendors = useLedgerStore(s => s.vendors);
+  const bills = useLedgerStore(s => s.bills);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const vendorRows = useMemo<VendorBalanceRow[]>(() => {
+    return vendors.map(vendor => {
+      const vendorBills = bills.filter(b => b.vendorId === vendor.id && b.status !== 'void');
+      const totalBilledCents = vendorBills.reduce((sum, b) => sum + (b.amountCents || 0), 0);
+      const totalPaidCents = vendorBills.reduce((sum, b) => sum + (b.amountPaidCents || 0), 0);
+      const openBills = vendorBills.filter(b => b.status !== 'paid');
+      const balanceCents = Math.max(0, totalBilledCents - totalPaidCents);
+
+      return {
+        vendorId: vendor.id,
+        name: vendor.name || 'Unnamed Vendor',
+        email: vendor.email,
+        phone: vendor.phone,
+        openBillsCount: openBills.length,
+        totalBilledCents,
+        totalPaidCents,
+        balanceCents
+      };
+    }).sort((a, b) => b.balanceCents - a.balanceCents);
+  }, [vendors, bills]);
+
+  const filteredRows = useMemo(() => {
+    if (!searchTerm.trim()) return vendorRows;
+    const term = searchTerm.toLowerCase();
+    return vendorRows.filter(r => 
+      r.name.toLowerCase().includes(term) || 
+      (r.email && r.email.toLowerCase().includes(term)) ||
+      (r.phone && r.phone.includes(term))
+    );
+  }, [vendorRows, searchTerm]);
+
+  const totalOutstandingCents = useMemo(() => {
+    return vendorRows.reduce((sum, r) => sum + r.balanceCents, 0);
+  }, [vendorRows]);
+
+  const totalBilledAllCents = useMemo(() => {
+    return vendorRows.reduce((sum, r) => sum + r.totalBilledCents, 0);
+  }, [vendorRows]);
+
+  const handleExportCSV = () => {
+    const headers = ['Vendor Name', 'Email', 'Phone', 'Open Bills', 'Total Billed ($)', 'Total Paid ($)', 'Balance Due ($)'];
+    const rows = filteredRows.map(r => [
+      `"${r.name.replace(/"/g, '""')}"`,
+      `"${(r.email || '').replace(/"/g, '""')}"`,
+      `"${(r.phone || '').replace(/"/g, '""')}"`,
+      r.openBillsCount,
+      (r.totalBilledCents / 100).toFixed(2),
+      (r.totalPaidCents / 100).toFixed(2),
+      (r.balanceCents / 100).toFixed(2)
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `vendor_balance_summary_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Vendor Balance Summary exported to CSV');
+  };
+
+  const columns: ColumnDef<VendorBalanceRow>[] = [
+    {
+      key: 'name',
+      header: 'Vendor',
+      render: (item) => (
+        <div>
+          <div className="font-semibold text-neutral-900 dark:text-white">{item.name}</div>
+          <div className="flex items-center gap-3 text-[10px] text-neutral-400 mt-0.5">
+            {item.email && <span className="flex items-center gap-1"><Mail className="w-2.5 h-2.5" />{item.email}</span>}
+            {item.phone && <span className="flex items-center gap-1"><Phone className="w-2.5 h-2.5" />{item.phone}</span>}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'openBillsCount',
+      header: 'Open Bills',
+      align: 'center',
+      render: (item) => (
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+          item.openBillsCount > 0 
+            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' 
+            : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
+        }`}>
+          {item.openBillsCount}
+        </span>
+      )
+    },
+    {
+      key: 'totalBilledCents',
+      header: 'Total Billed',
+      align: 'right',
+      render: (item) => formatCurrency(item.totalBilledCents)
+    },
+    {
+      key: 'totalPaidCents',
+      header: 'Total Paid',
+      align: 'right',
+      render: (item) => (
+        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+          {formatCurrency(item.totalPaidCents)}
+        </span>
+      )
+    },
+    {
+      key: 'balanceCents',
+      header: 'Balance Due',
+      align: 'right',
+      render: (item) => (
+        <span className={`font-bold ${item.balanceCents > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-neutral-500'}`}>
+          {formatCurrency(item.balanceCents)}
+        </span>
+      )
+    }
+  ];
+
+  return (
+    <PartyReportLayout
+      title="Vendor Balance Summary"
+      description="Consolidated statement of accounts payable, cumulative billing, and payments across all active suppliers."
+      icon={Building}
+      totalLabel="Total Payables Due"
+      totalAmountCents={totalOutstandingCents}
+      secondaryTotalLabel="Cumulative Billed"
+      secondaryTotalCents={totalBilledAllCents}
+      exportFilename="vendor_balance_summary.csv"
+      onExportCSV={handleExportCSV}
+      searchTerm={searchTerm}
+      onSearchChange={setSearchTerm}
+      searchPlaceholder="Search vendor by name, email, or phone..."
+      columns={columns}
+      data={filteredRows}
+      emptyMessage="No vendor records found matching search filter."
+      getRowId={(item) => item.vendorId}
+    />
+  );
+};
+
+export default VendorBalanceSummaryView;

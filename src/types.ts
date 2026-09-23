@@ -555,6 +555,7 @@ export interface ChartAccount {
   archived?: boolean;
   isSystem?: boolean;
   classification?: string;
+  role?: string;
   isActive?: boolean;
 }
 

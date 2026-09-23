@@ -1,0 +1,172 @@
+import React, { useState, useMemo } from 'react';
+import { Users, Mail, Phone } from 'lucide-react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
+import { formatCurrency } from '../../lib/utils';
+import { toast } from 'sonner';
+
+interface CustomerBalanceRow {
+  customerId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  openInvoicesCount: number;
+  totalInvoicedCents: number;
+  totalPaidCents: number;
+  balanceCents: number;
+}
+
+export const CustomerBalanceSummaryView: React.FC = () => {
+  const customers = useLedgerStore(s => s.customers);
+  const invoices = useLedgerStore(s => s.invoices);
+  const payments = useLedgerStore(s => s.payments);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const customerRows = useMemo<CustomerBalanceRow[]>(() => {
+    return customers.map(cust => {
+      const custInvoices = invoices.filter(inv => inv.customerId === cust.id && inv.status !== 'void');
+      const totalInvoicedCents = custInvoices.reduce((sum, inv) => sum + (inv.amountCents || 0), 0);
+      
+      // Calculate payments made directly against invoices or by this customer
+      const custPayments = payments.filter(p => 
+        p.contactId === cust.id || 
+        p.allocations?.some(a => custInvoices.some(inv => inv.id === a.documentId))
+      );
+      const totalPaidCents = custPayments.reduce((sum, p) => sum + (p.amountCents || 0), 0);
+
+      const openInvoices = custInvoices.filter(inv => inv.status !== 'paid');
+      const balanceCents = Math.max(0, totalInvoicedCents - totalPaidCents);
+
+      return {
+        customerId: cust.id,
+        name: cust.name || 'Unnamed Customer',
+        email: cust.email,
+        phone: cust.phone,
+        openInvoicesCount: openInvoices.length,
+        totalInvoicedCents,
+        totalPaidCents,
+        balanceCents
+      };
+    }).sort((a, b) => b.balanceCents - a.balanceCents);
+  }, [customers, invoices, payments]);
+
+  const filteredRows = useMemo(() => {
+    if (!searchTerm.trim()) return customerRows;
+    const term = searchTerm.toLowerCase();
+    return customerRows.filter(r => 
+      r.name.toLowerCase().includes(term) || 
+      (r.email && r.email.toLowerCase().includes(term)) ||
+      (r.phone && r.phone.includes(term))
+    );
+  }, [customerRows, searchTerm]);
+
+  const totalOutstandingCents = useMemo(() => {
+    return customerRows.reduce((sum, r) => sum + r.balanceCents, 0);
+  }, [customerRows]);
+
+  const totalInvoicedAllCents = useMemo(() => {
+    return customerRows.reduce((sum, r) => sum + r.totalInvoicedCents, 0);
+  }, [customerRows]);
+
+  const handleExportCSV = () => {
+    const headers = ['Customer Name', 'Email', 'Phone', 'Open Invoices', 'Total Invoiced ($)', 'Total Paid ($)', 'Balance Due ($)'];
+    const rows = filteredRows.map(r => [
+      `"${r.name.replace(/"/g, '""')}"`,
+      `"${(r.email || '').replace(/"/g, '""')}"`,
+      `"${(r.phone || '').replace(/"/g, '""')}"`,
+      r.openInvoicesCount,
+      (r.totalInvoicedCents / 100).toFixed(2),
+      (r.totalPaidCents / 100).toFixed(2),
+      (r.balanceCents / 100).toFixed(2)
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `customer_balance_summary_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Customer Balance Summary exported to CSV');
+  };
+
+  const columns: ColumnDef<CustomerBalanceRow>[] = [
+    {
+      key: 'name',
+      header: 'Customer',
+      render: (item) => (
+        <div>
+          <div className="font-semibold text-neutral-900 dark:text-white">{item.name}</div>
+          <div className="flex items-center gap-3 text-[10px] text-neutral-400 mt-0.5">
+            {item.email && <span className="flex items-center gap-1"><Mail className="w-2.5 h-2.5" />{item.email}</span>}
+            {item.phone && <span className="flex items-center gap-1"><Phone className="w-2.5 h-2.5" />{item.phone}</span>}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'openInvoicesCount',
+      header: 'Open Invoices',
+      align: 'center',
+      render: (item) => (
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+          item.openInvoicesCount > 0 
+            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' 
+            : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
+        }`}>
+          {item.openInvoicesCount}
+        </span>
+      )
+    },
+    {
+      key: 'totalInvoicedCents',
+      header: 'Total Invoiced',
+      align: 'right',
+      render: (item) => formatCurrency(item.totalInvoicedCents)
+    },
+    {
+      key: 'totalPaidCents',
+      header: 'Total Paid',
+      align: 'right',
+      render: (item) => (
+        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+          {formatCurrency(item.totalPaidCents)}
+        </span>
+      )
+    },
+    {
+      key: 'balanceCents',
+      header: 'Balance Due',
+      align: 'right',
+      render: (item) => (
+        <span className={`font-bold ${item.balanceCents > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-500'}`}>
+          {formatCurrency(item.balanceCents)}
+        </span>
+      )
+    }
+  ];
+
+  return (
+    <PartyReportLayout
+      title="Customer Balance Summary"
+      description="Consolidated statement of account balances, cumulative invoicing, and payments across all active customers."
+      icon={Users}
+      totalLabel="Total Receivables Due"
+      totalAmountCents={totalOutstandingCents}
+      secondaryTotalLabel="Cumulative Invoiced"
+      secondaryTotalCents={totalInvoicedAllCents}
+      exportFilename="customer_balance_summary.csv"
+      onExportCSV={handleExportCSV}
+      searchTerm={searchTerm}
+      onSearchChange={setSearchTerm}
+      searchPlaceholder="Search customer by name, email, or phone..."
+      columns={columns}
+      data={filteredRows}
+      emptyMessage="No customer records found matching search filter."
+      getRowId={(item) => item.customerId}
+    />
+  );
+};
+
+export default CustomerBalanceSummaryView;

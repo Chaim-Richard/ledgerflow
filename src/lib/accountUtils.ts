@@ -11,7 +11,7 @@ export function resolveAccountRole(account: ChartAccount | undefined | null): Ac
   const subtype = (account.subtype || '').toLowerCase();
 
   // Handle explicit role overrides first
-  if ((account as any).role === 'fx_rounding' || name.includes('rounding') || category.includes('rounding')) {
+  if ((account as any).role === 'fx_rounding' || (account as any).subtype === 'rounding' || category === 'rounding differences') {
     return 'fx_rounding';
   }
 
