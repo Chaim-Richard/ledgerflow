@@ -15,6 +15,7 @@ import { optimizedTransactionSimilarity } from '../../lib/algorithms';
 import { executeCommand } from '../utils/commandExecutor';
 import { requirePlanCapacity } from '../middleware/planCapacity';
 import { requireOpenPeriod } from '../middleware/periodLock';
+import { requireWorkspaceRole } from './workspaceRoutes';
 
 export const transactionRouter = express.Router();
 
@@ -829,6 +830,57 @@ transactionRouter.patch('/bank-lines/:id', async (req, res) => {
     if (e.name === 'ZodError') {
       return res.status(400).json({ error: 'Schema validation failed', details: e.issues });
     }
+    res.status(400).json({ error: e.message });
+  }
+});
+
+transactionRouter.post('/bank-lines/:id/unmatch', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { workspaceId } = req.body;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Missing workspaceId' });
+    }
+    const user = (req as any).user;
+    const db = getDb();
+    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+    if (!wsDoc.exists) {
+      return res.status(404).json({ error: 'Workspace not found' });
+    }
+    const wsData = wsDoc.data();
+    const lockDate = wsData?.lockDate;
+
+    const lineRef = db.collection('bankLines').doc(id);
+    const lineSnap = await lineRef.get();
+    if (!lineSnap.exists || lineSnap.data()?.workspaceId !== workspaceId) {
+      return res.status(404).json({ error: `Bank line ${id} not found in workspace` });
+    }
+    const lineData = lineSnap.data();
+    const lineDate = lineData?.date || '';
+
+    if (lockDate && lineDate && lineDate <= lockDate) {
+      return res.status(400).json({ error: `This period is locked on or before ${lockDate}` });
+    }
+
+    await db.runTransaction(async (tx) => {
+      tx.update(lineRef, {
+        matchedTransactionId: null,
+        status: 'pending',
+        updatedAt: FieldValue.serverTimestamp()
+      });
+
+      const auditRef = db.collection('auditLogs').doc();
+      tx.set(auditRef, {
+        workspaceId,
+        uid: user.uid,
+        action: 'unmatch_bank_line',
+        description: `User ${user.email || user.uid} unmatched bank line ${id}`,
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    res.json({ status: 'ok', id });
+  } catch (e: any) {
     res.status(400).json({ error: e.message });
   }
 });

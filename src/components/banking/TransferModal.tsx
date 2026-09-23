@@ -3,7 +3,7 @@ import { ChartAccount, Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { createAccountTransfer, detectPotentialTransfers, TransferMatchCandidate } from '../../lib/transferEngine';
-import { formatCurrency, formatDate } from '../../lib/utils';
+import { formatCurrency, formatDate, getLocalDateIso } from '../../lib/utils';
 import { isCashAccount } from '../../lib/txFilters';
 import { useTimeout } from '../../hooks/useTimeout';
 import { 
@@ -43,7 +43,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
   const [fromAccountId, setFromAccountId] = useState<string>(defaultFromAccountId || '');
   const [toAccountId, setToAccountId] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
-  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<string>(getLocalDateIso());
   const [description, setDescription] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { setSafeTimeout } = useTimeout();

@@ -21,7 +21,7 @@ import {
   Trash2, Zap, DollarSign,
   Check, Eye, Ban, FileText
 } from 'lucide-react';
-import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
+import { parseLocalDate, cn, formatCurrency, getLocalDateIso } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isPostable, lineAmount, isOpenInvoice } from '../../lib/txFilters';
 import { format, differenceInDays } from 'date-fns';
@@ -102,7 +102,7 @@ export default function Sales() {
     }
 
     if (data.type === 'recurring') {
-      const startDateStr = data.date || new Date().toISOString().slice(0, 10);
+      const startDateStr = data.date || getLocalDateIso();
       const anchorDay = Number(startDateStr.split('-')[2]) || 1;
       const nextOcc = calculateNextOccurrence(startDateStr, data.recurringInterval || 'monthly', anchorDay);
       await addEntity('recurring', {

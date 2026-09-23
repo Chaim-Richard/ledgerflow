@@ -3,7 +3,7 @@ import { Employee, PayRun, Transaction, TransactionLine } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { computePeriodPayroll, PAYROLL_DISCLAIMER } from '../../lib/payroll-engine';
-import { formatCurrency, formatDate } from '../../lib/utils';
+import { formatCurrency, formatDate, getLocalDateIso } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { useTimeout } from '../../hooks/useTimeout';
 import { 
@@ -45,7 +45,7 @@ export const PayrollView: React.FC = () => {
   const [empState, setEmpState] = useState('CA');
 
   // Pay run generation form
-  const [runPayDate, setRunPayDate] = useState(new Date().toISOString().split('T')[0]);
+  const [runPayDate, setRunPayDate] = useState(getLocalDateIso());
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>('');
 
   // Auto-calculated pay run preview
