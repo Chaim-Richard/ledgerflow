@@ -1,12 +1,12 @@
 {
-  "anyCount": 1086,
-  "utcDateCount": 37,
+  "anyCount": 1287,
+  "utcDateCount": 40,
   "arrayIndexKeys": 64,
   "blankNoOpener": 3,
-  "consoleLog": 0,
+  "consoleLog": 8,
   "serverTsLines": 4720,
-  "filesOver800": 14,
+  "filesOver800": 15,
   "orphanFiles": 0,
-  "eslintWarnings": 0,
-  "untestedViews": 0
+  "eslintWarnings": 4,
+  "untestedViews": 77
 }

@@ -3,44 +3,28 @@ import { Building, Mail, Phone } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
 import { formatCurrency } from '../../lib/utils';
+import { computeVendorBalanceSummary, VendorBalanceSummaryRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
-
-interface VendorBalanceRow {
-  vendorId: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  openBillsCount: number;
-  totalBilledCents: number;
-  totalPaidCents: number;
-  balanceCents: number;
-}
 
 export const VendorBalanceSummaryView: React.FC = () => {
   const vendors = useLedgerStore(s => s.vendors);
   const bills = useLedgerStore(s => s.bills);
+  const payments = useLedgerStore(s => s.payments);
+  const vendorCredits = useLedgerStore(s => s.vendorCredits);
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  const vendorRows = useMemo<VendorBalanceRow[]>(() => {
-    return vendors.map(vendor => {
-      const vendorBills = bills.filter(b => b.vendorId === vendor.id && b.status !== 'void');
-      const totalBilledCents = vendorBills.reduce((sum, b) => sum + (b.amountCents || 0), 0);
-      const totalPaidCents = vendorBills.reduce((sum, b) => sum + (b.amountPaidCents || 0), 0);
-      const openBills = vendorBills.filter(b => b.status !== 'paid');
-      const balanceCents = Math.max(0, totalBilledCents - totalPaidCents);
-
-      return {
-        vendorId: vendor.id,
-        name: vendor.name || 'Unnamed Vendor',
-        email: vendor.email,
-        phone: vendor.phone,
-        openBillsCount: openBills.length,
-        totalBilledCents,
-        totalPaidCents,
-        balanceCents
-      };
-    }).sort((a, b) => b.balanceCents - a.balanceCents);
-  }, [vendors, bills]);
+  const vendorRows = useMemo<VendorBalanceSummaryRow[]>(() => {
+    return computeVendorBalanceSummary(
+      vendors,
+      bills,
+      payments,
+      vendorCredits,
+      startDate || undefined,
+      endDate || undefined
+    );
+  }, [vendors, bills, payments, vendorCredits, startDate, endDate]);
 
   const filteredRows = useMemo(() => {
     if (!searchTerm.trim()) return vendorRows;
@@ -83,7 +67,7 @@ export const VendorBalanceSummaryView: React.FC = () => {
     toast.success('Vendor Balance Summary exported to CSV');
   };
 
-  const columns: ColumnDef<VendorBalanceRow>[] = [
+  const columns: ColumnDef<VendorBalanceSummaryRow>[] = [
     {
       key: 'name',
       header: 'Vendor',
@@ -132,7 +116,7 @@ export const VendorBalanceSummaryView: React.FC = () => {
       header: 'Balance Due',
       align: 'right',
       render: (item) => (
-        <span className={`font-bold ${item.balanceCents > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-neutral-500'}`}>
+        <span className={`font-bold ${item.balanceCents > 0 ? 'text-amber-600 dark:text-amber-400' : item.balanceCents < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-500'}`}>
           {formatCurrency(item.balanceCents)}
         </span>
       )
@@ -153,6 +137,10 @@ export const VendorBalanceSummaryView: React.FC = () => {
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
       searchPlaceholder="Search vendor by name, email, or phone..."
+      startDate={startDate}
+      endDate={endDate}
+      onStartDateChange={setStartDate}
+      onEndDateChange={setEndDate}
       columns={columns}
       data={filteredRows}
       emptyMessage="No vendor records found matching search filter."
@@ -162,3 +150,4 @@ export const VendorBalanceSummaryView: React.FC = () => {
 };
 
 export default VendorBalanceSummaryView;
+

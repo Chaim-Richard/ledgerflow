@@ -23,6 +23,10 @@ export interface PartyReportLayoutProps<T> {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
+  startDate?: string;
+  endDate?: string;
+  onStartDateChange?: (val: string) => void;
+  onEndDateChange?: (val: string) => void;
   columns: ColumnDef<T>[];
   data: T[];
   emptyMessage?: string;
@@ -41,6 +45,10 @@ export function PartyReportLayout<T>({
   searchTerm,
   onSearchChange,
   searchPlaceholder = 'Search...',
+  startDate,
+  endDate,
+  onStartDateChange,
+  onEndDateChange,
   columns,
   data,
   emptyMessage = 'No records found matching criteria.',
@@ -92,8 +100,8 @@ export function PartyReportLayout<T>({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="relative flex-1 min-w-[220px] max-w-sm">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
           <input
             type="text"
@@ -103,6 +111,25 @@ export function PartyReportLayout<T>({
             className="w-full pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
+
+        {onStartDateChange && onEndDateChange && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-neutral-500 text-[11px] font-semibold uppercase">From:</span>
+            <input
+              type="date"
+              value={startDate || ''}
+              onChange={(e) => onStartDateChange(e.target.value)}
+              className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-900 dark:text-white"
+            />
+            <span className="text-neutral-500 text-[11px] font-semibold uppercase">To:</span>
+            <input
+              type="date"
+              value={endDate || ''}
+              onChange={(e) => onEndDateChange(e.target.value)}
+              className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-900 dark:text-white"
+            />
+          </div>
+        )}
       </div>
 
       {/* Report Table */}

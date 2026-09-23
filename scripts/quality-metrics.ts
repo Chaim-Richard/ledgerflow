@@ -148,6 +148,38 @@ export function computeQualityMetrics(rootDir: string = process.cwd()): QualityM
   let serverTsLines = 0;
   let filesOver800 = 0;
 
+  function scanFile(fullPath: string) {
+    if (!fs.existsSync(fullPath)) return;
+    const content = fs.readFileSync(fullPath, 'utf8');
+    const lines = content.split('\n');
+
+    if (lines.length > 800) {
+      filesOver800++;
+    }
+
+    if (path.basename(fullPath) === 'server.ts') {
+      serverTsLines = lines.length;
+    }
+
+    for (const line of lines) {
+      if (/:\s*any\b/.test(line) || /as\s+any\b/.test(line)) {
+        anyCount++;
+      }
+      if (/\bgetUTC(Date|Month|FullYear|Hours|Minutes|Seconds|Day)\b|\bDate\.UTC\b|\btoUTCString\b/.test(line)) {
+        utcDateCount++;
+      }
+      if (/key=\{.*index.*\}/.test(line) || /key=\{i\}/.test(line) || /key=\{idx\}/.test(line)) {
+        arrayIndexKeys++;
+      }
+      if (/target="_blank"/.test(line) && !/rel=".*noopener.*"/.test(line)) {
+        blankNoOpener++;
+      }
+      if (/console\.log\(/.test(line)) {
+        consoleLog++;
+      }
+    }
+  }
+
   function scanDir(dir: string) {
     if (!fs.existsSync(dir)) return;
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -163,45 +195,22 @@ export function computeQualityMetrics(rootDir: string = process.cwd()): QualityM
         !entry.name.includes('.test.') &&
         !entry.name.endsWith('.d.ts')
       ) {
-        const content = fs.readFileSync(fullPath, 'utf8');
-        const lines = content.split('\n');
-
-        if (lines.length > 800) {
-          filesOver800++;
-        }
-
-        if (entry.name === 'server.ts') {
-          serverTsLines = lines.length;
-        }
-
-        for (const line of lines) {
-          if (/:\s*any\b/.test(line) || /as\s+any\b/.test(line)) {
-            anyCount++;
-          }
-          if (/\bgetUTC(Date|Month|FullYear|Hours|Minutes|Seconds|Day)\b|\bDate\.UTC\b|\btoUTCString\b/.test(line)) {
-            utcDateCount++;
-          }
-          if (/key=\{.*index.*\}/.test(line) || /key=\{i\}/.test(line) || /key=\{idx\}/.test(line)) {
-            arrayIndexKeys++;
-          }
-          if (/target="_blank"/.test(line) && !/rel=".*noopener.*"/.test(line)) {
-            blankNoOpener++;
-          }
-          if (/console\.log\(/.test(line)) {
-            consoleLog++;
-          }
-        }
+        scanFile(fullPath);
       }
     }
   }
 
   scanDir(path.join(rootDir, 'src'));
   if (fs.existsSync(path.join(rootDir, 'server.ts'))) {
-    const serverContent = fs.readFileSync(path.join(rootDir, 'server.ts'), 'utf8');
-    serverTsLines = serverContent.split('\n').length;
+    scanFile(path.join(rootDir, 'server.ts'));
+  }
+  if (fs.existsSync(path.join(rootDir, 'vite.config.ts'))) {
+    scanFile(path.join(rootDir, 'vite.config.ts'));
   }
 
   const orphanFiles = computeOrphanFiles(rootDir);
+  const untestedViews = computeUntestedViews(rootDir);
+  const eslintWarnings = computeEslintWarnings(rootDir);
 
   return {
     anyCount,
@@ -212,7 +221,64 @@ export function computeQualityMetrics(rootDir: string = process.cwd()): QualityM
     serverTsLines,
     filesOver800,
     orphanFiles,
-    eslintWarnings: 0,
-    untestedViews: 0,
+    eslintWarnings,
+    untestedViews,
   };
+}
+
+function computeUntestedViews(rootDir: string): number {
+  const registryPath = path.resolve(rootDir, 'src/config/registry.tsx');
+  if (!fs.existsSync(registryPath)) return 0;
+  const content = fs.readFileSync(registryPath, 'utf8');
+  const viewKeys = new Set<string>();
+  const matchView = /'([^']+)':\s*lazy\(/g;
+  let m: RegExpExecArray | null;
+  while ((m = matchView.exec(content)) !== null) {
+    viewKeys.add(m[1]);
+  }
+  
+  const testDir = path.resolve(rootDir, 'e2e');
+  let testContent = '';
+  if (fs.existsSync(testDir)) {
+    for (const f of fs.readdirSync(testDir)) {
+      if (f.endsWith('.ts') || f.endsWith('.tsx')) {
+        testContent += fs.readFileSync(path.join(testDir, f), 'utf8') + '\n';
+      }
+    }
+  }
+
+  let untested = 0;
+  for (const k of viewKeys) {
+    if (!testContent.includes(`'${k}'`) && !testContent.includes(`"${k}"`)) {
+      untested++;
+    }
+  }
+  return untested;
+}
+
+function computeEslintWarnings(rootDir: string): number {
+  let count = 0;
+  function scan(dir: string) {
+    if (!fs.existsSync(dir)) return;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!['node_modules', 'dist', '.git', 'coverage', 'tests'].includes(entry.name)) {
+          scan(full);
+        }
+      } else if (/\.(ts|tsx|js|jsx)$/.test(entry.name) && !entry.name.includes('.test.') && !entry.name.endsWith('.d.ts')) {
+        const text = fs.readFileSync(full, 'utf8');
+        const matches = text.match(/eslint-disable|@ts-ignore|@ts-expect-error/g);
+        if (matches) count += matches.length;
+      }
+    }
+  }
+  scan(path.join(rootDir, 'src'));
+  if (fs.existsSync(path.join(rootDir, 'server.ts'))) {
+    const text = fs.readFileSync(path.join(rootDir, 'server.ts'), 'utf8');
+    const matches = text.match(/eslint-disable|@ts-ignore|@ts-expect-error/g);
+    if (matches) count += matches.length;
+  }
+  return count;
 }

@@ -17,7 +17,7 @@ export default function StatementView() {
 
   const [type, setType] = useState<'customer' | 'vendor'>('customer');
   const [contactId, setContactId] = useState<string>('');
-  const [startDate, setStartDate] = useState('2026-01-01');
+  const [startDate, setStartDate] = useState(`${new Date().getFullYear()}-01-01`);
   const [endDate, setEndDate] = useState(getLocalDateISO());
 
   // Default to first contact

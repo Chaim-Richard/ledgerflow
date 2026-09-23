@@ -3,63 +3,28 @@ import { FileText } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
 import { formatCurrency } from '../../lib/utils';
+import { computeTransactionsByCustomer, PartyTransactionRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
-
-interface PartyTxRow {
-  id: string;
-  date: string;
-  partyName: string;
-  type: string;
-  reference: string;
-  status: string;
-  amountCents: number;
-}
 
 export const TransactionsByCustomerView: React.FC = () => {
   const customers = useLedgerStore(s => s.customers);
   const invoices = useLedgerStore(s => s.invoices);
   const payments = useLedgerStore(s => s.payments);
+  const creditNotes = useLedgerStore(s => s.creditNotes);
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  const customerMap = useMemo(() => {
-    return new Map(customers.map(c => [c.id, c.name]));
-  }, [customers]);
-
-  const rows = useMemo<PartyTxRow[]>(() => {
-    const list: PartyTxRow[] = [];
-
-    // 1. Invoices
-    for (const inv of invoices) {
-      if (inv.status === 'void') continue;
-      const customerName = inv.customerName || customerMap.get(inv.customerId) || 'Unknown Customer';
-      list.push({
-        id: inv.id,
-        date: inv.date || inv.dueDate || '2026-01-01',
-        partyName: customerName,
-        type: 'Invoice',
-        reference: inv.number || inv.id,
-        status: inv.status || 'pending',
-        amountCents: inv.amountCents || 0
-      });
-    }
-
-    // 2. Payments (direction === 'received')
-    for (const pay of payments) {
-      if (pay.status === 'void' || pay.direction === 'made') continue;
-      const customerName = pay.contactName || customerMap.get(pay.contactId) || 'Customer Payment';
-      list.push({
-        id: pay.id,
-        date: pay.date || '2026-01-01',
-        partyName: customerName,
-        type: 'Payment',
-        reference: pay.reference || pay.number || pay.id,
-        status: pay.status || 'posted',
-        amountCents: -(pay.amountCents || 0)
-      });
-    }
-
-    return list.sort((a, b) => b.date.localeCompare(a.date));
-  }, [invoices, payments, customerMap]);
+  const rows = useMemo<PartyTransactionRow[]>(() => {
+    return computeTransactionsByCustomer(
+      customers,
+      invoices,
+      payments,
+      creditNotes,
+      startDate || undefined,
+      endDate || undefined
+    );
+  }, [customers, invoices, payments, creditNotes, startDate, endDate]);
 
   const filteredRows = useMemo(() => {
     if (!searchTerm.trim()) return rows;
@@ -101,7 +66,7 @@ export const TransactionsByCustomerView: React.FC = () => {
     toast.success('Transactions by Customer exported to CSV');
   };
 
-  const columns: ColumnDef<PartyTxRow>[] = [
+  const columns: ColumnDef<PartyTransactionRow>[] = [
     {
       key: 'date',
       header: 'Date',
@@ -123,6 +88,8 @@ export const TransactionsByCustomerView: React.FC = () => {
         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
           item.type === 'Invoice'
             ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+            : item.type === 'Credit Note'
+            ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
             : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
         }`}>
           {item.type}
@@ -169,6 +136,10 @@ export const TransactionsByCustomerView: React.FC = () => {
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
       searchPlaceholder="Filter by customer name, ref, or type..."
+      startDate={startDate}
+      endDate={endDate}
+      onStartDateChange={setStartDate}
+      onEndDateChange={setEndDate}
       columns={columns}
       data={filteredRows}
       emptyMessage="No customer transactions found matching search filter."
@@ -178,3 +149,4 @@ export const TransactionsByCustomerView: React.FC = () => {
 };
 
 export default TransactionsByCustomerView;
+

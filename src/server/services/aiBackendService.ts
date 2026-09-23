@@ -359,11 +359,13 @@ export class AIBackendService {
 
       case 'build-auto-rule': {
         const sentence = payload.sentence || '';
+        const categories = payload.categories || [];
+        const accounts = payload.accounts || [];
         if (!ai) {
           throw new Error("Gemini API client is not initialized.");
         }
         try {
-          const prompt = `Generate a structured rule schema matching sentence query: "${sentence}". Return only the condition and action matching our schema. Do not try to include any disallowed properties.`;
+          const prompt = `Generate a structured rule schema matching sentence query: "${sentence}". Available categories: ${JSON.stringify(categories)}, available accounts: ${JSON.stringify(accounts)}. Match condition and action to these categories/accounts where appropriate. Return only the condition and action matching our schema. Do not try to include any disallowed properties.`;
           const response = await ai.models.generateContent({
             model: 'gemini-3.8-flash',
             contents: prompt,

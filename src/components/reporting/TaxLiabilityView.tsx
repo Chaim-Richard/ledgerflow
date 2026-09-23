@@ -8,7 +8,7 @@ export default function TaxLiabilityView() {
   const invoices = useLedgerStore(s => s.invoices);
   const bills = useLedgerStore(s => s.bills);
 
-  const [startDate, setStartDate] = useState('2026-01-01');
+  const [startDate, setStartDate] = useState(`${new Date().getFullYear()}-01-01`);
   const [endDate, setEndDate] = useState(getLocalDateISO());
 
   const taxData = useMemo(() => {

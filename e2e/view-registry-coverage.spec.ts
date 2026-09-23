@@ -5,7 +5,7 @@ import path from 'path';
 
 let a11yBaseline: Record<string, number> = {};
 try {
-  const baselinePath = path.resolve(__dirname, 'a11y-baseline.json');
+  const baselinePath = path.resolve(process.cwd(), 'e2e/a11y-baseline.json');
   if (fs.existsSync(baselinePath)) {
     a11yBaseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
   }

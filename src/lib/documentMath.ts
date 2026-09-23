@@ -11,6 +11,7 @@
 export interface DocumentTaxInput {
   amountCents?: number;
   taxAmountCents?: number;
+  taxCents?: number;
   salesTaxCents?: number;
   taxRate?: number;
   taxInclusive?: boolean;
@@ -35,6 +36,9 @@ export function normalizeTaxRate(taxRate?: number): number {
 export function calculateDocumentTax(doc: DocumentTaxInput): number {
   if (doc.taxAmountCents !== undefined && doc.taxAmountCents !== null && !isNaN(doc.taxAmountCents)) {
     return Math.max(0, Math.round(doc.taxAmountCents));
+  }
+  if (doc.taxCents !== undefined && doc.taxCents !== null && !isNaN(doc.taxCents)) {
+    return Math.max(0, Math.round(doc.taxCents));
   }
   if (doc.salesTaxCents !== undefined && doc.salesTaxCents !== null && !isNaN(doc.salesTaxCents)) {
     return Math.max(0, Math.round(doc.salesTaxCents));

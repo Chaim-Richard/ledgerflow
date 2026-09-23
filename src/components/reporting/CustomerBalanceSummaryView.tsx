@@ -3,52 +3,28 @@ import { Users, Mail, Phone } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
 import { formatCurrency } from '../../lib/utils';
+import { computeCustomerBalanceSummary, CustomerBalanceSummaryRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
-
-interface CustomerBalanceRow {
-  customerId: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  openInvoicesCount: number;
-  totalInvoicedCents: number;
-  totalPaidCents: number;
-  balanceCents: number;
-}
 
 export const CustomerBalanceSummaryView: React.FC = () => {
   const customers = useLedgerStore(s => s.customers);
   const invoices = useLedgerStore(s => s.invoices);
   const payments = useLedgerStore(s => s.payments);
+  const creditNotes = useLedgerStore(s => s.creditNotes);
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  const customerRows = useMemo<CustomerBalanceRow[]>(() => {
-    return customers.map(cust => {
-      const custInvoices = invoices.filter(inv => inv.customerId === cust.id && inv.status !== 'void');
-      const totalInvoicedCents = custInvoices.reduce((sum, inv) => sum + (inv.amountCents || 0), 0);
-      
-      // Calculate payments made directly against invoices or by this customer
-      const custPayments = payments.filter(p => 
-        p.contactId === cust.id || 
-        p.allocations?.some(a => custInvoices.some(inv => inv.id === a.documentId))
-      );
-      const totalPaidCents = custPayments.reduce((sum, p) => sum + (p.amountCents || 0), 0);
-
-      const openInvoices = custInvoices.filter(inv => inv.status !== 'paid');
-      const balanceCents = Math.max(0, totalInvoicedCents - totalPaidCents);
-
-      return {
-        customerId: cust.id,
-        name: cust.name || 'Unnamed Customer',
-        email: cust.email,
-        phone: cust.phone,
-        openInvoicesCount: openInvoices.length,
-        totalInvoicedCents,
-        totalPaidCents,
-        balanceCents
-      };
-    }).sort((a, b) => b.balanceCents - a.balanceCents);
-  }, [customers, invoices, payments]);
+  const customerRows = useMemo<CustomerBalanceSummaryRow[]>(() => {
+    return computeCustomerBalanceSummary(
+      customers,
+      invoices,
+      payments,
+      creditNotes,
+      startDate || undefined,
+      endDate || undefined
+    );
+  }, [customers, invoices, payments, creditNotes, startDate, endDate]);
 
   const filteredRows = useMemo(() => {
     if (!searchTerm.trim()) return customerRows;
@@ -91,7 +67,7 @@ export const CustomerBalanceSummaryView: React.FC = () => {
     toast.success('Customer Balance Summary exported to CSV');
   };
 
-  const columns: ColumnDef<CustomerBalanceRow>[] = [
+  const columns: ColumnDef<CustomerBalanceSummaryRow>[] = [
     {
       key: 'name',
       header: 'Customer',
@@ -140,7 +116,7 @@ export const CustomerBalanceSummaryView: React.FC = () => {
       header: 'Balance Due',
       align: 'right',
       render: (item) => (
-        <span className={`font-bold ${item.balanceCents > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-500'}`}>
+        <span className={`font-bold ${item.balanceCents > 0 ? 'text-rose-600 dark:text-rose-400' : item.balanceCents < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-500'}`}>
           {formatCurrency(item.balanceCents)}
         </span>
       )
@@ -161,6 +137,10 @@ export const CustomerBalanceSummaryView: React.FC = () => {
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
       searchPlaceholder="Search customer by name, email, or phone..."
+      startDate={startDate}
+      endDate={endDate}
+      onStartDateChange={setStartDate}
+      onEndDateChange={setEndDate}
       columns={columns}
       data={filteredRows}
       emptyMessage="No customer records found matching search filter."
@@ -170,3 +150,4 @@ export const CustomerBalanceSummaryView: React.FC = () => {
 };
 
 export default CustomerBalanceSummaryView;
+

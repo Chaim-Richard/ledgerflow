@@ -82,7 +82,7 @@
   .light {
     --ink: #E7EDEB; --surface: #F4F8F7; --panel: #FFFFFF; --elevated: #FFFFFF;
     --line: #D4DEDB; --grid: rgba(20, 60, 64, 0.05);
-    --text: #0E2229; --muted: #57706F; --faint: #8199A0;
+    --text: #0E2229; --muted: #57706F; --faint: #5B7075;
     --brass: #956613; --brass-soft: rgba(149, 102, 19, 0.10); --brass-line: rgba(149, 102, 19, 0.35);
     --pos: #1E8A57; --neg: #C0503A;
     --w-personal: #4E6E92; --w-charity: #3F7C5E; --w-book: #7E5DA0; --w-estate: #A5537A;

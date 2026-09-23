@@ -245,7 +245,14 @@ export const RulesSettings: React.FC = () => {
     setIsGeneratingAiRule(true);
     setAiError(null);
     try {
-      const result = await aiService.process('build-auto-rule', { sentence: aiSentence });
+      const accountsList = useLedgerStore.getState().accounts;
+      const categories = Array.from(new Set(accountsList.map(a => a.category).filter(Boolean)));
+      const accountNames = accountsList.map(a => a.name).filter(Boolean);
+      const result = await aiService.process('build-auto-rule', { 
+        sentence: aiSentence,
+        categories,
+        accounts: accountNames
+      });
       const rawRule = result?.rule || result;
       const validated = AutoRuleSchema.safeParse({
         ...rawRule,

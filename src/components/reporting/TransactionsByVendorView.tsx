@@ -3,69 +3,34 @@ import { FileSpreadsheet } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
 import { formatCurrency } from '../../lib/utils';
+import { computeTransactionsByVendor, PartyTransactionRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
-
-interface VendorTxRow {
-  id: string;
-  date: string;
-  vendorName: string;
-  type: string;
-  reference: string;
-  status: string;
-  amountCents: number;
-}
 
 export const TransactionsByVendorView: React.FC = () => {
   const vendors = useLedgerStore(s => s.vendors);
   const bills = useLedgerStore(s => s.bills);
   const payments = useLedgerStore(s => s.payments);
+  const vendorCredits = useLedgerStore(s => s.vendorCredits);
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  const vendorMap = useMemo(() => {
-    return new Map(vendors.map(v => [v.id, v.name]));
-  }, [vendors]);
-
-  const rows = useMemo<VendorTxRow[]>(() => {
-    const list: VendorTxRow[] = [];
-
-    // 1. Bills
-    for (const bill of bills) {
-      if (bill.status === 'void') continue;
-      const vendorName = bill.vendorName || vendorMap.get(bill.vendorId) || 'Unknown Vendor';
-      list.push({
-        id: bill.id,
-        date: bill.date || bill.dueDate || '2026-01-01',
-        vendorName,
-        type: 'Bill',
-        reference: bill.number || bill.id,
-        status: bill.status || 'pending',
-        amountCents: bill.amountCents || 0
-      });
-    }
-
-    // 2. Vendor disbursements / payments made (direction === 'made')
-    for (const pay of payments) {
-      if (pay.status === 'void' || pay.direction === 'received') continue;
-      const vendorName = pay.contactName || vendorMap.get(pay.contactId) || 'Supplier Payment';
-      list.push({
-        id: pay.id,
-        date: pay.date || '2026-01-01',
-        vendorName,
-        type: 'Vendor Payment',
-        reference: pay.reference || pay.number || pay.id,
-        status: pay.status || 'posted',
-        amountCents: -(pay.amountCents || 0)
-      });
-    }
-
-    return list.sort((a, b) => b.date.localeCompare(a.date));
-  }, [bills, payments, vendorMap]);
+  const rows = useMemo<PartyTransactionRow[]>(() => {
+    return computeTransactionsByVendor(
+      vendors,
+      bills,
+      payments,
+      vendorCredits,
+      startDate || undefined,
+      endDate || undefined
+    );
+  }, [vendors, bills, payments, vendorCredits, startDate, endDate]);
 
   const filteredRows = useMemo(() => {
     if (!searchTerm.trim()) return rows;
     const term = searchTerm.toLowerCase();
     return rows.filter(r => 
-      r.vendorName.toLowerCase().includes(term) ||
+      r.partyName.toLowerCase().includes(term) ||
       r.reference.toLowerCase().includes(term) ||
       r.type.toLowerCase().includes(term)
     );
@@ -83,7 +48,7 @@ export const TransactionsByVendorView: React.FC = () => {
     const headers = ['Date', 'Vendor Name', 'Type', 'Reference / Number', 'Status', 'Amount ($)'];
     const csvRows = filteredRows.map(r => [
       r.date,
-      `"${r.vendorName.replace(/"/g, '""')}"`,
+      `"${r.partyName.replace(/"/g, '""')}"`,
       r.type,
       `"${r.reference.replace(/"/g, '""')}"`,
       r.status,
@@ -101,18 +66,18 @@ export const TransactionsByVendorView: React.FC = () => {
     toast.success('Transactions by Vendor exported to CSV');
   };
 
-  const columns: ColumnDef<VendorTxRow>[] = [
+  const columns: ColumnDef<PartyTransactionRow>[] = [
     {
       key: 'date',
       header: 'Date',
       className: 'whitespace-nowrap font-mono'
     },
     {
-      key: 'vendorName',
+      key: 'partyName',
       header: 'Vendor',
       render: (item) => (
         <span className="font-medium text-neutral-900 dark:text-white">
-          {item.vendorName}
+          {item.partyName}
         </span>
       )
     },
@@ -123,6 +88,8 @@ export const TransactionsByVendorView: React.FC = () => {
         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
           item.type === 'Bill'
             ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+            : item.type === 'Vendor Credit'
+            ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
             : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
         }`}>
           {item.type}
@@ -169,6 +136,10 @@ export const TransactionsByVendorView: React.FC = () => {
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
       searchPlaceholder="Filter by vendor name, ref, or type..."
+      startDate={startDate}
+      endDate={endDate}
+      onStartDateChange={setStartDate}
+      onEndDateChange={setEndDate}
       columns={columns}
       data={filteredRows}
       emptyMessage="No vendor transactions found matching search filter."
@@ -178,3 +149,4 @@ export const TransactionsByVendorView: React.FC = () => {
 };
 
 export default TransactionsByVendorView;
+
