@@ -3,7 +3,7 @@ import { cn } from '../../lib/utils';
 import { useUIStore } from '../../stores/useUIStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isPostable } from '../../lib/txFilters';
 
 export default function StatusBar() {
   const isOnline = useUIStore(s => s.isOnline);
@@ -19,7 +19,7 @@ export default function StatusBar() {
       if (!isPostable(tx)) continue;
       if (Array.isArray(tx.lines)) {
         for (const line of tx.lines) {
-          imbalance += lineAmount(line, tx);
+          imbalance += Number(line.amountCents || 0);
         }
       }
     }
@@ -47,7 +47,7 @@ export default function StatusBar() {
         <span>Base Currency: {currentWorkspace?.currency || 'USD'}</span>
         <span className="text-[var(--brass)]">·</span>
         {isBalanced ? (
-          <span className="text-emerald-600 dark:text-emerald-400 font-medium">Double-Entry Balanced</span>
+          <span className="text-emerald-700 dark:text-emerald-300 font-medium">Double-Entry Balanced</span>
         ) : (
           <span className="text-amber-600 dark:text-amber-400 font-semibold">Out of balance</span>
         )}

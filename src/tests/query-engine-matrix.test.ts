@@ -416,4 +416,67 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
       });
     }, /status is locked/);
   });
+
+  // =========================================================================
+  // Saved View and User Search Term AND Combination Test
+  // =========================================================================
+  test('Saved View and User Search Term AND Combination Test', () => {
+    const accounts: any[] = [
+      { id: 'acc-cash', name: 'Operating Cash', type: 'asset', category: 'Cash' },
+      { id: 'acc-rev', name: 'Revenue Account', type: 'revenue', category: 'Revenue' }
+    ];
+
+    const transactions: any[] = [
+      {
+        id: 'tx-1',
+        description: 'Cash bank operating savings description',
+        totalAmountCents: 1000,
+        status: 'completed',
+        _normalized: { absAmount: 10 },
+        lines: [{ accountId: 'acc-cash', amountCents: 1000 }]
+      },
+      {
+        id: 'tx-2',
+        description: 'Some random office supplies purchase',
+        totalAmountCents: 500,
+        status: 'completed',
+        _normalized: { absAmount: 5 },
+        lines: [{ accountId: 'acc-rev', amountCents: 500 }]
+      }
+    ];
+
+    const view = {
+      id: 'view-cash',
+      filter: {
+        searchTerm: 'cash bank checking operating savings'
+      }
+    };
+
+    // Case A: Query with active view search and non-existent user term returns 0 rows
+    const resultsEmpty = TransactionQueryEngine.query({
+      normalized: transactions,
+      filterCriteria: null,
+      searchTerm: 'NonExistentTermXYZ12345',
+      accounts,
+      activeView: view,
+      dimensionNodes: [],
+      reverseDimensionIndex: new Map(),
+      thresholds: { avg: 0, totalVolume: 0, percentiles: { top10: 0, top25: 0, bottom10: 0 } }
+    });
+    assert.equal(resultsEmpty.length, 0);
+
+    // Case B: Query with active view search and matching user term returns that row
+    const resultsMatch = TransactionQueryEngine.query({
+      normalized: transactions,
+      filterCriteria: null,
+      searchTerm: 'operating',
+      accounts,
+      activeView: view,
+      dimensionNodes: [],
+      reverseDimensionIndex: new Map(),
+      thresholds: { avg: 0, totalVolume: 0, percentiles: { top10: 0, top25: 0, bottom10: 0 } }
+    });
+    assert.equal(resultsMatch.length, 1);
+    assert.equal(resultsMatch[0].id, 'tx-1');
+  });
 });

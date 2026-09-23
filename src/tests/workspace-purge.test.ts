@@ -21,9 +21,9 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
       collection(colName: string) {
         if (colName === 'workspaces') {
           return {
-            where(field: string, op: string, val: string) {
+            where(_field: string, _op: string, _val: string) {
               return {
-                where(field2: string, op2: string, val2: string) {
+                where(_field2: string, _op2: string, _val2: string) {
                   return {
                     async get() {
                       return {
@@ -64,12 +64,12 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
 
         if (colName === 'jobRuns') {
           return {
-            doc(id: string) {
+            doc(_id: string) {
               return {
                 async get() {
                   return { exists: false, data: () => ({}) };
                 },
-                async set(data: any, opts?: any) {}
+                async set(_data: any, _opts?: any) {}
               };
             }
           };
@@ -79,7 +79,7 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
           return {
             doc() {
               return {
-                async set(data: any) {
+                async set(_data: any) {
                   auditLogWritten = true;
                 }
               };
@@ -104,7 +104,7 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
               }
             };
           },
-          doc(id: string) {
+          doc(_id: string) {
             return {
               async get() {
                 return { exists: false };
@@ -115,7 +115,7 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
       },
       batch() {
         return {
-          delete(ref: any) {},
+          delete(_ref: any) {},
           async commit() {}
         };
       }
@@ -172,7 +172,7 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
 
         if (colName === 'jobRuns') {
           return {
-            doc(id: string) {
+            doc(_id: string) {
               return {
                 async get() {
                   return { exists: false, data: () => ({}) };

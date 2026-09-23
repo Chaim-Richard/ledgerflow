@@ -97,7 +97,7 @@ export interface SplitAllocation {
 export interface TransactionLine {
   id?: string;
   accountId: string;
-  accountName?: string;
+  accountName: string;
   amountCents: number; // Positive for Debit, Negative for Credit
   debitCents?: number;
   creditCents?: number;
@@ -147,7 +147,6 @@ export interface Transaction {
   
   // Transfers & Inter-Account Movements
   isTransfer?: boolean;
-  posted?: boolean;
   transferDetails?: {
     fromAccountId: string;
     toAccountId: string;
@@ -167,7 +166,7 @@ export interface Transaction {
   units?: number;
   unitType?: string; 
   
-  status: 'draft' | 'pending' | 'certified' | 'completed' | 'failed' | 'flagged' | 'reconciled' | 'reviewed' | 'overdue' | 'approved' | 'void' | 'posted';
+  status: 'draft' | 'pending' | 'certified' | 'completed' | 'failed' | 'flagged' | 'reconciled' | 'reviewed' | 'overdue' | 'approved' | 'void';
   type: 'actual' | 'forecast' | 'adjustment' | 'reversal' | 'journal' | 'expense' | 'income' | 'bank_import';
   total_impact?: number; // New: Aggregated impact score
   projectId?: string;    // Explicit project reference
@@ -261,7 +260,10 @@ export interface Bill {
   exchangeRate?: number;
   taxAmountCents?: number;
   taxRate?: number;
-  taxInclusive?: boolean;
+  // Legacy tax/subtotal fields read by src/lib/documentMath.ts
+  taxCents?: number;
+  salesTaxCents?: number;
+  subtotalCents?: number;
   receiptUrl?: string;
   tags?: string[];
   metadata?: Record<string, any>;
@@ -284,7 +286,6 @@ export interface Bill {
   isLocked?: boolean;
   lockedAt?: string;
   paymentToken?: string;
-  createdAt?: string;
 }
 
 export interface Invoice {
@@ -297,6 +298,12 @@ export interface Invoice {
   amountCents: number;
   amountPaidCents?: number;
   exchangeRate?: number;
+  taxAmountCents?: number;
+  taxRate?: number;
+  // Legacy tax/subtotal fields read by src/lib/documentMath.ts
+  taxCents?: number;
+  salesTaxCents?: number;
+  subtotalCents?: number;
   date?: string;
   dueDate: string;
   tags?: string[];
@@ -329,7 +336,6 @@ export interface Invoice {
   isLocked?: boolean;
   lockedAt?: string;
   paymentToken?: string;
-  createdAt?: string;
 }
 
 export interface PaymentAllocation {
@@ -356,7 +362,7 @@ export interface Payment {
   allocations: PaymentAllocation[];
   unappliedCents: number;               // amountCents minus sum(allocations)
   status: 'draft' | 'posted' | 'void';
-  createdAt?: string;
+  createdAt: string;
   updatedAt?: string;
 }
 
@@ -400,7 +406,7 @@ export interface CreditNote {
   exchangeRate?: number;
   tags?: string[];
   metadata?: Record<string, any>;
-  createdAt?: string;
+  createdAt: string;
   updatedAt?: string;
 }
 
@@ -421,7 +427,7 @@ export interface VendorCredit {
   exchangeRate?: number;
   tags?: string[];
   metadata?: Record<string, any>;
-  createdAt?: string;
+  createdAt: string;
   updatedAt?: string;
 }
 

@@ -69,10 +69,8 @@ export class TransactionQueryEngine {
     
     // Determine effective search term from component props AND active view
     const viewSearch = activeView?.filter?.searchTerm;
-    const effectiveSearchTerm = (searchTerm.trim().length > 0) 
-      ? (viewSearch ? `${viewSearch} ${searchTerm}` : searchTerm) 
-      : (viewSearch || '');
-    const hasSearch = effectiveSearchTerm.trim().length > 0;
+    const effectiveSearchTerm = searchTerm.trim();
+    const hasSearch = effectiveSearchTerm.length > 0;
     
     const allowSimulations = Boolean(filterCriteria?.includeSimulations || (activeView?.filter as any)?.includeSimulations);
     if (!hasFilter && !hasSearch && !activeView) {
@@ -328,6 +326,15 @@ export class TransactionQueryEngine {
         if (vFilter.type && vFilter.type !== 'all' && t.type !== vFilter.type) return false;
         if (vFilter.status && vFilter.status !== 'all' && t.status !== vFilter.status) return false;
         if (vFilter.projectId && t.project !== vFilter.projectId) return false;
+
+        // View-based OR search matching any word in view's searchTerm
+        if (vFilter.searchTerm) {
+          const viewWords = vFilter.searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+          if (viewWords.length > 0) {
+            const matchesAnyViewWord = viewWords.some((w: string) => checkKeywordMatch(t, w));
+            if (!matchesAnyViewWord) return false;
+          }
+        }
       }
 
       // Filter Criteria (UI Overrides) - Optimized Procedural Filtering
