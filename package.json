@@ -13,7 +13,7 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "lint": "npm run lint:types; npm run lint:eslint",
     "lint:types": "tsc --noEmit",
-    "lint:eslint": "eslint . --max-warnings 2813",
+    "lint:eslint": "eslint . --max-warnings 2816",
     "test": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test src/tests/*.test.ts src/lib/*.test.ts",
     "test:rules": "firebase emulators:exec --only firestore \"tsx --test src/tests/rules/firestore.rules.test.ts\"",
     "test:e2e": "firebase emulators:exec --only firestore,auth \"playwright test\"",

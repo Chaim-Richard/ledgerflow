@@ -97,7 +97,7 @@ export interface SplitAllocation {
 export interface TransactionLine {
   id?: string;
   accountId: string;
-  accountName: string;
+  accountName?: string;
   amountCents: number; // Positive for Debit, Negative for Credit
   debitCents?: number;
   creditCents?: number;
@@ -147,6 +147,7 @@ export interface Transaction {
   
   // Transfers & Inter-Account Movements
   isTransfer?: boolean;
+  posted?: boolean;
   transferDetails?: {
     fromAccountId: string;
     toAccountId: string;
@@ -166,7 +167,7 @@ export interface Transaction {
   units?: number;
   unitType?: string; 
   
-  status: 'draft' | 'pending' | 'certified' | 'completed' | 'failed' | 'flagged' | 'reconciled' | 'reviewed' | 'overdue' | 'approved' | 'void';
+  status: 'draft' | 'pending' | 'certified' | 'completed' | 'failed' | 'flagged' | 'reconciled' | 'reviewed' | 'overdue' | 'approved' | 'void' | 'posted';
   type: 'actual' | 'forecast' | 'adjustment' | 'reversal' | 'journal' | 'expense' | 'income' | 'bank_import';
   total_impact?: number; // New: Aggregated impact score
   projectId?: string;    // Explicit project reference
@@ -260,6 +261,7 @@ export interface Bill {
   exchangeRate?: number;
   taxAmountCents?: number;
   taxRate?: number;
+  taxInclusive?: boolean;
   receiptUrl?: string;
   tags?: string[];
   metadata?: Record<string, any>;
@@ -282,6 +284,7 @@ export interface Bill {
   isLocked?: boolean;
   lockedAt?: string;
   paymentToken?: string;
+  createdAt?: string;
 }
 
 export interface Invoice {
@@ -326,6 +329,7 @@ export interface Invoice {
   isLocked?: boolean;
   lockedAt?: string;
   paymentToken?: string;
+  createdAt?: string;
 }
 
 export interface PaymentAllocation {
@@ -352,7 +356,7 @@ export interface Payment {
   allocations: PaymentAllocation[];
   unappliedCents: number;               // amountCents minus sum(allocations)
   status: 'draft' | 'posted' | 'void';
-  createdAt: string;
+  createdAt?: string;
   updatedAt?: string;
 }
 
@@ -396,7 +400,7 @@ export interface CreditNote {
   exchangeRate?: number;
   tags?: string[];
   metadata?: Record<string, any>;
-  createdAt: string;
+  createdAt?: string;
   updatedAt?: string;
 }
 
@@ -417,7 +421,7 @@ export interface VendorCredit {
   exchangeRate?: number;
   tags?: string[];
   metadata?: Record<string, any>;
-  createdAt: string;
+  createdAt?: string;
   updatedAt?: string;
 }
 

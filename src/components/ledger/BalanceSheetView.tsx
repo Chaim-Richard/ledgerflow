@@ -164,7 +164,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
       if (!isPostable(tx) || !isTransactionInDateRange(tx, undefined, dateCutoff)) return;
       tx.lines?.forEach(line => {
         const id = line.accountId;
-        const acc = accountMap.get(id) || accountMap.get(line.accountName);
+        const acc = accountMap.get(id) || (line.accountName ? accountMap.get(line.accountName) : undefined);
         if (!acc) {
           orphanedLines.push({
             accountId: id || line.accountName || 'unknown',

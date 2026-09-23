@@ -42,7 +42,7 @@ test.describe('Transaction List Improvements Suite', () => {
     await expect(matchingRecords).toBeVisible();
 
     // Verify initial inflow text
-    const initialInflowText = await inflowElement.innerText();
+    const initialInflowText = await inflowElement.textContent();
     expect(initialInflowText).toContain('Filtered Inflow:');
 
     // Inject a test transaction with attachments (fileUrls) into the Zustand ledger store

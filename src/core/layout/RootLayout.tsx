@@ -145,7 +145,7 @@ export function RootLayout() {
         <ConnectionBanner />
         <LedgerBackupReminder />
         {!user && isGuest && (
-          <div className="bg-purple-600/10 text-purple-600 dark:text-purple-400 border-b border-purple-500/20 px-4 py-1.5 text-xs text-center font-semibold">
+          <div className="bg-purple-600/10 text-purple-800 dark:text-purple-300 border-b border-purple-500/20 px-4 py-1.5 text-xs text-center font-semibold">
             Demo data — sign up to save your own
           </div>
         )}

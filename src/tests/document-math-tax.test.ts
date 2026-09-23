@@ -6,6 +6,8 @@ import { calculateDocumentTax, calculateDocumentNet, normalizeTaxRate, calculate
 import { computeTaxLiability } from '../server/reports/computeReports';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
 
+import { makeInvoice, makeBill } from './fixtures.js';
+
 describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
   test('normalizes tax rates cleanly', () => {
     assert.equal(normalizeTaxRate(20), 0.20);
@@ -73,40 +75,37 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
 
   test('ties out perfectly between computeReports and document templates', () => {
     const invoices = [
-      {
+      makeInvoice({
         id: 'inv-1',
         number: 'INV-101',
         customerName: 'Acme Corp',
         date: '2026-03-01',
         amountCents: 10000,
-        totalCents: 10000,
         taxRate: 10,
         taxInclusive: false,
-        status: 'approved' as const
-      },
-      {
+        status: 'approved'
+      }),
+      makeInvoice({
         id: 'inv-2',
         number: 'INV-102',
         customerName: 'Beta LLC',
         date: '2026-03-05',
         amountCents: 11000,
-        totalCents: 11000,
         taxRate: 10,
         taxInclusive: true,
-        status: 'sent' as const
-      }
+        status: 'sent'
+      })
     ];
 
     const bills = [
-      {
+      makeBill({
         id: 'bill-1',
         date: '2026-03-02',
         amountCents: 5000,
-        totalCents: 5000,
         taxRate: 10,
         taxInclusive: false,
-        status: 'approved' as const
-      }
+        status: 'approved'
+      })
     ];
 
     const report = computeTaxLiability(invoices, bills, '2026-03-01', '2026-03-31');
@@ -125,9 +124,9 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
     // Verify Invoice 1 template lines balance exactly
     const inv1Tax = calculateDocumentTax(invoices[0]);
     const inv1Lines = TransactionTemplates.buildInvoiceLines({
-      invoiceNumber: invoices[0].number,
-      customerName: invoices[0].customerName,
-      totalCents: invoices[0].totalCents,
+      invoiceNumber: invoices[0].number || '',
+      customerName: invoices[0].customerName || '',
+      totalCents: invoices[0].amountCents,
       taxCents: inv1Tax,
       arAccount: { id: 'ar', name: 'A/R' },
       revenueAccount: { id: 'rev', name: 'Revenue' },
@@ -140,16 +139,15 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
   });
 
   test('invoice carrying only salesTaxCents posts and reports the same number', () => {
-    const invoice = {
+    const invoice = makeInvoice({
       id: 'inv-sales-tax-only',
       number: 'INV-ST-1',
       customerName: 'Gamma Corp',
       date: '2026-03-10',
       amountCents: 10000,
-      totalCents: 10000,
-      salesTaxCents: 825, // explicit legacy salesTaxCents without taxAmountCents
-      status: 'approved' as const
-    };
+      metadata: { salesTaxCents: 825 },
+      status: 'approved'
+    });
 
     const calculatedTax = calculateDocumentTax(invoice);
     assert.equal(calculatedTax, 825);
@@ -158,9 +156,9 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
     assert.equal(report.taxCollectedCents, 825);
 
     const postingLines = TransactionTemplates.buildInvoiceLines({
-      invoiceNumber: invoice.number,
-      customerName: invoice.customerName,
-      totalCents: invoice.totalCents,
+      invoiceNumber: invoice.number || '',
+      customerName: invoice.customerName || '',
+      totalCents: invoice.amountCents,
       taxCents: calculatedTax,
       arAccount: { id: 'ar', name: 'A/R' },
       revenueAccount: { id: 'rev', name: 'Revenue' },

@@ -29,7 +29,8 @@ export function induceRules(transactions: readonly Transaction[], minSupport: nu
                     patternAccountCounts.set(pattern, new Map());
                 }
                 const accountMap = patternAccountCounts.get(pattern)!;
-                accountMap.set(line.accountName, (accountMap.get(line.accountName) || 0) + 1);
+                const accName = line.accountName || line.accountId || 'unassigned';
+                accountMap.set(accName, (accountMap.get(accName) || 0) + 1);
             });
         });
     });

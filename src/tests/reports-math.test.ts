@@ -9,32 +9,42 @@ import {
   computeTransactionsByVendor
 } from '../server/reports/computeReports.js';
 
+import {
+  makeCustomer,
+  makeVendor,
+  makeInvoice,
+  makeBill,
+  makePayment,
+  makeCreditNote,
+  makeVendorCredit
+} from './fixtures.js';
+
 describe('Financial Report Math & Business Rules', () => {
   const mockCustomers = [
-    { id: 'cust-1', name: 'Acme Corp', email: 'acme@example.com', phone: '555-0101' },
-    { id: 'cust-2', name: 'Beta LLC', email: 'beta@example.com', phone: '555-0102' }
+    makeCustomer({ id: 'cust-1', name: 'Acme Corp', email: 'acme@example.com', phone: '555-0101' }),
+    makeCustomer({ id: 'cust-2', name: 'Beta LLC', email: 'beta@example.com', phone: '555-0102' })
   ];
 
   const mockVendors = [
-    { id: 'vend-1', name: 'Supplier One', email: 'sup1@example.com', phone: '555-0201' },
-    { id: 'vend-2', name: 'Supplier Two', email: 'sup2@example.com', phone: '555-0202' }
+    makeVendor({ id: 'vend-1', name: 'Supplier One', email: 'sup1@example.com', phone: '555-0201' }),
+    makeVendor({ id: 'vend-2', name: 'Supplier Two', email: 'sup2@example.com', phone: '555-0202' })
   ];
 
   it('computes Customer Balance Summary with issued invoices, payments, credit notes, and currency conversion', () => {
     const invoices = [
-      { id: 'inv-1', customerId: 'cust-1', amountCents: 10000, status: 'sent', date: '2026-03-01' },
-      { id: 'inv-2', customerId: 'cust-1', amountCents: 5000, status: 'draft', date: '2026-03-02' }, // Draft ignored
-      { id: 'inv-3', customerId: 'cust-1', amountCents: 10000, exchangeRate: 1.5, status: 'sent', date: '2026-03-03' }, // 15000 base
-      { id: 'inv-4', customerId: 'cust-2', amountCents: 20000, status: 'approved', date: '2026-03-04' }
+      makeInvoice({ id: 'inv-1', customerId: 'cust-1', amountCents: 10000, status: 'sent', date: '2026-03-01' }),
+      makeInvoice({ id: 'inv-2', customerId: 'cust-1', amountCents: 5000, status: 'draft', date: '2026-03-02' }), // Draft ignored
+      makeInvoice({ id: 'inv-3', customerId: 'cust-1', amountCents: 10000, exchangeRate: 1.5, status: 'sent', date: '2026-03-03' }), // 15000 base
+      makeInvoice({ id: 'inv-4', customerId: 'cust-2', amountCents: 20000, status: 'approved', date: '2026-03-04' })
     ];
 
     const payments = [
-      { id: 'pay-1', contactId: 'cust-1', amountCents: 8000, direction: 'received', status: 'posted', date: '2026-03-05' },
-      { id: 'pay-2', contactId: 'cust-2', amountCents: 30000, direction: 'received', status: 'posted', date: '2026-03-06' } // Overpayment -> credit balance
+      makePayment({ id: 'pay-1', contactId: 'cust-1', amountCents: 8000, direction: 'received', status: 'posted', date: '2026-03-05' }),
+      makePayment({ id: 'pay-2', contactId: 'cust-2', amountCents: 30000, direction: 'received', status: 'posted', date: '2026-03-06' }) // Overpayment -> credit balance
     ];
 
     const creditNotes = [
-      { id: 'cn-1', customerId: 'cust-1', amountCents: 2000, status: 'approved', date: '2026-03-07' }
+      makeCreditNote({ id: 'cn-1', customerId: 'cust-1', amountCents: 2000, status: 'open', date: '2026-03-07' })
     ];
 
     const summary = computeCustomerBalanceSummary(mockCustomers, invoices, payments, creditNotes);
@@ -58,8 +68,8 @@ describe('Financial Report Math & Business Rules', () => {
 
   it('includes unpaid invoices from prior years in the customer balance summary as-of date', () => {
     const invoices = [
-      { id: 'inv-old', customerId: 'cust-1', amountCents: 50000, status: 'sent', date: '2025-06-15' },
-      { id: 'inv-new', customerId: 'cust-1', amountCents: 20000, status: 'sent', date: '2026-03-01' }
+      makeInvoice({ id: 'inv-old', customerId: 'cust-1', amountCents: 50000, status: 'sent', date: '2025-06-15' }),
+      makeInvoice({ id: 'inv-new', customerId: 'cust-1', amountCents: 20000, status: 'sent', date: '2026-03-01' })
     ];
 
     // Compute balance as of 2026-03-31 - should include the 2025 unpaid invoice
@@ -72,17 +82,17 @@ describe('Financial Report Math & Business Rules', () => {
 
   it('computes Vendor Balance Summary with issued bills, vendor credits, and payments', () => {
     const bills = [
-      { id: 'bill-1', vendorId: 'vend-1', amountCents: 12000, status: 'pending', date: '2026-03-01' },
-      { id: 'bill-2', vendorId: 'vend-1', amountCents: 4000, status: 'draft', date: '2026-03-02' }, // Draft ignored
-      { id: 'bill-3', vendorId: 'vend-1', amountCents: 10000, exchangeRate: 1.2, status: 'approved', date: '2026-03-03' } // 12000 base
+      makeBill({ id: 'bill-1', vendorId: 'vend-1', amountCents: 12000, status: 'pending', date: '2026-03-01' }),
+      makeBill({ id: 'bill-2', vendorId: 'vend-1', amountCents: 4000, status: 'draft', date: '2026-03-02' }), // Draft ignored
+      makeBill({ id: 'bill-3', vendorId: 'vend-1', amountCents: 10000, exchangeRate: 1.2, status: 'approved', date: '2026-03-03' }) // 12000 base
     ];
 
     const payments = [
-      { id: 'pay-v1', contactId: 'vend-1', amountCents: 10000, direction: 'made', status: 'posted', date: '2026-03-04' }
+      makePayment({ id: 'pay-v1', contactId: 'vend-1', amountCents: 10000, direction: 'made', status: 'posted', date: '2026-03-04' })
     ];
 
     const vendorCredits = [
-      { id: 'vc-1', vendorId: 'vend-1', amountCents: 3000, status: 'approved', date: '2026-03-05' }
+      makeVendorCredit({ id: 'vc-1', vendorId: 'vend-1', amountCents: 3000, status: 'open', date: '2026-03-05' })
     ];
 
     const summary = computeVendorBalanceSummary(mockVendors, bills, payments, vendorCredits);
@@ -98,14 +108,14 @@ describe('Financial Report Math & Business Rules', () => {
 
   it('computes Transactions by Customer with date filter and proper amounts', () => {
     const invoices = [
-      { id: 'inv-1', customerId: 'cust-1', amountCents: 10000, status: 'sent', date: '2026-02-15' },
-      { id: 'inv-2', customerId: 'cust-1', amountCents: 20000, status: 'sent', date: '2026-03-15' }
+      makeInvoice({ id: 'inv-1', customerId: 'cust-1', amountCents: 10000, status: 'sent', date: '2026-02-15' }),
+      makeInvoice({ id: 'inv-2', customerId: 'cust-1', amountCents: 20000, status: 'sent', date: '2026-03-15' })
     ];
     const payments = [
-      { id: 'pay-1', contactId: 'cust-1', amountCents: 5000, direction: 'received', status: 'posted', date: '2026-03-20' }
+      makePayment({ id: 'pay-1', contactId: 'cust-1', amountCents: 5000, direction: 'received', status: 'posted', date: '2026-03-20' })
     ];
     const creditNotes = [
-      { id: 'cn-1', customerId: 'cust-1', amountCents: 1000, status: 'approved', date: '2026-03-25' }
+      makeCreditNote({ id: 'cn-1', customerId: 'cust-1', amountCents: 1000, status: 'open', date: '2026-03-25' })
     ];
 
     const txs = computeTransactionsByCustomer(mockCustomers, invoices, payments, creditNotes, '2026-03-01', '2026-03-31');
@@ -118,13 +128,13 @@ describe('Financial Report Math & Business Rules', () => {
 
   it('computes Transactions by Vendor with proper negative amounts for payments and credits', () => {
     const bills = [
-      { id: 'bill-1', vendorId: 'vend-1', amountCents: 15000, status: 'pending', date: '2026-03-10' }
+      makeBill({ id: 'bill-1', vendorId: 'vend-1', amountCents: 15000, status: 'pending', date: '2026-03-10' })
     ];
     const vendorCredits = [
-      { id: 'vc-1', vendorId: 'vend-1', amountCents: 2000, status: 'approved', date: '2026-03-12' }
+      makeVendorCredit({ id: 'vc-1', vendorId: 'vend-1', amountCents: 2000, status: 'open', date: '2026-03-12' })
     ];
     const payments = [
-      { id: 'pay-1', contactId: 'vend-1', amountCents: 8000, direction: 'made', status: 'posted', date: '2026-03-14' }
+      makePayment({ id: 'pay-1', contactId: 'vend-1', amountCents: 8000, direction: 'made', status: 'posted', date: '2026-03-14' })
     ];
 
     const txs = computeTransactionsByVendor(mockVendors, bills, payments, vendorCredits);
@@ -139,13 +149,13 @@ describe('Financial Report Math & Business Rules', () => {
   });
 
   it('computes Statement with correct running balance', () => {
-    const contact = { id: 'cust-1', name: 'Acme Corp' };
+    const contact = makeCustomer({ id: 'cust-1', name: 'Acme Corp' });
     const invoices = [
-      { id: 'inv-1', customerId: 'cust-1', amountCents: 10000, status: 'sent', date: '2026-01-10' },
-      { id: 'inv-2', customerId: 'cust-1', amountCents: 15000, status: 'sent', date: '2026-02-10' }
+      makeInvoice({ id: 'inv-1', customerId: 'cust-1', amountCents: 10000, status: 'sent', date: '2026-01-10' }),
+      makeInvoice({ id: 'inv-2', customerId: 'cust-1', amountCents: 15000, status: 'sent', date: '2026-02-10' })
     ];
     const payments = [
-      { id: 'pay-1', contactId: 'cust-1', amountCents: 5000, direction: 'received', status: 'posted', date: '2026-02-15' }
+      makePayment({ id: 'pay-1', contactId: 'cust-1', amountCents: 5000, direction: 'received', status: 'posted', date: '2026-02-15' })
     ];
 
     const stmt = computeStatement(contact, invoices, [], payments, '2026-02-01', '2026-02-28', 'customer');
@@ -156,10 +166,10 @@ describe('Financial Report Math & Business Rules', () => {
 
   it('computes Tax Liability accurately from sales and purchases', () => {
     const invoices = [
-      { id: 'inv-1', amountCents: 11000, subtotalCents: 10000, taxCents: 1000, status: 'sent', date: '2026-03-01' }
+      makeInvoice({ id: 'inv-1', amountCents: 11000, taxRate: 10, status: 'sent', date: '2026-03-01' })
     ];
     const bills = [
-      { id: 'bill-1', amountCents: 5500, subtotalCents: 5000, taxCents: 500, status: 'pending', date: '2026-03-02' }
+      makeBill({ id: 'bill-1', amountCents: 5500, taxRate: 10, status: 'pending', date: '2026-03-02' })
     ];
 
     const tax = computeTaxLiability(invoices, bills, '2026-03-01', '2026-03-31');

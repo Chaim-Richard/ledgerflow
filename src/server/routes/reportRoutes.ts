@@ -347,7 +347,7 @@ reportRouter.get("/statement", async (req, res) => {
     const payments = paySnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
 
     const statement = computeStatement(
-      { id: contactSnap.id, ...contactSnap.data() },
+      { id: contactSnap.id, ...(contactSnap.data() as any) } as any,
       invoices,
       bills,
       payments,

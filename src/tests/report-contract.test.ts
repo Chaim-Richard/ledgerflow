@@ -9,19 +9,28 @@ import {
   computeStatement
 } from '../server/reports/computeReports';
 
+import {
+  makeChartAccount,
+  makeTransaction,
+  makeInvoice,
+  makeBill,
+  makePayment,
+  makeCustomer
+} from './fixtures.js';
+
 // Sample accounts and transactions for running pure computation tests
 const sampleAccounts = [
-  { id: 'acc_cash', name: 'Cash', type: 'asset', category: 'Cash', openingBalanceCents: 100000 },
-  { id: 'acc_ar', name: 'Accounts Receivable', type: 'asset', category: 'Receivables', openingBalanceCents: 50000 },
-  { id: 'acc_ap', name: 'Accounts Payable', type: 'liability', category: 'Payables', openingBalanceCents: 0 },
-  { id: 'acc_equity', name: 'Owner Equity', type: 'equity', category: 'Equity', openingBalanceCents: 0 },
-  { id: 'acc_rev', name: 'Sales Revenue', type: 'income', category: 'Revenue', openingBalanceCents: 0 },
-  { id: 'acc_cogs', name: 'Cost of Goods Sold', type: 'cost_of_goods', category: 'COGS', openingBalanceCents: 0 },
-  { id: 'acc_exp', name: 'Office Expense', type: 'expense', category: 'Operating Expenses', openingBalanceCents: 0 }
+  makeChartAccount({ id: 'acc_cash', name: 'Cash', type: 'asset', category: 'Cash', openingBalanceCents: 100000 }),
+  makeChartAccount({ id: 'acc_ar', name: 'Accounts Receivable', type: 'asset', category: 'Receivables', openingBalanceCents: 50000 }),
+  makeChartAccount({ id: 'acc_ap', name: 'Accounts Payable', type: 'liability', category: 'Payables', openingBalanceCents: 0 }),
+  makeChartAccount({ id: 'acc_equity', name: 'Owner Equity', type: 'equity', category: 'Equity', openingBalanceCents: 0 }),
+  makeChartAccount({ id: 'acc_rev', name: 'Sales Revenue', type: 'income', category: 'Revenue', openingBalanceCents: 0 }),
+  makeChartAccount({ id: 'acc_cogs', name: 'Cost of Goods Sold', type: 'cost_of_goods', category: 'COGS', openingBalanceCents: 0 }),
+  makeChartAccount({ id: 'acc_exp', name: 'Office Expense', type: 'expense', category: 'Operating Expenses', openingBalanceCents: 0 })
 ];
 
 const sampleTransactions = [
-  {
+  makeTransaction({
     id: 'tx_1',
     date: '2026-01-15',
     status: 'posted',
@@ -30,8 +39,8 @@ const sampleTransactions = [
       { accountId: 'acc_ar', amountCents: 150000 },
       { accountId: 'acc_rev', amountCents: -150000 }
     ]
-  },
-  {
+  }),
+  makeTransaction({
     id: 'tx_2',
     date: '2026-01-20',
     status: 'posted',
@@ -40,8 +49,8 @@ const sampleTransactions = [
       { accountId: 'acc_cogs', amountCents: 40000 },
       { accountId: 'acc_ap', amountCents: -40000 }
     ]
-  },
-  {
+  }),
+  makeTransaction({
     id: 'tx_3',
     date: '2026-01-25',
     status: 'posted',
@@ -50,7 +59,7 @@ const sampleTransactions = [
       { accountId: 'acc_exp', amountCents: 30000 },
       { accountId: 'acc_cash', amountCents: -30000 }
     ]
-  }
+  })
 ];
 
 describe('Report Contract Structural Guard Suite', () => {
@@ -99,16 +108,16 @@ describe('Report Contract Structural Guard Suite', () => {
 
   test('Trial Balance correctly handles credit-balance opening balances (Task 1 regression test)', () => {
     const tbAccounts = [
-      { id: '1000', name: 'Cash', type: 'asset', category: 'Cash', openingBalanceCents: 50000 },
-      { id: '1100', name: 'AR', type: 'asset', category: 'Receivables', openingBalanceCents: 0 },
-      { id: '2000', name: 'AP', type: 'liability', category: 'Payables', openingBalanceCents: 0 },
-      { id: '3000', name: 'Equity', type: 'equity', category: 'Equity', openingBalanceCents: -50000 },
-      { id: '4000', name: 'Revenue', type: 'income', category: 'Revenue', openingBalanceCents: 0 },
-      { id: '5000', name: 'Expense', type: 'expense', category: 'Operating Expenses', openingBalanceCents: 0 }
+      makeChartAccount({ id: '1000', name: 'Cash', type: 'asset', category: 'Cash', openingBalanceCents: 50000 }),
+      makeChartAccount({ id: '1100', name: 'AR', type: 'asset', category: 'Receivables', openingBalanceCents: 0 }),
+      makeChartAccount({ id: '2000', name: 'AP', type: 'liability', category: 'Payables', openingBalanceCents: 0 }),
+      makeChartAccount({ id: '3000', name: 'Equity', type: 'equity', category: 'Equity', openingBalanceCents: -50000 }),
+      makeChartAccount({ id: '4000', name: 'Revenue', type: 'income', category: 'Revenue', openingBalanceCents: 0 }),
+      makeChartAccount({ id: '5000', name: 'Expense', type: 'expense', category: 'Operating Expenses', openingBalanceCents: 0 })
     ];
 
     const tbTransactions = [
-      {
+      makeTransaction({
         id: 'tx_ar_rev',
         date: '2026-01-01',
         status: 'posted',
@@ -117,8 +126,8 @@ describe('Report Contract Structural Guard Suite', () => {
           { accountId: '1100', amountCents: 100000 },
           { accountId: '4000', amountCents: -100000 }
         ]
-      },
-      {
+      }),
+      makeTransaction({
         id: 'tx_cash_ar',
         date: '2026-01-02',
         status: 'posted',
@@ -127,8 +136,8 @@ describe('Report Contract Structural Guard Suite', () => {
           { accountId: '1000', amountCents: 60000 },
           { accountId: '1100', amountCents: -60000 }
         ]
-      },
-      {
+      }),
+      makeTransaction({
         id: 'tx_exp_ap',
         date: '2026-01-03',
         status: 'posted',
@@ -137,7 +146,7 @@ describe('Report Contract Structural Guard Suite', () => {
           { accountId: '5000', amountCents: 30000 },
           { accountId: '2000', amountCents: -30000 }
         ]
-      }
+      })
     ];
 
     const result = computeTrialBalance(tbAccounts, tbTransactions);
@@ -183,14 +192,14 @@ describe('Report Contract Structural Guard Suite', () => {
 
   test('Tax Report Task 1 & 2: tax-exclusive $1000 @10% -> tax=10000', () => {
     const invoices = [
-      {
+      makeInvoice({
         id: 'inv_excl',
         date: '2026-02-01',
         status: 'sent',
         amountCents: 100000,
         taxRate: 10,
         taxInclusive: false
-      }
+      })
     ];
     const report = computeTaxLiability(invoices, [], '2026-01-01', '2026-12-31');
     assert.equal(report.taxCollectedCents, 10000, 'Tax collected on $1000 @ 10% tax-exclusive must be exactly 10000 cents');
@@ -199,14 +208,14 @@ describe('Report Contract Structural Guard Suite', () => {
 
   test('Tax Report Task 1 & 2: tax-inclusive $1100 @10% -> tax=10000', () => {
     const invoices = [
-      {
+      makeInvoice({
         id: 'inv_incl',
         date: '2026-02-01',
         status: 'approved',
         amountCents: 110000,
         taxRate: 10,
         taxInclusive: true
-      }
+      })
     ];
     const report = computeTaxLiability(invoices, [], '2026-01-01', '2026-12-31');
     assert.equal(report.taxCollectedCents, 10000, 'Tax collected on $1100 @ 10% tax-inclusive must be exactly 10000 cents');
@@ -215,14 +224,14 @@ describe('Report Contract Structural Guard Suite', () => {
 
   test('Tax Report Task 1 & 2: bill $1000 @10% tax-exclusive -> taxPaid=10000', () => {
     const bills = [
-      {
+      makeBill({
         id: 'bill_excl',
         date: '2026-02-01',
         status: 'pending',
         amountCents: 100000,
         taxRate: 10,
         taxInclusive: false
-      }
+      })
     ];
     const report = computeTaxLiability([], bills, '2026-01-01', '2026-12-31');
     assert.equal(report.taxPaidCents, 10000, 'Tax paid on $1000 @ 10% tax-exclusive must be exactly 10000 cents');
@@ -231,24 +240,24 @@ describe('Report Contract Structural Guard Suite', () => {
 
   test('Tax Report Task 2: draft invoice and draft bill are excluded from tax owed (tax=0, taxPaid=0)', () => {
     const invoices = [
-      {
+      makeInvoice({
         id: 'inv_draft',
         date: '2026-02-01',
         status: 'draft',
         amountCents: 100000,
         taxRate: 10,
         taxInclusive: false
-      }
+      })
     ];
     const bills = [
-      {
+      makeBill({
         id: 'bill_draft',
         date: '2026-02-01',
         status: 'draft',
         amountCents: 100000,
         taxRate: 10,
         taxInclusive: false
-      }
+      })
     ];
     const report = computeTaxLiability(invoices, bills, '2026-01-01', '2026-12-31');
     assert.equal(report.taxCollectedCents, 0, 'Draft invoice must not count towards taxCollectedCents');
@@ -269,14 +278,14 @@ describe('Report Contract Structural Guard Suite', () => {
 
     for (const { status, want } of statuses) {
       const bills = [
-        {
+        makeBill({
           id: `bill_${status}`,
           date: '2026-02-01',
           status,
           amountCents: 100000,
           taxRate: 10,
           taxInclusive: false
-        }
+        })
       ];
       const report = computeTaxLiability([], bills, '2026-01-01', '2026-12-31');
       assert.equal(
@@ -289,10 +298,10 @@ describe('Report Contract Structural Guard Suite', () => {
 
   test('Balance Sheet Task 3: orphaned account reference detection', () => {
     const accounts = [
-      { id: 'acc_asset', name: 'Asset', type: 'asset', category: 'Cash', openingBalanceCents: 0 }
+      makeChartAccount({ id: 'acc_asset', name: 'Asset', type: 'asset', category: 'Cash', openingBalanceCents: 0 })
     ];
     const transactions = [
-      {
+      makeTransaction({
         id: 'tx_with_orphan',
         date: '2026-01-01',
         status: 'posted',
@@ -301,7 +310,7 @@ describe('Report Contract Structural Guard Suite', () => {
           { accountId: 'acc_asset', amountCents: 40000 },
           { accountId: 'acc_deleted_or_missing', amountCents: -40000 }
         ]
-      }
+      })
     ];
     const result = computeBalanceSheet(accounts, transactions, '2026-12-31');
     assert.ok(Array.isArray(result.orphanedLines), 'orphanedLines must be an array');
@@ -311,15 +320,15 @@ describe('Report Contract Structural Guard Suite', () => {
   });
 
   test('Statement report excludes draft invoices, draft bills, and unposted payments', () => {
-    const contact = { id: 'cust_100', name: 'Acme Corp' };
+    const contact = makeCustomer({ id: 'cust_100', name: 'Acme Corp' });
     const invoices = [
-      { id: 'inv_draft', customerId: 'cust_100', date: '2026-02-01', status: 'draft', amountCents: 100000 },
-      { id: 'inv_sent', customerId: 'cust_100', date: '2026-02-05', status: 'sent', amountCents: 50000 }
+      makeInvoice({ id: 'inv_draft', customerId: 'cust_100', date: '2026-02-01', status: 'draft', amountCents: 100000 }),
+      makeInvoice({ id: 'inv_sent', customerId: 'cust_100', date: '2026-02-05', status: 'sent', amountCents: 50000 })
     ];
     const bills: any[] = [];
     const payments = [
-      { id: 'pay_draft', contactId: 'cust_100', date: '2026-02-10', direction: 'received', status: 'draft', amountCents: 20000 },
-      { id: 'pay_posted', contactId: 'cust_100', date: '2026-02-12', direction: 'received', status: 'posted', amountCents: 10000 }
+      makePayment({ id: 'pay_draft', contactId: 'cust_100', date: '2026-02-10', direction: 'received', status: 'draft', amountCents: 20000 }),
+      makePayment({ id: 'pay_posted', contactId: 'cust_100', date: '2026-02-12', direction: 'received', status: 'posted', amountCents: 10000 })
     ];
 
     const statement = computeStatement(contact, invoices, bills, payments, '2026-01-01', '2026-12-31', 'customer');

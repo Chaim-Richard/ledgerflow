@@ -206,7 +206,8 @@ export function computeCashFlow(accounts: ChartAccount[], transactions: Transact
       const amount = lineAmount(line, tx);
       const delta = -amount;
 
-      if (acc.type === 'income' || acc.type === 'revenue' || acc.type === 'expense' || acc.type === 'cost_of_goods' || acc.type === 'cogs' ||
+      const accType = acc.type as string;
+      if (accType === 'income' || accType === 'revenue' || accType === 'expense' || accType === 'cost_of_goods' || accType === 'cogs' ||
           (acc.type === 'asset' && (acc.category === 'Receivables' || acc.category === 'Receivable' || acc.category === 'Accounts Receivable')) ||
           (acc.type === 'liability' && (acc.category === 'Payables' || acc.category === 'Payable' || acc.category === 'Accounts Payable'))) {
         cashFlow.operating.total += delta;
@@ -291,7 +292,7 @@ export function computeGeneralLedger(accounts: ChartAccount[], transactions: Tra
             transactionId: tx.id || '',
             date: tx.date || '',
             description: tx.description || '',
-            reference: tx.reference || line.description || '',
+            reference: String(tx.metadata?.invoiceId || tx.metadata?.billId || tx.metadata?.paymentId || line.description || ''),
             debitCents,
             creditCents,
             runningBalanceCents
@@ -340,17 +341,17 @@ export function computeStatement(
   let openingBalanceCents = 0;
 
   if (isCustomer) {
-    invoices.filter((inv) => inv.customerId === contactId && inv.date < start && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv) => {
+    invoices.filter((inv) => inv.customerId === contactId && (inv.date || (inv.createdAt ? inv.createdAt.split('T')[0] : '') || '') < start && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv) => {
       openingBalanceCents += (inv.amountCents || 0);
     });
-    payments.filter((p) => p.contactId === contactId && p.date < start && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
+    payments.filter((p) => p.contactId === contactId && p.date < start && p.direction === 'received' && (p.status === 'posted' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
       openingBalanceCents -= (p.amountCents || 0);
     });
   } else {
-    bills.filter((b) => b.vendorId === contactId && (b.date || b.issueDate || '') < start && BILL_IS_ISSUED.has(b.status)).forEach((b) => {
+    bills.filter((b) => b.vendorId === contactId && (b.date || b.issueDate || (b.createdAt ? b.createdAt.split('T')[0] : '') || '') < start && BILL_IS_ISSUED.has(b.status)).forEach((b) => {
       openingBalanceCents += (b.amountCents || 0);
     });
-    payments.filter((p) => p.contactId === contactId && p.date < start && p.direction === 'made' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
+    payments.filter((p) => p.contactId === contactId && p.date < start && p.direction === 'made' && (p.status === 'posted' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
       openingBalanceCents -= (p.amountCents || 0);
     });
   }
@@ -367,10 +368,14 @@ export function computeStatement(
   }[] = [];
 
   if (isCustomer) {
-    invoices.filter((inv) => inv.customerId === contactId && inv.date >= start && inv.date <= end && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv) => {
+    invoices.filter((inv) => {
+      const docDate = inv.date || (inv.createdAt ? inv.createdAt.split('T')[0] : '') || '';
+      return inv.customerId === contactId && docDate >= start && docDate <= end && INVOICE_IS_ISSUED.has(inv.status);
+    }).forEach((inv) => {
+      const docDate = inv.date || (inv.createdAt ? inv.createdAt.split('T')[0] : '') || '';
       activityItems.push({
         id: inv.id,
-        date: inv.date,
+        date: docDate,
         type: 'Invoice',
         reference: inv.number || inv.id,
         amountCents: (inv.amountCents || 0),
@@ -378,7 +383,7 @@ export function computeStatement(
         debitCents: (inv.amountCents || 0)
       });
     });
-    payments.filter((p) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
+    payments.filter((p) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'received' && (p.status === 'posted' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
       activityItems.push({
         id: p.id,
         date: p.date,
@@ -390,10 +395,14 @@ export function computeStatement(
       });
     });
   } else {
-    bills.filter((b) => b.vendorId === contactId && (b.date || b.issueDate || '') >= start && (b.date || b.issueDate || '') <= end && BILL_IS_ISSUED.has(b.status)).forEach((b) => {
+    bills.filter((b) => {
+      const docDate = b.date || b.issueDate || (b.createdAt ? b.createdAt.split('T')[0] : '') || '';
+      return b.vendorId === contactId && docDate >= start && docDate <= end && BILL_IS_ISSUED.has(b.status);
+    }).forEach((b) => {
+      const docDate = b.date || b.issueDate || (b.createdAt ? b.createdAt.split('T')[0] : '') || '';
       activityItems.push({
         id: b.id,
-        date: b.date || b.issueDate || '',
+        date: docDate,
         type: 'Bill',
         reference: b.number || b.id,
         amountCents: (b.amountCents || 0),
@@ -401,7 +410,7 @@ export function computeStatement(
         debitCents: (b.amountCents || 0)
       });
     });
-    payments.filter((p) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'made' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
+    payments.filter((p) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'made' && (p.status === 'posted' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
       activityItems.push({
         id: p.id,
         date: p.date,
@@ -414,7 +423,12 @@ export function computeStatement(
     });
   }
 
-  activityItems.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  activityItems.sort((a, b) => {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return a.date.localeCompare(b.date);
+  });
 
   let runningBalanceCents = openingBalanceCents;
   const entries = activityItems.map(item => {
@@ -447,7 +461,8 @@ export function computeTaxLiability(invoices: Invoice[], bills: Bill[], startDat
   let taxPaidCents = 0;
 
   invoices.forEach((inv) => {
-    if (inv.date >= start && inv.date <= end && INVOICE_COUNTS_FOR_TAX.has(inv.status)) {
+    const invDate = inv.date || inv.createdAt || '';
+    if (invDate >= start && invDate <= end && INVOICE_COUNTS_FOR_TAX.has(inv.status)) {
       const tax = calculateDocumentTax(inv);
       const net = calculateDocumentNet(inv);
       taxableSalesCents += net;
@@ -476,10 +491,7 @@ export function computeTaxLiability(invoices: Invoice[], bills: Bill[], startDat
   };
 }
 
-function toBaseCents(amountCents: number = 0, exchangeRate?: number, baseAmountCents?: number): number {
-  if (baseAmountCents !== undefined && baseAmountCents !== null && !isNaN(baseAmountCents)) {
-    return baseAmountCents;
-  }
+function toBaseCents(amountCents: number = 0, exchangeRate?: number): number {
   const rate = typeof exchangeRate === 'number' && exchangeRate > 0 ? exchangeRate : 1;
   return Math.round(amountCents * rate);
 }
@@ -511,25 +523,25 @@ export function computeCustomerBalanceSummary(
     const custInvoices = invoices.filter(inv => {
       if (inv.customerId !== custId) return false;
       if (!INVOICE_IS_ISSUED.has(inv.status)) return false;
-      const docDate = inv.date || inv.issueDate || (inv.createdAt ? inv.createdAt.split('T')[0] : '');
+      const docDate = inv.date || (inv.createdAt ? inv.createdAt.split('T')[0] : '');
       if (docDate && docDate > end) return false;
       return true;
     });
 
     const totalInvoicedCents = custInvoices.reduce((sum, inv) => {
-      return sum + toBaseCents(inv.amountCents || 0, inv.exchangeRate, inv.baseAmountCents);
+      return sum + toBaseCents(inv.amountCents || 0, inv.exchangeRate);
     }, 0);
 
     const custCreditNotes = creditNotes.filter(cn => {
       if (cn.customerId !== custId) return false;
       if (cn.status === 'void' || cn.status === 'draft') return false;
-      const docDate = cn.date || cn.issueDate || (cn.createdAt ? cn.createdAt.split('T')[0] : '');
+      const docDate = cn.date || (cn.createdAt ? cn.createdAt.split('T')[0] : '');
       if (docDate && docDate > end) return false;
       return true;
     });
 
     const totalCreditNotesCents = custCreditNotes.reduce((sum, cn) => {
-      return sum + toBaseCents(cn.amountCents || 0, cn.exchangeRate, cn.baseAmountCents);
+      return sum + toBaseCents(cn.amountCents || 0, cn.exchangeRate);
     }, 0);
 
     const custPayments = payments.filter(p => {
@@ -543,7 +555,7 @@ export function computeCustomerBalanceSummary(
     });
 
     const totalPaidCents = custPayments.reduce((sum, p) => {
-      return sum + toBaseCents(p.amountCents || 0, p.exchangeRate, p.baseAmountCents);
+      return sum + toBaseCents(p.amountCents || 0, p.exchangeRate);
     }, 0);
 
     const openInvoicesCount = custInvoices.filter(inv => inv.status !== 'paid').length;
@@ -597,19 +609,19 @@ export function computeVendorBalanceSummary(
     });
 
     const totalBilledCents = vendorBills.reduce((sum, b) => {
-      return sum + toBaseCents(b.amountCents || 0, b.exchangeRate, b.baseAmountCents);
+      return sum + toBaseCents(b.amountCents || 0, b.exchangeRate);
     }, 0);
 
     const custVendorCredits = vendorCredits.filter(vc => {
       if (vc.vendorId !== vendorId) return false;
       if (vc.status === 'void' || vc.status === 'draft') return false;
-      const docDate = vc.date || vc.issueDate || (vc.createdAt ? vc.createdAt.split('T')[0] : '');
+      const docDate = vc.date || (vc.createdAt ? vc.createdAt.split('T')[0] : '');
       if (docDate && docDate > end) return false;
       return true;
     });
 
     const totalVendorCreditsCents = custVendorCredits.reduce((sum, vc) => {
-      return sum + toBaseCents(vc.amountCents || 0, vc.exchangeRate, vc.baseAmountCents);
+      return sum + toBaseCents(vc.amountCents || 0, vc.exchangeRate);
     }, 0);
 
     const vendorPayments = payments.filter(p => {
@@ -622,7 +634,7 @@ export function computeVendorBalanceSummary(
     });
 
     const totalPaidCents = vendorPayments.reduce((sum, p) => {
-      return sum + toBaseCents(p.amountCents || 0, p.exchangeRate, p.baseAmountCents);
+      return sum + toBaseCents(p.amountCents || 0, p.exchangeRate);
     }, 0);
 
     const openBillsCount = vendorBills.filter(b => b.status !== 'paid').length;
@@ -668,7 +680,7 @@ export function computeTransactionsByCustomer(
   // 1. Invoices (issued only, non-draft, non-void)
   for (const inv of invoices) {
     if (!INVOICE_IS_ISSUED.has(inv.status)) continue;
-    const docDate = inv.date || inv.issueDate || (inv.createdAt ? inv.createdAt.split('T')[0] : '') || '';
+    const docDate = inv.date || (inv.createdAt ? inv.createdAt.split('T')[0] : '') || '';
     if (docDate && (docDate < start || docDate > end)) continue;
     const customerName = inv.customerName || customerMap.get(inv.customerId) || 'Unknown Customer';
     list.push({
@@ -678,14 +690,14 @@ export function computeTransactionsByCustomer(
       type: 'Invoice',
       reference: inv.number || inv.id,
       status: inv.status || 'pending',
-      amountCents: toBaseCents(inv.amountCents || 0, inv.exchangeRate, inv.baseAmountCents)
+      amountCents: toBaseCents(inv.amountCents || 0, inv.exchangeRate)
     });
   }
 
   // 2. Credit Notes
   for (const cn of creditNotes) {
     if (cn.status === 'void' || cn.status === 'draft') continue;
-    const docDate = cn.date || cn.issueDate || (cn.createdAt ? cn.createdAt.split('T')[0] : '') || '';
+    const docDate = cn.date || (cn.createdAt ? cn.createdAt.split('T')[0] : '') || '';
     if (docDate && (docDate < start || docDate > end)) continue;
     const customerName = cn.customerName || customerMap.get(cn.customerId) || 'Unknown Customer';
     list.push({
@@ -695,7 +707,7 @@ export function computeTransactionsByCustomer(
       type: 'Credit Note',
       reference: cn.number || cn.id,
       status: cn.status || 'applied',
-      amountCents: -toBaseCents(cn.amountCents || 0, cn.exchangeRate, cn.baseAmountCents)
+      amountCents: -toBaseCents(cn.amountCents || 0, cn.exchangeRate)
     });
   }
 
@@ -712,11 +724,16 @@ export function computeTransactionsByCustomer(
       type: 'Payment',
       reference: pay.reference || pay.number || pay.id,
       status: pay.status || 'posted',
-      amountCents: -toBaseCents(pay.amountCents || 0, pay.exchangeRate, pay.baseAmountCents)
+      amountCents: -toBaseCents(pay.amountCents || 0, pay.exchangeRate)
     });
   }
 
-  return list.sort((a, b) => b.date.localeCompare(a.date));
+  return list.sort((a, b) => {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return b.date.localeCompare(a.date);
+  });
 }
 
 export function computeTransactionsByVendor(
@@ -745,14 +762,14 @@ export function computeTransactionsByVendor(
       type: 'Bill',
       reference: bill.number || bill.id,
       status: bill.status || 'pending',
-      amountCents: toBaseCents(bill.amountCents || 0, bill.exchangeRate, bill.baseAmountCents)
+      amountCents: toBaseCents(bill.amountCents || 0, bill.exchangeRate)
     });
   }
 
   // 2. Vendor Credits
   for (const vc of vendorCredits) {
     if (vc.status === 'void' || vc.status === 'draft') continue;
-    const docDate = vc.date || vc.issueDate || (vc.createdAt ? vc.createdAt.split('T')[0] : '') || '';
+    const docDate = vc.date || (vc.createdAt ? vc.createdAt.split('T')[0] : '') || '';
     if (docDate && (docDate < start || docDate > end)) continue;
     const vendorName = vc.vendorName || vendorMap.get(vc.vendorId) || 'Unknown Vendor';
     list.push({
@@ -762,7 +779,7 @@ export function computeTransactionsByVendor(
       type: 'Vendor Credit',
       reference: vc.number || vc.id,
       status: vc.status || 'applied',
-      amountCents: -toBaseCents(vc.amountCents || 0, vc.exchangeRate, vc.baseAmountCents)
+      amountCents: -toBaseCents(vc.amountCents || 0, vc.exchangeRate)
     });
   }
 
@@ -779,9 +796,14 @@ export function computeTransactionsByVendor(
       type: 'Vendor Payment',
       reference: pay.reference || pay.number || pay.id,
       status: pay.status || 'posted',
-      amountCents: -toBaseCents(pay.amountCents || 0, pay.exchangeRate, pay.baseAmountCents)
+      amountCents: -toBaseCents(pay.amountCents || 0, pay.exchangeRate)
     });
   }
 
-  return list.sort((a, b) => b.date.localeCompare(a.date));
+  return list.sort((a, b) => {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return b.date.localeCompare(a.date);
+  });
 }

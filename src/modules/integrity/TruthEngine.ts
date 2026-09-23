@@ -462,7 +462,7 @@ export class TruthEngine {
     return score;
   }
 
-  static scanOrphanedAccountReferences(accounts: Array<{ id: string }>, transactions: any[]): {
+  static scanOrphanedAccountReferences(accounts: any[], transactions: any[]): {
     orphanedAccountIds: string[];
     orphanedLines: Array<{
       transactionId: string;
