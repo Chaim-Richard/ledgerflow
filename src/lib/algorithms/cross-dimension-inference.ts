@@ -14,7 +14,7 @@ export function learnCrossDimensionRules(transactions: readonly Transaction[]) {
     if (!vendorToProjectFreq[vendor]) vendorToProjectFreq[vendor] = {};
 
     tx.lines.forEach(line => {
-      const acc = line.accountName || line.accountId || 'unassigned';
+      const acc = line.accountName || 'unknown';
       vendorToAccountFreq[vendor][acc] = (vendorToAccountFreq[vendor][acc] || 0) + 1;
     });
 

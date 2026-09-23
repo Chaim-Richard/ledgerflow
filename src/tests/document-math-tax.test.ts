@@ -5,8 +5,7 @@ import * as path from 'node:path';
 import { calculateDocumentTax, calculateDocumentNet, normalizeTaxRate, calculateAmountDue } from '../lib/documentMath';
 import { computeTaxLiability } from '../server/reports/computeReports';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
-
-import { makeInvoice, makeBill } from './fixtures.js';
+import { Invoice, Bill } from '../types';
 
 describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
   test('normalizes tax rates cleanly', () => {
@@ -75,40 +74,43 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
 
   test('ties out perfectly between computeReports and document templates', () => {
     const invoices = [
-      makeInvoice({
+      {
         id: 'inv-1',
         number: 'INV-101',
         customerName: 'Acme Corp',
         date: '2026-03-01',
         amountCents: 10000,
+        totalCents: 10000,
         taxRate: 10,
         taxInclusive: false,
-        status: 'approved'
-      }),
-      makeInvoice({
+        status: 'approved' as const
+      },
+      {
         id: 'inv-2',
         number: 'INV-102',
         customerName: 'Beta LLC',
         date: '2026-03-05',
         amountCents: 11000,
+        totalCents: 11000,
         taxRate: 10,
         taxInclusive: true,
-        status: 'sent'
-      })
+        status: 'sent' as const
+      }
     ];
 
     const bills = [
-      makeBill({
+      {
         id: 'bill-1',
         date: '2026-03-02',
         amountCents: 5000,
+        totalCents: 5000,
         taxRate: 10,
         taxInclusive: false,
-        status: 'approved'
-      })
+        status: 'approved' as const
+      }
     ];
 
-    const report = computeTaxLiability(invoices, bills, '2026-03-01', '2026-03-31');
+    const report = computeTaxLiability(invoices as unknown as Invoice[], bills as unknown as Bill[], '2026-03-01', '2026-03-31');
     
     // Inv 1: Tax = 1,000 cents, Net = 10,000 cents
     // Inv 2: Tax = 1,000 cents (11000 - 11000/1.1 = 1000), Net = 10,000 cents
@@ -124,9 +126,9 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
     // Verify Invoice 1 template lines balance exactly
     const inv1Tax = calculateDocumentTax(invoices[0]);
     const inv1Lines = TransactionTemplates.buildInvoiceLines({
-      invoiceNumber: invoices[0].number || '',
-      customerName: invoices[0].customerName || '',
-      totalCents: invoices[0].amountCents,
+      invoiceNumber: invoices[0].number,
+      customerName: invoices[0].customerName,
+      totalCents: invoices[0].totalCents,
       taxCents: inv1Tax,
       arAccount: { id: 'ar', name: 'A/R' },
       revenueAccount: { id: 'rev', name: 'Revenue' },
@@ -139,26 +141,27 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
   });
 
   test('invoice carrying only salesTaxCents posts and reports the same number', () => {
-    const invoice = makeInvoice({
+    const invoice = {
       id: 'inv-sales-tax-only',
       number: 'INV-ST-1',
       customerName: 'Gamma Corp',
       date: '2026-03-10',
       amountCents: 10000,
-      metadata: { salesTaxCents: 825 },
-      status: 'approved'
-    });
+      totalCents: 10000,
+      salesTaxCents: 825, // explicit legacy salesTaxCents without taxAmountCents
+      status: 'approved' as const
+    };
 
     const calculatedTax = calculateDocumentTax(invoice);
     assert.equal(calculatedTax, 825);
 
-    const report = computeTaxLiability([invoice], [], '2026-03-01', '2026-03-31');
+    const report = computeTaxLiability([invoice as any], [], '2026-03-01', '2026-03-31');
     assert.equal(report.taxCollectedCents, 825);
 
     const postingLines = TransactionTemplates.buildInvoiceLines({
-      invoiceNumber: invoice.number || '',
-      customerName: invoice.customerName || '',
-      totalCents: invoice.amountCents,
+      invoiceNumber: invoice.number,
+      customerName: invoice.customerName,
+      totalCents: invoice.totalCents,
       taxCents: calculatedTax,
       arAccount: { id: 'ar', name: 'A/R' },
       revenueAccount: { id: 'rev', name: 'Revenue' },

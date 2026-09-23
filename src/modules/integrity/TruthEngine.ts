@@ -1,7 +1,7 @@
 import { parseLocalDate } from '../../lib/utils';
 // Architecture: Core Integrity Engine
 // Enforces that numbers, facts, and validations are strictly correct. No false info.
-import { TemporalValidity } from '../../types';
+import { TemporalValidity, ChartAccount } from '../../types';
 import Decimal from 'decimal.js';
 import { evaluateAmountExpression } from '../../lib/amountExpression';
 
@@ -462,7 +462,7 @@ export class TruthEngine {
     return score;
   }
 
-  static scanOrphanedAccountReferences(accounts: any[], transactions: any[]): {
+  static scanOrphanedAccountReferences(accounts: Array<{ id: string }>, transactions: any[]): {
     orphanedAccountIds: string[];
     orphanedLines: Array<{
       transactionId: string;
@@ -472,7 +472,7 @@ export class TruthEngine {
     }>;
     totalOrphanedAmountCents: number;
   } {
-    const { orphanedLines } = computeBalanceSheet(accounts, transactions);
+    const { orphanedLines } = computeBalanceSheet(accounts as unknown as ChartAccount[], transactions);
     const orphanedAccountIdsSet = new Set<string>();
     const formattedOrphanedLines = orphanedLines.map(l => {
       orphanedAccountIdsSet.add(l.accountId);

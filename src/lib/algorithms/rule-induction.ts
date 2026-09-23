@@ -11,7 +11,8 @@ export function induceRules(transactions: readonly Transaction[], minSupport: nu
         if (!t.verification || t.verification.status !== 'verified') return;
         
         t.lines?.forEach(line => {
-            if (!line.accountName || line.accountName === 'Uncategorized') return;
+            const accName = line.accountName;
+            if (!accName || accName === 'Uncategorized') return;
             
             // Extract the vendor or description prefix
             const desc = (line.description || t.description || '').toLowerCase();
@@ -29,7 +30,6 @@ export function induceRules(transactions: readonly Transaction[], minSupport: nu
                     patternAccountCounts.set(pattern, new Map());
                 }
                 const accountMap = patternAccountCounts.get(pattern)!;
-                const accName = line.accountName || line.accountId || 'unassigned';
                 accountMap.set(accName, (accountMap.get(accName) || 0) + 1);
             });
         });

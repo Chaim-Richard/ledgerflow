@@ -97,7 +97,7 @@ export interface SplitAllocation {
 export interface TransactionLine {
   id?: string;
   accountId: string;
-  accountName: string;
+  accountName?: string;
   amountCents: number; // Positive for Debit, Negative for Credit
   debitCents?: number;
   creditCents?: number;
@@ -194,7 +194,7 @@ export interface Transaction {
   dimensions?: Record<string, string>;
   isIntercompany?: boolean;
 
-  createdAt: string;
+  createdAt?: string;
   updatedAt?: string;
   expectedUpdatedAt?: string;
   deletedAt?: string; 
@@ -263,7 +263,6 @@ export interface Bill {
   // Legacy tax/subtotal fields read by src/lib/documentMath.ts
   taxCents?: number;
   salesTaxCents?: number;
-  subtotalCents?: number;
   receiptUrl?: string;
   tags?: string[];
   metadata?: Record<string, any>;
@@ -286,6 +285,8 @@ export interface Bill {
   isLocked?: boolean;
   lockedAt?: string;
   paymentToken?: string;
+  taxInclusive?: boolean;
+  posted?: boolean;
 }
 
 export interface Invoice {
@@ -303,7 +304,6 @@ export interface Invoice {
   // Legacy tax/subtotal fields read by src/lib/documentMath.ts
   taxCents?: number;
   salesTaxCents?: number;
-  subtotalCents?: number;
   date?: string;
   dueDate: string;
   tags?: string[];
@@ -327,8 +327,8 @@ export interface Invoice {
   discountCents?: number;
   retainageCents?: number;
   depositCents?: number;
-  taxRate?: number;
   taxInclusive?: boolean;
+  posted?: boolean;
   currency?: string;
   paymentDate?: string;
   paidAt?: string;

@@ -206,7 +206,7 @@ export function computeCashFlow(accounts: ChartAccount[], transactions: Transact
       const amount = lineAmount(line, tx);
       const delta = -amount;
 
-      if (acc.type === 'income' || acc.type === 'revenue' || acc.type === 'expense' || acc.type === 'cost_of_goods' || acc.type === 'cogs' ||
+      if (acc.type === 'income' || acc.type === 'expense' || acc.type === 'cost_of_goods' ||
           (acc.type === 'asset' && (acc.category === 'Receivables' || acc.category === 'Receivable' || acc.category === 'Accounts Receivable')) ||
           (acc.type === 'liability' && (acc.category === 'Payables' || acc.category === 'Payable' || acc.category === 'Accounts Payable'))) {
         cashFlow.operating.total += delta;
@@ -291,7 +291,7 @@ export function computeGeneralLedger(accounts: ChartAccount[], transactions: Tra
             transactionId: tx.id || '',
             date: tx.date || '',
             description: tx.description || '',
-            reference: tx.reference || line.description || '',
+            reference: line.description || '',
             debitCents,
             creditCents,
             runningBalanceCents
@@ -340,17 +340,17 @@ export function computeStatement(
   let openingBalanceCents = 0;
 
   if (isCustomer) {
-    invoices.filter((inv) => inv.customerId === contactId && inv.date < start && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv) => {
+    invoices.filter((inv) => inv.customerId === contactId && (inv.date || '') < start && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv) => {
       openingBalanceCents += (inv.amountCents || 0);
     });
-    payments.filter((p) => p.contactId === contactId && p.date < start && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
+    payments.filter((p) => p.contactId === contactId && (p.date || '') < start && p.direction === 'received' && p.status === 'posted').forEach((p) => {
       openingBalanceCents -= (p.amountCents || 0);
     });
   } else {
     bills.filter((b) => b.vendorId === contactId && (b.date || b.issueDate || '') < start && BILL_IS_ISSUED.has(b.status)).forEach((b) => {
       openingBalanceCents += (b.amountCents || 0);
     });
-    payments.filter((p) => p.contactId === contactId && p.date < start && p.direction === 'made' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
+    payments.filter((p) => p.contactId === contactId && (p.date || '') < start && p.direction === 'made' && p.status === 'posted').forEach((p) => {
       openingBalanceCents -= (p.amountCents || 0);
     });
   }
@@ -367,10 +367,10 @@ export function computeStatement(
   }[] = [];
 
   if (isCustomer) {
-    invoices.filter((inv) => inv.customerId === contactId && inv.date >= start && inv.date <= end && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv) => {
+    invoices.filter((inv) => inv.customerId === contactId && (inv.date || '') >= start && (inv.date || '') <= end && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv) => {
       activityItems.push({
         id: inv.id,
-        date: inv.date,
+        date: inv.date || '',
         type: 'Invoice',
         reference: inv.number || inv.id,
         amountCents: (inv.amountCents || 0),
@@ -378,10 +378,10 @@ export function computeStatement(
         debitCents: (inv.amountCents || 0)
       });
     });
-    payments.filter((p) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
+    payments.filter((p) => p.contactId === contactId && (p.date || '') >= start && (p.date || '') <= end && p.direction === 'received' && p.status === 'posted').forEach((p) => {
       activityItems.push({
         id: p.id,
-        date: p.date,
+        date: p.date || '',
         type: 'Payment',
         reference: p.reference || p.id,
         amountCents: -(p.amountCents || 0),
@@ -401,10 +401,10 @@ export function computeStatement(
         debitCents: (b.amountCents || 0)
       });
     });
-    payments.filter((p) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'made' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
+    payments.filter((p) => p.contactId === contactId && (p.date || '') >= start && (p.date || '') <= end && p.direction === 'made' && p.status === 'posted').forEach((p) => {
       activityItems.push({
         id: p.id,
-        date: p.date,
+        date: p.date || '',
         type: 'Payment',
         reference: p.reference || p.id,
         amountCents: -(p.amountCents || 0),
@@ -447,7 +447,7 @@ export function computeTaxLiability(invoices: Invoice[], bills: Bill[], startDat
   let taxPaidCents = 0;
 
   invoices.forEach((inv) => {
-    if (inv.date >= start && inv.date <= end && INVOICE_COUNTS_FOR_TAX.has(inv.status)) {
+    if ((inv.date || '') >= start && (inv.date || '') <= end && INVOICE_COUNTS_FOR_TAX.has(inv.status)) {
       const tax = calculateDocumentTax(inv);
       const net = calculateDocumentNet(inv);
       taxableSalesCents += net;

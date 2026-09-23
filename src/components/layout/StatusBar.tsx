@@ -3,7 +3,7 @@ import { cn } from '../../lib/utils';
 import { useUIStore } from '../../stores/useUIStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { isPostable } from '../../lib/txFilters';
+import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export default function StatusBar() {
   const isOnline = useUIStore(s => s.isOnline);
@@ -19,7 +19,7 @@ export default function StatusBar() {
       if (!isPostable(tx)) continue;
       if (Array.isArray(tx.lines)) {
         for (const line of tx.lines) {
-          imbalance += Number(line.amountCents || 0);
+          imbalance += lineAmount(line, tx);
         }
       }
     }
