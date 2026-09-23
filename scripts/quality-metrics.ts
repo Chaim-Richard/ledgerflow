@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 export interface QualityMetrics {
   anyCount: number;
@@ -71,6 +72,24 @@ export function computeQualityMetrics(rootDir: string = process.cwd()): QualityM
     serverTsLines = serverContent.split('\n').length;
   }
 
+  let eslintWarnings = 0;
+  try {
+    const eslintOutput = execSync('npx eslint . -f json', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const results = JSON.parse(eslintOutput);
+    for (const file of results) {
+      eslintWarnings += file.warningCount || 0;
+    }
+  } catch (err: any) {
+    if (err.stdout) {
+      try {
+        const results = JSON.parse(err.stdout);
+        for (const file of results) {
+          eslintWarnings += file.warningCount || 0;
+        }
+      } catch {}
+    }
+  }
+
   return {
     anyCount,
     utcDateCount,
@@ -80,7 +99,7 @@ export function computeQualityMetrics(rootDir: string = process.cwd()): QualityM
     serverTsLines,
     filesOver800,
     orphanFiles: 0,
-    eslintWarnings: 0,
+    eslintWarnings,
     untestedViews: 0,
   };
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { differenceInDays, parseISO } from 'date-fns';
@@ -12,8 +12,10 @@ import {
   Users, 
   Clock, 
   Search,
-  Filter
+  Filter,
+  ArrowUpDown
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface PartyAgingReportViewProps {
   side: 'customer' | 'vendor';
@@ -44,78 +46,135 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPartyId, setSelectedPartyId] = useState<string | null>(null);
 
+  // Sorting state
+  const [sortBy, setSortBy] = useState<'partyName' | 'current' | 'thirtyToSixty' | 'sixtyToNinety' | 'overNinety' | 'total'>('partyName');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
   // Filter only outstanding documents (status not paid, void, draft)
-  const outstandingDocs = documents.filter(doc => {
-    const status = (doc.status || '').toLowerCase();
-    return status !== 'paid' && status !== 'void' && status !== 'draft';
-  });
+  const outstandingDocs = useMemo(() => {
+    return documents.filter(doc => {
+      const status = (doc.status || '').toLowerCase();
+      return status !== 'paid' && status !== 'void' && status !== 'draft';
+    });
+  }, [documents]);
 
   // Calculate aging for each party
-  const agingRows: AgingRow[] = parties.map(party => {
-    const partyDocs = outstandingDocs.filter(d => {
-      const matchId = isCustomer ? (d as any).customerId : (d as any).vendorId;
-      return matchId === party.id;
-    });
+  const agingRows: AgingRow[] = useMemo(() => {
+    return parties.map(party => {
+      const partyDocs = outstandingDocs.filter(d => {
+        const matchId = isCustomer ? (d as any).customerId : (d as any).vendorId;
+        return matchId === party.id;
+      });
 
-    let current = 0;
-    let thirtyToSixty = 0;
-    let sixtyToNinety = 0;
-    let overNinety = 0;
-    let total = 0;
+      let current = 0;
+      let thirtyToSixty = 0;
+      let sixtyToNinety = 0;
+      let overNinety = 0;
+      let total = 0;
 
-    partyDocs.forEach(doc => {
-      const docDate = doc.date ? parseISO(doc.date.slice(0, 10)) : new Date();
-      const ageDays = differenceInDays(new Date(), docDate);
-      
-      const docTotal = doc.amountCents || 0;
-      const docPaid = (doc as any).amountPaidCents || 0;
-      const outstandingAmount = Math.max(0, docTotal - docPaid);
+      partyDocs.forEach(doc => {
+        const docDate = doc.date ? parseISO(doc.date.slice(0, 10)) : new Date();
+        const ageDays = differenceInDays(new Date(), docDate);
+        
+        const docTotal = doc.amountCents || 0;
+        const docPaid = (doc as any).amountPaidCents || 0;
+        const outstandingAmount = Math.max(0, docTotal - docPaid);
 
-      if (outstandingAmount > 0) {
-        total += outstandingAmount;
-        if (ageDays <= 30) {
-          current += outstandingAmount;
-        } else if (ageDays <= 60) {
-          thirtyToSixty += outstandingAmount;
-        } else if (ageDays <= 90) {
-          sixtyToNinety += outstandingAmount;
-        } else {
-          overNinety += outstandingAmount;
+        if (outstandingAmount > 0) {
+          total += outstandingAmount;
+          if (ageDays <= 30) {
+            current += outstandingAmount;
+          } else if (ageDays <= 60) {
+            thirtyToSixty += outstandingAmount;
+          } else if (ageDays <= 90) {
+            sixtyToNinety += outstandingAmount;
+          } else {
+            overNinety += outstandingAmount;
+          }
         }
+      });
+
+      return {
+        partyId: party.id,
+        partyName: party.name,
+        current,
+        thirtyToSixty,
+        sixtyToNinety,
+        overNinety,
+        total
+      };
+    }).filter(row => row.total > 0); // Only show parties with outstanding balance
+  }, [parties, outstandingDocs, isCustomer]);
+
+  // Search filter and Sorting
+  const sortedAndFilteredRows = useMemo(() => {
+    const filtered = agingRows.filter(row => 
+      row.partyName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return [...filtered].sort((a, b) => {
+      let valA: any = a[sortBy];
+      let valB: any = b[sortBy];
+
+      if (typeof valA === 'string') {
+        valA = valA.toLowerCase();
+        valB = valB.toLowerCase();
       }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
     });
-
-    return {
-      partyId: party.id,
-      partyName: party.name,
-      current,
-      thirtyToSixty,
-      sixtyToNinety,
-      overNinety,
-      total
-    };
-  }).filter(row => row.total > 0); // Only show parties with outstanding balance
-
-  // Search filter
-  const filteredRows = agingRows.filter(row => 
-    row.partyName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  }, [agingRows, searchTerm, sortBy, sortOrder]);
 
   // Totals
-  const totalCurrent = filteredRows.reduce((sum, r) => sum + r.current, 0);
-  const total30to60 = filteredRows.reduce((sum, r) => sum + r.thirtyToSixty, 0);
-  const total60to90 = filteredRows.reduce((sum, r) => sum + r.sixtyToNinety, 0);
-  const total90plus = filteredRows.reduce((sum, r) => sum + r.overNinety, 0);
-  const grandTotal = filteredRows.reduce((sum, r) => sum + r.total, 0);
+  const totalCurrent = useMemo(() => sortedAndFilteredRows.reduce((sum, r) => sum + r.current, 0), [sortedAndFilteredRows]);
+  const total30to60 = useMemo(() => sortedAndFilteredRows.reduce((sum, r) => sum + r.thirtyToSixty, 0), [sortedAndFilteredRows]);
+  const total60to90 = useMemo(() => sortedAndFilteredRows.reduce((sum, r) => sum + r.sixtyToNinety, 0), [sortedAndFilteredRows]);
+  const total90plus = useMemo(() => sortedAndFilteredRows.reduce((sum, r) => sum + r.overNinety, 0), [sortedAndFilteredRows]);
+  const grandTotal = useMemo(() => sortedAndFilteredRows.reduce((sum, r) => sum + r.total, 0), [sortedAndFilteredRows]);
 
   // Selected party documents for drill down
   const selectedParty = parties.find(p => p.id === selectedPartyId);
-  const selectedPartyDocs = selectedPartyId
-    ? outstandingDocs.filter(d => {
-        const matchId = isCustomer ? (d as any).customerId : (d as any).vendorId;
-        return matchId === selectedPartyId;
-      })
-    : [];
+  const selectedPartyDocs = useMemo(() => {
+    return selectedPartyId
+      ? outstandingDocs.filter(d => {
+          const matchId = isCustomer ? (d as any).customerId : (d as any).vendorId;
+          return matchId === selectedPartyId;
+        })
+      : [];
+  }, [selectedPartyId, outstandingDocs, isCustomer]);
+
+  const handleSort = (field: typeof sortBy) => {
+    if (sortBy === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const exportToCSV = () => {
+    const headers = [isCustomer ? 'Customer' : 'Vendor', '0-30 Days', '31-60 Days', '61-90 Days', '91+ Days', 'Total Outstanding'];
+    const rows = sortedAndFilteredRows.map(r => [
+      `"${r.partyName.replace(/"/g, '""')}"`,
+      r.current / 100,
+      r.thirtyToSixty / 100,
+      r.sixtyToNinety / 100,
+      r.overNinety / 100,
+      r.total / 100
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${isCustomer ? 'ar' : 'ap'}_aging_report.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Aging report exported successfully to CSV');
+  };
 
   return (
     <div className="space-y-6">
@@ -129,6 +188,15 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Aging schedule of outstanding {isCustomer ? 'customer invoices' : 'vendor bills'} grouped by outstanding duration.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportToCSV}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors border border-slate-200 dark:border-slate-800"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
         </div>
       </div>
 
@@ -187,17 +255,47 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                <th className="p-4">{isCustomer ? 'Customer' : 'Vendor'}</th>
-                <th className="p-4 text-right">0-30 Days</th>
-                <th className="p-4 text-right">31-60 Days</th>
-                <th className="p-4 text-right">61-90 Days</th>
-                <th className="p-4 text-right">91+ Days</th>
-                <th className="p-4 text-right">Total Outstanding</th>
+                <th className="p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('partyName')}>
+                  <span className="flex items-center gap-1">
+                    {isCustomer ? 'Customer' : 'Vendor'}
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </span>
+                </th>
+                <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('current')}>
+                  <span className="flex items-center justify-end gap-1">
+                    0-30 Days
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </span>
+                </th>
+                <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('thirtyToSixty')}>
+                  <span className="flex items-center justify-end gap-1">
+                    31-60 Days
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </span>
+                </th>
+                <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('sixtyToNinety')}>
+                  <span className="flex items-center justify-end gap-1">
+                    61-90 Days
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </span>
+                </th>
+                <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('overNinety')}>
+                  <span className="flex items-center justify-end gap-1">
+                    91+ Days
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </span>
+                </th>
+                <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('total')}>
+                  <span className="flex items-center justify-end gap-1">
+                    Total Outstanding
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </span>
+                </th>
                 <th className="p-4 w-10"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-              {filteredRows.map(row => (
+              {sortedAndFilteredRows.map(row => (
                 <tr 
                   key={row.partyId}
                   onClick={() => setSelectedPartyId(row.partyId)}
@@ -228,7 +326,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                 </tr>
               ))}
 
-              {filteredRows.length === 0 && (
+              {sortedAndFilteredRows.length === 0 && (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-slate-500 dark:text-slate-400">
                     No outstanding {isCustomer ? 'receivables' : 'payables'} found matching criteria.
@@ -236,7 +334,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                 </tr>
               )}
             </tbody>
-            {filteredRows.length > 0 && (
+            {sortedAndFilteredRows.length > 0 && (
               <tfoot>
                 <tr className="bg-slate-50 dark:bg-slate-800/30 font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-800">
                   <td className="p-4">Grand Total</td>
@@ -253,7 +351,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
         </div>
       </div>
 
-      {/* Drill-down DrillDownModal / Side Drawer */}
+      {/* Drill-down Drawer */}
       {selectedPartyId && selectedParty && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl h-full shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800">
@@ -264,7 +362,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                   onClick={() => setSelectedPartyId(null)}
                   className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-bold mb-1"
                 >
-                  <ArrowLeft className="w-3.h-3" /> Back to Aging Schedule
+                  <ArrowLeft className="w-3 h-3" /> Back to Aging Schedule
                 </button>
                 <h3 className="text-xl font-black text-slate-900 dark:text-white">
                   Outstanding Ledger: {selectedParty.name}

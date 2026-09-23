@@ -10,12 +10,16 @@ import {
   FileText, 
   Trash2, 
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  DollarSign,
+  Ban,
+  Download
 } from 'lucide-react';
 import { formatCurrency } from '../../lib/utils';
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
 import VendorDetailView from './VendorDetailView';
+import ReceivePaymentModal from '../sales/ReceivePaymentModal';
 import { toast } from 'sonner';
 
 export default function Purchases() {
@@ -30,6 +34,10 @@ export default function Purchases() {
 
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentDocumentId, setPaymentDocumentId] = useState<string | null>(null);
+  const [paymentContactId, setPaymentContactId] = useState<string | null>(null);
 
   // Filter bills based on search term (vendor name, number, etc.)
   const filteredBills = useMemo(() => {
@@ -65,6 +73,32 @@ export default function Purchases() {
     }
   };
 
+  const handleVoidBill = async (id: string) => {
+    await updateEntity('bills', id, { status: 'void' }, 'Bill voided successfully');
+  };
+
+  const exportBillsToCSV = () => {
+    const headers = ['Vendor Name', 'Bill Number', 'Date', 'Due Date', 'Status', 'Amount Cents'];
+    const rows = filteredBills.map(b => [
+      `"${(b.vendorName || 'Unknown Vendor').replace(/"/g, '""')}"`,
+      `"${(b.number || b.id).replace(/"/g, '""')}"`,
+      b.date || '',
+      b.dueDate || '',
+      b.status || 'unpaid',
+      b.amountCents || 0
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'bills_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Bills exported successfully to CSV');
+  };
+
   if (selectedVendorId) {
     return (
       <VendorDetailView 
@@ -89,6 +123,15 @@ export default function Purchases() {
         </div>
 
         <div className="flex items-center gap-3">
+          {activeSubTab === 'bills' && (
+            <button
+              onClick={exportBillsToCSV}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors border border-slate-200 dark:border-slate-800"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          )}
           <button
             onClick={() => {
               if (activeSubTab === 'bills') {
@@ -191,9 +234,38 @@ export default function Purchases() {
                       <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
                         {formatCurrency((b.amountCents || 0) / 100)}
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 text-right flex items-center justify-end gap-2">
+                        {b.status !== 'paid' && b.status !== 'void' && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPaymentDocumentId(b.id);
+                                setPaymentContactId(b.vendorId || '');
+                                setIsPaymentModalOpen(true);
+                              }}
+                              className="px-2 py-1 text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold rounded-md flex items-center gap-1 shadow-xs transition-colors"
+                            >
+                              <DollarSign className="w-3.5 h-3.5" />
+                              Pay
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleVoidBill(b.id);
+                              }}
+                              className="px-2 py-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold rounded-md flex items-center gap-1 shadow-xs transition-colors"
+                            >
+                              <Ban className="w-3.5 h-3.5" />
+                              Void
+                            </button>
+                          </>
+                        )}
                         <button
-                          onClick={() => handleDeleteBill(b.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteBill(b.id);
+                          }}
                           className="text-rose-500 hover:text-rose-700 p-1 rounded-lg"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -278,6 +350,16 @@ export default function Purchases() {
         onClose={() => setIsVendorModalOpen(false)}
         onSave={handleAddVendor}
       />
+
+      {isPaymentModalOpen && paymentDocumentId && paymentContactId && (
+        <ReceivePaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          defaultDirection="made"
+          defaultDocumentId={paymentDocumentId}
+          defaultContactId={paymentContactId}
+        />
+      )}
     </div>
   );
 }

@@ -13,4 +13,11 @@ describe('No Top-Level App Folder Guard Suite', () => {
       'Security / Workspace Violation: Top-level app/ directory must not exist. Workspace files must reside at workspace root.'
     );
   });
+
+  it('fails if bun.lock or yarn.lock exists in the workspace root', () => {
+    const bunLock = path.resolve(process.cwd(), 'bun.lock');
+    const yarnLock = path.resolve(process.cwd(), 'yarn.lock');
+    assert.equal(fs.existsSync(bunLock), false, 'Workspace Violation: bun.lock must not exist. Use npm package-lock.json only.');
+    assert.equal(fs.existsSync(yarnLock), false, 'Workspace Violation: yarn.lock must not exist. Use npm package-lock.json only.');
+  });
 });
