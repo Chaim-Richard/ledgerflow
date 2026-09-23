@@ -1,7 +1,7 @@
 import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount, isTransactionInDateRange } from "../../lib/txFilters";
 import { resolveAccountRole } from "../../lib/accountUtils";
 import { calculateDocumentTax, calculateDocumentNet } from "../../lib/documentMath";
-import type { Invoice, Bill } from "../../types";
+import type { Invoice, Bill, Payment, CreditNote, VendorCredit, Customer, Vendor, Transaction, ChartAccount, TransactionLine } from "../../types";
 
 export const INVOICE_IS_ISSUED = new Set<Invoice['status']>([
   'sent', 'approved', 'invoiced', 'pending', 'overdue', 'partially_paid', 'paid'
@@ -14,17 +14,23 @@ export const BILL_IS_ISSUED = new Set<Bill['status']>([
 export const INVOICE_COUNTS_FOR_TAX = INVOICE_IS_ISSUED;
 export const BILL_COUNTS_FOR_TAX = BILL_IS_ISSUED;
 
-export function computeProfitAndLoss(accounts: any[], transactions: any[], startDate?: string, endDate?: string) {
+export function computeProfitAndLoss(accounts: ChartAccount[], transactions: Transaction[], startDate?: string, endDate?: string) {
   const start = startDate || "1970-01-01";
   const end = endDate || "2099-12-31";
-  const pl: any = {
+  const pl: {
+    income: { total: number; accounts: Record<string, { name: string; code?: string; balance: number; parentId?: string }> };
+    cogs: { total: number; accounts: Record<string, { name: string; code?: string; balance: number; parentId?: string }> };
+    expense: { total: number; accounts: Record<string, { name: string; code?: string; balance: number; parentId?: string }> };
+    grossProfit: number;
+    netIncome: number;
+  } = {
     income: { total: 0, accounts: {} },
     cogs: { total: 0, accounts: {} },
     expense: { total: 0, accounts: {} },
     grossProfit: 0,
     netIncome: 0
   };
-  accounts.forEach((acc: any) => {
+  accounts.forEach((acc) => {
     const isCogs = acc.type === 'cost_of_goods' || acc.category === 'COGS' || acc.category === 'Direct Costs' || resolveAccountRole(acc) === 'cogs';
     if (isRevenueAccount(acc)) {
       pl.income.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0, parentId: acc.parentId };
@@ -37,7 +43,7 @@ export function computeProfitAndLoss(accounts: any[], transactions: any[], start
   for (const tx of transactions) {
     if (!isPostable(tx)) continue;
     if (!isTransactionInDateRange(tx, start, end)) continue;
-    tx.lines?.forEach((line: any) => {
+    tx.lines?.forEach((line: TransactionLine) => {
       const amount = lineAmount(line, tx);
       if (pl.income.accounts[line.accountId]) {
         const val = -amount; 
@@ -63,11 +69,11 @@ export function computeProfitAndLoss(accounts: any[], transactions: any[], start
   return pl;
 }
 
-export function computeBalanceSheet(accounts: any[], transactions: any[], endDate?: string) {
+export function computeBalanceSheet(accounts: ChartAccount[], transactions: Transaction[], endDate?: string) {
   const end = endDate || "2099-12-31";
 
   const balances: Record<string, number> = {};
-  accounts.forEach((acc: any) => {
+  accounts.forEach((acc) => {
     balances[acc.id] = acc.openingBalanceCents || 0;
   });
 
@@ -76,7 +82,7 @@ export function computeBalanceSheet(accounts: any[], transactions: any[], endDat
   for (const tx of transactions) {
     if (!isPostable(tx)) continue;
     if (!isTransactionInDateRange(tx, undefined, end)) continue;
-    tx.lines?.forEach((line: any) => {
+    tx.lines?.forEach((line: TransactionLine) => {
       if (balances[line.accountId] !== undefined) {
         balances[line.accountId] += lineAmount(line, tx);
       } else {
@@ -100,7 +106,7 @@ export function computeBalanceSheet(accounts: any[], transactions: any[], endDat
   let totalLiabilities = 0;
   let totalEquity = 0;
 
-  accounts.forEach((acc: any) => {
+  accounts.forEach((acc) => {
     const bal = balances[acc.id] || 0;
     if (acc.type === 'asset') {
       assets[acc.id] = bal;
@@ -134,11 +140,10 @@ export function computeBalanceSheet(accounts: any[], transactions: any[], endDat
   };
 }
 
-export function computeTrialBalance(accounts: any[], transactions: any[], asOfDate?: string) {
-  const trialBalance: Record<string, { name: string, code?: string, type: string, debit: number, credit: number, netSigned: number }> = {};
-  accounts.forEach((acc: any) => {
+export function computeTrialBalance(accounts: ChartAccount[], transactions: Transaction[], asOfDate?: string) {
+  const trialBalance: Record<string, { name: string; code?: string; type: string; debit: number; credit: number; netSigned: number }> = {};
+  accounts.forEach((acc) => {
     const opening = acc.openingBalanceCents || 0;
-    const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
     trialBalance[acc.id] = {
       name: acc.name,
       code: acc.code,
@@ -151,7 +156,7 @@ export function computeTrialBalance(accounts: any[], transactions: any[], asOfDa
   for (const tx of transactions) {
     if (!isPostable(tx)) continue;
     if (asOfDate && !isTransactionInDateRange(tx, undefined, asOfDate)) continue;
-    tx.lines?.forEach((line: any) => {
+    tx.lines?.forEach((line: TransactionLine) => {
       const amount = lineAmount(line, tx);
       if (trialBalance[line.accountId]) {
         const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(trialBalance[line.accountId].type);
@@ -178,25 +183,25 @@ export function computeTrialBalance(accounts: any[], transactions: any[], asOfDa
   return { accounts: accountsArray, totalDebit, totalCredit, isBalanced: totalDebit === totalCredit };
 }
 
-export function computeCashFlow(accounts: any[], transactions: any[], startDate?: string, endDate?: string) {
+export function computeCashFlow(accounts: ChartAccount[], transactions: Transaction[], startDate?: string, endDate?: string) {
   let filteredTx = transactions;
   if (startDate || endDate) {
     const start = startDate ? String(startDate) : "1970-01-01";
     const end = endDate ? String(endDate) : "2099-12-31";
-    filteredTx = transactions.filter((tx: any) => isTransactionInDateRange(tx, start, end));
+    filteredTx = transactions.filter((tx) => isTransactionInDateRange(tx, start, end));
   }
 
   const cashFlow = {
-    operating: { total: 0, inflow: 0, outflow: 0, items: [] as any[] },
-    investing: { total: 0, inflow: 0, outflow: 0, items: [] as any[] },
-    financing: { total: 0, inflow: 0, outflow: 0, items: [] as any[] },
+    operating: { total: 0, inflow: 0, outflow: 0, items: [] as { name: string; amount: number }[] },
+    investing: { total: 0, inflow: 0, outflow: 0, items: [] as { name: string; amount: number }[] },
+    financing: { total: 0, inflow: 0, outflow: 0, items: [] as { name: string; amount: number }[] },
     netChange: 0
   };
 
-  filteredTx.forEach((tx: any) => {
+  filteredTx.forEach((tx) => {
     if (!isPostable(tx)) return;
-    tx.lines?.forEach((line: any) => {
-      const acc = accounts.find((a: any) => a.id === line.accountId);
+    tx.lines?.forEach((line: TransactionLine) => {
+      const acc = accounts.find((a) => a.id === line.accountId);
       if (!acc) return;
       const amount = lineAmount(line, tx);
       const delta = -amount;
@@ -226,23 +231,23 @@ export function computeCashFlow(accounts: any[], transactions: any[], startDate?
   return cashFlow;
 }
 
-export function computeGeneralLedger(accounts: any[], transactions: any[], startDate?: string, endDate?: string, targetAccountId?: string) {
+export function computeGeneralLedger(accounts: ChartAccount[], transactions: Transaction[], startDate?: string, endDate?: string, targetAccountId?: string) {
   const start = startDate || "1970-01-01";
   const end = endDate || "2099-12-31";
 
   const targetAccounts = targetAccountId
-    ? accounts.filter((a: any) => a.id === targetAccountId)
+    ? accounts.filter((a) => a.id === targetAccountId)
     : accounts;
 
-  const resultAccounts = targetAccounts.map((acc: any) => {
+  const resultAccounts = targetAccounts.map((acc) => {
     let openingBalanceCents = acc.openingBalanceCents || 0;
     const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
 
     // Compute prior period postings
-    transactions.forEach((tx: any) => {
+    transactions.forEach((tx) => {
       if (!isPostable(tx)) return;
       if (tx.date && tx.date < start) {
-        tx.lines?.forEach((line: any) => {
+        tx.lines?.forEach((line: TransactionLine) => {
           if (line.accountId === acc.id) {
             const amt = lineAmount(line, tx);
             openingBalanceCents += isDebitNature ? amt : -amt;
@@ -251,18 +256,26 @@ export function computeGeneralLedger(accounts: any[], transactions: any[], start
       }
     });
 
-    const periodTxs = transactions.filter((tx: any) => {
+    const periodTxs = transactions.filter((tx) => {
       if (!isPostable(tx)) return false;
       return isTransactionInDateRange(tx, start, end);
-    }).sort((a: any, b: any) => (a.date || '').localeCompare(b.date || ''));
+    }).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
     let runningBalanceCents = openingBalanceCents;
     let periodDebitsCents = 0;
     let periodCreditsCents = 0;
-    const entries: any[] = [];
+    const entries: {
+      transactionId: string;
+      date: string;
+      description: string;
+      reference: string;
+      debitCents: number;
+      creditCents: number;
+      runningBalanceCents: number;
+    }[] = [];
 
-    periodTxs.forEach((tx: any) => {
-      tx.lines?.forEach((line: any) => {
+    periodTxs.forEach((tx) => {
+      tx.lines?.forEach((line: TransactionLine) => {
         if (line.accountId === acc.id) {
           const amt = lineAmount(line, tx);
           const debitCents = amt > 0 ? amt : 0;
@@ -309,10 +322,10 @@ export function computeGeneralLedger(accounts: any[], transactions: any[], start
 }
 
 export function computeStatement(
-  contact: any,
-  invoices: any[],
-  bills: any[],
-  payments: any[],
+  contact: Customer | Vendor | undefined | null,
+  invoices: Invoice[],
+  bills: Bill[],
+  payments: Payment[],
   startDate: string,
   endDate: string,
   type: 'customer' | 'vendor'
@@ -327,26 +340,34 @@ export function computeStatement(
   let openingBalanceCents = 0;
 
   if (isCustomer) {
-    invoices.filter((inv: any) => inv.customerId === contactId && inv.date < start && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv: any) => {
+    invoices.filter((inv) => inv.customerId === contactId && inv.date < start && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv) => {
       openingBalanceCents += (inv.amountCents || 0);
     });
-    payments.filter((p: any) => p.contactId === contactId && p.date < start && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p: any) => {
+    payments.filter((p) => p.contactId === contactId && p.date < start && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
       openingBalanceCents -= (p.amountCents || 0);
     });
   } else {
-    bills.filter((b: any) => b.vendorId === contactId && (b.date || b.issueDate || '') < start && BILL_IS_ISSUED.has(b.status)).forEach((b: any) => {
+    bills.filter((b) => b.vendorId === contactId && (b.date || b.issueDate || '') < start && BILL_IS_ISSUED.has(b.status)).forEach((b) => {
       openingBalanceCents += (b.amountCents || 0);
     });
-    payments.filter((p: any) => p.contactId === contactId && p.date < start && p.direction === 'made' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p: any) => {
+    payments.filter((p) => p.contactId === contactId && p.date < start && p.direction === 'made' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
       openingBalanceCents -= (p.amountCents || 0);
     });
   }
 
   // Activity stream in range
-  const activityItems: any[] = [];
+  const activityItems: {
+    id: string;
+    date: string;
+    type: string;
+    reference: string;
+    amountCents: number;
+    creditCents: number;
+    debitCents: number;
+  }[] = [];
 
   if (isCustomer) {
-    invoices.filter((inv: any) => inv.customerId === contactId && inv.date >= start && inv.date <= end && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv: any) => {
+    invoices.filter((inv) => inv.customerId === contactId && inv.date >= start && inv.date <= end && INVOICE_IS_ISSUED.has(inv.status)).forEach((inv) => {
       activityItems.push({
         id: inv.id,
         date: inv.date,
@@ -357,7 +378,7 @@ export function computeStatement(
         debitCents: (inv.amountCents || 0)
       });
     });
-    payments.filter((p: any) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p: any) => {
+    payments.filter((p) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'received' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
       activityItems.push({
         id: p.id,
         date: p.date,
@@ -369,7 +390,7 @@ export function computeStatement(
       });
     });
   } else {
-    bills.filter((b: any) => b.vendorId === contactId && (b.date || b.issueDate || '') >= start && (b.date || b.issueDate || '') <= end && BILL_IS_ISSUED.has(b.status)).forEach((b: any) => {
+    bills.filter((b) => b.vendorId === contactId && (b.date || b.issueDate || '') >= start && (b.date || b.issueDate || '') <= end && BILL_IS_ISSUED.has(b.status)).forEach((b) => {
       activityItems.push({
         id: b.id,
         date: b.date || b.issueDate || '',
@@ -380,7 +401,7 @@ export function computeStatement(
         debitCents: (b.amountCents || 0)
       });
     });
-    payments.filter((p: any) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'made' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p: any) => {
+    payments.filter((p) => p.contactId === contactId && p.date >= start && p.date <= end && p.direction === 'made' && (p.status === 'posted' || p.status === 'completed' || (!p.status && p.status !== 'void' && p.status !== 'draft'))).forEach((p) => {
       activityItems.push({
         id: p.id,
         date: p.date,
@@ -416,7 +437,7 @@ export function computeStatement(
   };
 }
 
-export function computeTaxLiability(invoices: any[], bills: any[], startDate?: string, endDate?: string) {
+export function computeTaxLiability(invoices: Invoice[], bills: Bill[], startDate?: string, endDate?: string) {
   const start = startDate || "1970-01-01";
   const end = endDate || "2099-12-31";
 
@@ -425,7 +446,7 @@ export function computeTaxLiability(invoices: any[], bills: any[], startDate?: s
   let taxablePurchasesCents = 0;
   let taxPaidCents = 0;
 
-  invoices.forEach((inv: any) => {
+  invoices.forEach((inv) => {
     if (inv.date >= start && inv.date <= end && INVOICE_COUNTS_FOR_TAX.has(inv.status)) {
       const tax = calculateDocumentTax(inv);
       const net = calculateDocumentNet(inv);
@@ -434,7 +455,7 @@ export function computeTaxLiability(invoices: any[], bills: any[], startDate?: s
     }
   });
 
-  bills.forEach((b: any) => {
+  bills.forEach((b) => {
     const bDate = b.date || b.issueDate || '';
     if (bDate >= start && bDate <= end && BILL_COUNTS_FOR_TAX.has(b.status)) {
       const tax = calculateDocumentTax(b);
@@ -476,15 +497,14 @@ export interface CustomerBalanceSummaryRow {
 }
 
 export function computeCustomerBalanceSummary(
-  customers: any[] = [],
-  invoices: any[] = [],
-  payments: any[] = [],
-  creditNotes: any[] = [],
-  startDate?: string,
+  customers: Customer[] = [],
+  invoices: Invoice[] = [],
+  payments: Payment[] = [],
+  creditNotes: CreditNote[] = [],
+  asOfDateOrStartDate?: string,
   endDate?: string
 ): CustomerBalanceSummaryRow[] {
-  const start = startDate || "1970-01-01";
-  const end = endDate || "2099-12-31";
+  const end = endDate || asOfDateOrStartDate || new Date().toISOString().split('T')[0];
 
   return customers.map(cust => {
     const custId = cust.id;
@@ -492,7 +512,7 @@ export function computeCustomerBalanceSummary(
       if (inv.customerId !== custId) return false;
       if (!INVOICE_IS_ISSUED.has(inv.status)) return false;
       const docDate = inv.date || inv.issueDate || (inv.createdAt ? inv.createdAt.split('T')[0] : '');
-      if (docDate && (docDate < start || docDate > end)) return false;
+      if (docDate && docDate > end) return false;
       return true;
     });
 
@@ -504,7 +524,7 @@ export function computeCustomerBalanceSummary(
       if (cn.customerId !== custId) return false;
       if (cn.status === 'void' || cn.status === 'draft') return false;
       const docDate = cn.date || cn.issueDate || (cn.createdAt ? cn.createdAt.split('T')[0] : '');
-      if (docDate && (docDate < start || docDate > end)) return false;
+      if (docDate && docDate > end) return false;
       return true;
     });
 
@@ -513,12 +533,12 @@ export function computeCustomerBalanceSummary(
     }, 0);
 
     const custPayments = payments.filter(p => {
-      const matchesContact = p.contactId === custId || p.allocations?.some((a: any) => custInvoices.some(inv => inv.id === a.documentId));
+      const matchesContact = p.contactId === custId || p.allocations?.some((a: { documentId: string }) => custInvoices.some(inv => inv.id === a.documentId));
       if (!matchesContact) return false;
       if (p.direction === 'made') return false;
       if (p.status === 'void' || p.status === 'draft') return false;
       const docDate = p.date || (p.createdAt ? p.createdAt.split('T')[0] : '');
-      if (docDate && (docDate < start || docDate > end)) return false;
+      if (docDate && docDate > end) return false;
       return true;
     });
 
@@ -557,15 +577,14 @@ export interface VendorBalanceSummaryRow {
 }
 
 export function computeVendorBalanceSummary(
-  vendors: any[] = [],
-  bills: any[] = [],
-  payments: any[] = [],
-  vendorCredits: any[] = [],
-  startDate?: string,
+  vendors: Vendor[] = [],
+  bills: Bill[] = [],
+  payments: Payment[] = [],
+  vendorCredits: VendorCredit[] = [],
+  asOfDateOrStartDate?: string,
   endDate?: string
 ): VendorBalanceSummaryRow[] {
-  const start = startDate || "1970-01-01";
-  const end = endDate || "2099-12-31";
+  const end = endDate || asOfDateOrStartDate || new Date().toISOString().split('T')[0];
 
   return vendors.map(vendor => {
     const vendorId = vendor.id;
@@ -573,7 +592,7 @@ export function computeVendorBalanceSummary(
       if (b.vendorId !== vendorId) return false;
       if (!BILL_IS_ISSUED.has(b.status)) return false;
       const docDate = b.date || b.issueDate || (b.createdAt ? b.createdAt.split('T')[0] : '');
-      if (docDate && (docDate < start || docDate > end)) return false;
+      if (docDate && docDate > end) return false;
       return true;
     });
 
@@ -585,7 +604,7 @@ export function computeVendorBalanceSummary(
       if (vc.vendorId !== vendorId) return false;
       if (vc.status === 'void' || vc.status === 'draft') return false;
       const docDate = vc.date || vc.issueDate || (vc.createdAt ? vc.createdAt.split('T')[0] : '');
-      if (docDate && (docDate < start || docDate > end)) return false;
+      if (docDate && docDate > end) return false;
       return true;
     });
 
@@ -598,7 +617,7 @@ export function computeVendorBalanceSummary(
       if (p.direction === 'received') return false;
       if (p.status === 'void' || p.status === 'draft') return false;
       const docDate = p.date || (p.createdAt ? p.createdAt.split('T')[0] : '');
-      if (docDate && (docDate < start || docDate > end)) return false;
+      if (docDate && docDate > end) return false;
       return true;
     });
 
@@ -634,10 +653,10 @@ export interface PartyTransactionRow {
 }
 
 export function computeTransactionsByCustomer(
-  customers: any[] = [],
-  invoices: any[] = [],
-  payments: any[] = [],
-  creditNotes: any[] = [],
+  customers: Customer[] = [],
+  invoices: Invoice[] = [],
+  payments: Payment[] = [],
+  creditNotes: CreditNote[] = [],
   startDate?: string,
   endDate?: string
 ): PartyTransactionRow[] {
@@ -701,10 +720,10 @@ export function computeTransactionsByCustomer(
 }
 
 export function computeTransactionsByVendor(
-  vendors: any[] = [],
-  bills: any[] = [],
-  payments: any[] = [],
-  vendorCredits: any[] = [],
+  vendors: Vendor[] = [],
+  bills: Bill[] = [],
+  payments: Payment[] = [],
+  vendorCredits: VendorCredit[] = [],
   startDate?: string,
   endDate?: string
 ): PartyTransactionRow[] {

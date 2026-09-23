@@ -3,7 +3,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeStatement } from '../../server/reports/computeReports';
-import { FileText, Printer, Mail, Calendar, User, Building2, Eye, Download } from 'lucide-react';
+import { FileText, Printer, Eye, Download } from 'lucide-react';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 
 export default function StatementView() {

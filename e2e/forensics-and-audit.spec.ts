@@ -6,7 +6,6 @@ test.describe('Forensics, Cryptographic Hash Chain & Audit Trail Suite', () => {
     await page.addInitScript(() => {
       localStorage.setItem('isGuest', 'true');
       localStorage.setItem('has_seen_onboarding', 'true');
-      localStorage.setItem('guest_has_seeded', 'true');
     });
 
     await page.goto('/');

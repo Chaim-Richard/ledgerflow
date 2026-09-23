@@ -16,12 +16,12 @@ export class AIBackendService {
     });
   }
 
-  static async processTask(task: string, payload: any): Promise<any> {
+  static async processTask(task: string, payload: Record<string, unknown>): Promise<unknown> {
     const ai = this.getAiClient();
 
     switch (task) {
       case 'strategic-analysis': {
-        const mode = payload.mode || 'growth';
+        const mode = (payload.mode as string) || 'growth';
         if (!ai) {
           return {
             directives: [
@@ -62,7 +62,7 @@ export class AIBackendService {
             }
           });
           return JSON.parse(response.text || '{}');
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini strategic-analysis failed, falling back", err);
           return {
             directives: [`Deterministic strategic alignment for ${mode}.`],
@@ -73,10 +73,10 @@ export class AIBackendService {
       }
 
       case 'generate-forecast': {
-        const txs = payload.transactions || [];
-        const horizon = payload.horizon || 3;
+        const txs = (payload.transactions as Array<{ date?: string; totalAmountCents?: number }>) || [];
+        const horizon = (payload.horizon as number) || 3;
         if (!ai || txs.length === 0) {
-          const points = txs.map((t: any) => ({ date: t.date, value: (t.totalAmountCents || 0) / 100 }));
+          const points = txs.map((t) => ({ date: t.date, value: (t.totalAmountCents || 0) / 100 }));
           return {
             points,
             confidence: points.length > 5 ? 88 : 60,
@@ -84,7 +84,7 @@ export class AIBackendService {
           };
         }
         try {
-          const prompt = `Forecast cash flows for next ${horizon} months based on these historical points: ${JSON.stringify(txs.map((t: any) => ({ date: t.date, amount: (t.totalAmountCents || 0) / 100 })))}. Detect potential anomalies.`;
+          const prompt = `Forecast cash flows for next ${horizon} months based on these historical points: ${JSON.stringify(txs.map((t) => ({ date: t.date, amount: (t.totalAmountCents || 0) / 100 })))}. Detect potential anomalies.`;
           const response = await ai.models.generateContent({
             model: 'gemini-3.8-flash',
             contents: prompt,
@@ -112,10 +112,10 @@ export class AIBackendService {
             }
           });
           return JSON.parse(response.text || '{}');
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini generate-forecast failed, falling back", err);
           return {
-            points: txs.map((t: any) => ({ date: t.date, value: (t.totalAmountCents || 0) / 100 })),
+            points: txs.map((t) => ({ date: t.date, value: (t.totalAmountCents || 0) / 100 })),
             confidence: 50,
             anomalies: []
           };
@@ -123,8 +123,8 @@ export class AIBackendService {
       }
 
       case 'map-transactions': {
-        const txs = payload.transactions || [];
-        const accounts = payload.accounts || [];
+        const txs = (payload.transactions as unknown[]) || [];
+        const accounts = (payload.accounts as unknown[]) || [];
         if (!ai || txs.length === 0) return [];
         try {
           const prompt = `Suggest account mappings for these transactions: ${JSON.stringify(txs)} into these accounts: ${JSON.stringify(accounts)}. Context: ${payload.context || ''}`;
@@ -148,14 +148,14 @@ export class AIBackendService {
             }
           });
           return JSON.parse(response.text || '[]');
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini map-transactions failed", err);
           return [];
         }
       }
 
       case 'analyze-trends': {
-        const txs = payload.transactions || [];
+        const txs = (payload.transactions as unknown[]) || [];
         if (!ai) {
           return {
             trends: ["Expense velocity consistent with operations."],
@@ -182,14 +182,14 @@ export class AIBackendService {
             }
           });
           return JSON.parse(response.text || '{}');
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini analyze-trends failed", err);
           return { trends: [], anomalies: [], strategicAdvice: [] };
         }
       }
 
       case 'parse-query': {
-        const query = SecurityService.scrubPII(payload.query || '');
+        const query = SecurityService.scrubPII((payload.query as string) || '');
         if (!ai) return { parsedQuery: query };
         try {
           const prompt = `Parse the user query into filter fields. User query: "${query}". Context: ${payload.context || ''}`;
@@ -212,14 +212,14 @@ export class AIBackendService {
             }
           });
           return JSON.parse(response.text || '{}');
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini parse-query failed", err);
           return { parsedQuery: query };
         }
       }
 
       case 'parse-magic-entry': {
-        const input = SecurityService.scrubPII(payload.input || '');
+        const input = SecurityService.scrubPII((payload.input as string) || '');
         if (!ai) return { rawInput: input, parsed: false };
         try {
           const prompt = `Parse this natural language financial entry: "${input}". Match with available categories: ${JSON.stringify(payload.categories)} and accounts: ${JSON.stringify(payload.accounts)}. Pattern Context: ${payload.patternContext || ''}`;
@@ -243,7 +243,7 @@ export class AIBackendService {
             }
           });
           return JSON.parse(response.text || '{}');
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini parse-magic-entry failed", err);
           return { rawInput: input, parsed: false };
         }
@@ -259,7 +259,7 @@ export class AIBackendService {
             model: 'gemini-2.5-flash',
             contents: [
               { text: prompt },
-              { inlineData: { data: payload.base64Data, mimeType: payload.mimeType || 'image/png' } }
+              { inlineData: { data: payload.base64Data as string, mimeType: (payload.mimeType as string) || 'image/png' } }
             ],
             config: {
               responseMimeType: 'application/json',
@@ -276,7 +276,7 @@ export class AIBackendService {
             }
           });
           return JSON.parse(response.text || '{}');
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini parse-receipt failed", err);
           throw err;
         }
@@ -292,7 +292,7 @@ export class AIBackendService {
             model: 'gemini-2.5-flash',
             contents: [
               { text: prompt },
-              { inlineData: { data: payload.content, mimeType: payload.mimeType || 'application/pdf' } }
+              { inlineData: { data: payload.content as string, mimeType: (payload.mimeType as string) || 'application/pdf' } }
             ],
             config: {
               responseMimeType: 'application/json',
@@ -318,14 +318,14 @@ export class AIBackendService {
             }
           });
           return JSON.parse(response.text || '{}');
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini parse-statement failed", err);
           throw err;
         }
       }
 
       case 'parse-personal-tax-profile': {
-        const msg = payload.message || '';
+        const msg = (payload.message as string) || '';
         if (!ai) {
           throw new Error("Cannot parse personal tax profile: Gemini AI service unavailable.");
         }
@@ -351,16 +351,17 @@ export class AIBackendService {
             }
           });
           return JSON.parse(response.text || '{}');
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini parse-personal-tax-profile failed", err);
           throw err;
         }
       }
 
       case 'build-auto-rule': {
-        const sentence = payload.sentence || '';
-        const categories = payload.categories || [];
-        const accounts = payload.accounts || [];
+        const sentence = (payload.sentence as string) || '';
+        const categories = (payload.categories as string[]) || [];
+        const accounts = (payload.accounts as string[]) || [];
+        const projects = (payload.projects as string[]) || [];
         if (!ai) {
           throw new Error("Gemini API client is not initialized.");
         }
@@ -425,6 +426,24 @@ export class AIBackendService {
             delete parsed.rule.action.setAmountCents;
           }
 
+          // Validate targetCategory against workspace categories
+          if (parsed.rule.action?.targetCategory && Array.isArray(categories) && categories.length > 0) {
+            if (!categories.includes(parsed.rule.action.targetCategory)) {
+              const err = new Error(`Target category '${parsed.rule.action.targetCategory}' is not valid for this workspace.`) as Error & { status?: number };
+              err.status = 422;
+              throw err;
+            }
+          }
+
+          // Validate targetProject against workspace projects
+          if (parsed.rule.action?.targetProject && Array.isArray(projects) && projects.length > 0) {
+            if (!projects.includes(parsed.rule.action.targetProject)) {
+              const err = new Error(`Target project '${parsed.rule.action.targetProject}' is not valid for this workspace.`) as Error & { status?: number };
+              err.status = 422;
+              throw err;
+            }
+          }
+
           // Complete remaining missing fields for a valid AutoRule
           const ruleCandidate = {
             id: `rule_ai_${Date.now()}`,
@@ -441,7 +460,7 @@ export class AIBackendService {
           }
 
           return { rule: validationResult.data };
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini build-auto-rule failed", err);
           throw err;
         }
@@ -451,7 +470,7 @@ export class AIBackendService {
         if (!ai) {
           throw new Error("Cannot process chat: Gemini AI service unavailable.");
         }
-        const query = payload.query || '';
+        const query = (payload.query as string) || '';
         const summary = payload.ledgerSummary ? JSON.stringify(payload.ledgerSummary) : '';
         const prompt = `You are an expert ERP and Financial Ledger assistant.
 Ledger Context:
@@ -467,7 +486,7 @@ Provide a concise, direct, helpful, and professional financial response.`;
             contents: prompt
           });
           return { answer: response.text || "No response generated." };
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini chat failed", err);
           throw err;
         }
@@ -477,7 +496,7 @@ Provide a concise, direct, helpful, and professional financial response.`;
         if (!ai) {
           throw new Error("Cannot generate business blueprint: Gemini AI service unavailable.");
         }
-        const description = payload.description || '';
+        const description = (payload.description as string) || '';
         const prompt = `Generate a business chart of accounts and ERP configuration blueprint based on the following business description: "${description}".
 Return:
 - name: string (business or template name)
@@ -530,7 +549,7 @@ Return:
             }
           });
           return JSON.parse(response.text || '{}');
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.warn("Gemini parse-business-blueprint failed", err);
           throw err;
         }

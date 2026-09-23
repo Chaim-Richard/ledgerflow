@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  computeProfitAndLoss,
-  computeBalanceSheet,
   computeStatement,
   computeTaxLiability,
   computeCustomerBalanceSummary,
@@ -56,6 +54,20 @@ describe('Financial Report Math & Business Rules', () => {
     assert.ok(cust2);
     // Invoiced = 20000, Paid = 30000 -> negative balance (credit) = -10000
     assert.equal(cust2?.balanceCents, -10000);
+  });
+
+  it('includes unpaid invoices from prior years in the customer balance summary as-of date', () => {
+    const invoices = [
+      { id: 'inv-old', customerId: 'cust-1', amountCents: 50000, status: 'sent', date: '2025-06-15' },
+      { id: 'inv-new', customerId: 'cust-1', amountCents: 20000, status: 'sent', date: '2026-03-01' }
+    ];
+
+    // Compute balance as of 2026-03-31 - should include the 2025 unpaid invoice
+    const summary = computeCustomerBalanceSummary(mockCustomers, invoices, [], [], '2026-03-31');
+    const cust1 = summary.find(r => r.customerId === 'cust-1');
+    assert.ok(cust1);
+    assert.equal(cust1?.totalInvoicedCents, 70000);
+    assert.equal(cust1?.balanceCents, 70000);
   });
 
   it('computes Vendor Balance Summary with issued bills, vendor credits, and payments', () => {

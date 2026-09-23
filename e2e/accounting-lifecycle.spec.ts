@@ -7,7 +7,6 @@ test.describe('End-to-End Accounting Lifecycle & Workflows', () => {
     await page.addInitScript(() => {
       localStorage.setItem('isGuest', 'true');
       localStorage.setItem('has_seen_onboarding', 'true');
-      localStorage.setItem('guest_has_seeded', 'true');
     });
 
     await page.goto('/');

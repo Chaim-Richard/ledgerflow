@@ -3,6 +3,7 @@ import { FileText } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
 import { formatCurrency } from '../../lib/utils';
+import { getFiscalYearBounds } from '../../lib/fiscalCalendar';
 import { computeTransactionsByCustomer, PartyTransactionRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
 
@@ -12,8 +13,31 @@ export const TransactionsByCustomerView: React.FC = () => {
   const payments = useLedgerStore(s => s.payments);
   const creditNotes = useLedgerStore(s => s.creditNotes);
   const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+
+  const [startDate, setStartDate] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('startDate') || getFiscalYearBounds().startDate;
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('endDate') || getFiscalYearBounds().endDate;
+  });
+
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    const url = new URL(window.location.href);
+    if (val) url.searchParams.set('startDate', val);
+    else url.searchParams.delete('startDate');
+    window.history.replaceState({}, '', url.toString());
+  };
+
+  const handleEndDateChange = (val: string) => {
+    setEndDate(val);
+    const url = new URL(window.location.href);
+    if (val) url.searchParams.set('endDate', val);
+    else url.searchParams.delete('endDate');
+    window.history.replaceState({}, '', url.toString());
+  };
 
   const rows = useMemo<PartyTransactionRow[]>(() => {
     return computeTransactionsByCustomer(
@@ -138,8 +162,8 @@ export const TransactionsByCustomerView: React.FC = () => {
       searchPlaceholder="Filter by customer name, ref, or type..."
       startDate={startDate}
       endDate={endDate}
-      onStartDateChange={setStartDate}
-      onEndDateChange={setEndDate}
+      onStartDateChange={handleStartDateChange}
+      onEndDateChange={handleEndDateChange}
       columns={columns}
       data={filteredRows}
       emptyMessage="No customer transactions found matching search filter."

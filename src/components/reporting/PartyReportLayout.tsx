@@ -23,6 +23,8 @@ export interface PartyReportLayoutProps<T> {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
+  asOfDate?: string;
+  onAsOfDateChange?: (val: string) => void;
   startDate?: string;
   endDate?: string;
   onStartDateChange?: (val: string) => void;
@@ -45,6 +47,8 @@ export function PartyReportLayout<T>({
   searchTerm,
   onSearchChange,
   searchPlaceholder = 'Search...',
+  asOfDate,
+  onAsOfDateChange,
   startDate,
   endDate,
   onStartDateChange,
@@ -111,6 +115,18 @@ export function PartyReportLayout<T>({
             className="w-full pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
+
+        {onAsOfDateChange && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-neutral-500 text-[11px] font-semibold uppercase">As of Date:</span>
+            <input
+              type="date"
+              value={asOfDate || ''}
+              onChange={(e) => onAsOfDateChange(e.target.value)}
+              className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-900 dark:text-white"
+            />
+          </div>
+        )}
 
         {onStartDateChange && onEndDateChange && (
           <div className="flex items-center gap-2 text-xs">

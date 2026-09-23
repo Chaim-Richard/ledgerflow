@@ -42,6 +42,7 @@ import {
   PeriodStatus
 } from '../types';
 import { Scenario, useScenarioStore } from '../lib/scenarioStore';
+import { seedDemoWorkspace } from '../lib/demoWorkspaceSeeder';
 import { migrateWorkspaceDimensionNodesToCollection } from '../lib/migrations/dimensionNodesMigration';
 
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
@@ -52,6 +53,7 @@ import { fetchSnapshotBridge, useSnapshotBridge } from "./useSnapshotBridge";
 
 export function useLedgerData() {
   const user = useAuthStore(s => s.user);
+  const isGuest = useAuthStore(s => s.isGuest);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const setWorkspaces = useAuthStore(s => s.setWorkspaces);
   const setCurrentWorkspaceId = useAuthStore(s => s.setCurrentWorkspaceId);
@@ -59,7 +61,27 @@ export function useLedgerData() {
   const startDate = useUIStore(s => s.filterCriteria?.startDate);
   const endDate = useUIStore(s => s.filterCriteria?.endDate);
   const activeTab = useUIStore(s => s.activeTab);
+  
+  const setAccounts = useLedgerStore(s => s.setAccounts);
+  const setCustomers = useLedgerStore(s => s.setCustomers);
+  const setVendors = useLedgerStore(s => s.setVendors);
+  const setTransactions = useLedgerStore(s => s.setTransactions);
+  
   useSnapshotBridge();
+
+  // Guest mode seed effect
+  useEffect(() => {
+    if (!user && isGuest) {
+      const demoData = seedDemoWorkspace('guest');
+      setAccounts(demoData.accounts);
+      setCustomers(demoData.customers);
+      setVendors(demoData.vendors);
+      setTransactions(demoData.transactions);
+      if (!currentWorkspaceId) {
+        setCurrentWorkspaceId('guest');
+      }
+    }
+  }, [user, isGuest, setAccounts, setCustomers, setVendors, setTransactions, currentWorkspaceId, setCurrentWorkspaceId]);
 
 
   // 1. Workspaces

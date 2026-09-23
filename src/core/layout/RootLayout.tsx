@@ -37,6 +37,8 @@ export function RootLayout() {
   const activeTab = useUIStore(state => state.activeTab);
   const setActiveTab = useUIStore(state => state.setActiveTab);
   
+  const user = useAuthStore(state => state.user);
+  const isGuest = useAuthStore(state => state.isGuest);
   const workspaces = useAuthStore(state => state.workspaces);
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
   const projects = useLedgerStore(state => state.projects);
@@ -142,6 +144,11 @@ export function RootLayout() {
       )}>
         <ConnectionBanner />
         <LedgerBackupReminder />
+        {!user && isGuest && (
+          <div className="bg-purple-600/10 text-purple-600 dark:text-purple-400 border-b border-purple-500/20 px-4 py-1.5 text-xs text-center font-semibold">
+            Demo data — sign up to save your own
+          </div>
+        )}
         {isDataTruncated && (
           <div className="bg-amber-500/10 text-amber-500 border-b border-amber-500/20 px-4 py-2 text-sm text-center font-medium">
             Showing 2,000 of N transactions — totals are incomplete without server sync.

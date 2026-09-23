@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Building, Mail, Phone } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeVendorBalanceSummary, VendorBalanceSummaryRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
 
@@ -12,8 +12,7 @@ export const VendorBalanceSummaryView: React.FC = () => {
   const payments = useLedgerStore(s => s.payments);
   const vendorCredits = useLedgerStore(s => s.vendorCredits);
   const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [asOfDate, setAsOfDate] = useState(getLocalDateISO());
 
   const vendorRows = useMemo<VendorBalanceSummaryRow[]>(() => {
     return computeVendorBalanceSummary(
@@ -21,10 +20,9 @@ export const VendorBalanceSummaryView: React.FC = () => {
       bills,
       payments,
       vendorCredits,
-      startDate || undefined,
-      endDate || undefined
+      asOfDate
     );
-  }, [vendors, bills, payments, vendorCredits, startDate, endDate]);
+  }, [vendors, bills, payments, vendorCredits, asOfDate]);
 
   const filteredRows = useMemo(() => {
     if (!searchTerm.trim()) return vendorRows;
@@ -137,10 +135,8 @@ export const VendorBalanceSummaryView: React.FC = () => {
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
       searchPlaceholder="Search vendor by name, email, or phone..."
-      startDate={startDate}
-      endDate={endDate}
-      onStartDateChange={setStartDate}
-      onEndDateChange={setEndDate}
+      asOfDate={asOfDate}
+      onAsOfDateChange={setAsOfDate}
       columns={columns}
       data={filteredRows}
       emptyMessage="No vendor records found matching search filter."

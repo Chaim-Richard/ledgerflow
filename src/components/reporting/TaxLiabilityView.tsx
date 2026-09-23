@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeTaxLiability } from '../../server/reports/computeReports';
-import { Receipt, DollarSign, Calculator, Download } from 'lucide-react';
+import { Receipt, Calculator } from 'lucide-react';
 
 export default function TaxLiabilityView() {
   const invoices = useLedgerStore(s => s.invoices);

@@ -7,7 +7,6 @@ test.describe('Transaction List Improvements Suite', () => {
     await page.addInitScript(() => {
       localStorage.setItem('isGuest', 'true');
       localStorage.setItem('has_seen_onboarding', 'true');
-      localStorage.setItem('guest_has_seeded', 'true');
     });
 
     await page.goto('/');
@@ -25,12 +24,9 @@ test.describe('Transaction List Improvements Suite', () => {
   });
 
   test('Filtered totals bar displays and updates upon filtering, and attachment badge renders on transaction with fileUrls', async ({ page }) => {
-    // Navigate to Transactions -> Ledger & Journal
-    const txNav = page.locator('button:has-text("Transactions"), button[title="Transactions"]');
+    // Navigate to Transactions screen
+    const txNav = page.locator('[data-testid="nav-transactions"]');
     await txNav.first().click();
-
-    const ledgerNav = page.locator('button:has-text("Ledger & Journal"), button[title*="Ledger"]');
-    await ledgerNav.first().click();
 
     // Wait for the Transaction Grid and Filtered Totals bar
     const totalsBar = page.locator('[data-testid="filtered-totals-bar"]');
@@ -95,11 +91,8 @@ test.describe('Transaction List Improvements Suite', () => {
   });
 
   test('Tabular figures (tabular-nums) class is present on transaction amounts', async ({ page }) => {
-    const txNav = page.locator('button:has-text("Transactions"), button[title="Transactions"]');
+    const txNav = page.locator('[data-testid="nav-transactions"]');
     await txNav.first().click();
-
-    const ledgerNav = page.locator('button:has-text("Ledger & Journal"), button[title*="Ledger"]');
-    await ledgerNav.first().click();
 
     await page.waitForSelector('[data-testid="filtered-totals-bar"]', { timeout: 15000 });
 

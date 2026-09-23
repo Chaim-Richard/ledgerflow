@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Users, Mail, Phone } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeCustomerBalanceSummary, CustomerBalanceSummaryRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
 
@@ -12,8 +12,7 @@ export const CustomerBalanceSummaryView: React.FC = () => {
   const payments = useLedgerStore(s => s.payments);
   const creditNotes = useLedgerStore(s => s.creditNotes);
   const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [asOfDate, setAsOfDate] = useState(getLocalDateISO());
 
   const customerRows = useMemo<CustomerBalanceSummaryRow[]>(() => {
     return computeCustomerBalanceSummary(
@@ -21,10 +20,9 @@ export const CustomerBalanceSummaryView: React.FC = () => {
       invoices,
       payments,
       creditNotes,
-      startDate || undefined,
-      endDate || undefined
+      asOfDate
     );
-  }, [customers, invoices, payments, creditNotes, startDate, endDate]);
+  }, [customers, invoices, payments, creditNotes, asOfDate]);
 
   const filteredRows = useMemo(() => {
     if (!searchTerm.trim()) return customerRows;
@@ -137,10 +135,8 @@ export const CustomerBalanceSummaryView: React.FC = () => {
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
       searchPlaceholder="Search customer by name, email, or phone..."
-      startDate={startDate}
-      endDate={endDate}
-      onStartDateChange={setStartDate}
-      onEndDateChange={setEndDate}
+      asOfDate={asOfDate}
+      onAsOfDateChange={setAsOfDate}
       columns={columns}
       data={filteredRows}
       emptyMessage="No customer records found matching search filter."

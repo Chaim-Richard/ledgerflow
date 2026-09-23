@@ -3,6 +3,7 @@ import { FileSpreadsheet } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
 import { formatCurrency } from '../../lib/utils';
+import { getFiscalYearBounds } from '../../lib/fiscalCalendar';
 import { computeTransactionsByVendor, PartyTransactionRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
 
@@ -12,8 +13,31 @@ export const TransactionsByVendorView: React.FC = () => {
   const payments = useLedgerStore(s => s.payments);
   const vendorCredits = useLedgerStore(s => s.vendorCredits);
   const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+
+  const [startDate, setStartDate] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('startDate') || getFiscalYearBounds().startDate;
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('endDate') || getFiscalYearBounds().endDate;
+  });
+
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    const url = new URL(window.location.href);
+    if (val) url.searchParams.set('startDate', val);
+    else url.searchParams.delete('startDate');
+    window.history.replaceState({}, '', url.toString());
+  };
+
+  const handleEndDateChange = (val: string) => {
+    setEndDate(val);
+    const url = new URL(window.location.href);
+    if (val) url.searchParams.set('endDate', val);
+    else url.searchParams.delete('endDate');
+    window.history.replaceState({}, '', url.toString());
+  };
 
   const rows = useMemo<PartyTransactionRow[]>(() => {
     return computeTransactionsByVendor(
@@ -138,8 +162,8 @@ export const TransactionsByVendorView: React.FC = () => {
       searchPlaceholder="Filter by vendor name, ref, or type..."
       startDate={startDate}
       endDate={endDate}
-      onStartDateChange={setStartDate}
-      onEndDateChange={setEndDate}
+      onStartDateChange={handleStartDateChange}
+      onEndDateChange={handleEndDateChange}
       columns={columns}
       data={filteredRows}
       emptyMessage="No vendor transactions found matching search filter."

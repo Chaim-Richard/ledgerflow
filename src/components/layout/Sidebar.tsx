@@ -188,6 +188,7 @@ const Sidebar = React.memo(({
                  return (
                    <button
                      key={groupId}
+                     data-testid={`nav-${firstTabInGroup?.id || groupId}`}
                      onClick={() => {
                        if (firstTabInGroup) setActiveTab(firstTabInGroup.id as any);
                      }}
