@@ -202,6 +202,7 @@ export interface Transaction {
   isLocked?: boolean;
   lockedAt?: string;
   paymentToken?: string;
+  posted?: boolean;
 }
 
 export interface Project {

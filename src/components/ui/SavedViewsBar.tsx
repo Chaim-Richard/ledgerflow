@@ -83,46 +83,44 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
             return (
               <div
                 key={view.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => setActiveView(isActive ? null : view.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setActiveView(isActive ? null : view.id);
-                  }
-                }}
                 className={cn(
-                  "group relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 border cursor-pointer select-none",
+                  "group relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 border select-none",
                   isActive
                     ? "bg-[var(--brass)]/15 border-[var(--brass)] text-[var(--text)] shadow-xs font-semibold scale-[1.02]"
                     : "bg-[var(--surface-elevated)] border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--line-strong)]"
                 )}
               >
-                <div 
-                  className="p-1 rounded-md text-white flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: view.color || '#3b82f6' }}
+                <button
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => setActiveView(isActive ? null : view.id)}
+                  className="flex items-center gap-2 text-left cursor-pointer"
                 >
-                  <IconComponent size={12} />
-                </div>
-
-                <div className="flex flex-col text-left">
-                  <div className="flex items-center gap-1.5 leading-none">
-                    <span className="truncate max-w-[130px]">{view.name}</span>
-                    {view.isDefault && (
-                      <span className="text-[9px] px-1 py-0.2 bg-[var(--brass)]/20 text-[var(--brass)] rounded font-semibold uppercase tracking-wider">
-                        Default
-                      </span>
-                    )}
+                  <div 
+                    className="p-1 rounded-md text-white flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: view.color || '#3b82f6' }}
+                  >
+                    <IconComponent size={12} />
                   </div>
 
-                  <span className="text-[10px] font-bold mt-0.5 text-[var(--text-secondary)] tabular-nums">
-                    {formatCurrency(metrics.totalMoneyCents)}
-                    <span className="text-[9px] font-normal text-[var(--muted)] ml-1">
-                      ({metrics.matchingCount})
+                  <div className="flex flex-col text-left">
+                    <div className="flex items-center gap-1.5 leading-none">
+                      <span className="truncate max-w-[130px]">{view.name}</span>
+                      {view.isDefault && (
+                        <span className="text-[9px] px-1 py-0.2 bg-[var(--brass)]/20 text-[var(--brass)] rounded font-semibold uppercase tracking-wider">
+                          Default
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="text-[10px] font-bold mt-0.5 text-[var(--text-secondary)] tabular-nums">
+                      {formatCurrency(metrics.totalMoneyCents)}
+                      <span className="text-[9px] font-normal text-[var(--muted)] ml-1">
+                        ({metrics.matchingCount})
+                      </span>
                     </span>
-                  </span>
-                </div>
+                  </div>
+                </button>
 
                 <button
                   type="button"
