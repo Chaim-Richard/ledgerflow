@@ -280,6 +280,8 @@ export interface Bill {
   dueDate: string;
   status: 'draft' | 'pending' | 'approved' | 'paid' | 'partially_paid' | 'overdue' | 'unpaid' | 'void' | 'rejected' | 'cancelled';
   amountPaidCents?: number;
+  /** Part of amountPaidCents settled by payment records or applied credits (they post their own entries). */
+  settledByRecordsCents?: number;
   paymentDate?: string;
   paidAt?: string;
   reversalEventId?: string;
@@ -299,6 +301,8 @@ export interface Invoice {
   number?: string;
   amountCents: number;
   amountPaidCents?: number;
+  /** Part of amountPaidCents settled by payment records or applied credits (they post their own entries). */
+  settledByRecordsCents?: number;
   exchangeRate?: number;
   taxAmountCents?: number;
   taxRate?: number;

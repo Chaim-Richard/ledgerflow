@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-import { applyCreditNoteToInvoice, applyVendorCreditToBill } from '../lib/creditNoteEngine';
 import { calculateStraightLineDepreciation, generateDepreciationLedgerEntry } from '../lib/depreciationEngine';
 import { calculateDueDate, calculateLateFee } from '../lib/paymentTerms';
 import { detectDuplicateContacts } from '../lib/contactUtils';
@@ -9,76 +8,7 @@ import { CreditNote, Invoice, VendorCredit, Bill, FixedAsset, Estimate } from '.
 
 describe('Accounting Features & Engines Suite (Items 118 - 130)', () => {
 
-  describe('1. Credit Notes & Vendor Credits Application (Item 118 & 119)', () => {
-    test('applyCreditNoteToInvoice applies partial credit and updates status and AR line', () => {
-      const creditNote: CreditNote = {
-        id: 'cn_100',
-        uid: 'usr_1',
-        workspaceId: 'ws_test',
-        customerId: 'cust_1',
-        amountCents: 10000,
-        remainingCents: 10000,
-        date: '2026-09-01',
-        status: 'open',
-        createdAt: '2026-09-01T00:00:00Z'
-      };
-
-      const invoice: Invoice = {
-        id: 'inv_200',
-        uid: 'usr_1',
-        workspaceId: 'ws_test',
-        number: 'INV-200',
-        customerId: 'cust_1',
-        date: '2026-09-01',
-        dueDate: '2026-10-01',
-        amountCents: 25000,
-        amountPaidCents: 0,
-        status: 'sent'
-      };
-
-      const res = applyCreditNoteToInvoice(creditNote, invoice, 10000);
-
-      assert.equal(res.updatedCreditNote.remainingCents, 0);
-      assert.equal(res.updatedCreditNote.status, 'applied');
-      assert.equal(res.updatedInvoice.amountPaidCents, 10000);
-      assert.equal(res.updatedInvoice.status, 'partially_paid');
-      assert.equal(res.ledgerTransaction.totalAmountCents, 10000);
-      assert.equal(res.ledgerTransaction.lines?.length, 2);
-    });
-
-    test('applyVendorCreditToBill applies vendor credit to bill', () => {
-      const vendorCredit: VendorCredit = {
-        id: 'vc_300',
-        uid: 'usr_1',
-        workspaceId: 'ws_test',
-        vendorId: 'vend_1',
-        amountCents: 5000,
-        remainingCents: 5000,
-        date: '2026-09-01',
-        status: 'open',
-        createdAt: '2026-09-01T00:00:00Z'
-      };
-
-      const bill: Bill = {
-        id: 'bill_400',
-        uid: 'usr_1',
-        workspaceId: 'ws_test',
-        number: 'BILL-400',
-        vendorId: 'vend_1',
-        date: '2026-09-01',
-        dueDate: '2026-10-01',
-        amountCents: 5000,
-        amountPaidCents: 0,
-        status: 'pending'
-      };
-
-      const res = applyVendorCreditToBill(vendorCredit, bill, 5000);
-
-      assert.equal(res.updatedVendorCredit.remainingCents, 0);
-      assert.equal(res.updatedBill.amountPaidCents, 5000);
-      assert.equal(res.updatedBill.status, 'paid');
-    });
-  });
+  // Credit application and refunds: src/tests/credits.test.ts (server, real database)
 
   describe('2. Fixed Asset Register & Depreciation (Item 121)', () => {
     test('calculateStraightLineDepreciation builds exact monthly schedule and salvage value bound', () => {

@@ -122,6 +122,7 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
         ref: docRef,
         updates: {
           amountPaidCents: newPaid,
+          settledByRecordsCents: (docData.settledByRecordsCents || 0) + alloc.amountCents,
           status: newStatus,
           updatedAt: new Date().toISOString()
         }

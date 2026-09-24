@@ -121,7 +121,7 @@ describe('Posting endpoint: cost of goods sold moves stock', { skip: !url && 'LF
 
   after(async () => {
     server?.close();
-    for (const table of ['transactions', 'inventory', 'chartAccounts', 'invoices', 'idempotencyKeys', 'workspaces']) {
+    for (const table of ['transactions', 'inventory', 'chartAccounts', 'invoices', 'creditNotes', 'idempotencyKeys', 'workspaces']) {
       await db.pool.query(`delete from public."${table}" where workspace_id in ($1, $2) or id in ($1, $2)`, [ws, other]);
     }
     await db.terminate();
@@ -178,6 +178,18 @@ describe('Posting endpoint: cost of goods sold moves stock', { skip: !url && 'LF
     assert.equal(res.status, 200, await res.text());
     assert.equal(await stock(), -2);
     assert.equal((await post('owner-1', { workspaceId: ws, transactions: [reversalOf(`${ws}_r5`, entry)] })).status, 409);
+  });
+
+  test('an update changes only the fields it sends (Retry), and credit notes can be saved', async () => {
+    await db.collection('invoices').doc(`${ws}_inv7`).set({ workspaceId: ws, customerId: 'c', amountCents: 500, dueDate: '2026-05-01', status: 'sent', metadata: { cogsPending: true } });
+    const upd = await post('owner-1', { workspaceId: ws, transactions: [], entityMutation: { collection: 'invoices', docId: `${ws}_inv7`, action: 'update', data: { metadata: { cogsPending: false } } } });
+    assert.equal(upd.status, 200, JSON.stringify(upd.body));
+    const inv = (await db.collection('invoices').doc(`${ws}_inv7`).get()).data();
+    assert.equal(inv?.status, 'sent');
+    assert.equal(inv?.metadata?.cogsPending, false);
+    const cn = await post('owner-1', { workspaceId: ws, transactions: [], entityMutation: { collection: 'creditNotes', docId: `${ws}_cn1`, action: 'create', data: { customerId: 'c', amountCents: 300, remainingCents: 300, date: '2026-05-01', status: 'open' } } });
+    assert.equal(cn.status, 200, JSON.stringify(cn.body));
+    assert.equal((await db.collection('creditNotes').doc(`${ws}_cn1`).get()).data()?.amountCents, 300);
   });
 
   test('all or nothing: a failing entry also undoes the invoice change', async () => {

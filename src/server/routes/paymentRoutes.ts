@@ -4,7 +4,9 @@ import type { Firestore } from '../db/firestore';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
 import { createPaymentAtomic } from '../services/paymentService';
 import { getLocalDateISO } from '../../lib/utils';
-import { getWorkspaceUserRole, AuthenticatedRequest } from './workspaceRoutes';
+import { getWorkspaceUserRole, AuthenticatedRequest, requireWorkspaceRole } from './workspaceRoutes';
+import { applyCredit, CreditError, refundCredit } from '../services/creditService';
+import { writeServerAuditLog } from '../services/auditLogService';
 
 export const paymentRouter = express.Router();
 
@@ -74,3 +76,51 @@ export async function handleCreatePayment(req: express.Request, res: express.Res
 paymentRouter.post('/', (req, res) => handleCreatePayment(req, res));
 
 
+
+// Credit notes / vendor credits: apply to an open invoice / bill, or refund
+const creditApplySchema = z.object({
+  workspaceId: z.string().min(1),
+  kind: z.enum(['customer', 'vendor']),
+  creditId: z.string().min(1),
+  documentId: z.string().min(1),
+  amountCents: z.number().int().positive(),
+});
+const creditRefundSchema = z.object({
+  workspaceId: z.string().min(1),
+  kind: z.enum(['customer', 'vendor']),
+  creditId: z.string().min(1),
+  amountCents: z.number().int().positive(),
+  cashAccountId: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default(() => getLocalDateISO()),
+  memo: z.string().max(500).optional(),
+});
+
+async function handleCredit(req: express.Request, res: express.Response, action: 'apply' | 'refund') {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const db = getDb();
+    let result: Record<string, unknown>;
+    if (action === 'apply') {
+      const input = creditApplySchema.parse(req.body);
+      result = await applyCredit(db, input);
+    } else {
+      const input = creditRefundSchema.parse(req.body);
+      result = await refundCredit(db, { ...input, uid: user.uid });
+    }
+    const { workspaceId, kind, creditId, amountCents } = req.body;
+    await writeServerAuditLog({
+      workspaceId, uid: user.uid, email: user.email || '', action: action === 'apply' ? 'CREDIT_APPLIED' : 'CREDIT_REFUNDED',
+      entityType: kind === 'vendor' ? 'vendorCredit' : 'creditNote', entityId: creditId,
+      details: { amountCents, documentId: req.body.documentId, description: `${action === 'apply' ? 'Applied' : 'Refunded'} ${amountCents} cents of credit ${creditId}` },
+    }, { db });
+    res.json({ status: 'success', data: result });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: 'Invalid request', details: err.issues });
+    if (err instanceof CreditError) return res.status(err.status).json({ status: 'error', message: err.message });
+    res.status(400).json({ status: 'error', message: err instanceof Error ? err.message : String(err) });
+  }
+}
+
+const ledgerWriters = requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']);
+paymentRouter.post('/credits/apply', ledgerWriters, (req, res) => handleCredit(req, res, 'apply'));
+paymentRouter.post('/credits/refund', ledgerWriters, (req, res) => handleCredit(req, res, 'refund'));

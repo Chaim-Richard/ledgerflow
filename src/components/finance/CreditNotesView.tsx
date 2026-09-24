@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { CreditNote, VendorCredit } from '../../types';
-import { applyCreditNoteToInvoice, applyVendorCreditToBill } from '../../lib/creditNoteEngine';
+import CreditActionDialog from './CreditActionDialog';
+import type { CreditActionTarget } from './CreditActionDialog';
 import { EmptyState } from '../ui/EmptyState';
 import { Money } from '../ui/Money';
 import { 
@@ -37,6 +38,8 @@ export default function CreditNotesView() {
   const vendorCredits = useLedgerStore(s => s.vendorCredits || []);
   
   const { addEntity } = useEntityOperations();
+  const [creditAction, setCreditAction] = useState<CreditActionTarget | null>(null);
+  const usable = (c: CreditNote | VendorCredit) => (c.status === 'open' || c.status === 'partially_applied') && (c.remainingCents ?? c.amountCents) > 0;
 
   // Form State
   const [customerId, setCustomerId] = useState('');
@@ -212,6 +215,12 @@ export default function CreditNotesView() {
                       </td>
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {usable(cn) && (
+                            <>
+                              <button type="button" onClick={() => setCreditAction({ kind: 'customer', mode: 'apply', id: cn.id, number: cn.number, partyId: cn.customerId, partyName: cn.customerName, remainingCents: cn.remainingCents, currency: cn.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Apply</button>
+                              <button type="button" onClick={() => setCreditAction({ kind: 'customer', mode: 'refund', id: cn.id, number: cn.number, partyId: cn.customerId, partyName: cn.customerName, remainingCents: cn.remainingCents, currency: cn.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Refund</button>
+                            </>
+                          )}
                           <button
                             onClick={() => setPreviewCreditNote(cn)}
                             className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
@@ -256,6 +265,7 @@ export default function CreditNotesView() {
                     <th className="p-3 text-right">Amount</th>
                     <th className="p-3 text-right">Remaining Credit</th>
                     <th className="p-3 text-center">Status</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
@@ -272,6 +282,14 @@ export default function CreditNotesView() {
                           {vc.status.toUpperCase()}
                         </span>
                       </td>
+                      <td className="p-3 text-right">
+                        {usable(vc) && (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button type="button" onClick={() => setCreditAction({ kind: 'vendor', mode: 'apply', id: vc.id, number: vc.number, partyId: vc.vendorId, partyName: vc.vendorName, remainingCents: vc.remainingCents, currency: vc.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Apply</button>
+                            <button type="button" onClick={() => setCreditAction({ kind: 'vendor', mode: 'refund', id: vc.id, number: vc.number, partyId: vc.vendorId, partyName: vc.vendorName, remainingCents: vc.remainingCents, currency: vc.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Refund</button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -280,6 +298,8 @@ export default function CreditNotesView() {
           )}
         </div>
       )}
+
+      {creditAction && <CreditActionDialog target={creditAction} onClose={() => setCreditAction(null)} />}
 
       {/* Create Modal */}
       {showCreateModal && (

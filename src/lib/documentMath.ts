@@ -90,3 +90,21 @@ export function calculateAmountDue(doc: {
   const paid = Math.max(0, doc.amountPaidCents || 0);
   return Math.max(0, total - paid);
 }
+
+/**
+ * The part of an invoice/bill's paid amount that its own ledger posting records as cash.
+ * Payments recorded as payment records, and credits applied to the document, post their own
+ * entries (or none: a credit already reduced receivables/payables when it was issued); they are
+ * counted in `settledByRecordsCents` and must not be posted again when the document is re-posted.
+ * A document marked paid without a recorded amount counts as paid in full ("mark as paid").
+ */
+export function cashPostedWithDocumentCents(doc: {
+  amountCents?: number;
+  amountPaidCents?: number;
+  settledByRecordsCents?: number;
+  status?: string;
+}): number {
+  if (doc.status !== 'paid' && doc.status !== 'partially_paid') return 0;
+  const paid = doc.amountPaidCents || (doc.status === 'paid' ? Math.max(0, doc.amountCents || 0) : 0);
+  return Math.max(0, paid - Math.max(0, doc.settledByRecordsCents || 0));
+}

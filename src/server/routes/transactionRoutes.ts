@@ -6,7 +6,7 @@ import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidat
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { ClosingEntryEngine } from '../../kernel/ledger/ClosingEntryEngine';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchema, BankLineUpdateSchema } from '../../schemas';
+import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchema, BankLineUpdateSchema, CreditNoteSchema, VendorCreditSchema } from '../../schemas';
 import { Transaction } from '../../types';
 import { parseLocalDate, getLocalDateISO } from '../../lib/utils';
 import { getDb, assertWorkspaceAccess } from '../db/firestore';
@@ -478,7 +478,7 @@ transactionRouter.post('/bulk', async (req, res) => {
     }
 
     // Allowlist entityMutation collections to close arbitrary Admin-SDK mutation primitive
-    const ALLOWED_ENTITY_COLLECTIONS = ['invoices', 'bills', 'orders', 'projects'];
+    const ALLOWED_ENTITY_COLLECTIONS = ['invoices', 'bills', 'orders', 'projects', 'creditNotes', 'vendorCredits'];
     if (entityMutation) {
       if (!ALLOWED_ENTITY_COLLECTIONS.includes(entityMutation.collection)) {
         return res.status(400).json({ error: `Forbidden: entityMutation collection '${entityMutation.collection}' is not permitted.` });
@@ -537,10 +537,13 @@ transactionRouter.post('/bulk', async (req, res) => {
 
       // Writes
       if (entityRef && (entityMutation.action === 'create' || entityMutation.action === 'update')) {
-        const schemaMap: any = { invoices: InvoiceSchema, bills: BillSchema, orders: OrderSchema, projects: ProjectSchema };
+        const schemaMap: any = { invoices: InvoiceSchema, bills: BillSchema, orders: OrderSchema, projects: ProjectSchema, creditNotes: CreditNoteSchema, vendorCredits: VendorCreditSchema };
         const schema = schemaMap[entityMutation.collection];
         if (!schema) throw new Error(`Forbidden: No schema for entityMutation collection '${entityMutation.collection}'.`);
-        const validatedData = schema.parse({ ...entityMutation.data, workspaceId: wsId });
+        // An update sends only the changed fields: check those, and never fill in defaults for the rest
+        const sent = { ...(entityMutation.data || {}), workspaceId: wsId };
+        const parsed = (entityMutation.action === 'update' ? schema.partial() : schema).parse(sent);
+        const validatedData = entityMutation.action === 'update' ? Object.fromEntries(Object.entries(parsed).filter(([k]) => k in sent)) : parsed;
         t.set(entityRef, { ...validatedData, uid: user.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       } else if (entityRef && entityMutation.action === 'delete') {
         t.delete(entityRef);

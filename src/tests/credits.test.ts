@@ -1,0 +1,125 @@
+/**
+ * Credit notes / vendor credits after issue (src/server/services/creditService.ts via
+ * POST /api/v1/payments/credits/apply|refund), and the rule that an invoice's own posting
+ * never records cash that a payment record or a credit already settled.
+ * The database part runs when LF_TEST_DATABASE_URL is set.
+ */
+import test, { after, before, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import crypto from 'crypto';
+import type { AddressInfo } from 'node:net';
+import type { Server } from 'node:http';
+import { cashPostedWithDocumentCents } from '../lib/documentMath';
+import type { Firestore } from '../server/db/pgFirestore';
+
+describe('Cash posted with an invoice', () => {
+  test('"mark as paid" with no recorded amount counts as paid in full', () => {
+    assert.equal(cashPostedWithDocumentCents({ status: 'paid', amountCents: 5000 }), 5000);
+  });
+  test('amounts settled by payment records or credits are not posted again', () => {
+    assert.equal(cashPostedWithDocumentCents({ status: 'paid', amountCents: 5000, amountPaidCents: 5000, settledByRecordsCents: 5000 }), 0);
+    assert.equal(cashPostedWithDocumentCents({ status: 'partially_paid', amountCents: 5000, amountPaidCents: 3000, settledByRecordsCents: 1000 }), 2000);
+  });
+  test('unpaid documents post no cash', () => {
+    assert.equal(cashPostedWithDocumentCents({ status: 'sent', amountCents: 5000, amountPaidCents: 5000 }), 0);
+  });
+});
+
+const url = process.env.LF_TEST_DATABASE_URL;
+
+describe('Credits: apply and refund', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
+  const suffix = crypto.randomBytes(4).toString('hex');
+  const ws = `ws_credit_${suffix}`;
+  const id = (name: string) => `${ws}_${name}`;
+  let server: Server;
+  let base = '';
+  let db: Firestore;
+
+  const call = async (uid: string, action: 'apply' | 'refund', body: Record<string, unknown>) => {
+    const res = await fetch(`${base}/api/v1/payments/credits/${action}`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': uid },
+      body: JSON.stringify({ workspaceId: ws, ...body }),
+    });
+    return { status: res.status, body: await res.json() as Record<string, unknown> };
+  };
+  const get = async (coll: string, name: string) => (await db.collection(coll).doc(id(name)).get()).data() || {};
+
+  before(async () => {
+    process.env.DATABASE_URL = url;
+    const express = (await import('express')).default;
+    const { paymentRouter } = await import('../server/routes/paymentRoutes');
+    const { getDb } = await import('../server/db/firestore');
+    db = getDb();
+    await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'Credits', currency: 'USD', members: ['owner-1', 'view-1'], roles: { 'view-1': 'viewer' } });
+    const account = (name: string, data: Record<string, unknown>) => db.collection('chartAccounts').doc(id(name)).set({ workspaceId: ws, ...data });
+    await account('cash', { name: 'Checking', type: 'asset', category: 'Cash', code: '1000' });
+    await account('ar', { name: 'Accounts Receivable', type: 'asset', category: 'Receivables', code: '1100' });
+    await account('ap', { name: 'Accounts Payable', type: 'liability', category: 'Payables', code: '2000' });
+    await db.collection('creditNotes').doc(id('cn')).set({ workspaceId: ws, customerId: 'c1', customerName: 'Acme', number: 'CN-1', amountCents: 10000, remainingCents: 10000, date: '2026-05-01', status: 'open', currency: 'USD' });
+    await db.collection('vendorCredits').doc(id('vc')).set({ workspaceId: ws, vendorId: 'v1', vendorName: 'Supply', number: 'VC-1', amountCents: 4000, remainingCents: 4000, date: '2026-05-01', status: 'open', currency: 'USD' });
+    await db.collection('invoices').doc(id('inv')).set({ workspaceId: ws, customerId: 'c1', number: 'INV-1', amountCents: 6000, amountPaidCents: 0, status: 'sent', dueDate: '2026-06-01', currency: 'USD' });
+    await db.collection('invoices').doc(id('other')).set({ workspaceId: ws, customerId: 'c2', number: 'INV-2', amountCents: 6000, status: 'sent', dueDate: '2026-06-01', currency: 'USD' });
+
+    const app = express();
+    app.use(express.json());
+    app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: String(req.header('x-test-uid')) }; next(); });
+    app.use('/api/v1/payments', paymentRouter);
+    server = app.listen(0);
+    base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+
+  after(async () => {
+    server?.close();
+    for (const table of ['transactions', 'creditNotes', 'vendorCredits', 'invoices', 'chartAccounts', 'auditLogs', 'workspaces']) {
+      await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
+    }
+    await db.terminate();
+  });
+
+  test('a viewer cannot use credits', async () => {
+    assert.equal((await call('view-1', 'apply', { kind: 'customer', creditId: id('cn'), documentId: id('inv'), amountCents: 100 })).status, 403);
+  });
+
+  test('applying settles the invoice and lowers the credit, with no ledger entry', async () => {
+    const res = await call('owner-1', 'apply', { kind: 'customer', creditId: id('cn'), documentId: id('inv'), amountCents: 6000 });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const inv = await get('invoices', 'inv');
+    assert.equal(inv.amountPaidCents, 6000);
+    assert.equal(inv.settledByRecordsCents, 6000);
+    assert.equal(inv.status, 'paid');
+    const cn = await get('creditNotes', 'cn');
+    assert.equal(cn.remainingCents, 4000);
+    assert.equal(cn.status, 'partially_applied');
+    const posted = await db.collection('transactions').where('workspaceId', '==', ws).get();
+    assert.equal(posted.size, 0);
+    // Re-posting the invoice later must not record this as cash
+    assert.equal(cashPostedWithDocumentCents(inv), 0);
+  });
+
+  test('refused: another customer, more than is left, a paid invoice', async () => {
+    assert.equal((await call('owner-1', 'apply', { kind: 'customer', creditId: id('cn'), documentId: id('other'), amountCents: 100 })).status, 400);
+    assert.equal((await call('owner-1', 'apply', { kind: 'customer', creditId: id('cn'), documentId: id('inv'), amountCents: 100 })).status, 409);
+    assert.equal((await call('owner-1', 'refund', { kind: 'customer', creditId: id('cn'), amountCents: 4001, cashAccountId: id('cash'), date: '2026-05-02' })).status, 400);
+  });
+
+  test('customer refund: DR receivables, CR cash, credit used up', async () => {
+    const res = await call('owner-1', 'refund', { kind: 'customer', creditId: id('cn'), amountCents: 4000, cashAccountId: id('cash'), date: '2026-05-02' });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const tx = (await db.collection('transactions').doc(String((res.body.data as Record<string, unknown>).transactionId)).get()).data();
+    assert.deepEqual(tx?.lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]), [[id('ar'), 4000], [id('cash'), -4000]]);
+    assert.equal(tx?.metadata.refundOfCreditId, id('cn'));
+    const cn = await get('creditNotes', 'cn');
+    assert.equal(cn.remainingCents, 0);
+    assert.equal(cn.status, 'applied');
+    assert.equal((await call('owner-1', 'refund', { kind: 'customer', creditId: id('cn'), amountCents: 1, cashAccountId: id('cash'), date: '2026-05-02' })).status, 409);
+  });
+
+  test('vendor refund: DR cash, CR payables; the cash account must be a bank/cash account', async () => {
+    assert.equal((await call('owner-1', 'refund', { kind: 'vendor', creditId: id('vc'), amountCents: 1000, cashAccountId: id('ar'), date: '2026-05-02' })).status, 400);
+    const res = await call('owner-1', 'refund', { kind: 'vendor', creditId: id('vc'), amountCents: 1500, cashAccountId: id('cash'), date: '2026-05-03' });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const tx = (await db.collection('transactions').doc(String((res.body.data as Record<string, unknown>).transactionId)).get()).data();
+    assert.deepEqual(tx?.lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]), [[id('cash'), 1500], [id('ap'), -1500]]);
+    assert.equal((await get('vendorCredits', 'vc')).remainingCents, 2500);
+  });
+});

@@ -17,7 +17,7 @@ import {
   InventoryItem
 } from '../types';
 import { isPostable } from '../lib/txFilters';
-import { calculateDocumentTax } from '../lib/documentMath';
+import { calculateDocumentTax, cashPostedWithDocumentCents } from '../lib/documentMath';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
 import { planInvoiceCogs } from './invoiceCogs';
 
@@ -293,7 +293,8 @@ export class LedgerPostService {
 
     // 3. Transaction 2: Payment Posting (DR Cash, CR A/R)
     if (status === 'paid' || status === 'partially_paid') {
-      const paidAmtCents = roundCents((invoiceData.amountPaidCents || (status === 'paid' ? rawAmount : 0)) * rate);
+      // Only what was marked paid on the document itself; payment records and credits post their own entries
+      const paidAmtCents = roundCents(cashPostedWithDocumentCents({ ...invoiceData, status }) * rate);
       if (paidAmtCents > 0) {
         const paymentDate = invoiceData.paymentDate || invoiceData.paidAt || today;
         const paymentTx = {
@@ -474,7 +475,8 @@ export class LedgerPostService {
 
     // 3. Transaction 2: Payment Posting (DR A/P, CR Cash)
     if (status === 'paid' || status === 'partially_paid') {
-      const paidAmtCents = roundCents((billData.amountPaidCents || (status === 'paid' ? rawAmount : 0)) * rate);
+      // Only what was marked paid on the document itself; payment records and credits post their own entries
+      const paidAmtCents = roundCents(cashPostedWithDocumentCents({ ...billData, status }) * rate);
       if (paidAmtCents > 0) {
         const paymentDate = billData.paymentDate || billData.paidAt || today;
         const paymentTx = {
@@ -584,7 +586,11 @@ export class LedgerPostService {
     }
 
     if (creditNoteData.status === 'void') {
-      if (txsToPost.length > 0) {
+      // A credit already applied to invoices/bills or refunded can't be voided (that would undo money that moved)
+      if (typeof creditNoteData.remainingCents === 'number' && creditNoteData.remainingCents < (creditNoteData.amountCents || 0)) {
+        throw new Error('This credit has been applied or refunded and can no longer be voided.');
+      }
+      if (txsToPost.length > 0 || entityMutation) {
         await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
       }
       return;
@@ -694,7 +700,11 @@ export class LedgerPostService {
     }
 
     if (vendorCreditData.status === 'void') {
-      if (txsToPost.length > 0) {
+      // A credit already applied to invoices/bills or refunded can't be voided (that would undo money that moved)
+      if (typeof vendorCreditData.remainingCents === 'number' && vendorCreditData.remainingCents < (vendorCreditData.amountCents || 0)) {
+        throw new Error('This credit has been applied or refunded and can no longer be voided.');
+      }
+      if (txsToPost.length > 0 || entityMutation) {
         await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
       }
       return;

@@ -207,6 +207,7 @@ export const InvoiceSchema = z.object({
   number: z.string().max(100).optional(),
   amountCents: z.number().int().nonnegative().optional(),
   amountPaidCents: z.number().int().nonnegative().optional(),
+  settledByRecordsCents: z.number().int().nonnegative().optional(),
   currency: z.string().max(10).optional(),
   exchangeRate: z.number().positive().finite().optional(),
   status: z.enum(['draft', 'pending', 'paid', 'partially_paid', 'overdue', 'sent', 'approved', 'rejected', 'invoiced', 'void']),
@@ -250,6 +251,7 @@ export const BillSchema = z.object({
   lockedAt: z.string().optional(),
   paymentToken: z.string().optional(),
   amountPaidCents: z.number().int().nonnegative().optional(),
+  settledByRecordsCents: z.number().int().nonnegative().optional(),
 });
 
 export const OrderSchema = z.object({
