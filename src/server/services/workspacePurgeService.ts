@@ -1,8 +1,9 @@
-import admin from 'firebase-admin';
+import type { Firestore } from '../db/firestore';
+import { deleteFilesWithPrefix, StorageNotConfiguredError } from '../storage/supabaseStorage';
 import { WORKSPACE_SCOPED_COLLECTIONS } from '../../constants/collections';
 import { writeServerAuditLog } from './auditLogService';
 
-export async function purgePendingWorkspaces(db: admin.firestore.Firestore): Promise<{ purgedWorkspaces: string[]; errors: string[] }> {
+export async function purgePendingWorkspaces(db: Firestore): Promise<{ purgedWorkspaces: string[]; errors: string[] }> {
   const nowISO = new Date().toISOString();
   const purgedWorkspaces: string[] = [];
   const errors: string[] = [];
@@ -91,11 +92,10 @@ export async function purgePendingWorkspaces(db: admin.firestore.Firestore): Pro
 
         // 2. Purge Storage files associated with this workspace
         try {
-          const bucket = admin.storage().bucket();
-          await bucket.deleteFiles({ prefix: `workspaces/${workspaceId}/` });
-          await bucket.deleteFiles({ prefix: `${workspaceId}/` });
+          await deleteFilesWithPrefix(`workspaces/${workspaceId}/`);
+          await deleteFilesWithPrefix(`${workspaceId}/`);
         } catch (storageErr: any) {
-          if (process.env.NODE_ENV !== 'production' && (!admin.apps?.length || storageErr?.code === 'storage/unknown' || storageErr?.message?.includes('bucket') || storageErr?.message?.includes('storage is not') || storageErr?.message?.includes('default bucket'))) {
+          if (process.env.NODE_ENV !== 'production' && storageErr instanceof StorageNotConfiguredError) {
             // Tolerate unconfigured storage bucket only in non-production/test environments
             console.warn(`[Workspace Purge] Non-production storage tolerance for workspace ${workspaceId}:`, storageErr?.message);
           } else {

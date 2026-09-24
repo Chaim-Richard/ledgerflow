@@ -11,7 +11,7 @@ process.env.SYSTEM_SALT = process.env.SYSTEM_SALT || 'test-audit-salt-hex-32-cha
 import { SecurityService } from '../services/securityService.js';
 import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator.js';
 import { validateWorkspaceMember, validateWorkspaceAccounts } from '../server/db/firestore.js';
-import type { Firestore } from 'firebase-admin/firestore';
+import type { Firestore } from '../server/db/firestore';
 
 describe('Security and Integrity Deep Audit Test Suite', () => {
   test('AES-256-GCM encryption & decryption round-trip works accurately', () => {

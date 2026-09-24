@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import type express from 'express';
-import type { Firestore } from 'firebase-admin/firestore';
+import type { Firestore } from '../server/db/firestore';
 import { handleReconcile } from '../server/routes/transactionRoutes';
 
 class MockDb {

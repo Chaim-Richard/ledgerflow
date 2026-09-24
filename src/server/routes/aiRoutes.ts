@@ -1,6 +1,6 @@
 import express from "express";
 import { z } from "zod";
-import admin from "firebase-admin";
+import { verifyIdToken } from "../auth/supabaseAuth";
 import { AIBackendService } from "../services/aiBackendService";
 import { SecurityService } from "../../services/securityService";
 import { getDb, validateWorkspaceMember } from "../db/firestore";
@@ -54,7 +54,7 @@ aiRouter.post("/process", async (req: express.Request, res: express.Response) =>
   const token = authHeader.split("Bearer ")[1];
   let decodedToken: any;
   try {
-    decodedToken = await admin.auth().verifyIdToken(token);
+    decodedToken = await verifyIdToken(token);
   } catch (_e) {
     return res.status(401).json({ status: "error", message: "Unauthenticated: Invalid token" });
   }

@@ -1,4 +1,4 @@
-import admin from "firebase-admin";
+import { FieldValue } from "../db/firestore";
 
 export async function incrementShardedCounter(
   db: any, 
@@ -15,7 +15,7 @@ export async function incrementShardedCounter(
       workspaceId,
       metric,
       shardId,
-      value: admin.firestore.FieldValue.increment(value)
+      value: FieldValue.increment(value)
     }, { merge: true });
   } catch (err: any) {
     console.error("Failed to increment sharded counter:", err);

@@ -1,20 +1,5 @@
-import admin from 'firebase-admin';
-import fs from 'node:fs';
+import { getDb } from '../src/server/db/firestore';
 import { calculateDocumentTax } from '../src/lib/documentMath';
-
-// Initialize Firebase Admin
-if (!admin.apps.length) {
-  let firebaseConfig: any = {};
-  try {
-    firebaseConfig = JSON.parse(fs.readFileSync('firebase-applet-config.json', 'utf8'));
-  } catch (e) {}
-  const projectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
-  if (projectId) {
-    admin.initializeApp({ projectId });
-  } else {
-    admin.initializeApp();
-  }
-}
 
 async function run() {
   const args = process.argv.slice(2);
@@ -32,7 +17,7 @@ async function run() {
     process.exit(0);
   }
 
-  const db = admin.firestore();
+  const db = getDb();
 
   console.log(`Recomputing document tax for workspace: ${workspaceId} (Read-only mode)`);
 
@@ -91,6 +76,7 @@ async function run() {
   }
 
   console.log("Recomputation completed successfully.");
+  await db.terminate();
   process.exit(0);
 }
 

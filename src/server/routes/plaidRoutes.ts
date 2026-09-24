@@ -55,9 +55,10 @@ plaidRouter.post("/exchange_public_token", async (req: express.Request, res: exp
 
     const { access_token, item_id } = response.data;
     
-    // Store encrypted access_token in Firestore associated with the user/workspace
+    // Store the encrypted access_token in the server-only banks collection, tagged with the user
     const db = getDb();
-    await db.collection("users").doc(user.uid).collection("banks").add({
+    await db.collection("banks").add({
+      uid: user.uid,
       access_token: SecurityService.encryptSensitiveField(access_token),
       item_id,
       createdAt: new Date().toISOString()
@@ -76,7 +77,7 @@ plaidRouter.post("/sync", async (req: express.Request, res: express.Response) =>
     const db = getDb();
     
     // Get all banks for the user
-    const banksSnap = await db.collection("users").doc(user.uid).collection("banks").get();
+    const banksSnap = await db.collection("banks").where("uid", "==", user.uid).get();
     if (banksSnap.empty) {
        return res.json({ transactions: [] });
     }

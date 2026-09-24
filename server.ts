@@ -33,8 +33,6 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import admin from "firebase-admin";
-import { getFirestore } from "firebase-admin/firestore";
 import multer from "multer";
 import fs from "fs";
 import { parse as parseCsv } from 'csv-parse/sync';
@@ -70,7 +68,10 @@ import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
 import { TruthEngine } from "./src/modules/integrity/TruthEngine.ts";
 import { calculateNetIncome, isPostable, lineAmount } from "./src/lib/txFilters.ts";
 import { TransactionValidator } from "./src/kernel/validation/TransactionValidator.ts";
-import { assertWorkspaceAccess } from "./src/server/db/firestore.ts";
+import { assertWorkspaceAccess, getDb, FieldValue } from "./src/server/db/firestore.ts";
+import type { Transaction } from "./src/server/db/firestore.ts";
+import { verifyIdToken, authAdmin, supabaseUrl } from "./src/server/auth/supabaseAuth.ts";
+import type { DecodedIdToken } from "./src/server/auth/supabaseAuth.ts";
 
 import { processAllRecurring } from "./src/server/services/recurringService.ts";
 import { processErrorDigest } from "./src/server/services/errorDigestService.ts";
@@ -138,7 +139,7 @@ const EnvSchema = z.object({
   CURRENCY_API_KEY: z.string().min(1),
   TAX_API_KEY: z.string().min(1),
   SYSTEM_SALT: z.string().min(1),
-  FIREBASE_PROJECT_ID: z.string().optional(),
+  DATABASE_URL: z.string().optional(),
 });
 
 const envResult = EnvSchema.safeParse(process.env);
@@ -160,33 +161,12 @@ try {
 }
 
 // --- Types ---
-interface AuthUser extends admin.auth.DecodedIdToken {
+interface AuthUser extends DecodedIdToken {
   email_verified: boolean;
 }
 
 interface AuthenticatedRequest extends express.Request {
   user: AuthUser;
-}
-
-// Load Firebase Config safely with environment override
-let firebaseConfig: Record<string, any> = {};
-try {
-  const configPath = path.resolve(process.cwd(), "firebase-applet-config.json");
-  if (fs.existsSync(configPath)) {
-    firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
-  }
-} catch (error) {
-  console.warn("[Firebase Admin] Warning: Could not read firebase-applet-config.json:", error);
-}
-
-// Applet config project ID takes precedence to keep client & admin SDK in sync
-const activeFirebaseProjectId = firebaseConfig.projectId || process.env.FIREBASE_PROJECT_ID;
-
-if (admin.apps.length === 0 && activeFirebaseProjectId) {
-  admin.initializeApp({
-    projectId: activeFirebaseProjectId,
-  });
-  console.debug(`[Firebase Admin] Initialized for project: ${activeFirebaseProjectId}`);
 }
 
 const upload = multer({ 
@@ -197,32 +177,6 @@ const upload = multer({
   }
 });
 
-const getDb = () => {
-  const dbId = firebaseConfig.firestoreDatabaseId || process.env.FIRESTORE_DATABASE_ID || "(default)";
-  try {
-    let firestoreInstance;
-    if (dbId && dbId !== "(default)") {
-      firestoreInstance = getFirestore(admin.app(), dbId);
-    } else {
-      firestoreInstance = getFirestore(admin.app());
-    }
-    try {
-      firestoreInstance.settings({ ignoreUndefinedProperties: true });
-    } catch {
-      // settings already initialized
-    }
-    return firestoreInstance;
-  } catch (error) {
-    console.error(`[Firebase Admin] Failed getFirestore for: ${dbId}`, error);
-    const fallbackInstance = getFirestore(admin.app()); 
-    try {
-      fallbackInstance.settings({ ignoreUndefinedProperties: true });
-    } catch {
-      // ignore if settings already locked
-    }
-    return fallbackInstance;
-  }
-};
 
 // --- Global Admin Pricing & Billing Overrides System ---
 let globalAdminConfig = {
@@ -441,7 +395,7 @@ const authenticate = async (req: express.Request, res: express.Response, next: e
   const idToken = authHeader.split("Bearer ")[1];
 
   try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken) as AuthUser;
+    const decodedToken = await verifyIdToken(idToken) as AuthUser;
     
     if (decodedToken.admin === true || (decodedToken as any).role === 'admin') {
       decodedToken.admin = true;
@@ -482,7 +436,7 @@ const optionalAuthenticate = async (req: express.Request, res: express.Response,
 
   const idToken = authHeader.split("Bearer ")[1];
   try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken) as AuthUser;
+    const decodedToken = await verifyIdToken(idToken) as AuthUser;
     (req as AuthenticatedRequest).user = decodedToken;
   } catch (_err) {
     // Non-blocking: unauthenticated telemetry fallback
@@ -512,7 +466,7 @@ async function writeAuditLog(
   workspaceId: string = 'system',
   before?: any,
   after?: any,
-  transaction?: admin.firestore.Transaction
+  transaction?: Transaction
 ) {
   try {
     const db = getDb();
@@ -601,6 +555,12 @@ async function startServer() {
       return true;
     }
 
+    // This project's own Vercel deployments (production and preview URLs Vercel sets at runtime)
+    const vercelHosts = [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL].filter(Boolean);
+    if (vercelHosts.some(host => origin === `https://${host}`)) {
+      return true;
+    }
+
     // Localhost & loopback
     if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?$/.test(origin)) {
       return true;
@@ -657,7 +617,8 @@ async function startServer() {
         scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "blob:", "https:"],
-        connectSrc: ["'self'", "https://firebasestorage.googleapis.com", "https://*.googleapis.com"],
+        // Supabase: data (https) and live updates (wss)
+        connectSrc: ["'self'", supabaseUrl(), supabaseUrl().replace(/^http/, "ws"), "https://*.googleapis.com"],
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
         frameSrc: ["'self'", "https://*.stripe.com", "https://cdn.plaid.com"],
         frameAncestors: isAiStudioProxy ? ["*"] : ["'self'"]
@@ -715,24 +676,14 @@ async function startServer() {
               return { alreadyProcessed: true };
             }
 
-            let doc = await t.get(invoiceRef);
-            let targetRef = invoiceRef;
-            
-            // Fallback check for legacy nested collection if top-level does not exist
-            if (!doc.exists && workspaceId) {
-              const legacyRef = db.collection('workspaces').doc(workspaceId).collection('invoices').doc(invoiceId);
-              const legacyDoc = await t.get(legacyRef);
-              if (legacyDoc.exists) {
-                doc = legacyDoc;
-                targetRef = legacyRef;
-              }
-            }
-            
+            const doc = await t.get(invoiceRef);
+            const targetRef = invoiceRef;
+
             if (!doc.exists) {
               t.set(eventRef, {
                 id: eventId,
                 type: event.type,
-                processedAt: admin.firestore.FieldValue.serverTimestamp(),
+                processedAt: FieldValue.serverTimestamp(),
                 note: 'invoice_not_found'
               });
               return { notFound: true };
@@ -756,7 +707,7 @@ async function startServer() {
 
                 t.update(targetRef, {
                   status: newTotalPaid >= totalInvoiceCents ? 'paid' : 'partially_paid',
-                  amountPaidCents: admin.firestore.FieldValue.increment(amountTotal),
+                  amountPaidCents: FieldValue.increment(amountTotal),
                   paidAt: new Date().toISOString(),
                   isLocked: newTotalPaid >= totalInvoiceCents
                 });
@@ -858,7 +809,7 @@ async function startServer() {
                 // Async payment pending (e.g. ACH clearing)
                 t.update(targetRef, {
                   paymentStatus: 'pending_settlement',
-                  updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                  updatedAt: FieldValue.serverTimestamp()
                 });
               }
             }
@@ -867,7 +818,7 @@ async function startServer() {
               id: eventId,
               type: event.type,
               paymentStatus: session.payment_status,
-              processedAt: admin.firestore.FieldValue.serverTimestamp()
+              processedAt: FieldValue.serverTimestamp()
             });
 
             return { success: true };
@@ -911,7 +862,7 @@ async function startServer() {
               };
 
               if (isNewSubscription || wsData.computeCreditBalance === undefined) {
-                updatePayload.computeCreditBalance = admin.firestore.FieldValue.increment(creditsToGrant);
+                updatePayload.computeCreditBalance = FieldValue.increment(creditsToGrant);
               }
 
               t.set(wsRef, updatePayload, { merge: true });
@@ -919,7 +870,7 @@ async function startServer() {
               t.set(eventRef, {
                 id: eventId,
                 type: event.type,
-                processedAt: admin.firestore.FieldValue.serverTimestamp()
+                processedAt: FieldValue.serverTimestamp()
               });
 
               return { success: true };
@@ -962,7 +913,7 @@ async function startServer() {
           t.set(eventRef, {
             id: eventId,
             type: event.type,
-            processedAt: admin.firestore.FieldValue.serverTimestamp()
+            processedAt: FieldValue.serverTimestamp()
           });
         });
       } else {
@@ -970,7 +921,7 @@ async function startServer() {
         await eventRef.set({
           id: eventId,
           type: event.type,
-          processedAt: admin.firestore.FieldValue.serverTimestamp()
+          processedAt: FieldValue.serverTimestamp()
         }, { merge: true });
       }
 
@@ -1097,15 +1048,9 @@ async function startServer() {
           if (authUser.admin) {
             validatedWorkspaceId = rawData.workspaceId;
           } else {
-            const memberDoc = await db.collection("workspaces").doc(rawData.workspaceId).collection("members").doc(authUser.uid).get();
-            if (memberDoc.exists) {
-              validatedWorkspaceId = rawData.workspaceId;
-            } else {
-              const wsDoc = await db.collection("workspaces").doc(rawData.workspaceId).get();
-              if (wsDoc.exists && wsDoc.data()?.ownerId === authUser.uid) {
-                validatedWorkspaceId = rawData.workspaceId;
-              }
-            }
+            // Throws when the user is not a member (caught below).
+            await assertWorkspaceAccess(db, rawData.workspaceId, authUser);
+            validatedWorkspaceId = rawData.workspaceId;
           }
           validatedUserId = authUser.uid;
           validatedUserEmail = authUser.email;
@@ -1162,7 +1107,7 @@ async function startServer() {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const idToken = authHeader.split('Bearer ')[1];
         try {
-          await admin.auth().verifyIdToken(idToken);
+          await verifyIdToken(idToken);
           isAuthenticated = true;
         } catch (_e) {
           // Token invalid or expired
@@ -1368,7 +1313,7 @@ async function startServer() {
         try {
           db.collection("apiKeys").doc(keyId).update({
             lastUsedAt: new Date().toISOString(),
-            totalRequests: admin.firestore.FieldValue.increment(1)
+            totalRequests: FieldValue.increment(1)
           }).catch((err: any) => console.error("[Deep Auth] Failed incrementing API key metrics: ", err));
         } catch (mErr) {
           // stats silently fail with safety
@@ -1384,7 +1329,7 @@ async function startServer() {
     if (authHeader.startsWith("Bearer ")) {
       const idToken = authHeader.split("Bearer ")[1];
       try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken) as AuthUser;
+        const decodedToken = await verifyIdToken(idToken) as AuthUser;
         const isAnonymous = decodedToken.firebase?.sign_in_provider === 'anonymous';
         if (!decodedToken.email_verified && !isAnonymous) {
           return res.status(403).json({ status: "error", message: "Access Denied: Please verify your email protocol." });
@@ -1894,7 +1839,7 @@ async function startServer() {
 
       if (!targetUid && email) {
         try {
-          const userByEmail = await admin.auth().getUserByEmail(email);
+          const userByEmail = await authAdmin.getUserByEmail(email);
           targetUid = userByEmail.uid;
         } catch (authErr) {
           // If auth user not found by email, use hashed/sanitized placeholder ID
@@ -2537,10 +2482,10 @@ async function startServer() {
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
       await db.collection("users").doc(authReq.user.uid).update({
-        geminiApiKeyEncrypted: admin.firestore.FieldValue.delete(),
-        geminiApiKey: admin.firestore.FieldValue.delete(),
+        geminiApiKeyEncrypted: FieldValue.delete(),
+        geminiApiKey: FieldValue.delete(),
         hasCustomApiKey: false,
-        apiKeySuffix: admin.firestore.FieldValue.delete(),
+        apiKeySuffix: FieldValue.delete(),
         updatedAt: new Date().toISOString()
       });
 
@@ -3702,7 +3647,7 @@ You MUST output a valid JSON object matching this schema exactly:
       // Update custom claims
       try {
         if (validated.role) {
-          await admin.auth().setCustomUserClaims(userId, {
+          await authAdmin.setCustomUserClaims(userId, {
             admin: validated.role === 'admin'
           });
         }
@@ -3776,11 +3721,11 @@ You MUST output a valid JSON object matching this schema exactly:
       const providedSecret = req.headers["x-cron-secret"] as string;
       const authHeader = req.headers.authorization;
 
-      let decodedToken: admin.auth.DecodedIdToken | null = null;
+      let decodedToken: DecodedIdToken | null = null;
       if (authHeader?.startsWith("Bearer ")) {
         const token = authHeader.split("Bearer ")[1];
         try {
-          decodedToken = await admin.auth().verifyIdToken(token);
+          decodedToken = await verifyIdToken(token);
         } catch {
           decodedToken = null;
         }
@@ -3808,11 +3753,11 @@ You MUST output a valid JSON object matching this schema exactly:
       const providedSecret = req.headers["x-cron-secret"] as string;
       const authHeader = req.headers.authorization;
 
-      let decodedToken: admin.auth.DecodedIdToken | null = null;
+      let decodedToken: DecodedIdToken | null = null;
       if (authHeader?.startsWith("Bearer ")) {
         const token = authHeader.split("Bearer ")[1];
         try {
-          decodedToken = await admin.auth().verifyIdToken(token);
+          decodedToken = await verifyIdToken(token);
         } catch {
           decodedToken = null;
         }
@@ -4456,7 +4401,7 @@ You MUST output a valid JSON object matching this schema exactly:
   app.post("/api/v1/auth/revoke-sessions", apiAuthenticate, async (req: any, res) => {
     try {
       const uid = req.user.uid;
-      await admin.auth().revokeRefreshTokens(uid);
+      await authAdmin.revokeRefreshTokens(uid);
       res.json({ success: true, message: 'All active sessions revoked successfully. You will be signed out shortly.' });
     } catch (error: any) {
       console.error('Failed to revoke sessions:', error);
@@ -4468,7 +4413,7 @@ You MUST output a valid JSON object matching this schema exactly:
   app.delete("/api/v1/auth/delete-account", apiAuthenticate, async (req: any, res) => {
     try {
       const uid = req.user.uid;
-      await admin.auth().deleteUser(uid);
+      await authAdmin.deleteUser(uid);
       res.json({ success: true, message: 'Account deleted successfully.' });
     } catch (error: any) {
       console.error('Failed to delete account:', error);
@@ -4526,9 +4471,9 @@ You MUST output a valid JSON object matching this schema exactly:
       // 2. Backup retention: Purge expired job run logs older than 90 days in chunks of 450
       let purgedJobRuns = 0;
       while (true) {
-        const oldJobRuns = await admin.firestore().collection('jobRuns').where('finishedAt', '<', cutoffStr).limit(450).get();
+        const oldJobRuns = await getDb().collection('jobRuns').where('finishedAt', '<', cutoffStr).limit(450).get();
         if (oldJobRuns.empty) break;
-        const batch = admin.firestore().batch();
+        const batch = getDb().batch();
         oldJobRuns.docs.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
         purgedJobRuns += oldJobRuns.size;
@@ -4539,7 +4484,7 @@ You MUST output a valid JSON object matching this schema exactly:
       }
 
       // 3. Cap strategicAdvice array on all workspaces to maximum 15 items to prevent database bloat
-      const workspacesSnap = await admin.firestore().collection('workspaces').get();
+      const workspacesSnap = await getDb().collection('workspaces').get();
       for (const doc of workspacesSnap.docs) {
         const data = doc.data() || {};
         if (Array.isArray(data.strategicAdvice) && data.strategicAdvice.length > 15) {

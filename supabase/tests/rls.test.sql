@@ -173,5 +173,16 @@ select pg_temp.expect_value('batch is all-or-nothing', $$select count(*)::text f
 select pg_temp.expect_denied('batch on a system table', 'u-book',
   $$select lf_batch('[{"op":"delete","table":"pg_authid","id":"x"}]'::jsonb)$$);
 
+-- document ids: browser writes keep firestore.rules isValidId; server writes may be long
+select pg_temp.expect_ok('browser id of 127 characters', 'u-book',
+  format($f$select lf_set('vendors', %L, '{"workspaceId":"ws1","name":"V"}'::jsonb)$f$, repeat('v', 127)));
+select pg_temp.expect_denied('browser id of 128 characters', 'u-book',
+  format($f$select lf_set('vendors', %L, '{"workspaceId":"ws1","name":"V"}'::jsonb)$f$, repeat('v', 128)));
+select pg_temp.expect_denied('browser id with a space', 'u-book',
+  $$select lf_set('vendors', 'has space', '{"workspaceId":"ws1","name":"V"}'::jsonb)$$);
+select set_config('request.jwt.claims', '', true);  -- back to a server connection
+insert into "idempotencyKeys" (id, data) values (repeat('k', 400), '{"workspaceId":"ws1"}');
+select pg_temp.expect_value('server id of 400 characters', $$select count(*)::text from "idempotencyKeys" where id = repeat('k', 400)$$, '1');
+
 select 'ALL RLS TESTS PASSED' as result;
 rollback;
