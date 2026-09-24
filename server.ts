@@ -616,11 +616,11 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
     contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.plaid.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         imgSrc: ["'self'", "data:", "blob:", "https:"],
         // Supabase: data (https) and live updates (wss)
-        connectSrc: ["'self'", supabaseUrl(), supabaseUrl().replace(/^http/, "ws"), "https://*.googleapis.com"],
+        connectSrc: ["'self'", supabaseUrl(), supabaseUrl().replace(/^http/, "ws"), "https://*.plaid.com", "https://*.googleapis.com"],
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
         frameSrc: ["'self'", "https://*.stripe.com", "https://cdn.plaid.com"],
         frameAncestors: isAiStudioProxy ? ["*"] : ["'self'"]
