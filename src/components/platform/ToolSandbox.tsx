@@ -8,7 +8,7 @@ import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
 import { AlgorithmContext, buildAlgorithmContext } from '../../lib/algorithms/types';
 import { isPostable } from '../../lib/txFilters';
 import { exportToExcel } from '../../lib/excelExport';
-import { getLocalDateIso } from '../../lib/utils';
+import { getLocalDateISO } from '../../lib/utils';
 
 interface ToolSandboxProps {
   toolId: string;
@@ -58,7 +58,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
 
   // Re-run anytime params change, using REAL user dataset
   const results = useMemo(() => {
-    const today = getLocalDateIso();
+    const today = getLocalDateISO();
     const asOfDate = params.asOfDate || today;
     const rangeInput = algorithm.inputs.find((i: any) => i.kind === 'dateRange');
     const range = rangeInput ? params[rangeInput.key] : undefined;
@@ -106,7 +106,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
     const sanitizedName = algorithm.name.replace(/[^a-zA-Z0-9_-]/g, '_');
     await exportToExcel(columns, results.rows, {
       sheetName: 'Report',
-      fileName: `${sanitizedName}_${getLocalDateIso()}.xlsx`
+      fileName: `${sanitizedName}_${getLocalDateISO()}.xlsx`
     });
   };
 
@@ -127,7 +127,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
     const link = document.createElement('a');
     link.href = url;
     const sanitizedName = algorithm.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-    link.setAttribute('download', `${sanitizedName}_${getLocalDateIso()}.csv`);
+    link.setAttribute('download', `${sanitizedName}_${getLocalDateISO()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

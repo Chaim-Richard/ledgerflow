@@ -655,7 +655,7 @@ transactionRouter.post('/batch', async (req, res) => {
 });
 
 // An endpoint for complex reconciliations
-transactionRouter.post('/reconcile', async (req, res) => {
+transactionRouter.post('/reconcile', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
   try {
      const { workspaceId, operations } = req.body;
      if (!workspaceId || !Array.isArray(operations) || operations.length === 0) {
@@ -664,13 +664,15 @@ transactionRouter.post('/reconcile', async (req, res) => {
      if (operations.length > 250) {
        return res.status(400).json({ error: 'Operations batch exceeds 250 operations limit' });
      }
-     const user = (req as any).user;
+     const authReq = req as unknown as { user: { uid: string; email?: string; admin?: boolean } };
+     const user = authReq.user;
      const db = getDb();
      const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
-       return res.status(403).json({ error: 'Not a member' });
+     if (!wsDoc.exists) {
+       return res.status(404).json({ error: 'Workspace not found' });
      }
      const wsData = wsDoc.data();
+     const lockDate = wsData?.lockDate;
 
      // Pre-collect all doc IDs and account IDs
      const bankLineIds = new Set<string>();
@@ -707,6 +709,32 @@ transactionRouter.post('/reconcile', async (req, res) => {
         for (const id of txIds) {
           const snap = await t.get(db.collection('transactions').doc(id));
           txSnaps.set(id, snap);
+        }
+
+        if (lockDate) {
+          for (const snap of bankLineSnaps.values()) {
+            if (snap.exists) {
+              const lineDate = snap.data()?.date || '';
+              if (lineDate && lineDate <= lockDate) {
+                throw new Error(`Period Locked: Cannot modify bank line dated ${lineDate} on or before ${lockDate}`);
+              }
+            }
+          }
+          for (const snap of txSnaps.values()) {
+            if (snap.exists) {
+              const txDate = snap.data()?.date || '';
+              if (txDate && txDate <= lockDate) {
+                throw new Error(`Period Locked: Cannot modify transaction dated ${txDate} on or before ${lockDate}`);
+              }
+            }
+          }
+          for (const op of operations) {
+            if (op.type === 'createTransaction' && op.data?.date) {
+              if (op.data.date <= lockDate) {
+                throw new Error(`Period Locked: Cannot create transaction dated ${op.data.date} on or before ${lockDate}`);
+              }
+            }
+          }
         }
 
         // Also gather any account IDs from existing transactions that might be updated
@@ -788,17 +816,28 @@ transactionRouter.post('/reconcile', async (req, res) => {
           }
         }
 
-        // STEP 3: EXECUTE ALL WRITES
+        // STEP 3: EXECUTE ALL WRITES + AUDIT LOG
         for (const writeOp of writes) {
           writeOp();
         }
+
+        const auditRef = db.collection('auditLogs').doc();
+        t.set(auditRef, {
+          workspaceId,
+          uid: user.uid,
+          action: 'reconcile',
+          description: `User ${user.email || user.uid} executed reconciliation batch (${operations.length} operations)`,
+          severity: 'info',
+          createdAt: new Date().toISOString()
+        });
      });
      res.json({ status: 'ok' });
-  } catch(e: any) {
-    if (e.message === 'Not a member') {
-       return res.status(403).json({ error: e.message });
+  } catch(e: unknown) {
+    const errMessage = e instanceof Error ? e.message : String(e);
+    if (errMessage === 'Not a member' || errMessage.includes('Forbidden')) {
+       return res.status(403).json({ error: errMessage });
     }
-    res.status(400).json({ error: e.message });
+    res.status(400).json({ error: errMessage });
   }
 });
 
@@ -834,56 +873,7 @@ transactionRouter.patch('/bank-lines/:id', async (req, res) => {
   }
 });
 
-transactionRouter.post('/bank-lines/:id/unmatch', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { workspaceId } = req.body;
-    if (!workspaceId) {
-      return res.status(400).json({ error: 'Missing workspaceId' });
-    }
-    const user = (req as any).user;
-    const db = getDb();
-    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-    if (!wsDoc.exists) {
-      return res.status(404).json({ error: 'Workspace not found' });
-    }
-    const wsData = wsDoc.data();
-    const lockDate = wsData?.lockDate;
 
-    const lineRef = db.collection('bankLines').doc(id);
-    const lineSnap = await lineRef.get();
-    if (!lineSnap.exists || lineSnap.data()?.workspaceId !== workspaceId) {
-      return res.status(404).json({ error: `Bank line ${id} not found in workspace` });
-    }
-    const lineData = lineSnap.data();
-    const lineDate = lineData?.date || '';
-
-    if (lockDate && lineDate && lineDate <= lockDate) {
-      return res.status(400).json({ error: `This period is locked on or before ${lockDate}` });
-    }
-
-    await db.runTransaction(async (tx) => {
-      tx.update(lineRef, {
-        matchedTransactionId: null,
-        status: 'pending',
-        updatedAt: FieldValue.serverTimestamp()
-      });
-
-      const auditRef = db.collection('auditLogs').doc();
-      tx.set(auditRef, {
-        workspaceId,
-        uid: user.uid,
-        action: 'unmatch_bank_line',
-        description: `User ${user.email || user.uid} unmatched bank line ${id}`,
-        createdAt: new Date().toISOString()
-      });
-    });
-
-    res.json({ status: 'ok', id });
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
 
 
 // ==========================================

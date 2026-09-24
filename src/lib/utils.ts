@@ -391,15 +391,7 @@ export function resolveAccountName(accounts: any[], accountId?: string, fallback
   return fallbackName || accountId || 'Uncategorized';
 }
 
-/**
- * Returns YYYY-MM-DD in local time to avoid UTC date offset errors.
- */
-export function getLocalDateIso(date: Date = new Date()): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+
 
 /**
  * Formats a Date into YYYY-MM-DD for a specific timezone (e.g., 'America/New_York', 'Pacific/Auckland').

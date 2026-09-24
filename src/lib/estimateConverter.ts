@@ -1,5 +1,5 @@
 import { Estimate, Invoice } from '../types';
-import { getLocalDateIso } from './utils';
+import { getLocalDateISO } from './utils';
 import { calculateDueDate } from './paymentTerms';
 
 /**
@@ -12,7 +12,7 @@ export function convertEstimateToInvoice(estimate: Estimate): Invoice {
     throw new Error('Cannot convert a declined estimate to an invoice');
   }
 
-  const issueDate = getLocalDateIso();
+  const issueDate = getLocalDateISO();
   const dueDate = calculateDueDate(issueDate, 'net_30');
 
   const invoiceItems = (estimate.lines || []).map(line => ({
