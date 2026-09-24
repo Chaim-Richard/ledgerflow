@@ -130,7 +130,7 @@ export async function allocateNextNumber(db: any, workspaceId: string, type: 'in
  * POST only to prevent prefetching/crawlers from mutating state (Finding E).
  */
 workspaceRouter.post('/:workspaceId/next-number', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
-  const { workspaceId } = req.params;
+  const { workspaceId } = req.params as Record<string, string>;
   const rawType = req.body?.type;
 
   const schema = z.enum(['invoice', 'bill', 'estimate']);
@@ -176,7 +176,7 @@ export function countWorkspaceOwners(workspaceData: any): { count: number; owner
  */
 workspaceRouter.get('/:workspaceId/roles', async (req, res) => {
   const authReq = req as unknown as AuthenticatedRequest;
-  const { workspaceId } = req.params;
+  const { workspaceId } = req.params as Record<string, string>;
 
   try {
     const db = getDb();
@@ -199,7 +199,7 @@ workspaceRouter.get('/:workspaceId/roles', async (req, res) => {
  * Update workspace user role (Owner only) - Supports POST and PATCH /:workspaceId/roles/:uid
  */
 const handleUpdateRole = async (req: express.Request, res: express.Response) => {
-  const { workspaceId } = req.params;
+  const { workspaceId } = req.params as Record<string, string>;
   const targetUid = req.params.uid || req.body.targetUid;
   const schema = z.object({
     role: z.enum(['owner', 'accountant', 'bookkeeper', 'viewer'])
@@ -266,7 +266,7 @@ workspaceRouter.patch('/:workspaceId/roles/:uid', requireWorkspaceRole(['owner']
  * Invites Endpoints
  */
 workspaceRouter.get('/:workspaceId/invites', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
-  const { workspaceId } = req.params;
+  const { workspaceId } = req.params as Record<string, string>;
   try {
     const db = getDb();
     const snap = await db.collection('invites').where('workspaceId', '==', workspaceId).limit(100).get();
@@ -278,7 +278,7 @@ workspaceRouter.get('/:workspaceId/invites', requireWorkspaceRole(['owner', 'acc
 });
 
 workspaceRouter.post('/:workspaceId/invites', requireWorkspaceRole(['owner']), async (req, res) => {
-  const { workspaceId } = req.params;
+  const { workspaceId } = req.params as Record<string, string>;
   const schema = z.object({
     email: z.string().email(),
     role: z.enum(['owner', 'accountant', 'bookkeeper', 'viewer']).default('viewer')
@@ -339,7 +339,7 @@ workspaceRouter.post('/:workspaceId/invites', requireWorkspaceRole(['owner']), a
 });
 
 workspaceRouter.delete('/:workspaceId/invites/:inviteId', requireWorkspaceRole(['owner']), async (req, res) => {
-  const { workspaceId, inviteId } = req.params;
+  const { workspaceId, inviteId } = req.params as Record<string, string>;
   try {
     const db = getDb();
     const inviteRef = db.collection('invites').doc(inviteId);
@@ -366,7 +366,7 @@ workspaceRouter.delete('/:workspaceId/invites/:inviteId', requireWorkspaceRole([
  * Never hard-deletes financial records or auditLogs (Finding Section 13A).
  */
 workspaceRouter.delete('/:workspaceId', requireWorkspaceRole(['owner']), async (req, res) => {
-  const { workspaceId } = req.params;
+  const { workspaceId } = req.params as Record<string, string>;
   try {
     const db = getDb();
     const wsRef = db.collection('workspaces').doc(workspaceId);
@@ -413,7 +413,7 @@ workspaceRouter.delete('/:workspaceId', requireWorkspaceRole(['owner']), async (
  * Restore workspace within retention window (Owner only)
  */
 workspaceRouter.post('/:workspaceId/restore', requireWorkspaceRole(['owner']), async (req, res) => {
-  const { workspaceId } = req.params;
+  const { workspaceId } = req.params as Record<string, string>;
   try {
     const db = getDb();
     const wsRef = db.collection('workspaces').doc(workspaceId);
@@ -461,7 +461,7 @@ workspaceRouter.post('/:workspaceId/restore', requireWorkspaceRole(['owner']), a
  * Task 5: Seed Demo Data
  */
 workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
-  const { workspaceId } = req.params;
+  const { workspaceId } = req.params as Record<string, string>;
   const db = getDb();
   
   try {

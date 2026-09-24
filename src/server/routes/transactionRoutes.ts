@@ -236,7 +236,7 @@ transactionRouter.post('/', requirePlanCapacity('transactions'), requireOpenPeri
 
 transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEntrySafety, async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as Record<string, string>;
     const { partialUpdate } = req.body;
     let { transaction } = req.body;
     const user = (req as any).user;
@@ -391,7 +391,7 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
 
 transactionRouter.delete('/:id', requireOpenPeriod('transactions'), async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as Record<string, string>;
     const workspaceId = (req.query.workspaceId as string) || (req.body?.workspaceId as string);
     const user = (req as any).user;
     const db = getDb();
@@ -834,7 +834,7 @@ transactionRouter.post('/reconcile', (req, res) => handleReconcile(req, res));
 
 transactionRouter.patch('/bank-lines/:id', async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as Record<string, string>;
     const { workspaceId, ...updatePayload } = req.body;
     if (!workspaceId) {
       return res.status(400).json({ error: 'Missing workspaceId' });
@@ -1498,7 +1498,7 @@ transactionRouter.post('/reset', async (req, res) => {
  */
 transactionRouter.post('/:id/reverse', async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as Record<string, string>;
     const { reversalDate, reason, replacement, workspaceId } = req.body;
     const user = (req as any).user;
     const db = getDb();

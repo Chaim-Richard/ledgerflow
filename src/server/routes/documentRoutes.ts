@@ -9,7 +9,7 @@ export const documentRouter = express.Router();
 export async function handlePdfRequest(req: express.Request, res: express.Response, dbOverride?: any) {
   try {
     const authReq = req as any;
-    const { type, id } = req.params;
+    const { type, id } = req.params as Record<string, string>;
     const workspaceId = (req.query.workspaceId || req.body?.workspaceId || '') as string;
 
     if (!workspaceId) {

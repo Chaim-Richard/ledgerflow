@@ -316,7 +316,6 @@ function handleApiError(res: express.Response, err: any) {
  * Authorization & Context Helper
  */
 async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string) {
-  console.debug("[DEBUG] authorizeWorkspace - workspaceId:", workspaceId);
   const db = getDb();
   
   if (!workspaceId || typeof workspaceId !== 'string') {
@@ -921,6 +920,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   });
 
   app.use(express.json({ limit: "50mb" })); // Increased limit to securely support ~100,000 transaction bulk imports
+  app.use((req, _res, next) => { req.body ??= {}; next(); }); // Express 5 leaves req.body undefined without a body
   app.use(csrfProtection({ isAllowedOrigin }));
 
   // Rate Limiting - Increased for production SPA load
@@ -1509,7 +1509,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   // --- Workspace Member Management Endpoints ---
   app.get("/api/v1/workspaces/:workspaceId/members", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const { workspaceId } = req.params;
+      const { workspaceId } = req.params as Record<string, string>;
       const authReq = req as AuthenticatedRequest;
       await authorizeWorkspace(authReq, workspaceId);
 
@@ -1537,7 +1537,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   // --- Workspace Full Complete Export Endpoint (Server-Side Streaming & Authoritative Checksum) ---
   const handleWorkspaceExport = async (req: express.Request, res: express.Response) => {
     try {
-      const { workspaceId } = req.params;
+      const { workspaceId } = req.params as Record<string, string>;
       const authReq = req as AuthenticatedRequest;
       await authorizeWorkspace(authReq, workspaceId);
 
@@ -1682,7 +1682,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   // Owner only: a restore replaces every record in the workspace (all or nothing).
   app.post("/api/v1/workspaces/:workspaceId/restore", apiAuthenticate, requireWorkspaceRole(['owner']), async (req: express.Request, res: express.Response) => {
     try {
-      const { workspaceId } = req.params;
+      const { workspaceId } = req.params as Record<string, string>;
       await authorizeWorkspace(req as AuthenticatedRequest, workspaceId);
       const result = await restoreWorkspaceBackup(getDb(), workspaceId, req.body);
       return res.json({ success: true, message: "General ledger workspace successfully restored from backup.", ...result });
@@ -1694,7 +1694,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
   app.post("/api/v1/workspaces/:workspaceId/members", apiAuthenticate, requireWorkspaceRole(['owner']), requirePlanCapacity('seats'), async (req: express.Request, res: express.Response) => {
     try {
-      const { workspaceId } = req.params;
+      const { workspaceId } = req.params as Record<string, string>;
       const { memberUid, email } = req.body;
       const authReq = req as AuthenticatedRequest;
       await authorizeWorkspace(authReq, workspaceId);
@@ -1746,7 +1746,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
   app.delete("/api/v1/workspaces/:workspaceId/members/:memberUid", apiAuthenticate, requireWorkspaceRole(['owner']), async (req: express.Request, res: express.Response) => {
     try {
-      const { workspaceId, memberUid } = req.params;
+      const { workspaceId, memberUid } = req.params as Record<string, string>;
       const authReq = req as AuthenticatedRequest;
       await authorizeWorkspace(authReq, workspaceId);
 
@@ -2261,7 +2261,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
   app.delete("/api/v1/keys/revoke/:keyId", authenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const { keyId } = req.params;
+      const { keyId } = req.params as Record<string, string>;
       if (!keyId) {
         return res.status(400).json({ status: "error", message: "Missing keyId in path" });
       }
@@ -2880,7 +2880,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
 
   app.get("/api/v1/audit/jobs/:job_id", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const jobId = req.params.job_id;
+      const jobId = (req.params as Record<string, string>).job_id;
       const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
 
       if (!workspaceId) {
@@ -3313,7 +3313,7 @@ You MUST output a valid JSON object matching this schema exactly:
 
   app.put("/api/v1/admin/workspaces/:workspaceId", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
-      const { workspaceId } = req.params;
+      const { workspaceId } = req.params as Record<string, string>;
       const validated = AdminWorkspaceUpdateSchema.parse(req.body);
       const authReq = req as AuthenticatedRequest;
       const db = getDb();
@@ -3390,7 +3390,7 @@ You MUST output a valid JSON object matching this schema exactly:
 
   app.put(["/api/v1/admin/users/:userId", "/api/v1/admin/users/:userId/role"], authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
-      const { userId } = req.params;
+      const { userId } = req.params as Record<string, string>;
       const { role } = req.body;
       const ALLOWED_ROLES = ['client', 'admin'];
       if (role !== undefined && !ALLOWED_ROLES.includes(role)) {
@@ -3862,7 +3862,7 @@ You MUST output a valid JSON object matching this schema exactly:
   app.get("/api/v1/currency/:endpoint", authenticate, async (req: express.Request, res: express.Response) => {
     try {
       const allowedEndpoints = ["list", "live", "convert", "historical", "timeframe", "change"];
-      const { endpoint } = req.params;
+      const { endpoint } = req.params as Record<string, string>;
       
       if (!allowedEndpoints.includes(endpoint)) {
         return sendError(res, "Invalid currency API endpoint", 400);
@@ -3894,7 +3894,7 @@ You MUST output a valid JSON object matching this schema exactly:
   app.get("/api/v1/tax/:endpoint", authenticate, async (req: express.Request, res: express.Response) => {
     try {
       const allowedEndpoints = ["tax_rates", "us_rate_list"];
-      const { endpoint } = req.params;
+      const { endpoint } = req.params as Record<string, string>;
 
       if (!allowedEndpoints.includes(endpoint)) {
          return sendError(res, "Invalid tax API endpoint", 400);
@@ -4260,7 +4260,7 @@ You MUST output a valid JSON object matching this schema exactly:
   app.use("/api/cron", cronRouter);
 
   // API 404 handler for unmatched /api/* routes
-  app.use('/api/*', (req, res) => {
+  app.use('/api', (req, res) => {
     res.status(404).json({ error: `API route not found: ${req.originalUrl}` });
   });
 
@@ -4305,7 +4305,7 @@ async function startServer() {
     ];
     const distPath = candidatePaths.find(p => fs.existsSync(path.join(p, 'index.html'))) || path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('/{*splat}', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
