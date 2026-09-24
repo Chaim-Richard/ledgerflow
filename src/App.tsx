@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import { usePerformanceTrace } from './hooks/usePerformanceTrace';
 import { auth, db } from './firebase';
-import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from './lib/db/auth';
+import { onAuthStateChanged, onSecondFactorRequired, verifySecondFactor, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from './lib/db/auth';
 import { collection, doc, addDoc, writeBatch, setDoc } from './lib/db/firestore';
 import { Toaster, toast } from 'sonner';
 import { motion } from 'motion/react';
@@ -22,6 +22,7 @@ import { useBillingStore } from './modules/billing/BillingService';
 // Core Architectural Imports
 import { AuthScreen } from './core/auth/AuthScreen';
 import { InitializationScreen } from './core/auth/InitializationScreen';
+import { SecondFactorScreen } from './core/auth/SecondFactorScreen';
 import { RootLayout } from './core/layout/RootLayout';
 import { lazy, Suspense } from 'react';
 const LedgerAutoAuditor = lazy(() => import('./components/forensics/LedgerAutoAuditor').then(m => ({ default: m.LedgerAutoAuditor })));
@@ -37,6 +38,7 @@ export default function App() {
   usePerformanceTrace("App");
 
   const [isInitializing, setIsInitializing] = useState(true);
+  const [pendingSecondFactor, setPendingSecondFactor] = useState<string | null>(null);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'terms' | 'privacy'>('privacy');
   const user = useAuthStore(state => state.user);
@@ -183,6 +185,8 @@ export default function App() {
     });
   }, [setUser]);
 
+  useEffect(() => onSecondFactorRequired(auth, setPendingSecondFactor), []);
+
   // Operational Keyboard Shortcuts
 const shortcutMap = useMemo(() => {
     const base: Record<string, () => void> = {
@@ -285,9 +289,13 @@ const shortcutMap = useMemo(() => {
     localStorage.removeItem('ledgerflow_identity_name');
     
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
       setIsGuest(false);
-      toast.success('SUCCESSFULLY LOGGED IN');
+      if (cred.secondFactorRequired) {
+        toast.info('Password accepted. Enter the code from your authenticator app.');
+      } else {
+        toast.success('SUCCESSFULLY LOGGED IN');
+      }
     } catch (e: any) {
       console.error("Login failed:", e);
       toast.error('Login failed: ' + e.message);
@@ -324,6 +332,15 @@ const shortcutMap = useMemo(() => {
 
   if (isInitializing) {
     return <InitializationScreen language={language} />;
+  }
+
+  if (pendingSecondFactor) {
+    return (
+      <SecondFactorScreen
+        onVerify={(code) => verifySecondFactor(auth, code)}
+        onCancel={() => { void signOut(auth); }}
+      />
+    );
   }
 
   if (!user && !isGuest) {

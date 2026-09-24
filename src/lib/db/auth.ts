@@ -39,7 +39,11 @@ export interface User extends UserInfo {
   reload(): Promise<void>;
 }
 
-export interface UserCredential { user: User }
+export interface UserCredential {
+  user: User;
+  /** True when the account uses an authenticator app and the code step is still needed. */
+  secondFactorRequired?: boolean;
+}
 
 export class AuthError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -119,15 +123,29 @@ function toUser(u: SupabaseUser): User {
   };
 }
 
+/**
+ * The verified authenticator factor still to be confirmed with a code, if any: the session
+ * has only passed the password step (aal1) but the account has an authenticator app.
+ */
+function pendingFactorId(session: Session): string | null {
+  const factor = (session.user.factors || []).find(f => f.factor_type === 'totp' && f.status === 'verified');
+  if (!factor) return null;
+  return decodeJwt(session.access_token).aal === 'aal2' ? null : factor.id;
+}
+
 // ---------------------------------------------------------------------------
 // Auth object
 // ---------------------------------------------------------------------------
 
 type Listener = (user: User | null) => void;
+type FactorListener = (factorId: string | null) => void;
 
 export class Auth {
   currentUser: User | null = null;
+  /** Set while the password step is done but the authenticator code is still needed. */
+  pendingSecondFactor: string | null = null;
   private listeners = new Set<Listener>();
+  private factorListeners = new Set<FactorListener>();
   private ready = false;
   private started = false;
 
@@ -136,9 +154,14 @@ export class Auth {
     this.started = true;
     const supabase = getSupabase();
     const apply = (session: Session | null) => {
-      this.currentUser = session?.user ? toUser(session.user) : null;
+      // Until the code step is done the app treats the user as signed out (the database and
+      // the server refuse such a session anyway).
+      const pending = session ? pendingFactorId(session) : null;
+      this.pendingSecondFactor = pending;
+      this.currentUser = session?.user && !pending ? toUser(session.user) : null;
       this.ready = true;
       this.listeners.forEach(l => l(this.currentUser));
+      this.factorListeners.forEach(l => l(pending));
     };
     void supabase.auth.getSession().then(({ data }) => apply(data.session));
     supabase.auth.onAuthStateChange((event, session) => {
@@ -152,6 +175,13 @@ export class Auth {
     this.listeners.add(listener);
     if (this.ready) listener(this.currentUser);
     return () => { this.listeners.delete(listener); };
+  }
+
+  onSecondFactorChanged(listener: FactorListener): () => void {
+    this.start();
+    this.factorListeners.add(listener);
+    if (this.ready) listener(this.pendingSecondFactor);
+    return () => { this.factorListeners.delete(listener); };
   }
 
   async signOut(): Promise<void> {
@@ -177,7 +207,20 @@ export function signOut(auth: Auth): Promise<void> {
 export async function signInWithEmailAndPassword(_auth: Auth, email: string, password: string): Promise<UserCredential> {
   const { data, error } = await getSupabase().auth.signInWithPassword({ email, password });
   if (error || !data.user) fail(error, 'invalid-credential');
-  return { user: toUser(data.user) };
+  return { user: toUser(data.user), secondFactorRequired: data.session ? pendingFactorId(data.session) !== null : false };
+}
+
+/** Calls the listener with the factor id while an authenticator code is needed, else null. */
+export function onSecondFactorRequired(auth: Auth, listener: FactorListener): () => void {
+  return auth.onSecondFactorChanged(listener);
+}
+
+/** Finishes sign-in with the 6-digit code from the authenticator app. */
+export async function verifySecondFactor(auth: Auth, code: string): Promise<void> {
+  const factorId = auth.pendingSecondFactor;
+  if (!factorId) return;
+  const { error } = await getSupabase().auth.mfa.challengeAndVerify({ factorId, code: code.trim() });
+  if (error) fail(error, 'invalid-verification-code');
 }
 
 export async function createUserWithEmailAndPassword(_auth: Auth, email: string, password: string): Promise<UserCredential> {

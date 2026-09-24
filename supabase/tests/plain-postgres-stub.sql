@@ -27,3 +27,12 @@ create table if not exists auth.sessions (
   user_id uuid not null references auth.users (id) on delete cascade,
   created_at timestamptz default now()
 );
+create table if not exists auth.mfa_factors (
+  id uuid primary key,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  friendly_name text,
+  factor_type text not null,
+  status text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);

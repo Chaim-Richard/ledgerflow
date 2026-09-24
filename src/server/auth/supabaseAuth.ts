@@ -72,6 +72,23 @@ async function isEmailConfirmed(uid: string): Promise<boolean> {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Users with a verified authenticator app must finish the code step (a session at aal2).
+// The database enforces the same rule (supabase/migrations/*_two_step_login.sql).
+const authenticatorCache = new Map<string, { has: boolean; until: number }>();
+
+async function hasVerifiedAuthenticator(uid: string): Promise<boolean> {
+  const hit = authenticatorCache.get(uid);
+  if (hit && hit.until > Date.now()) return hit.has;
+  const result = await getDb().pool.query<{ has: boolean }>(
+    `select exists (select 1 from auth.mfa_factors
+                     where user_id = $1::uuid and factor_type::text = 'totp' and status::text = 'verified') as has`,
+    [uid]);
+  const has = result.rows[0]?.has === true;
+  if (authenticatorCache.size > 10_000) authenticatorCache.clear();
+  authenticatorCache.set(uid, { has, until: Date.now() + 60_000 });
+  return has;
+}
+
 /** Checks a Supabase access token (signature, issuer, audience, expiry) and decodes it. */
 export async function verifyIdToken(token: string): Promise<DecodedIdToken> {
   if (typeof token !== 'string' || token.split('.').length !== 3) {
@@ -105,6 +122,9 @@ export async function verifyIdToken(token: string): Promise<DecodedIdToken> {
 
   const appMeta = (payload.app_metadata || {}) as Record<string, unknown>;
   const isAnonymous = payload.is_anonymous === true;
+  if (payload.aal !== 'aal2' && !isAnonymous && await hasVerifiedAuthenticator(payload.sub)) {
+    throw new AuthError('auth/multi-factor-auth-required', 'Two-step verification is required for this account');
+  }
   const email = typeof payload.email === 'string' && payload.email ? payload.email : undefined;
   const provider = isAnonymous ? 'anonymous'
     : appMeta.provider === 'email' || !appMeta.provider ? 'password' : `${String(appMeta.provider)}.com`;

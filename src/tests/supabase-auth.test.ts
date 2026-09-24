@@ -43,15 +43,16 @@ describe('verifyIdToken', () => {
   });
 
   test('platform admin comes from app_metadata, never from user-editable metadata', async () => {
+    // aal2 (code-verified) and no email: no database lookups needed
     const admin = await verifyIdToken(await token({
-      sub: uid(), role: 'authenticated', app_metadata: { provider: 'email', admin: true, role: 'admin' },
+      sub: uid(), role: 'authenticated', aal: 'aal2', app_metadata: { provider: 'email', admin: true, role: 'admin' },
     }));
     assert.equal(admin.admin, true);
     assert.equal(admin.role, 'admin');
     assert.equal(admin.firebase.sign_in_provider, 'password');
 
     const pretender = await verifyIdToken(await token({
-      sub: uid(), role: 'authenticated', app_metadata: { provider: 'google' }, user_metadata: { admin: true, role: 'admin' },
+      sub: uid(), role: 'authenticated', aal: 'aal2', app_metadata: { provider: 'google' }, user_metadata: { admin: true, role: 'admin' },
     }));
     assert.equal(pretender.admin, undefined);
     assert.equal(pretender.role, undefined);
@@ -102,6 +103,21 @@ describe('email confirmation and account operations', { skip: !dbUrl && 'LF_TEST
     assert.equal((await verifyIdToken(t)).email_verified, false);
     await getDb().pool.query('update auth.users set email_confirmed_at = now() where id = $1', [id]);
     assert.equal((await verifyIdToken(t)).email_verified, true);
+  });
+
+  test('two-step login: a password-only token is refused once an authenticator is verified', async () => {
+    const email = `mfa-${crypto.randomBytes(3).toString('hex')}@example.com`;
+    const id = await addUser(email, true);
+    const aal1 = await token({ sub: id, email, role: 'authenticated', aal: 'aal1', app_metadata: { provider: 'email' } });
+    assert.equal((await verifyIdToken(aal1)).uid, id);
+
+    const other = await addUser(`mfa2-${crypto.randomBytes(3).toString('hex')}@example.com`, true);
+    await getDb().pool.query(
+      "insert into auth.mfa_factors (id, user_id, factor_type, status) values ($1, $2, 'totp', 'verified')", [uid(), other]);
+    const otherAal1 = await token({ sub: other, email: 'x@example.com', role: 'authenticated', aal: 'aal1', app_metadata: { provider: 'email' } });
+    await assert.rejects(verifyIdToken(otherAal1), (err: unknown) => authCode(err) === 'auth/multi-factor-auth-required');
+    const otherAal2 = await token({ sub: other, email: 'x@example.com', role: 'authenticated', aal: 'aal2', app_metadata: { provider: 'email' } });
+    assert.equal((await verifyIdToken(otherAal2)).uid, other);
   });
 
   test('look users up by id or email (any case); unknown users are not found', async () => {

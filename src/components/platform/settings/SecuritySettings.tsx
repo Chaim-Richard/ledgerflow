@@ -148,6 +148,9 @@ export default function SecuritySettings() {
                   {mfaSecret && (
                     <div className="mt-4 p-4 bg-[var(--surface)] border border-[var(--line)] rounded-lg">
                       <p className="text-sm font-bold text-[var(--text)] mb-2">1. Scan or enter this secret in your Authenticator app:</p>
+                      {mfaSecret.qrCodeSvg && (
+                        <img src={mfaSecret.qrCodeSvg} alt="QR code to add LedgerFlow to your authenticator app" className="w-40 h-40 bg-white p-2 rounded mb-3" />
+                      )}
                       <code className="block bg-[var(--ink)] p-2 rounded text-indigo-400 font-mono text-sm break-all mb-4">
                         {mfaSecret.secretKey}
                       </code>
