@@ -3,97 +3,66 @@ import { test, describe } from 'node:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { WORKSPACE_SCOPED_COLLECTIONS } from '../constants/collections';
+import { documentTables, tablesWithRules } from './helpers/migrations';
 
-describe('Firestore Rules Coverage Structural Guard (P-1)', () => {
-  test('Every subscribed and protected collection has a dedicated rule block in firestore.rules without duplicates', () => {
-    const rulesPath = path.join(process.cwd(), 'firestore.rules');
-    const ledgerPath = path.join(process.cwd(), 'src/hooks/useLedgerData.ts');
-
-    const rulesContent = fs.readFileSync(rulesPath, 'utf8');
-    const ledgerContent = fs.readFileSync(ledgerPath, 'utf8');
-
-    // 1. Parse SUBSCRIBED collections from src/hooks/useLedgerData.ts
-    const subscribedCollections = new Set<string>();
-    const collRegex = /collection\(db,\s*['"]([a-zA-Z0-9_]+)['"]\)/g;
-    let match: RegExpExecArray | null;
-    while ((match = collRegex.exec(ledgerContent)) !== null) {
-      subscribedCollections.add(match[1]);
+function sourceFiles(dir: string, out: string[] = []): string[] {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name !== 'tests' && entry.name !== 'node_modules') sourceFiles(full, out);
+    } else if (/\.(ts|tsx)$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
+      out.push(full);
     }
-    // Also include document listeners like doc(db, 'users', ...)
-    const docRegex = /doc\(db,\s*['"]([a-zA-Z0-9_]+)['"]/g;
-    while ((match = docRegex.exec(ledgerContent)) !== null) {
-      subscribedCollections.add(match[1]);
-    }
+  }
+  return out;
+}
 
-    // 2. Parse HAS_BLOCK from firestore.rules (match /collectionName/{id})
-    const blockRegex = /match\s+\/([a-zA-Z0-9_]+)\/\{/g;
-    const hasBlockList: string[] = [];
-    while ((match = blockRegex.exec(rulesContent)) !== null) {
-      const coll = match[1];
-      if (coll !== 'databases') {
-        hasBlockList.push(coll);
+describe('Database coverage guard (every collection has a table and access rules)', () => {
+  const tables = new Set(documentTables());
+  const withRules = new Set(tablesWithRules());
+
+  test('every collection the browser or server uses has a table in supabase/migrations', () => {
+    const used = new Set<string>();
+    const files = [...sourceFiles(path.join(process.cwd(), 'src')), path.join(process.cwd(), 'server.ts')];
+    const patterns = [
+      /collection\(db,\s*['"]([a-zA-Z0-9_]+)['"]/g,
+      /doc\(db,\s*['"]([a-zA-Z0-9_]+)['"]/g,
+      /\.collection\(\s*['"]([a-zA-Z0-9_]+)['"]\s*\)/g,
+      /\.collectionGroup\(\s*['"]([a-zA-Z0-9_]+)['"]\s*\)/g,
+    ];
+    for (const file of files) {
+      const text = fs.readFileSync(file, 'utf8');
+      for (const re of patterns) {
+        for (const m of text.matchAll(re)) used.add(m[1]);
       }
     }
-    const hasBlockSet = new Set(hasBlockList);
+    assert.ok(used.size > 20, 'should find the collections used by the app');
+    const missing = Array.from(used).filter(c => !tables.has(c)).sort();
+    assert.deepStrictEqual(missing, [], `Collections without a table (add them to supabase/migrations): ${missing.join(', ')}`);
+  });
 
-    // 3. Parse PROTECTED collections from isProtectedCollection in firestore.rules
-    const protMatch = rulesContent.match(/function\s+isProtectedCollection\(name\)\s*\{\s*return\s+name\s+in\s+(\[[^\]]+\]);/);
-    assert.ok(protMatch, 'isProtectedCollection helper function must be defined in firestore.rules');
-    const protectedCollections: string[] = JSON.parse(protMatch[1]);
-    const protectedSet = new Set(protectedCollections);
+  test('every table has an lf_rules row (browser writes are refused without one)', () => {
+    const missing = Array.from(tables).filter(t => !withRules.has(t)).sort();
+    assert.deepStrictEqual(missing, [], `Tables without lf_rules rows: ${missing.join(', ')}`);
+  });
 
-    // 4. ASSERT: no collection appears in HAS_BLOCK twice
-    const seenBlocks = new Set<string>();
-    const duplicateBlocks: string[] = [];
-    for (const coll of hasBlockList) {
-      if (seenBlocks.has(coll)) {
-        duplicateBlocks.push(coll);
-      }
-      seenBlocks.add(coll);
-    }
-    assert.deepStrictEqual(duplicateBlocks, [], `Duplicate collection rule blocks found in firestore.rules: ${duplicateBlocks.join(', ')}`);
+  test('WORKSPACE_SCOPED_COLLECTIONS matches the collections useLedgerData subscribes to', () => {
+    const ledgerContent = fs.readFileSync(path.join(process.cwd(), 'src/hooks/useLedgerData.ts'), 'utf8');
+    const subscribed = new Set<string>();
+    for (const m of ledgerContent.matchAll(/collection\(db,\s*['"]([a-zA-Z0-9_]+)['"]\)/g)) subscribed.add(m[1]);
+    for (const m of ledgerContent.matchAll(/doc\(db,\s*['"]([a-zA-Z0-9_]+)['"]/g)) subscribed.add(m[1]);
 
-    // 5. ASSERT: every SUBSCRIBED collection is in HAS_BLOCK
-    const missingSubscribed = Array.from(subscribedCollections).filter(c => !hasBlockSet.has(c));
-    assert.deepStrictEqual(
-      missingSubscribed,
-      [],
-      `Subscribed collections in useLedgerData.ts missing dedicated rules block in firestore.rules: ${missingSubscribed.join(', ')}`
-    );
+    const expectedScoped = Array.from(subscribed).filter(c => c !== 'users' && c !== 'workspaces' && c !== 'auditLogs');
+    const scopedSet = new Set<string>(WORKSPACE_SCOPED_COLLECTIONS);
+    const missingFromScoped = expectedScoped.filter(c => !scopedSet.has(c));
+    assert.deepStrictEqual(missingFromScoped, [],
+      `Subscribed collections missing from WORKSPACE_SCOPED_COLLECTIONS: ${missingFromScoped.join(', ')}`);
+    const expectedSet = new Set(expectedScoped);
+    const missingFromSubscribed = WORKSPACE_SCOPED_COLLECTIONS.filter(c => !expectedSet.has(c));
+    assert.deepStrictEqual(missingFromSubscribed, [],
+      `WORKSPACE_SCOPED_COLLECTIONS entries missing from useLedgerData.ts subscriptions: ${missingFromSubscribed.join(', ')}`);
 
-    // 6. ASSERT: every PROTECTED collection is in HAS_BLOCK (protected + no block = total lockout)
-    const missingProtected = protectedCollections.filter(c => !hasBlockSet.has(c));
-    assert.deepStrictEqual(
-      missingProtected,
-      [],
-      `Protected collections in isProtectedCollection() missing dedicated rules block (TOTAL LOCKOUT): ${missingProtected.join(', ')}`
-    );
-
-    // 7. ASSERT: every SUBSCRIBED collection is in isProtectedCollection()
-    const missingSubscribedFromProtected = Array.from(subscribedCollections).filter(c => !protectedSet.has(c));
-    assert.deepStrictEqual(
-      missingSubscribedFromProtected,
-      [],
-      `Subscribed collections in useLedgerData.ts missing from isProtectedCollection() in firestore.rules: ${missingSubscribedFromProtected.join(', ')}`
-    );
-
-    // 8. ASSERT: WORKSPACE_SCOPED_COLLECTIONS in src/constants/collections.ts matches subscribed collections in useLedgerData.ts
-    const scopedSet = new Set(WORKSPACE_SCOPED_COLLECTIONS);
-    const expectedScoped = Array.from(subscribedCollections).filter(c => c !== 'users' && c !== 'workspaces' && c !== 'auditLogs');
-
-    const missingFromScoped = expectedScoped.filter(c => !scopedSet.has(c as any));
-    assert.deepStrictEqual(
-      missingFromScoped,
-      [],
-      `Subscribed collections in useLedgerData.ts missing from WORKSPACE_SCOPED_COLLECTIONS in src/constants/collections.ts: ${missingFromScoped.join(', ')}`
-    );
-
-    const expectedScopedSet = new Set(expectedScoped);
-    const missingFromSubscribed = WORKSPACE_SCOPED_COLLECTIONS.filter(c => !expectedScopedSet.has(c));
-    assert.deepStrictEqual(
-      missingFromSubscribed,
-      [],
-      `Collections in WORKSPACE_SCOPED_COLLECTIONS missing from useLedgerData.ts subscriptions: ${missingFromSubscribed.join(', ')}`
-    );
+    const withoutTable = WORKSPACE_SCOPED_COLLECTIONS.filter(c => !tables.has(c));
+    assert.deepStrictEqual(withoutTable, [], `Scoped collections without a table: ${withoutTable.join(', ')}`);
   });
 });

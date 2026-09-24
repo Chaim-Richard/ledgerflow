@@ -1,31 +1,15 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-import { readFileSync } from 'node:fs';
 import { WORKSPACE_SCOPED_COLLECTIONS } from '../constants/collections';
+import { documentTables, hasWorkspaceFieldIndex, migrationsSql, ruleArrays, tablesWithRules } from './helpers/migrations';
 
-const rulesText = readFileSync('firestore.rules', 'utf8');
-const indexesJson = JSON.parse(readFileSync('firestore.indexes.json', 'utf8'));
+// The database rules (supabase/migrations) must stay in step with the data model.
+const sql = migrationsSql();
 
-function extractAffectedKeys(rulesContent: string, matchBlockName: string): string[] {
-  const blockRegex = new RegExp(`match\\s+/${matchBlockName}/{[a-zA-Z0-9]+}\\s*{([\\s\\S]*?)(?=match\\s+|}$)`, 'g');
-  const match = blockRegex.exec(rulesContent);
-  if (!match) return [];
-
-  const blockContent = match[1];
-  const keysRegex = /affectedKeys\(\[([\s\S]*?)\]\)/g;
-  const keysMatch = keysRegex.exec(blockContent);
-  if (!keysMatch) return [];
-
-  return keysMatch[1]
-    .split(',')
-    .map(k => k.trim().replace(/['"]/g, ''))
-    .filter(Boolean);
-}
-
-describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
-  test('workspaces rule allowlist strictly matches Workspace interface fields with no unexpected extras', () => {
-    const keys = extractAffectedKeys(rulesText, 'workspaces');
-    assert.ok(keys.length > 0, 'Should find affectedKeys for workspaces in firestore.rules');
+describe('Schema drift & index consistency guard (database rules)', () => {
+  test('workspaces allowed fields strictly match the Workspace model', () => {
+    const { allowed } = ruleArrays('workspaces', sql);
+    assert.ok(allowed.length > 0, 'Should find the workspaces allowed fields in lf_rules');
 
     const expectedWorkspaceKeys = [
       'id', 'uid', 'name', 'businessType', 'type', 'description', 'createdAt', 'updatedAt',
@@ -37,118 +21,79 @@ describe('Schema Drift & Index Consistency Structural Automated Guard', () => {
       'computeCreditBalance', 'dimensions', 'allowedWorldPaths',
       'bypassBilling', 'stripeCustomerId', 'stripeSubscriptionId', 'status', 'adminCount', 'admins', 'roles', 'members'
     ];
-
     for (const key of expectedWorkspaceKeys) {
-      assert.ok(
-        keys.includes(key),
-        `firestore.rules workspaces allowlist missing key '${key}'`
-      );
+      assert.ok(allowed.includes(key), `workspaces allowed fields missing '${key}'`);
     }
-
-    const extra = keys.filter(k => !expectedWorkspaceKeys.includes(k));
-    assert.equal(extra.length, 0, `workspaces rules permit fields absent from expected model: ${extra.join(', ')}`);
+    const extra = allowed.filter(k => !expectedWorkspaceKeys.includes(k));
+    assert.equal(extra.length, 0, `workspaces rules permit fields absent from the model: ${extra.join(', ')}`);
   });
 
-  test('transactions collection is locked down from direct client-side writes in firestore.rules', () => {
-    // Transactions are managed exclusively by server APIs / Admin SDK to enforce double-entry integrity
-    const blockRegex = /match\s+\/transactions\/\{transactionId\}\s*\{([\s\S]*?)(?=match\s+|$)/;
-    const match = blockRegex.exec(rulesText);
-    assert.ok(match, 'Should find transactions block in firestore.rules');
-    const blockContent = match[1];
-    assert.ok(
-      blockContent.includes('allow create, update, delete: if false;') || 
-      blockContent.includes('allow write: if false;') ||
-      blockContent.includes('canWrite('),
-      'Transactions collection must disallow direct client-side writes or require canWrite role permissions'
-    );
+  test('transactions can only be written by owner / accountant / bookkeeper', () => {
+    const loop = sql.match(/-- Standard workspace documents[\s\S]*?foreach t in array array\[([\s\S]*?)\] loop([\s\S]*?)end loop;/);
+    assert.ok(loop, 'Should find the standard workspace policy loop');
+    assert.ok(loop[1].includes("'transactions'"), 'transactions must use the standard writer policies');
+    assert.ok(/writer_insert[^;]*lf_can_write/.test(loop[2]), 'inserts must require lf_can_write');
+    assert.ok(/writer_update[^;]*lf_can_write/.test(loop[2]), 'updates must require lf_can_write');
+    assert.ok(!/create policy \w+ on public\.transactions/.test(sql), 'no extra policies may widen access to transactions');
   });
 
-  test('supportTickets rule allowlist strictly matches SupportTicket interface fields', () => {
-    const keys = extractAffectedKeys(rulesText, 'supportTickets');
-    assert.ok(keys.length > 0, 'Should find affectedKeys for supportTickets in firestore.rules');
-
-    const expectedSupportTicketKeys = [
-      'id', 'workspaceId', 'uid', 'subject', 'status', 'priority', 'createdAt', 'updatedAt',
-      'lastMessageAt', 'lastMessageBy', 'unreadForUser', 'unreadForAdmin'
-    ];
-
-    for (const key of expectedSupportTicketKeys) {
-      assert.ok(keys.includes(key), `firestore.rules supportTickets missing key '${key}'`);
+  test('supportTickets allowed fields include the SupportTicket model', () => {
+    const { allowed } = ruleArrays('supportTickets', sql);
+    for (const key of ['id', 'workspaceId', 'uid', 'subject', 'status', 'priority', 'createdAt', 'updatedAt',
+      'lastMessageAt', 'lastMessageBy', 'unreadForUser', 'unreadForAdmin']) {
+      assert.ok(allowed.includes(key), `supportTickets allowed fields missing '${key}'`);
     }
   });
 
-  test('supportMessages rule allowlist strictly matches SupportMessage interface fields', () => {
-    const keys = extractAffectedKeys(rulesText, 'supportMessages');
-    assert.ok(keys.length > 0, 'Should find affectedKeys for supportMessages in firestore.rules');
-
-    const expectedSupportMessageKeys = [
-      'id', 'ticketId', 'workspaceId', 'authorUid', 'authorRole', 'body', 'createdAt'
-    ];
-
-    for (const key of expectedSupportMessageKeys) {
-      assert.ok(keys.includes(key), `firestore.rules supportMessages missing key '${key}'`);
+  test('supportMessages allowed fields include the SupportMessage model', () => {
+    const { allowed } = ruleArrays('supportMessages', sql);
+    for (const key of ['id', 'ticketId', 'workspaceId', 'authorUid', 'authorRole', 'body', 'createdAt']) {
+      assert.ok(allowed.includes(key), `supportMessages allowed fields missing '${key}'`);
     }
   });
 
-  test('chartAccounts rule allowlist includes isActive field', () => {
-    const keys = extractAffectedKeys(rulesText, 'chartAccounts');
-    assert.ok(keys.length > 0, 'Should find affectedKeys for chartAccounts in firestore.rules');
-    assert.ok(keys.includes('isActive'), 'firestore.rules chartAccounts allowlist missing key "isActive"');
+  test('chartAccounts allowed fields include isActive; balances are immutable from the browser', () => {
+    const { allowed, immutable } = ruleArrays('chartAccounts', sql);
+    assert.ok(allowed.includes('isActive'), 'chartAccounts allowed fields missing "isActive"');
+    for (const key of ['balanceCents', 'openingBalanceCents', 'workspaceId']) {
+      assert.ok(immutable.includes(key), `chartAccounts must not let the browser change "${key}"`);
+    }
   });
 
-  test('workspaces rule enforces isUnchanged() protection on system & sensitive billing fields', () => {
-    const isUnchangedMatches = Array.from(rulesText.matchAll(/isUnchanged\(["']([^"']+)["']\)/g)).map(m => m[1]);
+  test('workspaces protect system and billing fields from browser changes', () => {
+    const { immutable } = ruleArrays('workspaces', sql);
     const expectedProtectedFields = [
       'uid', 'plan', 'computeCreditBalance', 'apiQuotaMonthlyLimitCents', 'maxSeats',
       'concurrentUserLimit', 'apiQuotaTotalCentsUsed', 'stripeCustomerId', 'seatCount',
       'status', 'lockedUntilDate', 'bypassBilling', 'stripeSubscriptionId',
       'billingLedgerChain', 'allowedWorldPaths', 'analyticalTopology', 'computeHardnessScore'
     ];
-
     for (const field of expectedProtectedFields) {
-      assert.ok(
-        isUnchangedMatches.includes(field),
-        `firestore.rules workspace update protection missing isUnchanged("${field}")`
-      );
+      assert.ok(immutable.includes(field), `workspaces must not let the browser change "${field}"`);
     }
   });
 
-  test('firestore.indexes.json includes composite indexes for workspaceId + order field queries', () => {
-    const requiredIndexes = [
-      { collectionGroup: 'transactions', field: 'date' },
-      { collectionGroup: 'invoices', field: 'date' },
-      { collectionGroup: 'bills', field: 'date' },
-      { collectionGroup: 'bankLines', field: 'date' },
-      { collectionGroup: 'auditLogs', field: 'timestamp' },
-      { collectionGroup: 'supportTickets', field: 'lastMessageAt' }
+  test('indexes cover the workspace + date/timestamp lists', () => {
+    const required = [
+      { table: 'transactions', field: 'date' },
+      { table: 'invoices', field: 'date' },
+      { table: 'bills', field: 'date' },
+      { table: 'bankLines', field: 'date' },
+      { table: 'auditLogs', field: 'timestamp' },
+      { table: 'supportTickets', field: 'lastMessageAt' },
     ];
-
-    for (const req of requiredIndexes) {
-      const matchFound = indexesJson.indexes.some((idx: any) => {
-        return (
-          idx.collectionGroup === req.collectionGroup &&
-          idx.fields.length === 2 &&
-          (idx.fields[0].fieldPath === 'workspaceId' || idx.fields[0].fieldPath === 'status') &&
-          idx.fields[0].order === 'ASCENDING' &&
-          idx.fields[1].fieldPath === req.field &&
-          idx.fields[1].order === 'DESCENDING'
-        );
-      });
-
-      assert.ok(
-        matchFound,
-        `firestore.indexes.json missing composite index for ${req.collectionGroup} (workspaceId ASC, ${req.field} DESC)`
-      );
+    for (const req of required) {
+      assert.ok(hasWorkspaceFieldIndex(req.table, req.field, sql),
+        `supabase/migrations missing index on ${req.table} (workspace_id, (data->>'${req.field}'))`);
     }
   });
 
-  test('A-15: All WORKSPACE_SCOPED_COLLECTIONS have corresponding rules in firestore.rules', () => {
+  test('A-15: every WORKSPACE_SCOPED_COLLECTIONS entry has a table and access rules', () => {
+    const tables = new Set(documentTables(sql));
+    const withRules = new Set(tablesWithRules(sql));
     for (const collName of WORKSPACE_SCOPED_COLLECTIONS) {
-      const hasMatch = rulesText.includes(`match /${collName}/{`);
-      assert.ok(
-        hasMatch,
-        `firestore.rules missing rules definition block for collection "${collName}"`
-      );
+      assert.ok(tables.has(collName), `No table for collection "${collName}"`);
+      assert.ok(withRules.has(collName), `No lf_rules row for collection "${collName}"`);
     }
   });
 });
