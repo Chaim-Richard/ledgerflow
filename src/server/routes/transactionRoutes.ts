@@ -6,7 +6,7 @@ import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidat
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { ClosingEntryEngine } from '../../kernel/ledger/ClosingEntryEngine';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchema, BankLineUpdateSchema, CreditNoteSchema, VendorCreditSchema } from '../../schemas';
+import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchema, BankLineUpdateSchema, BankLineImportSchema, CreditNoteSchema, VendorCreditSchema } from '../../schemas';
 import { Transaction } from '../../types';
 import { parseLocalDate, getLocalDateISO } from '../../lib/utils';
 import { getDb, assertWorkspaceAccess } from '../db/firestore';
@@ -18,6 +18,8 @@ import { requireOpenPeriod } from '../middleware/periodLock';
 import { getWorkspaceUserRole } from './workspaceRoutes';
 import { LedgerPostingError, prepareStockMoves } from '../services/cogsStockService';
 import { requireLedgerWriter } from '../middleware/requireLedgerWriter';
+import { BankLineError, payFromBankLine, splitBankLine } from '../services/bankLineService';
+import { z } from 'zod';
 import { writeServerAuditLog } from '../services/auditLogService';
 
 export const transactionRouter = express.Router();
@@ -446,6 +448,8 @@ transactionRouter.delete('/:id', requireOpenPeriod('transactions'), async (req, 
 transactionRouter.post('/bulk', async (req, res) => {
   try {
     const { transactions, workspaceId, entityMutation } = req.body;
+    // Imported bank statement lines (the browser may not write bankLines itself)
+    const bankLines = BankLineImportSchema.array().max(5000).parse(req.body.bankLines ?? []);
     const user = (req as any).user;
     const db = getDb();
     const wsId = workspaceId || transactions?.[0]?.workspaceId;
@@ -465,7 +469,7 @@ transactionRouter.post('/bulk', async (req, res) => {
     const idempotencyKey = req.headers['idempotency-key'] as string;
     const scopedIdempotencyKey = idempotencyKey ? `${wsId}_${idempotencyKey}` : null;
 
-    if ((!Array.isArray(transactions) || transactions.length === 0) && !entityMutation) {
+    if ((!Array.isArray(transactions) || transactions.length === 0) && !entityMutation && bankLines.length === 0) {
       return res.json({ status: 'ok', count: 0 });
     }
 
@@ -529,6 +533,14 @@ transactionRouter.post('/bulk', async (req, res) => {
         if (taken) throw new LedgerPostingError(409, `Transaction ${taken.id} already exists`);
       }
       const stock = await prepareStockMoves(db, t, wsId, validatedTransactions);
+      const bankLineRefs = bankLines.map(b => db.collection('bankLines').doc(b.id));
+      if (bankLineRefs.length > 0) {
+        const takenLine = (await t.getAll(...bankLineRefs)).find((snap: { exists: boolean }) => snap.exists);
+        if (takenLine) throw new LedgerPostingError(409, `Bank line ${takenLine.id} already exists`);
+        const postedIds = new Set(validatedTransactions.map(tx => tx.id));
+        const unknown = bankLines.find(b => b.matchedTransactionId && !postedIds.has(b.matchedTransactionId));
+        if (unknown) throw new LedgerPostingError(400, `Bank line ${unknown.id} points to a transaction outside this request`);
+      }
       const idempotencyRef = scopedIdempotencyKey ? db.collection('idempotencyKeys').doc(scopedIdempotencyKey) : null;
       if (idempotencyRef) {
         const replay = await t.get(idempotencyRef);
@@ -550,6 +562,7 @@ transactionRouter.post('/bulk', async (req, res) => {
       }
       validatedTransactions.forEach((tx, j) => t.create(refs[j], { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }));
       stock.apply();
+      bankLines.forEach((b, j) => t.create(bankLineRefs[j], { ...b, matchedTransactionId: b.matchedTransactionId ?? null, workspaceId: wsId, uid: user.uid, createdAt: new Date().toISOString() }));
       if (stock.warnings.length > 0) body = { ...body, warnings: stock.warnings };
       if (idempotencyRef) t.set(idempotencyRef, { createdAt: FieldValue.serverTimestamp(), code: 200, body, workspaceId: wsId });
     });
@@ -834,6 +847,33 @@ export async function handleReconcile(req: express.Request, res: express.Respons
 }
 
 transactionRouter.post('/reconcile', (req, res) => handleReconcile(req, res));
+
+// Clear a pending bank line: pay invoices/bills with it, or split it over accounts (bankLineService)
+const bankLinePaySchema = z.object({
+  workspaceId: z.string().min(1),
+  bankAccountId: z.string().min(1).optional(),
+  allocations: z.array(z.object({ documentId: z.string().min(1), amountCents: z.number().int().positive() })).min(1).max(100),
+});
+const bankLineSplitSchema = z.object({
+  workspaceId: z.string().min(1),
+  bankAccountId: z.string().min(1).optional(),
+  splits: z.array(z.object({ accountId: z.string().min(1), amountCents: z.number().int().positive(), description: z.string().max(500).optional() })).min(1).max(50),
+});
+async function clearBankLine(req: Request, res: Response, action: 'pay' | 'split') {
+  try {
+    const user = (req as Request & { user: { uid: string } }).user;
+    const { id } = req.params as Record<string, string>;
+    const result = action === 'pay'
+      ? await payFromBankLine(getDb(), { ...bankLinePaySchema.parse(req.body), uid: user.uid, bankLineId: id })
+      : await splitBankLine(getDb(), { ...bankLineSplitSchema.parse(req.body), uid: user.uid, bankLineId: id });
+    res.json({ status: 'ok', ...result });
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Invalid request', details: e.issues });
+    res.status(e instanceof BankLineError ? e.status : 400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+}
+transactionRouter.post('/bank-lines/:id/pay', (req, res) => clearBankLine(req, res, 'pay'));
+transactionRouter.post('/bank-lines/:id/split', (req, res) => clearBankLine(req, res, 'split'));
 
 transactionRouter.patch('/bank-lines/:id', async (req, res) => {
   try {

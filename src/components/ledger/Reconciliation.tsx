@@ -37,6 +37,8 @@ import { isPostable, lineAmount } from '../../lib/txFilters';
 
 
 import AsyncButton from '../ui/AsyncButton';
+import BankLineActionDialog from './BankLineActionDialog';
+import type { BankLineActionTarget } from './BankLineActionDialog';
 
 export default function Reconciliation() {
   const user = useAuthStore((s: any) => s.user);
@@ -62,6 +64,7 @@ export default function Reconciliation() {
   
   // Custom filter states
   const [searchQuery, setSearchQuery] = useState('');
+  const [bankLineAction, setBankLineAction] = useState<BankLineActionTarget | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   
   // Granular checkable state for the smart auto-alignment bulk modal
@@ -481,6 +484,12 @@ export default function Reconciliation() {
                           {formatCurrency(btx.amountCents)}
                         </span>
                         <div className="flex gap-1 mt-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                           <button type="button" onClick={(e) => { e.stopPropagation(); setBankLineAction({ mode: 'pay', line: btx }); }} className="p-1 px-2 text-[9px] font-bold text-[var(--muted)] hover:text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded cursor-pointer uppercase tracking-wider" title={btx.amountCents > 0 ? 'This deposit pays invoices' : 'This payment pays bills'}>
+                             {btx.amountCents > 0 ? 'Invoices' : 'Bills'}
+                           </button>
+                           <button type="button" onClick={(e) => { e.stopPropagation(); setBankLineAction({ mode: 'split', line: btx }); }} className="p-1 px-2 text-[9px] font-bold text-[var(--muted)] hover:text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded cursor-pointer uppercase tracking-wider" title="Split over several accounts">
+                             Split
+                           </button>
                            <button 
                              onClick={(e) => { e.stopPropagation(); onIgnore(btx.id); }} 
                              className="p-1 px-2 text-[9px] font-bold text-[var(--muted)] hover:text-rose-500 bg-[var(--surface)] border border-[var(--line)] rounded cursor-pointer uppercase tracking-wider"
@@ -641,6 +650,8 @@ export default function Reconciliation() {
           </div>
         </div>
       )}
+
+      {bankLineAction && <BankLineActionDialog target={bankLineAction} onClose={() => setBankLineAction(null)} />}
 
       {/* DUAL-VERIFIER ALIGNMENT DIALOG BAR */}
       <AnimatePresence mode="wait">

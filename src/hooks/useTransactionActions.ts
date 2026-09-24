@@ -333,20 +333,9 @@ export function useTransactionActions() {
         bankLineRecords.push(bankLineRecord);
       });
 
-      // Write bank lines in batches
-      const BANK_BATCH_SIZE = 400;
-      for (let i = 0; i < bankLineRecords.length; i += BANK_BATCH_SIZE) {
-        const batch = writeBatch(db);
-        const chunk = bankLineRecords.slice(i, i + BANK_BATCH_SIZE);
-        for (const record of chunk) {
-          const bRef = doc(db, 'bankLines', record.id);
-          batch.set(bRef, record);
-        }
-        await batch.commit();
-      }
-
-      // Post transactions via authenticated server bulk endpoint
-      if (processedTxs.length > 0) {
+      // Bank lines and their ledger entries go to the server together (one database transaction;
+      // the browser isn't allowed to write bank lines itself)
+      if (processedTxs.length > 0 || bankLineRecords.length > 0) {
         const token = await user.getIdToken();
         const res = await fetch('/api/v1/transactions/bulk', {
           method: 'POST',
@@ -356,7 +345,8 @@ export function useTransactionActions() {
           },
           body: JSON.stringify({
             workspaceId: currentWorkspaceId,
-            transactions: processedTxs
+            transactions: processedTxs,
+            bankLines: bankLineRecords.map(({ id, date, description, amountCents, status, matchedTransactionId }) => ({ id, date, description, amountCents, status, matchedTransactionId }))
           })
         });
 

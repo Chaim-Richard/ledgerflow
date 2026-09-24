@@ -1,5 +1,7 @@
 import { calculateAmountDue } from '../../lib/documentMath';
 import { writeServerAuditLog } from './auditLogService';
+import { resolveAccountRole } from '../../lib/accountUtils';
+import type { ChartAccount } from '../../types';
 
 export interface CreatePaymentPayload {
   workspaceId: string;
@@ -21,7 +23,17 @@ export interface CreatePaymentPayload {
   }>;
 }
 
+const PAYMENT_METHODS = new Set(['cash', 'check', 'bank_transfer', 'card', 'other']);
+
 export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload) {
+  return db.runTransaction((tx: unknown) => createPaymentInTransaction(db, tx, payload));
+}
+
+/**
+ * Records a payment inside an open database transaction (reads first, writes at the end), so a
+ * caller can add its own writes, e.g. marking the bank line it came from as matched.
+ */
+export async function createPaymentInTransaction(db: any, tx: any, payload: CreatePaymentPayload) {
   const {
     workspaceId,
     uid,
@@ -38,7 +50,7 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
     allocations = []
   } = payload;
 
-  return await db.runTransaction(async (tx: any) => {
+  {
     // 1. Fetch workspace for lockDate and default mappings
     const wsRef = db.collection('workspaces').doc(workspaceId);
     const wsSnap = await tx.get(wsRef);
@@ -129,8 +141,18 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
       });
 
       if (!resolvedOffsetAccountId) {
-        resolvedOffsetAccountId = docData.arAccountId || docData.apAccountId || wsData.defaultAccountMappings?.ar || wsData.defaultAccountMappings?.ap;
+        resolvedOffsetAccountId = alloc.documentType === 'invoice'
+          ? docData.arAccountId || wsData.defaultAccountMappings?.ar
+          : docData.apAccountId || wsData.defaultAccountMappings?.ap;
       }
+    }
+
+    // No mapping: the chart's receivables (customer payment) or payables (vendor payment) account
+    const receipt = allocations.some(a => a.documentType === 'invoice') || Boolean(customerId);
+    if (!resolvedOffsetAccountId) {
+      const chart = await tx.get(db.collection('chartAccounts').where('workspaceId', '==', workspaceId));
+      const role = receipt ? 'ar' : 'ap';
+      resolvedOffsetAccountId = chart.docs.find((d: { id: string; data: () => ChartAccount }) => resolveAccountRole({ ...d.data(), id: d.id }) === role)?.id;
     }
 
     if (totalAllocatedCents > amountCents) {
@@ -156,11 +178,22 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
     const paymentRef = db.collection('payments').doc();
     const paymentId = paymentRef.id;
     const paymentNumber = `PMT-${Math.floor(1000 + Math.random() * 9000)}`;
+    const isReceiptPayment = allocations.some(a => a.documentType === 'invoice') || Boolean(customerId);
     const paymentData = {
       id: paymentId,
       workspaceId,
       uid,
       number: paymentNumber,
+      // The fields screens and reports read (types.ts Payment)
+      direction: isReceiptPayment ? 'received' : 'made',
+      contactId: customerId || vendorId || null,
+      contactName: entityName || '',
+      method: PAYMENT_METHODS.has(paymentMethod) ? paymentMethod : 'other',
+      reference: referenceNumber,
+      depositAccountId: cashAccountId,
+      unappliedCents: amountCents - totalAllocatedCents,
+      currency: wsData.currency || 'USD',
+      status: 'posted',
       date: paymentDate,
       paymentDate,
       amountCents,
@@ -177,7 +210,7 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
     };
 
     // 5. Build General Ledger Transaction
-    const isReceipt = allocations.some(a => a.documentType === 'invoice') || Boolean(customerId);
+    const isReceipt = isReceiptPayment;
     const ledgerTxRef = db.collection('transactions').doc();
 
     const ledgerTxData = {
@@ -232,5 +265,5 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
     }, { db, tx });
 
     return { paymentId, transactionId: ledgerTxRef.id, payment: paymentData, ledgerTransaction: ledgerTxData };
-  });
+  }
 }

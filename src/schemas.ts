@@ -197,6 +197,17 @@ export const BankLineUpdateSchema = z.object({
   confidence: z.number().min(0).max(1).optional(),
 }).strict();
 
+/** A bank statement line sent with an import (POST /api/v1/transactions/bulk); the server adds workspace and user. */
+export const BankLineImportSchema = z.object({
+  id: z.string().regex(/^[A-Za-z0-9_-]{1,127}$/),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
+  description: z.string().max(1000).default(''),
+  amountCents: z.number().int().refine(Number.isSafeInteger),
+  status: z.enum(['pending', 'matched']).default('pending'),
+  matchedTransactionId: z.string().nullable().optional(),
+  accountId: z.string().max(200).optional(),
+}).strict();
+
 export const InvoiceSchema = z.object({
   id: z.string().optional(),
   uid: z.string().optional(),
