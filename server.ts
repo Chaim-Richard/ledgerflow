@@ -2,6 +2,7 @@ import { fxRouter } from "./src/server/routes/fxRoutes";
 import { aiRouter } from "./src/server/routes/aiRoutes";
 import { reportRouter } from "./src/server/routes/reportRoutes";
 import { workspaceRouter, countWorkspaceOwners, requireWorkspaceRole } from "./src/server/routes/workspaceRoutes";
+import { LEDGER_WRITER_ROLES, roleInWorkspace } from "./src/server/middleware/requireLedgerWriter";
 import { invitePublicRouter } from "./src/server/routes/invitePublicRoutes";
 import { invoiceEmailRouter } from "./src/server/routes/invoiceEmailRoutes";
 import { publicInvoiceRouter } from "./src/server/routes/publicInvoiceRoutes";
@@ -282,19 +283,6 @@ function sendError(res: express.Response, message: string, status: number = 500,
   });
 }
 
-function isIamConstraintError(err: any): boolean {
-  if (!err) return false;
-  const message = err.message || err.toString() || "";
-  const code = err.code;
-  return (
-    code === 7 ||
-    code === 'permission-denied' ||
-    message.includes('PERMISSION_DENIED') ||
-    message.includes('Missing or insufficient permissions') ||
-    message.includes('Cloud Firestore API has not been used')
-  );
-}
-
 /**
  * Centralized API error handler
  */
@@ -302,11 +290,6 @@ function handleApiError(res: express.Response, err: any) {
   const message = err.message || err.toString() || "";
   const code = err.code || "";
   
-  if (isIamConstraintError(err)) {
-    console.warn("[Admin API Note] Handled Firestore IAM constraint:", message);
-    return res.status(200).json({ status: "success", data: null, message: "Handled" });
-  }
-
   console.error("[Handling API Error]", err);
   console.error("[API Error Details] message:", message, "code:", code);
 
@@ -356,6 +339,9 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
 
       const method = req.method || "GET";
       const isMutation = ["POST", "PUT", "DELETE", "PATCH"].includes(method);
+      if (isMutation && !LEDGER_WRITER_ROLES.includes(roleInWorkspace(data, req.user.uid))) {
+        throw new Error("FORBIDDEN: your role in this workspace is read-only.");
+      }
       const isCreditSensitive = isMutation || url.includes("/brain/");
 
       if (isCreditSensitive) {
@@ -1528,34 +1514,21 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       await authorizeWorkspace(authReq, workspaceId);
 
       const db = getDb();
-      try {
-        const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
-        if (!wsDoc.exists) {
-          return sendError(res, "Workspace not found", 404);
-        }
-        const data = wsDoc.data() || {};
-        const members: string[] = Array.isArray(data.members) ? data.members : [];
-        const ownerUid = data.uid;
-
-        res.json({
-          status: "success",
-          workspaceId,
-          ownerUid,
-          members,
-          total: members.length + 1
-        });
-      } catch (dbErr: any) {
-        if (isIamConstraintError(dbErr)) {
-          return res.json({
-            status: "success",
-            workspaceId,
-            ownerUid: authReq.user.uid,
-            members: [],
-            total: 1
-          });
-        }
-        throw dbErr;
+      const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
+      if (!wsDoc.exists) {
+        return sendError(res, "Workspace not found", 404);
       }
+      const data = wsDoc.data() || {};
+      const members: string[] = Array.isArray(data.members) ? data.members : [];
+      const ownerUid = data.uid;
+
+      res.json({
+        status: "success",
+        workspaceId,
+        ownerUid,
+        members,
+        total: members.length + 1
+      });
     } catch (err: any) {
       handleApiError(res, err);
     }
@@ -1719,7 +1692,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
     }
   });
 
-  app.post("/api/v1/workspaces/:workspaceId/members", apiAuthenticate, requirePlanCapacity('seats'), async (req: express.Request, res: express.Response) => {
+  app.post("/api/v1/workspaces/:workspaceId/members", apiAuthenticate, requireWorkspaceRole(['owner']), requirePlanCapacity('seats'), async (req: express.Request, res: express.Response) => {
     try {
       const { workspaceId } = req.params;
       const { memberUid, email } = req.body;
@@ -1743,110 +1716,86 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         }
       }
 
-      try {
-        const wsRef = db.collection("workspaces").doc(workspaceId);
-        const wsDoc = await wsRef.get();
-        if (!wsDoc.exists) {
-          return sendError(res, "Workspace not found", 404);
-        }
-
-        const data = wsDoc.data() || {};
-        const existingMembers: string[] = Array.isArray(data.members) ? data.members : [];
-
-        if (!existingMembers.includes(targetUid)) {
-          existingMembers.push(targetUid);
-          await wsRef.update({
-            members: existingMembers,
-            updatedAt: new Date().toISOString()
-          });
-        }
-
-        res.json({
-          status: "success",
-          message: `Member ${targetUid} added to workspace.`,
-          workspaceId,
-          members: existingMembers
-        });
-      } catch (dbErr: any) {
-        if (isIamConstraintError(dbErr)) {
-          return res.json({
-            status: "success",
-            message: `Member ${targetUid} recorded.`,
-            workspaceId,
-            members: [targetUid]
-          });
-        }
-        throw dbErr;
+      const wsRef = db.collection("workspaces").doc(workspaceId);
+      const wsDoc = await wsRef.get();
+      if (!wsDoc.exists) {
+        return sendError(res, "Workspace not found", 404);
       }
+
+      const data = wsDoc.data() || {};
+      const existingMembers: string[] = Array.isArray(data.members) ? data.members : [];
+
+      if (!existingMembers.includes(targetUid)) {
+        existingMembers.push(targetUid);
+        await wsRef.update({
+          members: existingMembers,
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      res.json({
+        status: "success",
+        message: `Member ${targetUid} added to workspace.`,
+        workspaceId,
+        members: existingMembers
+      });
     } catch (err: any) {
       handleApiError(res, err);
     }
   });
 
-  app.delete("/api/v1/workspaces/:workspaceId/members/:memberUid", apiAuthenticate, async (req: express.Request, res: express.Response) => {
+  app.delete("/api/v1/workspaces/:workspaceId/members/:memberUid", apiAuthenticate, requireWorkspaceRole(['owner']), async (req: express.Request, res: express.Response) => {
     try {
       const { workspaceId, memberUid } = req.params;
       const authReq = req as AuthenticatedRequest;
       await authorizeWorkspace(authReq, workspaceId);
 
       const db = getDb();
-      try {
-        const wsRef = db.collection("workspaces").doc(workspaceId);
-        const wsDoc = await wsRef.get();
-        if (!wsDoc.exists) {
-          return sendError(res, "Workspace not found", 404);
-        }
-
-        const data = wsDoc.data() || {};
-        const { count, ownerUids } = countWorkspaceOwners(data);
-
-        // Refuse to remove last owner
-        if (ownerUids.includes(memberUid) && count <= 1) {
-          return sendError(res, "Cannot demote or remove the last owner of the workspace.", 400);
-        }
-
-        const existingMembers: string[] = Array.isArray(data.members) ? data.members : [];
-        const updatedMembers = existingMembers.filter(m => m !== memberUid);
-        const updatedRoles = { ...(data.roles || {}) };
-        delete updatedRoles[memberUid];
-
-        await wsRef.update({
-          members: updatedMembers,
-          roles: updatedRoles,
-          updatedAt: new Date().toISOString()
-        });
-
-        // Write audit log
-        await writeServerAuditLog({
-          workspaceId,
-          uid: authReq.user.uid,
-          email: authReq.user.email || '',
-          action: 'MEMBER_REMOVED',
-          entityType: 'workspace',
-          entityId: workspaceId,
-          details: {
-            removedUid: memberUid,
-            description: `Member ${memberUid} removed from workspace`
-          }
-        }, { db });
-
-        res.json({
-          status: "success",
-          message: `Member ${memberUid} removed from workspace.`,
-          workspaceId,
-          members: updatedMembers
-        });
-      } catch (dbErr: any) {
-        if (isIamConstraintError(dbErr)) {
-          return res.json({
-            status: "success",
-            message: `Member ${memberUid} removed.`,
-            workspaceId,
-            members: []
-          });
-        }
-        throw dbErr;
+      const wsRef = db.collection("workspaces").doc(workspaceId);
+      const wsDoc = await wsRef.get();
+      if (!wsDoc.exists) {
+        return sendError(res, "Workspace not found", 404);
       }
+
+      const data = wsDoc.data() || {};
+      const { count, ownerUids } = countWorkspaceOwners(data);
+
+      // Refuse to remove last owner
+      if (ownerUids.includes(memberUid) && count <= 1) {
+        return sendError(res, "Cannot demote or remove the last owner of the workspace.", 400);
+      }
+
+      const existingMembers: string[] = Array.isArray(data.members) ? data.members : [];
+      const updatedMembers = existingMembers.filter(m => m !== memberUid);
+      const updatedRoles = { ...(data.roles || {}) };
+      delete updatedRoles[memberUid];
+
+      await wsRef.update({
+        members: updatedMembers,
+        roles: updatedRoles,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Write audit log
+      await writeServerAuditLog({
+        workspaceId,
+        uid: authReq.user.uid,
+        email: authReq.user.email || '',
+        action: 'MEMBER_REMOVED',
+        entityType: 'workspace',
+        entityId: workspaceId,
+        details: {
+          removedUid: memberUid,
+          description: `Member ${memberUid} removed from workspace`
+        }
+      }, { db });
+
+      res.json({
+        status: "success",
+        message: `Member ${memberUid} removed from workspace.`,
+        workspaceId,
+        members: updatedMembers
+      });
     } catch (err: any) {
       handleApiError(res, err);
     }
@@ -2238,7 +2187,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   });
 
   // --- API Key Management endpoints ---
-  app.post("/api/v1/keys/provision", authenticate, async (req: express.Request, res: express.Response) => {
+  app.post("/api/v1/keys/provision", authenticate, requireWorkspaceRole(['owner']), async (req: express.Request, res: express.Response) => {
     try {
       const { name, scopes, expiration, workspaceId } = req.body;
       if (!workspaceId) {
@@ -3427,31 +3376,13 @@ You MUST output a valid JSON object matching this schema exactly:
   app.get("/api/v1/admin/users", authenticate, requireAdmin, async (req: express.Request, res: express.Response) => {
     try {
       const db = getDb();
-      try {
-        const usersSnap = await db.collection("users").limit(100).get();
-        const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() as any }));
-        
-        res.json({
-          status: "success",
-          users
-        });
-      } catch (dbErr: any) {
-        if (isIamConstraintError(dbErr)) {
-          const authUser = (req as AuthenticatedRequest).user;
-          return res.json({
-            status: "success",
-            users: [
-              {
-                uid: authUser.uid,
-                email: authUser.email || 'admin@ledgerflow.io',
-                role: 'admin',
-                displayName: (authUser as any).name || 'Admin User'
-              }
-            ]
-          });
-        }
-        throw dbErr;
-      }
+      const usersSnap = await db.collection("users").limit(100).get();
+      const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() as any }));
+      
+      res.json({
+        status: "success",
+        users
+      });
     } catch (err: any) {
       sendError(res, err.message, 500);
     }
@@ -3517,26 +3448,14 @@ You MUST output a valid JSON object matching this schema exactly:
       };
 
       let mutationOutput;
-      try {
-        if (scopedKey) {
-          mutationOutput = await executeIdempotent(scopedKey, {
-            actor: authReq.user.uid,
-            workspaceId: 'system',
-            operationType: 'ADMIN_USER_UPDATED'
-          }, performMutation);
-        } else {
-          mutationOutput = await db.runTransaction(performMutation);
-        }
-      } catch (txErr: any) {
-        if (isIamConstraintError(txErr)) {
-          mutationOutput = {
-            auditResult: { userId, role: validated.role },
-            roleChanged: true,
-            newRole: validated.role
-          };
-        } else {
-          throw txErr;
-        }
+      if (scopedKey) {
+        mutationOutput = await executeIdempotent(scopedKey, {
+          actor: authReq.user.uid,
+          workspaceId: 'system',
+          operationType: 'ADMIN_USER_UPDATED'
+        }, performMutation);
+      } else {
+        mutationOutput = await db.runTransaction(performMutation);
       }
 
       // Update custom claims
@@ -3561,25 +3480,18 @@ You MUST output a valid JSON object matching this schema exactly:
       const db = getDb();
       const { userId, workspaceId, action, startDate, endDate, limit = 50 } = req.query;
       
-      try {
-        let query = db.collection("auditLogs").orderBy("timestamp", "desc");
-        
-        if (userId) query = query.where("userId", "==", userId);
-        if (workspaceId) query = query.where("workspaceId", "==", workspaceId);
-        if (action) query = query.where("action", "==", action);
-        if (startDate) query = query.where("timestamp", ">=", startDate);
-        if (endDate) query = query.where("timestamp", "<=", endDate);
-        
-        const snap = await query.limit(Number(limit)).get();
-        const logs = snap.docs.map(doc => doc.data());
-        
-        res.json({ status: "success", logs });
-      } catch (dbErr: any) {
-        if (isIamConstraintError(dbErr)) {
-          return res.json({ status: "success", logs: [] });
-        }
-        throw dbErr;
-      }
+      let query = db.collection("auditLogs").orderBy("timestamp", "desc");
+      
+      if (userId) query = query.where("userId", "==", userId);
+      if (workspaceId) query = query.where("workspaceId", "==", workspaceId);
+      if (action) query = query.where("action", "==", action);
+      if (startDate) query = query.where("timestamp", ">=", startDate);
+      if (endDate) query = query.where("timestamp", "<=", endDate);
+      
+      const snap = await query.limit(Number(limit)).get();
+      const logs = snap.docs.map(doc => doc.data());
+      
+      res.json({ status: "success", logs });
     } catch (err: any) {
       handleApiError(res, err);
     }
@@ -3590,20 +3502,13 @@ You MUST output a valid JSON object matching this schema exactly:
       const db = getDb();
       const { workspaceId, severity, limit = 50 } = req.query;
       
-      try {
-        let query = db.collection("errorLogs").orderBy("createdAt", "desc");
-        if (workspaceId) query = query.where("workspaceId", "==", workspaceId);
-        if (severity) query = query.where("severity", "==", severity);
-        
-        const snap = await query.limit(Number(limit)).get();
-        const logs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.json({ status: "success", logs });
-      } catch (dbErr: any) {
-        if (isIamConstraintError(dbErr)) {
-          return res.json({ status: "success", logs: [] });
-        }
-        throw dbErr;
-      }
+      let query = db.collection("errorLogs").orderBy("createdAt", "desc");
+      if (workspaceId) query = query.where("workspaceId", "==", workspaceId);
+      if (severity) query = query.where("severity", "==", severity);
+      
+      const snap = await query.limit(Number(limit)).get();
+      const logs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      res.json({ status: "success", logs });
     } catch (err: any) {
       handleApiError(res, err);
     }

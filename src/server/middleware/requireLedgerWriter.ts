@@ -7,6 +7,15 @@ export const LEDGER_WRITER_ROLES = ['owner', 'accountant', 'bookkeeper'];
 
 const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+/** A user's role from a workspace document: the creator is the owner, others per `roles` (default viewer). */
+export function roleInWorkspace(workspace: { uid?: unknown; roles?: unknown } | undefined, uid: string): string {
+  if (!workspace) return 'viewer';
+  if (workspace.uid === uid) return 'owner';
+  const roles = workspace.roles as Record<string, unknown> | undefined;
+  const role = roles?.[uid];
+  return typeof role === 'string' ? role : 'viewer';
+}
+
 function asId(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
