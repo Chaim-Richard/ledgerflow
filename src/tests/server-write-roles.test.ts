@@ -47,7 +47,7 @@ describe('Server write roles', () => {
   });
 
   test("server.ts: labeling with a workspace's accounts and rules needs membership", () => {
-    const start = server.indexOf('app.post("/api/v1/label-transactions"');
+    const start = server.search(/app\.post\("\/api\/v1\/label-transactions"/);
     assert.ok(start > 0);
     assert.match(server.slice(start, start + 1500), /await assertWorkspaceAccess\(db, finalWorkspaceId, /);
   });
