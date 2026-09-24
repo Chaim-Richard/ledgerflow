@@ -46,6 +46,12 @@ describe('Server write roles', () => {
     assert.doesNotMatch(server, /message: "Handled"/);
   });
 
+  test("server.ts: labeling with a workspace's accounts and rules needs membership", () => {
+    const start = server.indexOf('app.post("/api/v1/label-transactions"');
+    assert.ok(start > 0);
+    assert.match(server.slice(start, start + 1500), /await assertWorkspaceAccess\(db, finalWorkspaceId, /);
+  });
+
   test('billing changes (checkout, portal, confirming a payment) are owner-only', () => {
     const billing = fs.readFileSync('src/server/routes/billingRoutes.ts', 'utf8');
     for (const route of ['/checkout', '/portal', '/verify-session']) {

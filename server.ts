@@ -3965,18 +3965,15 @@ You MUST output a valid JSON object matching this schema exactly:
       const db = getDb();
 
       if (!finalWorkspaceId) {
-        try {
-          const wsSnap = await db.collection("workspaces").where("uid", "==", (req as any).user.uid).limit(1).get();
-          if (!wsSnap.empty) {
-            finalWorkspaceId = wsSnap.docs[0].id;
-          }
-        } catch (err: any) {
-          // Sandbox context fallback safely
-        }
+        const wsSnap = await db.collection("workspaces").where("uid", "==", (req as any).user.uid).limit(1).get();
+        if (!wsSnap.empty) finalWorkspaceId = wsSnap.docs[0].id;
       }
 
       if (!finalWorkspaceId) {
         finalWorkspaceId = "sandbox_labeling";
+      } else {
+        // Only members may use a workspace's accounts and rules
+        await assertWorkspaceAccess(db, finalWorkspaceId, (req as AuthenticatedRequest).user).catch(() => { throw Object.assign(new Error("Not a member of this workspace"), { status: 403 }); });
       }
 
       const { transactions } = req.body;
@@ -4164,6 +4161,7 @@ You MUST output a valid JSON object matching this schema exactly:
         labeledTransactions
       });
     } catch (error: any) {
+      if (error.status === 403) return sendError(res, error.message, 403);
       sendError(res, "Labeling Engine Operation Failure", 500, error.message);
     }
   });
