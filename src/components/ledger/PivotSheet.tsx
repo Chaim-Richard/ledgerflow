@@ -14,7 +14,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatDecimal, cn, formatCurrency, sanitizeCsvCell, resolveAccountName } from '../../lib/utils';
+import { formatDecimal, cn, formatCurrency, sanitizeCsvCell, resolveAccountName, getLocalDateISO } from '../../lib/utils';
 import { isPostable, isTransactionInDateRange, lineAmount } from '../../lib/txFilters';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -383,7 +383,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                   const url = URL.createObjectURL(blob);
                   const link = document.createElement('a');
                   link.href = url;
-                  link.download = `pivot_export_${new Date().toISOString().split('T')[0]}.csv`;
+                  link.download = `pivot_export_${getLocalDateISO()}.csv`;
                   link.click();
                   URL.revokeObjectURL(url);
                 }}

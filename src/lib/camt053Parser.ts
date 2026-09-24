@@ -1,4 +1,5 @@
 import { ParsedBankLine } from './mt940Parser';
+import { getLocalDateISO } from './utils';
 
 /**
  * Parsers for ISO 20022 CAMT.053 XML bank statement format.
@@ -21,7 +22,7 @@ export function parseCamt053Statement(xmlContent: string): ParsedBankLine[] {
 
     const dateMatch = block.match(/<BookgDt>[\s\S]*?<Dt>([0-9]{4}-[0-9]{2}-[0-9]{2})<\/Dt>/) ||
                       block.match(/<Dt>([0-9]{4}-[0-9]{2}-[0-9]{2})<\/Dt>/);
-    const date = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
+    const date = dateMatch ? dateMatch[1] : getLocalDateISO();
 
     const ustrdMatch = block.match(/<Ustrd>([^<]+)<\/Ustrd>/);
     const description = ustrdMatch ? ustrdMatch[1] : 'CAMT.053 Entry';

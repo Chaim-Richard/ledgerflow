@@ -1,3 +1,5 @@
+import { getLocalDateISO } from './utils';
+
 export interface WorkspaceSubscription {
   planTier: 'free_trial' | 'starter' | 'pro' | 'enterprise';
   trialStartedAt?: string;
@@ -8,7 +10,7 @@ export interface WorkspaceSubscription {
 /**
  * Evaluates subscription status and remaining trial days.
  */
-export function getTrialStatus(subscription: WorkspaceSubscription, asOfDateIso: string = new Date().toISOString().split('T')[0]): {
+export function getTrialStatus(subscription: WorkspaceSubscription, asOfDateIso: string = getLocalDateISO()): {
   isTrial: boolean;
   isExpired: boolean;
   daysRemaining: number;

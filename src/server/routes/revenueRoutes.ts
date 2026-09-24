@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { getDb, assertPeriodOpen } from '../db/firestore';
 import { Transaction } from '../../types';
+import { getLocalDateISO } from '../../lib/utils';
 
 const RecognizeRevenueSchema = z.object({
   workspaceId: z.string().min(1, 'workspaceId is required'),
@@ -48,7 +49,7 @@ revenueRouter.post('/recognize', async (req, res) => {
       }
     }
 
-    const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
+    const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : getLocalDateISO();
 
     // 3. Validate period lock
     await assertPeriodOpen(db, workspaceId, txDate);

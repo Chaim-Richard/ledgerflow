@@ -1,3 +1,5 @@
+import { getLocalDateISO } from '../../lib/utils';
+
 /**
  * Enterprise PDF Document Generator Service (Zero-Dependency PDF 1.4 Engine)
  * Generates standards-compliant PDF binary buffers for Invoices, Estimates, Credit Notes, Payments, and Statements.
@@ -10,7 +12,7 @@ export async function generateDocumentPdf(
   const wsName = (workspace?.name || workspace?.companyName || 'LedgerFlow Workspace').replace(/[()\\]/g, ' ');
   const docTitle = type.toUpperCase().replace(/([A-Z])/g, ' $1').trim();
   const docNum = String(docData?.number || docData?.id || 'N/A').replace(/[()\\]/g, ' ');
-  const date = String(docData?.date || new Date().toISOString().slice(0, 10)).replace(/[()\\]/g, ' ');
+  const date = String(docData?.date || getLocalDateISO()).replace(/[()\\]/g, ' ');
   const recipient = String(docData?.customerName || docData?.vendorName || docData?.contactName || 'Valued Client').replace(/[()\\]/g, ' ');
   const totalCents = docData?.amountCents || 0;
   const totalFormatted = (totalCents / 100).toFixed(2);

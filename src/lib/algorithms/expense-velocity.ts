@@ -1,5 +1,6 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { isPostable, lineAmount } from '../txFilters';
+import { getLocalDateISO } from '../utils';
 
 export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
   id: 'ops_velocity',
@@ -89,7 +90,7 @@ export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
     
     const curr = new Date(startDate);
     while (curr <= endDate) {
-      contiguousDates.push(curr.toISOString().slice(0, 10));
+      contiguousDates.push(getLocalDateISO(curr));
       curr.setDate(curr.getDate() + 1);
     }
     

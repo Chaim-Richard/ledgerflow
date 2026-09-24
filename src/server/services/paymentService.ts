@@ -46,11 +46,15 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
       throw new Error(`Period is locked on or before ${wsData.lockDate}. Cannot post payment.`);
     }
 
-    // 2. Validate cash account exists
+    // 2. Validate cash account exists and belongs to workspace
     const cashAccRef = db.collection('chartAccounts').doc(cashAccountId);
     const cashAccSnap = await tx.get(cashAccRef);
     if (!cashAccSnap.exists) {
       throw new Error(`Invalid cash account ID: ${cashAccountId}`);
+    }
+    const cashAccData = cashAccSnap.data() || {};
+    if (cashAccData.workspaceId && cashAccData.workspaceId !== workspaceId) {
+      throw new Error(`Security Violation: Cash account ${cashAccountId} belongs to another workspace`);
     }
 
     let resolvedOffsetAccountId = offsetAccountId;
@@ -60,12 +64,18 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
       if (!offsetAccSnap.exists) {
         throw new Error(`Invalid offset account ID: ${resolvedOffsetAccountId}`);
       }
+      const offsetAccData = offsetAccSnap.data() || {};
+      if (offsetAccData.workspaceId && offsetAccData.workspaceId !== workspaceId) {
+        throw new Error(`Security Violation: Offset account ${resolvedOffsetAccountId} belongs to another workspace`);
+      }
     }
 
     // 3. Read & validate target invoices / bills
     const docUpdates: Array<{ ref: any; updates: any }> = [];
+    let totalAllocatedCents = 0;
 
     for (const alloc of allocations) {
+      totalAllocatedCents += alloc.amountCents;
       const collName = alloc.documentType === 'invoice' ? 'invoices' : 'bills';
       const docRef = db.collection(collName).doc(alloc.documentId);
       const docSnap = await tx.get(docRef);
@@ -75,8 +85,18 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
       }
 
       const docData = docSnap.data() || {};
+      if (docData.workspaceId && docData.workspaceId !== workspaceId) {
+        throw new Error(`Security Violation: Document ${alloc.documentId} belongs to another workspace`);
+      }
+
       const currentPaid = docData.amountPaidCents || 0;
-      const total = docData.amountCents || 0;
+      const total = docData.amountCents ?? docData.totalCents ?? 0;
+      const remainingBalance = Math.max(0, total - currentPaid);
+
+      if (alloc.amountCents > remainingBalance) {
+        throw new Error(`Overpayment not allowed: allocation of ${alloc.amountCents} cents exceeds remaining balance of ${remainingBalance} cents for document ${alloc.documentId}`);
+      }
+
       const newPaid = currentPaid + alloc.amountCents;
 
       let newStatus = docData.status;
@@ -100,6 +120,10 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
       }
     }
 
+    if (totalAllocatedCents > amountCents) {
+      throw new Error(`Total allocated amount (${totalAllocatedCents} cents) exceeds payment amount (${amountCents} cents)`);
+    }
+
     if (!resolvedOffsetAccountId) {
       throw new Error('Offset account ID (A/R or A/P) could not be resolved or is invalid');
     }
@@ -109,6 +133,10 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
     const offsetAccSnap = await tx.get(offsetAccRef);
     if (!offsetAccSnap.exists) {
       throw new Error(`Invalid offset account ID: ${resolvedOffsetAccountId}`);
+    }
+    const offsetAccData = offsetAccSnap.data() || {};
+    if (offsetAccData.workspaceId && offsetAccData.workspaceId !== workspaceId) {
+      throw new Error(`Security Violation: Resolved offset account ${resolvedOffsetAccountId} belongs to another workspace`);
     }
 
     // 4. Build Payment Document
@@ -175,6 +203,26 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
     }
     tx.set(paymentRef, paymentData);
     tx.set(ledgerTxRef, ledgerTxData);
+
+    const auditRef = db.collection('auditLogs').doc();
+    tx.set(auditRef, {
+      id: auditRef.id,
+      workspaceId,
+      uid,
+      userId: uid,
+      actorUid: uid,
+      action: 'PAYMENT_RECORDED',
+      entityType: 'payment',
+      entityId: paymentId,
+      details: {
+        description: `Payment ${paymentNumber} of $${(amountCents / 100).toFixed(2)} recorded for ${entityName || 'contact'}.`,
+        paymentNumber,
+        amountCents,
+        paymentMethod
+      },
+      severity: 'info',
+      timestamp: new Date().toISOString()
+    });
 
     return { paymentId, transactionId: ledgerTxRef.id, payment: paymentData, ledgerTransaction: ledgerTxData };
   });

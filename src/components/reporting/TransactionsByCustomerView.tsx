@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { FileText } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { getFiscalYearBounds } from '../../lib/fiscalCalendar';
 import { computeTransactionsByCustomer, PartyTransactionRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
@@ -83,7 +83,7 @@ export const TransactionsByCustomerView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `transactions_by_customer_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `transactions_by_customer_${getLocalDateISO()}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

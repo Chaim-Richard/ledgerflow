@@ -4,6 +4,7 @@ import { getDb } from '../db/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import { SupportMessage, SupportTicket, AuditLog } from '../../types';
 import { sendSupportNotification } from '../services/emailService';
+import { writeServerAuditLog } from '../services/auditLogService';
 
 const AddSupportMessageSchema = z.object({
   body: z.string().min(1, 'Message body is required').max(5000, 'Message body must be under 5000 characters'),
@@ -97,19 +98,18 @@ supportRouter.post('/tickets/:id/messages', async (req, res) => {
 
       // Audit Log for admin actions
       if (authorRole === 'admin') {
-        const auditRef = db.collection('auditLogs').doc();
-        const auditEntry = {
-          id: auditRef.id,
+        await writeServerAuditLog({
+          workspaceId: ticketData.workspaceId || 'system',
           uid: user.uid,
-          actorUid: user.uid,
-          actorEmail: user.email,
+          email: user.email || '',
           action: 'SUPPORT_ADMIN_REPLY',
           entityType: 'supportTicket',
           entityId: ticketId,
-          details: { body: body.substring(0, 100) },
-          timestamp: FieldValue.serverTimestamp()
-        };
-        t.set(auditRef, auditEntry);
+          details: {
+            description: `Admin replied to support ticket ${ticketId}`,
+            body: body.substring(0, 100)
+          }
+        }, { db, tx: t });
       }
 
       return { newMessage, ticketData };
@@ -179,18 +179,18 @@ supportRouter.patch('/tickets/:id/status', async (req, res) => {
         updatedAt: new Date().toISOString() 
       });
 
-      const auditRef = db.collection('auditLogs').doc();
-      t.set(auditRef, {
-        id: auditRef.id,
+      await writeServerAuditLog({
+        workspaceId: ticketDoc.data()?.workspaceId || 'system',
         uid: user.uid,
-        actorUid: user.uid,
-        actorEmail: user.email,
+        email: user.email || '',
         action: 'SUPPORT_TICKET_STATUS_CHANGE',
         entityType: 'supportTicket',
         entityId: ticketId,
-        details: { newStatus: status },
-        timestamp: FieldValue.serverTimestamp()
-      });
+        details: {
+          description: `Support ticket ${ticketId} status changed to ${status}`,
+          newStatus: status
+        }
+      }, { db, tx: t });
     });
 
     res.status(200).json({ status: 'ok' });

@@ -4,6 +4,7 @@ import Decimal from 'decimal.js';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { getDb, validateWorkspaceMember, assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
+import { getLocalDateISO } from '../../lib/utils';
 
 export const inventoryRouter = express.Router();
 
@@ -35,7 +36,7 @@ inventoryRouter.post('/cogs', async (req, res) => {
       }
     }
 
-    const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
+    const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : getLocalDateISO();
 
     // 2. Validate period lock
     await assertPeriodOpen(db, workspaceId, txDate);
@@ -175,7 +176,7 @@ inventoryRouter.post('/adjust', async (req, res) => {
     }
 
     const { data: wsData } = await validateWorkspaceMember(db, workspaceId, user);
-    const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA');
+    const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : getLocalDateISO();
     await assertPeriodOpen(db, workspaceId, txDate);
 
     // 1. Validate accounts exist and belong to workspace

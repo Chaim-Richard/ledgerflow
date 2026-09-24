@@ -199,4 +199,65 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
     assert.equal(debitLine.amountCents, 10000, 'Cash account must be debited 10,000 cents');
     assert.equal(creditLine.amountCents, -10000, 'A/R account must be credited -10,000 cents');
   });
+
+  test('Cross-workspace isolation: rejects payment if target invoice belongs to another workspace', async () => {
+    const db = new MockTransactionalDb();
+
+    db.data.set('workspaces/ws-victim', { id: 'ws-victim' });
+    db.data.set('workspaces/ws-attacker', { id: 'ws-attacker' });
+    db.data.set('chartAccounts/acc-cash', { id: 'acc-cash', workspaceId: 'ws-attacker' });
+    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', workspaceId: 'ws-attacker' });
+
+    db.data.set('invoices/inv-victim-1', {
+      id: 'inv-victim-1',
+      workspaceId: 'ws-victim',
+      totalCents: 10000,
+      amountPaidCents: 0,
+      status: 'pending'
+    });
+
+    await assert.rejects(async () => {
+      await createPaymentAtomic(db, {
+        workspaceId: 'ws-attacker',
+        uid: 'attacker-1',
+        paymentDate: '2026-09-15',
+        amountCents: 10000,
+        cashAccountId: 'acc-cash',
+        offsetAccountId: 'acc-ar',
+        allocations: [{ documentId: 'inv-victim-1', documentType: 'invoice', amountCents: 10000 }]
+      });
+    }, /belongs to another workspace/i);
+
+    const inv = db.getDocData('invoices', 'inv-victim-1');
+    assert.equal(inv.amountPaidCents, 0, 'Victim invoice must remain untouched');
+  });
+
+  test('Overpayment prevention: rejects allocation exceeding remaining document balance', async () => {
+    const db = new MockTransactionalDb();
+
+    db.data.set('workspaces/ws-1', { id: 'ws-1' });
+    db.data.set('chartAccounts/acc-cash', { id: 'acc-cash', workspaceId: 'ws-1' });
+    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', workspaceId: 'ws-1' });
+
+    db.data.set('invoices/inv-partial', {
+      id: 'inv-partial',
+      workspaceId: 'ws-1',
+      totalCents: 10000,
+      amountPaidCents: 6000,
+      status: 'partially_paid'
+    });
+
+    await assert.rejects(async () => {
+      await createPaymentAtomic(db, {
+        workspaceId: 'ws-1',
+        uid: 'user-1',
+        paymentDate: '2026-09-15',
+        amountCents: 5000,
+        cashAccountId: 'acc-cash',
+        offsetAccountId: 'acc-ar',
+        allocations: [{ documentId: 'inv-partial', documentType: 'invoice', amountCents: 5000 }]
+      });
+    }, /overpayment not allowed/i);
+  });
 });
+

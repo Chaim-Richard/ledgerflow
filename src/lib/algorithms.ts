@@ -1,5 +1,5 @@
 import { isPostable, lineAmount, isRevenueAccount, isExpenseAccount, calculateTransactionImpact } from './txFilters';
-import { parseLocalDate } from './utils';
+import { parseLocalDate, getLocalDateISO } from './utils';
 import { PerformanceTelemetry } from "./telemetry";
 
 const globalSeed = 42;
@@ -56,7 +56,7 @@ export function aggregateLedgerToDailySeries(
   for (let i = 0; i < days; i++) {
     const d = new Date(start.getTime());
     d.setUTCDate(start.getUTCDate() + i);
-    const dateStr = d.toLocaleDateString('en-CA');
+    const dateStr = getLocalDateISO(d);
     datesList.push(dateStr);
     seriesMap[dateStr] = 0;
   }

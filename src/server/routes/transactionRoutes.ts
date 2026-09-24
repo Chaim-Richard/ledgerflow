@@ -8,7 +8,7 @@ import { ClosingEntryEngine } from '../../kernel/ledger/ClosingEntryEngine';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
 import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchema, BankLineUpdateSchema } from '../../schemas';
 import { Transaction } from '../../types';
-import { parseLocalDate } from '../../lib/utils';
+import { parseLocalDate, getLocalDateISO } from '../../lib/utils';
 import { getDb, assertWorkspaceAccess } from '../db/firestore';
 import { isPostable, getAbsoluteTotal, isTransactionInDateRange } from '../../lib/txFilters';
 import { optimizedTransactionSimilarity } from '../../lib/algorithms';
@@ -16,6 +16,7 @@ import { executeCommand } from '../utils/commandExecutor';
 import { requirePlanCapacity } from '../middleware/planCapacity';
 import { requireOpenPeriod } from '../middleware/periodLock';
 import { requireWorkspaceRole } from './workspaceRoutes';
+import { writeServerAuditLog } from '../services/auditLogService';
 
 export const transactionRouter = express.Router();
 
@@ -293,16 +294,17 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
          t.update(txRef, { ...safePartial, updatedAt: FieldValue.serverTimestamp() });
       });
 
-      const auditId = crypto.randomUUID();
-      await db.collection("auditLogs").doc(auditId).set({
-        id: auditId,
+      await writeServerAuditLog({
         workspaceId: authoritativeWsId || "unknown",
-        timestamp: new Date().toISOString(),
-        userId: user.uid,
-        userEmail: user.email || "developer@ledgerflow.io",
+        uid: user.uid,
+        email: user.email || "developer@ledgerflow.io",
         action: "TRANSACTION_UPDATED_PARTIAL",
-        details: `Partial update on transaction ref [${id}].`
-      });
+        entityType: "transaction",
+        entityId: id,
+        details: {
+          description: `Partial update on transaction ref [${id}].`
+        }
+      }, { db });
 
       return res.json({ status: 'ok', transactionId: id });
     }
@@ -353,16 +355,17 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
       t.update(txRef, { ...txToSave, updatedAt: FieldValue.serverTimestamp() });
     });
 
-    const auditId = crypto.randomUUID();
-    await db.collection("auditLogs").doc(auditId).set({
-      id: auditId,
+    await writeServerAuditLog({
       workspaceId: transaction.workspaceId,
-      timestamp: new Date().toISOString(),
-      userId: user.uid,
-      userEmail: user.email || "developer@ledgerflow.io",
+      uid: user.uid,
+      email: user.email || "developer@ledgerflow.io",
       action: "TRANSACTION_UPDATED",
-      details: `Full update on transaction ref [${id}].`
-    });
+      entityType: "transaction",
+      entityId: id,
+      details: {
+        description: `Full update on transaction ref [${id}].`
+      }
+    }, { db });
 
     res.json({ status: 'ok', transactionId: id, data: transaction });
   } catch (e: any) {
@@ -418,16 +421,17 @@ transactionRouter.delete('/:id', requireOpenPeriod('transactions'), async (req, 
 
     await txRef.delete();
 
-    const auditId = crypto.randomUUID();
-    await db.collection("auditLogs").doc(auditId).set({
-      id: auditId,
+    await writeServerAuditLog({
       workspaceId: transactionWsId,
-      timestamp: new Date().toISOString(),
-      userId: user.uid,
-      userEmail: user.email || "developer@ledgerflow.io",
+      uid: user.uid,
+      email: user.email || "developer@ledgerflow.io",
       action: "TRANSACTION_DELETED",
-      details: `Deleted transaction ref [${id}].`
-    });
+      entityType: "transaction",
+      entityId: id,
+      details: {
+        description: `Deleted transaction ref [${id}].`
+      }
+    }, { db });
 
     res.json({ status: 'ok', deletedId: id });
   } catch (e: any) {
@@ -821,15 +825,18 @@ transactionRouter.post('/reconcile', requireWorkspaceRole(['owner', 'accountant'
           writeOp();
         }
 
-        const auditRef = db.collection('auditLogs').doc();
-        t.set(auditRef, {
+        await writeServerAuditLog({
           workspaceId,
           uid: user.uid,
+          email: user.email || '',
           action: 'reconcile',
-          description: `User ${user.email || user.uid} executed reconciliation batch (${operations.length} operations)`,
-          severity: 'info',
-          createdAt: new Date().toISOString()
-        });
+          entityType: 'reconciliation',
+          entityId: operations[0]?.id || 'batch',
+          details: {
+            description: `User ${user.email || user.uid} executed reconciliation batch (${operations.length} operations)`
+          },
+          severity: 'info'
+        }, { db, tx: t });
      });
      res.json({ status: 'ok' });
   } catch(e: unknown) {
@@ -1080,7 +1087,7 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
     const baseCurrency = wsData?.currency || 'USD';
     const targetCurr = (targetCurrency || baseCurrency).toUpperCase();
 
-    const today = new Date().toLocaleDateString('en-CA');
+    const today = getLocalDateISO();
     if (wsData?.lockDate && today <= wsData.lockDate) {
       return res.status(400).json({ error: `Period Locked: Cannot post revaluation adjustment in locked period ${wsData.lockDate}.` });
     }
@@ -1303,23 +1310,22 @@ transactionRouter.post('/close-year', async (req, res) => {
     }
 
     // 6. Log audit event
-    const auditId = crypto.randomUUID();
-    await db.collection("auditLogs").doc(auditId).set({
-      id: auditId,
+    await writeServerAuditLog({
       workspaceId,
-      actorUid: user.uid,
-      actorEmail: user.email || 'authenticated-user',
+      uid: user.uid,
+      email: user.email || 'authenticated-user',
       action: 'FISCAL_YEAR_CLOSE',
-      details: `Fiscal year closed as of ${closingDate}. Net income of $${(result.netIncomeCents / 100).toFixed(2)} transferred to Retained Earnings. ${result.revenueAccountsClosed} revenue accounts and ${result.expenseAccountsClosed} expense accounts closed.`,
-      metadata: {
+      entityType: 'workspace',
+      entityId: workspaceId,
+      details: {
+        description: `Fiscal year closed as of ${closingDate}. Net income of $${(result.netIncomeCents / 100).toFixed(2)} transferred to Retained Earnings. ${result.revenueAccountsClosed} revenue accounts and ${result.expenseAccountsClosed} expense accounts closed.`,
         transactionId: result.closingTransaction.id,
         closingDate,
         netIncomeCents: result.netIncomeCents,
         lockPeriod: !!lockPeriod,
         syntheticAccountCreated: !!result.generatedRetainedEarningsAccount
-      },
-      timestamp: FieldValue.serverTimestamp()
-    });
+      }
+    }, { db });
 
     await batch.commit();
 
@@ -1412,16 +1418,17 @@ transactionRouter.post('/close-month', async (req, res) => {
       updatedAt: new Date().toISOString()
     });
 
-    const auditId = crypto.randomUUID();
-    await db.collection("auditLogs").doc(auditId).set({
-      id: auditId,
+    await writeServerAuditLog({
       workspaceId,
-      actorUid: user.uid,
-      actorEmail: user.email || 'authenticated-user',
+      uid: user.uid,
+      email: user.email || 'authenticated-user',
       action: 'MONTH_END_CLOSE',
-      details: `Month-end closed for ${month} through ${closingDate}.${isFiscalYearEnd ? ' Fiscal year end closing entry generated.' : ''}`,
-      timestamp: FieldValue.serverTimestamp()
-    });
+      entityType: 'workspace',
+      entityId: workspaceId,
+      details: {
+        description: `Month-end closed for ${month} through ${closingDate}.${isFiscalYearEnd ? ' Fiscal year end closing entry generated.' : ''}`
+      }
+    }, { db });
 
     await batch.commit();
 
@@ -1482,14 +1489,17 @@ transactionRouter.post('/reset', async (req, res) => {
     }
 
     // Record persistent audit log of the reset action
-    await db.collection('auditLogs').add({
+    await writeServerAuditLog({
       workspaceId,
-      actorUid: user.uid,
-      actorEmail: user.email || 'authenticated-user',
+      uid: user.uid,
+      email: user.email || 'authenticated-user',
       action: 'WORKSPACE_DATA_RESET',
-      details: 'All financial and operational records reset by workspace owner.',
-      timestamp: FieldValue.serverTimestamp()
-    });
+      entityType: 'workspace',
+      entityId: workspaceId,
+      details: {
+        description: 'All financial and operational records reset by workspace owner.'
+      }
+    }, { db });
 
     res.json({ status: 'ok' });
   } catch (e: any) {
@@ -1728,22 +1738,21 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
     });
 
     // Write audit-log entry capturing the reason
-    const auditId = crypto.randomUUID();
-    await db.collection("auditLogs").doc(auditId).set({
-      id: auditId,
+    await writeServerAuditLog({
       workspaceId: targetWsId,
-      timestamp: new Date().toISOString(),
-      userId: user.uid,
-      userEmail: user.email || "developer@ledgerflow.io",
+      uid: user.uid,
+      email: user.email || "developer@ledgerflow.io",
       action: "TRANSACTION_REVERSED",
-      details: `Reversed transaction [${id}] via reversal [${resultReversal?.id}]. Reason: ${reason || 'Closed-period correction'}.${resultReplacement ? ` Replaced with correction [${resultReplacement.id}].` : ''}`,
-      metadata: {
+      entityType: "transaction",
+      entityId: id,
+      details: {
+        description: `Reversed transaction [${id}] via reversal [${resultReversal?.id}]. Reason: ${reason || 'Closed-period correction'}.${resultReplacement ? ` Replaced with correction [${resultReplacement.id}].` : ''}`,
         originalId: id,
         reversalId: resultReversal?.id,
         replacementId: resultReplacement?.id || null,
         reason: reason || 'Closed-period correction'
       }
-    });
+    }, { db });
 
     res.json({
       status: 'ok',

@@ -1,3 +1,5 @@
+import { getLocalDateISO } from './utils';
+
 export interface ExcelColumn {
   header: string;
   key: string;
@@ -68,7 +70,7 @@ export async function parseExcelToRows(data: ArrayBuffer): Promise<any[][]> {
           let val = row.values[i];
           if (val && typeof val === 'object') {
             if ('result' in val) val = val.result;
-            else if (val instanceof Date) val = val.toISOString().split('T')[0];
+            else if (val instanceof Date) val = getLocalDateISO(val);
           }
           rowData.push(val || '');
         }

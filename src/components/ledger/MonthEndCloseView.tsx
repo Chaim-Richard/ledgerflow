@@ -3,7 +3,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { CheckCircle2, Circle, AlertTriangle, ArrowRight, BookOpen, Lock, ShieldCheck, Download } from 'lucide-react';
 import { motion } from 'motion/react';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { downloadWorkbook, createWorkbook } from '../../lib/excelExport';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { Transaction } from '../../types';
@@ -250,7 +250,7 @@ export default function MonthEndCloseView() {
       });
 
       // Write file
-      const fileName = `Accountant_Package_${selectedMonth}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const fileName = `Accountant_Package_${selectedMonth}_${getLocalDateISO()}.xlsx`;
       await downloadWorkbook(workbook, fileName);
       
       toast.success(`Accountant Package exported: ${fileName}`, { id: toastId });

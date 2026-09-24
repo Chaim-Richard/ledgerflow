@@ -2,6 +2,8 @@ import express from 'express';
 import { z } from 'zod';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
 import { createPaymentAtomic } from '../services/paymentService';
+import { getLocalDateISO } from '../../lib/utils';
+import { getWorkspaceUserRole } from './workspaceRoutes';
 
 export const paymentRouter = express.Router();
 
@@ -14,8 +16,8 @@ const paymentAllocationSchema = z.object({
 const paymentInputSchema = z.object({
   workspaceId: z.string().min(1),
   amountCents: z.number().int().positive(),
-  paymentDate: z.string().default(() => new Date().toISOString().slice(0, 10)),
-  cashAccountId: z.string().min(1).default('default-cash-account'),
+  paymentDate: z.string().default(() => getLocalDateISO()),
+  cashAccountId: z.string().min(1),
   paymentMethod: z.string().optional(),
   referenceNumber: z.string().optional(),
   memo: z.string().optional(),
@@ -38,6 +40,13 @@ paymentRouter.post('/', async (req, res) => {
     const db = getDb();
     await validateWorkspaceMember(db, workspaceId, authReq.user);
 
+    if (authReq.user?.uid && !authReq.user?.admin) {
+      const userRole = await getWorkspaceUserRole(db, workspaceId, authReq.user.uid);
+      if (!['owner', 'accountant', 'bookkeeper'].includes(userRole)) {
+        return res.status(403).json({ status: 'error', message: 'Forbidden: requires owner, accountant, or bookkeeper role' });
+      }
+    }
+
     const result = await createPaymentAtomic(db, {
       ...payload,
       workspaceId,
@@ -46,8 +55,12 @@ paymentRouter.post('/', async (req, res) => {
 
     res.json({ status: 'success', data: result });
   } catch (err: any) {
-    if (err.message === 'FORBIDDEN') return res.status(403).json({ status: 'error', message: 'Forbidden' });
-    if (err.message === 'NOT_FOUND') return res.status(404).json({ status: 'error', message: 'Workspace not found' });
+    if (err.message === 'FORBIDDEN' || err.message?.includes('Security Violation') || err.message?.includes('Forbidden')) {
+      return res.status(403).json({ status: 'error', message: err.message || 'Forbidden' });
+    }
+    if (err.message === 'NOT_FOUND' || err.message?.includes('not found')) {
+      return res.status(404).json({ status: 'error', message: err.message || 'Workspace not found' });
+    }
     res.status(400).json({ status: 'error', message: err.message || 'Payment processing failed' });
   }
 });

@@ -3,6 +3,7 @@ import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useUIStore } from '../../../stores/useUIStore';
 import { Globe, Webhook, Download, Database, RefreshCw, ChevronRight, FileJson, Trash2, Copy } from 'lucide-react';
 import { generateOFX } from '../../../lib/ofx-exporter';
+import { getLocalDateISO } from '../../../lib/utils';
 import { toast } from 'sonner';
 
 export default function DeveloperSettings() {
@@ -36,7 +37,7 @@ export default function DeveloperSettings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ledgerflow_${defaultAcc.code}_${new Date().toLocaleDateString('en-CA')}.ofx`;
+    a.download = `ledgerflow_${defaultAcc.code}_${getLocalDateISO()}.ofx`;
     a.click();
     toast.success("OFX Export Layer Successful");
   };

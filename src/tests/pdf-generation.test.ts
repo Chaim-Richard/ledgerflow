@@ -9,6 +9,15 @@ class MockPdfDb {
       'ws-test': { name: 'Acme International Workspace', uid: 'user-admin' }
     },
     invoices: {
+      'inv-other-ws': {
+        id: 'inv-other-ws',
+        workspaceId: 'ws-other',
+        number: 'INV-OTHER',
+        customerName: 'Other Corp',
+        totalCents: 50000,
+        amountCents: 50000,
+        date: '2026-03-15'
+      },
       'inv-101': {
         id: 'inv-101',
         number: 'INV-1001',
@@ -192,5 +201,11 @@ describe('Document PDF Generator & Endpoint (%PDF- Magic Bytes Guarantee)', () =
     const { req, res, getStatus } = createMockHttp('invoice', 'inv-101', '');
     await handlePdfRequest(req, res, mockDb);
     assert.strictEqual(getStatus(), 400);
+  });
+
+  test('handlePdfRequest rejects cross-workspace access with 403', async () => {
+    const { req, res, getStatus } = createMockHttp('invoice', 'inv-other-ws', 'ws-test');
+    await handlePdfRequest(req, res, mockDb);
+    assert.strictEqual(getStatus(), 403);
   });
 });

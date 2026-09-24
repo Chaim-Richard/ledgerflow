@@ -4,7 +4,7 @@ import { ShieldAlert, Fingerprint, Zap, AlertTriangle, CheckCircle2, Loader2, Fi
 import { Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { AnomalyDetector } from '../../lib/algorithms';
-import { formatDecimal, cn } from '../../lib/utils';
+import { formatDecimal, cn, getLocalDateISO } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { toast } from 'sonner';
 import { useTimeout } from '../../hooks/useTimeout';
@@ -102,7 +102,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `LedgerFlow_Forensic_Report_${new Date().toISOString().slice(0, 10)}.txt`;
+        link.download = `LedgerFlow_Forensic_Report_${getLocalDateISO()}.txt`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

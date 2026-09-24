@@ -4,7 +4,7 @@ import { ShieldCheck, History, User, Activity, Search, Filter, Download } from '
 import { format } from 'date-fns';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
-import { cn } from '../../lib/utils';
+import { cn, getLocalDateISO } from '../../lib/utils';
 
 interface AuditTrailViewProps {
   auditLogs: AuditLog[];
@@ -114,7 +114,7 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `audit_trail_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `audit_trail_export_${getLocalDateISO()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

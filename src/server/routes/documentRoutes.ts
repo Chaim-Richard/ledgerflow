@@ -2,6 +2,7 @@ import express from 'express';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
 import { generateDocumentPdf } from '../services/pdfService';
 import { computeStatement } from '../reports/computeReports';
+import { getLocalDateISO } from '../../lib/utils';
 
 export const documentRouter = express.Router();
 
@@ -33,22 +34,40 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
       const snap = await db.collection('invoices').doc(id).get();
       if (!snap.exists) return res.status(404).json({ status: 'error', message: 'Invoice not found' });
       docData = snap.data();
+      if (docData.workspaceId && docData.workspaceId !== workspaceId) {
+        return res.status(403).json({ status: 'error', message: 'Forbidden: Document belongs to another workspace' });
+      }
     } else if (type === 'estimate') {
       const snap = await db.collection('estimates').doc(id).get();
       if (!snap.exists) return res.status(404).json({ status: 'error', message: 'Estimate not found' });
       docData = snap.data();
+      if (docData.workspaceId && docData.workspaceId !== workspaceId) {
+        return res.status(403).json({ status: 'error', message: 'Forbidden: Document belongs to another workspace' });
+      }
     } else if (type === 'creditNote') {
       const snap = await db.collection('creditNotes').doc(id).get();
       if (!snap.exists) return res.status(404).json({ status: 'error', message: 'Credit Note not found' });
       docData = snap.data();
+      if (docData.workspaceId && docData.workspaceId !== workspaceId) {
+        return res.status(403).json({ status: 'error', message: 'Forbidden: Document belongs to another workspace' });
+      }
     } else if (type === 'payment') {
       const snap = await db.collection('payments').doc(id).get();
       if (!snap.exists) return res.status(404).json({ status: 'error', message: 'Payment not found' });
       docData = snap.data();
+      if (docData.workspaceId && docData.workspaceId !== workspaceId) {
+        return res.status(403).json({ status: 'error', message: 'Forbidden: Document belongs to another workspace' });
+      }
     } else if (type === 'statement') {
       // id is customer/vendor contact ID
       const customerSnap = await db.collection('customers').doc(id).get();
       const vendorSnap = await db.collection('vendors').doc(id).get();
+      if (customerSnap.exists && customerSnap.data()?.workspaceId && customerSnap.data().workspaceId !== workspaceId) {
+        return res.status(403).json({ status: 'error', message: 'Forbidden: Customer belongs to another workspace' });
+      }
+      if (vendorSnap.exists && vendorSnap.data()?.workspaceId && vendorSnap.data().workspaceId !== workspaceId) {
+        return res.status(403).json({ status: 'error', message: 'Forbidden: Vendor belongs to another workspace' });
+      }
       const contactData: any = customerSnap.exists ? { id, ...customerSnap.data() } : (vendorSnap.exists ? { id, ...vendorSnap.data() } : { id, name: 'Contact' });
       const contactType = customerSnap.exists ? 'customer' : 'vendor';
 
@@ -68,7 +87,7 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
 
       docData = {
         number: `STMT-${id.substring(0, 6).toUpperCase()}`,
-        date: new Date().toISOString().substring(0, 10),
+        date: getLocalDateISO(),
         customerName: stmt.contactName,
         customerEmail: contactData.email || '',
         customerAddress: contactData.billingAddress || contactData.address || '',
