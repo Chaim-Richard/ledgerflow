@@ -16,7 +16,7 @@ import { paymentRouter } from "./src/server/routes/paymentRoutes";
 import { documentRouter } from "./src/server/routes/documentRoutes";
 import { mathRouter } from "./src/server/routes/mathRoutes";
 import { plaidRouter } from "./src/server/routes/plaidRoutes";
-import { billingRouter, billingFallbackCache } from "./src/server/routes/billingRoutes";
+import { billingRouter } from "./src/server/routes/billingRoutes";
 import { incrementShardedCounter, getShardedCounterValue } from "./src/server/services/shardedCounterService";
 import { getStripe } from "./src/server/services/stripeService";
 export { getStripe };
@@ -1396,33 +1396,12 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       if (!workspaceId) return sendError(res, "Missing workspaceId parameters in query", 400);
 
       const authReq = req as AuthenticatedRequest;
-      await authorizeWorkspace(authReq, workspaceId);
+      const wsData = await authorizeWorkspace(authReq, workspaceId);
 
-      let wsName = "Production Workspace";
-      let wsCurrency = "USD";
-      let wsLockDate: string | null = null;
-      let wsBusinessType = "enterprise";
-
-      try {
-        const db = getDb();
-        const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
-        if (wsDoc.exists) {
-          const wsData = wsDoc.data();
-          wsName = wsData?.name || wsName;
-          wsCurrency = wsData?.currency || wsCurrency;
-          wsLockDate = wsData?.lockDate || wsLockDate;
-          wsBusinessType = wsData?.businessType || wsBusinessType;
-        }
-      } catch (dbErr: any) {
-        console.warn("[Firebase Admin] /api/v1/status database check failed, falling back to basic descriptors:", dbErr.message);
-        const cached = typeof billingFallbackCache !== "undefined" ? billingFallbackCache.get(workspaceId) : null;
-        if (cached) {
-          wsName = cached.name || wsName;
-          wsCurrency = cached.currency || wsCurrency;
-          wsLockDate = cached.lockDate || wsLockDate;
-          wsBusinessType = cached.businessType || wsBusinessType;
-        }
-      }
+      const wsName = wsData?.name || "Production Workspace";
+      const wsCurrency = wsData?.currency || "USD";
+      const wsLockDate: string | null = wsData?.lockDate || null;
+      const wsBusinessType = wsData?.businessType || "enterprise";
 
       res.json({
         status: "active",
@@ -3261,24 +3240,23 @@ You MUST output a valid JSON object matching this schema exactly:
       
       workspacesSnap.docs.forEach(doc => {
          const data = doc.data() || {};
-         const cacheVal = typeof billingFallbackCache !== "undefined" ? (billingFallbackCache.get(doc.id) || {}) : {};
-         const baseCredit = data.computeCreditBalance !== undefined ? data.computeCreditBalance : (cacheVal.computeCreditBalance !== undefined ? cacheVal.computeCreditBalance : 100000);
+         const baseCredit = data.computeCreditBalance !== undefined ? data.computeCreditBalance : 100000;
          tenants[doc.id] = { 
             id: doc.id, 
-            name: data.name || cacheVal.name || "Default Workspace",
-            plan: data.plan || cacheVal.plan || "sandbox",
-            concurrentUserLimit: data.concurrentUserLimit || cacheVal.concurrentUserLimit || 50,
-            activeUserCount: data.activeUserCount || cacheVal.activeUserCount || 1,
-            seatCount: data.seatCount || cacheVal.seatCount || 1,
-            maxSeats: data.maxSeats || cacheVal.maxSeats || 3,
+            name: data.name || "Default Workspace",
+            plan: data.plan || "sandbox",
+            concurrentUserLimit: data.concurrentUserLimit || 50,
+            activeUserCount: data.activeUserCount || 1,
+            seatCount: data.seatCount || 1,
+            maxSeats: data.maxSeats || 3,
             computeCreditBalance: baseCredit + (shardSums[doc.id]?.computeCreditBalance || 0),
-            apiQuotaTotalCentsUsed: data.apiQuotaTotalCentsUsed || cacheVal.apiQuotaTotalCentsUsed || 0,
-            apiQuotaMonthlyLimitCents: data.apiQuotaMonthlyLimitCents || cacheVal.apiQuotaMonthlyLimitCents || 0,
-            creditCostMultiplier: data.creditCostMultiplier !== undefined ? Number(data.creditCostMultiplier) : (cacheVal.creditCostMultiplier !== undefined ? Number(cacheVal.creditCostMultiplier) : 1.0),
-            quotaCentsMultiplier: data.quotaCentsMultiplier !== undefined ? Number(data.quotaCentsMultiplier) : (cacheVal.quotaCentsMultiplier !== undefined ? Number(cacheVal.quotaCentsMultiplier) : 1.0),
-            bypassBilling: data.bypassBilling !== undefined ? data.bypassBilling === true : (cacheVal.bypassBilling !== undefined ? cacheVal.bypassBilling === true : false),
-            customKeyCreditCharge: data.customKeyCreditCharge !== undefined ? Number(data.customKeyCreditCharge) : (cacheVal.customKeyCreditCharge !== undefined ? Number(cacheVal.customKeyCreditCharge) : 10),
-            customKeyCentsCharge: data.customKeyCentsCharge !== undefined ? Number(data.customKeyCentsCharge) : (cacheVal.customKeyCentsCharge !== undefined ? Number(cacheVal.customKeyCentsCharge) : 0),
+            apiQuotaTotalCentsUsed: data.apiQuotaTotalCentsUsed || 0,
+            apiQuotaMonthlyLimitCents: data.apiQuotaMonthlyLimitCents || 0,
+            creditCostMultiplier: data.creditCostMultiplier !== undefined ? Number(data.creditCostMultiplier) : 1.0,
+            quotaCentsMultiplier: data.quotaCentsMultiplier !== undefined ? Number(data.quotaCentsMultiplier) : 1.0,
+            bypassBilling: data.bypassBilling !== undefined ? data.bypassBilling === true : false,
+            customKeyCreditCharge: data.customKeyCreditCharge !== undefined ? Number(data.customKeyCreditCharge) : 10,
+            customKeyCentsCharge: data.customKeyCentsCharge !== undefined ? Number(data.customKeyCentsCharge) : 0,
             txCount: 0, 
             requestCount: 0, 
             errorCount: 0 
@@ -3360,10 +3338,6 @@ You MUST output a valid JSON object matching this schema exactly:
         }, performMutation);
       } else {
         result = await db.runTransaction(performMutation);
-      }
-
-      if (typeof billingFallbackCache !== "undefined") {
-        billingFallbackCache.set(workspaceId, result);
       }
 
       res.json({ status: "success", data: result });

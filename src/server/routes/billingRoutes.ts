@@ -3,20 +3,24 @@ import crypto from "crypto";
 import { getDb, validateWorkspaceMember, FieldValue } from "../db/firestore.ts";
 import { getStripe } from "../services/stripeService.ts";
 import { getTrustedAppUrl } from "../utils/urlHelper.ts";
+import { roleInWorkspace } from "../middleware/requireLedgerWriter.ts";
 import { incrementShardedCounter, getShardedCounterValue } from "../services/shardedCounterService.ts";
 
 export const billingRouter = express.Router();
 
-// Fallback in-memory cache for workspace billing & metrics to guarantee continuous operations under any IAM/GCP database restriction
-export const billingFallbackCache = new Map<string, any>();
+const errorStatus = (err: { message?: string }) => (err?.message?.startsWith('FORBIDDEN') ? 403 : err?.message?.startsWith('NOT_FOUND') ? 404 : 500);
 
-async function authorizeWorkspace(user: any, workspaceId: string) {
+/** Member check; with `roles`, the user must also hold one of them (billing changes are owner-only). */
+async function authorizeWorkspace(user: any, workspaceId: string, roles?: string[]) {
   const db = getDb();
   if (!workspaceId || typeof workspaceId !== 'string') {
     throw new Error("NOT_FOUND: Invalid workspace identifier provided.");
   }
   try {
     const { data } = await validateWorkspaceMember(db, workspaceId, user);
+    if (roles && !user?.admin && !roles.includes(roleInWorkspace(data, user?.uid))) {
+      throw new Error(`FORBIDDEN: requires the ${roles.join(' or ')} role.`);
+    }
     return data;
   } catch (err: any) {
     if (err.message?.includes("Forbidden") || err.message?.includes("not authorized") || err.message?.includes("not a member")) {
@@ -31,7 +35,7 @@ billingRouter.post("/checkout", async (req: express.Request, res: express.Respon
     const workspaceId = (req.body.workspaceId as string) || (req as any).user?.developerWorkspaceId;
     if (!workspaceId) return res.status(400).json({ status: "error", message: "Missing workspaceId" });
 
-    await authorizeWorkspace((req as any).user, workspaceId);
+    await authorizeWorkspace((req as any).user, workspaceId, ['owner']);
 
     const stripe = getStripe();
     const { plan } = req.body;
@@ -103,7 +107,7 @@ billingRouter.post("/checkout", async (req: express.Request, res: express.Respon
     res.json({ url: session.url });
   } catch (err: any) {
     console.error("[Stripe] Failed:", err);
-    res.status(500).json({ status: "error", message: err.message });
+    res.status(errorStatus(err)).json({ status: "error", message: err.message });
   }
 });
 
@@ -112,7 +116,7 @@ billingRouter.post("/portal", async (req: express.Request, res: express.Response
     const workspaceId = (req.body.workspaceId as string) || (req as any).user?.developerWorkspaceId;
     if (!workspaceId) return res.status(400).json({ status: "error", message: "Missing workspaceId" });
 
-    await authorizeWorkspace((req as any).user, workspaceId);
+    await authorizeWorkspace((req as any).user, workspaceId, ['owner']);
 
     const db = getDb();
     const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
@@ -133,7 +137,7 @@ billingRouter.post("/portal", async (req: express.Request, res: express.Response
     res.json({ url: session.url });
   } catch (err: any) {
     console.error("[Stripe Portal] Failed:", err);
-    res.status(500).json({ status: "error", message: err.message });
+    res.status(errorStatus(err)).json({ status: "error", message: err.message });
   }
 });
 
@@ -144,7 +148,7 @@ billingRouter.post("/verify-session", async (req: express.Request, res: express.
       return res.status(400).json({ status: "error", message: "Missing required parameters" });
     }
 
-    await authorizeWorkspace((req as any).user, workspaceId);
+    await authorizeWorkspace((req as any).user, workspaceId, ['owner']);
 
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.retrieve(session_id);
@@ -185,7 +189,7 @@ billingRouter.post("/verify-session", async (req: express.Request, res: express.
     }
   } catch (err: any) {
      console.error("[Stripe Verify] Error:", err);
-     res.status(500).json({ status: "error", message: "Stripe verification failed" });
+     res.status(errorStatus(err)).json({ status: "error", message: errorStatus(err) === 403 ? err.message : "Stripe verification failed" });
   }
 });
 
@@ -194,21 +198,7 @@ billingRouter.get("/status", async (req: express.Request, res: express.Response)
     const workspaceId = (req.query.workspaceId as string);
     if (!workspaceId) return res.status(400).json({ status: "error", message: "Missing workspaceId" });
 
-    await authorizeWorkspace((req as any).user, workspaceId);
-
-    let wsData: any = {};
-    try {
-      const db = getDb();
-      const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
-      if (wsDoc.exists) {
-        wsData = wsDoc.data() || {};
-      } else {
-        wsData = billingFallbackCache.get(workspaceId) || {};
-      }
-    } catch (dbErr: any) {
-      console.warn("[Firebase Admin] Billing fetch failing back to in-memory store due to database/IAM constraint:", dbErr.message);
-      wsData = billingFallbackCache.get(workspaceId) || {};
-    }
+    const wsData: any = (await authorizeWorkspace((req as any).user, workspaceId)) || {};
 
     const db = getDb();
     const baselineQueries = wsData.totalQueriesThisMonth || 0;
@@ -233,15 +223,10 @@ billingRouter.get("/status", async (req: express.Request, res: express.Response)
       apiQuotaMonthlyLimitCents: wsData.apiQuotaMonthlyLimitCents || 0, // Sandbox has no real dollar limits, just credit limits
     };
 
-    // Ensure cache is populated
-    if (!billingFallbackCache.has(workspaceId)) {
-      billingFallbackCache.set(workspaceId, { ...statusData });
-    }
-
     res.json(statusData);
   } catch (err: any) {
     console.error("[Billing Status Error]:", err);
-    res.status(500).json({ status: "error", message: err.message });
+    res.status(errorStatus(err)).json({ status: "error", message: err.message });
   }
 });
 
@@ -253,24 +238,7 @@ billingRouter.post("/record-compute", async (req: express.Request, res: express.
     }
 
     const user = (req as any).user;
-    await authorizeWorkspace(user, workspaceId);
-
-    let wsData: any = {};
-    let wsFetchedFromDb = false;
-
-    try {
-      const db = getDb();
-      const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
-      if (wsDoc.exists) {
-        wsData = wsDoc.data() || {};
-        wsFetchedFromDb = true;
-      } else {
-        wsData = billingFallbackCache.get(workspaceId) || {};
-      }
-    } catch (dbErr: any) {
-      console.warn("[Firebase Admin] Record compute failing back to in-memory store due to database/IAM constraint:", dbErr.message);
-      wsData = billingFallbackCache.get(workspaceId) || {};
-    }
+    const wsData: any = (await authorizeWorkspace(user, workspaceId)) || {};
 
     const sanitizedWeight = Math.max(1, Math.min(1000, Math.floor(Math.abs(Number(weightScore) || 10))));
     const sanitizedExecutionTime = Math.max(1, Math.min(60000, Math.floor(Math.abs(Number(executionTimeMs) || 50))));
@@ -288,56 +256,26 @@ billingRouter.post("/record-compute", async (req: express.Request, res: express.
       hash: crypto.createHash('sha256').update(`${workspaceId}-${algorithmName}-${sanitizedWeight}-${crypto.randomUUID()}`).digest('hex')
     };
 
-    try {
-      const db = getDb();
-      const billingLedgerRef = db.collection("billingLedgerTraces").doc();
-      ledgerEntry.id = billingLedgerRef.id;
-      await billingLedgerRef.set(ledgerEntry);
-    } catch (dbErr: any) {
-      console.warn("[Firebase Admin] Billing trace logging skipped / logged to local log due to IAM constraint:", dbErr.message);
-    }
-
-    // Increment queries and computational complexity in Workspace safely
-    const currentValueQuota = wsData.apiQuotaTotalCentsUsed !== undefined ? wsData.apiQuotaTotalCentsUsed : 0;
-    const currentValueQueries = wsData.totalQueriesThisMonth !== undefined ? wsData.totalQueriesThisMonth : 0;
-    const currentValueHardness = wsData.computeHardnessScore !== undefined ? wsData.computeHardnessScore : 0;
-    const currentValueCredit = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 1000000;
-
     const db = getDb();
+    const billingLedgerRef = db.collection("billingLedgerTraces").doc();
+    ledgerEntry.id = billingLedgerRef.id;
+    await billingLedgerRef.set(ledgerEntry);
+
+    // Usage counters: sharded for the hot ones, atomic increments on the workspace for the rest
+    const quotaCents = Math.round(sanitizedWeight * 0.1); // 0.1 cent per complexity score
     await incrementShardedCounter(db, workspaceId, 'totalQueriesThisMonth', 1);
     await incrementShardedCounter(db, workspaceId, 'computeCreditBalance', -sanitizedWeight);
-
-    const shardedQueries = await getShardedCounterValue(db, workspaceId, 'totalQueriesThisMonth', currentValueQueries);
-    const shardedCredit = await getShardedCounterValue(db, workspaceId, 'computeCreditBalance', currentValueCredit);
-
-    const currentQuotaUsed = currentValueQuota + Math.round(sanitizedWeight * 0.1); // 0.1 cent per complexity score
-    const newComputeHardness = currentValueHardness + sanitizedWeight;
-
-    const updatedMetrics = {
-      apiQuotaTotalCentsUsed: currentQuotaUsed,
-      totalQueriesThisMonth: shardedQueries,
-      computeHardnessScore: newComputeHardness,
-      computeCreditBalance: Math.max(0, shardedCredit)
-    };
-
-    // Always write to the fallback in-memory cache to maintain locally consistent simulation state
-    billingFallbackCache.set(workspaceId, {
-      ...wsData,
-      ...updatedMetrics,
-      workspaceId
+    await db.collection("workspaces").doc(workspaceId).update({
+      apiQuotaTotalCentsUsed: FieldValue.increment(quotaCents),
+      computeHardnessScore: FieldValue.increment(sanitizedWeight)
     });
 
-    if (wsFetchedFromDb) {
-      try {
-        const wsRef = db.collection("workspaces").doc(workspaceId);
-        await wsRef.update({
-          apiQuotaTotalCentsUsed: currentQuotaUsed,
-          computeHardnessScore: newComputeHardness
-        });
-      } catch (dbErr: any) {
-        console.warn("[Firebase Admin] Failed workspace Firestore update, continuing via active in-memory billing cache:", dbErr.message);
-      }
-    }
+    const updatedMetrics = {
+      apiQuotaTotalCentsUsed: (wsData.apiQuotaTotalCentsUsed || 0) + quotaCents,
+      totalQueriesThisMonth: await getShardedCounterValue(db, workspaceId, 'totalQueriesThisMonth', wsData.totalQueriesThisMonth || 0),
+      computeHardnessScore: (wsData.computeHardnessScore || 0) + sanitizedWeight,
+      computeCreditBalance: Math.max(0, await getShardedCounterValue(db, workspaceId, 'computeCreditBalance', wsData.computeCreditBalance ?? 100000))
+    };
 
     res.json({
       status: "success",
@@ -346,6 +284,6 @@ billingRouter.post("/record-compute", async (req: express.Request, res: express.
     });
   } catch (err: any) {
     console.error("[Record Compute Error]:", err);
-    res.status(500).json({ status: "error", message: err.message });
+    res.status(errorStatus(err)).json({ status: "error", message: err.message });
   }
 });

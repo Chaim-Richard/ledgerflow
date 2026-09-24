@@ -46,6 +46,15 @@ describe('Server write roles', () => {
     assert.doesNotMatch(server, /message: "Handled"/);
   });
 
+  test('billing changes (checkout, portal, confirming a payment) are owner-only', () => {
+    const billing = fs.readFileSync('src/server/routes/billingRoutes.ts', 'utf8');
+    for (const route of ['/checkout', '/portal', '/verify-session']) {
+      const start = billing.indexOf(`billingRouter.post("${route}"`);
+      const next = billing.indexOf('billingRouter.', start + 10);
+      assert.match(billing.slice(start, next), /await authorizeWorkspace\(\(req as any\)\.user, workspaceId, \['owner'\]\)/, route);
+    }
+  });
+
   test('transactions router checks roles before any handler', () => {
     const routes = fs.readFileSync('src/server/routes/transactionRoutes.ts', 'utf8');
     const use = routes.indexOf('transactionRouter.use(requireLedgerWriter);');
