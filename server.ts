@@ -135,10 +135,11 @@ if (process.env.NODE_ENV !== "production") {
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default(defaultNodeEnv as "development" | "production" | "test"),
   GEMINI_API_KEY: z.string().optional(),
-  STRIPE_SECRET_KEY: z.string().min(1),
+  // Third-party keys are optional at startup: their features report "not set up" until added.
+  STRIPE_SECRET_KEY: z.string().optional(),
   SESSION_SECRET: z.string().min(1),
-  CURRENCY_API_KEY: z.string().min(1),
-  TAX_API_KEY: z.string().min(1),
+  CURRENCY_API_KEY: z.string().optional(),
+  TAX_API_KEY: z.string().optional(),
   SYSTEM_SALT: z.string().min(1),
   DATABASE_URL: z.string().optional(),
 });
@@ -178,7 +179,6 @@ const upload = multer({
     files: 1
   }
 });
-
 
 // --- Global Admin Pricing & Billing Overrides System ---
 let globalAdminConfig = {
@@ -382,7 +382,6 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
     throw err;
   }
 }
-
 
 /**
  * Authentication Middleware
@@ -2123,7 +2122,6 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       sendError(res, err.message, 500);
     }
   });
-
 
   app.get("/api/v1/ledger/diagnostics", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
@@ -3874,7 +3872,6 @@ You MUST output a valid JSON object matching this schema exactly:
 
   // stress-test route removed in favor of real client-side load testing
 
-
   app.get("/api/v1/logs", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
       const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
@@ -4072,7 +4069,8 @@ You MUST output a valid JSON object matching this schema exactly:
       }
 
       const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
-      const apiKey = process.env.CURRENCY_API_KEY as string;
+      const apiKey = process.env.CURRENCY_API_KEY;
+      if (!apiKey) return sendError(res, "Currency rates are not set up yet (CURRENCY_API_KEY)", 503);
       const url = `https://api.apilayer.com/currency_data/${endpoint}?${queryString}`;
       
       // Cache live endpoint for 6 hours, historical/list for 365 days
@@ -4103,7 +4101,8 @@ You MUST output a valid JSON object matching this schema exactly:
       }
 
       const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
-      const apiKey = process.env.TAX_API_KEY as string;
+      const apiKey = process.env.TAX_API_KEY;
+      if (!apiKey) return sendError(res, "Tax rates are not set up yet (TAX_API_KEY)", 503);
       const url = `https://api.apilayer.com/tax_data/${endpoint}?${queryString}`;
 
       // Tax data changes very rarely, cache for 30 days
@@ -4159,7 +4158,6 @@ You MUST output a valid JSON object matching this schema exactly:
     }
   });
 
-
   app.get("/api/activity-feed", authenticate, async (req: express.Request, res: express.Response) => {
     const authReq = req as AuthenticatedRequest;
     const result = WorkspaceIdSchema.safeParse(req.query);
@@ -4185,9 +4183,6 @@ You MUST output a valid JSON object matching this schema exactly:
   });
 
   // --- High Performance Rule Labeling Engine API (Excel Integration Ready) ---
-  
-
-  
 
   app.post("/api/v1/label-transactions", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
@@ -4460,7 +4455,6 @@ You MUST output a valid JSON object matching this schema exactly:
   app.use("/api/ai", aiRouter);
   app.use("/api/v1/ai", aiRouter);
   app.use("/api/v1/invites", invitePublicRouter);
-
 
   // Scheduled jobs (Vercel Cron calls them with CRON_SECRET)
   app.use("/api/cron", cronRouter);
