@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, cn } from '../../lib/utils';
 import { Package, TrendingUp } from 'lucide-react';
 import { isPostable } from '../../lib/txFilters';
 import { Invoice } from '../../types';

@@ -3,6 +3,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, cn } from '../../lib/utils';
 import { BookOpen, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Transaction } from '../../types';
+import { isPostable } from '../../lib/txFilters';
 
 interface Props {
   selectedYear?: number;
@@ -15,7 +16,7 @@ export const JournalSheetReportView: React.FC<Props> = ({ selectedYear, startDat
 
   const evaluatedTransactions = useMemo(() => {
     return (transactions || []).filter(tx => {
-      if (tx.status === 'void') return false;
+      if (!isPostable(tx)) return false;
       if (startDate && tx.date && tx.date < startDate) return false;
       if (endDate && tx.date && tx.date > endDate) return false;
       if (selectedYear && tx.date && !tx.date.startsWith(selectedYear.toString())) return false;
