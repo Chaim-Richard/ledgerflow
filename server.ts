@@ -22,19 +22,18 @@ export { getStripe };
 import { writeServerAuditLog } from "./src/server/services/auditLogService";
 import { requirePlanCapacity } from "./src/server/middleware/planCapacity";
 import { assertStartupConfig } from "./src/server/config/assertStartupConfig";
-import { purgePendingWorkspaces } from "./src/server/services/workspacePurgeService";
 import { logger } from "./src/server/utils/logger";
 import express from "express";
 import { safeFetch } from "./src/server/utils/safeFetch.js";
 import cors from "cors";
 import Stripe from "stripe";
 import rateLimit from "express-rate-limit";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import multer from "multer";
 import fs from "fs";
+import os from "os";
 import { parse as parseCsv } from 'csv-parse/sync';
 import { z } from "zod";
 import compression from "compression";
@@ -69,6 +68,8 @@ import { TruthEngine } from "./src/modules/integrity/TruthEngine.ts";
 import { calculateNetIncome, isPostable, lineAmount } from "./src/lib/txFilters.ts";
 import { TransactionValidator } from "./src/kernel/validation/TransactionValidator.ts";
 import { assertWorkspaceAccess, getDb, FieldValue } from "./src/server/db/firestore.ts";
+import { cronRouter } from "./src/server/routes/cronRoutes.ts";
+import { runDailyMaintenance } from "./src/server/services/maintenanceService.ts";
 import type { Transaction } from "./src/server/db/firestore.ts";
 import { verifyIdToken, authAdmin, supabaseUrl } from "./src/server/auth/supabaseAuth.ts";
 import type { DecodedIdToken } from "./src/server/auth/supabaseAuth.ts";
@@ -169,8 +170,9 @@ interface AuthenticatedRequest extends express.Request {
   user: AuthUser;
 }
 
-const upload = multer({ 
-  dest: "uploads/",
+// Temporary upload folder (the only writable place on Vercel); files are deleted after parsing.
+const upload = multer({
+  dest: path.join(os.tmpdir(), "ledgerflow-uploads"),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10 MB limit
     files: 1
@@ -540,7 +542,7 @@ async function resolveUserGeminiApiKey(uid?: string): Promise<{ apiKey: string; 
   return { apiKey: process.env.GEMINI_API_KEY || "", isCustom: false };
 }
 
-async function startServer() {
+async function buildApp(): Promise<{ app: express.Express; port: number }> {
   const app = express();
   const allowedOriginsEnv = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) : null;
   
@@ -4459,64 +4461,38 @@ You MUST output a valid JSON object matching this schema exactly:
   app.use("/api/v1/ai", aiRouter);
   app.use("/api/v1/invites", invitePublicRouter);
 
-  // Data Retention Cleanup Job (Runs every 24h)
-  setInterval(async () => {
-    try {
-      logger.info("Running data retention cleanup job");
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 90); // 90 days default
-      const cutoffStr = cutoff.toISOString();
 
-      // Audit logs are permanent and must NEVER be deleted (§13A / Part 2c).
-      // 2. Backup retention: Purge expired job run logs older than 90 days in chunks of 450
-      let purgedJobRuns = 0;
-      while (true) {
-        const oldJobRuns = await getDb().collection('jobRuns').where('finishedAt', '<', cutoffStr).limit(450).get();
-        if (oldJobRuns.empty) break;
-        const batch = getDb().batch();
-        oldJobRuns.docs.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-        purgedJobRuns += oldJobRuns.size;
-        if (oldJobRuns.size < 450) break;
-      }
-      if (purgedJobRuns > 0) {
-        logger.info("Purged expired job runs", { count: purgedJobRuns });
-      }
-
-      // 3. Cap strategicAdvice array on all workspaces to maximum 15 items to prevent database bloat
-      const workspacesSnap = await getDb().collection('workspaces').get();
-      for (const doc of workspacesSnap.docs) {
-        const data = doc.data() || {};
-        if (Array.isArray(data.strategicAdvice) && data.strategicAdvice.length > 15) {
-          const cappedAdvice = data.strategicAdvice.slice(-15); // Keep the most recent 15
-          await doc.ref.update({ strategicAdvice: cappedAdvice });
-          logger.info("Capped strategicAdvice for workspace", { workspaceId: doc.id });
-        }
-      }
-
-      // 4. Workspace deletion purge job
-      const purgeResult = await purgePendingWorkspaces(getDb());
-      if (purgeResult.purgedWorkspaces.length > 0) {
-        logger.info("Purged pending workspaces", { count: purgeResult.purgedWorkspaces.length, purged: purgeResult.purgedWorkspaces });
-      }
-      if (purgeResult.errors.length > 0) {
-        console.error(`[Data Lifecycle] Workspace purge encountered errors: ${purgeResult.errors.join('; ')}`);
-      }
-    } catch (e) {
-      console.error("[Data Lifecycle] Cleanup job failed", e);
-    }
-  }, 24 * 60 * 60 * 1000);
-
-  const http = await import('http');
-  const httpServer = http.createServer(app);
+  // Scheduled jobs (Vercel Cron calls them with CRON_SECRET)
+  app.use("/api/cron", cronRouter);
 
   // API 404 handler for unmatched /api/* routes
   app.use('/api/*', (req, res) => {
     res.status(404).json({ error: `API route not found: ${req.originalUrl}` });
   });
 
+  await syncGlobalAdminConfig();
+  return { app, port: PORT };
+}
+
+/** The Express app with every API route; the Vercel function (api/index.mjs) serves it. */
+export async function createApp(): Promise<express.Express> {
+  return (await buildApp()).app;
+}
+
+/** Long-running server (npm run dev / npm start): the app plus the web pages and timers. */
+async function startServer() {
+  const { app, port: PORT } = await buildApp();
+  const http = await import('http');
+  const httpServer = http.createServer(app);
+
+  // Daily maintenance (on Vercel the cron job runs it instead)
+  setInterval(() => {
+    runDailyMaintenance().catch(e => console.error("[Data Lifecycle] Cleanup job failed", e));
+  }, 24 * 60 * 60 * 1000);
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { 
         middlewareMode: true,
@@ -4539,8 +4515,6 @@ You MUST output a valid JSON object matching this schema exactly:
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
-
-  await syncGlobalAdminConfig();
 
   httpServer.on('error', (e: any) => {
     if (e.code === 'EADDRINUSE') {
@@ -4592,7 +4566,8 @@ process.on('uncaughtException', (error) => {
   console.error('💥 [Server] Uncaught Exception caught:', error);
 });
 
-if (process.env.NODE_ENV !== "test") {
+// On Vercel the function in api/index.mjs imports createApp() instead of starting a server.
+if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
   console.debug("🌀 [Server] Booting LedgerFlow Backend...");
   startServer().catch(err => {
     console.error("💥 [Server] Critical Startup Failure:", err);

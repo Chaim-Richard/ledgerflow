@@ -13,3 +13,4 @@ test-*.cjs
 test-*.js
 fix_*.py
 cleanup_*.py
+.vercel/

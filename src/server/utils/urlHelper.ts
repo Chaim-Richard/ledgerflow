@@ -1,6 +1,12 @@
 import { Request } from 'express';
 
-if (process.env.NODE_ENV === 'production' && !process.env.APP_URL && !process.env.VITE_APP_URL) {
+// On Vercel the production address is known (VERCEL_PROJECT_PRODUCTION_URL, set by Vercel itself,
+// never by a request), so it can stand in for APP_URL until a custom domain is configured.
+const vercelProductionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : undefined;
+
+if (process.env.NODE_ENV === 'production' && !process.env.APP_URL && !process.env.VITE_APP_URL && !vercelProductionUrl) {
   throw new Error('APP_URL environment variable is required in production mode');
 }
 
@@ -13,6 +19,9 @@ export function getTrustedAppUrl(req?: Request): string {
   }
   if (process.env.VITE_APP_URL) {
     return process.env.VITE_APP_URL.replace(/\/+$/, '');
+  }
+  if (vercelProductionUrl) {
+    return vercelProductionUrl;
   }
 
   if (process.env.NODE_ENV === 'production') {

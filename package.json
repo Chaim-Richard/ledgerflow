@@ -4,13 +4,16 @@
   "private": true,
   "packageManager": "npm@10.8.2",
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "scaffold:plugin": "node scripts/scaffold.js plugin",
     "scaffold:algo": "node scripts/scaffold.js algo",
     "db:test-setup": "tsx scripts/db-test.ts setup",
     "grant-admin": "tsx scripts/grant-admin.ts",
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=build/server.cjs",
     "lint": "npm run lint:types; npm run lint:eslint",
     "lint:types": "tsc --noEmit",
     "lint:eslint": "eslint . --max-warnings 2803",
@@ -19,7 +22,7 @@
     "test:e2e": "playwright test",
     "verify": "npm ci --dry-run --ignore-scripts && npm run lint && npm test && npm run test:rules && npm audit --audit-level=high && npm run test:e2e",
     "preview": "vite preview",
-    "start": "node dist/server.cjs",
+    "start": "node build/server.cjs",
     "prepare": "if [ \"$HUSKY\" != \"0\" ]; then husky; fi || true",
     "ratchet:update": "tsx scripts/update-ratchet.ts",
     "test:cov": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test --experimental-test-coverage --test-coverage-lines=75 --test-coverage-branches=65 src/tests/*.test.ts"
