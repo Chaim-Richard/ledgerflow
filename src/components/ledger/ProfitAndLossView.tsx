@@ -8,6 +8,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useFinancialReporting, ServerPLData } from '../../hooks/useFinancialReporting';
+import { getComparePeriod } from '../../lib/fiscalCalendar';
 import MonthNavigator from '../ui/MonthNavigator';
 import DrillDownModal from '../layout/DrillDownModal';
 
@@ -21,10 +22,15 @@ interface PLData {
 }
 
 interface ProfitAndLossViewProps {
-  workspaceId: string;
+  workspaceId?: string;
+  /** Period and comparison chosen on the Reports page; the view follows them when given. */
+  startDate?: string;
+  endDate?: string;
+  compareStartDate?: string;
+  compareEndDate?: string;
 }
 
-const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) => {
+const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDate, compareStartDate, compareEndDate }) => {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const [dateRange, setDateRange] = useState({
@@ -42,19 +48,21 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
   const [serverPrevData, setServerPrevData] = useState<PLData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
 
-  // Helper to subtract months
-  const getPrevPeriod = (start: string, end: string) => {
-    const s = parseLocalDate(start);
-    const e = parseLocalDate(end);
-    const msDiff = e.getTime() - s.getTime();
-    const prevE = new Date(s.getTime() - 86400000); 
-    const MathDiffDays = Math.round(msDiff / 86400000);
-    const prevS = new Date(prevE.getTime() - (MathDiffDays * 86400000));
-    return {
-      start: getLocalDateISO(prevS),
-      end: getLocalDateISO(prevE)
-    };
-  };
+  // Follow the Reports page period and comparison
+  useEffect(() => {
+    if (startDate && endDate) setDateRange({ start: startDate, end: endDate });
+  }, [startDate, endDate]);
+  useEffect(() => {
+    if (startDate) setIsComparative(Boolean(compareStartDate));
+  }, [startDate, compareStartDate]);
+
+  // Comparison period: the page's choice, else the calendar period just before (the month before
+  // March is February, not the same number of days)
+  const prevRange = useMemo(() => {
+    if (compareStartDate && compareEndDate) return { start: compareStartDate, end: compareEndDate };
+    const prev = getComparePeriod(dateRange.start, dateRange.end, 'previous');
+    return { start: prev?.startDate || dateRange.start, end: prev?.endDate || dateRange.end };
+  }, [compareStartDate, compareEndDate, dateRange.start, dateRange.end]);
 
   const loadServerReport = useCallback(async () => {
     try {
@@ -64,8 +72,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
         setIsServerAuthoritative(true);
       }
       if (isComparative) {
-        const prev = getPrevPeriod(dateRange.start, dateRange.end);
-        const prevRes = await fetchPL(prev.start, prev.end);
+        const prevRes = await fetchPL(prevRange.start, prevRange.end);
         if (prevRes) {
           setServerPrevData(prevRes);
         }
@@ -73,7 +80,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
     } catch {
       setIsServerAuthoritative(false);
     }
-  }, [fetchPL, dateRange.start, dateRange.end, isComparative]);
+  }, [fetchPL, dateRange.start, dateRange.end, isComparative, prevRange]);
 
   useEffect(() => {
     loadServerReport();
@@ -216,12 +223,11 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ workspaceId }) =>
     let prevPl = defaultData;
     
     if (isComparative) {
-      const prev = getPrevPeriod(dateRange.start, dateRange.end);
-      prevPl = calculatePeriod(prev.start, prev.end);
+      prevPl = calculatePeriod(prevRange.start, prevRange.end);
     }
 
     return { data: currentPl, prevData: prevPl };
-  }, [transactions, accounts, dateRange, isComparative]);
+  }, [transactions, accounts, dateRange, isComparative, prevRange]);
 
   const data = isServerAuthoritative && serverData ? serverData : localCalculation.data;
   const prevData = isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;

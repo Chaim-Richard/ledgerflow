@@ -29,9 +29,12 @@ import DrillDownModal from '../layout/DrillDownModal';
 interface BalanceSheetViewProps {
   accounts: ChartAccount[];
   formatCurrency: (val: number) => string;
+  /** As-of date and comparison chosen on the Reports page; the view follows them when given. */
+  asOfDate?: string;
+  compareEndDate?: string;
 }
 
-export default function BalanceSheetView({ accounts = [], formatCurrency }: BalanceSheetViewProps) {
+export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDate: pageAsOfDate, compareEndDate }: BalanceSheetViewProps) {
   const transactions = useLedgerStore(state => state.transactions || []);
   
   const [asOfDate, setAsOfDate] = useState<string>(getLocalDateISO());
@@ -39,6 +42,14 @@ export default function BalanceSheetView({ accounts = [], formatCurrency }: Bala
   const [priorDate, setPriorDate] = useState<string>(
     getLocalDateISO(new Date(new Date().getFullYear() - 1, new Date().getMonth(), new Date().getDate()))
   );
+  useEffect(() => {
+    if (pageAsOfDate) setAsOfDate(pageAsOfDate);
+  }, [pageAsOfDate]);
+  useEffect(() => {
+    if (!pageAsOfDate) return;
+    setIsComparative(Boolean(compareEndDate));
+    if (compareEndDate) setPriorDate(compareEndDate);
+  }, [pageAsOfDate, compareEndDate]);
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('code');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[] } | null>(null);

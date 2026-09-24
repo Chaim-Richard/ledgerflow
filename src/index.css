@@ -201,3 +201,12 @@
 }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Printing a report (Reports page "Print / PDF"): only the report, no menus or buttons. */
+@media print {
+  body:has([data-print-root]) * { visibility: hidden; }
+  body:has([data-print-root]) [data-print-root],
+  body:has([data-print-root]) [data-print-root] * { visibility: visible; }
+  body:has([data-print-root]) [data-print-root] { position: absolute; inset: 0 auto auto 0; width: 100%; }
+  [data-print-hide] { display: none !important; }
+}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Building, Mail, Phone } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
@@ -6,13 +6,15 @@ import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeVendorBalanceSummary, VendorBalanceSummaryRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
 
-export const VendorBalanceSummaryView: React.FC = () => {
+export const VendorBalanceSummaryView: React.FC<{ asOfDate?: string }> = ({ asOfDate: pageAsOfDate }) => {
   const vendors = useLedgerStore(s => s.vendors);
   const bills = useLedgerStore(s => s.bills);
   const payments = useLedgerStore(s => s.payments);
   const vendorCredits = useLedgerStore(s => s.vendorCredits);
   const [searchTerm, setSearchTerm] = useState('');
   const [asOfDate, setAsOfDate] = useState(getLocalDateISO());
+  // Follow the Reports page period when it gives one
+  useEffect(() => { if (pageAsOfDate) setAsOfDate(pageAsOfDate); }, [pageAsOfDate]);
 
   const vendorRows = useMemo<VendorBalanceSummaryRow[]>(() => {
     return computeVendorBalanceSummary(

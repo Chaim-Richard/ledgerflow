@@ -1,15 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeTaxLiability } from '../../server/reports/computeReports';
 import { Receipt, Calculator } from 'lucide-react';
 
-export default function TaxLiabilityView() {
+export default function TaxLiabilityView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
   const invoices = useLedgerStore(s => s.invoices);
   const bills = useLedgerStore(s => s.bills);
 
   const [startDate, setStartDate] = useState(`${new Date().getFullYear()}-01-01`);
   const [endDate, setEndDate] = useState(getLocalDateISO());
+  // Follow the Reports page period when it gives one
+  useEffect(() => { if (pageStartDate) setStartDate(pageStartDate); if (pageEndDate) setEndDate(pageEndDate); }, [pageStartDate, pageEndDate]);
 
   const taxData = useMemo(() => {
     return computeTaxLiability(invoices, bills, startDate, endDate);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
@@ -6,7 +6,7 @@ import { computeStatement } from '../../server/reports/computeReports';
 import { FileText, Printer, Eye, Download } from 'lucide-react';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 
-export default function StatementView() {
+export default function StatementView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const customers = useLedgerStore(s => s.customers);
@@ -19,6 +19,8 @@ export default function StatementView() {
   const [contactId, setContactId] = useState<string>('');
   const [startDate, setStartDate] = useState(`${new Date().getFullYear()}-01-01`);
   const [endDate, setEndDate] = useState(getLocalDateISO());
+  // Follow the Reports page period when it gives one
+  useEffect(() => { if (pageStartDate) setStartDate(pageStartDate); if (pageEndDate) setEndDate(pageEndDate); }, [pageStartDate, pageEndDate]);
 
   // Default to first contact
   const selectedContact = useMemo(() => {

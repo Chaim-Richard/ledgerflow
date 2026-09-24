@@ -1,6 +1,7 @@
 import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { getComparePeriod } from '../../lib/fiscalCalendar';
 import { parseLocalDate, formatDecimal, formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
 import { exportToExcel } from '../../lib/excelExport';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
@@ -9,7 +10,15 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useFinancialReporting, ServerCashFlowData } from '../../hooks/useFinancialReporting';
 import MonthNavigator from '../ui/MonthNavigator';
 
-export default function CashFlowView() {
+interface CashFlowViewProps {
+  /** Period and comparison chosen on the Reports page; the view follows them when given. */
+  startDate?: string;
+  endDate?: string;
+  compareStartDate?: string;
+  compareEndDate?: string;
+}
+
+export default function CashFlowView({ startDate, endDate, compareStartDate, compareEndDate }: CashFlowViewProps = {}) {
   const transactions = useLedgerStore(s => s.transactions);
   const rawAccounts = useLedgerStore(s => s.accounts);
   const computedAccounts = useLedgerStore(s => s.computedAccounts);
@@ -29,17 +38,17 @@ export default function CashFlowView() {
   const [serverPrevData, setServerPrevData] = useState<ServerCashFlowData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
 
+  useEffect(() => {
+    if (startDate && endDate) setDateRange({ start: startDate, end: endDate });
+  }, [startDate, endDate]);
+  useEffect(() => {
+    if (startDate) setIsComparative(Boolean(compareStartDate));
+  }, [startDate, compareStartDate]);
+  // The page's comparison period, else the calendar period just before
   const getPrevPeriod = (start: string, end: string) => {
-    const s = parseLocalDate(start);
-    const e = parseLocalDate(end);
-    const msDiff = e.getTime() - s.getTime();
-    const prevE = new Date(s.getTime() - 86400000); 
-    const MathDiffDays = Math.round(msDiff / 86400000);
-    const prevS = new Date(prevE.getTime() - (MathDiffDays * 86400000));
-    return {
-      start: getLocalDateISO(prevS),
-      end: getLocalDateISO(prevE)
-    };
+    if (compareStartDate && compareEndDate) return { start: compareStartDate, end: compareEndDate };
+    const prev = getComparePeriod(start, end, 'previous');
+    return { start: prev?.startDate || start, end: prev?.endDate || end };
   };
 
   const loadServerReport = useCallback(async () => {
@@ -59,7 +68,7 @@ export default function CashFlowView() {
     } catch {
       setIsServerAuthoritative(false);
     }
-  }, [fetchCashFlow, dateRange.start, dateRange.end, isComparative]);
+  }, [fetchCashFlow, dateRange.start, dateRange.end, isComparative, compareStartDate, compareEndDate]);
 
   useEffect(() => {
     loadServerReport();
@@ -190,7 +199,7 @@ export default function CashFlowView() {
     }
 
     return { currentData, prevData };
-  }, [transactions, accounts, dateRange, isComparative]);
+  }, [transactions, accounts, dateRange, isComparative, compareStartDate, compareEndDate]);
 
   const currentData = useMemo(() => {
     if (isServerAuthoritative && serverData) {

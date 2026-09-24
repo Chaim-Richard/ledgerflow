@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FileSpreadsheet } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
@@ -7,7 +7,7 @@ import { getFiscalYearBounds } from '../../lib/fiscalCalendar';
 import { computeTransactionsByVendor, PartyTransactionRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
 
-export const TransactionsByVendorView: React.FC = () => {
+export const TransactionsByVendorView: React.FC<{ startDate?: string; endDate?: string }> = ({ startDate: pageStartDate, endDate: pageEndDate }) => {
   const vendors = useLedgerStore(s => s.vendors);
   const bills = useLedgerStore(s => s.bills);
   const payments = useLedgerStore(s => s.payments);
@@ -22,6 +22,8 @@ export const TransactionsByVendorView: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('endDate') || getFiscalYearBounds().endDate;
   });
+  // Follow the Reports page period when it gives one
+  useEffect(() => { if (pageStartDate) setStartDate(pageStartDate); if (pageEndDate) setEndDate(pageEndDate); }, [pageStartDate, pageEndDate]);
 
   const handleStartDateChange = (val: string) => {
     setStartDate(val);
