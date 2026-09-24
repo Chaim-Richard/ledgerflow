@@ -10,6 +10,8 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
+import { formatCurrency } from '../../lib/utils';
+import { lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -397,16 +399,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                         list={`invoice-inventory-list-${idx}`}
                         value={item.description}
                         onChange={(e) => {
-                          const val = e.target.value;
-                          const selected = inventoryItems.find(i => i.name === val || i.sku === val);
                           const newItems = [...items];
-                          newItems[idx].description = val;
-                          if (selected) {
-                            newItems[idx].itemId = selected.id;
-                            newItems[idx].rateCents = selected.unitPriceCents;
-                            newItems[idx].unitCostCents = selected.unitCostCents;
-                            newItems[idx].amountCents = Math.round(newItems[idx].quantity * selected.unitPriceCents);
-                          }
+                          newItems[idx] = setLineDescription(newItems[idx], e.target.value, inventoryItems);
                           setItems(newItems);
                         }}
                         placeholder="Service or Product"
@@ -414,10 +408,13 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                       />
                       <datalist id={`invoice-inventory-list-${idx}`}>
                         {inventoryItems.map(i => (
-                          <option key={i.id} value={i.name}>{i.sku ? `[${i.sku}] ` : ''}${i.name} - ${(i.unitPriceCents / 100).toFixed(2)} (Stock: {i.quantityAtHand})</option>
+                          <option key={i.id} value={i.name}>{i.sku ? `[${i.sku}] ` : ''}{i.name} · {formatCurrency(i.unitPriceCents)} · stock {i.quantityAtHand}</option>
                         ))}
                       </datalist>
                     </div>
+                    {idx === 0 && inventoryItems.length === 0 && (
+                      <p className="text-[10px] text-[var(--muted)]">No items yet — add products in Inventory to pick them here.</p>
+                    )}
                   </div>
                   <div className="col-span-6 md:col-span-2 space-y-1">
                     <label htmlFor={`inv-item-qty-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Qty</label>
@@ -430,8 +427,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                       onChange={(e) => {
                         const newItems = [...items];
                         const qty = parseFloat(e.target.value || '0');
-                        newItems[idx].quantity = qty;
-                        newItems[idx].amountCents = Math.round(qty * newItems[idx].rateCents);
+                        newItems[idx] = { ...newItems[idx], quantity: qty, amountCents: lineAmountCents(qty, newItems[idx].rateCents) };
                         setItems(newItems);
                       }}
                       className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
@@ -448,8 +444,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                       onChange={(e) => {
                         const newItems = [...items];
                         const rateCents = TruthEngine.parseAmountToCents(e.target.value || '0');
-                        newItems[idx].rateCents = rateCents;
-                        newItems[idx].amountCents = Math.round(newItems[idx].quantity * rateCents);
+                        newItems[idx] = { ...newItems[idx], rateCents, amountCents: lineAmountCents(newItems[idx].quantity, rateCents) };
                         setItems(newItems);
                       }}
                       className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"

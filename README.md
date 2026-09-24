@@ -8,7 +8,7 @@ LedgerFlow is an enterprise-grade multi-entity continuous financial ledger and E
 
 - **Frontend:** React `^19.0.0`, Vite `^6.2.0`, TypeScript `~5.8.2`, Tailwind CSS `^4.1.14`
 - **State Management:** Zustand `^5.0.14`
-- **Database & Auth:** Firebase / Cloud Firestore `^11.4.0`, Firebase Admin `^13.8.0`
+- **Database & Auth:** Supabase — Postgres with row level security, Supabase Auth (email + password, Google, authenticator-app two-step login), Realtime. The app keeps a Firestore-style data API on top (`src/lib/db/` in the browser, `src/server/db/pgFirestore.ts` on the server).
 - **Backend Server:** Express `^4.21.2`, Node.js (TypeScript via `tsx` and bundled with `esbuild`)
 - **Payments & Billing:** Stripe `^22.2.1`
 - **Banking Integrations:** Plaid `^42.2.0`, `react-plaid-link` `^4.1.1`
@@ -22,9 +22,9 @@ LedgerFlow is an enterprise-grade multi-entity continuous financial ledger and E
 
 LedgerFlow strictly separates data, computation, and rendering into three decoupled layers:
 
-### Layer 1: Data Source of Truth (Zustand & Cloud Firestore)
+### Layer 1: Data Source of Truth (Zustand & Supabase Postgres)
 - All client-side runtime ledger state is managed via `useLedgerStore` (`src/stores/useLedgerStore.ts`).
-- Canonical data lives in **top-level Firestore collections** (`transactions`, `accounts`, `invoices`, `bills`, `projects`, `recurring`, `bankLines`, `auditLogs`) scoped strictly by `workspaceId`.
+- Canonical data lives in **top-level collections** (`transactions`, `chartAccounts`, `invoices`, `bills`, `projects`, `recurring`, `bankLines`, `auditLogs`), one Postgres table each (`supabase/migrations/`), scoped strictly by `workspaceId`.
 - No nested subcollections are used.
 
 ### Layer 2: Pure Math Financial Algorithms (`src/lib/algorithms/`)
@@ -86,14 +86,20 @@ npm run lint
 # 4. Run automated test suite
 npm test
 
+# 4b. Database tests (needs a local Postgres; CI starts one automatically)
+export LF_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lf_test
+npm run db:test-setup   # apply supabase/migrations to the test database
+npm run test:rules      # row level security tests
+npm test                # now also runs the database layer and sign-in tests
+
 # 5. Build for production (bundles Vite client + standalone server.cjs)
 npm run build
 
 # 6. Start production server
 npm start
 
-# 7. Grant platform admin privileges to a user
-npm run grant-admin <uid-or-email>
+# 7. Grant platform admin privileges to a user (DATABASE_URL = Supabase connection string)
+npm run grant-admin -- <uid-or-email>
 
 # 8. Scaffold new tools
 npm run scaffold:plugin <name>
@@ -107,4 +113,4 @@ npm run scaffold:algo <name>
 - **Server-Side API Keys:** All third-party secrets (`GEMINI_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, Plaid credentials) reside exclusively server-side.
 - **Data Encryption:** Sensitive fields are encrypted using AES-256-GCM.
 - **PII Scrubbing:** Automated sanitization of SSNs, credit card numbers, and secret tokens in logs.
-- **Role-Based Access Control:** Firestore security rules enforce strict ownership, workspace boundaries, and closed-period write lockdown.
+- **Role-Based Access Control:** Postgres row level security (`supabase/migrations/`, tested by `supabase/tests/rls.test.sql`) enforces workspace boundaries, roles, allowed fields, closed-period write lockdown and two-step login.

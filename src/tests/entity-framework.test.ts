@@ -1,10 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { z } from 'zod';
-import { defineEntity, getEntityRegistry, generateEntityFirestoreRules } from '../lib/entityFramework';
+import { defineEntity, getEntityRegistry, generateEntitySql } from '../lib/entityFramework';
 
 describe('Entity Framework Guard Suite (Shortcut 3)', () => {
-  it('registering an entity generates schema, collection metadata, and Firestore rules', () => {
+  it('registering an entity generates schema, collection metadata, and its database table + rules', () => {
     const ProductSchema = z.object({
       id: z.string(),
       workspaceId: z.string(),
@@ -28,8 +28,10 @@ describe('Entity Framework Guard Suite (Shortcut 3)', () => {
     const registry = getEntityRegistry();
     assert.ok(registry.has('Product'));
 
-    const rules = generateEntityFirestoreRules();
-    assert.ok(rules.includes('match /products/{docId}'));
-    assert.ok(rules.includes("request.resource.data.keys().hasOnly(['id', 'workspaceId', 'sku', 'priceCents', 'name'])"));
+    const sql = generateEntitySql();
+    assert.ok(sql.includes('create table public."products"'));
+    assert.ok(sql.includes("insert into public.lf_rules (table_name, allowed_keys) values ('products', '{id,workspaceId,sku,priceCents,name}');"));
+    assert.ok(sql.includes('create policy writer_insert on public."products"'));
+    assert.ok(sql.includes('create policy two_step_login on public."products" as restrictive'));
   });
 });

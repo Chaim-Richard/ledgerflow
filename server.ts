@@ -1,7 +1,7 @@
 import { fxRouter } from "./src/server/routes/fxRoutes";
 import { aiRouter } from "./src/server/routes/aiRoutes";
 import { reportRouter } from "./src/server/routes/reportRoutes";
-import { workspaceRouter, countWorkspaceOwners } from "./src/server/routes/workspaceRoutes";
+import { workspaceRouter, countWorkspaceOwners, requireWorkspaceRole } from "./src/server/routes/workspaceRoutes";
 import { invitePublicRouter } from "./src/server/routes/invitePublicRoutes";
 import { invoiceEmailRouter } from "./src/server/routes/invoiceEmailRoutes";
 import { publicInvoiceRouter } from "./src/server/routes/publicInvoiceRoutes";
@@ -22,19 +22,18 @@ export { getStripe };
 import { writeServerAuditLog } from "./src/server/services/auditLogService";
 import { requirePlanCapacity } from "./src/server/middleware/planCapacity";
 import { assertStartupConfig } from "./src/server/config/assertStartupConfig";
-import { purgePendingWorkspaces } from "./src/server/services/workspacePurgeService";
 import { logger } from "./src/server/utils/logger";
 import express from "express";
 import { safeFetch } from "./src/server/utils/safeFetch.js";
 import cors from "cors";
 import Stripe from "stripe";
 import rateLimit from "express-rate-limit";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import multer from "multer";
 import fs from "fs";
+import os from "os";
 import { parse as parseCsv } from 'csv-parse/sync';
 import { z } from "zod";
 import compression from "compression";
@@ -69,6 +68,9 @@ import { TruthEngine } from "./src/modules/integrity/TruthEngine.ts";
 import { calculateNetIncome, isPostable, lineAmount } from "./src/lib/txFilters.ts";
 import { TransactionValidator } from "./src/kernel/validation/TransactionValidator.ts";
 import { assertWorkspaceAccess, getDb, FieldValue } from "./src/server/db/firestore.ts";
+import { cronRouter } from "./src/server/routes/cronRoutes.ts";
+import { runDailyMaintenance } from "./src/server/services/maintenanceService.ts";
+import { restoreWorkspaceBackup, RestoreError } from "./src/server/services/workspaceRestoreService.ts";
 import type { Transaction } from "./src/server/db/firestore.ts";
 import { verifyIdToken, authAdmin, supabaseUrl } from "./src/server/auth/supabaseAuth.ts";
 import type { DecodedIdToken } from "./src/server/auth/supabaseAuth.ts";
@@ -134,10 +136,11 @@ if (process.env.NODE_ENV !== "production") {
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default(defaultNodeEnv as "development" | "production" | "test"),
   GEMINI_API_KEY: z.string().optional(),
-  STRIPE_SECRET_KEY: z.string().min(1),
+  // Third-party keys are optional at startup: their features report "not set up" until added.
+  STRIPE_SECRET_KEY: z.string().optional(),
   SESSION_SECRET: z.string().min(1),
-  CURRENCY_API_KEY: z.string().min(1),
-  TAX_API_KEY: z.string().min(1),
+  CURRENCY_API_KEY: z.string().optional(),
+  TAX_API_KEY: z.string().optional(),
   SYSTEM_SALT: z.string().min(1),
   DATABASE_URL: z.string().optional(),
 });
@@ -169,14 +172,14 @@ interface AuthenticatedRequest extends express.Request {
   user: AuthUser;
 }
 
-const upload = multer({ 
-  dest: "uploads/",
+// Temporary upload folder (the only writable place on Vercel); files are deleted after parsing.
+const upload = multer({
+  dest: path.join(os.tmpdir(), "ledgerflow-uploads"),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10 MB limit
     files: 1
   }
 });
-
 
 // --- Global Admin Pricing & Billing Overrides System ---
 let globalAdminConfig = {
@@ -381,7 +384,6 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
   }
 }
 
-
 /**
  * Authentication Middleware
  */
@@ -540,7 +542,7 @@ async function resolveUserGeminiApiKey(uid?: string): Promise<{ apiKey: string; 
   return { apiKey: process.env.GEMINI_API_KEY || "", isCustom: false };
 }
 
-async function startServer() {
+async function buildApp(): Promise<{ app: express.Express; port: number }> {
   const app = express();
   const allowedOriginsEnv = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) : null;
   
@@ -614,11 +616,11 @@ async function startServer() {
     contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.plaid.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         imgSrc: ["'self'", "data:", "blob:", "https:"],
         // Supabase: data (https) and live updates (wss)
-        connectSrc: ["'self'", supabaseUrl(), supabaseUrl().replace(/^http/, "ws"), "https://*.googleapis.com"],
+        connectSrc: ["'self'", supabaseUrl(), supabaseUrl().replace(/^http/, "ws"), "https://*.plaid.com", "https://*.googleapis.com"],
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
         frameSrc: ["'self'", "https://*.stripe.com", "https://cdn.plaid.com"],
         frameAncestors: isAiStudioProxy ? ["*"] : ["'self'"]
@@ -1704,121 +1706,15 @@ async function startServer() {
   app.get("/api/v1/workspaces/:workspaceId/export", apiAuthenticate, handleWorkspaceExport);
   app.get("/api/workspaces/:workspaceId/export", apiAuthenticate, handleWorkspaceExport);
 
-  app.post("/api/v1/workspaces/:workspaceId/restore", apiAuthenticate, async (req: express.Request, res: express.Response) => {
+  // Owner only: a restore replaces every record in the workspace (all or nothing).
+  app.post("/api/v1/workspaces/:workspaceId/restore", apiAuthenticate, requireWorkspaceRole(['owner']), async (req: express.Request, res: express.Response) => {
     try {
       const { workspaceId } = req.params;
-      const authReq = req as AuthenticatedRequest;
-      await authorizeWorkspace(authReq, workspaceId);
-
-      const backup = req.body;
-      if (!backup || typeof backup !== 'object') {
-        return sendError(res, "Invalid backup payload", 400);
-      }
-
-      // Basic schema and target checks
-      if (backup.workspace && backup.workspace.id !== workspaceId) {
-        return sendError(res, "Backup workspace ID does not match target workspace ID", 400);
-      }
-
-      if (backup.schemaVersion && Number(backup.schemaVersion) !== 1) {
-        return sendError(res, "Unsupported schema version", 400);
-      }
-
-      const db = getDb();
-
-      // Wipe existing collection records for this workspace to do a clean restore
-      const collectionsToRestore = [
-        { key: 'transactions', coll: 'transactions' },
-        { key: 'accounts', coll: 'chartAccounts' },
-        { key: 'projects', coll: 'projects' },
-        { key: 'budgets', coll: 'budgets' },
-        { key: 'vendors', coll: 'vendors' },
-        { key: 'customers', coll: 'customers' },
-        { key: 'invoices', coll: 'invoices' },
-        { key: 'bills', coll: 'bills' },
-        { key: 'payments', coll: 'payments' },
-        { key: 'estimates', coll: 'estimates' },
-        { key: 'inventory', coll: 'inventory' },
-        { key: 'assets', coll: 'assets' },
-        { key: 'recurringRules', coll: 'recurring' },
-        { key: 'recurring', coll: 'recurring' },
-        { key: 'taxRates', coll: 'taxRates' },
-        { key: 'autoRules', coll: 'autoRules' },
-        { key: 'reconciliations', coll: 'reconciliations' }
-      ];
-
-      // Helper to batch delete existing documents in chunks of 400
-      const deleteExisting = async (collName: string) => {
-        const snapshot = await db.collection(collName).where("workspaceId", "==", workspaceId).get();
-        if (snapshot.empty) return;
-        
-        const chunks = [];
-        for (let i = 0; i < snapshot.docs.length; i += 400) {
-          chunks.push(snapshot.docs.slice(i, i + 400));
-        }
-
-        for (const chunk of chunks) {
-          const batch = db.batch();
-          chunk.forEach((doc: any) => batch.delete(doc.ref));
-          await batch.commit();
-        }
-      };
-
-      // Wipe all related collections
-      await Promise.all(
-        Array.from(new Set(collectionsToRestore.map(c => c.coll))).map(coll => deleteExisting(coll))
-      );
-
-      // Helper to batch write restored documents in chunks of 400
-      const restoreCollection = async (items: any[], collName: string) => {
-        if (!Array.isArray(items) || items.length === 0) return;
-
-        const cleanedItems = items.map(item => {
-          const { id, ...data } = item;
-          return {
-            id: id || db.collection(collName).doc().id,
-            data: {
-              ...data,
-              workspaceId // Tenant Guard
-            }
-          };
-        });
-
-        const chunks = [];
-        for (let i = 0; i < cleanedItems.length; i += 400) {
-          chunks.push(cleanedItems.slice(i, i + 400));
-        }
-
-        for (const chunk of chunks) {
-          const batch = db.batch();
-          chunk.forEach(item => {
-            const ref = db.collection(collName).doc(item.id);
-            batch.set(ref, item.data, { merge: true });
-          });
-          await batch.commit();
-        }
-      };
-
-      // Restore each collection
-      for (const mapping of collectionsToRestore) {
-        const items = backup[mapping.key];
-        if (items) {
-          await restoreCollection(items, mapping.coll);
-        }
-      }
-
-      // Restore workspace metadata properties
-      if (backup.workspace) {
-        const { id, uid, createdAt, ...rest } = backup.workspace;
-        await db.collection("workspaces").doc(workspaceId).set(rest, { merge: true });
-      }
-
-      return res.json({
-        success: true,
-        message: "General ledger workspace successfully restored from backup.",
-        restoredCollections: Array.from(new Set(collectionsToRestore.map(c => c.key)))
-      });
+      await authorizeWorkspace(req as AuthenticatedRequest, workspaceId);
+      const result = await restoreWorkspaceBackup(getDb(), workspaceId, req.body);
+      return res.json({ success: true, message: "General ledger workspace successfully restored from backup.", ...result });
     } catch (err: any) {
+      if (err instanceof RestoreError) return sendError(res, err.message, err.status);
       handleApiError(res, err);
     }
   });
@@ -2121,7 +2017,6 @@ async function startServer() {
       sendError(res, err.message, 500);
     }
   });
-
 
   app.get("/api/v1/ledger/diagnostics", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
@@ -3872,7 +3767,6 @@ You MUST output a valid JSON object matching this schema exactly:
 
   // stress-test route removed in favor of real client-side load testing
 
-
   app.get("/api/v1/logs", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
       const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
@@ -4070,7 +3964,8 @@ You MUST output a valid JSON object matching this schema exactly:
       }
 
       const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
-      const apiKey = process.env.CURRENCY_API_KEY as string;
+      const apiKey = process.env.CURRENCY_API_KEY;
+      if (!apiKey) return sendError(res, "Currency rates are not set up yet (CURRENCY_API_KEY)", 503);
       const url = `https://api.apilayer.com/currency_data/${endpoint}?${queryString}`;
       
       // Cache live endpoint for 6 hours, historical/list for 365 days
@@ -4101,7 +3996,8 @@ You MUST output a valid JSON object matching this schema exactly:
       }
 
       const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
-      const apiKey = process.env.TAX_API_KEY as string;
+      const apiKey = process.env.TAX_API_KEY;
+      if (!apiKey) return sendError(res, "Tax rates are not set up yet (TAX_API_KEY)", 503);
       const url = `https://api.apilayer.com/tax_data/${endpoint}?${queryString}`;
 
       // Tax data changes very rarely, cache for 30 days
@@ -4157,7 +4053,6 @@ You MUST output a valid JSON object matching this schema exactly:
     }
   });
 
-
   app.get("/api/activity-feed", authenticate, async (req: express.Request, res: express.Response) => {
     const authReq = req as AuthenticatedRequest;
     const result = WorkspaceIdSchema.safeParse(req.query);
@@ -4183,9 +4078,6 @@ You MUST output a valid JSON object matching this schema exactly:
   });
 
   // --- High Performance Rule Labeling Engine API (Excel Integration Ready) ---
-  
-
-  
 
   app.post("/api/v1/label-transactions", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
@@ -4459,64 +4351,37 @@ You MUST output a valid JSON object matching this schema exactly:
   app.use("/api/v1/ai", aiRouter);
   app.use("/api/v1/invites", invitePublicRouter);
 
-  // Data Retention Cleanup Job (Runs every 24h)
-  setInterval(async () => {
-    try {
-      logger.info("Running data retention cleanup job");
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 90); // 90 days default
-      const cutoffStr = cutoff.toISOString();
-
-      // Audit logs are permanent and must NEVER be deleted (§13A / Part 2c).
-      // 2. Backup retention: Purge expired job run logs older than 90 days in chunks of 450
-      let purgedJobRuns = 0;
-      while (true) {
-        const oldJobRuns = await getDb().collection('jobRuns').where('finishedAt', '<', cutoffStr).limit(450).get();
-        if (oldJobRuns.empty) break;
-        const batch = getDb().batch();
-        oldJobRuns.docs.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-        purgedJobRuns += oldJobRuns.size;
-        if (oldJobRuns.size < 450) break;
-      }
-      if (purgedJobRuns > 0) {
-        logger.info("Purged expired job runs", { count: purgedJobRuns });
-      }
-
-      // 3. Cap strategicAdvice array on all workspaces to maximum 15 items to prevent database bloat
-      const workspacesSnap = await getDb().collection('workspaces').get();
-      for (const doc of workspacesSnap.docs) {
-        const data = doc.data() || {};
-        if (Array.isArray(data.strategicAdvice) && data.strategicAdvice.length > 15) {
-          const cappedAdvice = data.strategicAdvice.slice(-15); // Keep the most recent 15
-          await doc.ref.update({ strategicAdvice: cappedAdvice });
-          logger.info("Capped strategicAdvice for workspace", { workspaceId: doc.id });
-        }
-      }
-
-      // 4. Workspace deletion purge job
-      const purgeResult = await purgePendingWorkspaces(getDb());
-      if (purgeResult.purgedWorkspaces.length > 0) {
-        logger.info("Purged pending workspaces", { count: purgeResult.purgedWorkspaces.length, purged: purgeResult.purgedWorkspaces });
-      }
-      if (purgeResult.errors.length > 0) {
-        console.error(`[Data Lifecycle] Workspace purge encountered errors: ${purgeResult.errors.join('; ')}`);
-      }
-    } catch (e) {
-      console.error("[Data Lifecycle] Cleanup job failed", e);
-    }
-  }, 24 * 60 * 60 * 1000);
-
-  const http = await import('http');
-  const httpServer = http.createServer(app);
+  // Scheduled jobs (Vercel Cron calls them with CRON_SECRET)
+  app.use("/api/cron", cronRouter);
 
   // API 404 handler for unmatched /api/* routes
   app.use('/api/*', (req, res) => {
     res.status(404).json({ error: `API route not found: ${req.originalUrl}` });
   });
 
+  await syncGlobalAdminConfig();
+  return { app, port: PORT };
+}
+
+/** The Express app with every API route; the Vercel function (api/index.mjs) serves it. */
+export async function createApp(): Promise<express.Express> {
+  return (await buildApp()).app;
+}
+
+/** Long-running server (npm run dev / npm start): the app plus the web pages and timers. */
+async function startServer() {
+  const { app, port: PORT } = await buildApp();
+  const http = await import('http');
+  const httpServer = http.createServer(app);
+
+  // Daily maintenance (on Vercel the cron job runs it instead)
+  setInterval(() => {
+    runDailyMaintenance().catch(e => console.error("[Data Lifecycle] Cleanup job failed", e));
+  }, 24 * 60 * 60 * 1000);
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { 
         middlewareMode: true,
@@ -4539,8 +4404,6 @@ You MUST output a valid JSON object matching this schema exactly:
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
-
-  await syncGlobalAdminConfig();
 
   httpServer.on('error', (e: any) => {
     if (e.code === 'EADDRINUSE') {
@@ -4592,7 +4455,8 @@ process.on('uncaughtException', (error) => {
   console.error('💥 [Server] Uncaught Exception caught:', error);
 });
 
-if (process.env.NODE_ENV !== "test") {
+// On Vercel the function in api/index.mjs imports createApp() instead of starting a server.
+if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
   console.debug("🌀 [Server] Booting LedgerFlow Backend...");
   startServer().catch(err => {
     console.error("💥 [Server] Critical Startup Failure:", err);

@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
+import { Package } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, cn } from '../../lib/utils';
-import { Package, TrendingUp } from 'lucide-react';
-import { isPostable } from '../../lib/txFilters';
-import { Invoice } from '../../types';
+import { computeSalesByItem, yearRange } from '../../server/reports/itemReports';
 
 interface Props {
   selectedYear?: number;
@@ -11,141 +10,105 @@ interface Props {
   endDate?: string;
 }
 
+const pct = (value: number | null) => (value === null ? '—' : `${value.toFixed(1)}%`);
+
 export const SalesByItemReportView: React.FC<Props> = ({ selectedYear, startDate, endDate }) => {
   const invoices = useLedgerStore(s => s.invoices);
-  const inventoryItems = useLedgerStore(s => s.inventory);
+  const items = useLedgerStore(s => s.inventory);
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
 
-  const itemSales = useMemo(() => {
-    const map: Record<string, { name: string; sku: string; qty: number; revenueCents: number; costCents: number }> = {};
-
-    (invoices || []).forEach((inv: Invoice) => {
-      if (inv.status === 'void' || inv.status === 'draft') return;
-      if (startDate && inv.date && inv.date < startDate) return;
-      if (endDate && inv.date && inv.date > endDate) return;
-      if (selectedYear && inv.date && !inv.date.startsWith(selectedYear.toString())) return;
-
-      inv.items?.forEach(item => {
-        const key = item.itemId || item.description || 'Custom Item';
-        if (!map[key]) {
-          const invItem = inventoryItems.find(i => i.id === item.itemId);
-          map[key] = {
-            name: invItem?.name || item.description || 'Unnamed Item',
-            sku: invItem?.sku || '-',
-            qty: 0,
-            revenueCents: 0,
-            costCents: 0
-          };
-        }
-        const qty = item.quantity || 1;
-        const rev = item.amountCents || (qty * (item.rateCents || 0));
-        const invItem = inventoryItems.find(i => i.id === item.itemId);
-        const costPerUnit = item.unitCostCents !== undefined ? item.unitCostCents : (invItem?.unitCostCents || 0);
-
-        map[key].qty += qty;
-        map[key].revenueCents += rev;
-        map[key].costCents += qty * costPerUnit;
-      });
-    });
-
-    return Object.entries(map).map(([rowKey, item]) => {
-      const profitCents = item.revenueCents - item.costCents;
-      const margin = item.revenueCents > 0 ? (profitCents / item.revenueCents) * 100 : 0;
-      return {
-        ...item,
-        rowKey,
-        profitCents,
-        margin
-      };
-    }).sort((a, b) => b.revenueCents - a.revenueCents);
-  }, [invoices, inventoryItems, selectedYear, startDate, endDate]);
-
-  const totals = useMemo(() => {
-    return itemSales.reduce((acc, cur) => ({
-      revenue: acc.revenue + cur.revenueCents,
-      cost: acc.cost + cur.costCents,
-      profit: acc.profit + cur.profitCents
-    }), { revenue: 0, cost: 0, profit: 0 });
-  }, [itemSales]);
-
-  const overallMargin = totals.revenue > 0 ? (totals.profit / totals.revenue) * 100 : 0;
+  const { startDate: from, endDate: to } = startDate || endDate ? { startDate, endDate } : yearRange(selectedYear);
+  const report = useMemo(
+    () => computeSalesByItem({ invoices: invoices || [], items: items || [], transactions: transactions || [], accounts: accounts || [], startDate: from, endDate: to }),
+    [invoices, items, transactions, accounts, from, to]
+  );
+  const { rows, totals } = report;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6" id="sales-by-item-report">
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-neutral-200 pb-4 gap-4">
+    <div className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6 text-[var(--text)]" id="sales-by-item-report">
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[var(--line)] pb-4 gap-4">
         <div>
-          <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-            <Package className="w-5 h-5 text-indigo-600" />
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Package className="w-5 h-5 text-[var(--brass)]" />
             Sales by Item & Profit Margin
           </h2>
-          <p className="text-xs text-neutral-500 mt-0.5">
-            Detailed performance breakdown of inventory items and services sold, including COGS and gross margins.
+          <p className="text-xs text-[var(--muted)] mt-0.5">
+            Items sold on issued invoices, in your base currency, with cost of goods sold and margin.
           </p>
         </div>
-        <div className="flex items-center gap-6 bg-neutral-50 p-3 rounded-xl border border-neutral-200">
+        <div className="flex items-center gap-6 bg-[var(--panel)] p-3 rounded-xl border border-[var(--line)]">
           <div>
-            <div className="text-[10px] text-neutral-500 uppercase font-bold">Total Revenue</div>
-            <div className="text-sm font-mono font-bold text-emerald-600">{formatCurrency(totals.revenue)}</div>
+            <div className="text-[10px] text-[var(--muted)] uppercase font-bold">Sales</div>
+            <div className="text-sm font-mono font-bold text-[var(--pos)]">{formatCurrency(totals.salesCents)}</div>
           </div>
           <div>
-            <div className="text-[10px] text-neutral-500 uppercase font-bold">Gross Profit</div>
-            <div className="text-sm font-mono font-bold text-indigo-600">{formatCurrency(totals.profit)}</div>
+            <div className="text-[10px] text-[var(--muted)] uppercase font-bold">Gross profit</div>
+            <div className="text-sm font-mono font-bold">{formatCurrency(totals.marginCents)}</div>
           </div>
           <div>
-            <div className="text-[10px] text-neutral-500 uppercase font-bold">Margin</div>
-            <div className="text-sm font-mono font-bold text-neutral-900">{overallMargin.toFixed(1)}%</div>
+            <div className="text-[10px] text-[var(--muted)] uppercase font-bold">Margin</div>
+            <div className="text-sm font-mono font-bold">{pct(totals.marginPct)}</div>
           </div>
         </div>
       </div>
 
-      {itemSales.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border border-neutral-200 text-neutral-500 text-xs">
-          No invoice line items found for the selected period.
+      {rows.length === 0 ? (
+        <div className="text-center py-12 bg-[var(--panel)] rounded-lg border border-[var(--line)] text-[var(--muted)] text-xs">
+          No invoice lines found for the selected period.
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden shadow-xs">
+        <div className="bg-[var(--panel)] rounded-lg border border-[var(--line)] overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
+            <caption className="sr-only">Sales by item</caption>
+            <thead className="bg-[var(--surface)] border-b border-[var(--line)] text-[var(--muted)] font-semibold uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-4">Item / SKU</th>
-                <th className="py-3 px-4 text-center">Qty Sold</th>
-                <th className="py-3 px-4 text-right">Revenue</th>
-                <th className="py-3 px-4 text-right">Est. Cost</th>
-                <th className="py-3 px-4 text-right">Gross Profit</th>
-                <th className="py-3 px-4 text-right">Margin %</th>
+                <th scope="col" className="py-3 px-4">Item / SKU</th>
+                <th scope="col" className="py-3 px-4 text-right">Qty sold</th>
+                <th scope="col" className="py-3 px-4 text-right">Sales</th>
+                <th scope="col" className="py-3 px-4 text-right">Cost</th>
+                <th scope="col" className="py-3 px-4 text-right">Gross profit</th>
+                <th scope="col" className="py-3 px-4 text-right">Margin</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {itemSales.map((item) => (
-                <tr key={item.rowKey} className="hover:bg-neutral-50/80 transition-colors">
+            <tbody className="divide-y divide-[var(--line)]">
+              {rows.map(row => (
+                <tr key={row.key}>
                   <td className="py-3 px-4">
-                    <div className="font-semibold text-neutral-900">{item.name}</div>
-                    <div className="text-[10px] text-neutral-400 font-mono">SKU: {item.sku}</div>
+                    <div className={cn('font-semibold', !row.itemId && 'italic text-[var(--muted)]')}>{row.name}</div>
+                    {row.sku && <div className="text-[10px] text-[var(--muted)] font-mono">SKU: {row.sku}</div>}
                   </td>
-                  <td className="py-3 px-4 text-center font-mono text-neutral-700">
-                    {item.qty}
+                  <td className="py-3 px-4 text-right font-mono">{row.quantity}</td>
+                  <td className="py-3 px-4 text-right font-mono font-semibold text-[var(--pos)]">{formatCurrency(row.salesCents)}</td>
+                  <td className="py-3 px-4 text-right font-mono">
+                    {formatCurrency(row.costCents)}
+                    {row.costIsEstimate && <span className="ml-1 text-[10px] text-[var(--muted)]" title="Cost of goods sold not posted yet: quantity × unit cost">(est.)</span>}
                   </td>
-                  <td className="py-3 px-4 text-right font-mono font-semibold text-emerald-600">
-                    {formatCurrency(item.revenueCents)}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono text-neutral-600">
-                    {formatCurrency(item.costCents)}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono font-semibold text-indigo-600">
-                    {formatCurrency(item.profitCents)}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono font-bold text-neutral-800">
-                    <span className={cn(
-                      "px-2 py-0.5 rounded-full text-[10px]",
-                      item.margin >= 40 ? "bg-emerald-50 text-emerald-700" : item.margin >= 15 ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"
-                    )}>
-                      {item.margin.toFixed(1)}%
-                    </span>
-                  </td>
+                  <td className={cn('py-3 px-4 text-right font-mono font-semibold', row.marginCents < 0 && 'text-[var(--neg)]')}>{formatCurrency(row.marginCents)}</td>
+                  <td className="py-3 px-4 text-right font-mono font-bold">{pct(row.marginPct)}</td>
                 </tr>
               ))}
             </tbody>
+            <tfoot className="border-t-2 border-[var(--line)] font-bold">
+              <tr>
+                <th scope="row" className="py-3 px-4 text-left">Total</th>
+                <td className="py-3 px-4 text-right font-mono">{totals.quantity}</td>
+                <td className="py-3 px-4 text-right font-mono text-[var(--pos)]">{formatCurrency(totals.salesCents)}</td>
+                <td className="py-3 px-4 text-right font-mono">
+                  {formatCurrency(totals.costCents)}
+                  {totals.costIsEstimate && <span className="ml-1 text-[10px] text-[var(--muted)]">(est.)</span>}
+                </td>
+                <td className="py-3 px-4 text-right font-mono">{formatCurrency(totals.marginCents)}</td>
+                <td className="py-3 px-4 text-right font-mono">{pct(totals.marginPct)}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
+      )}
+      {totals.costIsEstimate && (
+        <p className="text-[11px] text-[var(--muted)]">
+          (est.) = no cost of goods sold posted yet for some of these sales, so cost is quantity × the item's unit cost.
+        </p>
       )}
     </div>
   );

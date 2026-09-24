@@ -93,7 +93,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
-          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-utils': ['date-fns', 'zustand', 'clsx', 'tailwind-merge'],
           'vendor-ui': ['lucide-react', 'motion/react', 'sonner'],
           'vendor-viz': ['recharts', 'd3'],

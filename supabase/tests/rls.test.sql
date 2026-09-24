@@ -173,6 +173,170 @@ select pg_temp.expect_value('batch is all-or-nothing', $$select count(*)::text f
 select pg_temp.expect_denied('batch on a system table', 'u-book',
   $$select lf_batch('[{"op":"delete","table":"pg_authid","id":"x"}]'::jsonb)$$);
 
+-- ===== Table-driven checks (ported from the Firestore rules suite) =====
+
+create function pg_temp.try_as(uid text, stmt text) returns boolean language plpgsql as $$
+begin
+  perform pg_temp.as_user(uid);
+  begin
+    execute stmt;
+  exception when others then
+    execute 'reset role';
+    return false;
+  end;
+  execute 'reset role';
+  return true;
+end $$;
+
+create function pg_temp.count_rows(uid text, q text) returns bigint language plpgsql as $$
+declare n bigint;
+begin
+  perform pg_temp.as_user(uid);
+  execute q into n;
+  execute 'reset role';
+  return n;
+end $$;
+
+-- Every standard workspace table: writers add, viewers only read, outsiders see and change nothing.
+do $$
+declare
+  t text;
+  doc text;
+begin
+  foreach t in array array[
+    'transactions','journalEntries','invoices','payments','bills','creditNotes','vendorCredits',
+    'projects','estimates','inventory','recurring','budgets','autoRules','fixedAssets','assets',
+    'taxRates','dimensionNodes','vendors','customers','periods','rulePatterns','scenarios',
+    'employees','payRuns','partners','reconciliations','workspaceShards'
+  ] loop
+    doc := case when t = 'transactions' then '{"workspaceId":"ws1","date":"2026-02-15","status":"draft"}'
+                else '{"workspaceId":"ws1"}' end;
+    if not pg_temp.try_as('u-book', format('insert into public.%I (id, data) values (%L, %L::jsonb)', t, 'iso-' || t, doc)) then
+      raise exception 'FAIL %: bookkeeper could not add a document', t;
+    end if;
+    if pg_temp.try_as('u-view', format('insert into public.%I (id, data) values (%L, %L::jsonb)', t, 'iso-v-' || t, doc)) then
+      raise exception 'FAIL %: viewer added a document', t;
+    end if;
+    if pg_temp.try_as('u-out', format('insert into public.%I (id, data) values (%L, %L::jsonb)', t, 'iso-o-' || t, doc)) then
+      raise exception 'FAIL %: outsider added a document', t;
+    end if;
+    if pg_temp.count_rows('u-view', format('select count(*) from public.%I where id = %L', t, 'iso-' || t)) <> 1 then
+      raise exception 'FAIL %: viewer cannot read', t;
+    end if;
+    if pg_temp.count_rows('u-out', format('select count(*) from public.%I where id = %L', t, 'iso-' || t)) <> 0 then
+      raise exception 'FAIL %: outsider can read', t;
+    end if;
+    if pg_temp.try_as('u-out', format('select lf_update(%L, %L, %L::jsonb)', t, 'iso-' || t, '{"workspaceId":"ws1"}')) then
+      raise exception 'FAIL %: outsider updated a document', t;
+    end if;
+    if pg_temp.try_as('u-view', format('select lf_update(%L, %L, %L::jsonb)', t, 'iso-' || t, '{"workspaceId":"ws1"}')) then
+      raise exception 'FAIL %: viewer updated a document', t;
+    end if;
+  end loop;
+end $$;
+
+-- Every dated table: nothing is posted into, or moved into, a locked period (ws1 is locked to 2026-01-31).
+do $$
+declare t text;
+begin
+  for t in select table_name from public.lf_rules where dated order by 1 loop
+    if pg_temp.try_as('u-book', format('insert into public.%I (id, data) values (%L, %L::jsonb)', t, 'lock-in-' || t,
+        '{"workspaceId":"ws1","date":"2026-01-15","status":"draft"}')) then
+      raise exception 'FAIL %: posted into a locked period', t;
+    end if;
+    if not pg_temp.try_as('u-book', format('insert into public.%I (id, data) values (%L, %L::jsonb)', t, 'lock-out-' || t,
+        '{"workspaceId":"ws1","date":"2026-02-15","status":"draft"}')) then
+      raise exception 'FAIL %: could not post into an open period', t;
+    end if;
+    if pg_temp.try_as('u-book', format('select lf_update(%L, %L, %L::jsonb)', t, 'lock-out-' || t, '{"date":"2026-01-10"}')) then
+      raise exception 'FAIL %: moved a document into a locked period', t;
+    end if;
+  end loop;
+end $$;
+
+-- Every financial document table: only drafts can be deleted (void instead).
+do $$
+declare
+  t text;
+  st text;
+begin
+  for t in select table_name from public.lf_rules where delete_draft_only order by 1 loop
+    foreach st in array array['sent', 'posted', 'paid', 'void'] loop
+      perform set_config('request.jwt.claims', '', true);
+      execute format('insert into public.%I (id, data) values (%L, %L::jsonb)', t, 'del-' || st || '-' || t,
+        json_build_object('workspaceId', 'ws1', 'date', '2026-02-20', 'status', st)::text);
+      if pg_temp.try_as('u-owner', format('select lf_delete(%L, %L)', t, 'del-' || st || '-' || t)) then
+        raise exception 'FAIL %: deleted a % document', t, st;
+      end if;
+    end loop;
+    if not pg_temp.try_as('u-owner', format('select lf_delete(%L, %L)', t, 'lock-out-' || t)) then
+      raise exception 'FAIL %: could not delete a draft', t;
+    end if;
+  end loop;
+end $$;
+
+-- Server-only tables: no browser reads or writes at all.
+do $$
+declare t text;
+begin
+  foreach t in array array['stripeProcessedEvents','idempotencyKeys','external_api_cache','jobRuns','loginAudits',
+                           'emailEvents','numberingSeries','members','banks','admins'] loop
+    perform set_config('request.jwt.claims', '', true);
+    execute format('insert into public.%I (id, data) values (%L, %L::jsonb)', t, 'srv-' || t, '{"workspaceId":"ws1","uid":"u-owner"}');
+    if pg_temp.count_rows('u-owner', format('select count(*) from public.%I', t)) <> 0 then
+      raise exception 'FAIL %: a browser user can read a server-only table', t;
+    end if;
+    if pg_temp.try_as('u-owner', format('insert into public.%I (id, data) values (%L, %L::jsonb)', t, 'cli-' || t, '{"workspaceId":"ws1"}')) then
+      raise exception 'FAIL %: a browser user can write a server-only table', t;
+    end if;
+  end loop;
+end $$;
+
+-- Platform admin comes from app_metadata (set by the server), never from an email address.
+do $$
+declare n bigint;
+begin
+  perform set_config('request.jwt.claims',
+    json_build_object('role', 'authenticated', 'sub', 'u-evil', 'email', 'admin@ledgerflow.app')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from workspaces where id = 'ws1';
+  execute 'reset role';
+  if n <> 0 then raise exception 'FAIL an admin-looking email reads other workspaces'; end if;
+
+  perform set_config('request.jwt.claims',
+    json_build_object('role', 'authenticated', 'sub', 'u-admin', 'app_metadata', json_build_object('admin', true))::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from workspaces where id = 'ws1';
+  execute 'reset role';
+  if n <> 1 then raise exception 'FAIL a platform admin cannot read workspaces'; end if;
+end $$;
+
+-- Profiles and balances the browser may not change
+select pg_temp.expect_denied('change your own role', 'u-out', $$select lf_update('users','u-out','{"role":"admin"}'::jsonb)$$);
+select pg_temp.expect_denied('profile with someone else''s email', 'u-new',
+  $$insert into users(id,data) values ('u-new', '{"uid":"u-new","email":"other@test.local","role":"client"}')$$);
+select pg_temp.expect_denied('change an account balance', 'u-acct', $$select lf_update('chartAccounts','a2','{"balanceCents":999}'::jsonb)$$);
+select pg_temp.expect_denied('change an opening balance', 'u-acct', $$select lf_update('chartAccounts','a2','{"openingBalanceCents":5}'::jsonb)$$);
+select pg_temp.expect_ok('posting without a lock date', 'u-out',
+  $$insert into workspaces(id,data) values ('ws-open', '{"uid":"u-out","name":"Open"}');
+    insert into transactions(id,data) values ('tx-open', '{"workspaceId":"ws-open","date":"2020-01-01","lines":[]}')$$);
+
+-- Support tickets and messages
+select pg_temp.expect_ok('member opens a ticket', 'u-view',
+  $$insert into "supportTickets"(id,data) values ('t1', '{"workspaceId":"ws1","uid":"u-view","subject":"Help","status":"open","createdAt":"2026-02-01"}')$$);
+select pg_temp.expect_denied('open a ticket for someone else', 'u-view',
+  $$insert into "supportTickets"(id,data) values ('t2', '{"workspaceId":"ws1","uid":"u-book","subject":"Help","status":"open"}')$$);
+select pg_temp.expect_denied('outsider opens a ticket in ws1', 'u-out',
+  $$insert into "supportTickets"(id,data) values ('t3', '{"workspaceId":"ws1","uid":"u-out","subject":"Help","status":"open"}')$$);
+select pg_temp.expect_count('outsider reads ws1 tickets', 'u-out', $$select count(*) from "supportTickets" where workspace_id = 'ws1'$$, 0);
+select pg_temp.expect_ok('user closes their ticket', 'u-view', $$select lf_update('supportTickets','t1','{"status":"closed"}'::jsonb)$$);
+select pg_temp.expect_denied('user reopens a ticket', 'u-view', $$select lf_update('supportTickets','t1','{"status":"open"}'::jsonb)$$);
+select pg_temp.expect_ok('member posts a message', 'u-view',
+  $$insert into "supportMessages"(id,data) values ('m1', '{"ticketId":"t1","workspaceId":"ws1","authorUid":"u-view","authorRole":"user","body":"Hi"}')$$);
+select pg_temp.expect_denied('member poses as support staff', 'u-view',
+  $$insert into "supportMessages"(id,data) values ('m2', '{"ticketId":"t1","workspaceId":"ws1","authorUid":"u-view","authorRole":"admin","body":"Hi"}')$$);
+select pg_temp.expect_denied('edit a message', 'u-view', $$select lf_update('supportMessages','m1','{"body":"changed"}'::jsonb)$$);
+
 -- document ids: browser writes keep firestore.rules isValidId; server writes may be long
 select pg_temp.expect_ok('browser id of 127 characters', 'u-book',
   format($f$select lf_set('vendors', %L, '{"workspaceId":"ws1","name":"V"}'::jsonb)$f$, repeat('v', 127)));
