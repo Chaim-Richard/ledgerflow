@@ -22,7 +22,8 @@ export function parseCamt053Statement(xmlContent: string): ParsedBankLine[] {
 
     const dateMatch = block.match(/<BookgDt>[\s\S]*?<Dt>([0-9]{4}-[0-9]{2}-[0-9]{2})<\/Dt>/) ||
                       block.match(/<Dt>([0-9]{4}-[0-9]{2}-[0-9]{2})<\/Dt>/);
-    const date = dateMatch ? dateMatch[1] : getLocalDateISO();
+    if (!dateMatch) continue;
+    const date = dateMatch[1];
 
     const ustrdMatch = block.match(/<Ustrd>([^<]+)<\/Ustrd>/);
     const description = ustrdMatch ? ustrdMatch[1] : 'CAMT.053 Entry';

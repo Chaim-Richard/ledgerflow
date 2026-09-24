@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // Ensure test execution has deterministic salt even if running without env wrappers
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
@@ -8,6 +10,8 @@ process.env.SYSTEM_SALT = process.env.SYSTEM_SALT || 'test-audit-salt-hex-32-cha
 
 import { SecurityService } from '../services/securityService.js';
 import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator.js';
+import { validateWorkspaceMember, validateWorkspaceAccounts } from '../server/db/firestore.js';
+import type { Firestore } from 'firebase-admin/firestore';
 
 describe('Security and Integrity Deep Audit Test Suite', () => {
   test('AES-256-GCM encryption & decryption round-trip works accurately', () => {
@@ -114,5 +118,71 @@ describe('Security and Integrity Deep Audit Test Suite', () => {
     assert.equal(hashA, hashB, 'Deterministic stringify must produce matching hashes regardless of key insertion order');
     assert.equal(SecurityService.verifyIntegrity(payloadA, hashA), true);
     assert.equal(SecurityService.verifyIntegrity({ ...payloadA, amountCents: 10001 }, hashA), false);
+  });
+
+  test('validateWorkspaceMember and validateWorkspaceAccounts reject PERMISSION_DENIED in production', async () => {
+    const origEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+
+    const throwingDb = {
+      collection: () => ({
+        doc: () => ({
+          get: async () => { throw new Error('PERMISSION_DENIED'); }
+        })
+      }),
+      getAll: async () => { throw new Error('PERMISSION_DENIED'); }
+    } as unknown as Firestore;
+
+    try {
+      await assert.rejects(async () => {
+        await validateWorkspaceMember(throwingDb, 'ws-123', { uid: 'user-1' });
+      }, /PERMISSION_DENIED/);
+
+      await assert.rejects(async () => {
+        await validateWorkspaceAccounts(throwingDb, 'ws-123', ['acc-1']);
+      }, /PERMISSION_DENIED/);
+    } finally {
+      process.env.NODE_ENV = origEnv;
+    }
+  });
+
+  test('Audit logs are permanent: no server file contains .delete() on auditLogs', () => {
+    function scanDir(dir: string): string[] {
+      const files: string[] = [];
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          files.push(...scanDir(fullPath));
+        } else if (entry.isFile() && (entry.name.endsWith('.ts') || entry.name.endsWith('.js'))) {
+          files.push(fullPath);
+        }
+      }
+      return files;
+    }
+
+    const serverFiles = [
+      path.resolve(process.cwd(), 'server.ts'),
+      ...scanDir(path.resolve(process.cwd(), 'src/server'))
+    ];
+
+    const violations: string[] = [];
+    for (const file of serverFiles) {
+      if (!fs.existsSync(file)) continue;
+      const content = fs.readFileSync(file, 'utf-8');
+      if (content.includes("collection('auditLogs')") || content.includes('collection("auditLogs")')) {
+        if (content.includes('.delete(')) {
+          // Check if .delete( is specifically used on an auditLog reference
+          const lines = content.split('\n');
+          for (let i = 0; i < lines.length; i++) {
+            if (lines[i].includes('.delete(') && (lines[i].includes('auditLog') || (i > 0 && lines[i - 1].includes('auditLog')))) {
+              violations.push(`${path.relative(process.cwd(), file)}:${i + 1}: ${lines[i].trim()}`);
+            }
+          }
+        }
+      }
+    }
+
+    assert.deepEqual(violations, [], `Audit log deletion forbidden! Found: ${violations.join(', ')}`);
   });
 });

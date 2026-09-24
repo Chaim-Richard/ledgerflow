@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import { WORKSPACE_SCOPED_COLLECTIONS } from '../../constants/collections';
+import { writeServerAuditLog } from './auditLogService';
 
 export async function purgePendingWorkspaces(db: admin.firestore.Firestore): Promise<{ purgedWorkspaces: string[]; errors: string[] }> {
   const nowISO = new Date().toISOString();
@@ -104,21 +105,18 @@ export async function purgePendingWorkspaces(db: admin.firestore.Firestore): Pro
         }
 
         // 3. Write permanent purge audit log before deleting workspace document
-        const auditRef = db.collection('auditLogs').doc();
-        await auditRef.set({
-          id: auditRef.id,
+        await writeServerAuditLog({
+          workspaceId,
           uid: 'system',
           email: 'system@ledgerflow.internal',
-          workspaceId,
           action: 'WORKSPACE_PURGED',
           entityType: 'workspace',
           entityId: workspaceId,
           details: {
             description: `Workspace ${workspaceId} permanently purged following 30-day retention period.`,
             purgedAt: new Date().toISOString()
-          },
-          timestamp: new Date().toISOString()
-        });
+          }
+        }, { db });
 
         // 4. Delete the workspace document LAST
         await wsDoc.ref.delete();

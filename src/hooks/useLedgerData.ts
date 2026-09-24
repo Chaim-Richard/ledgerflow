@@ -47,7 +47,7 @@ import { migrateWorkspaceDimensionNodesToCollection } from '../lib/migrations/di
 
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 
-import { safeAsync } from "../lib/utils";
+import { safeAsync, getLocalDateISO } from "../lib/utils";
 import { fetchSnapshotBridge, useSnapshotBridge } from "./useSnapshotBridge";
 
 
@@ -178,7 +178,7 @@ export function useLedgerData() {
       sessionStorage.setItem(sessionLoginKey, 'true');
       addDoc(collection(db, 'auditLogs'), {
         action: 'USER_LOGIN',
-        details: 'User authenticated and entered workspace session',
+        details: { description: 'User authenticated and entered workspace session' },
         severity: 'info',
         uid: user.uid,
         userEmail: user.email,
@@ -275,7 +275,7 @@ export function useLedgerData() {
     const finalStartDate = startDate || (() => {
       const d = new Date();
       d.setFullYear(d.getFullYear() - 1);
-      return d.toISOString().split('T')[0];
+      return getLocalDateISO(d);
     })();
 
     txConstraints.push(where('date', '>=', finalStartDate));

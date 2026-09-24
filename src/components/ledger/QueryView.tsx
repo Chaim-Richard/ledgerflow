@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useSavedViewsStore, SavedViewFilter } from '../../stores/useSavedViewsStore';
 import { isPostable, isTransactionInDateRange, getAbsoluteTotal } from '../../lib/txFilters';
-import { formatDecimal } from '../../lib/utils';
+import { formatDecimal, getLocalDateISO } from '../../lib/utils';
 import { TanStackDataGrid } from '../ui/TanStackDataGrid';
 import { ColumnDef } from '@tanstack/react-table';
 import { Filter, Download, Bookmark } from 'lucide-react';
@@ -141,7 +141,7 @@ export default function QueryView() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `ledger_query_${new Date().toISOString().substring(0, 10)}.csv`);
+    link.setAttribute('download', `ledger_query_${getLocalDateISO()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

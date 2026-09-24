@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { cn, getLocalDateISO } from '../../lib/utils';
+import { auditDescription, auditTime } from '../../lib/auditFormat';
 
 interface AuditTrailViewProps {
   auditLogs: AuditLog[];
@@ -33,11 +34,11 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
                 {log.action}
               </span>
               <p className="text-xs font-bold text-[var(--text)] uppercase tracking-tight truncate">
-                {log.entityType} <span className="text-[var(--muted)] opacity-40 mx-1.5">//</span> {log.details?.description || log.entityId}
+                {log.entityType} <span className="text-[var(--muted)] opacity-40 mx-1.5">//</span> {auditDescription(log) || log.entityId}
               </p>
             </div>
             <div className="flex items-center gap-4 text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider italic">
-              <span className="flex items-center gap-1.5"><History size={11} className="text-[var(--brass)]" />{log.timestamp ? format(new Date(log.timestamp), 'MMM dd, HH:mm:ss') : 'N/A'}</span>
+              <span className="flex items-center gap-1.5"><History size={11} className="text-[var(--brass)]" />{auditTime(log) ? format(auditTime(log)!, 'MMM dd, HH:mm:ss') : 'N/A'}</span>
               <span className="flex items-center gap-1.5"><User size={11} className="text-[var(--brass)]" />{log.email || log.userEmail || (log.uid && log.uid.substring(0, 8)) || 'System'}</span>
             </div>
           </div>
@@ -89,12 +90,12 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
         log.action?.toLowerCase().includes(search) ||
         log.entityId?.toLowerCase().includes(search) ||
         log.email?.toLowerCase().includes(search) ||
-        log.details?.description?.toLowerCase().includes(search);
+        auditDescription(log).toLowerCase().includes(search);
 
       return userMatch && actionMatch && textMatch;
     }).sort((a, b) => {
-      const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-      const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      const timeA = auditTime(a)?.getTime() || 0;
+      const timeB = auditTime(b)?.getTime() || 0;
       return timeB - timeA;
     });
   }, [auditLogs, userFilter, actionFilter, searchTerm]);
@@ -102,12 +103,12 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
   const handleExportCSV = () => {
     const headers = ['Timestamp', 'Action', 'User/Email', 'Entity Type', 'Entity ID', 'Description'];
     const rows = filteredLogs.map(l => [
-      l.timestamp ? new Date(l.timestamp).toISOString() : '',
+      auditTime(l)?.toISOString() || '',
       l.action || '',
       l.email || l.userEmail || l.uid || '',
       l.entityType || '',
       l.entityId || '',
-      (l.details?.description || '').replace(/,/g, ';')
+      auditDescription(l).replace(/,/g, ';')
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');

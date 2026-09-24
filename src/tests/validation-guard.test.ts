@@ -58,6 +58,7 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
   test('paymentRoutes rejects missing workspaceId or negative amount with 400 Bad Request', async () => {
     const app = express();
     app.use(express.json());
+    app.use((req, _res, next) => { (req as any).user = { uid: 'user-1', admin: true }; next(); });
     app.use('/api/v1/payments', paymentRouter);
 
     const server: any = await new Promise((resolve) => {

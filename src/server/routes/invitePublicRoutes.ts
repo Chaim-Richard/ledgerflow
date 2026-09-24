@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { verifyInviteTokenSignature } from '../../lib/inviteManager';
+import { writeServerAuditLog } from '../services/auditLogService';
 
 export const invitePublicRouter = express.Router();
 
@@ -175,12 +176,10 @@ invitePublicRouter.post('/:token/accept', async (req, res) => {
       });
 
       // Audit log entry
-      const auditRef = db.collection('auditLogs').doc();
-      tx.set(auditRef, {
-        id: auditRef.id,
+      await writeServerAuditLog({
+        workspaceId: invite.workspaceId,
         uid: user.uid,
         email: user.email || '',
-        workspaceId: invite.workspaceId,
         action: 'INVITE_ACCEPTED',
         entityType: 'workspace',
         entityId: invite.workspaceId,
@@ -189,9 +188,8 @@ invitePublicRouter.post('/:token/accept', async (req, res) => {
           role: invite.role,
           inviteId: inviteDoc.id,
           description: `User ${user.email} accepted workspace invitation as ${invite.role}`
-        },
-        timestamp: new Date().toISOString()
-      });
+        }
+      }, { db, tx });
     });
 
     res.json({

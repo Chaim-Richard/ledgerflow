@@ -19,6 +19,7 @@ import { billingRouter, billingFallbackCache } from "./src/server/routes/billing
 import { incrementShardedCounter, getShardedCounterValue } from "./src/server/services/shardedCounterService";
 import { getStripe } from "./src/server/services/stripeService";
 export { getStripe };
+import { writeServerAuditLog } from "./src/server/services/auditLogService";
 import { requirePlanCapacity } from "./src/server/middleware/planCapacity";
 import { assertStartupConfig } from "./src/server/config/assertStartupConfig";
 import { purgePendingWorkspaces } from "./src/server/services/workspacePurgeService";
@@ -514,24 +515,19 @@ async function writeAuditLog(
 ) {
   try {
     const db = getDb();
-    const auditId = crypto.randomUUID();
-    const auditData = {
-      id: auditId,
+    await writeServerAuditLog({
       workspaceId,
-      timestamp: new Date().toISOString(),
-      userId,
-      userEmail: email,
+      uid: userId,
+      email,
       action,
-      details,
-      before: before || null,
-      after: after || null
-    };
-    
-    if (transaction) {
-      transaction.set(db.collection("auditLogs").doc(auditId), auditData);
-    } else {
-      await db.collection("auditLogs").doc(auditId).set(auditData);
-    }
+      entityType: 'system',
+      entityId: workspaceId,
+      details: {
+        description: details,
+        before: before || null,
+        after: after || null
+      }
+    }, { db, tx: transaction as any });
   } catch (err: any) {
     console.warn("[AuditLog] Failed to persist audit log entry to database:", err.message);
   }
@@ -1979,21 +1975,18 @@ async function startServer() {
         });
 
         // Write audit log
-        const auditRef = db.collection("auditLogs").doc();
-        await auditRef.set({
-          id: auditRef.id,
+        await writeServerAuditLog({
+          workspaceId,
           uid: authReq.user.uid,
           email: authReq.user.email || '',
-          workspaceId,
           action: 'MEMBER_REMOVED',
           entityType: 'workspace',
           entityId: workspaceId,
           details: {
             removedUid: memberUid,
             description: `Member ${memberUid} removed from workspace`
-          },
-          timestamp: new Date().toISOString()
-        });
+          }
+        }, { db });
 
         res.json({
           status: "success",
@@ -4528,21 +4521,7 @@ You MUST output a valid JSON object matching this schema exactly:
       cutoff.setDate(cutoff.getDate() - 90); // 90 days default
       const cutoffStr = cutoff.toISOString();
 
-      // 1. Purge expired audit logs in chunks of 450
-      let purgedAuditLogs = 0;
-      while (true) {
-        const snap = await admin.firestore().collection('auditLogs').where('timestamp', '<', cutoffStr).limit(450).get();
-        if (snap.empty) break;
-        const batch = admin.firestore().batch();
-        snap.docs.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-        purgedAuditLogs += snap.size;
-        if (snap.size < 450) break;
-      }
-      if (purgedAuditLogs > 0) {
-        console.log(`[Data Lifecycle] Purged ${purgedAuditLogs} expired audit logs.`);
-      }
-
+      // Audit logs are permanent and must NEVER be deleted (§13A / Part 2c).
       // 2. Backup retention: Purge expired job run logs older than 90 days in chunks of 450
       let purgedJobRuns = 0;
       while (true) {

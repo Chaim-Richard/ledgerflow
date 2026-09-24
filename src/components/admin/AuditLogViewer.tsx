@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
+import { auditDescription, auditTime } from '../../lib/auditFormat';
 import { auth } from '../../firebase';
 import { useCollection } from '../../hooks/useCollection';
 
@@ -232,9 +233,9 @@ export default function AuditLogViewer() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">{log.action}</span>
                       <span className="text-[9px] font-bold text-slate-400">•</span>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{new Date(log.timestamp).toLocaleString()}</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{auditTime(log)?.toLocaleString() || ''}</span>
                     </div>
-                    <p className="text-sm font-medium text-slate-600 truncate">{log.details}</p>
+                    <p className="text-sm font-medium text-slate-600 truncate">{auditDescription(log)}</p>
                     <div className="flex items-center gap-3 mt-1.5">
                       <div className="flex items-center gap-1">
                         <User size={10} className="text-slate-400" />

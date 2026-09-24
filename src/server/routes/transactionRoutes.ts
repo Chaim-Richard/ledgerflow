@@ -15,7 +15,7 @@ import { optimizedTransactionSimilarity } from '../../lib/algorithms';
 import { executeCommand } from '../utils/commandExecutor';
 import { requirePlanCapacity } from '../middleware/planCapacity';
 import { requireOpenPeriod } from '../middleware/periodLock';
-import { requireWorkspaceRole } from './workspaceRoutes';
+import { requireWorkspaceRole, getWorkspaceUserRole } from './workspaceRoutes';
 import { writeServerAuditLog } from '../services/auditLogService';
 
 export const transactionRouter = express.Router();
@@ -659,7 +659,7 @@ transactionRouter.post('/batch', async (req, res) => {
 });
 
 // An endpoint for complex reconciliations
-transactionRouter.post('/reconcile', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
+export async function handleReconcile(req: express.Request, res: express.Response, dbOverride?: any) {
   try {
      const { workspaceId, operations } = req.body;
      if (!workspaceId || !Array.isArray(operations) || operations.length === 0) {
@@ -668,14 +668,21 @@ transactionRouter.post('/reconcile', requireWorkspaceRole(['owner', 'accountant'
      if (operations.length > 250) {
        return res.status(400).json({ error: 'Operations batch exceeds 250 operations limit' });
      }
-     const authReq = req as unknown as { user: { uid: string; email?: string; admin?: boolean } };
+     const authReq = req as unknown as { user?: { uid: string; email?: string; admin?: boolean } };
      const user = authReq.user;
-     const db = getDb();
+     if (!user?.uid) {
+       return res.status(401).json({ error: 'Sign in required' });
+     }
+     const db = dbOverride || getDb();
      const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
      if (!wsDoc.exists) {
        return res.status(404).json({ error: 'Workspace not found' });
      }
      const wsData = wsDoc.data();
+     const userRole = await getWorkspaceUserRole(db, workspaceId, user.uid);
+     if (!['owner', 'accountant', 'bookkeeper'].includes(userRole)) {
+       return res.status(403).json({ error: 'Forbidden: requires owner, accountant, or bookkeeper role' });
+     }
      const lockDate = wsData?.lockDate;
 
      // Pre-collect all doc IDs and account IDs
@@ -846,7 +853,9 @@ transactionRouter.post('/reconcile', requireWorkspaceRole(['owner', 'accountant'
     }
     res.status(400).json({ error: errMessage });
   }
-});
+}
+
+transactionRouter.post('/reconcile', (req, res) => handleReconcile(req, res));
 
 transactionRouter.patch('/bank-lines/:id', async (req, res) => {
   try {

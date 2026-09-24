@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
+import type express from 'express';
+import type { Firestore } from 'firebase-admin/firestore';
 import { createPaymentAtomic } from '../server/services/paymentService';
 import { handleCreatePayment } from '../server/routes/paymentRoutes';
 
@@ -372,7 +374,7 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
   });
 
   test('Viewer role receives 403 and cannot create payments', async () => {
-    const db: any = {
+    const db = {
       collection: (coll: string) => ({
         doc: (id: string) => ({
           get: async () => {
@@ -390,11 +392,11 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
           }
         })
       })
-    };
+    } as unknown as Firestore;
 
     let statusCode = 200;
-    let jsonBody: any = null;
-    const req: any = {
+    let jsonBody: Record<string, any> | null = null;
+    const req = {
       user: { uid: 'user-viewer' },
       body: {
         workspaceId: 'ws-viewer-test',
@@ -403,13 +405,13 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
         cashAccountId: 'acc-cash',
         allocations: []
       }
-    };
+    } as unknown as express.Request;
     const res: any = {
       status: (code: number) => {
         statusCode = code;
         return res;
       },
-      json: (data: any) => {
+      json: (data: Record<string, any>) => {
         jsonBody = data;
         return res;
       }
@@ -417,7 +419,33 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
 
     await handleCreatePayment(req, res, db);
     assert.equal(statusCode, 403);
-    assert.ok(jsonBody.message.includes('Forbidden'));
+    assert.ok((jsonBody as any)?.message?.includes('Forbidden'));
+  });
+
+  test('Unauthenticated request (no user) receives 401', async () => {
+    let statusCode = 200;
+    let jsonBody: Record<string, any> | null = null;
+    const req = {
+      body: {
+        workspaceId: 'ws-test',
+        amountCents: 5000,
+        cashAccountId: 'acc-cash'
+      }
+    } as unknown as express.Request;
+    const res: any = {
+      status: (code: number) => {
+        statusCode = code;
+        return res;
+      },
+      json: (data: Record<string, any>) => {
+        jsonBody = data;
+        return res;
+      }
+    };
+
+    await handleCreatePayment(req, res);
+    assert.equal(statusCode, 401);
+    assert.equal((jsonBody as any)?.message, 'Sign in required');
   });
 });
 

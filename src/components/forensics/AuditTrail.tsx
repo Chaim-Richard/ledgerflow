@@ -12,6 +12,7 @@ import {
   Filter
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { auditDescription, auditTime } from '../../lib/auditFormat';
 import { format } from 'date-fns';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { FixedSizeList as List } from 'react-window';
@@ -59,11 +60,11 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
                   {log.action}
                 </span>
                 <p className="text-xs font-black text-[var(--text)] uppercase tracking-tight truncate">
-                  {log.entityType} <span className="opacity-20 mx-1">/</span> {log.details?.description || log.entityId || 'SYSTEM'}
+                  {log.entityType} <span className="opacity-20 mx-1">/</span> {auditDescription(log) || log.entityId || 'SYSTEM'}
                 </p>
               </div>
               <div className="flex items-center gap-4 text-[9px] font-black text-slate-500 uppercase tracking-widest italic opacity-60">
-                <span className="flex items-center gap-1.5"><History size={10} />{log.timestamp ? format(new Date(log.timestamp), 'MMM dd, HH:mm:ss') : 'N/A'}</span>
+                <span className="flex items-center gap-1.5"><History size={10} />{auditTime(log) ? format(auditTime(log)!, 'MMM dd, HH:mm:ss') : 'N/A'}</span>
                 <span className="flex items-center gap-1.5"><User size={10} />{log.userEmail || log.email || log.uid?.substring(0, 8) || 'SYSTEM'}</span>
               </div>
             </div>
@@ -131,7 +132,7 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
   const filteredLogs = useMemo(() => {
     let base = auditLogs.map(log => ({
       ...log,
-      _timestampMs: log.timestamp ? new Date(log.timestamp).getTime() : 0
+      _timestampMs: auditTime(log)?.getTime() || 0
     }));
 
     if (searchTerm) {

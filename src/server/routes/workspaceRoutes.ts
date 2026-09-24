@@ -2,6 +2,7 @@ import express from 'express';
 import admin from 'firebase-admin';
 import { z } from 'zod';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
+import { writeServerAuditLog } from '../services/auditLogService';
 import { seedDemoWorkspace } from '../../lib/demoWorkspaceSeeder';
 import { formatTzDate } from './transactionRoutes';
 
@@ -231,12 +232,10 @@ const handleUpdateRole = async (req: express.Request, res: express.Response) => 
       tx.update(wsRef, { roles, updatedAt: new Date().toISOString() });
 
       // Record audit log entry
-      const auditRef = db.collection('auditLogs').doc();
-      tx.set(auditRef, {
-        id: auditRef.id,
+      await writeServerAuditLog({
+        workspaceId,
         uid: (req as any).user.uid,
         email: (req as any).user.email || '',
-        workspaceId,
         action: 'ROLE_CHANGE',
         entityType: 'workspace',
         entityId: workspaceId,
@@ -245,9 +244,8 @@ const handleUpdateRole = async (req: express.Request, res: express.Response) => 
           beforeRole: previousRole,
           afterRole: role,
           description: `User ${targetUid} role updated from ${previousRole} to ${role}`
-        },
-        timestamp: new Date().toISOString()
-      });
+        }
+      }, { db, tx });
     });
 
     res.json({ status: 'success', targetUid, role, previousRole });
@@ -318,12 +316,10 @@ workspaceRouter.post('/:workspaceId/invites', requireWorkspaceRole(['owner']), a
     });
 
     // Write audit log entry
-    const auditRef = db.collection('auditLogs').doc();
-    await auditRef.set({
-      id: auditRef.id,
+    await writeServerAuditLog({
+      workspaceId,
       uid: (req as any).user.uid,
       email: (req as any).user.email || '',
-      workspaceId,
       action: 'INVITE_SENT',
       entityType: 'workspace',
       entityId: workspaceId,
@@ -332,9 +328,8 @@ workspaceRouter.post('/:workspaceId/invites', requireWorkspaceRole(['owner']), a
         role: invite.role,
         inviteId: invite.id,
         description: `Invite sent to ${invite.email} with role ${invite.role}`
-      },
-      timestamp: new Date().toISOString()
-    });
+      }
+    }, { db });
 
     res.json({ status: 'success', invite });
   } catch (err: any) {
@@ -390,21 +385,18 @@ workspaceRouter.delete('/:workspaceId', requireWorkspaceRole(['owner']), async (
     });
 
     // Audit log entry - auditLogs must NEVER be deleted
-    const auditRef = db.collection('auditLogs').doc();
-    await auditRef.set({
-      id: auditRef.id,
+    await writeServerAuditLog({
+      workspaceId,
       uid: (req as any).user.uid,
       email: (req as any).user.email || '',
-      workspaceId,
       action: 'WORKSPACE_DELETION_SCHEDULED',
       entityType: 'workspace',
       entityId: workspaceId,
       details: {
         description: `Workspace marked for deletion, scheduled for purge on ${scheduledPurgeAt}`,
         scheduledPurgeAt
-      },
-      timestamp: now.toISOString()
-    });
+      }
+    }, { db });
 
     res.json({
       status: 'success',
@@ -443,20 +435,17 @@ workspaceRouter.post('/:workspaceId/restore', requireWorkspaceRole(['owner']), a
     });
 
     // Audit log entry
-    const auditRef = db.collection('auditLogs').doc();
-    await auditRef.set({
-      id: auditRef.id,
+    await writeServerAuditLog({
+      workspaceId,
       uid: (req as any).user.uid,
       email: (req as any).user.email || '',
-      workspaceId,
       action: 'WORKSPACE_RESTORED',
       entityType: 'workspace',
       entityId: workspaceId,
       details: {
         description: 'Workspace restored from pending deletion'
-      },
-      timestamp: now.toISOString()
-    });
+      }
+    }, { db });
 
     res.json({
       status: 'success',

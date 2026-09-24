@@ -68,6 +68,7 @@ export function useTransactionActions() {
     if (!user || !currentWorkspaceId) return;
     try {
       setIsSyncing(true);
+      const auditDetails = typeof details === 'string' ? { description: details } : (details || {});
       await retryWithBackoff(() => addDoc(collection(db, 'auditLogs'), {
         uid: user.uid,
         workspaceId: currentWorkspaceId,
@@ -75,7 +76,7 @@ export function useTransactionActions() {
         action,
         entityType,
         entityId,
-        details,
+        details: auditDetails,
         timestamp: new Date().toISOString()
       }));
     } catch (e) {
@@ -1399,6 +1400,7 @@ export function useTransactionActions() {
           action: 'DELETE_EMPTY_ACCOUNT',
           entityType: 'account',
           entityId: id,
+          details: { description: 'Empty account deleted' },
           timestamp: new Date().toISOString()
         });
 

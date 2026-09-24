@@ -61,6 +61,7 @@ export async function validateWorkspaceMember(db: Firestore, workspaceId: string
       return { wsDoc, data };
     }
   } catch (err: any) {
+    if (process.env.NODE_ENV === 'production') throw err;
     // If permission denied or database unreachable due to GCP/IAM service account constraints in preview
     if (
       err.message?.includes('PERMISSION_DENIED') ||
@@ -161,6 +162,7 @@ export async function validateWorkspaceAccounts(db: Firestore, workspaceId: stri
       });
     }
   } catch (err: any) {
+    if (process.env.NODE_ENV === 'production') throw err;
     if (err.message?.includes('Security Violation:') || err.message?.includes('not found in chart of accounts')) throw err;
     if (
       err.message?.includes('PERMISSION_DENIED') ||

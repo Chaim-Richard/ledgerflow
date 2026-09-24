@@ -1,5 +1,6 @@
 import express from 'express';
 import { z } from 'zod';
+import type { Firestore } from 'firebase-admin/firestore';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
 import { createPaymentAtomic } from '../services/paymentService';
 import { getLocalDateISO } from '../../lib/utils';
@@ -28,9 +29,13 @@ const paymentInputSchema = z.object({
   allocations: z.array(paymentAllocationSchema).default([])
 });
 
-export async function handleCreatePayment(req: express.Request, res: express.Response, dbOverride?: any) {
+export async function handleCreatePayment(req: express.Request, res: express.Response, dbOverride?: Firestore) {
   try {
     const authReq = req as Partial<AuthenticatedRequest>;
+    if (!authReq.user?.uid) {
+      return res.status(401).json({ status: 'error', message: 'Sign in required' });
+    }
+
     const parsed = paymentInputSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ status: 'error', message: 'Invalid payment payload', details: parsed.error.issues });
@@ -38,9 +43,9 @@ export async function handleCreatePayment(req: express.Request, res: express.Res
     const { workspaceId, ...payload } = parsed.data;
 
     const db = dbOverride || getDb();
-    await validateWorkspaceMember(db, workspaceId, authReq.user || { uid: 'system' });
+    await validateWorkspaceMember(db, workspaceId, authReq.user);
 
-    if (authReq.user?.uid && !authReq.user?.admin) {
+    if (!authReq.user.admin) {
       const userRole = await getWorkspaceUserRole(db, workspaceId, authReq.user.uid);
       if (!['owner', 'accountant', 'bookkeeper'].includes(userRole)) {
         return res.status(403).json({ status: 'error', message: 'Forbidden: requires owner, accountant, or bookkeeper role' });
@@ -50,7 +55,7 @@ export async function handleCreatePayment(req: express.Request, res: express.Res
     const result = await createPaymentAtomic(db, {
       ...payload,
       workspaceId,
-      uid: authReq.user?.uid || 'system'
+      uid: authReq.user.uid
     });
 
     res.json({ status: 'success', data: result });
@@ -67,4 +72,5 @@ export async function handleCreatePayment(req: express.Request, res: express.Res
 }
 
 paymentRouter.post('/', (req, res) => handleCreatePayment(req, res));
+
 
