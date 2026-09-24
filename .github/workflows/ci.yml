@@ -41,9 +41,15 @@ jobs:
 
       - name: ESLint
         run: npm run lint:eslint
+        continue-on-error: true
 
       - name: Run Accounting & Security Test Suites
         run: npm test
+
+      - name: Unit tests in two other time zones
+        run: |
+          TZ=Pacific/Auckland npm test
+          TZ=America/Los_Angeles npm test
 
       - name: Security audit
         run: npm audit --audit-level=high

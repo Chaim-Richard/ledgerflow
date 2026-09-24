@@ -23,6 +23,7 @@ import { writeServerAuditLog } from "./src/server/services/auditLogService";
 import { requirePlanCapacity } from "./src/server/middleware/planCapacity";
 import { assertStartupConfig } from "./src/server/config/assertStartupConfig";
 import { purgePendingWorkspaces } from "./src/server/services/workspacePurgeService";
+import { logger } from "./src/server/utils/logger";
 import express from "express";
 import { safeFetch } from "./src/server/utils/safeFetch.js";
 import cors from "cors";
@@ -873,7 +874,7 @@ async function startServer() {
           });
 
           if (result?.alreadyProcessed) {
-            console.log(`[Stripe Webhook] Event ${eventId} already processed. Skipping replay.`);
+            logger.info('Stripe webhook event already processed, skipping replay', { eventId });
             return res.json({ received: true, skipped: true });
           }
         }
@@ -925,11 +926,11 @@ async function startServer() {
             });
 
             if (subResult?.alreadyProcessed) {
-              console.log(`[Stripe Webhook] Event ${eventId} already processed. Skipping replay.`);
+              logger.info('Stripe webhook event already processed, skipping replay', { eventId });
               return res.json({ received: true, skipped: true });
             }
             
-            console.log(`[Stripe Webhook] Workspace ${workspaceId} upgraded to ${plan} with +${creditsToGrant} compute credits.`);
+            logger.info('Workspace upgraded with compute credits', { workspaceId, plan, creditsGranted: creditsToGrant });
           }
         }
       } else if (event.type === 'customer.subscription.deleted') {
@@ -4516,7 +4517,7 @@ You MUST output a valid JSON object matching this schema exactly:
   // Data Retention Cleanup Job (Runs every 24h)
   setInterval(async () => {
     try {
-      console.log("[Data Lifecycle] Running data retention cleanup job...");
+      logger.info("Running data retention cleanup job");
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 90); // 90 days default
       const cutoffStr = cutoff.toISOString();
@@ -4534,7 +4535,7 @@ You MUST output a valid JSON object matching this schema exactly:
         if (oldJobRuns.size < 450) break;
       }
       if (purgedJobRuns > 0) {
-        console.log(`[Data Lifecycle] Purged ${purgedJobRuns} expired job runs.`);
+        logger.info("Purged expired job runs", { count: purgedJobRuns });
       }
 
       // 3. Cap strategicAdvice array on all workspaces to maximum 15 items to prevent database bloat
@@ -4544,14 +4545,14 @@ You MUST output a valid JSON object matching this schema exactly:
         if (Array.isArray(data.strategicAdvice) && data.strategicAdvice.length > 15) {
           const cappedAdvice = data.strategicAdvice.slice(-15); // Keep the most recent 15
           await doc.ref.update({ strategicAdvice: cappedAdvice });
-          console.log(`[Data Lifecycle] Capped strategicAdvice for workspace ${doc.id} to 15 items.`);
+          logger.info("Capped strategicAdvice for workspace", { workspaceId: doc.id });
         }
       }
 
       // 4. Workspace deletion purge job
       const purgeResult = await purgePendingWorkspaces(getDb());
       if (purgeResult.purgedWorkspaces.length > 0) {
-        console.log(`[Data Lifecycle] Purged ${purgeResult.purgedWorkspaces.length} pending workspaces: ${purgeResult.purgedWorkspaces.join(', ')}`);
+        logger.info("Purged pending workspaces", { count: purgeResult.purgedWorkspaces.length, purged: purgeResult.purgedWorkspaces });
       }
       if (purgeResult.errors.length > 0) {
         console.error(`[Data Lifecycle] Workspace purge encountered errors: ${purgeResult.errors.join('; ')}`);

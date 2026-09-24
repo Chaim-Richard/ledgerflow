@@ -1,5 +1,4 @@
 import { ParsedBankLine } from './mt940Parser';
-import { getLocalDateISO } from './utils';
 
 /**
  * Parsers for ISO 20022 CAMT.053 XML bank statement format.

@@ -15,7 +15,7 @@ import { optimizedTransactionSimilarity } from '../../lib/algorithms';
 import { executeCommand } from '../utils/commandExecutor';
 import { requirePlanCapacity } from '../middleware/planCapacity';
 import { requireOpenPeriod } from '../middleware/periodLock';
-import { requireWorkspaceRole, getWorkspaceUserRole } from './workspaceRoutes';
+import { getWorkspaceUserRole } from './workspaceRoutes';
 import { writeServerAuditLog } from '../services/auditLogService';
 
 export const transactionRouter = express.Router();

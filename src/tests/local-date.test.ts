@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-import { getLocalDateISO, formatTzDate } from '../lib/utils';
+import { formatTzDate } from '../lib/utils';
 import { parseCamt053Statement } from '../lib/camt053Parser';
+import { normalizeDateString } from '../lib/dateParsing';
 
 describe('Local Date and Timezone Handling (§14 Part 3)', () => {
   test('formatTzDate returns correct local YYYY-MM-DD for America/Los_Angeles', () => {
@@ -12,26 +13,6 @@ describe('Local Date and Timezone Handling (§14 Part 3)', () => {
   });
 
   test('StatementImporter date normalization retains exact YYYY-MM-DD and US slash formats', () => {
-    const normalizeDateString = (dateStr: string): string => {
-      if (!dateStr) return '';
-      const s = dateStr.trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-      const usMatch = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
-      if (usMatch) {
-        const [_, m, d, rawY] = usMatch;
-        const y = rawY.length === 2 ? (parseInt(rawY, 10) > 50 ? '19' + rawY : '20' + rawY) : rawY;
-        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-      }
-      const d = new Date(s);
-      if (!isNaN(d.getTime())) {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-      }
-      return '';
-    };
-
     assert.equal(normalizeDateString('2026-03-10'), '2026-03-10');
     assert.equal(normalizeDateString('03/10/2026'), '2026-03-10');
     assert.equal(normalizeDateString('3/10/2026'), '2026-03-10');

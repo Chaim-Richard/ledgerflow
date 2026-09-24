@@ -141,6 +141,88 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
     assert.equal(totalDebits, totalCredits);
   });
 
+  test('multicurrency tie out with discount, retainage, and tax on top', () => {
+    const invoice = makeInvoice({
+      id: 'inv-eur-2',
+      number: 'INV-EUR-200',
+      customerName: 'Acme Europe 2',
+      date: '2026-03-10',
+      amountCents: 10000,
+      discountCents: 1000,
+      retainageCents: 500,
+      taxRate: 20,
+      taxInclusive: false,
+      currency: 'EUR',
+      exchangeRate: 1.1,
+      status: 'approved'
+    });
+
+    const tax = calculateDocumentTax(invoice);
+    const report = computeTaxLiability([invoice], [], '2026-03-01', '2026-03-31');
+    assert.equal(tax, report.taxCollectedCents);
+
+    const lines = TransactionTemplates.buildInvoiceLines({
+      invoiceNumber: invoice.number || 'INV-EUR-200',
+      customerName: invoice.customerName || 'Acme Europe 2',
+      totalCents: invoice.amountCents,
+      taxCents: tax,
+      discountCents: invoice.discountCents,
+      retainageCents: invoice.retainageCents,
+      exchangeRate: invoice.exchangeRate,
+      arAccount: { id: 'ar', name: 'A/R' },
+      revenueAccount: { id: 'rev', name: 'Revenue' },
+      taxAccount: { id: 'tax', name: 'Tax Payable' },
+      discountAccount: { id: 'discount', name: 'Sales Discounts' },
+      retainageAccount: { id: 'retainage', name: 'Retainage Receivable' }
+    });
+
+    const sum = lines.reduce((acc, line) => acc + line.amountCents, 0);
+    assert.equal(sum, 0);
+  });
+
+  test('multicurrency tie out with discount and retainage', () => {
+    const invoice = makeInvoice({
+      id: 'inv-eur-1',
+      number: 'INV-EUR-100',
+      customerName: 'Acme Europe',
+      date: '2026-03-10',
+      amountCents: 10000,
+      discountCents: 1000,
+      retainageCents: 500,
+      taxRate: 20,
+      taxInclusive: false,
+      currency: 'EUR',
+      exchangeRate: 1.1,
+      status: 'approved'
+    });
+
+    const tax = calculateDocumentTax(invoice);
+    assert.equal(tax, 1800);
+
+    const report = computeTaxLiability([invoice], [], '2026-03-01', '2026-03-31');
+    assert.equal(report.taxCollectedCents, 1800);
+
+    const lines = TransactionTemplates.buildInvoiceLines({
+      invoiceNumber: invoice.number || 'INV-EUR-100',
+      customerName: invoice.customerName || 'Acme Europe',
+      totalCents: invoice.amountCents,
+      taxCents: tax,
+      discountCents: invoice.discountCents,
+      retainageCents: invoice.retainageCents,
+      exchangeRate: invoice.exchangeRate,
+      arAccount: { id: 'ar', name: 'A/R' },
+      revenueAccount: { id: 'rev', name: 'Revenue' },
+      taxAccount: { id: 'tax', name: 'Tax Payable' },
+      discountAccount: { id: 'discount', name: 'Sales Discounts' },
+      retainageAccount: { id: 'retainage', name: 'Retainage Receivable' }
+    });
+
+    const totalDebits = lines.filter(l => l.amountCents > 0).reduce((s, l) => s + l.amountCents, 0);
+    const totalCredits = lines.filter(l => l.amountCents < 0).reduce((s, l) => s + Math.abs(l.amountCents), 0);
+    assert.equal(totalDebits, totalCredits);
+    assert.equal(totalDebits, 11000); // 9500 (AR) + 500 (retainage) + 1000 (discount) = 11000
+  });
+
   test('invoice carrying only salesTaxCents posts and reports the same number', () => {
     const invoice: Invoice = makeInvoice({
       id: 'inv-sales-tax-only',
