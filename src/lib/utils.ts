@@ -140,7 +140,7 @@ export function formatDecimal(cents: number): string {
  * Returns YYYY-MM-DD string in workspace or local user timezone to prevent UTC shift off-by-one errors
  */
 export function getLocalDateISO(d: Date = new Date()): string {
-  let timezone = 'UTC';
+  let timezone = '';
   try {
     const state = useAuthStore.getState();
     const activeWorkspace = state?.workspaces?.find((w: any) => w.id === state?.currentWorkspaceId);
@@ -149,6 +149,14 @@ export function getLocalDateISO(d: Date = new Date()): string {
     }
   } catch (_e) {
     // Fallback if store is not yet accessible
+  }
+
+  if (!timezone) {
+    try {
+      timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+      timezone = 'UTC';
+    }
   }
 
   try {
@@ -196,7 +204,7 @@ export function parseLocalDate(s: string): Date {
     const [y, m, d] = parts;
     const localDate = new Date(y, m - 1, d, 0, 0, 0, 0);
 
-    let timezone = 'UTC';
+    let timezone = '';
     try {
       const state = useAuthStore.getState();
       const activeWorkspace = state?.workspaces?.find((w: any) => w.id === state?.currentWorkspaceId);
@@ -204,7 +212,15 @@ export function parseLocalDate(s: string): Date {
         timezone = activeWorkspace.timezone;
       }
     } catch {
-      // Fallback to UTC if auth store is unavailable
+      // Fallback if auth store is unavailable
+    }
+
+    if (!timezone) {
+      try {
+        timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      } catch {
+        timezone = 'UTC';
+      }
     }
 
     try {

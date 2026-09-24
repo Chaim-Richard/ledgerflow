@@ -315,6 +315,7 @@ export interface Invoice {
   paymentTerms?: string; // 'net_15', 'net_30', 'net_60', 'due_on_receipt', etc.
   items?: Array<{
     id: string;
+    itemId?: string; // Links to InventoryItem.id
     description: string;
     quantity: number;
     rateCents: number;

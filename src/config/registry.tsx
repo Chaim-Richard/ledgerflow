@@ -327,6 +327,8 @@ export const REPORT_COMPONENTS: Record<string, any> = {
   'VendorBalanceSummaryView': lazy(() => import('../components/reporting/VendorBalanceSummaryView')),
   'TransactionsByCustomerView': lazy(() => import('../components/reporting/TransactionsByCustomerView')),
   'TransactionsByVendorView': lazy(() => import('../components/reporting/TransactionsByVendorView')),
+  'SalesByItemReportView': lazy(() => import('../components/reporting/SalesByItemReportView')),
+  'JournalSheetReportView': lazy(() => import('../components/reporting/JournalSheetReportView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = [
@@ -345,6 +347,8 @@ export const REPORT_TABS_REGISTRY = [
   { id: 'vendor-balance-summary', label: { en: 'Vendor Balance Summary', he: 'יתרות ספקים' }, componentName: 'VendorBalanceSummaryView', icon: Building },
   { id: 'transactions-by-customer', label: { en: 'Transactions by Customer', he: 'עסקאות לפי לקוח' }, componentName: 'TransactionsByCustomerView', icon: FileText },
   { id: 'transactions-by-vendor', label: { en: 'Transactions by Vendor', he: 'עסקאות לפי ספק' }, componentName: 'TransactionsByVendorView', icon: FileSpreadsheet },
+  { id: 'sales-by-item', label: { en: 'Sales by Item', he: 'מכירות לפי פריט' }, componentName: 'SalesByItemReportView', icon: Package },
+  { id: 'journal-sheet', label: { en: 'Journal Sheet', he: 'גיליון יומן' }, componentName: 'JournalSheetReportView', icon: BookOpen },
   { id: 'expense-by-category', label: { en: 'Expense by Category', he: 'הוצאות לפי קטגוריה' }, componentName: 'ExpenseByCategoryReportView', icon: PieChart },
   { id: 'income-by-source', label: { en: 'Income by Source', he: 'הכנסות לפי מקור' }, componentName: 'IncomeBySourceReportView', icon: TrendingUp },
   { id: 'top-expenses-income', label: { en: 'Top Line Items', he: 'הוצאות והכנסות מובילות' }, componentName: 'TopExpensesIncomeReportView', icon: BarChart3 },

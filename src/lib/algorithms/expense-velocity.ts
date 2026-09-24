@@ -1,6 +1,6 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { isPostable, lineAmount } from '../txFilters';
-import { getLocalDateISO } from '../utils';
+import { getLocalDateISO, parseLocalDate } from '../utils';
 
 export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
   id: 'ops_velocity',
@@ -84,8 +84,8 @@ export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
     }
 
     // Build contiguous calendar days from min date to max date
-    const startDate = new Date(rawDates[0]);
-    const endDate = new Date(rawDates[rawDates.length - 1]);
+    const startDate = parseLocalDate(rawDates[0]);
+    const endDate = parseLocalDate(rawDates[rawDates.length - 1]);
     const contiguousDates: string[] = [];
     
     const curr = new Date(startDate);

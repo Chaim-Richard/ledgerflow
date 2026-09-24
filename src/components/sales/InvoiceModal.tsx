@@ -25,6 +25,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const safeCustomers = Array.isArray(customers) ? customers : [];
   const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'income') : [];
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const inventoryItems = useLedgerStore(s => s.inventory || []);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
 
   const [invoice, setInvoice] = useState<Partial<Invoice>>(() => initialInvoice || ({
@@ -36,7 +37,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     totalCents: 0
   }));
 
-  const [items, setItems] = useState<Array<{ id: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string, taxRate?: number }>>([
+  const [items, setItems] = useState<Array<{ id: string, itemId?: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string, taxRate?: number, unitCostCents?: number }>>([
     { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }
   ]);
 
@@ -388,19 +389,35 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               {items.map((item, idx) => (
                 <div key={item.id} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
                   <div className="col-span-12 md:col-span-4 space-y-1">
-                    <label htmlFor={`inv-item-desc-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Description</label>
-                    <input 
-                      id={`inv-item-desc-${idx}`}
-                      type="text"
-                      value={item.description}
-                      onChange={(e) => {
-                        const newItems = [...items];
-                        newItems[idx].description = e.target.value;
-                        setItems(newItems);
-                      }}
-                      placeholder="Service or Product"
-                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
-                    />
+                    <label htmlFor={`inv-item-desc-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Item / Description</label>
+                    <div className="relative">
+                      <input 
+                        id={`inv-item-desc-${idx}`}
+                        type="text"
+                        list={`invoice-inventory-list-${idx}`}
+                        value={item.description}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const selected = inventoryItems.find(i => i.name === val || i.sku === val);
+                          const newItems = [...items];
+                          newItems[idx].description = val;
+                          if (selected) {
+                            newItems[idx].itemId = selected.id;
+                            newItems[idx].rateCents = selected.unitPriceCents;
+                            newItems[idx].unitCostCents = selected.unitCostCents;
+                            newItems[idx].amountCents = Math.round(newItems[idx].quantity * selected.unitPriceCents);
+                          }
+                          setItems(newItems);
+                        }}
+                        placeholder="Service or Product"
+                        className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
+                      />
+                      <datalist id={`invoice-inventory-list-${idx}`}>
+                        {inventoryItems.map(i => (
+                          <option key={i.id} value={i.name}>{i.sku ? `[${i.sku}] ` : ''}${i.name} - ${(i.unitPriceCents / 100).toFixed(2)} (Stock: {i.quantityAtHand})</option>
+                        ))}
+                      </datalist>
+                    </div>
                   </div>
                   <div className="col-span-6 md:col-span-2 space-y-1">
                     <label htmlFor={`inv-item-qty-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Qty</label>
