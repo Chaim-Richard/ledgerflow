@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
 import { createPaymentAtomic } from '../services/paymentService';
 import { getLocalDateISO } from '../../lib/utils';
-import { getWorkspaceUserRole } from './workspaceRoutes';
+import { getWorkspaceUserRole, AuthenticatedRequest } from './workspaceRoutes';
 
 export const paymentRouter = express.Router();
 
@@ -28,17 +28,17 @@ const paymentInputSchema = z.object({
   allocations: z.array(paymentAllocationSchema).default([])
 });
 
-paymentRouter.post('/', async (req, res) => {
+export async function handleCreatePayment(req: express.Request, res: express.Response, dbOverride?: any) {
   try {
-    const authReq = req as any;
+    const authReq = req as Partial<AuthenticatedRequest>;
     const parsed = paymentInputSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ status: 'error', message: 'Invalid payment payload', details: parsed.error.issues });
     }
     const { workspaceId, ...payload } = parsed.data;
 
-    const db = getDb();
-    await validateWorkspaceMember(db, workspaceId, authReq.user);
+    const db = dbOverride || getDb();
+    await validateWorkspaceMember(db, workspaceId, authReq.user || { uid: 'system' });
 
     if (authReq.user?.uid && !authReq.user?.admin) {
       const userRole = await getWorkspaceUserRole(db, workspaceId, authReq.user.uid);
@@ -54,13 +54,17 @@ paymentRouter.post('/', async (req, res) => {
     });
 
     res.json({ status: 'success', data: result });
-  } catch (err: any) {
-    if (err.message === 'FORBIDDEN' || err.message?.includes('Security Violation') || err.message?.includes('Forbidden')) {
-      return res.status(403).json({ status: 'error', message: err.message || 'Forbidden' });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message === 'FORBIDDEN' || message.includes('Forbidden') || message.includes('Unauthorized') || message.includes('Security Violation')) {
+      return res.status(403).json({ status: 'error', message });
     }
-    if (err.message === 'NOT_FOUND' || err.message?.includes('not found')) {
-      return res.status(404).json({ status: 'error', message: err.message || 'Workspace not found' });
+    if (message === 'NOT_FOUND' || message.includes('not found')) {
+      return res.status(404).json({ status: 'error', message });
     }
-    res.status(400).json({ status: 'error', message: err.message || 'Payment processing failed' });
+    res.status(400).json({ status: 'error', message });
   }
-});
+}
+
+paymentRouter.post('/', (req, res) => handleCreatePayment(req, res));
+

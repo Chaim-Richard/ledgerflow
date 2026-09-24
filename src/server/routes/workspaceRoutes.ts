@@ -11,7 +11,7 @@ interface AuthUser extends admin.auth.DecodedIdToken {
   email_verified: boolean;
 }
 
-interface AuthenticatedRequest extends express.Request {
+export interface AuthenticatedRequest extends express.Request {
   user: AuthUser;
 }
 

@@ -34,39 +34,38 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
       const snap = await db.collection('invoices').doc(id).get();
       if (!snap.exists) return res.status(404).json({ status: 'error', message: 'Invoice not found' });
       docData = snap.data();
-      if (docData.workspaceId && docData.workspaceId !== workspaceId) {
-        return res.status(403).json({ status: 'error', message: 'Forbidden: Document belongs to another workspace' });
+      if (docData.workspaceId !== workspaceId) {
+        return res.status(404).json({ status: 'error', message: 'Invoice not found' });
       }
     } else if (type === 'estimate') {
       const snap = await db.collection('estimates').doc(id).get();
       if (!snap.exists) return res.status(404).json({ status: 'error', message: 'Estimate not found' });
       docData = snap.data();
-      if (docData.workspaceId && docData.workspaceId !== workspaceId) {
-        return res.status(403).json({ status: 'error', message: 'Forbidden: Document belongs to another workspace' });
+      if (docData.workspaceId !== workspaceId) {
+        return res.status(404).json({ status: 'error', message: 'Estimate not found' });
       }
     } else if (type === 'creditNote') {
       const snap = await db.collection('creditNotes').doc(id).get();
       if (!snap.exists) return res.status(404).json({ status: 'error', message: 'Credit Note not found' });
       docData = snap.data();
-      if (docData.workspaceId && docData.workspaceId !== workspaceId) {
-        return res.status(403).json({ status: 'error', message: 'Forbidden: Document belongs to another workspace' });
+      if (docData.workspaceId !== workspaceId) {
+        return res.status(404).json({ status: 'error', message: 'Credit Note not found' });
       }
     } else if (type === 'payment') {
       const snap = await db.collection('payments').doc(id).get();
       if (!snap.exists) return res.status(404).json({ status: 'error', message: 'Payment not found' });
       docData = snap.data();
-      if (docData.workspaceId && docData.workspaceId !== workspaceId) {
-        return res.status(403).json({ status: 'error', message: 'Forbidden: Document belongs to another workspace' });
+      if (docData.workspaceId !== workspaceId) {
+        return res.status(404).json({ status: 'error', message: 'Payment not found' });
       }
     } else if (type === 'statement') {
       // id is customer/vendor contact ID
       const customerSnap = await db.collection('customers').doc(id).get();
       const vendorSnap = await db.collection('vendors').doc(id).get();
-      if (customerSnap.exists && customerSnap.data()?.workspaceId && customerSnap.data().workspaceId !== workspaceId) {
-        return res.status(403).json({ status: 'error', message: 'Forbidden: Customer belongs to another workspace' });
-      }
-      if (vendorSnap.exists && vendorSnap.data()?.workspaceId && vendorSnap.data().workspaceId !== workspaceId) {
-        return res.status(403).json({ status: 'error', message: 'Forbidden: Vendor belongs to another workspace' });
+      const customerInWs = customerSnap.exists && customerSnap.data()?.workspaceId === workspaceId;
+      const vendorInWs = vendorSnap.exists && vendorSnap.data()?.workspaceId === workspaceId;
+      if ((customerSnap.exists || vendorSnap.exists) && !customerInWs && !vendorInWs) {
+        return res.status(404).json({ status: 'error', message: 'Contact not found' });
       }
       const contactData: any = customerSnap.exists ? { id, ...customerSnap.data() } : (vendorSnap.exists ? { id, ...vendorSnap.data() } : { id, name: 'Contact' });
       const contactType = customerSnap.exists ? 'customer' : 'vendor';

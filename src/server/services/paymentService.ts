@@ -1,3 +1,6 @@
+import { calculateAmountDue } from '../../lib/documentMath';
+import { writeServerAuditLog } from './auditLogService';
+
 export interface CreatePaymentPayload {
   workspaceId: string;
   uid: string;
@@ -53,8 +56,8 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
       throw new Error(`Invalid cash account ID: ${cashAccountId}`);
     }
     const cashAccData = cashAccSnap.data() || {};
-    if (cashAccData.workspaceId && cashAccData.workspaceId !== workspaceId) {
-      throw new Error(`Security Violation: Cash account ${cashAccountId} belongs to another workspace`);
+    if (cashAccData.workspaceId !== workspaceId) {
+      throw new Error(`Invalid cash account ID: ${cashAccountId}`);
     }
 
     let resolvedOffsetAccountId = offsetAccountId;
@@ -65,13 +68,18 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
         throw new Error(`Invalid offset account ID: ${resolvedOffsetAccountId}`);
       }
       const offsetAccData = offsetAccSnap.data() || {};
-      if (offsetAccData.workspaceId && offsetAccData.workspaceId !== workspaceId) {
-        throw new Error(`Security Violation: Offset account ${resolvedOffsetAccountId} belongs to another workspace`);
+      if (offsetAccData.workspaceId !== workspaceId) {
+        throw new Error(`Invalid offset account ID: ${resolvedOffsetAccountId}`);
       }
     }
 
     // 3. Read & validate target invoices / bills
-    const docUpdates: Array<{ ref: any; updates: any }> = [];
+    const allocationKeys = allocations.map(a => `${a.documentType}:${a.documentId}`);
+    if (new Set(allocationKeys).size !== allocationKeys.length) {
+      throw new Error('Each invoice or bill may appear only once in a payment');
+    }
+
+    const docUpdates: Array<{ ref: { id?: string; [k: string]: unknown }; updates: Record<string, unknown> }> = [];
     let totalAllocatedCents = 0;
 
     for (const alloc of allocations) {
@@ -85,13 +93,17 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
       }
 
       const docData = docSnap.data() || {};
-      if (docData.workspaceId && docData.workspaceId !== workspaceId) {
-        throw new Error(`Security Violation: Document ${alloc.documentId} belongs to another workspace`);
+      if (docData.workspaceId !== workspaceId) {
+        throw new Error(`Document ${alloc.documentId} not found`);
+      }
+
+      if (docData.status === 'void' || docData.status === 'draft') {
+        throw new Error(`Cannot record a payment against a ${docData.status} document`);
       }
 
       const currentPaid = docData.amountPaidCents || 0;
-      const total = docData.amountCents ?? docData.totalCents ?? 0;
-      const remainingBalance = Math.max(0, total - currentPaid);
+      const total = docData.amountCents || 0;
+      const remainingBalance = calculateAmountDue(docData);
 
       if (alloc.amountCents > remainingBalance) {
         throw new Error(`Overpayment not allowed: allocation of ${alloc.amountCents} cents exceeds remaining balance of ${remainingBalance} cents for document ${alloc.documentId}`);
@@ -135,8 +147,8 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
       throw new Error(`Invalid offset account ID: ${resolvedOffsetAccountId}`);
     }
     const offsetAccData = offsetAccSnap.data() || {};
-    if (offsetAccData.workspaceId && offsetAccData.workspaceId !== workspaceId) {
-      throw new Error(`Security Violation: Resolved offset account ${resolvedOffsetAccountId} belongs to another workspace`);
+    if (offsetAccData.workspaceId !== workspaceId) {
+      throw new Error(`Invalid offset account ID: ${resolvedOffsetAccountId}`);
     }
 
     // 4. Build Payment Document
@@ -204,13 +216,9 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
     tx.set(paymentRef, paymentData);
     tx.set(ledgerTxRef, ledgerTxData);
 
-    const auditRef = db.collection('auditLogs').doc();
-    tx.set(auditRef, {
-      id: auditRef.id,
+    await writeServerAuditLog({
       workspaceId,
       uid,
-      userId: uid,
-      actorUid: uid,
       action: 'PAYMENT_RECORDED',
       entityType: 'payment',
       entityId: paymentId,
@@ -219,10 +227,8 @@ export async function createPaymentAtomic(db: any, payload: CreatePaymentPayload
         paymentNumber,
         amountCents,
         paymentMethod
-      },
-      severity: 'info',
-      timestamp: new Date().toISOString()
-    });
+      }
+    }, { db, tx });
 
     return { paymentId, transactionId: ledgerTxRef.id, payment: paymentData, ledgerTransaction: ledgerTxData };
   });

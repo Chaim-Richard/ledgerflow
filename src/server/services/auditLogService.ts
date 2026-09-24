@@ -1,4 +1,7 @@
+import type { DocumentData, DocumentReference, Firestore } from 'firebase-admin/firestore';
 import { getDb } from '../db/firestore';
+
+type AuditWriter = { set(ref: DocumentReference, data: DocumentData): unknown };
 
 export interface AuditLogEntryInput {
   workspaceId: string;
@@ -38,9 +41,9 @@ export function buildAuditLogRecord(input: AuditLogEntryInput, id: string) {
 
 export async function writeServerAuditLog(
   input: AuditLogEntryInput,
-  options?: { db?: any; tx?: any }
+  options?: { db?: Firestore; tx?: AuditWriter }
 ): Promise<string> {
-  const db = options?.db || getDb();
+  const db = (options?.db || getDb()) as Firestore;
   const auditRef = db.collection('auditLogs').doc();
   const record = buildAuditLogRecord(input, auditRef.id);
 

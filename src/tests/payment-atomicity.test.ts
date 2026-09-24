@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { createPaymentAtomic } from '../server/services/paymentService';
+import { handleCreatePayment } from '../server/routes/paymentRoutes';
 
 class MockTransactionalDb {
   public data: Map<string, any> = new Map();
@@ -80,13 +81,14 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
     });
 
     // Setup Accounts
-    db.data.set('chartAccounts/acc-cash', { id: 'acc-cash', name: 'Cash' });
-    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', name: 'AR' });
+    db.data.set('chartAccounts/acc-cash', { id: 'acc-cash', name: 'Cash', workspaceId: 'ws-1' });
+    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', name: 'AR', workspaceId: 'ws-1' });
 
     // Setup Invoice with total 10000 cents, 0 paid
     db.data.set('invoices/inv-100', {
       id: 'inv-100',
-      totalCents: 10000,
+      workspaceId: 'ws-1',
+      amountCents: 10000,
       amountPaidCents: 0,
       status: 'pending'
     });
@@ -127,7 +129,8 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
     // Setup Invoice with total 5000 cents, 0 paid
     db.data.set('invoices/inv-200', {
       id: 'inv-200',
-      totalCents: 5000,
+      workspaceId: 'ws-1',
+      amountCents: 5000,
       amountPaidCents: 0,
       status: 'pending'
     });
@@ -157,12 +160,13 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
     const db = new MockTransactionalDb();
 
     db.data.set('workspaces/ws-1', { id: 'ws-1' });
-    db.data.set('chartAccounts/acc-cash', { id: 'acc-cash', name: 'Cash' });
-    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', name: 'AR' });
+    db.data.set('chartAccounts/acc-cash', { id: 'acc-cash', name: 'Cash', workspaceId: 'ws-1' });
+    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', name: 'AR', workspaceId: 'ws-1' });
 
     db.data.set('invoices/inv-300', {
       id: 'inv-300',
-      totalCents: 10000,
+      workspaceId: 'ws-1',
+      amountCents: 10000,
       amountPaidCents: 0,
       status: 'pending'
     });
@@ -211,7 +215,7 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
     db.data.set('invoices/inv-victim-1', {
       id: 'inv-victim-1',
       workspaceId: 'ws-victim',
-      totalCents: 10000,
+      amountCents: 10000,
       amountPaidCents: 0,
       status: 'pending'
     });
@@ -226,7 +230,7 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
         offsetAccountId: 'acc-ar',
         allocations: [{ documentId: 'inv-victim-1', documentType: 'invoice', amountCents: 10000 }]
       });
-    }, /belongs to another workspace/i);
+    }, /not found/i);
 
     const inv = db.getDocData('invoices', 'inv-victim-1');
     assert.equal(inv.amountPaidCents, 0, 'Victim invoice must remain untouched');
@@ -242,7 +246,7 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
     db.data.set('invoices/inv-partial', {
       id: 'inv-partial',
       workspaceId: 'ws-1',
-      totalCents: 10000,
+      amountCents: 10000,
       amountPaidCents: 6000,
       status: 'partially_paid'
     });
@@ -259,5 +263,162 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
       });
     }, /overpayment not allowed/i);
   });
+
+  test('Rejects payment if cash account belongs to another workspace', async () => {
+    const db = new MockTransactionalDb();
+    db.data.set('workspaces/ws-1', { id: 'ws-1' });
+    db.data.set('chartAccounts/acc-cash-other', { id: 'acc-cash-other', workspaceId: 'ws-other' });
+    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', workspaceId: 'ws-1' });
+    db.data.set('invoices/inv-1', { id: 'inv-1', workspaceId: 'ws-1', amountCents: 10000, amountPaidCents: 0, status: 'pending' });
+
+    await assert.rejects(async () => {
+      await createPaymentAtomic(db, {
+        workspaceId: 'ws-1',
+        uid: 'user-1',
+        paymentDate: '2026-09-15',
+        amountCents: 10000,
+        cashAccountId: 'acc-cash-other',
+        offsetAccountId: 'acc-ar',
+        allocations: [{ documentId: 'inv-1', documentType: 'invoice', amountCents: 10000 }]
+      });
+    }, /invalid cash account/i);
+  });
+
+  test('Rejects payment if invoice has no workspaceId', async () => {
+    const db = new MockTransactionalDb();
+    db.data.set('workspaces/ws-1', { id: 'ws-1' });
+    db.data.set('chartAccounts/acc-cash', { id: 'acc-cash', workspaceId: 'ws-1' });
+    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', workspaceId: 'ws-1' });
+    db.data.set('invoices/inv-no-ws', { id: 'inv-no-ws', amountCents: 10000, amountPaidCents: 0, status: 'pending' });
+
+    await assert.rejects(async () => {
+      await createPaymentAtomic(db, {
+        workspaceId: 'ws-1',
+        uid: 'user-1',
+        paymentDate: '2026-09-15',
+        amountCents: 10000,
+        cashAccountId: 'acc-cash',
+        offsetAccountId: 'acc-ar',
+        allocations: [{ documentId: 'inv-no-ws', documentType: 'invoice', amountCents: 10000 }]
+      });
+    }, /not found/i);
+  });
+
+  test('Rejects payment against a void or draft document', async () => {
+    const db = new MockTransactionalDb();
+    db.data.set('workspaces/ws-1', { id: 'ws-1' });
+    db.data.set('chartAccounts/acc-cash', { id: 'acc-cash', workspaceId: 'ws-1' });
+    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', workspaceId: 'ws-1' });
+    db.data.set('invoices/inv-void', { id: 'inv-void', workspaceId: 'ws-1', amountCents: 10000, amountPaidCents: 0, status: 'void' });
+
+    await assert.rejects(async () => {
+      await createPaymentAtomic(db, {
+        workspaceId: 'ws-1',
+        uid: 'user-1',
+        paymentDate: '2026-09-15',
+        amountCents: 10000,
+        cashAccountId: 'acc-cash',
+        offsetAccountId: 'acc-ar',
+        allocations: [{ documentId: 'inv-void', documentType: 'invoice', amountCents: 10000 }]
+      });
+    }, /void/i);
+  });
+
+  test('Rejects payment with duplicate invoice allocations', async () => {
+    const db = new MockTransactionalDb();
+    db.data.set('workspaces/ws-1', { id: 'ws-1' });
+    db.data.set('chartAccounts/acc-cash', { id: 'acc-cash', workspaceId: 'ws-1' });
+    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', workspaceId: 'ws-1' });
+    db.data.set('invoices/inv-1', { id: 'inv-1', workspaceId: 'ws-1', amountCents: 10000, amountPaidCents: 0, status: 'pending' });
+
+    await assert.rejects(async () => {
+      await createPaymentAtomic(db, {
+        workspaceId: 'ws-1',
+        uid: 'user-1',
+        paymentDate: '2026-09-15',
+        amountCents: 10000,
+        cashAccountId: 'acc-cash',
+        offsetAccountId: 'acc-ar',
+        allocations: [
+          { documentId: 'inv-1', documentType: 'invoice', amountCents: 5000 },
+          { documentId: 'inv-1', documentType: 'invoice', amountCents: 5000 }
+        ]
+      });
+    }, /only once/i);
+  });
+
+  test('Rejects payment when allocations exceed payment amount', async () => {
+    const db = new MockTransactionalDb();
+    db.data.set('workspaces/ws-1', { id: 'ws-1' });
+    db.data.set('chartAccounts/acc-cash', { id: 'acc-cash', workspaceId: 'ws-1' });
+    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', workspaceId: 'ws-1' });
+    db.data.set('invoices/inv-1', { id: 'inv-1', workspaceId: 'ws-1', amountCents: 10000, amountPaidCents: 0, status: 'pending' });
+    db.data.set('invoices/inv-2', { id: 'inv-2', workspaceId: 'ws-1', amountCents: 10000, amountPaidCents: 0, status: 'pending' });
+
+    await assert.rejects(async () => {
+      await createPaymentAtomic(db, {
+        workspaceId: 'ws-1',
+        uid: 'user-1',
+        paymentDate: '2026-09-15',
+        amountCents: 10000,
+        cashAccountId: 'acc-cash',
+        offsetAccountId: 'acc-ar',
+        allocations: [
+          { documentId: 'inv-1', documentType: 'invoice', amountCents: 6000 },
+          { documentId: 'inv-2', documentType: 'invoice', amountCents: 5000 }
+        ]
+      });
+    }, /exceeds payment amount/i);
+  });
+
+  test('Viewer role receives 403 and cannot create payments', async () => {
+    const db: any = {
+      collection: (coll: string) => ({
+        doc: (id: string) => ({
+          get: async () => {
+            if (coll === 'workspaces' && id === 'ws-viewer-test') {
+              return {
+                exists: true,
+                data: () => ({
+                  id: 'ws-viewer-test',
+                  members: ['user-viewer'],
+                  roles: { 'user-viewer': 'viewer' }
+                })
+              };
+            }
+            return { exists: false, data: () => undefined };
+          }
+        })
+      })
+    };
+
+    let statusCode = 200;
+    let jsonBody: any = null;
+    const req: any = {
+      user: { uid: 'user-viewer' },
+      body: {
+        workspaceId: 'ws-viewer-test',
+        amountCents: 5000,
+        paymentDate: '2026-09-15',
+        cashAccountId: 'acc-cash',
+        allocations: []
+      }
+    };
+    const res: any = {
+      status: (code: number) => {
+        statusCode = code;
+        return res;
+      },
+      json: (data: any) => {
+        jsonBody = data;
+        return res;
+      }
+    };
+
+    await handleCreatePayment(req, res, db);
+    assert.equal(statusCode, 403);
+    assert.ok(jsonBody.message.includes('Forbidden'));
+  });
 });
+
 

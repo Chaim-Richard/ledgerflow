@@ -14,15 +14,14 @@ class MockPdfDb {
         workspaceId: 'ws-other',
         number: 'INV-OTHER',
         customerName: 'Other Corp',
-        totalCents: 50000,
         amountCents: 50000,
         date: '2026-03-15'
       },
       'inv-101': {
         id: 'inv-101',
+        workspaceId: 'ws-test',
         number: 'INV-1001',
         customerName: 'Global Corp',
-        totalCents: 125000,
         amountCents: 125000,
         date: '2026-03-15',
         items: [
@@ -33,6 +32,7 @@ class MockPdfDb {
     estimates: {
       'est-201': {
         id: 'est-201',
+        workspaceId: 'ws-test',
         number: 'EST-2001',
         customerName: 'Stark Enterprises',
         amountCents: 450000,
@@ -45,6 +45,7 @@ class MockPdfDb {
     creditNotes: {
       'cn-301': {
         id: 'cn-301',
+        workspaceId: 'ws-test',
         number: 'CN-3001',
         customerName: 'Wayne Tech',
         amountCents: 35000,
@@ -55,6 +56,7 @@ class MockPdfDb {
     payments: {
       'pay-401': {
         id: 'pay-401',
+        workspaceId: 'ws-test',
         number: 'PAY-4001',
         contactName: 'Oscorp Industries',
         amountCents: 85000,
@@ -65,6 +67,7 @@ class MockPdfDb {
     customers: {
       'cust-501': {
         id: 'cust-501',
+        workspaceId: 'ws-test',
         name: 'Cyberdyne Systems',
         email: 'billing@cyberdyne.com',
         billingAddress: '100 Skynet Way, Sunnyvale, CA'
@@ -203,9 +206,9 @@ describe('Document PDF Generator & Endpoint (%PDF- Magic Bytes Guarantee)', () =
     assert.strictEqual(getStatus(), 400);
   });
 
-  test('handlePdfRequest rejects cross-workspace access with 403', async () => {
+  test('handlePdfRequest rejects cross-workspace access with 404 (same as missing)', async () => {
     const { req, res, getStatus } = createMockHttp('invoice', 'inv-other-ws', 'ws-test');
     await handlePdfRequest(req, res, mockDb);
-    assert.strictEqual(getStatus(), 403);
+    assert.strictEqual(getStatus(), 404);
   });
 });

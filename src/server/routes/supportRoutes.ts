@@ -1,8 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { getDb } from '../db/firestore';
-import { FieldValue } from 'firebase-admin/firestore';
-import { SupportMessage, SupportTicket, AuditLog } from '../../types';
+import { SupportMessage, SupportTicket } from '../../types';
 import { sendSupportNotification } from '../services/emailService';
 import { writeServerAuditLog } from '../services/auditLogService';
 
