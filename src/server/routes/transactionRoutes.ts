@@ -16,9 +16,12 @@ import { executeCommand } from '../utils/commandExecutor';
 import { requirePlanCapacity } from '../middleware/planCapacity';
 import { requireOpenPeriod } from '../middleware/periodLock';
 import { getWorkspaceUserRole } from './workspaceRoutes';
+import { LedgerPostingError, prepareStockMoves } from '../services/cogsStockService';
+import { requireLedgerWriter } from '../middleware/requireLedgerWriter';
 import { writeServerAuditLog } from '../services/auditLogService';
 
 export const transactionRouter = express.Router();
+transactionRouter.use(requireLedgerWriter);
 
 export function formatTzDate(d: Date = new Date(), timezone = 'UTC'): string {
   try {
@@ -485,8 +488,7 @@ transactionRouter.post('/bulk', async (req, res) => {
       }
     }
 
-    // Period lock, duplicate ID check, and account verification for transactions
-    const accountIdsToVerify = new Set<string>();
+    // Period lock, duplicate ID check, and account verification (TransactionValidator) for transactions
     const seenTxIds = new Set<string>();
 
     const validatedTransactions: any[] = [];
@@ -508,78 +510,51 @@ transactionRouter.post('/bulk', async (req, res) => {
       validatedTransactions.push(validatedTx);
     }
 
-    if (accountIdsToVerify.size > 0) {
-      const accRefs = Array.from(accountIdsToVerify).map(id => db.collection('chartAccounts').doc(id));
-      const accSnaps = await db.getAll(...accRefs);
-      for (const snap of accSnaps) {
-        if (!snap.exists || snap.data()?.workspaceId !== wsId) {
-          return res.status(400).json({ error: `Account ${snap.id} does not exist or does not belong to authorized workspace.` });
+    // ONE database transaction: the document change, the ledger entries, stock moved by cost of
+    // goods sold entries, and the idempotency record all commit together or not at all.
+    let body: Record<string, unknown> = { status: 'ok', count: validatedTransactions.length };
+    await db.runTransaction(async (t: any) => {
+      // Reads first
+      const entityRef = entityMutation ? db.collection(entityMutation.collection).doc(entityMutation.docId) : null;
+      if (entityRef) {
+        const existingDoc = await t.get(entityRef);
+        if (existingDoc.exists && existingDoc.data()?.workspaceId !== wsId) {
+          throw new LedgerPostingError(403, `Forbidden: Entity ${entityMutation.docId} does not belong to authorized workspace.`);
         }
       }
-    }
+      const refs = validatedTransactions.map(tx => db.collection('transactions').doc(tx.id));
+      if (refs.length > 0) {
+        const snaps = await t.getAll(...refs);
+        const taken = snaps.find((s: any) => s.exists);
+        if (taken) throw new LedgerPostingError(409, `Transaction ${taken.id} already exists`);
+      }
+      const stock = await prepareStockMoves(db, t, wsId, validatedTransactions);
+      const idempotencyRef = scopedIdempotencyKey ? db.collection('idempotencyKeys').doc(scopedIdempotencyKey) : null;
+      if (idempotencyRef) {
+        const replay = await t.get(idempotencyRef);
+        if (replay.exists) { body = replay.data()?.body || body; return; }
+      }
 
-    // Execute entity mutation if provided
-    if (entityMutation) {
-      await db.runTransaction(async (t: any) => {
-        const ref = db.collection(entityMutation.collection).doc(entityMutation.docId);
-        if (entityMutation.action === "create" || entityMutation.action === "update") {
-          const existingDoc = await t.get(ref);
-          if (existingDoc.exists && existingDoc.data()?.workspaceId !== wsId) {
-            throw new Error(`Forbidden: Entity ${entityMutation.docId} does not belong to authorized workspace.`);
-          }
-          
-          const schemaMap: any = { invoices: InvoiceSchema, bills: BillSchema, orders: OrderSchema, projects: ProjectSchema };
-          const schema = schemaMap[entityMutation.collection];
-          
-          if (!schema) throw new Error(`Forbidden: No schema for entityMutation collection '${entityMutation.collection}'.`);
-          
-          const validatedData = schema.parse({ ...entityMutation.data, workspaceId: wsId });
-          const safeData = { ...validatedData, uid: user.uid, updatedAt: FieldValue.serverTimestamp() };
-          t.set(ref, safeData, { merge: true });
-        } else if (entityMutation.action === "delete") {
-          const existingDoc = await t.get(ref);
-          if (existingDoc.exists) {
-            if (existingDoc.data()?.workspaceId !== wsId) {
-              throw new Error(`Forbidden: Entity ${entityMutation.docId} does not belong to authorized workspace.`);
-            }
-            t.delete(ref);
-          }
-        }
-      });
-    }
+      // Writes
+      if (entityRef && (entityMutation.action === 'create' || entityMutation.action === 'update')) {
+        const schemaMap: any = { invoices: InvoiceSchema, bills: BillSchema, orders: OrderSchema, projects: ProjectSchema };
+        const schema = schemaMap[entityMutation.collection];
+        if (!schema) throw new Error(`Forbidden: No schema for entityMutation collection '${entityMutation.collection}'.`);
+        const validatedData = schema.parse({ ...entityMutation.data, workspaceId: wsId });
+        t.set(entityRef, { ...validatedData, uid: user.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      } else if (entityRef && entityMutation.action === 'delete') {
+        t.delete(entityRef);
+      }
+      validatedTransactions.forEach((tx, j) => t.create(refs[j], { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }));
+      stock.apply();
+      if (stock.warnings.length > 0) body = { ...body, warnings: stock.warnings };
+      if (idempotencyRef) t.set(idempotencyRef, { createdAt: FieldValue.serverTimestamp(), code: 200, body, workspaceId: wsId });
+    });
 
-    // Chunk transactions in batches of 400 to avoid Firestore 500-write limit
-    const CHUNK_SIZE = 400;
-    for (let i = 0; i < validatedTransactions.length; i += CHUNK_SIZE) {
-      const chunk = validatedTransactions.slice(i, i + CHUNK_SIZE);
-      await db.runTransaction(async (t: any) => {
-        const refs = chunk.map(tx => db.collection('transactions').doc(tx.id));
-        if (refs.length > 0) {
-          const snaps = await t.getAll(...refs);
-          for (const s of snaps) {
-            if (s.exists) throw new Error(`Transaction ${s.id} already exists`);
-          }
-        }
-
-        for (let j = 0; j < chunk.length; j++) {
-          const tx = chunk[j];
-          t.create(refs[j], { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-        }
-      });
-    }
-
-    if (scopedIdempotencyKey) {
-      await db.collection('idempotencyKeys').doc(scopedIdempotencyKey).set({
-        createdAt: FieldValue.serverTimestamp(),
-        code: 200,
-        body: { status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 }
-      });
-    }
-
-    res.json({ status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 });
+    res.json(body);
   } catch (e: any) {
     console.error('[BULK TRANSACTIONS ERROR]', e);
-    res.status(400).json({ error: e.message });
+    res.status(e instanceof LedgerPostingError ? e.status : 400).json({ error: e.message });
   }
 });
 
@@ -1719,7 +1694,11 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
         }, undefined, t);
       }
 
+      // Reversing a cost-of-goods-sold entry puts the stock back (and no entry is reversed twice).
+      const stock = await prepareStockMoves(db, t, targetWsId, validatedReplacement ? [validatedReversal, validatedReplacement] : [validatedReversal]);
+
       // 3. ATOMIC WRITES (All after reads)
+      stock.apply();
       // A: Create reversal transaction
       t.create(db.collection('transactions').doc(reversalId), {
         ...validatedReversal,
@@ -1770,7 +1749,7 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
       replacement: resultReplacement
     });
   } catch (e: any) {
-    const statusCode = e.statusCode || (e.message === 'Transaction not found' ? 404 : (e.message?.includes('Forbidden') || e.message === 'Not a member' ? 403 : 400));
+    const statusCode = e.statusCode || (e instanceof LedgerPostingError ? e.status : (e.message === 'Transaction not found' ? 404 : (e.message?.includes('Forbidden') || e.message === 'Not a member' ? 403 : 400)));
     res.status(statusCode).json({ error: e.message });
   }
 });

@@ -111,7 +111,8 @@ export function useEntityOperations() {
       };
 
       if (path === 'invoices') {
-        await LedgerPostService.postInvoiceLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
+        const posted = await LedgerPostService.postInvoiceLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
+        if (posted.cogsPendingReason) toast.warning(posted.cogsPendingReason);
         if (finalData.customerId) {
           syncEntityBalance('customers', finalData.customerId);
         }
@@ -211,7 +212,8 @@ export function useEntityOperations() {
       if (path === 'invoices' && user && currentWorkspaceId) {
         const existingInvoice = useLedgerStore.getState().invoices.find(i => i.id === id) || {};
         const mergedData = { ...existingInvoice, ...finalData };
-        await LedgerPostService.postInvoiceLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
+        const posted = await LedgerPostService.postInvoiceLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
+        if (posted.cogsPendingReason) toast.warning(posted.cogsPendingReason);
         const targetCustId = mergedData.customerId || finalData.customerId;
         if (targetCustId) {
           syncEntityBalance('customers', targetCustId);

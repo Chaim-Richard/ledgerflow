@@ -1,5 +1,6 @@
 import { resolveAccountRole } from '../lib/accountUtils';
 import { getIdToken } from '../firebase';
+import { toast } from 'sonner';
 import { getLocalDateISO, roundCents } from '../lib/utils';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -12,11 +13,13 @@ import {
   Bill, 
   CreditNote, 
   VendorCredit, 
-  Payment 
+  Payment,
+  InventoryItem
 } from '../types';
 import { isPostable } from '../lib/txFilters';
 import { calculateDocumentTax } from '../lib/documentMath';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
+import { planInvoiceCogs } from './invoiceCogs';
 
 export interface EntityMutation {
   collection: string;
@@ -30,6 +33,7 @@ export interface LedgerPostContext {
   lockDate?: string | null;
   transactions?: Transaction[];
   workspaces?: Workspace[];
+  inventory?: InventoryItem[];
   idempotencyKey?: string;
   bypassPost?: boolean;
   uid?: string;
@@ -62,6 +66,10 @@ export class LedgerPostService {
     return context?.workspaces || useAuthStore.getState().workspaces || [];
   }
 
+  private static getInventory(context?: LedgerPostContext): InventoryItem[] {
+    return context?.inventory || useLedgerStore.getState().inventory || [];
+  }
+
   /**
    * Period Lock Guard
    */
@@ -71,6 +79,22 @@ export class LedgerPostService {
     if (lockDate && dateStr <= lockDate) {
       throw new Error(`Period is locked on or before ${lockDate}. Cannot post or modify transaction on ${dateStr}.`);
     }
+  }
+
+  /** Workspace mapping first, then the first chart account matching the predicate. */
+  private static findAccount(
+    accounts: ChartAccount[],
+    workspaceMappings: Record<string, string>,
+    keys: string[],
+    predicate: (a: ChartAccount) => boolean
+  ): { id: string; name: string } | undefined {
+    for (const key of keys) {
+      const mappedId = workspaceMappings[key.toLowerCase()];
+      const acc = mappedId ? accounts.find(a => a.id === mappedId) : undefined;
+      if (acc) return { id: acc.id, name: acc.name };
+    }
+    const found = accounts.find(predicate);
+    return found ? { id: found.id, name: found.name } : undefined;
   }
 
   /**
@@ -83,18 +107,8 @@ export class LedgerPostService {
     predicate: (a: ChartAccount) => boolean,
     errorName: string
   ): { id: string; name: string } {
-    // 1. Workspace default mappings check
-    for (const key of keys) {
-      const mappedId = workspaceMappings[key.toLowerCase()];
-      if (mappedId) {
-        const acc = accounts.find(a => a.id === mappedId);
-        if (acc) return { id: acc.id, name: acc.name };
-      }
-    }
-
-    // 2. Search chart of accounts predicate
-    const found = accounts.find(predicate);
-    if (found) return { id: found.id, name: found.name };
+    const found = this.findAccount(accounts, workspaceMappings, keys, predicate);
+    if (found) return found;
 
     // 3. Fail loudly instead of using fake fallback IDs
     throw new Error(`Missing ${errorName} account. Please set up a ${errorName} account in Chart of Accounts or Workspace Settings.`);
@@ -111,8 +125,8 @@ export class LedgerPostService {
     uid: string, 
     entityMutation?: EntityMutation, 
     context?: LedgerPostContext
-  ) {
-    if (!workspaceId || !invoiceId) return;
+  ): Promise<{ cogsPendingReason?: string }> {
+    if (!workspaceId || !invoiceId) return {};
 
     const invoiceDate = invoiceData.date || getLocalDateISO();
     this.verifyLockDate(invoiceDate, context);
@@ -189,13 +203,13 @@ export class LedgerPostService {
       if (txsToPost.length > 0) {
         await this.postTxsServerApi(txsToPost, workspaceId, entityMutation);
       }
-      return;
+      return {};
     }
 
     const rawAmount = invoiceData.amountCents || 0;
     const rate = invoiceData.exchangeRate || 1;
     const amount = roundCents(rawAmount * rate);
-    if (amount <= 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation); } return; }
+    if (amount <= 0) { if (entityMutation) { await this.postTxsServerApi([], workspaceId, entityMutation); } return {}; }
 
     const invoiceNum = invoiceData.number || invoiceId;
     const customer = invoiceData.customerName || 'Customer';
@@ -263,56 +277,18 @@ export class LedgerPostService {
     };
     txsToPost.push(accrualTx);
 
-    // 2.5 AUTO-COGS RECOGNITION (New Requirement D17)
-    // If invoice contains items that match inventory SKUs/IDs, post reciprocal COGS entries
-    if (invoiceData.items && invoiceData.items.length > 0) {
-      const inventoryAcc = this.resolveAccount(
-        accounts,
-        mappings,
-        ['inventory', 'stock', 'inventory asset'],
-        a => resolveAccountRole(a) === 'inventory' || a.category === 'Inventory',
-        'Inventory Asset'
-      );
-
-      const cogsAcc = this.resolveAccount(
-        accounts,
-        mappings,
-        ['cogs', 'cost of goods sold', 'direct costs'],
-        a => resolveAccountRole(a) === 'cogs' || a.category === 'COGS' || a.category === 'Direct Costs',
-        'Cost of Goods Sold (COGS)'
-      );
-
-      // We need to fetch unit costs for these items. 
-      // In a real production system, we'd fetch from Firestore. 
-      // Here, we check if they are in the items metadata or we trigger a background sync.
-      for (const item of invoiceData.items) {
-        // If the item has a unitCostCents or we can identify it as inventory
-        const unitCost = item.unitCostCents || item.metadata?.unitCostCents;
-        if (unitCost && unitCost > 0) {
-          const totalCogs = roundCents(unitCost * item.quantity * rate);
-          txsToPost.push({
-            uid,
-            workspaceId,
-            date: invoiceDate,
-            description: `COGS: ${item.description} (Qty: ${item.quantity})`,
-            totalAmountCents: totalCogs,
-            currency: invoiceData.currency || 'USD',
-            exchangeRate: rate,
-            status: 'completed',
-            type: 'actual',
-            createdAt: new Date().toISOString(),
-            metadata: {
-              invoiceId,
-              itemId: item.id,
-              type: 'invoice-cogs-auto'
-            },
-            lines: [
-              { accountId: cogsAcc.id, accountName: cogsAcc.name, amountCents: totalCogs, debitCents: totalCogs, creditCents: 0, description: `COGS for ${item.description}` },
-              { accountId: inventoryAcc.id, accountName: inventoryAcc.name, amountCents: -totalCogs, debitCents: 0, creditCents: totalCogs, description: `Inventory reduction for ${item.description}` }
-            ]
-          });
-        }
-      }
+    // 2.5 Cost of goods sold for lines that sell inventory items (the server moves the stock).
+    const cogs = planInvoiceCogs({
+      invoiceId, invoice: invoiceData, date: invoiceDate, uid, workspaceId,
+      baseCurrency: currentWs?.currency || 'USD',
+      inventoryAccount: this.findAccount(accounts, mappings, ['inventory', 'stock', 'inventory asset'], a => resolveAccountRole(a) === 'inventory'),
+      cogsAccount: this.findAccount(accounts, mappings, ['cogs', 'cost of goods sold', 'direct costs'], a => resolveAccountRole(a) === 'cogs'),
+      items: this.getInventory(context),
+    });
+    txsToPost.push(...cogs.entries);
+    const wasPending = Boolean(invoiceData.metadata?.cogsPending);
+    if (entityMutation && entityMutation.action !== 'delete' && (cogs.pendingReason || wasPending)) {
+      entityMutation.data = { ...entityMutation.data, metadata: { ...(invoiceData.metadata || {}), cogsPending: Boolean(cogs.pendingReason) } };
     }
 
     // 3. Transaction 2: Payment Posting (DR Cash, CR A/R)
@@ -352,6 +328,7 @@ export class LedgerPostService {
 
     // Atomic post via Server API
     await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
+    return { cogsPendingReason: cogs.pendingReason };
   }
 
   /**
@@ -1029,8 +1006,11 @@ export class LedgerPostService {
 
     // Server-side bypass: if context has a bypassPost flag or if we are executing server-side,
     // we can return or process directly. But in default environments:
+    // Ids are chosen here so the entries added to the local store below carry the same ids as the
+    // server copies; a quick second edit can then link its reversals to them.
+    txs = (txs || []).map(tx => (tx.id ? tx : { ...tx, id: crypto.randomUUID() }));
     const token = await getIdToken().catch(() => null);
-    const idempotencyKey = context?.idempotencyKey || (txs && txs.length > 0 ? txs[0].id : null) || crypto.randomUUID();
+    const idempotencyKey = context?.idempotencyKey || (txs.length > 0 ? txs[0].id : null) || crypto.randomUUID();
     const response = await fetch('/api/v1/transactions/bulk', {
       method: 'POST',
       headers: {
@@ -1041,10 +1021,11 @@ export class LedgerPostService {
       body: JSON.stringify({ transactions: txs, workspaceId, entityMutation })
     });
 
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
       throw new Error(data.error || 'Server rejected transaction posting');
     }
+    if (Array.isArray(data.warnings)) data.warnings.forEach((w: unknown) => toast.warning(String(w)));
 
     // Immediately update client Zustand store state if available
     try {

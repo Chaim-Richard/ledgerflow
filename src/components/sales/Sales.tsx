@@ -343,6 +343,12 @@ export default function Sales() {
                           {inv.status}
                         </span>
                       </div>
+                      {inv.metadata?.cogsPending && (
+                        <div className="mt-2 flex items-center justify-center gap-2 text-[10px] text-[var(--neg)]">
+                          <span title="The cost of the items sold was not recorded: add an Inventory and a Cost of Goods Sold account, then retry.">Cost not recorded</span>
+                          <button type="button" onClick={() => updateEntity('invoices', inv.id, {}, 'Invoice re-posted')} className="underline font-bold">Retry</button>
+                        </div>
+                      )}
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex items-center gap-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
