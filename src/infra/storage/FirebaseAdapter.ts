@@ -3,7 +3,7 @@ import {
   collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, deleteDoc, 
   onSnapshot, query, where, writeBatch, DocumentData, QuerySnapshot, DocumentSnapshot,
   orderBy, limit
-} from 'firebase/firestore';
+} from '../../lib/db/firestore';
 import { DatabaseAdapter, QueryFilter, BatchOperation, QueryOptions } from '../../services/storage/types';
 
 export class FirebaseAdapter implements DatabaseAdapter {

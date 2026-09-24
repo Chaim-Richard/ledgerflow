@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { User } from 'firebase/auth';
+import { User } from '../../lib/db/auth';
 import { Invoice, Customer, ChartAccount } from '../../types';
 import { 
   Plus, 

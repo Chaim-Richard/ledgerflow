@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import { usePerformanceTrace } from './hooks/usePerformanceTrace';
 import { auth, db } from './firebase';
-import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from 'firebase/auth';
-import { collection, doc, addDoc, writeBatch, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from './lib/db/auth';
+import { collection, doc, addDoc, writeBatch, setDoc } from './lib/db/firestore';
 import { Toaster, toast } from 'sonner';
 import { motion } from 'motion/react';
 import { BUSINESS_TEMPLATES } from './lib/businessTemplates';

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, doc, onSnapshot, setDoc, serverTimestamp, query, where, deleteDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, serverTimestamp, query, where, deleteDoc } from '../lib/db/firestore';
 import { useAuthStore } from '../stores/useAuthStore';
 
 export interface Collaborator {

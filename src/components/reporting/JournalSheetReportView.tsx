@@ -75,7 +75,7 @@ export const JournalSheetReportView: React.FC<Props> = ({ selectedYear, startDat
         </div>
       ) : (
         <div className="space-y-4">
-          {evaluatedTransactions.map((tx: any) => (
+          {evaluatedTransactions.map((tx) => (
             <div 
               key={tx.id} 
               className={cn(
@@ -114,7 +114,7 @@ export const JournalSheetReportView: React.FC<Props> = ({ selectedYear, startDat
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
-                    {(tx.lines || []).map((line: any, lIdx: number) => {
+                    {(tx.lines || []).map((line, lIdx: number) => {
                       const amt = line.amountCents || 0;
                       const isDebit = amt > 0;
                       return (

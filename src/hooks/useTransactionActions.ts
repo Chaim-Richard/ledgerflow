@@ -15,7 +15,7 @@ import {
   getDocs,
   query,
   where
-} from 'firebase/firestore';
+} from '../lib/db/firestore';
 import { useMemo, useCallback } from 'react';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/useAuthStore';

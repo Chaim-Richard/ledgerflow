@@ -6,7 +6,7 @@ import {
   onSnapshot, 
   orderBy,
   limit
-} from 'firebase/firestore';
+} from '../lib/db/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useSupportStore } from '../stores/useSupportStore';

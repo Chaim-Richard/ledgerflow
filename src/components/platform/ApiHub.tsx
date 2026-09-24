@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 import { cn, getLocalDateISO } from '../../lib/utils';
 import { convertXeroAccounts } from '../../lib/xeroAdapter';
 import { db, getIdToken } from '../../firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from '../../lib/db/firestore';
 import { useTimeout } from '../../hooks/useTimeout';
 
 const AVAILABLE_SCOPES = [

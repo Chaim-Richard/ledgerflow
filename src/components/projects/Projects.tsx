@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { User } from 'firebase/auth';
+import { User } from '../../lib/db/auth';
 import { Project, Transaction, Budget, Vendor } from '../../types';
 import { 
   BrainCircuit,

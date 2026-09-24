@@ -74,6 +74,26 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     });
   }
 
+  const reportTabs = [
+    { label: 'Sales by Item', componentName: 'SalesByItemReportView' },
+    { label: 'Journal Sheet', componentName: 'JournalSheetReportView' },
+  ];
+
+  for (const report of reportTabs) {
+    test(`Report tab mounts: ${report.label} (${report.componentName})`, async ({ page }) => {
+      await page.locator('button:has-text("Reports")').first().click();
+      const tab = page.locator(`button:has-text("${report.label}")`).first();
+      await expect(tab).toBeVisible({ timeout: 10000 });
+      await tab.click();
+      await page.waitForTimeout(500);
+
+      const bodyText = await page.locator('body').innerText();
+      expect(bodyText).not.toContain('Something went wrong');
+      expect(bodyText).not.toContain('Uncaught Error');
+      expect(bodyText).not.toContain('NaN');
+    });
+  }
+
   test('Command Palette (CMD+K / CTRL+K) opens and executes view switching', async ({ page }) => {
     // Open Command Palette via keyboard shortcut or button
     await page.keyboard.press('Meta+k');

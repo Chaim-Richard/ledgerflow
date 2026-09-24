@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, DollarSign, Check, AlertCircle, Sparkles } from 'lucide-react';
-import { runTransaction, doc, collection } from 'firebase/firestore';
+import { runTransaction, doc, collection } from '../../lib/db/firestore';
 import { db } from '../../firebase';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';

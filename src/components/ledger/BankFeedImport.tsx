@@ -6,7 +6,7 @@ import { Transaction, ChartAccount } from '../../types';
 import { cn, reportError, OperationType } from '../../lib/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit } from '../../lib/db/firestore';
 import { db, getIdToken } from '../../firebase';
 import { MatchingEngine } from '../../lib/MatchingEngine';
 import { generateImportIdentity } from '../../lib/algorithms';

@@ -8,7 +8,7 @@ import {
   query,
   where,
   getDocs
-} from 'firebase/firestore';
+} from '../lib/db/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';

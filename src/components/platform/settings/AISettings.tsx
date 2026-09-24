@@ -5,7 +5,7 @@ import { Key, AlertCircle, RefreshCw, CheckCircle2, Lock, Eye, EyeOff, Database,
 import { cn } from '../../../lib/utils';
 import { toast } from 'sonner';
 import { db } from '../../../firebase';
-import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from '../../../lib/db/firestore';
 import AsyncButton from '../../ui/AsyncButton';
 import { useTimeout } from '../../../hooks/useTimeout';
 

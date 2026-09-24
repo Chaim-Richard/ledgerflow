@@ -13,7 +13,7 @@ import {
   Lock
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, updateDoc, writeBatch } from '../../../lib/db/firestore';
 import { db } from '../../../firebase';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLedgerStore } from '../../../stores/useLedgerStore';

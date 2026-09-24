@@ -1,6 +1,6 @@
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import React, { useState, useMemo } from 'react';
-import { User } from 'firebase/auth';
+import { User } from '../../lib/db/auth';
 import { Transaction, ChartAccount, TaxRate } from '../../types';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import { 

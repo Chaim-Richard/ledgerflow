@@ -27,7 +27,7 @@ import { cn, reportError, OperationType, formatCurrency } from '../../lib/utils'
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection } from '../../lib/db/firestore';
 import { db } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import JournalEntryModal from './JournalEntryModal';
