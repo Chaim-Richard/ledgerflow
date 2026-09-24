@@ -1,0 +1,126 @@
+import type { DocumentData, Firestore } from '../db/firestore';
+
+/**
+ * Restores a workspace from a backup file (the export's JSON), all or nothing.
+ *
+ * Safety rules:
+ * - A record id that already belongs to ANOTHER workspace refuses the whole restore; otherwise
+ *   a crafted backup could overwrite or take over another company's records.
+ * - Ownership, membership, billing and system fields of the workspace are never restored.
+ * - The old records are deleted and the backup written in ONE database transaction, so a
+ *   failure leaves the workspace as it was.
+ */
+
+export class RestoreError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = 'RestoreError';
+  }
+}
+
+export const RESTORE_COLLECTIONS: { key: string; coll: string }[] = [
+  { key: 'transactions', coll: 'transactions' },
+  { key: 'accounts', coll: 'chartAccounts' },
+  { key: 'projects', coll: 'projects' },
+  { key: 'budgets', coll: 'budgets' },
+  { key: 'vendors', coll: 'vendors' },
+  { key: 'customers', coll: 'customers' },
+  { key: 'invoices', coll: 'invoices' },
+  { key: 'bills', coll: 'bills' },
+  { key: 'payments', coll: 'payments' },
+  { key: 'estimates', coll: 'estimates' },
+  { key: 'inventory', coll: 'inventory' },
+  { key: 'assets', coll: 'assets' },
+  { key: 'recurringRules', coll: 'recurring' },
+  { key: 'recurring', coll: 'recurring' },
+  { key: 'taxRates', coll: 'taxRates' },
+  { key: 'autoRules', coll: 'autoRules' },
+  { key: 'reconciliations', coll: 'reconciliations' },
+];
+
+/** Workspace fields a backup may not change: ownership, membership, billing and system state. */
+export const PROTECTED_WORKSPACE_FIELDS = new Set([
+  'id', 'uid', 'createdAt', 'plan', 'billingCycle', 'computeCreditBalance', 'apiQuotaMonthlyLimitCents',
+  'apiQuotaTotalCentsUsed', 'maxSeats', 'seatCount', 'concurrentUserLimit', 'activeUserCount',
+  'stripeCustomerId', 'stripeSubscriptionId', 'bypassBilling', 'status', 'lockedUntilDate',
+  'billingLedgerChain', 'allowedWorldPaths', 'analyticalTopology', 'computeHardnessScore', 'roles',
+  'admins', 'members', 'adminCount', 'deletedAt', 'scheduledPurgeAt', 'totalQueriesThisMonth',
+]);
+
+const VALID_ID = /^[^\s/]{1,127}$/;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export interface RestoreResult {
+  restoredCollections: string[];
+  counts: Record<string, number>;
+}
+
+export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string, backup: unknown): Promise<RestoreResult> {
+  if (!isRecord(backup)) throw new RestoreError(400, 'Invalid backup payload');
+  const backupWorkspace = backup.workspace;
+  if (backupWorkspace !== undefined && (!isRecord(backupWorkspace) || backupWorkspace.id !== workspaceId)) {
+    throw new RestoreError(400, 'Backup workspace ID does not match target workspace ID');
+  }
+  if (backup.schemaVersion !== undefined && Number(backup.schemaVersion) !== 1) {
+    throw new RestoreError(400, 'Unsupported schema version');
+  }
+
+  // 1. Collect the backup's records (the same record under two keys: the last one wins).
+  const records = new Map<string, { coll: string; id: string; data: DocumentData }>();
+  for (const { key, coll } of RESTORE_COLLECTIONS) {
+    const items = backup[key];
+    if (items === undefined || items === null) continue;
+    if (!Array.isArray(items)) throw new RestoreError(400, `Backup field "${key}" must be a list`);
+    for (const item of items) {
+      if (!isRecord(item)) throw new RestoreError(400, `Backup field "${key}" contains an invalid record`);
+      const { id: rawId, ...data } = item;
+      const id = rawId === undefined || rawId === null || rawId === '' ? db.collection(coll).doc().id : rawId;
+      if (typeof id !== 'string' || !VALID_ID.test(id)) {
+        throw new RestoreError(400, `Backup field "${key}" contains an invalid record id`);
+      }
+      records.set(`${coll}/${id}`, { coll, id, data: { ...data, workspaceId } });
+    }
+  }
+
+  // 2. Refuse ids that belong to another workspace.
+  const byCollection = new Map<string, string[]>();
+  for (const r of records.values()) byCollection.set(r.coll, [...(byCollection.get(r.coll) || []), r.id]);
+  for (const [coll, ids] of byCollection) {
+    for (let i = 0; i < ids.length; i += 500) {
+      const snaps = await db.getAll(...ids.slice(i, i + 500).map(id => db.collection(coll).doc(id)));
+      const foreign = snaps.find(s => s.exists && s.data()?.workspaceId !== workspaceId);
+      if (foreign) {
+        throw new RestoreError(409, `Backup record ${coll}/${foreign.id} belongs to another workspace; nothing was restored`);
+      }
+    }
+  }
+
+  // 3. One transaction: delete this workspace's records, write the backup, update safe settings.
+  const batch = db.batch();
+  const colls = Array.from(new Set(RESTORE_COLLECTIONS.map(c => c.coll)));
+  for (const coll of colls) {
+    const existing = await db.collection(coll).where('workspaceId', '==', workspaceId).get();
+    existing.docs.forEach(doc => batch.delete(doc.ref));
+  }
+  const counts: Record<string, number> = {};
+  for (const r of records.values()) {
+    batch.set(db.collection(r.coll).doc(r.id), r.data);
+    counts[r.coll] = (counts[r.coll] || 0) + 1;
+  }
+  if (isRecord(backupWorkspace)) {
+    const safe: DocumentData = {};
+    for (const [k, v] of Object.entries(backupWorkspace)) {
+      if (!PROTECTED_WORKSPACE_FIELDS.has(k)) safe[k] = v;
+    }
+    if (Object.keys(safe).length > 0) batch.set(db.collection('workspaces').doc(workspaceId), safe, { merge: true });
+  }
+  await batch.commit();
+
+  return {
+    restoredCollections: Array.from(new Set(RESTORE_COLLECTIONS.filter(c => backup[c.key] != null).map(c => c.key))),
+    counts,
+  };
+}

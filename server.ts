@@ -1,7 +1,7 @@
 import { fxRouter } from "./src/server/routes/fxRoutes";
 import { aiRouter } from "./src/server/routes/aiRoutes";
 import { reportRouter } from "./src/server/routes/reportRoutes";
-import { workspaceRouter, countWorkspaceOwners } from "./src/server/routes/workspaceRoutes";
+import { workspaceRouter, countWorkspaceOwners, requireWorkspaceRole } from "./src/server/routes/workspaceRoutes";
 import { invitePublicRouter } from "./src/server/routes/invitePublicRoutes";
 import { invoiceEmailRouter } from "./src/server/routes/invoiceEmailRoutes";
 import { publicInvoiceRouter } from "./src/server/routes/publicInvoiceRoutes";
@@ -70,6 +70,7 @@ import { TransactionValidator } from "./src/kernel/validation/TransactionValidat
 import { assertWorkspaceAccess, getDb, FieldValue } from "./src/server/db/firestore.ts";
 import { cronRouter } from "./src/server/routes/cronRoutes.ts";
 import { runDailyMaintenance } from "./src/server/services/maintenanceService.ts";
+import { restoreWorkspaceBackup, RestoreError } from "./src/server/services/workspaceRestoreService.ts";
 import type { Transaction } from "./src/server/db/firestore.ts";
 import { verifyIdToken, authAdmin, supabaseUrl } from "./src/server/auth/supabaseAuth.ts";
 import type { DecodedIdToken } from "./src/server/auth/supabaseAuth.ts";
@@ -1705,121 +1706,15 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   app.get("/api/v1/workspaces/:workspaceId/export", apiAuthenticate, handleWorkspaceExport);
   app.get("/api/workspaces/:workspaceId/export", apiAuthenticate, handleWorkspaceExport);
 
-  app.post("/api/v1/workspaces/:workspaceId/restore", apiAuthenticate, async (req: express.Request, res: express.Response) => {
+  // Owner only: a restore replaces every record in the workspace (all or nothing).
+  app.post("/api/v1/workspaces/:workspaceId/restore", apiAuthenticate, requireWorkspaceRole(['owner']), async (req: express.Request, res: express.Response) => {
     try {
       const { workspaceId } = req.params;
-      const authReq = req as AuthenticatedRequest;
-      await authorizeWorkspace(authReq, workspaceId);
-
-      const backup = req.body;
-      if (!backup || typeof backup !== 'object') {
-        return sendError(res, "Invalid backup payload", 400);
-      }
-
-      // Basic schema and target checks
-      if (backup.workspace && backup.workspace.id !== workspaceId) {
-        return sendError(res, "Backup workspace ID does not match target workspace ID", 400);
-      }
-
-      if (backup.schemaVersion && Number(backup.schemaVersion) !== 1) {
-        return sendError(res, "Unsupported schema version", 400);
-      }
-
-      const db = getDb();
-
-      // Wipe existing collection records for this workspace to do a clean restore
-      const collectionsToRestore = [
-        { key: 'transactions', coll: 'transactions' },
-        { key: 'accounts', coll: 'chartAccounts' },
-        { key: 'projects', coll: 'projects' },
-        { key: 'budgets', coll: 'budgets' },
-        { key: 'vendors', coll: 'vendors' },
-        { key: 'customers', coll: 'customers' },
-        { key: 'invoices', coll: 'invoices' },
-        { key: 'bills', coll: 'bills' },
-        { key: 'payments', coll: 'payments' },
-        { key: 'estimates', coll: 'estimates' },
-        { key: 'inventory', coll: 'inventory' },
-        { key: 'assets', coll: 'assets' },
-        { key: 'recurringRules', coll: 'recurring' },
-        { key: 'recurring', coll: 'recurring' },
-        { key: 'taxRates', coll: 'taxRates' },
-        { key: 'autoRules', coll: 'autoRules' },
-        { key: 'reconciliations', coll: 'reconciliations' }
-      ];
-
-      // Helper to batch delete existing documents in chunks of 400
-      const deleteExisting = async (collName: string) => {
-        const snapshot = await db.collection(collName).where("workspaceId", "==", workspaceId).get();
-        if (snapshot.empty) return;
-        
-        const chunks = [];
-        for (let i = 0; i < snapshot.docs.length; i += 400) {
-          chunks.push(snapshot.docs.slice(i, i + 400));
-        }
-
-        for (const chunk of chunks) {
-          const batch = db.batch();
-          chunk.forEach((doc: any) => batch.delete(doc.ref));
-          await batch.commit();
-        }
-      };
-
-      // Wipe all related collections
-      await Promise.all(
-        Array.from(new Set(collectionsToRestore.map(c => c.coll))).map(coll => deleteExisting(coll))
-      );
-
-      // Helper to batch write restored documents in chunks of 400
-      const restoreCollection = async (items: any[], collName: string) => {
-        if (!Array.isArray(items) || items.length === 0) return;
-
-        const cleanedItems = items.map(item => {
-          const { id, ...data } = item;
-          return {
-            id: id || db.collection(collName).doc().id,
-            data: {
-              ...data,
-              workspaceId // Tenant Guard
-            }
-          };
-        });
-
-        const chunks = [];
-        for (let i = 0; i < cleanedItems.length; i += 400) {
-          chunks.push(cleanedItems.slice(i, i + 400));
-        }
-
-        for (const chunk of chunks) {
-          const batch = db.batch();
-          chunk.forEach(item => {
-            const ref = db.collection(collName).doc(item.id);
-            batch.set(ref, item.data, { merge: true });
-          });
-          await batch.commit();
-        }
-      };
-
-      // Restore each collection
-      for (const mapping of collectionsToRestore) {
-        const items = backup[mapping.key];
-        if (items) {
-          await restoreCollection(items, mapping.coll);
-        }
-      }
-
-      // Restore workspace metadata properties
-      if (backup.workspace) {
-        const { id, uid, createdAt, ...rest } = backup.workspace;
-        await db.collection("workspaces").doc(workspaceId).set(rest, { merge: true });
-      }
-
-      return res.json({
-        success: true,
-        message: "General ledger workspace successfully restored from backup.",
-        restoredCollections: Array.from(new Set(collectionsToRestore.map(c => c.key)))
-      });
+      await authorizeWorkspace(req as AuthenticatedRequest, workspaceId);
+      const result = await restoreWorkspaceBackup(getDb(), workspaceId, req.body);
+      return res.json({ success: true, message: "General ledger workspace successfully restored from backup.", ...result });
     } catch (err: any) {
+      if (err instanceof RestoreError) return sendError(res, err.message, err.status);
       handleApiError(res, err);
     }
   });
