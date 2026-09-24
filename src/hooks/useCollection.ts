@@ -8,7 +8,7 @@ import {
   onSnapshot,
   getDocs,
   WhereFilterOp
-} from 'firebase/firestore';
+} from '../lib/db/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/useAuthStore';
 

@@ -19,7 +19,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Budget, Transaction, ChartAccount } from '../../types';
 import { cn, formatCurrency, getLocalDateISO, safeConfirm } from '../../lib/utils';
-import { addDoc, collection, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, updateDoc } from '../../lib/db/firestore';
 import { db } from '../../firebase';
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';

@@ -1,5 +1,4 @@
-import { FieldValue } from 'firebase-admin/firestore';
-import { getDb } from '../db/firestore';
+import { getDb, FieldValue } from '../db/firestore';
 import { RecurringTransaction } from '../../types';
 import { findDueRecurring } from '../../lib/recurringEngine';
 import { executeIdempotent, deriveScopedOperationKey } from '../utils/idempotency';

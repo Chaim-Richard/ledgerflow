@@ -1,5 +1,5 @@
-import { Timestamp, Transaction as FirestoreTransaction } from 'firebase-admin/firestore';
 import { getDb } from '../db/firestore';
+import type { Transaction as FirestoreTransaction } from '../db/firestore';
 
 export interface IdempotencyRecord {
   id: string;
@@ -11,7 +11,7 @@ export interface IdempotencyRecord {
   status: 'pending' | 'success' | 'failed';
   result?: any;
   error?: string;
-  expiresAt: Timestamp;
+  expiresAt: string;
 }
 
 /**
@@ -99,7 +99,7 @@ export async function executeIdempotent<T>(
       updatedAt: new Date().toISOString(),
       status: 'success',
       result: result !== undefined ? result : null,
-      expiresAt: Timestamp.fromMillis(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     };
 
     t.set(keyRef, record, { merge: true });

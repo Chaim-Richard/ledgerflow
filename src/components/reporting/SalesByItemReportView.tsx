@@ -47,11 +47,12 @@ export const SalesByItemReportView: React.FC<Props> = ({ selectedYear, startDate
       });
     });
 
-    return Object.values(map).map(item => {
+    return Object.entries(map).map(([rowKey, item]) => {
       const profitCents = item.revenueCents - item.costCents;
       const margin = item.revenueCents > 0 ? (profitCents / item.revenueCents) * 100 : 0;
       return {
         ...item,
+        rowKey,
         profitCents,
         margin
       };
@@ -114,8 +115,8 @@ export const SalesByItemReportView: React.FC<Props> = ({ selectedYear, startDate
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {itemSales.map((item, idx) => (
-                <tr key={idx} className="hover:bg-neutral-50/80 transition-colors">
+              {itemSales.map((item) => (
+                <tr key={item.rowKey} className="hover:bg-neutral-50/80 transition-colors">
                   <td className="py-3 px-4">
                     <div className="font-semibold text-neutral-900">{item.name}</div>
                     <div className="text-[10px] text-neutral-400 font-mono">SKU: {item.sku}</div>

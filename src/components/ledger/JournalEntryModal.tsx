@@ -1,6 +1,6 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useMemo } from 'react';
-import { User } from 'firebase/auth';
+import { User } from '../../lib/db/auth';
 import { ChartAccount, JournalLine } from '../../types';
 import { 
   Plus, 
@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
-import { collection, writeBatch, doc } from 'firebase/firestore';
+import { collection, writeBatch, doc } from '../../lib/db/firestore';
 import { db, getIdToken } from '../../firebase';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';

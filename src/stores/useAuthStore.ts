@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { User as FirebaseUser } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { User as FirebaseUser } from '../lib/db/auth';
+import { doc, updateDoc } from '../lib/db/firestore';
 import { db } from '../firebase';
 import { Workspace, User as UserProfile } from '../types';
 import { useLedgerStore } from './useLedgerStore';

@@ -1,74 +1,23 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, disableNetwork, enableNetwork, memoryLocalCache } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+// Data and sign-in entry point. The app now runs on Supabase; this module keeps the old
+// Firebase-shaped exports (db, auth, getIdToken, ...) so existing imports keep working.
+import { getFirestore } from './lib/db/firestore';
+import { getAuth } from './lib/db/auth';
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const db = getFirestore();
 
-// Initialize Firestore with modern persistent cache configuration (replaces deprecated enableIndexedDbPersistence and enableMultiTabIndexedDbPersistence)
-const getDatabaseId = () => {
-  const dbId = firebaseConfig.firestoreDatabaseId;
-  return (dbId && dbId !== "(default)") ? dbId : undefined;
-};
+export const auth = getAuth();
 
-const isIframe = () => {
-  try {
-    return typeof window !== 'undefined' && window.self !== window.top;
-  } catch (e) {
-    return true;
-  }
-};
-
-const getCacheConfig = () => {
-  if (isIframe()) {
-    console.debug("Firestore: running in iframe workspace preview. Enabling memory cache to prevent sandboxed IndexedDB blockages.");
-    return { localCache: memoryLocalCache() };
-  }
-  
-  try {
-    return {
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
-      })
-    };
-  } catch (error) {
-    console.warn("Firestore: persistent local cache initialization failed, falling back to memory cache:", error);
-    return { localCache: memoryLocalCache() };
-  }
-};
-
-let firestoreInstance;
-const dbId = getDatabaseId();
-try {
-  firestoreInstance = dbId ? initializeFirestore(app, getCacheConfig(), dbId) : initializeFirestore(app, getCacheConfig());
-} catch (e) {
-  firestoreInstance = dbId ? getFirestore(app, dbId) : getFirestore(app);
-}
-
-export const db = firestoreInstance;
-
-export const auth = getAuth(app);
-
+// Offline mode was a Firestore cache feature; Supabase has no client cache to toggle.
 export const goOffline = async () => {
-  try {
-    await disableNetwork(db);
-    console.debug("Firestore working in offline sandbox mode");
-  } catch (error) {
-    console.error("Failed to disable Firestore network:", error);
-  }
+  console.debug('Offline mode is not available; data stays live.');
 };
 
 export const goOnline = async () => {
-  try {
-    await enableNetwork(db);
-    console.debug("Firestore connected to live network");
-  } catch (error) {
-    console.error("Failed to enable Firestore network:", error);
-  }
+  console.debug('Connected to live data.');
 };
 
 /**
- * Get the current user's ID token for authenticating with the backend.
+ * Get the current user's access token for authenticating with the backend.
  */
 export const getIdToken = async () => {
   if (auth.currentUser) {
@@ -76,4 +25,3 @@ export const getIdToken = async () => {
   }
   return null;
 };
-

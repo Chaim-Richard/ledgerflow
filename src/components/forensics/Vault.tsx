@@ -26,7 +26,7 @@ import {
   deleteDoc, 
   doc,
   updateDoc
-} from 'firebase/firestore';
+} from '../../lib/db/firestore';
 import { db, auth } from '../../firebase';
 import { CloudDocument, Transaction } from '../../types';
 import { format } from 'date-fns';

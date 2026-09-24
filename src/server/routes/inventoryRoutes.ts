@@ -1,5 +1,5 @@
 import express from 'express';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue } from '../db/firestore';
 import Decimal from 'decimal.js';
 import { DoubleEntryValidator } from '../../kernel/validation/DoubleEntryValidator';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';

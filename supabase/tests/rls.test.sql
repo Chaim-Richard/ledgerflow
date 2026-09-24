@@ -173,5 +173,51 @@ select pg_temp.expect_value('batch is all-or-nothing', $$select count(*)::text f
 select pg_temp.expect_denied('batch on a system table', 'u-book',
   $$select lf_batch('[{"op":"delete","table":"pg_authid","id":"x"}]'::jsonb)$$);
 
+-- document ids: browser writes keep firestore.rules isValidId; server writes may be long
+select pg_temp.expect_ok('browser id of 127 characters', 'u-book',
+  format($f$select lf_set('vendors', %L, '{"workspaceId":"ws1","name":"V"}'::jsonb)$f$, repeat('v', 127)));
+select pg_temp.expect_denied('browser id of 128 characters', 'u-book',
+  format($f$select lf_set('vendors', %L, '{"workspaceId":"ws1","name":"V"}'::jsonb)$f$, repeat('v', 128)));
+select pg_temp.expect_denied('browser id with a space', 'u-book',
+  $$select lf_set('vendors', 'has space', '{"workspaceId":"ws1","name":"V"}'::jsonb)$$);
+select set_config('request.jwt.claims', '', true);  -- back to a server connection
+insert into "idempotencyKeys" (id, data) values (repeat('k', 400), '{"workspaceId":"ws1"}');
+select pg_temp.expect_value('server id of 400 characters', $$select count(*)::text from "idempotencyKeys" where id = repeat('k', 400)$$, '1');
+
+-- two-step login: a user with a verified authenticator needs a code-verified (aal2) session
+select set_config('request.jwt.claims', '', true);
+insert into auth.users (id, email) values ('7a0c5c4e-0000-4000-8000-00000000a001', 'mfa@test.local');
+insert into auth.mfa_factors (id, user_id, factor_type, status, created_at, updated_at)
+  values ('7a0c5c4e-0000-4000-8000-00000000f001', '7a0c5c4e-0000-4000-8000-00000000a001', 'totp', 'verified', now(), now());
+insert into workspaces (id, data) values ('ws-mfa', '{"uid":"7a0c5c4e-0000-4000-8000-00000000a001","name":"MFA"}');
+create function pg_temp.count_as(uid text, aal text, q text) returns bigint language plpgsql as $$
+declare n bigint;
+begin
+  perform set_config('request.jwt.claims',
+    json_build_object('role', 'authenticated', 'sub', uid, 'aal', aal)::text, true);
+  execute 'set local role authenticated';
+  execute q into n;
+  execute 'reset role';
+  return n;
+end $$;
+select pg_temp.expect_value('password-only session sees nothing',
+  $$select pg_temp.count_as('7a0c5c4e-0000-4000-8000-00000000a001', 'aal1', 'select count(*) from workspaces')::text$$, '0');
+select pg_temp.expect_value('code-verified session sees its workspace',
+  $$select pg_temp.count_as('7a0c5c4e-0000-4000-8000-00000000a001', 'aal2', 'select count(*) from workspaces')::text$$, '1');
+select pg_temp.expect_count('users without an authenticator are unaffected', 'u-owner', $$select count(*) from workspaces where id = 'ws1'$$, 1);
+do $$
+declare refused boolean := false;
+begin
+  perform set_config('request.jwt.claims',
+    json_build_object('role', 'authenticated', 'sub', '7a0c5c4e-0000-4000-8000-00000000a001', 'aal', 'aal1')::text, true);
+  execute 'set local role authenticated';
+  begin
+    insert into customers (id, data) values ('c-mfa', '{"workspaceId":"ws-mfa","name":"X"}');
+  exception when others then refused := true;
+  end;
+  execute 'reset role';
+  if not refused then raise exception 'FAIL password-only session wrote a document'; end if;
+end $$;
+
 select 'ALL RLS TESTS PASSED' as result;
 rollback;

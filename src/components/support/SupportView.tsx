@@ -26,7 +26,7 @@ import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { useTimeout } from '../../hooks/useTimeout';
 import { db } from '../../firebase';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from '../../lib/db/firestore';
 
 export default function SupportView() {
   const { user, userProfile, getCurrentWorkspace } = useAuthStore();

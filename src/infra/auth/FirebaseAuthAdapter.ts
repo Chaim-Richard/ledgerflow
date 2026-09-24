@@ -4,7 +4,7 @@ import {
   signInWithPopup, 
   GoogleAuthProvider, 
   signOut as firebaseSignOut 
-} from 'firebase/auth';
+} from '../../lib/db/auth';
 import { AuthAdapter, AuthUser } from '../../services/auth/types';
 
 export class FirebaseAuthAdapter implements AuthAdapter {

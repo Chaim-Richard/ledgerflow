@@ -4,7 +4,7 @@ import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { db } from '../../../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from '../../../lib/db/firestore';
 import { APP_TABS, SYSTEM_GLOSSARY } from '../../../config/registry';
 import { 
   Sliders, 

@@ -1,7 +1,6 @@
 import express from "express";
 import crypto from "crypto";
-import admin from "firebase-admin";
-import { getDb, validateWorkspaceMember } from "../db/firestore.ts";
+import { getDb, validateWorkspaceMember, FieldValue } from "../db/firestore.ts";
 import { getStripe } from "../services/stripeService.ts";
 import { getTrustedAppUrl } from "../utils/urlHelper.ts";
 import { incrementShardedCounter, getShardedCounterValue } from "../services/shardedCounterService.ts";
@@ -159,7 +158,7 @@ billingRouter.post("/verify-session", async (req: express.Request, res: express.
         t.set(eventRef, {
           sessionId: session.id,
           workspaceId,
-          claimedAt: admin.firestore.FieldValue.serverTimestamp()
+          claimedAt: FieldValue.serverTimestamp()
         });
         return false;
       });
@@ -174,7 +173,7 @@ billingRouter.post("/verify-session", async (req: express.Request, res: express.
       await db.collection("workspaces").doc(workspaceId).set({
         plan: targetPlan,
         billingCycle: "monthly",
-        computeCreditBalance: admin.firestore.FieldValue.increment(creditsToGrant),
+        computeCreditBalance: FieldValue.increment(creditsToGrant),
         computeLimit: creditsToGrant, 
         stripeCustomerId: session.customer || null,
         stripeSubscriptionId: session.subscription || null,

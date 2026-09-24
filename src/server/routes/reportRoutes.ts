@@ -1,5 +1,6 @@
 import express from "express";
-import admin from "firebase-admin";
+import type { DecodedIdToken } from "../auth/supabaseAuth";
+import type { Query } from "../db/firestore";
 import { z } from "zod";
 import { getDb, validateWorkspaceMember } from "../db/firestore";
 import { isTransactionInDateRange, isPostable } from "../../lib/txFilters";
@@ -27,7 +28,7 @@ function getCacheKey(req: express.Request): string {
   return crypto.createHash('sha256').update(payload).digest('hex');
 }
 
-interface AuthUser extends admin.auth.DecodedIdToken {
+interface AuthUser extends DecodedIdToken {
   email_verified: boolean;
 }
 
@@ -54,7 +55,7 @@ async function getReportContext(req: AuthenticatedRequest, workspaceId: string, 
   await authorizeWorkspace(req, workspaceId);
   const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get();
   
-  let txQuery: admin.firestore.Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
+  let txQuery: Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
   if (startDate) {
     txQuery = txQuery.where("date", ">=", startDate);
   }
@@ -240,7 +241,7 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
     await authorizeWorkspace(authReq, workspaceId);
     const db = getDb();
 
-    let txQuery: admin.firestore.Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
+    let txQuery: Query = db.collection("transactions").where("workspaceId", "==", workspaceId);
     
     const targetMonth = month ? String(month) : getLocalDateISO(new Date()).substring(0, 7);
     const { startDate: mStart, endDate: mEnd } = calculateMonthDateRange(targetMonth);

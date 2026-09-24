@@ -31,7 +31,7 @@ import { useUIStore } from '../../stores/useUIStore';
 import { SYSTEM_GLOSSARY } from '../../config/registry';
 import { BookA } from 'lucide-react';
 import { auth, db } from '../../firebase';
-import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc } from '../../lib/db/firestore';
 
 
 

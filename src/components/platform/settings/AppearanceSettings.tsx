@@ -16,7 +16,7 @@ import { cn } from '../../../lib/utils';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { db } from '../../../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from '../../../lib/db/firestore';
 
 export default function AppearanceSettings() {
   const theme = useUIStore(state => state.theme);

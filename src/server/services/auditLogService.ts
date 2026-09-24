@@ -1,4 +1,4 @@
-import type { DocumentData, DocumentReference, Firestore } from 'firebase-admin/firestore';
+import type { DocumentData, DocumentReference, Firestore } from '../db/firestore';
 import { getDb } from '../db/firestore';
 
 type AuditWriter = { set(ref: DocumentReference, data: DocumentData): unknown };

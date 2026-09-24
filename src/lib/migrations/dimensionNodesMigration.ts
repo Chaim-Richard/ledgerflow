@@ -1,4 +1,4 @@
-import { doc, getDoc, updateDoc, writeBatch, deleteField, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, writeBatch, deleteField, type Firestore } from '../db/firestore';
 import { DimensionNode } from '../../types';
 
 export interface MigrationResult {

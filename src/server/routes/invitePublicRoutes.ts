@@ -1,5 +1,5 @@
 import express from 'express';
-import admin from 'firebase-admin';
+import { verifyIdToken } from '../auth/supabaseAuth';
 import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { verifyInviteTokenSignature } from '../../lib/inviteManager';
@@ -16,7 +16,7 @@ const populateUserAuth = async (req: express.Request, res: express.Response, nex
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split('Bearer ')[1];
     try {
-      const decoded = await admin.auth().verifyIdToken(token);
+      const decoded = await verifyIdToken(token);
       (req as any).user = decoded;
     } catch (e) {
       // Ignore token decoding failure for public GET lookup

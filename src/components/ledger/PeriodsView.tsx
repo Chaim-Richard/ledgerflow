@@ -4,7 +4,7 @@ import { Lock, Unlock, ShieldCheck, AlertCircle, Calendar, Plus, Trash2, History
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { db } from '../../firebase';
-import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, updateDoc } from '../../lib/db/firestore';
 import { toast } from 'sonner';
 import { cn, getLocalDateISO, safeConfirm } from '../../lib/utils';
 import AsyncButton from '../ui/AsyncButton';

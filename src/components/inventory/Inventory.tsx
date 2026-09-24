@@ -37,7 +37,7 @@ import {
   deleteDoc, 
   doc,
   updateDoc
-} from 'firebase/firestore';
+} from '../../lib/db/firestore';
 import { db } from '../../firebase';
 import { InventoryItem } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';

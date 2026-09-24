@@ -1,14 +1,15 @@
 import express from 'express';
-import admin from 'firebase-admin';
+import type { DecodedIdToken } from '../auth/supabaseAuth';
 import { z } from 'zod';
-import { getDb, validateWorkspaceMember } from '../db/firestore';
+import { getDb, validateWorkspaceMember, FieldValue } from '../db/firestore';
+import type { Firestore } from '../db/firestore';
 import { writeServerAuditLog } from '../services/auditLogService';
 import { seedDemoWorkspace } from '../../lib/demoWorkspaceSeeder';
 import { formatTzDate } from './transactionRoutes';
 
 export const workspaceRouter = express.Router();
 
-interface AuthUser extends admin.auth.DecodedIdToken {
+interface AuthUser extends DecodedIdToken {
   email_verified: boolean;
 }
 
@@ -27,7 +28,7 @@ function sendError(res: express.Response, message: string, status: number = 500,
 /**
  * Middleware helper for checking per-workspace user role.
  */
-export async function getWorkspaceUserRole(db: FirebaseFirestore.Firestore, workspaceId: string, uid: string): Promise<string> {
+export async function getWorkspaceUserRole(db: Firestore, workspaceId: string, uid: string): Promise<string> {
   const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
   if (!wsDoc.exists) throw new Error('NOT_FOUND');
   const data = wsDoc.data() || {};
@@ -429,8 +430,8 @@ workspaceRouter.post('/:workspaceId/restore', requireWorkspaceRole(['owner']), a
     const now = new Date();
     await wsRef.update({
       status: 'active',
-      deletedAt: admin.firestore.FieldValue.delete(),
-      scheduledPurgeAt: admin.firestore.FieldValue.delete(),
+      deletedAt: FieldValue.delete(),
+      scheduledPurgeAt: FieldValue.delete(),
       updatedAt: now.toISOString()
     });
 

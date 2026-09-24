@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { db, auth } from '../firebase';
-import { doc, writeBatch, collection, addDoc, setDoc } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
+import { doc, writeBatch, collection, addDoc, setDoc } from '../lib/db/firestore';
+import { signOut } from '../lib/db/auth';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useUIStore } from '../stores/useUIStore';

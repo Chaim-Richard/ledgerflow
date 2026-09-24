@@ -1,6 +1,6 @@
 import express from 'express';
 import { z } from 'zod';
-import type { Firestore } from 'firebase-admin/firestore';
+import type { Firestore } from '../db/firestore';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
 import { createPaymentAtomic } from '../services/paymentService';
 import { getLocalDateISO } from '../../lib/utils';

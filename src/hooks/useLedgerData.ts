@@ -10,7 +10,7 @@ import {
   limit,
   orderBy,
   getDocs
-} from 'firebase/firestore';
+} from '../lib/db/firestore';
 import { db } from '../firebase';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useAuthStore } from '../stores/useAuthStore';

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Transaction as FirestoreTransaction } from 'firebase-admin/firestore';
+import type { Transaction as FirestoreTransaction } from '../db/firestore';
 import { getDb } from '../db/firestore';
 import { 
   executeIdempotent, 
