@@ -49,6 +49,7 @@ import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 
 import { safeAsync, getLocalDateISO } from "../lib/utils";
 import { fetchSnapshotBridge, useSnapshotBridge } from "./useSnapshotBridge";
+import { effectiveLockDate } from '../lib/periodLock';
 
 
 export function useLedgerData() {
@@ -148,13 +149,16 @@ export function useLedgerData() {
   const matchingThreshold = useLedgerStore(state => state.matchingThreshold);
   const setBaseCurrency = useLedgerStore(state => state.setBaseCurrency);
   const setLockDate = useLedgerStore(state => state.setLockDate);
+  const setLockException = useLedgerStore(state => state.setLockException);
   const setMatchingThreshold = useLedgerStore(state => state.setMatchingThreshold);
 
   useEffect(() => {
     const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
     if (currentWorkspace) {
       const targetCurrency = currentWorkspace.currency || 'USD';
-      const targetLockDate = currentWorkspace.lockDate || null;
+      // Closed through this date for this user (soft close applies to bookkeepers only)
+      const targetLockDate = effectiveLockDate(currentWorkspace, user?.uid || '');
+      setLockException(currentWorkspace.lockException || null);
       const targetThreshold = typeof currentWorkspace.matchingThreshold === 'number' ? currentWorkspace.matchingThreshold : 0.85;
       if (baseCurrency !== targetCurrency) {
         setBaseCurrency(targetCurrency);
@@ -166,7 +170,7 @@ export function useLedgerData() {
         setMatchingThreshold(targetThreshold);
       }
     }
-  }, [currentWorkspaceId, workspaces, baseCurrency, lockDate, matchingThreshold, setBaseCurrency, setLockDate, setMatchingThreshold]);
+  }, [currentWorkspaceId, workspaces, user?.uid, baseCurrency, lockDate, matchingThreshold, setBaseCurrency, setLockDate, setLockException, setMatchingThreshold]);
 
   // Main Entities (Workspace Scoped)
   useEffect(() => {
@@ -377,7 +381,7 @@ export function useLedgerData() {
   // 1. Sales & Invoicing Hub
   useEffect(() => {
     if (!user || !currentWorkspaceId) return;
-    if (activeTab !== 'sales' && activeTab !== 'estimates' && activeTab !== 'payments' && activeTab !== 'credit-notes' && activeTab !== 'audit-trail') return;
+    if (activeTab !== 'sales' && activeTab !== 'estimates' && activeTab !== 'payments' && activeTab !== 'credit-notes' && activeTab !== 'audit-trail' && activeTab !== 'month-end-close') return;
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubInvoices = onSnapshot(query(collection(db, 'invoices'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
@@ -417,7 +421,7 @@ export function useLedgerData() {
   // 2. Purchases, Bills & Vendors
   useEffect(() => {
     if (!user || !currentWorkspaceId) return;
-    if (activeTab !== 'purchases' && activeTab !== 'inventory' && activeTab !== 'credit-notes') return;
+    if (activeTab !== 'purchases' && activeTab !== 'inventory' && activeTab !== 'credit-notes' && activeTab !== 'month-end-close') return;
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubBills = onSnapshot(query(collection(db, 'bills'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {
@@ -499,7 +503,7 @@ export function useLedgerData() {
   // 6. Banking Feed & Reconciliations
   useEffect(() => {
     if (!user || !currentWorkspaceId) return;
-    if (activeTab !== 'banking' && activeTab !== 'reconciliation') return;
+    if (activeTab !== 'banking' && activeTab !== 'reconciliation' && activeTab !== 'month-end-close') return;
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubBankLines = onSnapshot(query(collection(db, 'bankLines'), ...filter, orderBy('date', 'desc'), limit(2000)), (snap) => {

@@ -10,7 +10,7 @@ import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchem
 import { Transaction } from '../../types';
 import { parseLocalDate, getLocalDateISO } from '../../lib/utils';
 import { getDb, assertWorkspaceAccess } from '../db/firestore';
-import { isPostable, getAbsoluteTotal, isTransactionInDateRange } from '../../lib/txFilters';
+import { isPostable, getAbsoluteTotal } from '../../lib/txFilters';
 import { optimizedTransactionSimilarity } from '../../lib/algorithms';
 import { executeCommand } from '../utils/commandExecutor';
 import { requirePlanCapacity } from '../middleware/planCapacity';
@@ -21,6 +21,8 @@ import { requireLedgerWriter } from '../middleware/requireLedgerWriter';
 import { BankLineError, payFromBankLine, splitBankLine } from '../services/bankLineService';
 import { z } from 'zod';
 import { writeServerAuditLog } from '../services/auditLogService';
+import { assertPostingOpen, lockMessage, postingLock } from '../../lib/periodLock';
+import { closePeriod, PeriodCloseError } from '../services/periodCloseService';
 
 export const transactionRouter = express.Router();
 transactionRouter.use(requireLedgerWriter);
@@ -274,9 +276,7 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
          if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
            throw new Error('Not a member');
          }
-         if (wsData?.lockDate && txData?.date && isTransactionInDateRange(txData as any, undefined, wsData.lockDate)) {
-           throw new Error(`Period Locked: Data mutation forbidden before ${wsData.lockDate}`);
-         }
+         if (txData?.date) assertPostingOpen(txData.date, wsData, user.uid);
          if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) {
            throw new Error(`Forbidden: Transaction status is locked (${txData?.status}).`);
          }
@@ -350,9 +350,7 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
       if ((doc.data()?.status === 'certified' || doc.data()?.status === 'void' || doc.data()?.isCleared === true) && !user.admin) {
         throw new Error('Cannot modify certified, cleared, or voided transactions');
       }
-      if (wsData?.lockDate && doc.data()?.date && !isTransactionInDateRange(doc.data() as any, wsData.lockDate)) {
-        throw new Error(`Period Locked: Cannot modify a transaction originally dated before ${wsData.lockDate}`);
-      }
+      if (doc.data()?.date) assertPostingOpen(doc.data()?.date, wsData, user.uid);
 
       const txToSave = { ...validatedTx };
       delete (txToSave as any).expectedUpdatedAt;
@@ -416,9 +414,8 @@ transactionRouter.delete('/:id', requireOpenPeriod('transactions'), async (req, 
       return res.status(403).json({ error: 'Not a member' });
     }
 
-    if (wsData?.lockDate && data?.date && !isTransactionInDateRange(data as any, wsData.lockDate)) {
-      return res.status(400).json({ error: `Period Locked: Data mutation forbidden before ${wsData.lockDate}` });
-    }
+    const lock = data?.date ? postingLock(data.date, wsData, user.uid) : null;
+    if (lock) return res.status(400).json({ error: lockMessage(data?.date, lock) });
 
     if ((data?.status === 'certified' || data?.status === 'void' || data?.isCleared === true) && !user.admin) {
       return res.status(403).json({ error: `Forbidden: Transaction status is audited, cleared, or locked (${data?.status}). Destructive actions are restricted to administrators.` });
@@ -605,7 +602,7 @@ transactionRouter.post('/batch', async (req, res) => {
          const txData = txDoc.data();
          if (txData?.workspaceId !== workspaceId) throw new Error(`Transaction ${chunkUpdates[i].id} does not belong to this workspace`);
          
-         if (wsData?.lockDate && txData?.date && isTransactionInDateRange(txData as any, undefined, wsData.lockDate)) throw new Error(`Period Locked: Transaction ${chunkUpdates[i].id} is locked.`);
+         if (txData?.date) assertPostingOpen(txData.date, wsData, user.uid);
          if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) throw new Error(`Forbidden: Transaction ${chunkUpdates[i].id} status is locked.`);
          
          const updateData = { ...chunkUpdates[i].data };
@@ -674,8 +671,6 @@ export async function handleReconcile(req: express.Request, res: express.Respons
      if (!['owner', 'accountant', 'bookkeeper'].includes(userRole)) {
        return res.status(403).json({ error: 'Forbidden: requires owner, accountant, or bookkeeper role' });
      }
-     const lockDate = wsData?.lockDate;
-
      // Pre-collect all doc IDs and account IDs
      const bankLineIds = new Set<string>();
      const txIds = new Set<string>();
@@ -713,30 +708,12 @@ export async function handleReconcile(req: express.Request, res: express.Respons
           txSnaps.set(id, snap);
         }
 
-        if (lockDate) {
-          for (const snap of bankLineSnaps.values()) {
-            if (snap.exists) {
-              const lineDate = snap.data()?.date || '';
-              if (lineDate && lineDate <= lockDate) {
-                throw new Error(`Period Locked: Cannot modify bank line dated ${lineDate} on or before ${lockDate}`);
-              }
-            }
-          }
-          for (const snap of txSnaps.values()) {
-            if (snap.exists) {
-              const txDate = snap.data()?.date || '';
-              if (txDate && txDate <= lockDate) {
-                throw new Error(`Period Locked: Cannot modify transaction dated ${txDate} on or before ${lockDate}`);
-              }
-            }
-          }
-          for (const op of operations) {
-            if (op.type === 'createTransaction' && op.data?.date) {
-              if (op.data.date <= lockDate) {
-                throw new Error(`Period Locked: Cannot create transaction dated ${op.data.date} on or before ${lockDate}`);
-              }
-            }
-          }
+        // Closed periods (src/lib/periodLock.ts): nothing dated in them is changed or created.
+        for (const snap of [...bankLineSnaps.values(), ...txSnaps.values()]) {
+          if (snap.exists && snap.data()?.date) assertPostingOpen(snap.data().date, wsData, user.uid);
+        }
+        for (const op of operations) {
+          if (op.type === 'createTransaction' && op.data?.date) assertPostingOpen(op.data.date, wsData, user.uid);
         }
 
         // Also gather any account IDs from existing transactions that might be updated
@@ -1115,9 +1092,8 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
     const targetCurr = (targetCurrency || baseCurrency).toUpperCase();
 
     const today = getLocalDateISO();
-    if (wsData?.lockDate && today <= wsData.lockDate) {
-      return res.status(400).json({ error: `Period Locked: Cannot post revaluation adjustment in locked period ${wsData.lockDate}.` });
-    }
+    const lock = postingLock(today, wsData, user.uid);
+    if (lock) return res.status(400).json({ error: lockMessage(today, lock) });
 
     // --- LIVE FX FETCH ---
     const liveRates = await FxService.getRatesForBase(baseCurrency);
@@ -1369,106 +1345,21 @@ transactionRouter.post('/close-year', async (req, res) => {
   }
 });
 
+// Hard close through the end of a month. Same service as the Month-End Close screen
+// (src/server/services/periodCloseService.ts): owner/accountant only, refused while drafts are
+// dated in the period, audited. The year-end closing entry is /close-year.
 transactionRouter.post('/close-month', async (req, res) => {
+  const { workspaceId, month } = (req.body || {}) as { workspaceId?: string; month?: string };
+  if (!workspaceId || !month || !/^\d{4}-\d{2}$/.test(month)) {
+    return res.status(400).json({ error: 'Missing or invalid parameters: workspaceId and month (YYYY-MM) required.' });
+  }
+  const user = (req as unknown as { user: { uid: string; email?: string } }).user;
   try {
-    const { workspaceId, month, isFiscalYearEnd } = req.body;
-    if (!workspaceId || !month || !/^\d{4}-\d{2}$/.test(month)) {
-      return res.status(400).json({ error: 'Missing or invalid parameters: workspaceId and month (YYYY-MM) required.' });
-    }
-
-    const db = getDb();
-    const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-    if (!wsDoc.exists) {
-      return res.status(404).json({ error: 'Workspace not found.' });
-    }
-
-    const user = (req as any).user;
-    const wsData = wsDoc.data();
-    const isOwnerOrAdmin = wsData?.uid === user.uid || wsData?.members?.includes(user.uid) || user.admin;
-    if (!isOwnerOrAdmin) {
-      return res.status(403).json({ error: 'Forbidden: Insufficient permissions to close period.' });
-    }
-
-    // Calculate end date of month
-    const [yearStr, monthStr] = month.split('-');
-    const year = parseInt(yearStr, 10);
-    const monthNum = parseInt(monthStr, 10);
-    const lastDay = new Date(year, monthNum, 0).getDate();
-    const closingDate = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
-
-    if (wsData?.lockDate && closingDate < wsData.lockDate) {
-      return res.status(400).json({ error: `Cannot move lock date backwards. Current lock date is ${wsData.lockDate}.` });
-    }
-
-    if (wsData?.lockDate && wsData.lockDate >= closingDate) {
-      return res.status(400).json({ error: `Period ${month} is already closed (locked through ${wsData.lockDate}).` });
-    }
-
-    const today = formatTzDate(new Date(), wsData?.timezone);
-    if (closingDate > today) {
-      return res.status(400).json({ error: `Cannot close future accounting period. Closing date (${closingDate}) is ahead of current date (${today}).` });
-    }
-
-    const batch = db.batch();
-    let closingTxResult: any = null;
-
-    if (isFiscalYearEnd) {
-      const accountsSnap = await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get();
-      const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-
-      const txSnap = await db.collection('transactions')
-        .where('workspaceId', '==', workspaceId)
-        .where('date', '<=', closingDate)
-        .get();
-      const transactions = txSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-
-      closingTxResult = ClosingEntryEngine.generateClosingJournalEntry({
-        workspaceId,
-        uid: user.uid,
-        closingDate,
-        accounts,
-        transactions,
-        baseCurrency: wsData?.currency || 'USD'
-      });
-
-      const txRef = db.collection('transactions').doc(closingTxResult.closingTransaction.id);
-      batch.set(txRef, closingTxResult.closingTransaction);
-
-      if (closingTxResult.generatedRetainedEarningsAccount) {
-        const accRef = db.collection('chartAccounts').doc(closingTxResult.generatedRetainedEarningsAccount.id);
-        batch.set(accRef, closingTxResult.generatedRetainedEarningsAccount);
-      }
-    }
-
-    batch.update(db.collection('workspaces').doc(workspaceId), {
-      lockDate: closingDate,
-      updatedAt: new Date().toISOString()
-    });
-
-    await writeServerAuditLog({
-      workspaceId,
-      uid: user.uid,
-      email: user.email || 'authenticated-user',
-      action: 'MONTH_END_CLOSE',
-      entityType: 'workspace',
-      entityId: workspaceId,
-      details: {
-        description: `Month-end closed for ${month} through ${closingDate}.${isFiscalYearEnd ? ' Fiscal year end closing entry generated.' : ''}`
-      }
-    }, { db });
-
-    await batch.commit();
-
-    res.json({
-      status: 'ok',
-      month,
-      closingDate,
-      lockDate: closingDate,
-      message: `Period ${month} locked through ${closingDate}.`,
-      closingTransaction: closingTxResult?.closingTransaction || null
-    });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    const result = await closePeriod(getDb(), { workspaceId, uid: user.uid, email: user.email, month, mode: 'hard' });
+    res.json({ status: 'ok', month, closingDate: result.lockDate, lockDate: result.lockDate, message: `Period ${month} locked through ${result.lockDate}.` });
+  } catch (e) {
+    if (e instanceof PeriodCloseError) return res.status(e.status).json({ error: e.message, details: e.details });
+    res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }
 });
 
@@ -1616,8 +1507,9 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
 
       // Validate reversal date against period lock (must land in an open period)
       const revDate = reversalDate || formatTzDate(new Date(), wsData?.timezone);
-      if (wsData?.lockDate && revDate <= wsData.lockDate) {
-        const err: any = new Error(`Period Locked: Reversal date (${revDate}) cannot be in a closed period (<= ${wsData.lockDate}).`);
+      const revLock = postingLock(revDate, wsData, user.uid);
+      if (revLock) {
+        const err: any = new Error(`${lockMessage(revDate, revLock)} Choose a reversal date in an open period.`);
         err.statusCode = 400;
         throw err;
       }
@@ -1625,8 +1517,9 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
       // Validate replacement date against period lock (must land in an open period)
       if (replacement) {
         const replDate = replacement.date || revDate;
-        if (wsData?.lockDate && replDate <= wsData.lockDate) {
-          const err: any = new Error(`Period Locked: Replacement date (${replDate}) cannot be in a closed period (<= ${wsData.lockDate}).`);
+        const replLock = postingLock(replDate, wsData, user.uid);
+        if (replLock) {
+          const err: any = new Error(`${lockMessage(replDate, replLock)} Choose a replacement date in an open period.`);
           err.statusCode = 400;
           throw err;
         }

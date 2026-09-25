@@ -20,6 +20,7 @@ import { isPostable } from '../lib/txFilters';
 import { calculateDocumentTax, cashPostedWithDocumentCents } from '../lib/documentMath';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
 import { planInvoiceCogs } from './invoiceCogs';
+import { isLockedDate } from '../lib/periodLock';
 
 export interface EntityMutation {
   collection: string;
@@ -76,7 +77,8 @@ export class LedgerPostService {
   public static verifyLockDate(dateStr: string, context?: LedgerPostContext): void {
     if (!dateStr) return;
     const lockDate = this.getLockDate(context);
-    if (lockDate && dateStr <= lockDate) {
+    const exception = context && context.lockDate !== undefined ? null : useLedgerStore.getState().lockException;
+    if (isLockedDate(dateStr, lockDate, exception)) {
       throw new Error(`Period is locked on or before ${lockDate}. Cannot post or modify transaction on ${dateStr}.`);
     }
   }

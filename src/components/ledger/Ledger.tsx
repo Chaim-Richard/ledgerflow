@@ -41,7 +41,6 @@ const BalanceSheetView = React.lazy(() => import('./BalanceSheetView'));
 const CashFlowView = React.lazy(() => import('./CashFlowView'));
 
 const ProfitAndLossView = React.lazy(() => import('./ProfitAndLossView'));
-const PeriodsView = React.lazy(() => import('./PeriodsView'));
 const ProjectProfitabilityView = React.lazy(() => import('./ProjectProfitabilityView'));
 const AuditTrailView = React.lazy(() => import('./AuditTrailView'));
 const TaxManager = React.lazy(() => import('../finance/TaxManager'));

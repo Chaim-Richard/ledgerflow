@@ -40,7 +40,6 @@ export default function BlueprintSettings() {
 
   // Read lockDate and actions from ledger store
   const lockDate = useLedgerStore(state => state.lockDate);
-  const setLockDate = useLedgerStore(state => state.setLockDate);
   const baseCurrency = useLedgerStore(state => state.baseCurrency);
   const setBaseCurrency = useLedgerStore(state => state.setBaseCurrency);
 
@@ -147,8 +146,9 @@ export default function BlueprintSettings() {
     if (selectedLockDate) {
       await txActions.handleCloseMonth(selectedLockDate);
     } else {
-      setLockDate(null);
-      toast.info("Lock date cleared locally. (Cloud sync requires administrative override)");
+      // Reopening needs a reason and the right role: it is done in Month-End Close.
+      toast.info('To reopen a closed period, use Month-End Close (a reason is required).');
+      useUIStore.getState().setActiveTab('month-end-close');
     }
   };
 

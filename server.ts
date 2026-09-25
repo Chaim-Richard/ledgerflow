@@ -248,30 +248,6 @@ function calculateWorkspaceCharges(wsData: any, baseCredits: number, baseCents: 
 }
 
 /**
- * Period Lock Enforcement
- * Prevents modifications to closed fiscal periods
- */
-async function verifyLockDate(workspaceId: string, date: string) {
-  try {
-    const db = getDb();
-    const ws = await db.collection("workspaces").doc(workspaceId).get();
-    if (ws.exists) {
-      const data = ws.data();
-      if (data?.lockDate && date <= data.lockDate) {
-        throw new Error(`Period Locked: Data mutation forbidden before ${data.lockDate}`);
-      }
-    } else {
-      throw new Error("Workspace not found");
-    }
-  } catch (err: any) {
-    if (err.message?.includes("Period Locked") || err.message === "Workspace not found") {
-      throw err;
-    }
-    throw new Error(`Failed to verify period lock status: ${err.message}`, { cause: err });
-  }
-}
-
-/**
  * Standard API error response
  */
 function sendError(res: express.Response, message: string, status: number = 500, details?: any) {

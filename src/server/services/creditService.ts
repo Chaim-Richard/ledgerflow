@@ -4,6 +4,7 @@ import { calculateAmountDue } from '../../lib/documentMath';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import type { ChartAccount } from '../../types';
+import { lockMessage, postingLock } from '../../lib/periodLock';
 
 /**
  * Customer credit notes and vendor credits after they are issued:
@@ -120,7 +121,8 @@ export async function refundCredit(db: Firestore, input: RefundCreditInput) {
     if (!cash || cash.workspaceId !== input.workspaceId || resolveAccountRole(cash) !== 'cash') {
       throw new CreditError(400, 'Choose a cash or bank account of this workspace');
     }
-    if (workspace.lockDate && input.date <= workspace.lockDate) throw new CreditError(400, `Period is locked on or before ${workspace.lockDate}`);
+    const lock = postingLock(input.date, workspace, input.uid);
+    if (lock) throw new CreditError(400, lockMessage(input.date, lock));
     if (!USABLE_CREDIT.has(credit.status)) throw new CreditError(409, `${side.label} is ${credit.status}; nothing left to refund`);
     const remaining = remainingOf(credit);
     if (amountCents > remaining) throw new CreditError(400, `Only ${remaining} cents are left on this credit`);

@@ -31,6 +31,7 @@ import {
 
 
 import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator';
+import type { LockException } from '../lib/periodLock';
 export interface LedgerState {
   _version: number;
   _lastSync: number;
@@ -85,7 +86,10 @@ export interface LedgerState {
   optimisticIds: Set<string>;
   computedAccounts: ChartAccount[];
   totalLedgerBalance: number;
+  /** The last closed date for the signed-in user (hard close, or soft close for bookkeepers). */
   lockDate: string | null;
+  /** Partial unlock inside the closed period (dates in it are open again). */
+  lockException: LockException | null;
   isPrivacyMode: boolean;
   baseCurrency: string;
   matchingThreshold: number;
@@ -105,6 +109,7 @@ export interface LedgerState {
   deleteTransaction: (id: string) => void;
   updateTransaction: (id: string, updates: Partial<Transaction>) => void;
   setLockDate: (date: string | null) => void;
+  setLockException: (exception: LockException | null) => void;
   setBaseCurrency: (currency: string) => void;
   setMatchingThreshold: (threshold: number) => void;
   setPrivacyMode: (active: boolean) => void;
@@ -233,6 +238,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     state.setTransactions(nextTxs);
   },
   lockDate: null,
+  lockException: null,
   baseCurrency: 'USD',
   matchingThreshold: 0.8,
   isDataTruncated: false,
@@ -240,6 +246,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   isPrivacyMode: false,
 
   setLockDate: (date) => set({ lockDate: date }),
+  setLockException: (exception) => set({ lockException: exception }),
   setBaseCurrency: (currency) => set({ baseCurrency: currency }),
   setMatchingThreshold: (threshold) => set({ matchingThreshold: threshold }),
   setPrivacyMode: (active) => set({ isPrivacyMode: active }),

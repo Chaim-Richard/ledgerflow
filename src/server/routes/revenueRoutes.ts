@@ -52,7 +52,7 @@ revenueRouter.post('/recognize', async (req, res) => {
     const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : getLocalDateISO();
 
     // 3. Validate period lock
-    await assertPeriodOpen(db, workspaceId, txDate);
+    await assertPeriodOpen(db, workspaceId, txDate, user.uid);
 
     const tx = {
       id: db.collection("transactions").doc().id,

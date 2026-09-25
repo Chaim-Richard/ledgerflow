@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { getDb } from '../db/firestore';
+import { lockMessage, postingLock } from '../../lib/periodLock';
 
 export function requireOpenPeriod(collectionOrDb?: string | any, dbOverride?: any) {
   const collectionName = typeof collectionOrDb === 'string' ? collectionOrDb : undefined;
@@ -58,14 +59,16 @@ export function requireOpenPeriod(collectionOrDb?: string | any, dbOverride?: an
         return next();
       }
 
-      const lockDate = wsDoc.data()?.lockDate;
-      if (lockDate && date <= lockDate) {
+      const uid = String((req as Request & { user?: { uid?: string } }).user?.uid || '');
+      const lock = postingLock(date, wsDoc.data(), uid);
+      if (lock) {
+        const message = lockMessage(date, lock);
         return res.status(400).json({
           status: 'error',
-          error: `Period Locked: Data mutation forbidden before or on ${lockDate}`,
-          message: `Period Locked: Data mutation forbidden before or on ${lockDate}`,
+          error: message,
+          message,
           code: 'PERIOD_LOCKED',
-          lockDate
+          lockDate: lock.through
         });
       }
 

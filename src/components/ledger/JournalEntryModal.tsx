@@ -26,6 +26,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useTimeout } from '../../hooks/useTimeout';
 import { resolveAccountRole } from '../../lib/accountUtils';
+import { isLockedDate } from '../../lib/periodLock';
 
 // Temporal series for various currencies (to ensure we use 'rate of date of change' as requested)
 const getTemporalRatesFor = (currency: string): TemporalValidity[] => {
@@ -56,6 +57,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   
   const baseCurrency = useLedgerStore(state => state.baseCurrency);
   const lockDate = useLedgerStore(state => state.lockDate);
+  const lockException = useLedgerStore(state => state.lockException);
   const workspace = useAuthStore(state => state.getCurrentWorkspace());
   const activeDimensions = (workspace?.dimensions || DEFAULT_WORKSPACE_DIMENSIONS).filter(d => d.id !== 'category');
   
@@ -63,7 +65,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   const [exchangeRate, setExchangeRate] = useState<number>(1.0);
   const { setSafeTimeout } = useTimeout();
   
-  const isLocked = !!(lockDate && date <= lockDate);
+  const isLocked = !!date && isLockedDate(date, lockDate, lockException);
 
   const [lines, setLines] = useState<JournalLine[]>([
     { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },

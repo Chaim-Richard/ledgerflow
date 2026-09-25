@@ -10,10 +10,10 @@ import { multiFactor, TotpMultiFactorGenerator } from '../../../lib/db/auth';
 import { auth } from '../../../firebase';
 import { toast } from 'sonner';
 import { RequireRole } from '../../ui/RequireRole';
+import { useUIStore } from '../../../stores/useUIStore';
 
 export default function SecuritySettings() {
   const lockDate = useLedgerStore(s => s.lockDate);
-  const setLockDate = useLedgerStore(s => s.setLockDate);
   const [isResetting, setIsResetting] = useState(false);
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
   const user = useAuthStore(state => state.user);
@@ -56,8 +56,9 @@ export default function SecuritySettings() {
     } else {
       // If we want to allow clearing, we'd need a route for that, 
       // but for now we follow the audit which emphasizes close-month.
-      setLockDate(null);
-      toast.info("Lock date cleared locally. (Cloud sync requires administrative override)");
+      // Reopening needs a reason and the right role: it is done in Month-End Close.
+      toast.info('To reopen a closed period, use Month-End Close (a reason is required).');
+      useUIStore.getState().setActiveTab('month-end-close');
     }
   };
 

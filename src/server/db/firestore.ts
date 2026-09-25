@@ -2,6 +2,7 @@
 // Firestore-compatible layer in ./pgFirestore.ts, so routes keep their firebase-admin-style code.
 import { Firestore } from './pgFirestore';
 import type { DocumentData } from './pgFirestore';
+import { assertPostingOpen } from '../../lib/periodLock';
 
 export {
   AggregateQuery, CollectionReference, DocumentReference, DocumentSnapshot, FieldPath, FieldValue,
@@ -39,15 +40,13 @@ export async function validateWorkspaceMember(db: Firestore, workspaceId: string
 
 export const assertWorkspaceAccess = validateWorkspaceMember;
 
-export async function assertPeriodOpen(db: Firestore, workspaceId: string, date: string) {
+/** Throws "Period Locked" when the date is closed for this user (src/lib/periodLock.ts). */
+export async function assertPeriodOpen(db: Firestore, workspaceId: string, date: string, uid: string) {
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw new Error(`Invalid transaction date format: ${date}. Expected YYYY-MM-DD.`);
   }
   const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-  const lockDate: string | undefined = wsDoc.data()?.lockDate;
-  if (lockDate && date <= lockDate) {
-    throw new Error(`Period Locked: Posting forbidden for transaction date ${date} on or prior to lock date ${lockDate}.`);
-  }
+  assertPostingOpen(date, wsDoc.data(), uid);
 }
 
 export async function validateWorkspaceAccounts(db: Firestore, workspaceId: string, accountIds: string[]): Promise<Map<string, { id: string; name: string; type: string; category?: string }>> {

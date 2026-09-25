@@ -156,7 +156,7 @@ const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
 const daysInMonth = (y: number, m: number) => [31, isLeap(y) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
 
 /** Days since 1970-01-01 (proleptic Gregorian). */
-function dayNumber(ymd: string): number {
+export function dayNumber(ymd: string): number {
   const [yy, m, d] = ymd.split('-').map(Number);
   const y = m <= 2 ? yy - 1 : yy;
   const era = Math.floor(y / 400);
@@ -187,7 +187,7 @@ function addMonthsYMD(ymd: string, months: number): string {
   return `${ny}-${pad2(nm)}-${pad2(Math.min(d, daysInMonth(ny, nm)))}`;
 }
 
-function addDaysYMD(ymd: string, days: number): string {
+export function addDaysYMD(ymd: string, days: number): string {
   return fromDayNumber(dayNumber(ymd) + days);
 }
 

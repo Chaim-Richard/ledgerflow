@@ -4,6 +4,7 @@ import { getDb } from '../../server/db/firestore';
 import { TransactionSchema } from '../../schemas';
 import { getAbsoluteTotal } from '../../lib/txFilters';
 import { SecurityService } from '../../services/securityService';
+import { assertPostingOpen, lockMessage, postingLock } from '../../lib/periodLock';
 
 export interface ValidationContext {
   workspaceId: string;
@@ -20,10 +21,9 @@ export class TransactionValidator {
     options?: { isReversalUpdate?: boolean }
   ) {
     // 1. Period Lock (exempt if setting reversalEventId as part of a sanctioned reversal)
-    if (context.wsData?.lockDate && existingTx.date && existingTx.date <= context.wsData.lockDate) {
-      if (!options?.isReversalUpdate) {
-        throw new Error(`Period Locked: Cannot modify transaction on ${existingTx.date} before lock date ${context.wsData.lockDate}.`);
-      }
+    const lock = !options?.isReversalUpdate && existingTx.date ? postingLock(existingTx.date, context.wsData, context.user.uid) : null;
+    if (lock) {
+      throw new Error(`Period Locked: Cannot modify transaction on ${existingTx.date}: ${lockMessage(existingTx.date, lock).replace(/^Period Locked: /, '')}`);
     }
 
     // 2. Status Locks
@@ -83,9 +83,7 @@ export class TransactionValidator {
     } as Transaction;
 
     // 1. Period Lock
-    if (context.wsData?.lockDate && validatedTx.date && validatedTx.date <= context.wsData.lockDate) {
-      throw new Error(`Period Locked: Cannot post/modify transaction on ${validatedTx.date} before lock date ${context.wsData.lockDate}.`);
-    }
+    if (validatedTx.date) assertPostingOpen(validatedTx.date, context.wsData, context.user.uid);
 
     // 2. Status Locks
     if (existingTx && (existingTx.status === 'certified' || existingTx.status === 'void') && !context.user.admin) {

@@ -39,7 +39,7 @@ inventoryRouter.post('/cogs', async (req, res) => {
     const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : getLocalDateISO();
 
     // 2. Validate period lock
-    await assertPeriodOpen(db, workspaceId, txDate);
+    await assertPeriodOpen(db, workspaceId, txDate, user.uid);
 
     // 3. Validate accounts exist and belong to workspace
     const accountMap = await validateWorkspaceAccounts(db, workspaceId, [inventoryAccountId, cogsAccountId]);
@@ -177,7 +177,7 @@ inventoryRouter.post('/adjust', async (req, res) => {
 
     const { data: wsData } = await validateWorkspaceMember(db, workspaceId, user);
     const txDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : getLocalDateISO();
-    await assertPeriodOpen(db, workspaceId, txDate);
+    await assertPeriodOpen(db, workspaceId, txDate, user.uid);
 
     // 1. Validate accounts exist and belong to workspace
     const accountMap = await validateWorkspaceAccounts(db, workspaceId, [inventoryAccountId, offsetAccountId]);

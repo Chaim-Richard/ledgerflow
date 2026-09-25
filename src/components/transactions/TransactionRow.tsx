@@ -15,10 +15,11 @@ import {
   Paperclip
 } from 'lucide-react';
 import { parseLocalDate, resolveAccountName, cn } from '../../lib/utils';
-import { isInflow, isTransactionInDateRange } from '../../lib/txFilters';
+import { isInflow } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
 import CategoryWhyPopover from '../common/CategoryWhyPopover';
+import { isLockedDate } from '../../lib/periodLock';
 
 const HighlightMatch = ({ text, match }: { text: string; match?: string }) => {
   if (!match) return <>{text}</>;
@@ -100,7 +101,8 @@ const TransactionRow = React.memo(({
   const isPrivacyMode = useLedgerStore(state => state.isPrivacyMode);
   const accounts = useLedgerStore(state => state.accounts);
   const lockDate = useLedgerStore(state => state.lockDate);
-  const isLocked = !!(lockDate && isTransactionInDateRange(tx, undefined, lockDate)) || !!tx.isLocked;
+  const lockException = useLedgerStore(state => state.lockException);
+  const isLocked = (!!tx.date && isLockedDate(tx.date, lockDate, lockException)) || !!tx.isLocked;
   const displayTx = tx;
 
   const [isEditingDesc, setIsEditingDesc] = React.useState(false);

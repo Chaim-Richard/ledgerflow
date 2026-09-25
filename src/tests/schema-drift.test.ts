@@ -25,7 +25,9 @@ describe('Schema drift & index consistency guard (database rules)', () => {
       // set only by the server / platform admins (immutable for users)
       'isClosed', 'computeLimit', 'lastUpgradedAt', 'deletedAt', 'scheduledPurgeAt', 'creditCostMultiplier',
       'quotaCentsMultiplier', 'customKeyCreditCharge', 'customKeyCentsCharge', 'freeWorkspaceTxCap',
-      'paymentStatus', 'trialEndsAt'
+      'paymentStatus', 'trialEndsAt',
+      // closing the books (migration 20260925030000_period_close), server-only
+      'softLockDate', 'lockException'
     ];
     for (const key of expectedWorkspaceKeys) {
       assert.ok(allowed.includes(key), `workspaces allowed fields missing '${key}'`);

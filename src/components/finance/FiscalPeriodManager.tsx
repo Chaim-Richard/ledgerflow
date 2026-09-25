@@ -16,14 +16,17 @@ import {
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, isAfter, isBefore, parseISO, addMonths, subMonths } from 'date-fns';
 import { cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
-import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { useUIStore } from '../../stores/useUIStore';
+import { getIdToken } from '../../firebase';
+import { monthCloseState } from '../../lib/periodLock';
 import { LedgerPostService } from '../../services/LedgerPostService';
-import { isPostable, calculateTransactionImpact } from '../../lib/txFilters';
+import { isPostable, calculateTransactionImpact, lineAmount } from '../../lib/txFilters';
 
 export default function FiscalPeriodManager() {
-  const { updateEntity } = useEntityOperations();
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspaces = useAuthStore(s => s.workspaces);
+  const setWorkspaces = useAuthStore(s => s.setWorkspaces);
+  const setActiveTab = useUIStore(s => s.setActiveTab);
   const workspace = workspaces.find(w => w.id === currentWorkspaceId);
   
   const transactions = useLedgerStore(s => s.transactions);
@@ -39,7 +42,8 @@ export default function FiscalPeriodManager() {
     let curr = startOfMonth(new Date());
     for (let i = 0; i < 18; i++) {
       const pId = format(curr, 'yyyy-MM');
-      const isLocked = lockDate ? pId <= lockDate.substring(0, 7) : false;
+      // Closed (soft or hard) under the workspace's lock dates (src/lib/periodLock.ts)
+      const isLocked = monthCloseState(pId, workspace) !== 'open';
       list.push({
         id: pId,
         label: format(curr, 'MMMM yyyy'),
@@ -50,18 +54,24 @@ export default function FiscalPeriodManager() {
       curr = subMonths(curr, 1);
     }
     return list;
-  }, [lockDate]);
+  }, [workspace]);
 
-  const handleSetLockDate = async (date: string | null) => {
+  // Closing goes through the server (role check, drafts check, audit log): periodCloseService.ts
+  const closeMonth = async (month: string) => {
     if (!currentWorkspaceId) return;
     setIsProcessing(true);
     try {
-      await updateEntity('workspaces', currentWorkspaceId, {
-        lockDate: date,
-        updatedAt: new Date().toISOString()
-      }, `Period lock updated to ${date || 'Open'}`);
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(currentWorkspaceId)}/periods/${month}/close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
+        body: JSON.stringify({ mode: 'hard' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'The period could not be closed');
+      setWorkspaces(workspaces.map(w => (w.id === currentWorkspaceId ? { ...w, lockDate: data.lockDate, softLockDate: data.softLockDate } : w)));
+      toast.success(`${month} closed`);
     } catch (e) {
-      console.error(e);
+      toast.error(e instanceof Error ? e.message : 'The period could not be closed');
     } finally {
       setIsProcessing(false);
     }
@@ -79,7 +89,7 @@ export default function FiscalPeriodManager() {
     
     // Check for unbalanced JEs in this period
     const unbalanced = periodTxs.filter(t => {
-      const sum = (t.lines || []).reduce((s, l) => s + (l.amountCents || 0), 0);
+      const sum = (t.lines || []).reduce((s, l) => s + lineAmount(l, t), 0);
       return Math.abs(sum) > 0;
     });
 
@@ -103,7 +113,7 @@ export default function FiscalPeriodManager() {
       toast.warning("Closing an empty period. No transactions found.");
     }
 
-    await handleSetLockDate(period.endDate);
+    await closeMonth(period.id);
     setSelectedPeriod(null);
   };
 
@@ -128,10 +138,11 @@ export default function FiscalPeriodManager() {
           </div>
           {lockDate && (
             <button 
-              onClick={() => handleSetLockDate(null)}
+              onClick={() => setActiveTab('month-end-close')}
               disabled={isProcessing}
               className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer"
-              title="Unlock All Periods"
+              title="Reopen a period (Month-End Close, with a reason)"
+              aria-label="Reopen a period in Month-End Close"
             >
               <Unlock className="w-4 h-4" />
             </button>

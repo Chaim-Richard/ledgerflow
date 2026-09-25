@@ -9,6 +9,7 @@ import { formatTzDate } from './transactionRoutes';
 import { applyAccountTemplate, TemplateError } from '../services/templateService';
 import { importRecords, undoImport, ImportError } from '../services/recordImportService';
 import { IMPORT_KINDS, MAX_IMPORT_ROWS } from '../../lib/recordImport';
+import { periodRouter } from './periodRoutes';
 
 export const workspaceRouter = express.Router();
 
@@ -180,6 +181,9 @@ workspaceRouter.post('/:workspaceId/import-maps', requireWorkspaceRole(['owner',
     sendError(res, 'Could not save the column layout', 500, err instanceof Error ? err.message : String(err));
   }
 });
+
+// Closing the books: close / reopen / partial unlock / sign-offs (src/server/routes/periodRoutes.ts)
+workspaceRouter.use('/:workspaceId/periods', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), periodRouter);
 
 // Bulk import of customers, vendors, items or accounts from a spreadsheet (K-01; rules in
 // src/lib/recordImport.ts). Writers may import; the chart of accounts is owner/accountant only.

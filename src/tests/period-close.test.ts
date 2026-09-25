@@ -1,0 +1,207 @@
+/**
+ * Closing the books: the lock rule (src/lib/periodLock.ts), the close checklist
+ * (src/lib/closeChecklist.ts), the posting check, and the close / reopen / partial unlock /
+ * sign-off endpoints (src/server/services/periodCloseService.ts, database part with
+ * LF_TEST_DATABASE_URL).
+ */
+import test, { after, before, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import crypto from 'crypto';
+import type { AddressInfo } from 'node:net';
+import type { Server } from 'node:http';
+import { dayBefore, effectiveLockDate, isLockedDate, monthCloseState, monthEnd, postingLock } from '../lib/periodLock';
+import { buildCloseChecklist, readyToClose } from '../lib/closeChecklist';
+import { TransactionValidator } from '../kernel/validation/TransactionValidator';
+import { makeBill, makeInvoice, makeTransaction } from './fixtures';
+import type { DocumentData, Firestore } from '../server/db/pgFirestore';
+
+const ws = { uid: 'owner-1', roles: { 'acct-1': 'accountant', 'book-1': 'bookkeeper' }, lockDate: '2026-01-31', softLockDate: '2026-03-31' };
+
+describe('Closed periods', () => {
+  test('hard close stops everyone; soft close stops bookkeepers only', () => {
+    assert.deepEqual(postingLock('2026-01-15', ws, 'owner-1'), { kind: 'hard', through: '2026-01-31' });
+    assert.equal(postingLock('2026-02-15', ws, 'owner-1'), null);
+    assert.equal(postingLock('2026-02-15', ws, 'acct-1'), null);
+    assert.deepEqual(postingLock('2026-02-15', ws, 'book-1'), { kind: 'soft', through: '2026-03-31' });
+    assert.deepEqual(postingLock('2026-03-31', ws, 'stranger'), { kind: 'soft', through: '2026-03-31' });
+    assert.equal(postingLock('2026-04-01', ws, 'book-1'), null);
+    assert.ok(postingLock(undefined, ws, 'owner-1'), 'no date while closed: refused');
+    assert.equal(effectiveLockDate(ws, 'acct-1'), '2026-01-31');
+    assert.equal(effectiveLockDate(ws, 'book-1'), '2026-03-31');
+  });
+
+  test('a partial unlock opens its dates, for the hard and the soft close', () => {
+    const unlocked = { ...ws, lockException: { fromDate: '2026-01-20', toDate: '2026-02-10' } };
+    assert.equal(postingLock('2026-01-25', unlocked, 'book-1'), null);
+    assert.equal(postingLock('2026-02-10', unlocked, 'book-1'), null);
+    assert.ok(postingLock('2026-01-19', unlocked, 'owner-1'));
+    assert.ok(postingLock('2026-02-11', unlocked, 'book-1'));
+    assert.equal(isLockedDate('2026-01-25T10:00:00Z', '2026-01-31', unlocked.lockException), false);
+  });
+
+  test('month ends, the day before, and how a month shows', () => {
+    assert.equal(monthEnd('2028-02'), '2028-02-29');
+    assert.equal(monthEnd('2100-02'), '2100-02-28');
+    assert.equal(monthEnd('2026-12'), '2026-12-31');
+    assert.equal(dayBefore('2026-03-01'), '2026-02-28');
+    assert.equal(dayBefore('2026-01-01'), '2025-12-31');
+    assert.equal(monthCloseState('2026-01', ws), 'hard');
+    assert.equal(monthCloseState('2026-03', ws), 'soft');
+    assert.equal(monthCloseState('2026-04', ws), 'open');
+    assert.equal(monthCloseState('2026-02', { ...ws, lockException: { fromDate: '2026-02-05', toDate: '2026-02-06' } }), 'partly-open');
+    assert.equal(monthCloseState('2026-03', { ...ws, softLockDate: '2026-03-28' }), 'open', 'a lock on the 28th does not close March');
+  });
+
+  test('the posting check follows the role: a bookkeeper cannot post into a soft-closed month, an accountant can', async () => {
+    const accountsMap = new Map([
+      ['cash', { id: 'cash', name: 'Cash', workspaceId: 'w1', type: 'asset' }],
+      ['rev', { id: 'rev', name: 'Sales', workspaceId: 'w1', type: 'revenue' }],
+    ]);
+    const tx = () => ({ id: `t-${crypto.randomBytes(3).toString('hex')}`, date: '2026-03-10', description: 'Adjustment', lines: [{ accountId: 'cash', amountCents: 100 }, { accountId: 'rev', amountCents: -100 }] });
+    await assert.rejects(TransactionValidator.validateAndPrepare(tx(), { workspaceId: 'w1', user: { uid: 'book-1' }, wsData: ws, accountsMap }), /soft-closed/);
+    const ok = await TransactionValidator.validateAndPrepare(tx(), { workspaceId: 'w1', user: { uid: 'acct-1' }, wsData: ws, accountsMap });
+    assert.equal(ok.date, '2026-03-10');
+  });
+});
+
+describe('Close checklist', () => {
+  const lines = (cents: number) => [{ id: 'l1', accountId: 'cash', amountCents: cents }, { id: 'l2', accountId: 'rev', amountCents: -cents }];
+
+  test('drafts and an unbalanced trial balance block the close; the rest needs a sign-off', () => {
+    const items = buildCloseChecklist({
+      month: '2026-03',
+      transactions: [
+        makeTransaction({ id: 't1', date: '2026-03-05', status: 'completed', lines: lines(500) }),
+        makeTransaction({ id: 't2', date: '2026-03-06', status: 'draft', lines: lines(100) }),
+        makeTransaction({ id: 't3', date: '2026-03-07', status: 'completed', lines: [{ id: 'l', accountId: '', amountCents: 0 }] }),
+        makeTransaction({ id: 't4', date: '2026-04-01', status: 'completed', lines: [{ id: 'l', accountId: 'cash', amountCents: 7 }] }),
+      ],
+      bankLines: [{ date: '2026-03-02', status: 'pending' }, { date: '2026-03-03', status: 'matched', matchedTransactionId: 't1' }],
+      invoices: [makeInvoice({ status: 'sent', dueDate: '2026-01-15' }), makeInvoice({ status: 'draft', date: '2026-03-20' } as never)],
+      bills: [makeBill({ status: 'open', dueDate: '2026-02-15' } as never)],
+    });
+    const byId = Object.fromEntries(items.map(i => [i.id, i]));
+    assert.equal(byId.drafts.status, 'blocker');
+    assert.equal(byId.drafts.count, 2);
+    assert.equal(byId.categorize.count, 1);
+    assert.equal(byId.reconcile.count, 1);
+    assert.equal(byId['trial-balance'].status, 'done', 'the April entry is after the month end');
+    assert.equal(byId.aging.count, 1, 'only the invoice is more than 60 days overdue on 31 March');
+    assert.equal(readyToClose(items).ready, false);
+  });
+
+  test('ready when nothing blocks and every item needing attention is signed off', () => {
+    const items = buildCloseChecklist({
+      month: '2026-03',
+      transactions: [makeTransaction({ id: 't1', date: '2026-03-05', status: 'completed', lines: lines(500) })],
+      bankLines: [{ date: '2026-03-02', status: 'pending' }],
+      invoices: [], bills: [],
+    });
+    assert.match(readyToClose(items).reason || '', /Bank lines matched/);
+    assert.deepEqual(readyToClose(items, { reconcile: { by: 'a@x.test', at: '2026-04-02T10:00:00Z' } }), { ready: true });
+    const unbalanced = buildCloseChecklist({ month: '2026-03', transactions: [makeTransaction({ id: 'x', date: '2026-03-01', status: 'completed', lines: [{ id: 'l', accountId: 'cash', amountCents: 5 }] })], bankLines: [], invoices: [], bills: [] });
+    assert.equal(unbalanced.find(i => i.id === 'trial-balance')?.status, 'blocker');
+  });
+});
+
+const url = process.env.LF_TEST_DATABASE_URL;
+
+describe('Closing and reopening a month', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
+  const wsId = `ws_close_${crypto.randomBytes(4).toString('hex')}`;
+  let server: Server;
+  let base = '';
+  let db: Firestore;
+  const call = async (uid: string, path: string, body: Record<string, unknown> = {}) => {
+    const res = await fetch(`${base}/api/v1/workspaces/${wsId}/periods${path}`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': uid }, body: JSON.stringify(body),
+    });
+    return { status: res.status, body: await res.json() as Record<string, unknown> };
+  };
+  const workspace = async (): Promise<DocumentData> => (await db.collection('workspaces').doc(wsId).get()).data() || {};
+
+  before(async () => {
+    process.env.DATABASE_URL = url;
+    const express = (await import('express')).default;
+    const { workspaceRouter } = await import('../server/routes/workspaceRoutes');
+    const { getDb } = await import('../server/db/firestore');
+    db = getDb();
+    await db.collection('workspaces').doc(wsId).set({
+      uid: 'owner-1', name: 'Close', currency: 'USD', timezone: 'UTC',
+      members: ['owner-1', 'acct-1', 'book-1', 'view-1'], roles: { 'acct-1': 'accountant', 'book-1': 'bookkeeper', 'view-1': 'viewer' },
+    });
+    await db.collection('invoices').doc(`${wsId}_draft`).set({ workspaceId: wsId, status: 'draft', date: '2026-03-10', number: 'INV-9' });
+    const app = express();
+    app.use(express.json());
+    app.use((req, _res, next) => { (req as unknown as { user: { uid: string; email: string } }).user = { uid: String(req.header('x-test-uid')), email: `${req.header('x-test-uid')}@test.local` }; next(); });
+    app.use('/api/v1/workspaces', workspaceRouter);
+    server = app.listen(0);
+    base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+
+  after(async () => {
+    server?.close();
+    for (const table of ['invoices', 'periods', 'auditLogs', 'workspaces']) {
+      await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [wsId]);
+    }
+    await db.terminate();
+  });
+
+  test('only owners and accountants close; a month that has not ended cannot be closed', async () => {
+    assert.equal((await call('view-1', '/2026-03/close', { mode: 'soft' })).status, 403);
+    assert.equal((await call('book-1', '/2026-03/close', { mode: 'soft' })).status, 403);
+    assert.equal((await call('acct-1', '/2999-01/close', { mode: 'soft' })).status, 400);
+    assert.equal((await call('acct-1', '/2026-13/close', { mode: 'soft' })).status, 400);
+  });
+
+  test('drafts dated in the month block the close and are listed', async () => {
+    const res = await call('acct-1', '/2026-03/close', { mode: 'soft' });
+    assert.equal(res.status, 409);
+    assert.deepEqual((res.body.details as Array<{ id: string }>).map(d => d.id), [`${wsId}_draft`]);
+    await db.collection('invoices').doc(`${wsId}_draft`).delete();
+  });
+
+  test('soft close, sign-offs, hard close; sign-offs are final once hard-closed', async () => {
+    const soft = await call('acct-1', '/2026-03/close', { mode: 'soft' });
+    assert.equal(soft.status, 200, JSON.stringify(soft.body));
+    assert.equal((await workspace()).softLockDate, '2026-03-31');
+    assert.equal((await workspace()).lockDate, undefined);
+    assert.equal((await call('acct-1', '/2026-03/close', { mode: 'soft' })).status, 409, 'already closed');
+
+    assert.equal((await call('book-1', '/2026-03/sign-off', { itemId: 'nope' })).status, 400);
+    const signed = await call('book-1', '/2026-03/sign-off', { itemId: 'reconcile', note: 'Two card fees, fine' });
+    assert.equal(signed.status, 200, JSON.stringify(signed.body));
+    const period = (await db.collection('periods').doc(`${wsId}_2026-03`).get()).data();
+    assert.equal(period?.signOffs.reconcile.by, 'book-1@test.local');
+    assert.equal(period?.status, 'soft_closed');
+
+    const hard = await call('acct-1', '/2026-03/close', { mode: 'hard' });
+    assert.equal(hard.status, 200, JSON.stringify(hard.body));
+    assert.equal((await workspace()).lockDate, '2026-03-31');
+    assert.equal((await call('book-1', '/2026-03/sign-off', { itemId: 'aging' })).status, 409);
+  });
+
+  test('reopening a hard-closed month needs the owner and a reason; later months reopen too', async () => {
+    assert.equal((await call('acct-1', '/2026-02/reopen', { reason: 'Missed a bill' })).status, 403);
+    assert.equal((await call('owner-1', '/2026-02/reopen', { reason: 'no' })).status, 400);
+    const res = await call('owner-1', '/2026-02/reopen', { reason: 'Missed a supplier bill' });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const w = await workspace();
+    assert.equal(w.lockDate, '2026-01-31');
+    assert.equal(w.softLockDate, '2026-01-31');
+    assert.equal((await call('owner-1', '/2026-03/reopen', { reason: 'Again please' })).status, 409, 'March is open now');
+  });
+
+  test('partial unlock: owner only for hard-closed dates; closing again removes it', async () => {
+    assert.equal((await call('acct-1', '/unlock', { fromDate: '2026-01-10', toDate: '2026-01-20', reason: 'Fix a date' })).status, 403);
+    assert.equal((await call('owner-1', '/unlock', { fromDate: '2026-02-10', toDate: '2026-02-20', reason: 'Fix a date' })).status, 400, 'not closed');
+    const res = await call('owner-1', '/unlock', { fromDate: '2026-01-10', toDate: '2026-01-20', reason: 'Fix a date' });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual({ ...(await workspace()).lockException, at: undefined, byUid: undefined }, { fromDate: '2026-01-10', toDate: '2026-01-20', reason: 'Fix a date', by: 'owner-1@test.local', at: undefined, byUid: undefined });
+    assert.equal((await call('acct-1', '/relock')).status, 200);
+    assert.equal((await workspace()).lockException, null);
+    assert.equal((await call('acct-1', '/relock')).status, 409);
+
+    const actions = (await db.collection('auditLogs').where('workspaceId', '==', wsId).get()).docs.map(d => d.get('action')).sort();
+    assert.deepEqual([...new Set(actions)], ['PERIOD_CLOSED', 'PERIOD_PARTIAL_UNLOCK', 'PERIOD_RELOCKED', 'PERIOD_REOPENED', 'PERIOD_SIGN_OFF']);
+  });
+});

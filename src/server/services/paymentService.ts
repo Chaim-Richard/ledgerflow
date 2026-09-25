@@ -2,6 +2,7 @@ import { calculateAmountDue } from '../../lib/documentMath';
 import { writeServerAuditLog } from './auditLogService';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import type { ChartAccount } from '../../types';
+import { assertPostingOpen } from '../../lib/periodLock';
 
 export interface CreatePaymentPayload {
   workspaceId: string;
@@ -57,9 +58,7 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     if (!wsSnap.exists) throw new Error('NOT_FOUND');
     const wsData = wsSnap.data() || {};
 
-    if (wsData.lockDate && paymentDate <= wsData.lockDate) {
-      throw new Error(`Period is locked on or before ${wsData.lockDate}. Cannot post payment.`);
-    }
+    assertPostingOpen(paymentDate, wsData, uid);
 
     // 2. Validate cash account exists and belongs to workspace
     const cashAccRef = db.collection('chartAccounts').doc(cashAccountId);

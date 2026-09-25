@@ -41,6 +41,7 @@ import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { retryWithBackoff } from '../lib/retryUtils';
 import { checkVersionConflict, resolveConflictLWW } from '../lib/conflictEngine';
 import { addComment, getCommentsForEntity } from '../lib/commentService';
+import { postingLock } from '../lib/periodLock';
 
 export function useTransactionActions() {
   const user = useAuthStore(s => s.user);
@@ -84,10 +85,10 @@ export function useTransactionActions() {
     }
   };
 
+  // Closed for the signed-in user (src/lib/periodLock.ts: hard close, soft close, partial unlock)
   const isPeriodLocked = (date: string) => {
     const workspace = getCurrentWorkspace();
-    if (!workspace?.lockDate) return false;
-    return date <= workspace.lockDate;
+    return !!postingLock(date, workspace, user?.uid || '');
   };
 
   const handleVoidTransaction = async (id: string) => {

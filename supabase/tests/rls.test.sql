@@ -89,8 +89,12 @@ select pg_temp.expect_ok('delete a draft invoice', 'u-book',
 -- lock date
 select pg_temp.expect_denied('bookkeeper sets the lock date', 'u-book',
   $$select lf_update('workspaces','ws1','{"lockDate":"2026-01-31"}'::jsonb)$$);
-select pg_temp.expect_ok('accountant sets the lock date', 'u-acct',
+select pg_temp.expect_denied('accountant sets the lock date from the browser (closing goes through the server)', 'u-acct',
   $$select lf_update('workspaces','ws1','{"lockDate":"2026-01-31"}'::jsonb)$$);
+do $$ begin
+  perform set_config('request.jwt.claims', '', true);
+  update workspaces set data = data || '{"lockDate":"2026-01-31"}'::jsonb where id = 'ws1';
+end $$;
 select pg_temp.expect_denied('transaction in a locked period', 'u-book',
   $$insert into transactions(id,data) values ('tx1', '{"workspaceId":"ws1","date":"2026-01-15","lines":[]}')$$);
 select pg_temp.expect_denied('transaction without a date while locked', 'u-book',
@@ -99,6 +103,29 @@ select pg_temp.expect_ok('transaction in an open period', 'u-book',
   $$insert into transactions(id,data) values ('tx3', '{"workspaceId":"ws1","date":"2026-02-01","status":"draft","lines":[]}')$$);
 select pg_temp.expect_denied('move a transaction into a locked period', 'u-book',
   $$select lf_update('transactions','tx3','{"date":"2026-01-10"}'::jsonb)$$);
+
+-- soft close (only owners/accountants post) and partial unlock, both set by the server
+do $$ begin
+  perform set_config('request.jwt.claims', '', true);
+  update workspaces set data = data || '{"softLockDate":"2026-02-28","lockException":{"fromDate":"2026-01-10","toDate":"2026-01-20"}}'::jsonb where id = 'ws1';
+end $$;
+select pg_temp.expect_denied('bookkeeper posts into a soft-closed month', 'u-book',
+  $$insert into transactions(id,data) values ('tx-soft-b', '{"workspaceId":"ws1","date":"2026-02-10","lines":[]}')$$);
+select pg_temp.expect_ok('accountant posts an adjustment into a soft-closed month', 'u-acct',
+  $$insert into transactions(id,data) values ('tx-soft-a', '{"workspaceId":"ws1","date":"2026-02-10","status":"draft","lines":[]}')$$);
+select pg_temp.expect_ok('bookkeeper posts inside the partial unlock', 'u-book',
+  $$insert into transactions(id,data) values ('tx-unl', '{"workspaceId":"ws1","date":"2026-01-15","status":"draft","lines":[]}')$$);
+select pg_temp.expect_denied('bookkeeper posts outside the partial unlock', 'u-book',
+  $$insert into transactions(id,data) values ('tx-unl2', '{"workspaceId":"ws1","date":"2026-01-25","lines":[]}')$$);
+select pg_temp.expect_denied('owner removes the partial unlock from the browser', 'u-owner',
+  $$select lf_update('workspaces','ws1','{}'::jsonb,'{lockException}')$$);
+select pg_temp.expect_denied('browser writes a close record', 'u-owner',
+  $$insert into periods(id,data) values ('ws1_2026-01', '{"workspaceId":"ws1","periodId":"2026-01","status":"closed"}')$$);
+do $$ begin
+  perform set_config('request.jwt.claims', '', true);
+  delete from transactions where id in ('tx-soft-a', 'tx-unl');
+  update workspaces set data = data - 'softLockDate' - 'lockException' where id = 'ws1';
+end $$;
 
 -- workspace billing fields can't be changed by users
 select pg_temp.expect_denied('owner changes plan', 'u-owner',
@@ -241,7 +268,7 @@ begin
   foreach t in array array[
     'transactions','journalEntries','invoices','payments','bills','creditNotes','vendorCredits',
     'projects','estimates','inventory','recurring','budgets','autoRules','fixedAssets','assets',
-    'taxRates','dimensionNodes','vendors','customers','periods','rulePatterns','scenarios',
+    'taxRates','dimensionNodes','vendors','customers','rulePatterns','scenarios',
     'employees','payRuns','partners','reconciliations','workspaceShards'
   ] loop
     doc := case when t = 'transactions' then '{"workspaceId":"ws1","date":"2026-02-15","status":"draft"}'

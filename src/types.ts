@@ -1,3 +1,4 @@
+import type { LockException } from './lib/periodLock';
 export type NotificationKind =
   | 'invoice-created' | 'invoice-sent' | 'invoice-scheduled' | 'invoice-paid'
   | 'invoice-overdue' | 'invoice-cancelled' | 'invoice-refunded' | 'invoice-reminder-sent'
@@ -30,6 +31,10 @@ export interface Workspace {
   createdAt: string;
   lockedUntilDate?: string;
   lockDate?: string | null;
+  /** Soft close (src/lib/periodLock.ts): only owners and accountants post on or before it. Server-only. */
+  softLockDate?: string | null;
+  /** Partial unlock of a closed date range. Server-only. */
+  lockException?: LockException | null;
   strategicAdvice?: string[];
   analyticalTopology?: DashboardSchema;
   currency?: string;
@@ -770,7 +775,10 @@ export interface PeriodStatus {
   uid: string;
   workspaceId: string;
   periodId: string; // e.g., 2024-01
-  status: 'open' | 'closed';
+  status: 'open' | 'closed' | 'soft_closed';
+  closeMode?: 'soft' | 'hard';
+  /** Checklist sign-offs (src/lib/closeChecklist.ts), written by the server. */
+  signOffs?: Record<string, { by: string; at: string; note?: string }>;
   closedAt?: string;
   closedBy?: string;
   startDate: string;

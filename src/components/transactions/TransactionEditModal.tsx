@@ -28,6 +28,7 @@ import {
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import TagInput from './TagInput';
 import AsyncButton from '../ui/AsyncButton';
+import { isLockedDate } from '../../lib/periodLock';
 
 interface TransactionEditModalProps {
   isOpen: boolean;
@@ -59,7 +60,9 @@ export default function TransactionEditModal({
 
   // In reverse mode on a locked transaction, suggest an open date (today) for the replacement
   const initialTxDate = transaction?.date || '';
-  const isOriginalLocked = !!(lockDate && initialTxDate <= lockDate);
+  const lockException = useLedgerStore(s => s.lockException);
+  const closed = (d: string) => !!d && isLockedDate(d, lockDate, lockException);
+  const isOriginalLocked = closed(initialTxDate);
   const [date, setDate] = useState(() => {
     if (initialReverseMode && isOriginalLocked) {
       return todayISO > (lockDate || '') ? todayISO : initialTxDate;
@@ -89,7 +92,7 @@ export default function TransactionEditModal({
   // Manage lines for splitting and multiple assignments
   const [lines, setLines] = useState<TransactionLine[]>(() => transaction?.lines ? transaction.lines.map(l => ({ ...l })) : []);
 
-  const isLocked = !isReverseMode && !!(lockDate && date <= lockDate);
+  const isLocked = !isReverseMode && closed(date);
 
   // Compute total absolute sum (or sum of debits/credits in standard book)
   // Our types.ts says line.amountCents: Positive for Debit, Negative for Credit
@@ -159,11 +162,11 @@ export default function TransactionEditModal({
     });
 
     if (isReverseMode) {
-      if (lockDate && reversalDate <= lockDate) {
+      if (closed(reversalDate)) {
         toast.error(`Reversal date (${reversalDate}) must be in an open period (after ${lockDate}).`);
         return;
       }
-      if (lockDate && date <= lockDate) {
+      if (closed(date)) {
         toast.error(`Replacement date (${date}) must be in an open period (after ${lockDate}).`);
         return;
       }
