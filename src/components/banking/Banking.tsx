@@ -9,6 +9,7 @@ import PlaidConnectButton from '../finance/PlaidConnectButton';
 import { parseCamt053Statement } from '../../lib/camt053Parser';
 import { scoreReceiptMatches } from '../../lib/receiptMatcher';
 import { TransferModal } from './TransferModal';
+import MakeDepositDialog from './MakeDepositDialog';
 
 export default function Banking() {
   const accounts = useLedgerStore(s => s.accounts).filter(a => 
@@ -24,6 +25,7 @@ export default function Banking() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [needsReconnect, setNeedsReconnect] = useState<{ bankId: string; institutionName: string }[]>([]);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isDepositOpen, setIsDepositOpen] = useState(false);
 
   const handleSyncNow = async (accountName: string, accountId: string) => {
     setSyncingAccountId(accountId);
@@ -79,6 +81,9 @@ export default function Banking() {
             >
               <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
               <span>Transfer Funds</span>
+            </button>
+            <button type="button" onClick={() => setIsDepositOpen(true)} className="h-12 px-6 bg-[var(--surface)] hover:border-[var(--brass-line)] border border-[var(--line)] text-[var(--text)] font-black text-[10px] uppercase tracking-widest rounded-xl shadow-sm">
+              Make deposit
             </button>
             <PlaidConnectButton onSuccessSync={handleSyncSuccess} />
             {needsReconnect.map(b => (
@@ -145,6 +150,7 @@ export default function Banking() {
         </div>
       </div>
       <TransferModal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} />
+      {isDepositOpen && <MakeDepositDialog onClose={() => setIsDepositOpen(false)} />}
     </div>
   );
 }

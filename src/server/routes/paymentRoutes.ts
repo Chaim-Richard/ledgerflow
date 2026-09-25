@@ -6,6 +6,7 @@ import { createPaymentAtomic } from '../services/paymentService';
 import { getLocalDateISO } from '../../lib/utils';
 import { getWorkspaceUserRole, AuthenticatedRequest, requireWorkspaceRole } from './workspaceRoutes';
 import { applyCredit, CreditError, refundCredit } from '../services/creditService';
+import { createDeposit, DepositError } from '../services/depositService';
 import { writeServerAuditLog } from '../services/auditLogService';
 
 export const paymentRouter = express.Router();
@@ -124,3 +125,31 @@ async function handleCredit(req: express.Request, res: express.Response, action:
 const ledgerWriters = requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']);
 paymentRouter.post('/credits/apply', ledgerWriters, (req, res) => handleCredit(req, res, 'apply'));
 paymentRouter.post('/credits/refund', ledgerWriters, (req, res) => handleCredit(req, res, 'refund'));
+
+// Make deposit: payments waiting in Undeposited Funds go to the bank in one entry
+const depositSchema = z.object({
+  workspaceId: z.string().min(1),
+  bankAccountId: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default(() => getLocalDateISO()),
+  paymentIds: z.array(z.string().min(1)).min(1).max(500),
+  memo: z.string().max(500).optional(),
+});
+
+paymentRouter.post('/deposits', ledgerWriters, async (req, res) => {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const input = depositSchema.parse(req.body);
+    const db = getDb();
+    const result = await createDeposit(db, { ...input, uid: user.uid });
+    await writeServerAuditLog({
+      workspaceId: input.workspaceId, uid: user.uid, email: user.email || '', action: 'DEPOSIT_MADE',
+      entityType: 'transaction', entityId: result.transactionId,
+      details: { paymentIds: input.paymentIds, totalCents: result.totalCents, description: `Deposited ${result.count} payment(s) totalling ${result.totalCents} cents` },
+    }, { db });
+    res.json({ status: 'success', data: result });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: 'Invalid request', details: err.issues });
+    if (err instanceof DepositError) return res.status(err.status).json({ status: 'error', message: err.message });
+    res.status(400).json({ status: 'error', message: err instanceof Error ? err.message : String(err) });
+  }
+});

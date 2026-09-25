@@ -21,6 +21,7 @@ export function resolveAccountRole(account: ChartAccount | undefined | null): Ac
   }
 
   if (type === 'asset') {
+    if (subtype === 'undeposited_funds' || name.includes('undeposited')) return 'asset';
     if (
       category === 'cash' ||
       category.includes('cash') ||
@@ -59,4 +60,14 @@ export function resolveAccountRole(account: ChartAccount | undefined | null): Ac
   if (type === 'equity' || category === 'equity') return 'equity';
 
   return 'unknown';
+}
+
+/**
+ * The holding account for payments received but not yet taken to the bank ("Undeposited Funds"):
+ * an asset account with subtype undeposited_funds, or named so. "Make deposit" moves its payments
+ * to a bank account in one entry, so the bank statement's single deposit line matches.
+ */
+export function isUndepositedFundsAccount(account: ChartAccount | undefined | null): boolean {
+  if (!account || (account.type || '').toLowerCase() !== 'asset') return false;
+  return (account.subtype || '').toLowerCase() === 'undeposited_funds' || /undeposited/i.test(account.name || '');
 }

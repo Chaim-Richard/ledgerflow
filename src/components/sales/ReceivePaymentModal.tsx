@@ -3,6 +3,7 @@ import { X, DollarSign, Check, AlertCircle, Sparkles } from 'lucide-react';
 import { runTransaction, doc, collection } from '../../lib/db/firestore';
 import { db } from '../../firebase';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { isUndepositedFundsAccount } from '../../lib/accountUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, getLocalDateISO, roundCents } from '../../lib/utils';
 import { LedgerPostService } from '../../services/LedgerPostService';
@@ -46,9 +47,10 @@ export default function ReceivePaymentModal({
 
   // Filter bank/cash accounts
   const cashAccounts = useMemo(() => {
+    // Bank/cash accounts, plus Undeposited Funds (received now, taken to the bank later with "Make deposit")
     return (accounts || []).filter(a => 
       a.type === 'asset' && 
-      (a.category === 'Cash' || a.category === 'Bank' || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('checking'))
+      (a.category === 'Cash' || a.category === 'Bank' || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('checking') || isUndepositedFundsAccount(a))
     );
   }, [accounts]);
 
