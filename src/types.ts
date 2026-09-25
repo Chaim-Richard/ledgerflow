@@ -65,6 +65,18 @@ export interface Workspace {
   computeCreditBalance?: number;
   fiscalYearStartMonth?: number;
   fiscalYearStartDay?: number;
+  fiscalYearEnd?: string;
+  // Set only by the server or a platform admin (the database refuses them from the browser)
+  isClosed?: boolean;
+  computeLimit?: number;
+  lastUpgradedAt?: string;
+  deletedAt?: string;
+  scheduledPurgeAt?: string;
+  creditCostMultiplier?: number;
+  quotaCentsMultiplier?: number;
+  customKeyCreditCharge?: number;
+  customKeyCentsCharge?: number;
+  freeWorkspaceTxCap?: number;
   dimensions?: DimensionDefinition[]; // Dynamic workspace dimensional coordinate schema
   allowedWorldPaths?: string[];       // Coordinate-scoped permissions for sub-ledgers
   numberingSeries?: Record<string, { prefix: string; nextNumber: number; padding: number }>;

@@ -6,6 +6,7 @@ import type { Firestore } from '../db/firestore';
 import { writeServerAuditLog } from '../services/auditLogService';
 import { seedDemoWorkspace } from '../../lib/demoWorkspaceSeeder';
 import { formatTzDate } from './transactionRoutes';
+import { applyAccountTemplate, TemplateError } from '../services/templateService';
 
 export const workspaceRouter = express.Router();
 
@@ -129,6 +130,26 @@ export async function allocateNextNumber(db: any, workspaceId: string, type: 'in
  * Task 5: Allocate next document number atomically within Firestore transaction.
  * POST only to prevent prefetching/crawlers from mutating state (Finding E).
  */
+// Apply a chart-of-accounts template on the server (templateService): owners and accountants
+// manage the chart of accounts; the dashboard layout comes only from built-in templates.
+const applyTemplateSchema = z.object({
+  templateId: z.string().min(1).max(100).optional(),
+  accounts: z.array(z.record(z.string(), z.unknown())).max(500).optional(),
+}).refine(b => Boolean(b.templateId) !== Boolean(b.accounts), 'Send either templateId or accounts');
+
+workspaceRouter.post('/:workspaceId/apply-template', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
+  try {
+    const { workspaceId } = req.params as Record<string, string>;
+    const body = applyTemplateSchema.parse(req.body);
+    const result = await applyAccountTemplate(getDb(), { workspaceId, uid: (req as AuthenticatedRequest).user.uid, ...body });
+    res.json({ status: 'success', ...result });
+  } catch (err) {
+    if (err instanceof z.ZodError) return sendError(res, 'Invalid template request', 400, err.issues);
+    if (err instanceof TemplateError) return sendError(res, err.message, err.status);
+    sendError(res, 'Could not apply the template', 500, err instanceof Error ? err.message : String(err));
+  }
+});
+
 // Saved CSV column layouts for statement imports (src/lib/importColumnMaps.ts), keyed by the
 // file's header signature. Anyone who imports statements (owner/accountant/bookkeeper) may save.
 const importMapSchema = z.object({

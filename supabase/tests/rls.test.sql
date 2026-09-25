@@ -130,6 +130,10 @@ select pg_temp.expect_denied('customer with an unknown field', 'u-book',
   $$insert into customers(id,data) values ('c1', '{"workspaceId":"ws1","name":"A","hack":1}')$$);
 select pg_temp.expect_ok('customer', 'u-book',
   $$insert into customers(id,data) values ('c2', '{"workspaceId":"ws1","name":"A"}')$$);
+select pg_temp.expect_ok('customer form (with status)', 'u-book',
+  $$insert into customers(id,data) values ('c3', '{"workspaceId":"ws1","name":"B","email":"b@x.test","phone":"1","status":"active","balanceCents":0,"uid":"u-book","createdAt":"2026-05-01"}')$$);
+select pg_temp.expect_ok('template account with a role (FX rounding)', 'u-acct',
+  $$insert into "chartAccounts"(id,data) values ('a-fx', '{"workspaceId":"ws1","name":"FX Rounding","type":"expense","category":"Rounding Differences","subtype":"rounding","role":"fx_rounding","code":"8999"}')$$);
 
 -- chart of accounts
 select pg_temp.expect_denied('bookkeeper adds an account', 'u-book',

@@ -19,7 +19,13 @@ describe('Schema drift & index consistency guard (database rules)', () => {
       'maxSeats', 'seatCount', 'totalQueriesThisMonth', 'computeHardnessScore',
       'billingLedgerChain', 'apiQuotaTotalCentsUsed', 'apiQuotaMonthlyLimitCents',
       'computeCreditBalance', 'dimensions', 'allowedWorldPaths',
-      'bypassBilling', 'stripeCustomerId', 'stripeSubscriptionId', 'status', 'adminCount', 'admins', 'roles', 'members'
+      'bypassBilling', 'stripeCustomerId', 'stripeSubscriptionId', 'status', 'adminCount', 'admins', 'roles', 'members',
+      // settings (migration 20260925000000_workspace_fields)
+      'timezone', 'fiscalYearStartMonth', 'fiscalYearStartDay', 'fiscalYearEnd', 'importColumnMaps',
+      // set only by the server / platform admins (immutable for users)
+      'isClosed', 'computeLimit', 'lastUpgradedAt', 'deletedAt', 'scheduledPurgeAt', 'creditCostMultiplier',
+      'quotaCentsMultiplier', 'customKeyCreditCharge', 'customKeyCentsCharge', 'freeWorkspaceTxCap',
+      'paymentStatus', 'trialEndsAt'
     ];
     for (const key of expectedWorkspaceKeys) {
       assert.ok(allowed.includes(key), `workspaces allowed fields missing '${key}'`);
