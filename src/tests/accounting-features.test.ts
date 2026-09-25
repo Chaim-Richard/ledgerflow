@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-import { calculateStraightLineDepreciation, generateDepreciationLedgerEntry } from '../lib/depreciationEngine';
+import { calculateStraightLineDepreciation, depreciationThrough } from '../lib/depreciationEngine';
 import { calculateDueDate, calculateLateFee } from '../lib/paymentTerms';
 import { detectDuplicateContacts } from '../lib/contactUtils';
 import { convertEstimateToInvoice } from '../lib/estimateConverter';
-import { CreditNote, Invoice, VendorCredit, Bill, FixedAsset, Estimate } from '../types';
+import { FixedAsset, Estimate } from '../types';
 
 describe('Accounting Features & Engines Suite (Items 118 - 130)', () => {
 
@@ -27,17 +27,17 @@ describe('Accounting Features & Engines Suite (Items 118 - 130)', () => {
         createdAt: '2026-01-01T00:00:00Z'
       };
 
-      const schedule = calculateStraightLineDepreciation(asset, '2026-01-01');
+      const schedule = calculateStraightLineDepreciation(asset);
 
       assert.equal(schedule.length, 24);
       assert.equal(schedule[0].depreciationAmountCents, 10000);
       assert.equal(schedule[23].accumulatedDepreciationCents, 240000);
       assert.equal(schedule[23].bookValueCents, 0);
 
-      const entry = generateDepreciationLedgerEntry(asset, schedule[0]);
-      assert.equal(entry.totalAmountCents, 10000);
-      assert.equal(entry.lines?.[0].amountCents, 10000); // Expense DR
-      assert.equal(entry.lines?.[1].amountCents, -10000); // Accumulated Depreciation CR
+      // The month-end run posts the difference to this target (depreciation starts the month after purchase)
+      assert.equal(depreciationThrough(asset, '2026-01'), 0);
+      assert.equal(depreciationThrough(asset, '2026-02'), 10000);
+      assert.equal(depreciationThrough(asset, '2030-01'), 240000);
     });
   });
 

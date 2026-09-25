@@ -562,7 +562,7 @@ export function useLedgerData() {
   // 8. Recurring rules & fixed assets (Settings/Appearance/Data Health Views)
   useEffect(() => {
     if (!user || !currentWorkspaceId) return;
-    if (activeTab !== 'settings' && activeTab !== 'data-health' && activeTab !== 'system-command-center' && activeTab !== 'recurring') return;
+    if (activeTab !== 'settings' && activeTab !== 'data-health' && activeTab !== 'system-command-center' && activeTab !== 'recurring' && activeTab !== 'assets' && activeTab !== 'month-end-close') return;
 
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const unsubRecurring = onSnapshot(query(collection(db, 'recurring'), ...filter, limit(1000)), (snap) => {

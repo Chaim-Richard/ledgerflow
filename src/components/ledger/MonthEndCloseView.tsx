@@ -29,6 +29,7 @@ const ITEM_TABS: Record<CloseItem['id'], string> = {
   'trial-balance': 'reports',
   anomalies: 'audit-trail',
   aging: 'reports',
+  depreciation: 'assets',
 };
 
 const STATE_LABEL = {
@@ -62,6 +63,7 @@ export default function MonthEndCloseView() {
   const invoices = useLedgerStore(s => s.invoices);
   const bills = useLedgerStore(s => s.bills);
   const journalEntries = useLedgerStore(s => s.journalEntries);
+  const assets = useLedgerStore(s => s.assets);
   const workspaces = useAuthStore(s => s.workspaces) || [];
   const setWorkspaces = useAuthStore(s => s.setWorkspaces);
   const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
@@ -88,8 +90,8 @@ export default function MonthEndCloseView() {
   }, [workspaceId, month]);
 
   const items = useMemo(() => buildCloseChecklist({
-    month, transactions: transactions || [], bankLines: bankLines || [], invoices: invoices || [], bills: bills || [], journalEntries: journalEntries || [],
-  }), [month, transactions, bankLines, invoices, bills, journalEntries]);
+    month, transactions: transactions || [], bankLines: bankLines || [], invoices: invoices || [], bills: bills || [], journalEntries: journalEntries || [], assets: assets || [],
+  }), [month, transactions, bankLines, invoices, bills, journalEntries, assets]);
   const signOffs = period?.signOffs || {};
   const readiness = readyToClose(items, signOffs);
   const state = monthCloseState(month, workspace);

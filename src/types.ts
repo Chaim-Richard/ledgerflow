@@ -882,6 +882,14 @@ export interface FixedAsset {
   accumulatedDepreciationCents: number;
   status: 'active' | 'disposed';
   createdAt: string;
+  /** Balance sheet account the asset's cost is in (e.g. Equipment). */
+  assetAccountId?: string;
+  /** Where the monthly run posts: DR expenseAccountId, CR accumulatedAccountId. */
+  expenseAccountId?: string;
+  accumulatedAccountId?: string;
+  /** Last month (YYYY-MM) the depreciation run covered, and its ledger entry. */
+  depreciatedThrough?: string;
+  lastDepreciationTransactionId?: string;
 }
 
 export interface RecurringTransaction {

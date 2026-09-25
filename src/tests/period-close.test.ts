@@ -12,6 +12,8 @@ import type { Server } from 'node:http';
 import { dayBefore, effectiveLockDate, isLockedDate, monthCloseState, monthEnd, postingLock } from '../lib/periodLock';
 import { buildCloseChecklist, readyToClose } from '../lib/closeChecklist';
 import { TransactionValidator } from '../kernel/validation/TransactionValidator';
+import { depreciationThrough } from '../lib/depreciationEngine';
+import type { FixedAsset } from '../types';
 import { makeBill, makeInvoice, makeTransaction } from './fixtures';
 import type { DocumentData, Firestore } from '../server/db/pgFirestore';
 
@@ -203,5 +205,106 @@ describe('Closing and reopening a month', { skip: !url && 'LF_TEST_DATABASE_URL 
 
     const actions = (await db.collection('auditLogs').where('workspaceId', '==', wsId).get()).docs.map(d => d.get('action')).sort();
     assert.deepEqual([...new Set(actions)], ['PERIOD_CLOSED', 'PERIOD_PARTIAL_UNLOCK', 'PERIOD_RELOCKED', 'PERIOD_REOPENED', 'PERIOD_SIGN_OFF']);
+  });
+});
+
+describe('Depreciation', () => {
+  const asset = (fields: Partial<FixedAsset> = {}): FixedAsset => ({
+    id: 'a1', uid: 'u', workspaceId: 'w', name: 'Van', purchaseDate: '2026-01-15', purchasePriceCents: 120000, salvageValueCents: 0,
+    usefulLifeYears: 1, depreciationMethod: 'straight-line', accumulatedDepreciationCents: 0, status: 'active', createdAt: '2026-01-15', ...fields,
+  });
+
+  test('straight line: starts the month after purchase, exact total, nothing after the life ends', () => {
+    assert.equal(depreciationThrough(asset(), '2026-01'), 0);
+    assert.equal(depreciationThrough(asset(), '2026-02'), 10000);
+    assert.equal(depreciationThrough(asset(), '2026-06'), 50000);
+    assert.equal(depreciationThrough(asset(), '2027-01'), 120000);
+    assert.equal(depreciationThrough(asset(), '2030-01'), 120000);
+    assert.equal(depreciationThrough(asset({ purchasePriceCents: 100000, salvageValueCents: 10000, usefulLifeYears: 0.25 }), '2026-04'), 90000, 'rounding goes to the last month');
+  });
+
+  test('declining balance: more at the start, never below salvage, ends exactly at salvage', () => {
+    const dd = asset({ depreciationMethod: 'declining-balance', salvageValueCents: 20000 });
+    const first = depreciationThrough(dd, '2026-02');
+    assert.equal(first, Math.round(120000 * 2 / 12));
+    assert.ok(depreciationThrough(dd, '2026-03') - first < first, 'the second month is smaller');
+    assert.equal(depreciationThrough(dd, '2027-01'), 100000);
+  });
+
+  test('the close checklist asks for the run when an asset is behind', () => {
+    const items = buildCloseChecklist({ month: '2026-03', transactions: [], bankLines: [], invoices: [], bills: [], assets: [asset({ accumulatedDepreciationCents: 10000 })] });
+    assert.equal(items.find(i => i.id === 'depreciation')?.count, 1);
+    const upToDate = buildCloseChecklist({ month: '2026-03', transactions: [], bankLines: [], invoices: [], bills: [], assets: [asset({ accumulatedDepreciationCents: 20000 })] });
+    assert.equal(upToDate.find(i => i.id === 'depreciation')?.status, 'done');
+  });
+});
+
+describe('Depreciation run', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
+  const wsId = `ws_dep_${crypto.randomBytes(4).toString('hex')}`;
+  const id = (name: string) => `${wsId}_${name}`;
+  let server: Server;
+  let base = '';
+  let db: Firestore;
+  const run = async (uid: string, month: string) => {
+    const res = await fetch(`${base}/api/v1/workspaces/${wsId}/periods/${month}/depreciation`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': uid }, body: '{}' });
+    return { status: res.status, body: await res.json() as Record<string, unknown> };
+  };
+  const entries = async () => (await db.collection('transactions').where('workspaceId', '==', wsId).get()).docs.map(d => d.data());
+
+  before(async () => {
+    process.env.DATABASE_URL = url;
+    const express = (await import('express')).default;
+    const { workspaceRouter } = await import('../server/routes/workspaceRoutes');
+    const { getDb } = await import('../server/db/firestore');
+    db = getDb();
+    await db.collection('workspaces').doc(wsId).set({ uid: 'owner-1', name: 'Dep', currency: 'USD', timezone: 'UTC', members: ['owner-1', 'view-1'], roles: { 'view-1': 'viewer' } });
+    await db.collection('chartAccounts').doc(id('exp')).set({ workspaceId: wsId, name: 'Depreciation Expense', type: 'expense', code: '6400' });
+    await db.collection('chartAccounts').doc(id('acc')).set({ workspaceId: wsId, name: 'Accumulated Depreciation', type: 'asset', code: '1590', isContra: true });
+    await db.collection('assets').doc(id('van')).set({ workspaceId: wsId, name: 'Van', purchaseDate: '2026-01-15', purchasePriceCents: 120000, salvageValueCents: 0, usefulLifeYears: 1, depreciationMethod: 'straight-line', accumulatedDepreciationCents: 0, status: 'active' });
+    await db.collection('assets').doc(id('pc')).set({ workspaceId: wsId, name: 'Laptop', purchaseDate: '2026-02-01', purchasePriceCents: 36000, salvageValueCents: 0, usefulLifeYears: 3, depreciationMethod: 'straight-line', accumulatedDepreciationCents: 0, status: 'active', expenseAccountId: id('exp'), accumulatedAccountId: id('acc') });
+    await db.collection('assets').doc(id('old')).set({ workspaceId: wsId, name: 'Sold desk', purchaseDate: '2025-01-01', purchasePriceCents: 50000, salvageValueCents: 0, usefulLifeYears: 1, depreciationMethod: 'straight-line', accumulatedDepreciationCents: 0, status: 'disposed' });
+    const app = express();
+    app.use(express.json());
+    app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: String(req.header('x-test-uid')) }; next(); });
+    app.use('/api/v1/workspaces', workspaceRouter);
+    server = app.listen(0);
+    base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+
+  after(async () => {
+    server?.close();
+    for (const table of ['assets', 'chartAccounts', 'transactions', 'auditLogs', 'workspaces']) {
+      await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [wsId]);
+    }
+    await db.terminate();
+  });
+
+  test('viewers cannot run it; a month that has not ended cannot be run', async () => {
+    assert.equal((await run('view-1', '2026-03')).status, 403);
+    assert.equal((await run('owner-1', '2999-01')).status, 400);
+  });
+
+  test('one entry for all assets through the month (catching up missed months), then nothing the second time', async () => {
+    const res = await run('owner-1', '2026-03');
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    // Van: Feb + Mar = 2 × 10000; Laptop (bought in Feb): Mar = 1000; the disposed desk is skipped
+    assert.equal(res.body.totalCents, 21000);
+    assert.equal(res.body.assets, 2);
+    const [entry] = await entries();
+    assert.equal(entry.date, '2026-03-31');
+    assert.deepEqual(entry.lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]), [[id('exp'), 21000], [id('acc'), -21000]]);
+    const van = (await db.collection('assets').doc(id('van')).get()).data();
+    assert.equal(van?.accumulatedDepreciationCents, 20000);
+    assert.equal(van?.depreciatedThrough, '2026-03');
+
+    const again = await run('owner-1', '2026-03');
+    assert.equal(again.body.totalCents, 0);
+    assert.equal((await entries()).length, 1);
+  });
+
+  test('a locked month is refused', async () => {
+    await db.collection('workspaces').doc(wsId).update({ lockDate: '2026-04-30' });
+    assert.equal((await run('owner-1', '2026-04')).status, 409);
+    await db.collection('workspaces').doc(wsId).update({ lockDate: null });
   });
 });

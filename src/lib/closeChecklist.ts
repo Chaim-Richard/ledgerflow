@@ -4,10 +4,11 @@
  * or blocks the close (drafts dated in the month would be stuck once it closes; an unbalanced
  * trial balance means the books are wrong). The server refuses a close with drafts in it too.
  */
-import type { Bill, Invoice, Transaction } from '../types';
+import type { Bill, FixedAsset, Invoice, Transaction } from '../types';
 import { isPostable, lineAmount } from './txFilters';
 import { addDaysYMD } from './fiscalCalendar';
 import { monthEnd } from './periodLock';
+import { depreciationThrough } from './depreciationEngine';
 
 export const CLOSE_CHECKLIST_ITEMS = [
   { id: 'drafts', title: 'Drafts dated in the month' },
@@ -16,6 +17,7 @@ export const CLOSE_CHECKLIST_ITEMS = [
   { id: 'trial-balance', title: 'Trial balance balances' },
   { id: 'anomalies', title: 'Flagged transactions reviewed' },
   { id: 'aging', title: 'Old receivables and payables reviewed' },
+  { id: 'depreciation', title: 'Depreciation posted' },
 ] as const;
 
 export type CloseItemId = typeof CLOSE_CHECKLIST_ITEMS[number]['id'];
@@ -40,6 +42,7 @@ export interface CloseChecklistInput {
   invoices: Array<Pick<Invoice, 'status' | 'dueDate'> & { date?: string }>;
   bills: Array<Pick<Bill, 'status' | 'dueDate'> & { date?: string }>;
   journalEntries?: DatedDoc[];
+  assets?: FixedAsset[];
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -71,6 +74,8 @@ export function buildCloseChecklist(input: CloseChecklistInput): CloseItem[] {
   const isOld = (d: { status?: string; dueDate?: string }) => d.status !== 'paid' && d.status !== 'void' && d.status !== 'draft' && !!d.dueDate && d.dueDate.slice(0, 10) < cutoff;
   const old = input.invoices.filter(isOld).length + input.bills.filter(isOld).length;
 
+  const undepreciated = (input.assets || []).filter(a => a.status !== 'disposed' && depreciationThrough(a, month) > (a.accumulatedDepreciationCents || 0)).length;
+
   return [
     { id: 'drafts', title: title('drafts'), count: drafts,
       status: drafts ? 'blocker' : 'done',
@@ -90,6 +95,9 @@ export function buildCloseChecklist(input: CloseChecklistInput): CloseItem[] {
     { id: 'aging', title: title('aging'), count: old,
       status: old ? 'attention' : 'done',
       detail: old ? `${plural(old, 'invoice or bill', 'invoices or bills')} more than 60 days overdue at month end.` : 'Nothing more than 60 days overdue.' },
+    { id: 'depreciation', title: title('depreciation'), count: undepreciated,
+      status: undepreciated ? 'attention' : 'done',
+      detail: undepreciated ? `${plural(undepreciated, 'fixed asset')} not depreciated through this month yet (Fixed Asset Register → Post depreciation).` : 'Fixed assets are depreciated through this month.' },
   ];
 }
 
