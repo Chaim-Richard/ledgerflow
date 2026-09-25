@@ -1,4 +1,6 @@
 import type { LockException } from './lib/periodLock';
+import type { EmailTemplates } from './lib/emailTemplates';
+import type { ReminderSettings } from './lib/reminders';
 export type NotificationKind =
   | 'invoice-created' | 'invoice-sent' | 'invoice-scheduled' | 'invoice-paid'
   | 'invoice-overdue' | 'invoice-cancelled' | 'invoice-refunded' | 'invoice-reminder-sent'
@@ -35,6 +37,10 @@ export interface Workspace {
   softLockDate?: string | null;
   /** Partial unlock of a closed date range. Server-only. */
   lockException?: LockException | null;
+  /** Workspace email texts (src/lib/emailTemplates.ts); missing ones use the defaults. */
+  emailTemplates?: EmailTemplates;
+  /** Automatic payment reminders (src/lib/reminders.ts). */
+  reminderSettings?: ReminderSettings;
   strategicAdvice?: string[];
   analyticalTopology?: DashboardSchema;
   currency?: string;

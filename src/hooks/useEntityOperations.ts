@@ -9,7 +9,7 @@ import {
   where,
   getDocs
 } from '../lib/db/firestore';
-import { db } from '../firebase';
+import { db, getIdToken } from '../firebase';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { toast } from 'sonner';
@@ -144,6 +144,8 @@ export function useEntityOperations() {
       }
 
       if (successMsg) toast.success(successMsg);
+      // A new invoice saved as "sent" is emailed once it is posted
+      if (path === 'invoices' && finalData.status === 'sent') await sendInvoiceEmail(docId, finalData);
 
       return doc(db, path, docId);
     } catch (error) {
@@ -151,63 +153,52 @@ export function useEntityOperations() {
     }
   };
 
-  const sendInvoiceEmail = async (id: string, invoiceData: any) => {
+  // Emails the invoice to the customer (server: documentEmailService.ts). Called after the invoice
+  // is posted, so the server sees an issued invoice; the send is logged there.
+  const sendInvoiceEmail = async (id: string, invoiceData: { customerId?: string; metadata?: Record<string, unknown> }) => {
     if (!currentWorkspaceId) return false;
     const customers = useLedgerStore.getState().customers || [];
     const customer = customers.find(c => c.id === invoiceData.customerId);
-    const toEmail = invoiceData.metadata?.sentTo || customer?.email;
-
-    if (!toEmail || toEmail.trim() === '' || toEmail === 'customer@example.com') {
-      toast.error('Cannot send invoice email: Customer has no valid email address on file.');
+    const to = String(invoiceData.metadata?.sentTo || customer?.email || '').trim();
+    if (!to) {
+      toast.error('The invoice was not emailed: the customer has no email address.');
       return false;
     }
-
     try {
-      const res = await fetch(`/api/v1/invoices/email/${id}/send`, {
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(currentWorkspaceId)}/emails/invoices/${encodeURIComponent(id)}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
         body: JSON.stringify({
-          workspaceId: currentWorkspaceId,
-          toEmail,
-          subject: invoiceData.metadata?.emailSubject || `Invoice ${invoiceData.number || id}`,
-          body: invoiceData.metadata?.emailBody || 'Please find your invoice attached.'
-        })
+          template: 'invoice',
+          to,
+          ...(typeof invoiceData.metadata?.emailSubject === 'string' ? { subject: invoiceData.metadata.emailSubject } : {}),
+          ...(typeof invoiceData.metadata?.emailBody === 'string' ? { body: invoiceData.metadata.emailBody } : {}),
+        }),
       });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Invoice email sent successfully to ${toEmail}.`);
-        if (data.invoiceUrl) {
-          navigator.clipboard.writeText(data.invoiceUrl);
-          toast.info('Payment link copied to clipboard: ' + data.invoiceUrl);
-        }
-        return true;
-      } else {
-        toast.error(data.error || 'Failed to send invoice email.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(`The invoice was saved but not emailed: ${data.message || 'the email could not be sent'}`);
         return false;
       }
+      toast.success(`Invoice emailed to ${data.to}.`);
+      return true;
     } catch (err) {
-      console.error('Failed to send invoice email:', err);
-      toast.error('Failed to send invoice email.');
+      toast.error(`The invoice was saved but not emailed: ${err instanceof Error ? err.message : 'network error'}`);
       return false;
     }
   };
 
   const updateEntity = async (path: string, id: string, updates: any, successMsg?: string) => {
     try {
+      const { forceSend, ...changes } = updates || {};
       const finalData = {
-        ...updates,
+        ...changes,
         updatedAt: new Date().toISOString()
       };
 
-      // Post to ledger if it's an invoice or a bill
-      if (path === 'invoices' && updates.status === 'sent') {
-        const existingInvoice: any = useLedgerStore.getState().invoices.find(i => i.id === id) || {};
-        const mergedData = { ...existingInvoice, ...finalData };
-        if (existingInvoice?.status !== 'sent' || updates.forceSend) {
-          sendInvoiceEmail(id, mergedData);
-        }
-      }
-
+      // Email the invoice when it becomes "sent" (after it is posted below)
+      const previousInvoice = path === 'invoices' ? useLedgerStore.getState().invoices.find(i => i.id === id) : undefined;
+      const emailAfterSave = path === 'invoices' && finalData.status === 'sent' && (previousInvoice?.status !== 'sent' || Boolean(forceSend));
 
       if (path === 'invoices' && user && currentWorkspaceId) {
         const existingInvoice = useLedgerStore.getState().invoices.find(i => i.id === id) || {};
@@ -239,6 +230,7 @@ export function useEntityOperations() {
       }
 
       if (successMsg) toast.success(successMsg);
+      if (emailAfterSave) await sendInvoiceEmail(id, { ...(previousInvoice || {}), ...finalData });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${path}/${id}`);
     }

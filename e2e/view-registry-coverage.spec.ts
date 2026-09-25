@@ -96,6 +96,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
 
   const settingsTabs = [
     { label: 'Import Data', componentName: 'ImportDataView' },
+    { label: 'Emails & Reminders', componentName: 'EmailSettingsView' },
   ];
 
   for (const tab of settingsTabs) {
@@ -109,7 +110,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
       const bodyText = await page.locator('body').innerText();
       expect(bodyText).not.toContain('Something went wrong');
       expect(bodyText).not.toContain('Uncaught Error');
-      expect(bodyText.toLowerCase()).toContain('import');
+      expect(bodyText.toLowerCase()).toContain(tab.label.split(' ')[0].toLowerCase());
     });
   }
 

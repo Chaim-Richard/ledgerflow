@@ -4,7 +4,7 @@ import { reportRouter } from "./src/server/routes/reportRoutes";
 import { workspaceRouter, countWorkspaceOwners, requireWorkspaceRole } from "./src/server/routes/workspaceRoutes";
 import { LEDGER_WRITER_ROLES, roleInWorkspace } from "./src/server/middleware/requireLedgerWriter";
 import { invitePublicRouter } from "./src/server/routes/invitePublicRoutes";
-import { invoiceEmailRouter } from "./src/server/routes/invoiceEmailRoutes";
+import { emailWebhookRouter } from "./src/server/routes/emailRoutes";
 import { publicInvoiceRouter } from "./src/server/routes/publicInvoiceRoutes";
 import { transactionRouter } from "./src/server/routes/transactionRoutes";
 import { revenueRouter } from "./src/server/routes/revenueRoutes";
@@ -4199,7 +4199,7 @@ You MUST output a valid JSON object matching this schema exactly:
   app.use("/api/v1/payments", apiAuthenticate, paymentRouter);
   app.use("/api/v1/documents", apiAuthenticate, documentRouter);
   app.use("/api/v1/invoices/public", publicInvoiceLimiter, publicInvoiceRouter);
-  app.use("/api/v1/invoices/email", apiAuthenticate, invoiceEmailRouter);
+  app.use("/api/v1/email-events", emailWebhookRouter); // provider bounce/complaint reports (secret token)
   app.use("/api/ai", aiRouter);
   app.use("/api/v1/ai", aiRouter);
   app.use("/api/v1/invites", invitePublicRouter);

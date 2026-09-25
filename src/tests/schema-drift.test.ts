@@ -27,7 +27,9 @@ describe('Schema drift & index consistency guard (database rules)', () => {
       'quotaCentsMultiplier', 'customKeyCreditCharge', 'customKeyCentsCharge', 'freeWorkspaceTxCap',
       'paymentStatus', 'trialEndsAt',
       // closing the books (migration 20260925030000_period_close), server-only
-      'softLockDate', 'lockException'
+      'softLockDate', 'lockException',
+      // email templates and reminder settings (migration 20260925040000_email_settings)
+      'emailTemplates', 'reminderSettings'
     ];
     for (const key of expectedWorkspaceKeys) {
       assert.ok(allowed.includes(key), `workspaces allowed fields missing '${key}'`);

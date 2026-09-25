@@ -11,6 +11,7 @@ import { importRecords, undoImport, ImportError } from '../services/recordImport
 import { IMPORT_KINDS, MAX_IMPORT_ROWS } from '../../lib/recordImport';
 import { periodRouter } from './periodRoutes';
 import { badDebtRouter } from './badDebtRoutes';
+import { emailRouter } from './emailRoutes';
 
 export const workspaceRouter = express.Router();
 
@@ -185,6 +186,8 @@ workspaceRouter.post('/:workspaceId/import-maps', requireWorkspaceRole(['owner',
 
 // Closing the books: close / reopen / partial unlock / sign-offs (src/server/routes/periodRoutes.ts)
 workspaceRouter.use('/:workspaceId/periods', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), periodRouter);
+// Emails to customers and their send log (src/server/routes/emailRoutes.ts)
+workspaceRouter.use('/:workspaceId/emails', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), emailRouter);
 // Bad debt write-off and its reversal (src/server/routes/badDebtRoutes.ts)
 workspaceRouter.use('/:workspaceId/invoices', requireWorkspaceRole(['owner', 'accountant']), badDebtRouter);
 

@@ -1,13 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { User } from '../../lib/db/auth';
-import { Invoice, Customer, ChartAccount } from '../../types';
-import { 
-  Plus, 
-  Search, 
-  Users, 
-  MoreVertical,
-  Filter,
+import { Invoice } from '../../types';
+import {
+  Plus,
+  Users,
   Download,
   Mail,
   Clock,
@@ -15,11 +11,8 @@ import {
   Activity,
   ShieldCheck,
   TrendingUp,
-  Package,
-  RefreshCw,
-  Kanban,
-  Trash2, Zap, DollarSign,
-  Check, Eye, Ban, FileText, Undo2
+  Trash2, DollarSign,
+  Eye, Ban, Undo2
 } from 'lucide-react';
 import { parseLocalDate, cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { getIdToken } from '../../firebase';
@@ -32,8 +25,8 @@ import InvoiceModal from './InvoiceModal';
 import { EmptyState } from '../ui/EmptyState';
 import CustomerModal from './CustomerModal';
 import { PartyDetailView } from '../common/PartyDetailView';
-import { PARTY_SIDES } from '../../config/partySides';
 import WriteOffModal from './WriteOffModal';
+import InvoiceEmailDialog from './InvoiceEmailDialog';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import ReceivePaymentModal from './ReceivePaymentModal';
 
@@ -133,6 +126,7 @@ export default function Sales() {
   const [isWriteOffOpen, setIsWriteOffOpen] = useState(false);
   const [selectedInvoiceForWriteOff, setSelectedInvoiceForWriteOff] = useState<Invoice | null>(null);
   const [previewPdfInvoice, setPreviewPdfInvoice] = useState<Invoice | null>(null);
+  const [emailInvoice, setEmailInvoice] = useState<Invoice | null>(null);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -413,6 +407,16 @@ export default function Sales() {
                             <Ban size={16} />
                           </button>
                         )}
+                        {inv.status !== 'draft' && inv.status !== 'void' && (
+                          <button
+                            onClick={() => setEmailInvoice(inv)}
+                            className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
+                            title="Email the invoice or a reminder; see emails sent"
+                            aria-label="Email the invoice"
+                          >
+                            <Mail size={16} />
+                          </button>
+                        )}
                         <button
                           onClick={() => setPreviewPdfInvoice(inv)}
                           className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
@@ -565,6 +569,7 @@ export default function Sales() {
           defaultContactId={paymentContactId}
         />
       )}
+      {emailInvoice && <InvoiceEmailDialog invoice={emailInvoice} onClose={() => setEmailInvoice(null)} />}
       {isWriteOffOpen && selectedInvoiceForWriteOff && (
         <WriteOffModal
           isOpen={isWriteOffOpen}

@@ -7,7 +7,7 @@ import { paymentRouter } from '../server/routes/paymentRoutes';
 import { leaseRouter } from '../server/routes/leaseRoutes';
 import { revenueRouter } from '../server/routes/revenueRoutes';
 import { supportRouter } from '../server/routes/supportRoutes';
-import { invoiceEmailRouter } from '../server/routes/invoiceEmailRoutes';
+import { emailRouter } from '../server/routes/emailRoutes';
 
 describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)', () => {
   test('invitePublicRoutes rejects token < 10 chars with 400 Bad Request', async () => {
@@ -160,10 +160,10 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
     }
   });
 
-  test('invoiceEmailRoutes rejects invalid email format with 400 Bad Request', async () => {
+  test('emailRoutes rejects invalid email format with 400 Bad Request', async () => {
     const app = express();
     app.use(express.json());
-    app.use('/api/v1/invoices', invoiceEmailRouter);
+    app.use('/api/v1/workspaces/:workspaceId/emails', emailRouter);
 
     const server: any = await new Promise((resolve) => {
       const s = app.listen(0, '127.0.0.1', () => resolve(s));
@@ -171,10 +171,10 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
     const port = server.address().port;
 
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/api/v1/invoices/inv-123/send`, {
+      const res = await fetch(`http://127.0.0.1:${port}/api/v1/workspaces/ws-1/emails/invoices/inv-123`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId: 'ws-1', toEmail: 'not-an-email' })
+        body: JSON.stringify({ to: 'not-an-email' })
       });
       const body: any = await res.json();
 

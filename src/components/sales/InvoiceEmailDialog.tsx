@@ -1,0 +1,106 @@
+import React, { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { Mail, X } from 'lucide-react';
+import type { Invoice } from '../../types';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { getIdToken } from '../../firebase';
+
+/**
+ * Email an invoice or a payment reminder to the customer, and see every email sent for it
+ * (send log with bounces and complaints, BL-05). Server: src/server/routes/emailRoutes.ts.
+ */
+
+interface LogEvent { event: string; recipient: string; subject: string | null; template: string | null; error: string | null; timestamp: string }
+
+const EVENT_LABEL: Record<string, string> = { sent: 'Sent', failed: 'Failed', bounced: 'Bounced', complaint: 'Marked as spam', delivered: 'Delivered' };
+
+async function authorized(path: string, init?: RequestInit) {
+  const res = await fetch(path, { ...init, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}`, ...(init?.headers || {}) } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'The request failed');
+  return data;
+}
+
+export default function InvoiceEmailDialog({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
+  const customer = useLedgerStore(s => s.customers).find(c => c.id === invoice.customerId);
+  const overdue = !!invoice.dueDate && invoice.status !== 'paid' && invoice.status !== 'draft';
+  const [to, setTo] = useState(() => String(invoice.metadata?.sentTo || customer?.email || ''));
+  const [template, setTemplate] = useState<'invoice' | 'reminder'>(overdue && invoice.status !== 'pending' ? 'reminder' : 'invoice');
+  const [events, setEvents] = useState<LogEvent[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [version, setVersion] = useState(0);
+  const base = `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/emails`;
+
+  useEffect(() => {
+    let cancelled = false;
+    authorized(`${base}/log/${encodeURIComponent(invoice.id)}`)
+      .then(data => { if (!cancelled) setEvents(data.events || []); })
+      .catch(() => { if (!cancelled) setEvents([]); });
+    return () => { cancelled = true; };
+  }, [base, invoice.id, version]);
+
+  const send = async () => {
+    setBusy(true);
+    try {
+      const data = await authorized(`${base}/invoices/${encodeURIComponent(invoice.id)}`, { method: 'POST', body: JSON.stringify({ template, to }) });
+      toast.success(`${template === 'reminder' ? 'Reminder' : 'Invoice'} emailed to ${data.to}.`);
+      setVersion(v => v + 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'The email could not be sent');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="invoice-email-title">
+      <div className="w-full max-w-lg rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-xl">
+        <div className="flex items-center justify-between border-b border-[var(--line)] p-4">
+          <h2 id="invoice-email-title" className="text-sm font-bold text-[var(--text)] inline-flex items-center gap-2">
+            <Mail className="w-4 h-4" aria-hidden="true" /> Email invoice {invoice.number || invoice.id}
+          </h2>
+          <button type="button" onClick={onClose} className="p-1 text-[var(--muted)]" aria-label="Close"><X className="w-4 h-4" aria-hidden="true" /></button>
+        </div>
+        <div className="space-y-3 p-4 text-sm">
+          <div>
+            <label htmlFor="email-to" className="mb-1 block text-xs font-semibold text-[var(--text)]">To</label>
+            <input id="email-to" type="email" value={to} onChange={e => setTo(e.target.value)} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[var(--text)]" />
+          </div>
+          <div>
+            <label htmlFor="email-template" className="mb-1 block text-xs font-semibold text-[var(--text)]">Email</label>
+            <select id="email-template" value={template} onChange={e => setTemplate(e.target.value as 'invoice' | 'reminder')} className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[var(--text)]">
+              <option value="invoice">The invoice</option>
+              <option value="reminder">Payment reminder</option>
+            </select>
+            <p className="mt-1 text-[11px] text-[var(--muted)]">The text comes from Settings → Emails & Reminders. The PDF is attached.</p>
+          </div>
+          <button type="button" disabled={busy || !to.includes('@') || invoice.status === 'draft'} onClick={send}
+            className="rounded-lg bg-[var(--brass)] px-4 py-2 text-sm font-bold text-black disabled:opacity-50">
+            {busy ? 'Sending…' : 'Send'}
+          </button>
+          {invoice.status === 'draft' && <p className="text-xs text-[var(--muted)]">Save the invoice as final before emailing it.</p>}
+
+          <div className="border-t border-[var(--line)] pt-3">
+            <p className="mb-2 text-xs font-semibold text-[var(--muted)]">Emails for this invoice</p>
+            {events === null ? <p className="text-xs text-[var(--muted)]">Loading…</p>
+              : events.length === 0 ? <p className="text-xs text-[var(--muted)]">None yet.</p>
+              : (
+                <ul className="max-h-48 space-y-1 overflow-auto text-xs">
+                  {events.map(e => (
+                    <li key={`${e.timestamp}:${e.event}:${e.recipient}`} className="flex justify-between gap-3">
+                      <span className={e.event === 'sent' || e.event === 'delivered' ? 'text-[var(--text)]' : 'text-[var(--neg)]'}>
+                        {EVENT_LABEL[e.event] || e.event}{e.template === 'reminder' ? ' (reminder)' : ''} · {e.recipient}{e.error ? ` · ${e.error}` : ''}
+                      </span>
+                      <span className="shrink-0 text-[var(--muted)]">{e.timestamp.slice(0, 16).replace('T', ' ')}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

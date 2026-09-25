@@ -64,6 +64,7 @@ describe('Route Contract Guard Suite (§0c Route Contract)', () => {
       '/api/v1/payments',
       '/api/v1/documents',
       '/api/v1/invoices',
+      '/api/v1/email-events',
       '/api/v1/invites',
       '/api/v1/plaid',
       '/api/v1/math',

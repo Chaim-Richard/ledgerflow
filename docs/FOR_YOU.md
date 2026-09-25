@@ -2,7 +2,7 @@
 
 Claude keeps working while these wait. It never stops to wait for an answer: where a decision
 is needed, it takes the default written below and moves on. When you have time, answer as many
-as you like in one message, e.g. **"1 done, 4 yes, 7 no, 9 keep Hebrew"**. Answered items are
+as you like in one message, e.g. **"1 done, 4 yes, 11 hide, 10 keep Hebrew"**. Answered items are
 removed from this list.
 
 Last updated: 2026-09-25.
@@ -26,26 +26,32 @@ Last updated: 2026-09-25.
    users: Authentication → Emails → SMTP Settings (e.g. Resend, Postmark, SendGrid).
 6. **Database certificate.** Supabase → Database → SSL: download the certificate and paste it in
    Vercel as `DATABASE_CA_CERT`, so the server checks it is really talking to your database.
-7. **Optional keys** for features that say "not set up yet": Stripe (billing), currency rates,
+7. **Email sending (needed for invoices and reminders by email).** Pick a provider (Resend is the
+   simplest), then in Vercel → Environment Variables add `RESEND_API_KEY` and `EMAIL_FROM`
+   (e.g. `invoices@yourdomain.com`, a domain you verified with the provider). For bounce reports,
+   also add `EMAIL_WEBHOOK_SECRET` (any long random text) and in the provider's webhook settings
+   use `https://ledgerflow-one-pearl.vercel.app/api/v1/email-events?token=<that secret>`.
+   *Until then, "Email invoice" says email is not set up yet.*
+8. **Optional keys** for features that say "not set up yet": Stripe (billing), currency rates,
    tax. Tell Claude which ones you want.
-8. **Old settings to delete** in Vercel (unused since the move to Supabase): `FIREBASE_PROJECT_ID`,
+9. **Old settings to delete** in Vercel (unused since the move to Supabase): `FIREBASE_PROJECT_ID`,
    `SQL_*`, `JWT_SECRET`.
 
 ## B. Decisions (Claude uses the default until you say otherwise)
 
-9. **Hebrew.** Some screens have Hebrew labels, most don't. Finish Hebrew everywhere, or remove
+10. **Hebrew.** Some screens have Hebrew labels, most don't. Finish Hebrew everywhere, or remove
    the language switch for now? *Default: leave as is until you decide.*
-10. **Demo and fake features.** Some screens and endpoints return made-up data (the "API Hub" demo
+11. **Demo and fake features.** Some screens and endpoints return made-up data (the "API Hub" demo
     endpoints for e-commerce/marketing/HR, the Admin "command center" with simulated logs).
     Delete them, or keep them behind a "developer" switch? *Default: hide them behind a
     developer switch when Claude gets to the clean-up step.*
-11. **Which country's tax rules first?** (VAT/GST return boxes, reverse charge, US sales tax…)
+12. **Which country's tax rules first?** (VAT/GST return boxes, reverse charge, US sales tax…)
     *Default: generic rules that work anywhere (tax groups, compound tax, zero-rated vs exempt,
     reverse charge, configurable return boxes).*
-12. **Deposits on invoices.** Is a deposit a payment in advance (tax on the full invoice; the
+13. **Deposits on invoices.** Is a deposit a payment in advance (tax on the full invoice; the
     deposit only lowers the amount still due) or a discount? *Default: payment in advance
     (normal practice).*
-13. **Dependency updates** (the open Dependabot pull requests on GitHub). *Default: Claude
+14. **Dependency updates** (the open Dependabot pull requests on GitHub). *Default: Claude
     applies the safe updates directly on `main` during the trust & compliance step and closes
     the PRs they replace; the big ones (Plaid 47) wait until a feature needs them.*
 
