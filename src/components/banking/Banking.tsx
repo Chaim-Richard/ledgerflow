@@ -21,6 +21,8 @@ export default function Banking() {
   );
   
   const [syncingAccountId, setSyncingAccountId] = useState<string | null>(null);
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const [needsReconnect, setNeedsReconnect] = useState<{ bankId: string; institutionName: string }[]>([]);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   const handleSyncNow = async (accountName: string, accountId: string) => {
@@ -33,9 +35,10 @@ export default function Banking() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ accountId })
+        body: JSON.stringify({ workspaceId, accountId })
       });
       const data = await res.json();
+      setNeedsReconnect(Array.isArray(data.needsReconnect) ? data.needsReconnect : []);
       if (res.ok && data.success) {
         toast.success(`Synchronized ${accountName} with bank feed.`);
       } else if (res.ok) {
@@ -78,6 +81,12 @@ export default function Banking() {
               <span>Transfer Funds</span>
             </button>
             <PlaidConnectButton onSuccessSync={handleSyncSuccess} />
+            {needsReconnect.map(b => (
+              <div key={b.bankId} role="alert" className="flex items-center gap-3 rounded-xl border border-[var(--neg)] px-3 py-2 text-xs text-[var(--text)]">
+                <span>{b.institutionName || 'A bank'} needs you to log in again.</span>
+                <PlaidConnectButton bankId={b.bankId} label="Reconnect" onSuccessSync={() => setNeedsReconnect(list => list.filter(x => x.bankId !== b.bankId))} />
+              </div>
+            ))}
           </div>
         </div>
 

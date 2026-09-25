@@ -55,8 +55,8 @@ export function requireWorkspaceRole(allowedRoles: string[]) {
       (authReq as any).userRole = userRole;
       next();
     } catch (err: any) {
-      if (err.message === 'FORBIDDEN') return sendError(res, 'Forbidden', 403);
-      if (err.message === 'NOT_FOUND') return sendError(res, 'Workspace not found', 404);
+      if (err.message === 'FORBIDDEN' || /Unauthorized|not a member/i.test(err.message || '')) return sendError(res, 'Forbidden', 403);
+      if (err.message === 'NOT_FOUND' || /Workspace not found/i.test(err.message || '')) return sendError(res, 'Workspace not found', 404);
       sendError(res, 'Role Authorization Error', 500, err.message);
     }
   };

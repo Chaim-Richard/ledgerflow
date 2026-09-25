@@ -6,6 +6,7 @@ import { Transaction, ChartAccount } from '../../types';
 import { cn, reportError, OperationType } from '../../lib/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { toast } from 'sonner';
 import { collection, getDocs, query, where, limit } from '../../lib/db/firestore';
 import { db, getIdToken } from '../../firebase';
 import { MatchingEngine } from '../../lib/MatchingEngine';
@@ -34,6 +35,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
   const [mappedTransactions, setMappedTransactions] = useState<any[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const user = useAuthStore(s => s.user);
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const userProfile = useAuthStore(s => s.userProfile);
   const matchingThreshold = useLedgerStore(state => state.matchingThreshold);
 
@@ -84,10 +86,14 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       const token = await getIdToken();
       const res = await fetch('/api/v1/plaid/sync', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId: currentWorkspaceId })
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
+      if (Array.isArray(data.needsReconnect) && data.needsReconnect.length > 0) {
+        toast.warning(`${data.needsReconnect.length} bank connection(s) need you to log in again: open Banking → Reconnect.`);
+      }
       
       const mappedFormat = (data.transactions || []).map((t: any) => ({
         date: t.date,
