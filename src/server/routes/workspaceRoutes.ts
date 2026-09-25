@@ -7,6 +7,8 @@ import { writeServerAuditLog } from '../services/auditLogService';
 import { seedDemoWorkspace } from '../../lib/demoWorkspaceSeeder';
 import { formatTzDate } from './transactionRoutes';
 import { applyAccountTemplate, TemplateError } from '../services/templateService';
+import { importRecords, undoImport, ImportError } from '../services/recordImportService';
+import { IMPORT_KINDS, MAX_IMPORT_ROWS } from '../../lib/recordImport';
 
 export const workspaceRouter = express.Router();
 
@@ -176,6 +178,44 @@ workspaceRouter.post('/:workspaceId/import-maps', requireWorkspaceRole(['owner',
   } catch (err) {
     if (err instanceof z.ZodError) return sendError(res, 'Invalid column layout', 400, err.issues);
     sendError(res, 'Could not save the column layout', 500, err instanceof Error ? err.message : String(err));
+  }
+});
+
+// Bulk import of customers, vendors, items or accounts from a spreadsheet (K-01; rules in
+// src/lib/recordImport.ts). Writers may import; the chart of accounts is owner/accountant only.
+const importRecordsSchema = z.object({
+  kind: z.enum(IMPORT_KINDS),
+  rows: z.array(z.record(z.string(), z.string().max(5000))).min(1).max(MAX_IMPORT_ROWS),
+  openingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  dryRun: z.boolean().optional(),
+}).strict();
+const LEDGER_ADMIN_ROLES = ['owner', 'accountant'];
+const roleOf = (req: express.Request) => String((req as unknown as { userRole?: string }).userRole || '');
+
+workspaceRouter.post('/:workspaceId/import-records', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
+  try {
+    const { workspaceId } = req.params as Record<string, string>;
+    const body = importRecordsSchema.parse(req.body);
+    if (body.kind === 'accounts' && !LEDGER_ADMIN_ROLES.includes(roleOf(req))) return sendError(res, 'Only owners and accountants can change the chart of accounts', 403);
+    const { user } = req as AuthenticatedRequest;
+    const result = await importRecords(getDb(), { workspaceId, uid: user.uid, email: user.email, ...body });
+    res.json({ status: 'success', ...result });
+  } catch (err) {
+    if (err instanceof z.ZodError) return sendError(res, 'Invalid import request', 400, err.issues);
+    if (err instanceof ImportError) return sendError(res, err.message, err.status, err.issues.length ? err.issues : undefined);
+    sendError(res, 'Could not import the records', 500, err instanceof Error ? err.message : String(err));
+  }
+});
+
+workspaceRouter.post('/:workspaceId/import-records/:batchId/undo', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
+  try {
+    const { workspaceId, batchId } = req.params as Record<string, string>;
+    const { user } = req as AuthenticatedRequest;
+    const result = await undoImport(getDb(), { workspaceId, uid: user.uid, email: user.email, batchId, allowAccounts: LEDGER_ADMIN_ROLES.includes(roleOf(req)) });
+    res.json({ status: 'success', ...result });
+  } catch (err) {
+    if (err instanceof ImportError) return sendError(res, err.message, err.status);
+    sendError(res, 'Could not undo the import', 500, err instanceof Error ? err.message : String(err));
   }
 });
 

@@ -18,7 +18,7 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
@@ -371,6 +371,7 @@ export const SETTINGS_TABS_REGISTRY = [
   { id: 'security', label: { en: 'Security', he: 'אבטחה' }, componentName: 'SecurityView', icon: ShieldCheck },
   { id: 'rule', label: { en: 'AI & Copilot', he: 'בינה מלאכותית' }, componentName: 'AISettingsView', icon: CpuIcon },
   { id: 'developer', label: { en: 'Developer', he: 'מפתחים' }, componentName: 'DeveloperView', icon: TerminalIcon },
+  { id: 'import', label: { en: 'Import Data', he: 'ייבוא נתונים' }, componentName: 'ImportDataView', icon: Upload },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ];
@@ -385,6 +386,7 @@ export const SETTINGS_COMPONENTS: Record<string, any> = {
   'SecurityView': lazy(() => import('../components/platform/settings/SecuritySettings')),
   'AISettingsView': lazy(() => import('../components/platform/settings/AISettings')),
   'DeveloperView': lazy(() => import('../components/platform/settings/DeveloperSettings')),
+  'ImportDataView': lazy(() => import('../components/platform/settings/ImportSettings')),
   'ExportView': lazy(() => import('../components/platform/settings/BackupExportSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };

@@ -135,6 +135,16 @@ select pg_temp.expect_ok('customer form (with status)', 'u-book',
 select pg_temp.expect_ok('template account with a role (FX rounding)', 'u-acct',
   $$insert into "chartAccounts"(id,data) values ('a-fx', '{"workspaceId":"ws1","name":"FX Rounding","type":"expense","category":"Rounding Differences","subtype":"rounding","role":"fx_rounding","code":"8999"}')$$);
 
+-- imported records (server-created with importBatchId) stay editable; the batch id is fixed
+do $$ begin
+  perform set_config('request.jwt.claims', '', true);
+  insert into customers(id,data) values ('c-imp', '{"workspaceId":"ws1","name":"Imported","importBatchId":"imp_0123456789abcdef"}');
+end $$;
+select pg_temp.expect_ok('edit an imported customer', 'u-book',
+  $$select lf_update('customers','c-imp','{"phone":"555"}'::jsonb)$$);
+select pg_temp.expect_denied('change an import batch id', 'u-book',
+  $$select lf_update('customers','c-imp','{"importBatchId":"imp_ffffffffffffffff"}'::jsonb)$$);
+
 -- chart of accounts
 select pg_temp.expect_denied('bookkeeper adds an account', 'u-book',
   $$insert into "chartAccounts"(id,data) values ('a1', '{"workspaceId":"ws1","name":"Cash","type":"asset"}')$$);

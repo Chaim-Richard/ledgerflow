@@ -261,6 +261,8 @@ export interface Vendor {
   tags?: string[];
   metadata?: Record<string, any>;
   balanceCents?: number;
+  /** Set when the vendor came from a spreadsheet import (src/lib/recordImport.ts); lets the import be undone. */
+  importBatchId?: string;
 }
 
 export interface Bill {
@@ -469,6 +471,8 @@ export interface Customer {
   metadata?: Record<string, any>;
   notes?: string;
   isForeign?: boolean;
+  /** Set when the customer came from a spreadsheet import; lets the import be undone. */
+  importBatchId?: string;
 }
 
 export interface CustomTemplate {
@@ -587,6 +591,8 @@ export interface ChartAccount {
   classification?: string;
   role?: string;
   isActive?: boolean;
+  /** Set when the account came from a spreadsheet import; lets the import be undone. */
+  importBatchId?: string;
 }
 
 export interface JournalEntry {
@@ -851,6 +857,8 @@ export interface InventoryItem {
   unitsPerPackage?: number; // e.g. 100
   category?: string;
   createdAt: string;
+  /** Set when the item came from a spreadsheet import; lets the import be undone. */
+  importBatchId?: string;
 }
 
 export interface FixedAsset {

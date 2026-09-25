@@ -94,6 +94,25 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     });
   }
 
+  const settingsTabs = [
+    { label: 'Import Data', componentName: 'ImportDataView' },
+  ];
+
+  for (const tab of settingsTabs) {
+    test(`Settings tab mounts: ${tab.label} (${tab.componentName})`, async ({ page }) => {
+      await page.locator('button:has-text("Settings")').first().click();
+      const button = page.locator(`button:has-text("${tab.label}")`).first();
+      await expect(button).toBeVisible({ timeout: 10000 });
+      await button.click();
+      await page.waitForTimeout(500);
+
+      const bodyText = await page.locator('body').innerText();
+      expect(bodyText).not.toContain('Something went wrong');
+      expect(bodyText).not.toContain('Uncaught Error');
+      expect(bodyText.toLowerCase()).toContain('import');
+    });
+  }
+
   test('Command Palette (CMD+K / CTRL+K) opens and executes view switching', async ({ page }) => {
     // Open Command Palette via keyboard shortcut or button
     await page.keyboard.press('Meta+k');
