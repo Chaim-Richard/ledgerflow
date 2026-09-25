@@ -1,0 +1,56 @@
+# For you: things only you can do or decide
+
+Claude keeps working while these wait. It never stops to wait for an answer: where a decision
+is needed, it takes the default written below and moves on. When you have time, answer as many
+as you like in one message, e.g. **"1 done, 4 yes, 7 no, 9 keep Hebrew"**. Answered items are
+removed from this list.
+
+Last updated: 2026-09-25.
+
+## A. Settings only you can change (a few minutes each)
+
+1. **Sign-in addresses (Supabase).** supabase.com → project *ledgerflow* → Authentication → URL
+   Configuration. Site URL: `https://ledgerflow-one-pearl.vercel.app`. Redirect URLs: add
+   `https://ledgerflow-one-pearl.vercel.app/**` and `http://localhost:3000/**`.
+   Without it, sign-up confirmation and password-reset emails link to the wrong place.
+2. **Replace the four secrets Claude generated** (Vercel → project ledgerflow → Settings →
+   Environment Variables): `SESSION_SECRET`, `INVITE_SECRET`, `CRON_SECRET`, `SYSTEM_SALT`.
+   Put in long random values of your own. **Do `SYSTEM_SALT` before any bank is connected
+   with Plaid**: it encrypts the stored bank tokens, and changing it later disconnects banks.
+3. **Try sign-up on the live site** and tell Claude what happened (email arrived? could you log
+   in and create a workspace?).
+4. **Deployment protection (Vercel).** Right now only people logged in to your Vercel account
+   can open the site. Before customers: Vercel → Settings → Deployment Protection → turn off for
+   Production (or add your own domain). *Default meanwhile: leave it on.*
+5. **Email sender (Supabase).** The built-in sender only sends a few emails per hour. Before real
+   users: Authentication → Emails → SMTP Settings (e.g. Resend, Postmark, SendGrid).
+6. **Database certificate.** Supabase → Database → SSL: download the certificate and paste it in
+   Vercel as `DATABASE_CA_CERT`, so the server checks it is really talking to your database.
+7. **Optional keys** for features that say "not set up yet": Stripe (billing), currency rates,
+   tax. Tell Claude which ones you want.
+8. **Old settings to delete** in Vercel (unused since the move to Supabase): `FIREBASE_PROJECT_ID`,
+   `SQL_*`, `JWT_SECRET`.
+
+## B. Decisions (Claude uses the default until you say otherwise)
+
+9. **Hebrew.** Some screens have Hebrew labels, most don't. Finish Hebrew everywhere, or remove
+   the language switch for now? *Default: leave as is until you decide.*
+10. **Demo and fake features.** Some screens and endpoints return made-up data (the "API Hub" demo
+    endpoints for e-commerce/marketing/HR, the Admin "command center" with simulated logs).
+    Delete them, or keep them behind a "developer" switch? *Default: hide them behind a
+    developer switch when Claude gets to the clean-up step.*
+11. **Which country's tax rules first?** (VAT/GST return boxes, reverse charge, US sales tax…)
+    *Default: generic rules that work anywhere (tax groups, compound tax, zero-rated vs exempt,
+    reverse charge, configurable return boxes).*
+12. **Deposits on invoices.** Is a deposit a payment in advance (tax on the full invoice; the
+    deposit only lowers the amount still due) or a discount? *Default: payment in advance
+    (normal practice).*
+13. **Dependency updates** (the open Dependabot pull requests on GitHub). *Default: Claude
+    applies the safe updates directly on `main` during the trust & compliance step and closes
+    the PRs they replace; the big ones (Plaid 47) wait until a feature needs them.*
+
+## C. Good to know (no action needed)
+
+- Vercel deploys by itself about a minute after each push to `main`.
+- Database changes are applied to Supabase by Claude and tested on a local copy first.
+- Progress and the full list: [TRACKER.md](TRACKER.md).
