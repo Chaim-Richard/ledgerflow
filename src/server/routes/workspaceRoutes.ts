@@ -10,6 +10,7 @@ import { applyAccountTemplate, TemplateError } from '../services/templateService
 import { importRecords, undoImport, ImportError } from '../services/recordImportService';
 import { IMPORT_KINDS, MAX_IMPORT_ROWS } from '../../lib/recordImport';
 import { periodRouter } from './periodRoutes';
+import { badDebtRouter } from './badDebtRoutes';
 
 export const workspaceRouter = express.Router();
 
@@ -184,6 +185,8 @@ workspaceRouter.post('/:workspaceId/import-maps', requireWorkspaceRole(['owner',
 
 // Closing the books: close / reopen / partial unlock / sign-offs (src/server/routes/periodRoutes.ts)
 workspaceRouter.use('/:workspaceId/periods', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), periodRouter);
+// Bad debt write-off and its reversal (src/server/routes/badDebtRoutes.ts)
+workspaceRouter.use('/:workspaceId/invoices', requireWorkspaceRole(['owner', 'accountant']), badDebtRouter);
 
 // Bulk import of customers, vendors, items or accounts from a spreadsheet (K-01; rules in
 // src/lib/recordImport.ts). Writers may import; the chart of accounts is owner/accountant only.

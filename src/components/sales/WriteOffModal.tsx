@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
-import { doc, updateDoc } from '../../lib/db/firestore';
-import { db } from '../../firebase';
+import { getIdToken } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { Invoice } from '../../types';
 import { formatCurrency } from '../../lib/utils';
-import { LedgerPostService } from '../../services/LedgerPostService';
+import { calculateAmountDue } from '../../lib/documentMath';
+import { resolveAccountRole } from '../../lib/accountUtils';
 import { toast } from 'sonner';
 
 interface WriteOffModalProps {
@@ -19,8 +19,8 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
   const user = useAuthStore(s => s.user);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const accounts = useLedgerStore(s => s.accounts) || [];
-  const expenseAccounts = accounts.filter(a => a.type === 'expense');
-  const defaultBadDebt = expenseAccounts.find(a => a.name.toLowerCase().includes('bad debt') || a.code === '6800') || expenseAccounts[0];
+  const expenseAccounts = accounts.filter(a => resolveAccountRole(a) === 'expense' && !a.isArchived);
+  const defaultBadDebt = expenseAccounts.find(a => /bad debt|uncollectible|doubtful/i.test(a.name));
 
   const [badDebtAccountId, setBadDebtAccountId] = useState<string>(defaultBadDebt?.id || '');
   const [reason, setReason] = useState('Uncollectible bad debt');
@@ -28,10 +28,10 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
 
   if (!isOpen || !invoice) return null;
 
-  const total = invoice.amountCents || 0;
-  const paid = invoice.amountPaidCents || 0;
-  const remainingCents = Math.max(0, total - paid);
+  const remainingCents = calculateAmountDue(invoice);
 
+  // The server posts DR bad debt / CR receivables and settles the invoice in one database
+  // transaction (src/server/services/badDebtService.ts). The sale itself stays: it was earned.
   const handleWriteOff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentWorkspaceId || !user || !invoice.id) return;
@@ -42,33 +42,17 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
 
     setIsSubmitting(true);
     try {
-      // 1. Update invoice status in Firestore
-      const invRef = doc(db, 'invoices', invoice.id);
-      await updateDoc(invRef, {
-        status: 'void',
-        isWrittenOff: true,
-        writeOffReason: reason,
-        updatedAt: new Date().toISOString()
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(currentWorkspaceId)}/invoices/${encodeURIComponent(invoice.id)}/write-off`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
+        body: JSON.stringify({ reason, ...(badDebtAccountId ? { badDebtAccountId } : {}) }),
       });
-
-      // 2. Post Bad Debt journal entry via LedgerPostService
-      await LedgerPostService.postWriteOffLedger(
-        invoice.id,
-        invoice,
-        remainingCents,
-        currentWorkspaceId,
-        user.uid,
-        reason,
-        undefined,
-        undefined,
-        badDebtAccountId || undefined
-      );
-
-      toast.success(`Written off ${formatCurrency(remainingCents)} as Bad Debt`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to write off bad debt');
+      toast.success(`Written off ${formatCurrency(remainingCents)} as bad debt`);
       onClose();
-    } catch (err: any) {
-      console.error('Write-off failed:', err);
-      toast.error(err.message || 'Failed to write off bad debt');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to write off bad debt');
     } finally {
       setIsSubmitting(false);
     }
@@ -111,14 +95,16 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label htmlFor="write-off-account" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Bad Debt Expense Account
             </label>
             <select
+              id="write-off-account"
               value={badDebtAccountId}
               onChange={e => setBadDebtAccountId(e.target.value)}
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
             >
+              {!badDebtAccountId && <option value="">Choose the bad debt account…</option>}
               {expenseAccounts.map(acc => (
                 <option key={acc.id} value={acc.id}>
                   {acc.code ? `${acc.code} - ` : ''}{acc.name}
@@ -128,10 +114,11 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label htmlFor="write-off-reason" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Write-off Reason / Notes
             </label>
             <textarea
+              id="write-off-reason"
               value={reason}
               onChange={e => setReason(e.target.value)}
               rows={3}
@@ -141,7 +128,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            This will debit the selected Bad Debt Expense account and credit Accounts Receivable (1100), clearing the customer's open balance.
+            Debits the bad debt expense account and credits Accounts Receivable for what is still due. The sale stays in your reports. If the customer pays later, reverse the write-off first.
           </p>
 
           <div className="flex justify-end gap-3 pt-2">
@@ -154,7 +141,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !badDebtAccountId}
               className="px-4 py-2 text-sm font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-lg disabled:opacity-50"
             >
               {isSubmitting ? 'Writing off...' : 'Confirm Bad Debt Write-off'}

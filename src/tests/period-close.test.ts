@@ -308,3 +308,74 @@ describe('Depreciation run', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, (
     await db.collection('workspaces').doc(wsId).update({ lockDate: null });
   });
 });
+
+describe('Bad debt write-off', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
+  const wsId = `ws_bd_${crypto.randomBytes(4).toString('hex')}`;
+  const id = (name: string) => `${wsId}_${name}`;
+  let server: Server;
+  let base = '';
+  let db: Firestore;
+  const call = async (uid: string, path: string, body: Record<string, unknown> = {}) => {
+    const res = await fetch(`${base}/api/v1/workspaces/${wsId}/invoices/${id('inv')}${path}`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': uid }, body: JSON.stringify(body) });
+    return { status: res.status, body: await res.json() as Record<string, unknown> };
+  };
+  const invoice = async (): Promise<DocumentData> => (await db.collection('invoices').doc(id('inv')).get()).data() || {};
+  const ledger = async () => (await db.collection('transactions').where('workspaceId', '==', wsId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as DocumentData);
+
+  before(async () => {
+    process.env.DATABASE_URL = url;
+    const express = (await import('express')).default;
+    const { workspaceRouter } = await import('../server/routes/workspaceRoutes');
+    const { getDb } = await import('../server/db/firestore');
+    db = getDb();
+    await db.collection('workspaces').doc(wsId).set({ uid: 'owner-1', name: 'BD', currency: 'USD', timezone: 'UTC', members: ['owner-1', 'book-1'], roles: { 'book-1': 'bookkeeper' } });
+    await db.collection('chartAccounts').doc(id('ar')).set({ workspaceId: wsId, name: 'Accounts Receivable', type: 'asset', category: 'Receivables', code: '1100' });
+    await db.collection('chartAccounts').doc(id('bd')).set({ workspaceId: wsId, name: 'Bad Debt Expense', type: 'expense', code: '6800' });
+    await db.collection('invoices').doc(id('inv')).set({ workspaceId: wsId, customerId: 'c1', customerName: 'Acme', number: 'INV-7', amountCents: 10000, amountPaidCents: 3000, status: 'partially_paid', exchangeRate: 1.1, date: '2026-01-10', dueDate: '2026-02-10' });
+    const app = express();
+    app.use(express.json());
+    app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: String(req.header('x-test-uid')) }; next(); });
+    app.use('/api/v1/workspaces', workspaceRouter);
+    server = app.listen(0);
+    base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+
+  after(async () => {
+    server?.close();
+    for (const table of ['invoices', 'chartAccounts', 'transactions', 'auditLogs', 'workspaces']) {
+      await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [wsId]);
+    }
+    await db.terminate();
+  });
+
+  test('bookkeepers cannot write off; the account must be an expense', async () => {
+    assert.equal((await call('book-1', '/write-off', {})).status, 403);
+    assert.equal((await call('owner-1', '/write-off', { badDebtAccountId: id('ar') })).status, 400);
+  });
+
+  test('what is still due is written off in the base currency and the invoice is settled; the sale stays', async () => {
+    const res = await call('owner-1', '/write-off', { date: '2026-06-30', reason: 'Customer closed' });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.writtenOffCents, 7000);
+    assert.equal(res.body.baseCents, 7700, '7000 at 1.1');
+    const [entry] = await ledger();
+    assert.deepEqual(entry.lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]), [[id('bd'), 7700], [id('ar'), -7700]]);
+    const inv = await invoice();
+    assert.equal(inv.status, 'paid');
+    assert.equal(inv.amountPaidCents, 10000);
+    assert.equal(inv.settledByRecordsCents, 7000, 'not posted again as cash when the invoice is re-posted');
+    assert.equal((await call('owner-1', '/write-off', {})).status, 409, 'nothing left');
+  });
+
+  test('the customer pays after all: the write-off is reversed once and the invoice is due again', async () => {
+    const res = await call('owner-1', '/write-off/reverse', { date: '2026-07-15' });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const reversal = (await ledger()).find(t => t.metadata?.type === 'invoice-bad-debt-recovery');
+    assert.deepEqual(reversal?.lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]), [[id('bd'), -7700], [id('ar'), 7700]]);
+    const inv = await invoice();
+    assert.equal(inv.status, 'partially_paid');
+    assert.equal(inv.amountPaidCents, 3000);
+    assert.equal(inv.writtenOffCents, 0);
+    assert.equal((await call('owner-1', '/write-off/reverse', {})).status, 409);
+  });
+});

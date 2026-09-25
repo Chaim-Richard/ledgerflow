@@ -324,6 +324,12 @@ export interface Invoice {
   amountPaidCents?: number;
   /** Part of amountPaidCents settled by payment records or applied credits (they post their own entries). */
   settledByRecordsCents?: number;
+  /** Written off as bad debt (src/server/services/badDebtService.ts); counted in amountPaidCents. */
+  writtenOffCents?: number;
+  writeOffTransactionId?: string | null;
+  writeOffReason?: string | null;
+  writtenOffAt?: string;
+  writeOffReversalTransactionId?: string;
   exchangeRate?: number;
   taxAmountCents?: number;
   taxRate?: number;

@@ -19,9 +19,10 @@ import {
   RefreshCw,
   Kanban,
   Trash2, Zap, DollarSign,
-  Check, Eye, Ban, FileText
+  Check, Eye, Ban, FileText, Undo2
 } from 'lucide-react';
 import { parseLocalDate, cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { getIdToken } from '../../firebase';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isPostable, lineAmount, isOpenInvoice } from '../../lib/txFilters';
 import { format, differenceInDays } from 'date-fns';
@@ -134,6 +135,24 @@ export default function Sales() {
   const [previewPdfInvoice, setPreviewPdfInvoice] = useState<Invoice | null>(null);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // The customer paid after all: reverse the bad debt write-off (server, badDebtService.ts); the
+  // invoice is open again for the payment.
+  const reverseWriteOff = async (inv: Invoice) => {
+    if (!currentWorkspaceId) return;
+    try {
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(currentWorkspaceId)}/invoices/${encodeURIComponent(inv.id)}/write-off/reverse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
+        body: JSON.stringify({ reason: 'Customer paid after all' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'The write-off could not be reversed');
+      toast.success(`Write-off reversed: ${formatCurrency(inv.writtenOffCents || 0)} is due again. Record the payment now.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'The write-off could not be reversed');
+    }
+  };
 
   const agingBuckets = useMemo(() => {
     const now = new Date();
@@ -342,6 +361,9 @@ export default function Sales() {
                         )}>
                           {inv.status}
                         </span>
+                        {(inv.writtenOffCents || 0) > 0 && (
+                          <span className="text-[10px] text-amber-600 font-bold" title={inv.writeOffReason || undefined}>written off {formatCurrency(inv.writtenOffCents || 0)}</span>
+                        )}
                       </div>
                       {inv.metadata?.cogsPending && (
                         <div className="mt-2 flex items-center justify-center gap-2 text-[10px] text-[var(--neg)]">
@@ -369,7 +391,17 @@ export default function Sales() {
                             <DollarSign size={16} />
                           </button>
                         )}
-                        {(inv.status === 'overdue' || (inv.status !== 'paid' && inv.status !== 'void' && differenceInDays(new Date(), parseLocalDate(inv.dueDate)) > 0)) && (
+                        {(inv.writtenOffCents || 0) > 0 && (
+                          <button
+                            onClick={() => reverseWriteOff(inv)}
+                            className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-amber-600 transition-all"
+                            title="Customer paid after all: reverse the bad debt write-off"
+                            aria-label="Reverse the bad debt write-off"
+                          >
+                            <Undo2 size={16} />
+                          </button>
+                        )}
+                        {inv.status !== 'draft' && (inv.status === 'overdue' || (inv.status !== 'paid' && inv.status !== 'void' && differenceInDays(new Date(), parseLocalDate(inv.dueDate)) > 0)) && (
                           <button
                             onClick={() => {
                               setSelectedInvoiceForWriteOff(inv);
