@@ -9,6 +9,8 @@ import { isPostable, lineAmount } from './txFilters';
 import { addDaysYMD } from './fiscalCalendar';
 import { monthEnd } from './periodLock';
 import { depreciationThrough } from './depreciationEngine';
+import { findPostingMismatches } from './postingCheck';
+import type { PostingMismatch } from './postingCheck';
 
 export const CLOSE_CHECKLIST_ITEMS = [
   { id: 'drafts', title: 'Drafts dated in the month' },
@@ -18,6 +20,7 @@ export const CLOSE_CHECKLIST_ITEMS = [
   { id: 'anomalies', title: 'Flagged transactions reviewed' },
   { id: 'aging', title: 'Old receivables and payables reviewed' },
   { id: 'depreciation', title: 'Depreciation posted' },
+  { id: 'postings', title: 'Invoices and bills match the ledger' },
 ] as const;
 
 export type CloseItemId = typeof CLOSE_CHECKLIST_ITEMS[number]['id'];
@@ -39,8 +42,8 @@ export interface CloseChecklistInput {
   month: string;
   transactions: Transaction[];
   bankLines: Array<{ date?: string; status?: string; matchedTransactionId?: string | null }>;
-  invoices: Array<Pick<Invoice, 'status' | 'dueDate'> & { date?: string }>;
-  bills: Array<Pick<Bill, 'status' | 'dueDate'> & { date?: string }>;
+  invoices: Invoice[];
+  bills: Bill[];
   journalEntries?: DatedDoc[];
   assets?: FixedAsset[];
 }
@@ -74,6 +77,8 @@ export function buildCloseChecklist(input: CloseChecklistInput): CloseItem[] {
   const isOld = (d: { status?: string; dueDate?: string }) => d.status !== 'paid' && d.status !== 'void' && d.status !== 'draft' && !!d.dueDate && d.dueDate.slice(0, 10) < cutoff;
   const old = input.invoices.filter(isOld).length + input.bills.filter(isOld).length;
 
+  const mismatches = postingMismatchesThrough(input, end);
+
   const undepreciated = (input.assets || []).filter(a => a.status !== 'disposed' && depreciationThrough(a, month) > (a.accumulatedDepreciationCents || 0)).length;
 
   return [
@@ -98,7 +103,20 @@ export function buildCloseChecklist(input: CloseChecklistInput): CloseItem[] {
     { id: 'depreciation', title: title('depreciation'), count: undepreciated,
       status: undepreciated ? 'attention' : 'done',
       detail: undepreciated ? `${plural(undepreciated, 'fixed asset')} not depreciated through this month yet (Fixed Asset Register → Post depreciation).` : 'Fixed assets are depreciated through this month.' },
+    { id: 'postings', title: title('postings'), count: mismatches.length,
+      status: mismatches.length ? 'attention' : 'done',
+      detail: mismatches.length ? `${plural(mismatches.length, 'document')} whose ledger entry is missing, doubled or wrong. Repost them below.` : 'Every invoice and bill is in the ledger once, with the right amount.' },
   ];
+}
+
+/** Invoices and bills dated through `end` whose ledger entry doesn't match (src/lib/postingCheck.ts). */
+export function postingMismatchesThrough(input: Pick<CloseChecklistInput, 'invoices' | 'bills' | 'transactions'>, end: string): PostingMismatch[] {
+  const through = <T extends { date?: string }>(docs: T[]) => docs.filter(d => !d.date || d.date.slice(0, 10) <= end);
+  return findPostingMismatches({
+    invoices: through(input.invoices),
+    bills: through(input.bills),
+    transactions: input.transactions,
+  });
 }
 
 export interface SignOff { by: string; at: string; note?: string }

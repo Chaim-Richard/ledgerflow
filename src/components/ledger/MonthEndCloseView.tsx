@@ -7,10 +7,11 @@ import { useUIStore } from '../../stores/useUIStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { db, getIdToken } from '../../firebase';
 import { doc, getDoc } from '../../lib/db/firestore';
-import { cn, getLocalDateISO } from '../../lib/utils';
+import { cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { downloadWorkbook, createWorkbook } from '../../lib/excelExport';
 import { isPostable, lineAmount } from '../../lib/txFilters';
-import { buildCloseChecklist, readyToClose } from '../../lib/closeChecklist';
+import { buildCloseChecklist, postingMismatchesThrough, readyToClose } from '../../lib/closeChecklist';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
 import type { CloseItem } from '../../lib/closeChecklist';
 import { monthCloseState, monthEnd } from '../../lib/periodLock';
 import type { AppTab, PeriodStatus, Workspace } from '../../types';
@@ -30,6 +31,7 @@ const ITEM_TABS: Record<CloseItem['id'], string> = {
   anomalies: 'audit-trail',
   aging: 'reports',
   depreciation: 'assets',
+  postings: 'month-end-close',
 };
 
 const STATE_LABEL = {
@@ -68,6 +70,7 @@ export default function MonthEndCloseView() {
   const setWorkspaces = useAuthStore(s => s.setWorkspaces);
   const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
   const setActiveTab = useUIStore(s => s.setActiveTab);
+  const { updateEntity } = useEntityOperations();
   const role = useCurrentRole();
   const canClose = role === 'owner' || role === 'accountant';
   const canSign = canClose || role === 'bookkeeper';
@@ -92,6 +95,7 @@ export default function MonthEndCloseView() {
   const items = useMemo(() => buildCloseChecklist({
     month, transactions: transactions || [], bankLines: bankLines || [], invoices: invoices || [], bills: bills || [], journalEntries: journalEntries || [], assets: assets || [],
   }), [month, transactions, bankLines, invoices, bills, journalEntries, assets]);
+  const mismatches = useMemo(() => postingMismatchesThrough({ invoices: invoices || [], bills: bills || [], transactions: transactions || [] }, monthEnd(month)), [invoices, bills, transactions, month]);
   const signOffs = period?.signOffs || {};
   const readiness = readyToClose(items, signOffs);
   const state = monthCloseState(month, workspace);
@@ -148,6 +152,23 @@ export default function MonthEndCloseView() {
   );
 
   const relock = () => run(() => post(`${base}/relock`, {}), 'Closed again.', () => patchWorkspace({ lockException: null }));
+
+  // Reposting reverses what the ledger has for the document and posts it again from the document
+  // (LedgerPostService), which fixes missing, doubled, left-over and wrong-amount entries.
+  const repost = async (items: typeof mismatches) => {
+    setBusy(true);
+    let done = 0;
+    for (const m of items) {
+      try {
+        await updateEntity(m.kind === 'invoice' ? 'invoices' : 'bills', m.id, {});
+        done++;
+      } catch (err) {
+        toast.error(`${m.kind === 'invoice' ? 'Invoice' : 'Bill'} ${m.number}: ${err instanceof Error ? err.message : 'could not be reposted'}`);
+      }
+    }
+    setBusy(false);
+    if (done) toast.success(`Reposted ${done} document${done === 1 ? '' : 's'}.`);
+  };
 
   const postYearEnd = () => run(
     () => post<{ message?: string }>('/api/v1/transactions/close-year', { workspaceId, closingDate: end, lockPeriod: false }),
@@ -248,7 +269,7 @@ export default function MonthEndCloseView() {
                     {signed && <p className="text-xs text-[var(--muted)] mt-1">Signed off by {signed.by} on {signed.at.slice(0, 10)}{signed.note ? `: ${signed.note}` : ''}</p>}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {item.status !== 'done' && (
+                    {item.status !== 'done' && item.id !== 'postings' && (
                       <button type="button" onClick={() => setActiveTab(ITEM_TABS[item.id] as AppTab)} className="text-xs font-semibold text-[var(--brass)] hover:underline inline-flex items-center gap-1">
                         Open <ArrowRight className="w-3 h-3" aria-hidden="true" />
                       </button>
@@ -264,6 +285,32 @@ export default function MonthEndCloseView() {
               );
             })}
           </ul>
+
+          {mismatches.length > 0 && (
+            <div className="p-4 border-t border-[var(--line)] space-y-2">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-sm font-medium text-[var(--text)]">Documents to repost</p>
+                {canSign && (
+                  <button type="button" disabled={busy} onClick={() => repost(mismatches)} className="px-3 py-1.5 rounded-lg border border-[var(--line)] text-xs font-semibold text-[var(--text)] disabled:opacity-50">
+                    Repost all ({mismatches.length})
+                  </button>
+                )}
+              </div>
+              <ul className="divide-y divide-[var(--line)] text-sm">
+                {mismatches.slice(0, 50).map(m => (
+                  <li key={`${m.kind}:${m.id}`} className="py-2 flex items-center justify-between gap-3">
+                    <span className="text-[var(--text)]">
+                      {m.kind === 'invoice' ? 'Invoice' : 'Bill'} {m.number}{m.party ? ` · ${m.party}` : ''}
+                      <span className="block text-xs text-[var(--muted)]">{m.detail}{m.issue === 'amount' ? ` (document ${formatCurrency(m.expectedCents)}, ledger ${formatCurrency(m.postedCents)})` : ''}</span>
+                    </span>
+                    {canSign && (
+                      <button type="button" disabled={busy} onClick={() => repost([m])} className="text-xs font-semibold text-[var(--brass)] hover:underline disabled:opacity-50">Repost</button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {blockedDrafts.length > 0 && (
             <div className="p-4 border-t border-[var(--line)] text-sm text-[var(--text)]" role="alert">

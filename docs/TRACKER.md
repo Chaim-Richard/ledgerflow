@@ -42,6 +42,8 @@ then the 488 LATER items. Claude works through them in that order and ticks them
 | Banking 2 | L-92 + Y-08: bank connections belong to the workspace, expired bank logins can be reconnected · K-20: Undeposited Funds + "Make deposit" · Y-03: saved CSV column layouts per bank |
 | Bulk import | K-01 (= M-18 BK-01 BK-05 BK-06 CA-11): Settings → Import Data — customers, vendors, items, accounts from CSV/Excel; columns matched by name; every row checked, all or nothing; duplicates skipped; items' opening stock posted; undo keeps records already in use (12 tests) |
 | Period close 1 | R-01 R-02 R-03 R-08 R-10 BA-15: one lock rule (hard close, soft close for bookkeepers, partial unlock) in database + server + screens; close / reopen (reason; owner for hard) / unlock only through the server, audited; checklist with sign-offs; drafts block the close. Fixed: the close screen never loaded invoices/bills/bank lines; a lock on the 28th closed the month; "clear lock date" only changed the screen; bookkeepers could close months (11 tests) |
+| Period close 4 | CA-03: repost check in Month-End Close (missing, doubled, left-over, wrong-amount entries) with Repost. **L-105 fixed: foreign-currency invoices, bills, credits and payments were converted twice in the ledger** (EUR 100 at 1.10 booked as 121.00) |
+| Period close 3 | K-19: bad debt write-off keeps the sale (the old one voided the invoice **and** booked the loss: counted twice), base currency, reversal when the customer pays |
 | Period close 2 | R-06: month-end depreciation run (one entry, catch-up, runs once). Fixed: **the Fixed Asset Register saved nothing** (assets and "posted" depreciation lived only in the open page) |
 | Database rules | L-100 **time zone and fiscal year couldn't be saved** · L-101 **adding a customer failed** · L-102 **applying a chart-of-accounts template failed** (now done by the server) · guard test: every field the app saves must be allowed by the database (applied to Supabase) |
 
@@ -1512,7 +1514,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-16 Revenue recognition schedules
 - [ ] K-17 Prepaids + auto-reversing accruals
 - [ ] K-18 Retainers
-- [ ] K-19 Bad debt with reversal
+- [x] K-19 Bad debt with reversal (server, base currency, tested)
 - [x] K-20 Undeposited funds (Make deposit; tested)
 - [ ] K-21 Expected-bill tracking
 - [ ] K-22 Expense claims
@@ -1636,6 +1638,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-99 Payment records lacked direction/contactId/status (reports and customer pages missed them)
 - [x] L-100 Time zone / fiscal year / server-set workspace fields refused by the database (settings save failed)
 - [x] L-101 Adding a customer failed (`status` not allowed by the database)
+- [x] L-105 Foreign-currency documents converted twice in the ledger (amounts converted, then the rate applied again); fixed, test proves it; old entries: Month-End Close → Repost
+- [x] L-104 Bad debt write-off counted the loss twice (voided the sale and booked the expense); FX ignored
 - [x] L-103 Fixed Asset Register saved nothing (assets + depreciation only in the page); now saved + server run
 - [x] L-102 Applying a chart-of-accounts template failed (`role` not allowed, dashboard layout protected) — now applied by the server
 - [ ] L-80 Later: split "today in the workspace" from "this calendar date" — `getLocalDateISO(d)` on a device-midnight Date shifts a day when the workspace time zone ≠ the device's (e.g. `MonthNavigator.tsx:27`)
@@ -2120,7 +2124,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] CA-01 Payment reconciliation: bank deposit → payment allocated to invoices, line matched
 - [x] CA-02 Unreconcile — exists, now role-checked, lock-checked, audited
-- [ ] CA-03 Repost accounting ledger
+- [x] CA-03 Repost accounting ledger (check + repost; tested)
 - [ ] CA-04 Bank clearance date
 - [ ] CA-05 Finance books
 - [ ] CA-06 Closing balance snapshots

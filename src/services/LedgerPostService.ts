@@ -72,6 +72,25 @@ export class LedgerPostService {
   }
 
   /**
+   * New postings are recorded in the base currency. The amounts are converted once
+   * (document amount × the document's rate) before they get here, so the entry and every line
+   * carry rate 1; otherwise lineAmount() would apply the rate a second time. The document's own
+   * currency and rate are kept in metadata. Reversals keep the rates of what they reverse.
+   */
+  private static inBaseCurrency<T extends { currency?: string; exchangeRate?: number; lines: TransactionLine[]; metadata?: Record<string, unknown> }>(
+    tx: T, workspaceId: string, context?: LedgerPostContext,
+  ): T {
+    const baseCurrency = this.getWorkspaces(context).find(w => w.id === workspaceId)?.currency || 'USD';
+    return {
+      ...tx,
+      currency: baseCurrency,
+      exchangeRate: 1,
+      metadata: { ...(tx.metadata || {}), documentCurrency: tx.currency || baseCurrency, documentExchangeRate: tx.exchangeRate || 1 },
+      lines: tx.lines.map(l => ({ ...l, exchangeRate: 1 })),
+    };
+  }
+
+  /**
    * Period Lock Guard
    */
   public static verifyLockDate(dateStr: string, context?: LedgerPostContext): void {
@@ -277,7 +296,7 @@ export class LedgerPostService {
       },
       lines: accrualLines
     };
-    txsToPost.push(accrualTx);
+    txsToPost.push(this.inBaseCurrency(accrualTx, workspaceId, context));
 
     // 2.5 Cost of goods sold for lines that sell inventory items (the server moves the stock).
     const cogs = planInvoiceCogs({
@@ -325,7 +344,7 @@ export class LedgerPostService {
             isReceipt: true
           })
         };
-        txsToPost.push(paymentTx);
+        txsToPost.push(this.inBaseCurrency(paymentTx, workspaceId, context));
       }
     }
 
@@ -473,7 +492,7 @@ export class LedgerPostService {
       },
       lines: accrualLines
     };
-    txsToPost.push(accrualTx);
+    txsToPost.push(this.inBaseCurrency(accrualTx, workspaceId, context));
 
     // 3. Transaction 2: Payment Posting (DR A/P, CR Cash)
     if (status === 'paid' || status === 'partially_paid') {
@@ -507,7 +526,7 @@ export class LedgerPostService {
             isReceipt: false
           })
         };
-        txsToPost.push(paymentTx);
+        txsToPost.push(this.inBaseCurrency(paymentTx, workspaceId, context));
       }
     }
 
@@ -624,7 +643,7 @@ export class LedgerPostService {
         { accountId: arAccount.id, accountName: arAccount.name, amountCents: -amount, debitCents: 0, creditCents: amount, description: 'Accounts Receivable Credit' }
       ]
     };
-    txsToPost.push(cnTx);
+    txsToPost.push(this.inBaseCurrency(cnTx, workspaceId, context));
 
     await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
   }
@@ -738,7 +757,7 @@ export class LedgerPostService {
         { accountId: expenseAccount.id, accountName: expenseAccount.name, amountCents: -amount, debitCents: 0, creditCents: amount, description: 'Purchase Rebate / Expense Discount' }
       ]
     };
-    txsToPost.push(vcTx);
+    txsToPost.push(this.inBaseCurrency(vcTx, workspaceId, context));
 
     await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
   }
@@ -866,7 +885,7 @@ export class LedgerPostService {
         isReceipt
       })
     };
-    txsToPost.push(paymentTx);
+    txsToPost.push(this.inBaseCurrency(paymentTx, workspaceId, context));
 
     await this.postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
   }
