@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { 
   Type, 
@@ -64,8 +65,23 @@ export default function AppearanceSettings() {
       setWorkspaces(updated);
     } catch (err) {
       console.error("[Settings] Failed to save workspace timezone:", err);
+      toast.error('The time zone could not be saved (owners and accountants can change it).');
     } finally {
       setIsUpdatingZone(false);
+    }
+  };
+
+  // Fiscal year start: reports' year and quarter pickers follow it
+  const fiscalStartMonth = activeWorkspace?.fiscalYearStartMonth || 1;
+  const handleFiscalStartChange = async (month: number) => {
+    if (!currentWorkspaceId) return;
+    try {
+      await updateDoc(doc(db, 'workspaces', currentWorkspaceId), { fiscalYearStartMonth: month, fiscalYearStartDay: 1 });
+      setWorkspaces(workspaces.map(w => (w.id === currentWorkspaceId ? { ...w, fiscalYearStartMonth: month, fiscalYearStartDay: 1 } : w)));
+      toast.success('Fiscal year start saved');
+    } catch (err) {
+      console.error("[Settings] Failed to save fiscal year start:", err);
+      toast.error('The fiscal year start could not be saved (owners and accountants can change it).');
     }
   };
 
@@ -365,6 +381,25 @@ export default function AppearanceSettings() {
               </div>
             </div>
             <p className="text-[10px] text-[var(--muted)]">Lock the general ledger transaction entry timestamps, lock periods, and reports specifically to your entity's operational timezone.</p>
+          </div>
+
+          {/* Fiscal year start */}
+          <div className="p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl space-y-3 md:col-span-2">
+            <label htmlFor="fiscal-start-select" className="text-xs font-bold uppercase tracking-wider text-[var(--text)] flex items-center gap-2">
+              <Clock size={15} className="text-[var(--brass)]" />
+              Fiscal year starts in
+            </label>
+            <select
+              id="fiscal-start-select"
+              value={fiscalStartMonth}
+              onChange={(e) => handleFiscalStartChange(Number(e.target.value))}
+              className="w-full sm:w-64 bg-[var(--surface)] text-[var(--text)] text-sm font-medium p-2.5 rounded-lg border border-[var(--line)] focus:outline-none focus:ring-1 focus:ring-[var(--brass)] cursor-pointer"
+            >
+              {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((m, i) => (
+                <option key={m} value={i + 1}>{m}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-[var(--muted)]">Reports use it for the year and quarter pickers (a fiscal year is named after the calendar year it ends in).</p>
           </div>
 
           {/* High Contrast Toggle */}

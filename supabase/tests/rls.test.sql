@@ -104,6 +104,27 @@ select pg_temp.expect_denied('move a transaction into a locked period', 'u-book'
 select pg_temp.expect_denied('owner changes plan', 'u-owner',
   $$select lf_update('workspaces','ws1','{"plan":"enterprise"}'::jsonb)$$);
 
+-- workspace settings owners/accountants save (time zone, fiscal year, CSV maps) vs server-only fields
+select pg_temp.expect_ok('owner saves time zone and fiscal year', 'u-owner',
+  $$select lf_update('workspaces','ws1','{"timezone":"America/New_York","fiscalYearStartMonth":4,"fiscalYearStartDay":1}'::jsonb)$$);
+select pg_temp.expect_ok('accountant saves CSV column maps', 'u-acct',
+  $$select lf_update('workspaces','ws1','{"importColumnMaps":{"bank-1":{"date":"Posted"}}}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper changes workspace settings', 'u-book',
+  $$select lf_update('workspaces','ws1','{"timezone":"UTC"}'::jsonb)$$);
+select pg_temp.expect_denied('owner sets a server-only field', 'u-owner',
+  $$select lf_update('workspaces','ws1','{"creditCostMultiplier":0}'::jsonb)$$);
+select pg_temp.expect_denied('create a workspace with a server-only field', 'u-out',
+  $$insert into workspaces(id,data) values ('ws-z', '{"uid":"u-out","name":"Z","creditCostMultiplier":0}')$$);
+do $$ begin
+  -- the server marks a workspace for deletion; the owner can still save settings afterwards
+  perform set_config('request.jwt.claims', '', true);
+  update workspaces set data = data || '{"scheduledPurgeAt":"2026-12-31"}'::jsonb where id = 'ws1';
+end $$;
+select pg_temp.expect_ok('owner saves settings on a workspace with server-only fields', 'u-owner',
+  $$select lf_update('workspaces','ws1','{"timezone":"Europe/London"}'::jsonb)$$);
+select pg_temp.expect_denied('owner clears a server-only field', 'u-owner',
+  $$select lf_update('workspaces','ws1','{}'::jsonb,'{scheduledPurgeAt}')$$);
+
 -- allowed fields
 select pg_temp.expect_denied('customer with an unknown field', 'u-book',
   $$insert into customers(id,data) values ('c1', '{"workspaceId":"ws1","name":"A","hack":1}')$$);

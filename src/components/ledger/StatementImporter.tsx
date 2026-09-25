@@ -1,5 +1,8 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState } from 'react';
+import { headerSignature, mappingToSaved, savedToMapping } from '../../lib/importColumnMaps';
+import type { ColumnMapping } from '../../lib/importColumnMaps';
+import { getIdToken } from '../../firebase';
 import { 
   X, 
   FileText, 
@@ -152,6 +155,13 @@ export default function StatementImporter({
           const payeeIdx = header.findIndex(h => h.includes('payee') || h.includes('vendor') || h.includes('party'));
           const memoIdx = header.findIndex(h => h.includes('memo') || h.includes('note') || h.includes('comment'));
 
+          const savedLayout = useAuthStore.getState().getCurrentWorkspace()?.importColumnMaps?.[headerSignature(rows[0])];
+          if (savedLayout) {
+            setMapping(savedToMapping(savedLayout, rows[0]));
+            setStep('mapping');
+            toast.success(`Loaded ${rows.length - 1} records from ${file.name} using this bank's saved column layout.`, { id: loader });
+            return;
+          }
           setMapping({
             date: dateIdx !== -1 ? dateIdx : 0,
             description: descIdx !== -1 ? descIdx : (rows[0].length > 1 ? 1 : 0),
@@ -238,6 +248,30 @@ export default function StatementImporter({
 
     setSkippedCount(skipped);
     processResults(results);
+    if (results.length > 0 && csvData[0]) saveColumnLayout(csvData[0], mapping as ColumnMapping);
+  };
+
+  // Remember this bank's column layout (keyed by its header row) for the next import
+  const saveColumnLayout = async (header: string[], used: ColumnMapping) => {
+    const workspaceId = useAuthStore.getState().currentWorkspaceId;
+    if (!workspaceId) return;
+    const signature = headerSignature(header);
+    const saved = mappingToSaved(used, header);
+    try {
+      const token = await getIdToken().catch(() => null);
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/import-maps`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ signature, ...saved }),
+      });
+      if (!res.ok) return;
+      const { workspaces, setWorkspaces } = useAuthStore.getState();
+      setWorkspaces(workspaces.map(w => (w.id === workspaceId
+        ? { ...w, importColumnMaps: { ...(w.importColumnMaps || {}), [signature]: { ...saved, savedAt: new Date().toISOString() } } }
+        : w)));
+    } catch {
+      // Saving the layout is a convenience; the import itself already succeeded
+    }
   };
 
   const handleParse = async () => {

@@ -39,6 +39,8 @@ export interface Workspace {
   aiModel?: string;
   matchingThreshold?: number;
   timezone?: string;
+  /** Saved CSV column layouts for statement imports, keyed by header signature (src/lib/importColumnMaps.ts). */
+  importColumnMaps?: Record<string, import('./lib/importColumnMaps').SavedColumnMap>;
   notifications?: {
     largeTransactionAlert: boolean;
     largeTransactionThreshold: number;

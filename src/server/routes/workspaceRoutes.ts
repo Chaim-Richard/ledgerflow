@@ -129,6 +129,35 @@ export async function allocateNextNumber(db: any, workspaceId: string, type: 'in
  * Task 5: Allocate next document number atomically within Firestore transaction.
  * POST only to prevent prefetching/crawlers from mutating state (Finding E).
  */
+// Saved CSV column layouts for statement imports (src/lib/importColumnMaps.ts), keyed by the
+// file's header signature. Anyone who imports statements (owner/accountant/bookkeeper) may save.
+const importMapSchema = z.object({
+  signature: z.string().regex(/^csv_\d{1,3}_[0-9a-f]{8}$/),
+  columns: z.object(Object.fromEntries(['date', 'description', 'amount', 'debit', 'credit', 'payee', 'memo'].map(f => [f, z.string().min(1).max(200).optional()]))).strict(),
+  skipRows: z.number().int().min(0).max(20),
+}).strict();
+const MAX_IMPORT_MAPS = 50;
+
+workspaceRouter.post('/:workspaceId/import-maps', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
+  try {
+    const { workspaceId } = req.params as Record<string, string>;
+    const { signature, columns, skipRows } = importMapSchema.parse(req.body);
+    const db = getDb();
+    const ref = db.collection('workspaces').doc(workspaceId);
+    await db.runTransaction(async (t) => {
+      const maps = { ...((await t.get(ref)).data()?.importColumnMaps || {}) } as Record<string, { savedAt?: string }>;
+      maps[signature] = { columns, skipRows, savedAt: new Date().toISOString() } as { savedAt: string };
+      // Keep the most recently used layouts only
+      const keep = Object.entries(maps).sort((a, b) => String(b[1].savedAt || '').localeCompare(String(a[1].savedAt || ''))).slice(0, MAX_IMPORT_MAPS);
+      t.update(ref, { importColumnMaps: Object.fromEntries(keep), updatedAt: new Date().toISOString() });
+    });
+    res.json({ status: 'success' });
+  } catch (err) {
+    if (err instanceof z.ZodError) return sendError(res, 'Invalid column layout', 400, err.issues);
+    sendError(res, 'Could not save the column layout', 500, err instanceof Error ? err.message : String(err));
+  }
+});
+
 workspaceRouter.post('/:workspaceId/next-number', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
   const { workspaceId } = req.params as Record<string, string>;
   const rawType = req.body?.type;
