@@ -11,7 +11,8 @@ update public.lf_rules set allowed_keys = allowed_keys || array['role', 'account
 where table_name = 'chartAccounts';
 
 -- On the Workspace model and set only by billing on the server: listed so a workspace that has
--- them can still be edited, immutable for users (and refused when a user creates a workspace).
+-- them can still be edited, and immutable for users. (A new workspace's plan is already limited
+-- to starter/free on insert, so these two carry no billing power there.)
 update public.lf_rules
 set allowed_keys = allowed_keys || array['paymentStatus', 'trialEndsAt'],
     immutable_keys = immutable_keys || array['paymentStatus', 'trialEndsAt']
