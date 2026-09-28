@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { getTrustedAppUrl } from '../utils/urlHelper';
+import { calculateAmountDue } from '../../lib/documentMath';
 import Stripe from 'stripe';
 
 let stripeClient: Stripe | null = null;
@@ -61,7 +62,8 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
     const amountPaid = typeof invoice.amountPaidCents === 'number' 
       ? invoice.amountPaidCents 
       : 0;
-    const remainingBalance = Math.max(0, totalInvoiceAmount - amountPaid);
+    // What is still due, by the one money rule (discounts, retainage, credits, payments)
+    const remainingBalance = calculateAmountDue(invoice);
 
     res.json({
       invoice: {
@@ -141,7 +143,8 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
     const amountPaid = typeof invoice.amountPaidCents === 'number' 
       ? invoice.amountPaidCents 
       : 0;
-    const remainingBalance = totalInvoiceAmount - amountPaid;
+    // What is still due, by the one money rule (discounts, retainage, credits, payments)
+    const remainingBalance = calculateAmountDue(invoice);
 
     if (!Number.isInteger(remainingBalance) || remainingBalance <= 0) {
       return res.status(400).json({ error: 'Invoice has no outstanding unpaid balance or is already paid.' });

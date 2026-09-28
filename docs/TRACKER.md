@@ -48,6 +48,7 @@ then the 488 LATER items. Claude works through them in that order and ticks them
 | Bulk import | K-01 (= M-18 BK-01 BK-05 BK-06 CA-11): Settings → Import Data — customers, vendors, items, accounts from CSV/Excel; columns matched by name; every row checked, all or nothing; duplicates skipped; items' opening stock posted; undo keeps records already in use (12 tests) |
 | Period close 1 | R-01 R-02 R-03 R-08 R-10 BA-15: one lock rule (hard close, soft close for bookkeepers, partial unlock) in database + server + screens; close / reopen (reason; owner for hard) / unlock only through the server, audited; checklist with sign-offs; drafts block the close. Fixed: the close screen never loaded invoices/bills/bank lines; a lock on the 28th closed the month; "clear lock date" only changed the screen; bookkeepers could close months (11 tests) |
 | Notifications | S-01 S-03 S-04 S-06 S-14 S-19 + bounces: real notifications from the server (one per person, stored in the database, live bell): invoice emailed, invoice overdue (daily), customer payment received, email bounced / marked spam, bank connection expired, person invited / joined. Each person marks their own read and chooses which types they get (bell → gear). Only their own are visible (database rules tested). **The old bell showed made-up alerts kept only in the open page** |
+| Online payments | K-11: the emailed invoice link lets the customer pay by card; Stripe's confirmation becomes a real payment (payment record, invoice paid, one ledger entry in the home currency into a "Stripe Clearing" account, team notified); replays ignored; overpayment stays as a credit. Fixed **L-109** (the old handler guessed accounts and kept no payment record) and **L-110** (payments on foreign-currency invoices were booked unconverted) |
 | Reminders | BE-01 K-26: payment reminders emailed every morning on the days set in Settings → Emails & Reminders (workspace's own date, next step only, once a day); "Reminders on / No reminders" switch per customer. Fixed: **L-107 the "+" on a customer row saved an empty invoice** instead of opening the form; **L-108 every customer showed a made-up "Preferred Partner" label** |
 | Email 1 | S-01 BL-01 BL-03 BL-05 BL-08 K-08: invoices and reminders emailed by the server (writers; drafts refused; invoice currency; PDF), templates per workspace with preview (Settings → Emails & Reminders), plain-text part, send log per invoice, bounce/complaint reports skip that address. **L-106: emailing an invoice never worked** (no login token sent); the three copies of the email-provider code are now one |
 | Period close 4 | CA-03: repost check in Month-End Close (missing, doubled, left-over, wrong-amount entries) with Repost. **L-105 fixed: foreign-currency invoices, bills, credits and payments were converted twice in the ledger** (EUR 100 at 1.10 booked as 121.00) |
@@ -1514,7 +1515,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] K-08 Email templates (invoice, reminder, receipt; preview)
 - [x] K-09 Credit note refunds (DR A/R, CR cash; tested)
 - [x] K-10 Vendor credit refunds (DR cash, CR A/P; tested)
-- [ ] K-11 Payment links
+- [x] K-11 Payment links: emailed link → pay online → payment recorded, invoice paid, team notified (tested; needs Stripe keys live)
 - [ ] K-12 Item categories
 - [ ] K-13 Inventory adjustments
 - [ ] K-14 Account groups
@@ -1649,7 +1650,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-106 Emailing an invoice never worked (browser sent no login token); now sent by the server after posting
 - [x] L-107 "+" on a customer row saved an empty invoice (misspelled field) instead of opening the invoice form
 - [x] L-108 Customers list showed a made-up "Preferred Partner" label on everyone; now the reminders switch
-- [ ] L-109 Online card payments (Stripe webhook in server.ts) guess accounts, create no payment record and convert currency twice — rebuild with K-11
+- [x] L-109 Online card payments (Stripe webhook) guessed accounts, created no payment record and converted currency twice — now a real payment into Stripe Clearing (tested)
+- [x] L-110 Payments on foreign-currency invoices were booked unconverted and labelled USD (tested)
 - [x] L-105 Foreign-currency documents converted twice in the ledger (amounts converted, then the rate applied again); fixed, test proves it; old entries: Month-End Close → Repost
 - [x] L-104 Bad debt write-off counted the loss twice (voided the sale and booked the expense); FX ignored
 - [x] L-103 Fixed Asset Register saved nothing (assets + depreciation only in the page); now saved + server run

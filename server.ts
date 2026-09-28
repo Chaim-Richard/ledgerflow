@@ -24,6 +24,7 @@ import { writeServerAuditLog } from "./src/server/services/auditLogService";
 import { requirePlanCapacity } from "./src/server/middleware/planCapacity";
 import { assertStartupConfig } from "./src/server/config/assertStartupConfig";
 import { logger } from "./src/server/utils/logger";
+import { recordStripeInvoicePayment } from "./src/server/services/onlinePaymentService";
 import express from "express";
 import { safeFetch } from "./src/server/utils/safeFetch.js";
 import cors from "cors";
@@ -67,7 +68,6 @@ import { BayesianClassifier, sha256Sync } from "./src/lib/algorithms.ts";
 import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
 import { TruthEngine } from "./src/modules/integrity/TruthEngine.ts";
 import { calculateNetIncome, isPostable, lineAmount } from "./src/lib/txFilters.ts";
-import { TransactionValidator } from "./src/kernel/validation/TransactionValidator.ts";
 import { assertWorkspaceAccess, getDb, FieldValue } from "./src/server/db/firestore.ts";
 import { cronRouter } from "./src/server/routes/cronRoutes.ts";
 import { runDailyMaintenance } from "./src/server/services/maintenanceService.ts";
@@ -624,173 +624,14 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         const session = event.data.object as any;
         const isPaid = session.payment_status === 'paid';
         
-        // --- 1. Invoice Payment Fulfillment ---
+        // --- 1. A customer paid an invoice through its payment link (K-11) ---
         if (session.metadata?.invoiceId) {
-          const invoiceId = session.metadata.invoiceId;
-          const workspaceId = session.metadata.workspaceId;
-          const amountTotal = session.amount_total || 0;
-          
-          // Canonical top-level invoices collection
-          const invoiceRef = db.collection('invoices').doc(invoiceId);
-          
-          const result = await db.runTransaction(async (t) => {
-            const eventSnap = await t.get(eventRef);
-            if (eventSnap.exists) {
-              return { alreadyProcessed: true };
-            }
-
-            const doc = await t.get(invoiceRef);
-            const targetRef = invoiceRef;
-
-            if (!doc.exists) {
-              t.set(eventRef, {
-                id: eventId,
-                type: event.type,
-                processedAt: FieldValue.serverTimestamp(),
-                note: 'invoice_not_found'
-              });
-              return { notFound: true };
-            }
-            
-            const inv = doc.data() as any;
-            if (inv && inv.status !== "paid") {
-              if (isPaid) {
-                // Admin SDK requires all reads before writes in a transaction
-                const wsId = inv.workspaceId || workspaceId;
-                const [wsDoc, accountsSnap] = await Promise.all([
-                  t.get(db.collection('workspaces').doc(wsId)),
-                  t.get(db.collection('chartAccounts').where('workspaceId', '==', wsId))
-                ]);
-                const wsData = wsDoc.exists ? wsDoc.data() : {};
-                const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-                const currentPaidCents = inv.amountPaidCents || 0;
-                const newTotalPaid = currentPaidCents + amountTotal;
-                const totalInvoiceCents = inv.totalCents || inv.amountCents || 0;
-
-                t.update(targetRef, {
-                  status: newTotalPaid >= totalInvoiceCents ? 'paid' : 'partially_paid',
-                  amountPaidCents: FieldValue.increment(amountTotal),
-                  paidAt: new Date().toISOString(),
-                  isLocked: newTotalPaid >= totalInvoiceCents
-                });
-                
-                let cashAccount: any = accounts.find((a: any) => 
-                  a.subtype === "cash" || a.subtype === "bank" || a.category === "Cash" || a.role === "cash" || 
-                  (a.type === "asset" && (a.name || '').toLowerCase().includes('cash')) || 
-                  (a.type === "asset" && (a.name || '').toLowerCase().includes('bank')) || 
-                  (a.type === "asset" && (a.name || '').toLowerCase().includes('stripe'))
-                );
-                let arAccount: any = accounts.find((a: any) => 
-                  a.subtype === "accounts_receivable" || a.category === "Accounts Receivable" || a.role === "accounts_receivable" || 
-                  (a.type === "asset" && (a.name || '').toLowerCase().includes('receivable'))
-                );
-                
-                if (!cashAccount) {
-                  const newCashRef = db.collection('chartAccounts').doc();
-                  cashAccount = {
-                    id: newCashRef.id,
-                    uid: 'system',
-                    workspaceId: wsId,
-                    name: 'Stripe Clearing Account',
-                    code: '1010',
-                    type: 'asset',
-                    subtype: 'cash',
-                    category: 'Cash',
-                    balanceCents: 0,
-                    createdAt: new Date().toISOString()
-                  };
-                  t.set(newCashRef, cashAccount);
-                }
-                if (!arAccount) {
-                  const newArRef = db.collection('chartAccounts').doc();
-                  arAccount = {
-                    id: newArRef.id,
-                    uid: 'system',
-                    workspaceId: wsId,
-                    name: 'Accounts Receivable',
-                    code: '1200',
-                    type: 'asset',
-                    subtype: 'accounts_receivable',
-                    category: 'Accounts Receivable',
-                    balanceCents: 0,
-                    createdAt: new Date().toISOString()
-                  };
-                  t.set(newArRef, arAccount);
-                }
-                
-                const exchangeRate = typeof inv?.exchangeRate === 'number' && inv.exchangeRate > 0 ? inv.exchangeRate : 1;
-                const rawTx: any = {
-                  id: db.collection('transactions').doc().id,
-                  uid: 'system',
-                  workspaceId: wsId,
-                  date: formatTzDate(new Date(), wsData?.settings?.timezone || wsData?.timezone),
-                  description: `Invoice ${inv?.number || "Unknown"} Payment via Stripe`,
-                  totalAmountCents: amountTotal,
-                  currency: inv?.currency || 'USD',
-                  exchangeRate: exchangeRate,
-                  status: 'completed',
-                  type: 'actual',
-                  createdAt: new Date().toISOString(),
-                  metadata: {
-                    invoiceId,
-                    stripeSessionId: session.id,
-                    type: 'invoice-payment'
-                  },
-                  lines: [
-                    {
-                      accountId: cashAccount.id,
-                      accountName: cashAccount.name,
-                      amountCents: amountTotal, // Debit Cash
-                      description: `Stripe Payment for Invoice ${inv?.number || "Unknown"}`,
-                      exchangeRate: exchangeRate
-                    },
-                    {
-                      accountId: arAccount.id,
-                      accountName: arAccount.name,
-                      amountCents: -amountTotal, // Credit AR
-                      description: `A/R Clearance for Invoice ${inv?.number || "Unknown"}`,
-                      exchangeRate: exchangeRate
-                    }
-                  ]
-                };
-
-                const validatedTx = await TransactionValidator.validateAndPrepare(
-                  rawTx,
-                  {
-                    workspaceId: wsId,
-                    user: { uid: 'system', admin: true },
-                    wsData
-                  },
-                  undefined,
-                  t
-                );
-
-                const txRef = db.collection('transactions').doc(validatedTx.id);
-                t.set(txRef, validatedTx);
-              } else {
-                // Async payment pending (e.g. ACH clearing)
-                t.update(targetRef, {
-                  paymentStatus: 'pending_settlement',
-                  updatedAt: FieldValue.serverTimestamp()
-                });
-              }
-            }
-
-            t.set(eventRef, {
-              id: eventId,
-              type: event.type,
-              paymentStatus: session.payment_status,
-              processedAt: FieldValue.serverTimestamp()
-            });
-
-            return { success: true };
-          });
-
-          if (result?.alreadyProcessed) {
+          const outcome = await recordStripeInvoicePayment(db, eventId, event.type, session);
+          if (outcome.status === 'already_processed') {
             logger.info('Stripe webhook event already processed, skipping replay', { eventId });
             return res.json({ received: true, skipped: true });
           }
+          logger.info('Stripe invoice payment', { eventId, outcome: outcome.status });
         }
         
         // --- 2. Subscription Upgrade & Credit Provisioning ---

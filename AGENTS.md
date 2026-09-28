@@ -1,5 +1,8 @@
 # Project Architecture and Modification Guide
 
+> **Codex and other AI assistants:** first read [`docs/COORDINATION.md`](docs/COORDINATION.md).
+> It says which task to do next, which files not to touch, and the checks every change must pass.
+
 ## 1. System Overview
 This project is an advanced Enterprise Resource Planning (ERP) and Financial Ledger system built with React, Vite, and Tailwind CSS. It uses client-side state management (Zustand) and features a dynamic registry architecture for views, algorithms, and analytical lenses.
 
