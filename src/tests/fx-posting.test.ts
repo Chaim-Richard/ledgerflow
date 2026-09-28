@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { lineAmount } from '../lib/txFilters';
 import { makeBill, makeChartAccount, makeInvoice, makeTransaction } from './fixtures';
 import { findPostingMismatches } from '../lib/postingCheck';
+import { allocateCents } from '../kernel/templates/TransactionTemplates';
 import type { Invoice, Transaction, Workspace } from '../types';
 
 type Posted = Transaction & { metadata?: Record<string, unknown> };
@@ -72,6 +73,61 @@ describe('Foreign-currency postings', () => {
     assert.equal(byAccount(sent[2][0]).ap, 5500);
     assert.equal(byAccount(sent[3][0]).cash, 3300);
     for (const batch of sent) for (const tx of batch) assert.equal(tx.lines.reduce((s, l) => s + lineAmount(l, tx), 0), 0);
+  });
+
+  const withSecondAccounts = () => {
+    const ctx = context();
+    ctx.accounts.push(
+      makeChartAccount({ id: 'rev2', name: 'Consulting Income', type: 'income', category: 'Revenue' }),
+      makeChartAccount({ id: 'rent', name: 'Rent', type: 'expense' }),
+    );
+    return ctx;
+  };
+
+  test('L-115: invoice lines post to their own income accounts; tax added on top is owed (L-113)', async () => {
+    sent.length = 0;
+    // 60.00 products + 40.00 consulting, 20% on top: 100.00 + 20.00 = 120.00 owed (saved by the form as taxVersion 2)
+    await LedgerPostService.postInvoiceLedger('inv2', {
+      number: 'INV-2', customerId: 'c1', customerName: 'Acme', date: '2026-03-10', dueDate: '2026-04-10', status: 'sent',
+      amountCents: 12000, taxAmountCents: 2000, taxInclusive: true, taxVersion: 2, lineSumCents: 10000,
+      items: [
+        { id: 'a', description: 'Products', quantity: 1, rateCents: 6000, amountCents: 6000, accountId: 'rev' },
+        { id: 'b', description: 'Consulting', quantity: 1, rateCents: 4000, amountCents: 4000, accountId: 'Consulting Income' },
+      ],
+    }, 'w1', 'u1', undefined, withSecondAccounts());
+    const lines = byAccount(sent[0][0]);
+    assert.deepEqual([lines.ar, lines.rev, lines.rev2, lines.tax], [12000, -6000, -4000, -2000]);
+  });
+
+  test('prices including tax: revenue is split net of tax, to the cent', async () => {
+    sent.length = 0;
+    // two lines of 60.00 including 20%: 120.00 owed, tax 20.00, revenue 100.00 → 50.00 each
+    await LedgerPostService.postInvoiceLedger('inv3', {
+      number: 'INV-3', customerId: 'c1', customerName: 'Acme', date: '2026-03-10', dueDate: '2026-04-10', status: 'sent',
+      amountCents: 12000, taxAmountCents: 2000, taxInclusive: true, taxVersion: 2, pricesIncludeTax: true,
+      items: [
+        { id: 'a', description: 'A', quantity: 1, rateCents: 6000, amountCents: 6000, accountId: 'rev' },
+        { id: 'b', description: 'B', quantity: 1, rateCents: 6000, amountCents: 6000, accountId: 'rev2' },
+      ],
+    }, 'w1', 'u1', undefined, withSecondAccounts());
+    const lines = byAccount(sent[0][0]);
+    assert.deepEqual([lines.rev, lines.rev2, lines.tax], [-5000, -5000, -2000]);
+  });
+
+  test('bill lines post to their own expense accounts; a line without an account uses the default', async () => {
+    sent.length = 0;
+    await LedgerPostService.postBillLedger('b2', {
+      number: 'B-2', vendorId: 'v1', vendorName: 'Landlord', date: '2026-03-10', dueDate: '2026-04-10', status: 'pending', amountCents: 4000,
+      splits: [{ accountId: 'rent', amountCents: 3000 }, { accountId: 'exp', amountCents: 700 }, { accountId: '', amountCents: 300 }],
+    }, 'w1', 'u1', undefined, withSecondAccounts());
+    const lines = byAccount(sent[0][0]);
+    assert.deepEqual([lines.rent, lines.exp, lines.ap], [3000, 1000, -4000]);
+  });
+
+  test('splitting an amount by weights adds up exactly', () => {
+    assert.deepEqual(allocateCents(100, [1, 1, 1]), [34, 33, 33]);
+    assert.deepEqual(allocateCents(10000, [6000, 4000]), [6000, 4000]);
+    assert.deepEqual(allocateCents(500, [0, 0]), [500, 0]);
   });
 });
 

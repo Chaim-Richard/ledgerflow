@@ -48,6 +48,7 @@ then the 488 LATER items. Claude works through them in that order and ticks them
 | Bulk import | K-01 (= M-18 BK-01 BK-05 BK-06 CA-11): Settings → Import Data — customers, vendors, items, accounts from CSV/Excel; columns matched by name; every row checked, all or nothing; duplicates skipped; items' opening stock posted; undo keeps records already in use (12 tests) |
 | Period close 1 | R-01 R-02 R-03 R-08 R-10 BA-15: one lock rule (hard close, soft close for bookkeepers, partial unlock) in database + server + screens; close / reopen (reason; owner for hard) / unlock only through the server, audited; checklist with sign-offs; drafts block the close. Fixed: the close screen never loaded invoices/bills/bank lines; a lock on the 28th closed the month; "clear lock date" only changed the screen; bookkeepers could close months (11 tests) |
 | Notifications | S-01 S-03 S-04 S-06 S-14 S-19 + bounces: real notifications from the server (one per person, stored in the database, live bell): invoice emailed, invoice overdue (daily), customer payment received, email bounced / marked spam, bank connection expired, person invited / joined. Each person marks their own read and chooses which types they get (bell → gear). Only their own are visible (database rules tested). **The old bell showed made-up alerts kept only in the open page** |
+| Tax 1 | T-01 T-02 T-04: tax codes with parts (GST + PST), a part on top of the others (compound), and how the amount is reported (taxed, zero-rated, exempt, reverse charge, out of scope), edited under Taxes. Invoices and bills pick a tax code, prices with or without tax, and show subtotal, discount, each tax part and the total in the document's currency; the PDF too. Fixed **L-113** (tax added on top was never billed), **L-114** (server dropped discount / tax-inclusive / bill currency), **L-115** (every line posted to one account), L-116, L-117 |
 | Recurring + POs | BE-03: recurring schedules can be paused, resumed and deleted; a recurring invoice now becomes a **draft invoice** to check and send (team notified); a recurring entry is posted only with real, balanced accounts, otherwise the schedule shows why. BE-11: purchase orders are saved, goods received are recorded on them, "Create bill" opens the bill filled from the order (received quantities), and the 3-way match compares all three. Fixed **L-111** (recurring invoices wrote blank-account entries with no workspace) and **L-112** (orders were never saved) |
 | Online payments | K-11: the emailed invoice link lets the customer pay by card; Stripe's confirmation becomes a real payment (payment record, invoice paid, one ledger entry in the home currency into a "Stripe Clearing" account, team notified); replays ignored; overpayment stays as a credit. Fixed **L-109** (the old handler guessed accounts and kept no payment record) and **L-110** (payments on foreign-currency invoices were booked unconverted) |
 | Reminders | BE-01 K-26: payment reminders emailed every morning on the days set in Settings → Emails & Reminders (workspace's own date, next step only, once a day); "Reminders on / No reminders" switch per customer. Fixed: **L-107 the "+" on a customer row saved an empty invoice** instead of opening the form; **L-108 every customer showed a made-up "Preferred Partner" label** |
@@ -1655,6 +1656,11 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-110 Payments on foreign-currency invoices were booked unconverted and labelled USD (tested)
 - [x] L-111 Recurring invoices wrote ledger entries with blank accounts and no workspace every period (instead of invoices); "Pause" on screen didn't stop them; the screen's Run/Delete buttons did nothing (tested)
 - [x] L-112 Purchase orders and goods receipts were never saved (only in the open page, with a made-up demo order)
+- [x] L-113 **Invoices with tax added on top billed the customer without the tax** (the tax came out of revenue); the form now saves the total owed and the tax explicitly (tested)
+- [x] L-114 The server silently dropped invoice/bill fields it didn't list (discount, "tax inclusive", retainage, deposit, a bill's currency…); guard test added
+- [x] L-115 **Invoices and bills ignored the account chosen on each line** (everything went to one income / expense account); now each line's account gets its share (tested)
+- [x] L-116 Editing an existing invoice gave it a new number and wiped its stored details (email history, reminder counters)
+- [x] L-117 Invoice PDF always showed "$" and no tax or discount lines
 - [x] L-105 Foreign-currency documents converted twice in the ledger (amounts converted, then the rate applied again); fixed, test proves it; old entries: Month-End Close → Repost
 - [x] L-104 Bad debt write-off counted the loss twice (voided the sale and booked the expense); FX ignored
 - [x] L-103 Fixed Asset Register saved nothing (assets + depreciation only in the page); now saved + server run
@@ -1812,10 +1818,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION T — TAX DEPTH
 
-- [ ] T-01 Compound tax
-- [ ] T-02 Tax groups
+- [x] T-01 Compound tax (a part charged on top of the others; tested)
+- [x] T-02 Tax groups (a tax code with several parts, e.g. GST + PST; tested)
 - [ ] T-03 Reverse charge
-- [ ] T-04 Zero-rated vs exempt
+- [x] T-04 Zero-rated vs exempt (treatment on the tax code; reported separately in the return)
 - [ ] T-05 Party exemption certificates
 - [ ] T-06 VAT return boxes
 - [ ] T-07 Filed-return snapshot

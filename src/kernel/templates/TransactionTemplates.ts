@@ -5,6 +5,41 @@ export interface AccountRef {
   name: string;
 }
 
+/** A document line's account and its amount as entered (used only as a weight). */
+export interface LineAccountWeight {
+  account: AccountRef;
+  weightCents: number;
+}
+
+/**
+ * Splits an amount over weights so the parts add up exactly (largest remainder). Used to post
+ * revenue / expense to the accounts chosen on the document's lines (L-115).
+ */
+export function allocateCents(totalCents: number, weights: number[]): number[] {
+  const positive = weights.map(w => Math.max(0, w));
+  const sum = positive.reduce((s, w) => s + w, 0);
+  if (sum <= 0 || weights.length === 0) return weights.map((_, i) => (i === 0 ? totalCents : 0));
+  const exact = positive.map(w => (totalCents * w) / sum);
+  const parts = exact.map(x => Math.floor(x));
+  let remainder = totalCents - parts.reduce((s, p) => s + p, 0);
+  const order = exact.map((x, i) => ({ i, frac: x - Math.floor(x) })).sort((a, b) => b.frac - a.frac);
+  for (let k = 0; remainder > 0; k = (k + 1) % order.length, remainder--) parts[order[k].i] += 1;
+  return parts;
+}
+
+/** One posting line per account (lines on the same account are added together). */
+function splitByAccount(totalCents: number, fallback: AccountRef, lineAccounts: LineAccountWeight[] | undefined): Array<{ account: AccountRef; amountCents: number }> {
+  if (!lineAccounts || lineAccounts.length === 0) return [{ account: fallback, amountCents: totalCents }];
+  const parts = allocateCents(totalCents, lineAccounts.map(l => l.weightCents));
+  const byAccount = new Map<string, { account: AccountRef; amountCents: number }>();
+  lineAccounts.forEach((l, i) => {
+    const entry = byAccount.get(l.account.id) || { account: l.account, amountCents: 0 };
+    entry.amountCents += parts[i];
+    byAccount.set(l.account.id, entry);
+  });
+  return [...byAccount.values()].filter(e => e.amountCents !== 0);
+}
+
 export interface InvoiceTemplateParams {
   invoiceNumber: string;
   customerName: string;
@@ -15,6 +50,8 @@ export interface InvoiceTemplateParams {
   exchangeRate?: number;
   arAccount: AccountRef;
   revenueAccount: AccountRef;
+  /** The income account of each invoice line; revenue is posted to them in proportion. */
+  lineAccounts?: LineAccountWeight[];
   taxAccount?: AccountRef | null;
   discountAccount?: AccountRef | null;
   retainageAccount?: AccountRef | null;
@@ -30,6 +67,8 @@ export interface BillTemplateParams {
   exchangeRate?: number;
   apAccount: AccountRef;
   expenseAccount: AccountRef;
+  /** The expense account of each bill line; the cost is posted to them in proportion. */
+  lineAccounts?: LineAccountWeight[];
   taxAccount?: AccountRef | null;
   discountAccount?: AccountRef | null;
   retainageAccount?: AccountRef | null;
@@ -89,13 +128,15 @@ export class TransactionTemplates {
       });
     }
 
-    lines.push({
-      accountId: params.revenueAccount.id,
-      accountName: params.revenueAccount.name,
-      amountCents: -grossRevenueCents, // Credit Sales Revenue
-      description: `Sales Revenue for Invoice ${params.invoiceNumber} (${params.customerName})`,
-      exchangeRate: rate
-    });
+    for (const part of splitByAccount(grossRevenueCents, params.revenueAccount, params.lineAccounts)) {
+      lines.push({
+        accountId: part.account.id,
+        accountName: part.account.name,
+        amountCents: -part.amountCents, // Credit Sales Revenue
+        description: `Sales Revenue for Invoice ${params.invoiceNumber} (${params.customerName})`,
+        exchangeRate: rate
+      });
+    }
 
     if (taxCents > 0 && params.taxAccount) {
       lines.push({
@@ -123,15 +164,13 @@ export class TransactionTemplates {
     const netApCents = params.totalCents - retainageCents;
     const grossExpenseCents = params.totalCents + discountCents - taxCents;
 
-    const lines: TransactionLine[] = [
-      {
-        accountId: params.expenseAccount.id,
-        accountName: params.expenseAccount.name,
-        amountCents: grossExpenseCents, // Debit Expense/COGS
-        description: `Expense posting for Bill ${params.billNumber} (${params.vendorName})`,
-        exchangeRate: rate
-      }
-    ];
+    const lines: TransactionLine[] = splitByAccount(grossExpenseCents, params.expenseAccount, params.lineAccounts).map(part => ({
+      accountId: part.account.id,
+      accountName: part.account.name,
+      amountCents: part.amountCents, // Debit Expense/COGS
+      description: `Expense posting for Bill ${params.billNumber} (${params.vendorName})`,
+      exchangeRate: rate
+    }));
 
     if (taxCents > 0 && params.taxAccount) {
       lines.push({

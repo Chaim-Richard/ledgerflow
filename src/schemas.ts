@@ -208,6 +208,22 @@ export const BankLineImportSchema = z.object({
   accountId: z.string().max(200).optional(),
 }).strict();
 
+/** Discount, retainage and tax fields shared by invoices and bills (src/lib/taxCodes.ts, documentMath.ts). */
+const documentTaxFields = {
+  discountCents: z.number().int().nonnegative().optional(),
+  retainageCents: z.number().int().nonnegative().optional(),
+  depositCents: z.number().int().nonnegative().optional(),
+  taxInclusive: z.boolean().optional(),
+  taxCents: z.number().int().nonnegative().optional(),
+  salesTaxCents: z.number().int().nonnegative().optional(),
+  taxVersion: z.literal(2).optional(),
+  lineSumCents: z.number().int().optional(),
+  taxCodeId: z.string().max(200).optional(),
+  taxTreatment: z.enum(['standard', 'zero_rated', 'exempt', 'reverse_charge', 'out_of_scope']).optional(),
+  taxBreakdown: z.array(z.object({ name: z.string().max(100), rate: z.number().min(0).max(100), taxCents: z.number().int() })).max(10).optional(),
+  pricesIncludeTax: z.boolean().optional(),
+};
+
 export const InvoiceSchema = z.object({
   id: z.string().optional(),
   uid: z.string().optional(),
@@ -221,7 +237,7 @@ export const InvoiceSchema = z.object({
   settledByRecordsCents: z.number().int().nonnegative().optional(),
   currency: z.string().max(10).optional(),
   exchangeRate: z.number().positive().finite().optional(),
-  status: z.enum(['draft', 'pending', 'paid', 'partially_paid', 'overdue', 'sent', 'approved', 'rejected', 'invoiced', 'void']),
+  status: z.enum(['draft', 'pending', 'paid', 'partially_paid', 'overdue', 'sent', 'approved', 'rejected', 'invoiced', 'void', 'cancelled']),
   date: z.string().optional(),
   dueDate: z.string().optional(),
   paymentToken: z.string().optional(),
@@ -235,6 +251,16 @@ export const InvoiceSchema = z.object({
   isLocked: z.boolean().optional(),
   lockedAt: z.string().optional(),
   reversalEventId: z.string().optional(),
+  // Fields the invoice form saves that were silently dropped before (L-114)
+  type: z.enum(['standard', 'recurring', 'progress', 'estimate', 'quote', 'change-order', 'time-materials']).optional(),
+  recurringInterval: z.enum(['monthly', 'weekly', 'yearly']).optional(),
+  paymentTerms: z.string().max(50).optional(),
+  progressPercentage: z.number().min(0).max(100).optional(),
+  milestone: z.string().max(200).optional(),
+  paymentDate: z.string().optional(),
+  paidAt: z.string().optional(),
+  posted: z.boolean().optional(),
+  ...documentTaxFields,
 });
 
 export const BillSchema = z.object({
@@ -254,7 +280,7 @@ export const BillSchema = z.object({
   issueDate: z.string().optional(),
   date: z.string().optional(),
   dueDate: z.string(),
-  status: z.enum(['draft', 'pending', 'approved', 'paid', 'partially_paid', 'overdue', 'unpaid', 'void']),
+  status: z.enum(['draft', 'pending', 'approved', 'paid', 'partially_paid', 'overdue', 'unpaid', 'void', 'rejected', 'cancelled']),
   tags: z.array(z.string()).optional(),
   metadata: z.record(z.string(), z.any()).optional(),
   reversalEventId: z.string().optional(),
@@ -263,6 +289,13 @@ export const BillSchema = z.object({
   paymentToken: z.string().optional(),
   amountPaidCents: z.number().int().nonnegative().optional(),
   settledByRecordsCents: z.number().int().nonnegative().optional(),
+  // Fields the bill form saves that were silently dropped before (L-114)
+  currency: z.string().max(10).optional(),
+  paymentDate: z.string().optional(),
+  paidAt: z.string().optional(),
+  selfAssessedTaxCents: z.number().int().nonnegative().optional(),
+  posted: z.boolean().optional(),
+  ...documentTaxFields,
 });
 
 export const OrderSchema = z.object({

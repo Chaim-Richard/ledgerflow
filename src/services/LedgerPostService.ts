@@ -19,6 +19,7 @@ import {
 import { isPostable } from '../lib/txFilters';
 import { calculateDocumentTax, cashPostedWithDocumentCents } from '../lib/documentMath';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
+import type { LineAccountWeight } from '../kernel/templates/TransactionTemplates';
 import { planInvoiceCogs } from './invoiceCogs';
 import { isLockedDate } from '../lib/periodLock';
 
@@ -133,6 +134,28 @@ export class LedgerPostService {
 
     // 3. Fail loudly instead of using fake fallback IDs
     throw new Error(`Missing ${errorName} account. Please set up a ${errorName} account in Chart of Accounts or Workspace Settings.`);
+  }
+
+  /**
+   * The account chosen on each document line (by id, or by name for lines typed by hand), so
+   * revenue / cost goes where the user put it (L-115). A line without a usable account uses the
+   * document's default account. Returns undefined when there are no lines.
+   */
+  private static lineAccounts(
+    lines: Array<{ accountId?: string; amountCents?: number }> | undefined,
+    accounts: ChartAccount[],
+    fallback: { id: string; name: string },
+    usable: (a: ChartAccount) => boolean
+  ): LineAccountWeight[] | undefined {
+    if (!Array.isArray(lines) || lines.length === 0) return undefined;
+    return lines.map(line => {
+      const key = String(line.accountId || '').trim();
+      const account = key ? accounts.find(a => a.id === key) || accounts.find(a => (a.name || '').toLowerCase() === key.toLowerCase()) : undefined;
+      return {
+        account: account && usable(account) ? { id: account.id, name: account.name } : fallback,
+        weightCents: Number(line.amountCents) || 0,
+      };
+    });
   }
 
   /**
@@ -273,6 +296,7 @@ export class LedgerPostService {
       exchangeRate: rate,
       arAccount,
       revenueAccount,
+      lineAccounts: this.lineAccounts(invoiceData.items, accounts, revenueAccount, a => a.type === 'income'),
       taxAccount,
       discountAccount,
       retainageAccount
@@ -471,7 +495,8 @@ export class LedgerPostService {
       exchangeRate: rate,
       apAccount,
       expenseAccount,
-      taxAccount
+      taxAccount,
+      lineAccounts: this.lineAccounts(billData.splits, accounts, expenseAccount, a => !['cash', 'ar', 'ap'].includes(resolveAccountRole(a)))
     });
 
     const accrualTx = {

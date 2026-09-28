@@ -49,6 +49,24 @@ const TABLES: Record<string, [string, string[]]> = {
   purchaseOrders: ['PurchaseOrder', []],
 };
 
+// The server saves invoices and bills through zod schemas that drop unknown fields (L-114: the
+// discount, "tax inclusive" and a bill's currency were silently lost). Every model field must be
+// in the schema, except those only the server writes.
+const SCHEMA_MODELS: Array<[string, () => Promise<Record<string, unknown>>, string[]]> = [
+  ['Invoice', async () => (await import('../schemas')).InvoiceSchema.shape, ['writtenOffCents', 'writeOffTransactionId', 'writeOffReason', 'writtenOffAt', 'writeOffReversalTransactionId']],
+  ['Bill', async () => (await import('../schemas')).BillSchema.shape, []],
+];
+
+describe('Server schemas keep every field the app saves', () => {
+  for (const [model, shape, serverOnly] of SCHEMA_MODELS) {
+    test(`${model}: no field is dropped on save`, async () => {
+      const keys = Object.keys(await shape());
+      const missing = interfaceFields(model).filter(f => !keys.includes(f) && !serverOnly.includes(f));
+      assert.deepEqual(missing, [], `${model}Schema drops: ${missing.join(', ')}`);
+    });
+  }
+});
+
 describe('Allowed fields match the app model', () => {
   const sql = migrationsSql();
   for (const [table, [model, serverOnly]] of Object.entries(TABLES)) {

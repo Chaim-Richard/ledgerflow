@@ -1,5 +1,5 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Save, FileText, Download, Eye } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Invoice, Customer, ChartAccount } from '../../types';
@@ -12,6 +12,7 @@ import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { formatCurrency } from '../../lib/utils';
 import { lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
+import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const safeCustomers = Array.isArray(customers) ? customers : [];
   const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'income') : [];
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const inventoryItems = useLedgerStore(s => s.inventory || []);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
 
@@ -53,8 +55,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     }
   }, [initialInvoice]);
 
+  const editingExisting = Boolean(initialInvoice?.id);
   useEffect(() => {
-    if (isOpen) {
+    // a new invoice gets the next number; an existing one keeps its own
+    if (isOpen && !editingExisting) {
       const fetchNextNumber = async () => {
         try {
           const wsId = useAuthStore.getState().currentWorkspaceId;
@@ -80,7 +84,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       };
       fetchNextNumber();
     }
-  }, [isOpen]);
+  }, [isOpen, editingExisting]);
 
   const [memo, setMemo] = useState('');
   const [terms, setTerms] = useState('');
@@ -90,6 +94,15 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const [attachments, setAttachments] = useState<File[]>([]);
 
   const total = items.reduce((sum, item) => sum + item.amountCents, 0);
+
+  // Tax: a saved tax code (Settings → Tax), or a custom rate typed here (older invoices)
+  const taxRates = useLedgerStore(s => s.taxRates || []);
+  const salesCodes = useMemo(() => taxRates.filter(r => r.type === 'Sales' && r.appliesTo !== 'purchases').map(taxCodeFromRate), [taxRates]);
+  const taxChoice = invoice.taxCodeId || (Number(invoice.taxRate) > 0 ? 'custom' : '');
+  const taxCode = taxChoice === 'custom' ? customRateCode(Number(invoice.taxRate) || 0) : salesCodes.find(c => c.id === taxChoice) || null;
+  const pricesIncludeTax = invoice.pricesIncludeTax ?? (invoice.taxVersion === 2 ? false : Boolean(invoice.taxInclusive));
+  const totals = documentTotals(total, invoice.discountCents || 0, taxCode, pricesIncludeTax);
+  const money = (cents: number) => formatCurrency(cents, invoice.currency || workspaceCurrency);
 
   const handleAction = async (e: React.FormEvent, actionStatus: string) => {
     e.preventDefault();
@@ -109,9 +122,21 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       await onSave({
         ...invoice,
         status: actionStatus as any,
-        amountCents: total,
+        // the total owed (after the discount, tax included) and the tax, explicitly (taxCodes.ts)
+        amountCents: totals.amountCents,
+        lineSumCents: totals.subtotalCents,
+        discountCents: totals.discountCents,
+        taxAmountCents: totals.taxCents,
+        taxInclusive: true,
+        taxVersion: 2,
+        pricesIncludeTax,
+        taxCodeId: taxCode?.id,
+        taxTreatment: taxCode?.treatment,
+        taxBreakdown: totals.components,
+        taxRate: taxCode ? Math.round(effectiveRate(taxCode.components) * 100000) / 1000 : 0,
         items,
         metadata: {
+          ...(invoice.metadata || {}),
           memo,
           terms,
           emailSubject,
@@ -337,18 +362,31 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  />
              </div>
              <div className="space-y-2">
-                 <label htmlFor="inv-tax-rate" className="micro-label">Tax Rate (%)</label>
-                 <input 
-                   id="inv-tax-rate"
-                   type="number" step="0.001" min="0" max="100" value={invoice.taxRate || 0}
-                   onChange={(e) => setInvoice({ ...invoice, taxRate: parseFloat(e.target.value || '0') })}
-                   className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
-                 />
+                 <label htmlFor="inv-tax-code" className="micro-label">Tax</label>
+                 <select
+                   id="inv-tax-code"
+                   value={taxChoice}
+                   onChange={(e) => setInvoice({ ...invoice, taxCodeId: e.target.value === 'custom' || e.target.value === '' ? undefined : e.target.value, taxRate: e.target.value === 'custom' ? (invoice.taxRate || 0) : 0 })}
+                   className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                 >
+                   <option value="">No tax</option>
+                   {salesCodes.map(c => <option key={c.id} value={c.id}>{c.name}{c.treatment !== 'standard' ? ` (${TAX_TREATMENTS[c.treatment]})` : ''}</option>)}
+                   <option value="custom">Other rate…</option>
+                 </select>
+                 {taxChoice === 'custom' && (
+                   <input
+                     aria-label="Tax rate (%)"
+                     type="number" step="0.001" min="0" max="100" value={invoice.taxRate || 0}
+                     onChange={(e) => setInvoice({ ...invoice, taxRate: parseFloat(e.target.value || '0') })}
+                     className="w-full px-4 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl outline-none font-mono"
+                   />
+                 )}
+                 {salesCodes.length === 0 && <p className="text-[11px] text-[var(--muted)]">Add tax codes in Taxes.</p>}
              </div>
              <div className="space-y-2 flex flex-col justify-end pb-3">
                <label htmlFor="inv-tax-inclusive" className="flex items-center gap-2 cursor-pointer">
-                 <input id="inv-tax-inclusive" type="checkbox" checked={invoice.taxInclusive || false} onChange={e => setInvoice({ ...invoice, taxInclusive: e.target.checked })} className="w-5 h-5 rounded border-zinc-300 text-[var(--text)] focus:ring-zinc-900" />
-                 <span className="text-sm font-bold text-zinc-700">Tax Inclusive</span>
+                 <input id="inv-tax-inclusive" type="checkbox" checked={pricesIncludeTax} onChange={e => setInvoice({ ...invoice, pricesIncludeTax: e.target.checked })} className="w-5 h-5 rounded border-zinc-300 text-[var(--text)] focus:ring-zinc-900" />
+                 <span className="text-sm font-bold text-[var(--text)]">Prices include tax</span>
                </label>
              </div>
              <div className="space-y-2">
@@ -472,25 +510,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                       </datalist>
                     </div>
                   </div>
-                  <div className="col-span-6 md:col-span-1 space-y-1">
-                    <label htmlFor={`inv-item-tax-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Tax %</label>
-                    <input 
-                      id={`inv-item-tax-${idx}`}
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      value={item.taxRate || 0}
-                      onChange={(e) => {
-                        const newItems = [...items];
-                        newItems[idx].taxRate = parseFloat(e.target.value || '0');
-                        setItems(newItems);
-                      }}
-                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
-                    />
-                  </div>
-                  <div className="col-span-3 md:col-span-1 space-y-1 flex flex-col justify-end">
+                  <div className="col-span-9 md:col-span-1 space-y-1 flex flex-col justify-end">
                     <div className="px-2 py-2 text-right font-mono font-bold text-[var(--text)] border border-transparent tabular-nums">
-                      {(item.amountCents / 100).toFixed(2)}
+                      {money(item.amountCents)}
                     </div>
                   </div>
                   <div className="col-span-1 pb-1">
@@ -564,9 +586,15 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
         <div className="p-4 md:p-8 border-t border-[var(--line)] bg-[var(--ink)]/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-col w-full sm:w-auto">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Amount</span>
+            <dl className="text-xs text-[var(--muted)] grid grid-cols-[auto_auto] gap-x-4 mb-1 tabular-nums" aria-label="Invoice totals">
+              <dt>Subtotal</dt><dd className="text-right font-mono">{money(totals.subtotalCents)}</dd>
+              {totals.discountCents > 0 && <><dt>Discount</dt><dd className="text-right font-mono">−{money(totals.discountCents)}</dd></>}
+              {totals.components.map(c => <React.Fragment key={c.name}><dt>{c.name} {c.rate}%{pricesIncludeTax ? ' (included)' : ''}</dt><dd className="text-right font-mono">{money(c.taxCents)}</dd></React.Fragment>)}
+              {taxCode && taxCode.treatment !== 'standard' && <><dt>Tax</dt><dd className="text-right">{TAX_TREATMENTS[taxCode.treatment]}</dd></>}
+            </dl>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total</span>
             <span className="text-3xl font-black text-[var(--text)] font-mono">
-              {(total / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+              {money(totals.amountCents)}
             </span>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3 w-full sm:w-auto">

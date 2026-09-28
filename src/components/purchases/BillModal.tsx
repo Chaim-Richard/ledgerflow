@@ -1,5 +1,5 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Save, CreditCard, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Bill, Vendor, ChartAccount } from '../../types';
@@ -11,6 +11,8 @@ import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import { evaluateApprovalRequirement } from '../../lib/approvalWorkflow';
 import { addComment, getCommentsForEntity } from '../../lib/commentService';
+import { documentTotals, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
+import { formatCurrency } from '../../lib/utils';
 
 interface BillModalProps {
   isOpen: boolean;
@@ -85,6 +87,15 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   }
 
   const total = splits.reduce((sum, split) => sum + split.amountCents, 0);
+
+  // Tax: a purchase tax code (Settings → Tax); reverse charge means the vendor charges none
+  const taxRates = useLedgerStore(s => s.taxRates || []);
+  const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
+  const purchaseCodes = useMemo(() => taxRates.filter(r => r.type === 'Sales' && r.appliesTo !== 'sales').map(taxCodeFromRate), [taxRates]);
+  const taxCode = purchaseCodes.find(c => c.id === bill.taxCodeId) || null;
+  const pricesIncludeTax = bill.pricesIncludeTax ?? true;
+  const totals = documentTotals(total, 0, taxCode, pricesIncludeTax);
+  const money = (cents: number) => formatCurrency(cents, bill.currency || workspaceCurrency);
 
   const handleVendorSelect = (vendorId: string) => {
     const vend = safeVendors.find(v => v.id === vendorId);
@@ -171,7 +182,17 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     await onSave({
       ...bill,
       status: finalStatus as any,
-      amountCents: total,
+      // the total owed (tax included) and the tax, explicitly (taxCodes.ts)
+      amountCents: totals.amountCents,
+      lineSumCents: totals.subtotalCents,
+      taxAmountCents: totals.taxCents,
+      taxInclusive: true,
+      taxVersion: 2,
+      pricesIncludeTax,
+      taxCodeId: taxCode?.id,
+      taxTreatment: taxCode?.treatment,
+      taxBreakdown: totals.components,
+      selfAssessedTaxCents: totals.selfAssessedCents || undefined,
       splits,
       metadata: {
         ...(bill.metadata || {}),
@@ -294,6 +315,24 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label htmlFor="bill-tax-code" className="micro-label">Tax</label>
+              <select id="bill-tax-code" value={bill.taxCodeId || ''} onChange={(e) => setBill({ ...bill, taxCodeId: e.target.value || undefined })}
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] outline-none font-bold">
+                <option value="">No tax</option>
+                {purchaseCodes.map(c => <option key={c.id} value={c.id}>{c.name}{c.treatment !== 'standard' ? ` (${TAX_TREATMENTS[c.treatment]})` : ''}</option>)}
+              </select>
+              {purchaseCodes.length === 0 && <p className="text-[11px] text-[var(--muted)]">Add tax codes in Taxes.</p>}
+            </div>
+            <div className="space-y-2 flex flex-col justify-end pb-3">
+              <label htmlFor="bill-prices-include-tax" className="flex items-center gap-2 cursor-pointer">
+                <input id="bill-prices-include-tax" type="checkbox" checked={pricesIncludeTax} onChange={e => setBill({ ...bill, pricesIncludeTax: e.target.checked })} className="w-5 h-5 rounded" />
+                <span className="text-sm font-bold text-[var(--text)]">Amounts include tax (as on the vendor's bill)</span>
+              </label>
+            </div>
+          </div>
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="micro-label">Expense Allocation</h4>
@@ -408,9 +447,13 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
         <div className="p-4 md:p-8 border-t border-[var(--line)] bg-[var(--ink)]/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-col w-full sm:w-auto">
+            <dl className="text-xs text-[var(--muted)] grid grid-cols-[auto_auto] gap-x-4 mb-1 tabular-nums" aria-label="Bill totals">
+              <dt>Lines</dt><dd className="text-right font-mono">{money(totals.subtotalCents)}</dd>
+              {totals.components.map(c => <React.Fragment key={c.name}><dt>{c.name} {c.rate}%{totals.selfAssessedCents ? ' (reverse charge: you account for it)' : pricesIncludeTax ? ' (included)' : ''}</dt><dd className="text-right font-mono">{money(c.taxCents)}</dd></React.Fragment>)}
+            </dl>
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Bill Amount</span>
             <span className="text-3xl font-black text-[var(--text)] font-mono">
-              {(total / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+              {money(totals.amountCents)}
             </span>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3 w-full sm:w-auto">

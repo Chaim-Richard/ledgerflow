@@ -17,6 +17,12 @@ export interface DocumentTaxInput {
   taxInclusive?: boolean;
   discountCents?: number;
   retainageCents?: number;
+  /**
+   * 2 = saved by the tax-code forms (src/lib/taxCodes.ts documentTotals): `amountCents` is the
+   * total owed (after the discount, tax included) and `taxAmountCents` the tax, both explicit.
+   * Documents without it keep the older rules below.
+   */
+  taxVersion?: number;
 }
 
 /**
@@ -63,10 +69,18 @@ export function calculateDocumentTax(doc: DocumentTaxInput): number {
   }
 }
 
+/** The amount before tax inside a tax-inclusive amount, for a total rate (0.155 = 15.5%). */
+export function netFromGross(grossCents: number, totalRate: number): number {
+  return Math.round(grossCents / (1 + totalRate));
+}
+
 /**
  * Computes the net pre-tax amount in integer cents.
  */
 export function calculateDocumentNet(doc: DocumentTaxInput): number {
+  // Explicit amounts: the total owed already has the discount taken off
+  if (doc.taxVersion === 2) return Math.max(0, (doc.amountCents || 0) - calculateDocumentTax(doc));
+
   const discount = Math.max(0, doc.discountCents || 0);
 
   if (doc.taxInclusive) {

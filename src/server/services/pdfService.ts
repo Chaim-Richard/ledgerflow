@@ -15,7 +15,10 @@ export async function generateDocumentPdf(
   const date = String(docData?.date || getLocalDateISO()).replace(/[()\\]/g, ' ');
   const recipient = String(docData?.customerName || docData?.vendorName || docData?.contactName || 'Valued Client').replace(/[()\\]/g, ' ');
   const totalCents = docData?.amountCents || 0;
-  const totalFormatted = (totalCents / 100).toFixed(2);
+  // Amounts in the document's own currency, as a code (the built-in PDF fonts have no € or ₪)
+  const currency = String(docData?.currency || workspace?.currency || 'USD').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'USD';
+  const money = (cents: number) => `${currency} ${(Math.round(cents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const totalFormatted = money(totalCents);
 
   const items = docData?.items || docData?.transactions || [];
   let itemLines = '';
@@ -25,17 +28,37 @@ export async function generateDocumentPdf(
     items.slice(0, 15).forEach((item: any) => {
       const desc = String(item.description || item.name || 'Item').replace(/[()\\]/g, ' ').slice(0, 45);
       const qty = item.quantity !== undefined ? item.quantity : 1;
-      const amt = item.amountCents !== undefined ? (item.amountCents / 100).toFixed(2) : '0.00';
+      const amt = money(Number(item.amountCents) || 0);
       itemLines += `BT /F1 10 Tf 50 ${y} Td (${desc}) Tj ET\n`;
       itemLines += `BT /F1 10 Tf 350 ${y} Td (${qty}) Tj ET\n`;
-      itemLines += `BT /F1 10 Tf 480 ${y} Td ($${amt}) Tj ET\n`;
+      itemLines += `BT /F1 10 Tf 450 ${y} Td (${amt}) Tj ET\n`;
       y -= 20;
     });
   } else {
     itemLines += `BT /F1 10 Tf 50 ${y} Td (Standard Ledger Transaction) Tj ET\n`;
     itemLines += `BT /F1 10 Tf 350 ${y} Td (1) Tj ET\n`;
-    itemLines += `BT /F1 10 Tf 480 ${y} Td ($${totalFormatted}) Tj ET\n`;
+    itemLines += `BT /F1 10 Tf 450 ${y} Td (${totalFormatted}) Tj ET\n`;
     y -= 20;
+  }
+
+  // Subtotal, discount and tax above the total (documents saved with the tax-code forms)
+  const taxCents = Number(docData?.taxAmountCents) || 0;
+  const discountCents = Number(docData?.discountCents) || 0;
+  const summary: Array<[string, string]> = [];
+  if (taxCents > 0 || discountCents > 0) {
+    if (typeof docData?.lineSumCents === 'number') summary.push(['Subtotal', money(docData.lineSumCents)]);
+    if (discountCents > 0) summary.push(['Discount', `-${money(discountCents)}`]);
+    const parts = Array.isArray(docData?.taxBreakdown) && docData.taxBreakdown.length ? docData.taxBreakdown : [{ name: 'Tax', rate: docData?.taxRate, taxCents }];
+    for (const p of parts) {
+      const label = `${String(p.name || 'Tax').replace(/[()\\]/g, ' ').slice(0, 30)}${p.rate ? ` ${p.rate}%` : ''}${docData?.pricesIncludeTax ? ' incl.' : ''}`;
+      summary.push([label, money(Number(p.taxCents) || 0)]);
+    }
+  }
+  y -= 5;
+  for (const [label, value] of summary) {
+    y -= 18;
+    itemLines += `BT /F1 10 Tf 330 ${y} Td (${label}) Tj ET\n`;
+    itemLines += `BT /F1 10 Tf 450 ${y} Td (${value}) Tj ET\n`;
   }
 
   const streamContent = `
@@ -54,7 +77,7 @@ BT /F2 10 Tf 350 615 Td (QTY) Tj ET
 BT /F2 10 Tf 480 615 Td (AMOUNT) Tj ET
 ${itemLines}
 0.8 0.8 0.8 RG 1 w 50 ${y - 5} m 550 ${y - 5} l S
-BT /F2 12 Tf 380 ${y - 25} Td (TOTAL: $${totalFormatted}) Tj ET
+BT /F2 12 Tf 330 ${y - 25} Td (TOTAL: ${totalFormatted}) Tj ET
 Q
 `.trim();
 

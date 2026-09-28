@@ -2,6 +2,9 @@ import type { LockException } from './lib/periodLock';
 import type { EmailTemplates } from './lib/emailTemplates';
 import type { ReminderSettings } from './lib/reminders';
 import type { NotificationType } from './lib/notifications';
+import type { TaxComponent, TaxTreatment } from './lib/taxCodes';
+
+export interface TaxBreakdownLine { name: string; rate: number; taxCents: number }
 /** One person's in-app notification (table `notifications`, created by the server). */
 export interface AppNotification {
   id: string;
@@ -311,6 +314,15 @@ export interface Bill {
   lockedAt?: string;
   paymentToken?: string;
   taxInclusive?: boolean;
+  /** Tax-code fields (src/lib/taxCodes.ts): see DocumentTaxFields. */
+  taxVersion?: number;
+  lineSumCents?: number;
+  taxCodeId?: string;
+  taxTreatment?: TaxTreatment;
+  taxBreakdown?: TaxBreakdownLine[];
+  pricesIncludeTax?: boolean;
+  /** Reverse charge: the tax the business accounts for itself (due and reclaimable). */
+  selfAssessedTaxCents?: number;
   posted?: boolean;
 }
 
@@ -362,6 +374,18 @@ export interface Invoice {
   retainageCents?: number;
   depositCents?: number;
   taxInclusive?: boolean;
+  /**
+   * Tax-code fields, saved by the invoice form (src/lib/taxCodes.ts documentTotals). With
+   * taxVersion 2, amountCents is the total owed (after discount, tax included) and
+   * taxAmountCents the tax; lineSumCents is the lines as entered.
+   */
+  taxVersion?: number;
+  lineSumCents?: number;
+  taxCodeId?: string;
+  taxTreatment?: TaxTreatment;
+  taxBreakdown?: TaxBreakdownLine[];
+  /** How the lines were entered: with tax included, or tax added on top. */
+  pricesIncludeTax?: boolean;
   posted?: boolean;
   currency?: string;
   paymentDate?: string;
@@ -1045,6 +1069,11 @@ export interface TaxRate {
   name: string;
   rate: number; // Current baseline rate
   type: 'Sales' | 'Income' | 'Payroll';
+  /** Tax codes (src/lib/taxCodes.ts): how amounts are reported, and the parts (GST + PST…). */
+  treatment?: TaxTreatment;
+  components?: TaxComponent[];
+  /** Where it can be used: sales, purchases or both (default both). */
+  appliesTo?: 'sales' | 'purchases' | 'both';
   timeSeries?: TemporalValidity[]; // Historical/Future rate adjustments reflecting changing tax laws
   jurisdiction?: string; // Country/State/City
   createdAt: string;

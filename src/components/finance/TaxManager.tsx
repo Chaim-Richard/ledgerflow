@@ -19,6 +19,104 @@ import { motion, AnimatePresence } from 'motion/react';
 import { parseLocalDate, cn, formatCurrency, safeConfirm } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
+import { effectiveRate, TAX_TREATMENTS } from '../../lib/taxCodes';
+import type { TaxComponent, TaxTreatment } from '../../lib/taxCodes';
+
+const fieldClass = 'w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[var(--text)]';
+
+/**
+ * Add or edit a tax. A sales tax (VAT / GST / sales tax) is a tax code: one or more parts
+ * (e.g. GST 5% + PST 7%), a part can be charged on top of the others (compound), and a treatment
+ * (taxed, zero-rated, exempt, reverse charge, out of scope). `rate` keeps the total as a fraction
+ * for older screens.
+ */
+function TaxRateForm({ initial, onSave, onCancel }: { initial: TaxRate | null; onSave: (data: Partial<TaxRate>) => Promise<void>; onCancel: () => void }) {
+  const [name, setName] = useState(initial?.name || '');
+  const [type, setType] = useState<TaxRate['type']>(initial?.type || 'Sales');
+  const [treatment, setTreatment] = useState<TaxTreatment>(initial?.treatment || 'standard');
+  const [appliesTo, setAppliesTo] = useState<NonNullable<TaxRate['appliesTo']>>(initial?.appliesTo || 'both');
+  const [parts, setParts] = useState<Array<TaxComponent & { key: string }>>(() =>
+    (initial?.components?.length ? initial.components : [{ name: initial?.name || 'Tax', rate: Math.round((initial?.rate ?? 0) * 100 * 1000) / 1000 }])
+      .map(c => ({ ...c, key: crypto.randomUUID() })));
+  const setPart = (key: string, patch: Partial<TaxComponent>) => setParts(ps => ps.map(p => (p.key === key ? { ...p, ...patch } : p)));
+  const clean = parts.filter(p => p.name.trim() && p.rate >= 0).map(({ key: _key, ...p }) => ({ ...p, name: p.name.trim() }));
+  const total = effectiveRate(clean);
+
+  return (
+    <form
+      aria-labelledby="tax-rate-form-title"
+      className="space-y-4 text-sm"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!name.trim() || clean.length === 0) return;
+        await onSave(type === 'Sales'
+          ? { name: name.trim(), type, treatment, appliesTo, components: clean, rate: Math.round(total * 100000) / 100000 }
+          : { name: name.trim(), type, rate: (clean[0]?.rate || 0) / 100 });
+      }}
+    >
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="tax-name" className="block text-xs font-semibold mb-1">Name</label>
+          <input id="tax-name" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. VAT 20% or GST + PST" className={fieldClass} />
+        </div>
+        <div>
+          <label htmlFor="tax-type" className="block text-xs font-semibold mb-1">Kind</label>
+          <select id="tax-type" value={type} onChange={e => setType(e.target.value as TaxRate['type'])} className={fieldClass}>
+            <option value="Sales">Sales tax / VAT / GST (on invoices and bills)</option>
+            <option value="Income">Income tax (estimate only)</option>
+            <option value="Payroll">Payroll tax</option>
+          </select>
+        </div>
+      </div>
+      {type === 'Sales' && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="tax-treatment" className="block text-xs font-semibold mb-1">How it is reported</label>
+            <select id="tax-treatment" value={treatment} onChange={e => setTreatment(e.target.value as TaxTreatment)} className={fieldClass}>
+              {(Object.keys(TAX_TREATMENTS) as TaxTreatment[]).map(t => <option key={t} value={t}>{TAX_TREATMENTS[t]}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="tax-applies" className="block text-xs font-semibold mb-1">Used on</label>
+            <select id="tax-applies" value={appliesTo} onChange={e => setAppliesTo(e.target.value as NonNullable<TaxRate['appliesTo']>)} className={fieldClass}>
+              <option value="both">Sales and purchases</option>
+              <option value="sales">Sales only</option>
+              <option value="purchases">Purchases only</option>
+            </select>
+          </div>
+        </div>
+      )}
+      <fieldset className="space-y-2">
+        <legend className="text-xs font-semibold">{type === 'Sales' ? 'Parts (a single tax has one part)' : 'Rate'}</legend>
+        {parts.slice(0, type === 'Sales' ? parts.length : 1).map((p, n) => (
+          <div key={p.key} className="flex items-center gap-2">
+            {type === 'Sales' && <input aria-label={`Part ${n + 1} name`} value={p.name} onChange={e => setPart(p.key, { name: e.target.value })} className={`${fieldClass} flex-1`} />}
+            <input aria-label={`Part ${n + 1} rate (%)`} type="number" step="0.001" min="0" max="100" value={p.rate} onChange={e => setPart(p.key, { rate: parseFloat(e.target.value || '0') })} className={`${fieldClass} w-28 text-right font-mono`} />
+            <span aria-hidden="true">%</span>
+            {type === 'Sales' && n > 0 && (
+              <label className="flex items-center gap-1 text-xs whitespace-nowrap">
+                <input type="checkbox" checked={Boolean(p.compound)} onChange={e => setPart(p.key, { compound: e.target.checked })} /> on top of the others
+              </label>
+            )}
+            {type === 'Sales' && parts.length > 1 && (
+              <button type="button" aria-label={`Remove part ${n + 1}`} onClick={() => setParts(ps => ps.filter(x => x.key !== p.key))} className="p-2 text-[var(--muted)]"><Trash2 size={14} aria-hidden="true" /></button>
+            )}
+          </div>
+        ))}
+        {type === 'Sales' && (
+          <button type="button" onClick={() => setParts(ps => [...ps, { key: crypto.randomUUID(), name: '', rate: 0 }])} className="text-xs font-semibold inline-flex items-center gap-1">
+            <Plus size={12} aria-hidden="true" /> Add a part
+          </button>
+        )}
+        {type === 'Sales' && <p className="text-xs text-[var(--muted)]">Total: {(total * 100).toFixed(3).replace(/\.?0+$/, '')}% of the amount before tax{treatment !== 'standard' ? ` · ${TAX_TREATMENTS[treatment]}` : ''}</p>}
+      </fieldset>
+      <div className="pt-4 flex gap-3 border-t border-[var(--line)]">
+        <button type="button" onClick={onCancel} className="flex-1 py-3 border border-[var(--line)] rounded-xl font-semibold">Cancel</button>
+        <AsyncButton type="submit" loadingText="Saving…" className="flex-[2] py-3 bg-[var(--brass)] text-black rounded-xl font-bold">Save</AsyncButton>
+      </div>
+    </form>
+  );
+}
 
 interface TaxManagerProps {
   user?: User | null;
@@ -234,7 +332,9 @@ export default function TaxManager({
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{rate.type} Classification</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-black font-mono text-[var(--text)] tracking-tighter">{(rate.rate * 100).toFixed(1)}%</p>
+                    <p className="text-2xl font-black font-mono text-[var(--text)] tracking-tighter">{(rate.rate * 100).toFixed(rate.components?.some(c => !Number.isInteger(c.rate)) ? 3 : 1)}%</p>
+                    {rate.components && rate.components.length > 1 && <p className="text-[10px] text-[var(--muted)]">{rate.components.map(c => `${c.name} ${c.rate}%${c.compound ? ' (on top)' : ''}`).join(' + ')}</p>}
+                    {rate.treatment && rate.treatment !== 'standard' && <p className="text-[10px] text-[var(--muted)]">{TAX_TREATMENTS[rate.treatment]}</p>}
                     <div className="flex items-center justify-end gap-3 mt-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <button onClick={() => { setEditingRate(rate); setIsModalOpen(true); }} className="text-slate-400 hover:text-[var(--text)] transition-colors"><Edit2 size={14} /></button>
                       <button onClick={() => onDeleteTaxRate?.(rate.id)} className="text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
@@ -342,66 +442,21 @@ export default function TaxManager({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-xl bg-[var(--surface)] rounded-[32px] shadow-2xl border border-[var(--line)] overflow-hidden p-8 md:p-12"
             >
-              <div className="flex items-center justify-between mb-10">
-                 <div>
-                    <h2 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase font-display">{editingRate ? 'Modify Protocol' : 'Deploy Threshold'}</h2>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Operational Fiscal Parameterization</p>
-                 </div>
-                 <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-slate-400 hover:text-[var(--text)] hover:bg-slate-100 transition-all border border-[var(--line)]">
-                    <Plus size={24} className="rotate-45" />
+              <div className="flex items-center justify-between mb-6">
+                 <h2 id="tax-rate-form-title" className="text-xl font-bold text-[var(--text)]">{editingRate ? 'Edit tax' : 'New tax'}</h2>
+                 <button type="button" aria-label="Close" onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-full flex items-center justify-center text-[var(--muted)] border border-[var(--line)]">
+                    <Plus size={20} className="rotate-45" aria-hidden="true" />
                  </button>
               </div>
-
-              <form 
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
-                  const data = {
-                    name: formData.get('name') as string,
-                    type: formData.get('type') as any,
-                    rate: parseFloat(formData.get('rate') as string) / 100,
-                  };
-
-                  if (editingRate) {
-                    await onUpdateTaxRate?.(editingRate.id, data);
-                  } else {
-                    await onAddTaxRate?.(data);
-                  }
+              <TaxRateForm
+                initial={editingRate}
+                onCancel={() => setIsModalOpen(false)}
+                onSave={async (data) => {
+                  if (editingRate) await onUpdateTaxRate?.(editingRate.id, data);
+                  else await onAddTaxRate?.(data);
                   setIsModalOpen(false);
                 }}
-                className="space-y-6"
-              >
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Threshold Metadata (Name)</label>
-                  <input name="name" required defaultValue={editingRate?.name} placeholder="e.g. FEDERAL_REVENUE_SERVICE" className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-bold text-[var(--text)] uppercase tracking-widest placeholder:text-slate-300" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Scalar Intensity (%)</label>
-                    <input name="rate" type="number" step="0.1" required defaultValue={(editingRate?.rate ?? 0) * 100} className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-mono font-black text-[var(--text)] text-right text-lg" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Mapping Type</label>
-                    <select name="type" defaultValue={editingRate?.type || 'Income'} className="w-full px-5 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-bold text-[var(--text)] appearance-none cursor-pointer uppercase tracking-widest">
-                      <option value="Income">Income Protocol</option>
-                      <option value="Sales">Sales Flow</option>
-                      <option value="Payroll">Payroll Cluster</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="pt-8 flex gap-4 border-t border-[var(--line)] mt-8">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-[var(--surface)] border border-[var(--line)] text-slate-600 rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--ink)] transition-all active:scale-95 shadow-sm">Abort</button>
-                  <AsyncButton 
-                    type="submit" 
-                    loadingText="Deploying..."
-                    className="flex-[2] py-4 bg-slate-900 text-white rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md active:scale-95"
-                  >
-                    Deploy Parameter
-                  </AsyncButton>
-                </div>
-              </form>
+              />
             </motion.div>
           </div>
         )}
