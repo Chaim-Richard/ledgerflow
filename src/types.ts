@@ -1,26 +1,21 @@
 import type { LockException } from './lib/periodLock';
 import type { EmailTemplates } from './lib/emailTemplates';
 import type { ReminderSettings } from './lib/reminders';
-export type NotificationKind =
-  | 'invoice-created' | 'invoice-sent' | 'invoice-scheduled' | 'invoice-paid'
-  | 'invoice-overdue' | 'invoice-cancelled' | 'invoice-refunded' | 'invoice-reminder-sent'
-  | 'recurring-invoice-upcoming' | 'recurring-series-started'
-  | 'recurring-series-paused' | 'recurring-series-completed'
-  | 'transactions-created' | 'transactions-categorized' | 'transactions-assigned' | 'transactions-exported'
-  | 'inbox-new' | 'inbox-needs-review' | 'inbox-auto-matched' | 'inbox-cross-currency-matched'
-  | 'document-uploaded' | 'document-processed' | 'insight-ready';
-
+import type { NotificationType } from './lib/notifications';
+/** One person's in-app notification (table `notifications`, created by the server). */
 export interface AppNotification {
   id: string;
   workspaceId: string;
-  uid?: string;
-  kind: NotificationKind;
+  uid: string;
+  kind: NotificationType;
   title: string;
   message: string;
   read: boolean;
+  readAt?: string;
   createdAt: string;
   linkTab?: string;
-  metadata?: Record<string, any>;
+  recordId?: string;
+  eventKey?: string;
 }
 
 export interface Workspace {
@@ -488,6 +483,8 @@ export interface Customer {
   metadata?: Record<string, any>;
   notes?: string;
   isForeign?: boolean;
+  /** No automatic payment reminders for this customer (Settings → Emails & Reminders). */
+  noReminders?: boolean;
   /** Set when the customer came from a spreadsheet import; lets the import be undone. */
   importBatchId?: string;
 }

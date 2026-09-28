@@ -1,159 +1,184 @@
-import React, { useState } from 'react';
-import { useNotificationStore } from '../../stores/useNotificationStore';
-import { useUIStore } from '../../stores/useUIStore';
-import { Bell, CheckCheck, X, FileText, AlertTriangle, RefreshCw, FileCode, ArrowRight, ShieldCheck } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { Bell, CheckCheck, X, FileText, CreditCard, Landmark, Users, MailWarning, Settings2, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { unreadCount, useNotificationStore } from '../../stores/useNotificationStore';
+import { useUIStore } from '../../stores/useUIStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { loadNotificationPrefs, markNotificationsRead, saveNotificationPrefs } from '../../hooks/useNotificationFeed';
+import { NOTIFICATION_TYPES, typesForRole, wantsNotification } from '../../lib/notifications';
+import type { NotificationPrefs } from '../../lib/notifications';
+import type { AppNotification } from '../../types';
+
+/**
+ * The bell's panel: the signed-in person's notifications (live, from the server), mark read,
+ * and "Choose notifications" to turn types off (S-19).
+ */
+
+function KindIcon({ kind }: { kind: string }) {
+  const props = { size: 16, 'aria-hidden': true as const };
+  if (kind.startsWith('payment')) return <CreditCard {...props} className="text-[var(--pos)]" />;
+  if (kind.startsWith('bank')) return <Landmark {...props} className="text-[var(--neg)]" />;
+  if (kind.startsWith('member')) return <Users {...props} className="text-[var(--brass)]" />;
+  if (kind.startsWith('email')) return <MailWarning {...props} className="text-[var(--neg)]" />;
+  return <FileText {...props} className="text-[var(--brass)]" />;
+}
+
+function Preferences({ onDone }: { onDone: () => void }) {
+  const uid = useAuthStore(s => s.user?.uid) || '';
+  const role = useCurrentRole();
+  const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadNotificationPrefs(uid)
+      .then(p => { if (!cancelled) setPrefs(p); })
+      .catch(() => { if (!cancelled) setPrefs({}); });
+    return () => { cancelled = true; };
+  }, [uid]);
+
+  const save = async () => {
+    if (!prefs) return;
+    setSaving(true);
+    try {
+      await saveNotificationPrefs(uid, prefs);
+      toast.success('Notification choices saved.');
+      onDone();
+    } catch {
+      toast.error('Could not save your choices.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const types = typesForRole(role);
+  return (
+    <div className="p-5 space-y-3">
+      <p className="text-xs text-[var(--muted)]">Choose what you're told about in this app. This applies to all your workspaces.</p>
+      {prefs === null ? <p className="text-xs text-[var(--muted)]">Loading…</p> : (
+        <ul className="space-y-2">
+          {types.map(type => (
+            <li key={type}>
+              <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+                <input type="checkbox" checked={wantsNotification(prefs, type)}
+                  onChange={e => setPrefs({ ...prefs, [type]: e.target.checked })} />
+                {NOTIFICATION_TYPES[type].label}
+              </label>
+            </li>
+          ))}
+          {types.length === 0 && <li className="text-xs text-[var(--muted)]">Your role doesn't receive notifications.</li>}
+        </ul>
+      )}
+      <div className="flex gap-2">
+        <button type="button" disabled={saving || prefs === null} onClick={save}
+          className="px-4 py-2 rounded-lg bg-[var(--brass)] text-black text-sm font-bold disabled:opacity-50">Save</button>
+        <button type="button" onClick={onDone} className="px-3 py-2 rounded-lg border border-[var(--line)] text-sm text-[var(--text)]">Back</button>
+      </div>
+    </div>
+  );
+}
 
 export default function NotificationDrawer() {
-  const { notifications, isDrawerOpen, setDrawerOpen, markAsRead, markAllAsRead } = useNotificationStore();
+  const notifications = useNotificationStore(s => s.notifications);
+  const isDrawerOpen = useNotificationStore(s => s.isDrawerOpen);
+  const setDrawerOpen = useNotificationStore(s => s.setDrawerOpen);
   const setActiveTab = useUIStore(s => s.setActiveTab);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [choosing, setChoosing] = useState(false);
 
   if (!isDrawerOpen) return null;
 
-  const filteredNotifications = notifications.filter(n => filter === 'all' || !n.read);
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unread = unreadCount(notifications);
+  const shown = notifications.filter(n => filter === 'all' || !n.read);
 
-  const getIcon = (kind: string) => {
-    if (kind.startsWith('invoice')) return <FileText size={16} className="text-indigo-500" />;
-    if (kind.startsWith('recurring')) return <RefreshCw size={16} className="text-amber-500" />;
-    if (kind.startsWith('document')) return <FileCode size={16} className="text-blue-500" />;
-    return <ShieldCheck size={16} className="text-emerald-500" />;
+  const markRead = (ids: string[]) => {
+    markNotificationsRead(ids).catch(() => toast.error('Could not mark as read.'));
   };
 
-  const handleNotificationClick = (notif: any) => {
-    markAsRead(notif.id);
-    if (notif.linkTab) {
-      setActiveTab(notif.linkTab);
+  const open = (n: AppNotification) => {
+    if (!n.read) markRead([n.id]);
+    if (n.linkTab) {
+      setActiveTab(n.linkTab);
       setDrawerOpen(false);
     }
   };
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 overflow-hidden">
-        {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={() => setDrawerOpen(false)}
-          className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
-        />
-
-        <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="w-screen max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col"
-          >
-            {/* Drawer Header */}
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                  <Bell size={18} />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Notifications</h3>
-                  <p className="text-xs text-slate-500">{unreadCount} unread alert{unreadCount !== 1 ? 's' : ''}</p>
-                </div>
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      <button type="button" aria-label="Close notifications" onClick={() => setDrawerOpen(false)} className="absolute inset-0 bg-black/40 cursor-default" />
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+        <div role="dialog" aria-modal="true" aria-labelledby="notifications-title"
+          className="w-screen max-w-md bg-[var(--surface)] border-l border-[var(--line)] shadow-2xl flex flex-col text-[var(--text)]">
+          <div className="p-5 border-b border-[var(--line)] flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Bell size={18} className="text-[var(--brass)]" aria-hidden="true" />
+              <div>
+                <h2 id="notifications-title" className="text-base font-bold">{choosing ? 'Choose notifications' : 'Notifications'}</h2>
+                {!choosing && <p className="text-xs text-[var(--muted)]">{unread} unread</p>}
               </div>
-
-              <div className="flex items-center gap-2">
-                {unreadCount > 0 && (
-                  <button
-                    onClick={markAllAsRead}
-                    className="p-1.5 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-                    title="Mark all as read"
-                  >
-                    <CheckCheck size={15} />
-                    <span className="hidden sm:inline">Mark read</span>
-                  </button>
-                )}
-                <button
-                  onClick={() => setDrawerOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
-                >
-                  <X size={18} />
+            </div>
+            <div className="flex items-center gap-1">
+              {!choosing && unread > 0 && (
+                <button type="button" onClick={() => markRead(notifications.filter(n => !n.read).map(n => n.id))}
+                  className="p-1.5 text-xs font-semibold rounded-lg hover:bg-[var(--elevated)] flex items-center gap-1">
+                  <CheckCheck size={15} aria-hidden="true" /> Mark all read
                 </button>
-              </div>
-            </div>
-
-            {/* Sub-Header Tabs */}
-            <div className="px-5 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                  filter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                All ({notifications.length})
-              </button>
-              <button
-                onClick={() => setFilter('unread')}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                  filter === 'unread' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                Unread ({unreadCount})
-              </button>
-            </div>
-
-            {/* Notification List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
-              {filteredNotifications.length === 0 ? (
-                <div className="p-12 text-center text-slate-400">
-                  <Bell size={36} className="mx-auto mb-2 text-slate-300" />
-                  <p className="text-xs font-semibold">No notifications match this filter</p>
-                </div>
-              ) : (
-                filteredNotifications.map(notif => (
-                  <div
-                    key={notif.id}
-                    onClick={() => handleNotificationClick(notif)}
-                    className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                      notif.read
-                        ? 'bg-white border-slate-200 hover:border-slate-300 opacity-80'
-                        : 'bg-indigo-50/40 border-indigo-200 hover:border-indigo-300 shadow-xs'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-white rounded-lg shadow-2xs border border-slate-100 shrink-0">
-                        {getIcon(notif.kind)}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className="text-xs font-bold text-slate-900 truncate">{notif.title}</h4>
-                          {!notif.read && (
-                            <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
-                          )}
-                        </div>
-
-                        <p className="text-xs text-slate-600 mt-1 line-clamp-2 leading-relaxed">{notif.message}</p>
-
-                        <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400">
-                          <span>
-                            {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
-                          </span>
-                          {notif.linkTab && (
-                            <span className="text-indigo-600 font-bold flex items-center gap-0.5 hover:underline">
-                              View <ArrowRight size={10} />
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
               )}
+              {!choosing && (
+                <button type="button" onClick={() => setChoosing(true)} className="p-1.5 rounded-lg hover:bg-[var(--elevated)]" aria-label="Choose notifications">
+                  <Settings2 size={16} aria-hidden="true" />
+                </button>
+              )}
+              <button type="button" onClick={() => setDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-[var(--elevated)]" aria-label="Close">
+                <X size={18} aria-hidden="true" />
+              </button>
             </div>
-          </motion.div>
+          </div>
+
+          {choosing ? <Preferences onDone={() => setChoosing(false)} /> : (
+            <>
+              <div className="px-5 py-2.5 border-b border-[var(--line)] flex items-center gap-2" role="group" aria-label="Show">
+                {(['all', 'unread'] as const).map(f => (
+                  <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg ${filter === f ? 'bg-[var(--elevated)] text-[var(--text)]' : 'text-[var(--muted)]'}`}>
+                    {f === 'all' ? `All (${notifications.length})` : `Unread (${unread})`}
+                  </button>
+                ))}
+              </div>
+              <ul className="flex-1 overflow-y-auto p-4 space-y-2.5">
+                {shown.length === 0 ? (
+                  <li className="p-12 text-center text-[var(--muted)]">
+                    <Bell size={32} className="mx-auto mb-2" aria-hidden="true" />
+                    <p className="text-xs font-semibold">{filter === 'unread' ? 'Nothing unread.' : 'No notifications yet. Payments, overdue invoices and bank problems show up here.'}</p>
+                  </li>
+                ) : shown.map(n => (
+                  <li key={n.id}>
+                    <button type="button" onClick={() => open(n)}
+                      className={`w-full text-left p-4 rounded-xl border transition-colors ${n.read ? 'border-[var(--line)] opacity-80' : 'border-[var(--brass)] bg-[var(--brass-soft)]'}`}>
+                      <div className="flex items-start gap-3">
+                        <span className="p-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] shrink-0"><KindIcon kind={n.kind} /></span>
+                        <span className="flex-1 min-w-0">
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold truncate">{n.title}</span>
+                            {!n.read && <span className="w-2 h-2 rounded-full bg-[var(--brass)] shrink-0" aria-label="unread" />}
+                          </span>
+                          <span className="block text-xs text-[var(--muted)] mt-1 leading-relaxed">{n.message}</span>
+                          <span className="mt-2 flex items-center justify-between text-[11px] text-[var(--muted)]">
+                            <span>{formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}</span>
+                            {n.linkTab && <span className="font-bold flex items-center gap-0.5">View <ArrowRight size={10} aria-hidden="true" /></span>}
+                          </span>
+                        </span>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
       </div>
-    </AnimatePresence>
+    </div>
   );
 }

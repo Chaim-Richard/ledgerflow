@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { getTrustedAppUrl } from '../utils/urlHelper';
+import { notify } from '../services/notificationService';
 import { EmailSendError, emailInvoice, emailLog, logEmailEvent } from '../services/documentEmailService';
 
 /**
@@ -102,6 +103,14 @@ emailWebhookRouter.post('/', async (req, res) => {
       event: r.event, recipient: r.recipient, messageId: r.messageId || null,
       workspaceId: sent?.workspaceId || null, documentType: sent?.documentType || null, documentId: sent?.documentId || null,
     });
+    if (sent?.workspaceId && (r.event === 'bounced' || r.event === 'complaint')) {
+      await notify(db, {
+        workspaceId: String(sent.workspaceId), kind: 'email.bounced',
+        title: r.event === 'bounced' ? `Email to ${r.recipient} bounced` : `${r.recipient} marked an email as spam`,
+        message: `${String(sent.subject || 'An email')}. That address won't be emailed again until the customer's email is changed.`,
+        eventKey: `email.${r.event}:${r.messageId || r.recipient}`, recordId: sent.documentId ? String(sent.documentId) : undefined,
+      });
+    }
   }
   res.json({ status: 'success', recorded: reports.length });
 });

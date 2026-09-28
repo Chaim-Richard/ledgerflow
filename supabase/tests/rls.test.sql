@@ -399,6 +399,29 @@ select pg_temp.expect_denied('member poses as support staff', 'u-view',
   $$insert into "supportMessages"(id,data) values ('m2', '{"ticketId":"t1","workspaceId":"ws1","authorUid":"u-view","authorRole":"admin","body":"Hi"}')$$);
 select pg_temp.expect_denied('edit a message', 'u-view', $$select lf_update('supportMessages','m1','{"body":"changed"}'::jsonb)$$);
 
+-- notifications: the server writes one row per person; each person sees and marks only their own
+select set_config('request.jwt.claims', '', true);
+insert into notifications (id, data) values
+  ('n-view', '{"workspaceId":"ws1","uid":"u-view","kind":"payment.received","title":"Paid","message":"m","read":false}'),
+  ('n-book', '{"workspaceId":"ws1","uid":"u-book","kind":"payment.received","title":"Paid","message":"m","read":false}'),
+  ('n-out',  '{"workspaceId":"ws1","uid":"u-out","kind":"member.joined","title":"Old","message":"m","read":false}');
+select pg_temp.expect_count('a person sees only their own notifications', 'u-view', 'select count(*) from notifications', 1);
+select pg_temp.expect_count('the owner does not see others'' notifications', 'u-owner', 'select count(*) from notifications', 0);
+select pg_temp.expect_count('someone no longer in the workspace sees nothing', 'u-out', 'select count(*) from notifications', 0);
+select pg_temp.expect_ok('mark own notification read', 'u-view',
+  $$select lf_update('notifications','n-view','{"read":true,"readAt":"2026-09-28T10:00:00Z"}'::jsonb)$$);
+select pg_temp.expect_denied('change the text of a notification', 'u-view',
+  $$select lf_update('notifications','n-view','{"title":"Changed"}'::jsonb)$$);
+select pg_temp.expect_denied('mark someone else''s notification read', 'u-view',
+  $$select lf_update('notifications','n-book','{"read":true}'::jsonb)$$);
+select pg_temp.expect_denied('create a notification from the browser', 'u-owner',
+  $$insert into notifications(id,data) values ('n-fake', '{"workspaceId":"ws1","uid":"u-view","kind":"payment.received","title":"Fake","message":"m","read":false}')$$);
+select pg_temp.expect_ok('delete own notification', 'u-view', $$select lf_delete('notifications','n-view')$$);
+select pg_temp.expect_value('someone else''s notification is untouched',
+  $$select (data->>'read') from notifications where id = 'n-book'$$, 'false');
+select pg_temp.expect_ok('save own notification choices', 'u-view',
+  $$insert into users(id,data) values ('u-view', '{"uid":"u-view","email":"u-view@test.local","role":"client"}'); select lf_update('users','u-view','{"notificationPrefs":{"payment.received":false}}'::jsonb)$$);
+
 -- document ids: browser writes keep firestore.rules isValidId; server writes may be long
 select pg_temp.expect_ok('browser id of 127 characters', 'u-book',
   format($f$select lf_set('vendors', %L, '{"workspaceId":"ws1","name":"V"}'::jsonb)$f$, repeat('v', 127)));

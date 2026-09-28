@@ -45,6 +45,7 @@ const TABLES: Record<string, [string, string[]]> = {
   vendorCredits: ['VendorCredit', ['exchangeRate', 'tags', 'metadata']],
   // numberingSeries lives in its own collection; the field on the model is a legacy read path
   workspaces: ['Workspace', ['numberingSeries']],
+  notifications: ['AppNotification', []],
 };
 
 describe('Allowed fields match the app model', () => {

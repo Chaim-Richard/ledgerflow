@@ -23,7 +23,9 @@ function quotedNames(list: string): string[] {
 export function documentTables(sql = migrationsSql()): string[] {
   const m = sql.match(/all_tables text\[\] := array\[([\s\S]*?)\];/);
   if (!m) throw new Error('all_tables list not found in supabase/migrations');
-  return quotedNames(m[1]);
+  // plus document tables created by later migrations (same shape: id + data jsonb)
+  const later = Array.from(sql.matchAll(/create table public\."?([A-Za-z_][A-Za-z0-9_]*)"?\s*\(\s*id text primary key[\s\S]*?data jsonb/g), x => x[1]);
+  return [...quotedNames(m[1]), ...later];
 }
 
 /** Tables that have an lf_rules row (the guard trigger refuses browser writes on any other table). */

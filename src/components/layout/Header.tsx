@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Menu, Search, Sun, Moon, Plus, Compass, ShieldCheck, HelpCircle, Bell, Users } from 'lucide-react';
 import QuickCreateMenu from './QuickCreateMenu';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
-import { useNotificationStore } from '../../stores/useNotificationStore';
+import { unreadCount, useNotificationStore } from '../../stores/useNotificationStore';
+import { useNotificationFeed } from '../../hooks/useNotificationFeed';
 import NotificationDrawer from './NotificationDrawer';
 import { t } from '../../locales/i18n';
 import { useCollaborators } from '../../hooks/useCollaborators';
@@ -26,14 +27,9 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
   const currentRole = useCurrentRole();
   const collaborators = useCollaborators();
 
-  const { notifications, setDrawerOpen, runScheduledChecks } = useNotificationStore();
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  useEffect(() => {
-    if (currentWorkspaceId) {
-      runScheduledChecks(currentWorkspaceId);
-    }
-  }, [currentWorkspaceId, runScheduledChecks]);
+  const setDrawerOpen = useNotificationStore(s => s.setDrawerOpen);
+  const unread = useNotificationStore(s => unreadCount(s.notifications));
+  useNotificationFeed();
   
   const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
@@ -131,12 +127,12 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           onClick={() => setDrawerOpen(true)}
           className="p-2 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] rounded-lg transition-colors relative cursor-pointer"
           title="Open Notifications"
-          aria-label="Open Notifications"
+          aria-label={unread > 0 ? `Open Notifications (${unread} unread)` : 'Open Notifications'}
         >
           <Bell size={17} />
-          {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-bold bg-indigo-600 text-white rounded-full leading-none">
-              {unreadCount > 9 ? '9+' : unreadCount}
+          {unread > 0 && (
+            <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-bold bg-indigo-600 text-white rounded-full leading-none" aria-hidden="true">
+              {unread > 9 ? '9+' : unread}
             </span>
           )}
         </button>

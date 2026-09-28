@@ -127,3 +127,53 @@ describe('Repost check', () => {
     assert.deepEqual(issues.map(i => [i.id, i.issue, i.expectedCents, i.postedCents]), [['b1', 'amount', 7000, 6000]]);
   });
 });
+
+const dbUrl = process.env.LF_TEST_DATABASE_URL;
+
+describe('Foreign-currency payments recorded by the server', { skip: !dbUrl && 'LF_TEST_DATABASE_URL not set' }, () => {
+  const ws = `ws_fxpay_${Math.random().toString(16).slice(2, 10)}`;
+  const id = (name: string) => `${ws}_${name}`;
+  let db: import('../server/db/pgFirestore').Firestore;
+  let createPaymentAtomic: typeof import('../server/services/paymentService').createPaymentAtomic;
+
+  before(async () => {
+    process.env.DATABASE_URL = dbUrl;
+    ({ createPaymentAtomic } = await import('../server/services/paymentService'));
+    const { getDb } = await import('../server/db/firestore');
+    db = getDb();
+    await db.collection('workspaces').doc(ws).set({ uid: 'o', name: 'FX', currency: 'USD' });
+    await db.collection('chartAccounts').doc(id('cash')).set({ workspaceId: ws, name: 'Checking', type: 'asset', category: 'Cash', code: '1000' });
+    await db.collection('chartAccounts').doc(id('ar')).set({ workspaceId: ws, name: 'Accounts Receivable', type: 'asset', category: 'Receivables', code: '1200' });
+    await db.collection('invoices').doc(id('eur')).set({ workspaceId: ws, customerId: 'c', number: 'E1', amountCents: 10000, currency: 'EUR', exchangeRate: 1.1, status: 'sent', date: '2026-03-01' });
+    await db.collection('invoices').doc(id('usd')).set({ workspaceId: ws, customerId: 'c', number: 'U1', amountCents: 5000, status: 'sent', date: '2026-03-01' });
+  });
+
+  after(async () => {
+    for (const table of ['transactions', 'payments', 'invoices', 'chartAccounts', 'auditLogs', 'workspaces']) {
+      await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
+    }
+    await db.terminate();
+  });
+
+  const pay = (allocations: { documentId: string; amountCents: number }[], amountCents: number) => createPaymentAtomic(db, {
+    workspaceId: ws, uid: 'o', paymentDate: '2026-03-15', amountCents, customerId: 'c', cashAccountId: id('cash'),
+    allocations: allocations.map(a => ({ ...a, documentType: 'invoice' as const })),
+  });
+
+  test('EUR 100 paid on a EUR invoice at 1.10 is 110.00 in the ledger; the invoice is paid', async () => {
+    const result = await pay([{ documentId: id('eur'), amountCents: 10000 }], 10000);
+    assert.equal(result.payment.currency, 'EUR');
+    assert.equal(result.payment.exchangeRate, 1.1);
+    const tx = result.ledgerTransaction;
+    assert.equal(tx.currency, 'USD');
+    assert.deepEqual(tx.lines.map((l: { amountCents: number }) => l.amountCents), [11000, -11000]);
+    assert.equal((await db.collection('invoices').doc(id('eur')).get()).data()?.status, 'paid');
+  });
+
+  test('documents in two currencies can\'t share one payment', async () => {
+    await db.collection('invoices').doc(id('eur2')).set({ workspaceId: ws, customerId: 'c', number: 'E2', amountCents: 1000, currency: 'EUR', exchangeRate: 1.1, status: 'sent', date: '2026-03-01' });
+    await assert.rejects(pay([{ documentId: id('eur2'), amountCents: 1000 }, { documentId: id('usd'), amountCents: 5000 }], 6000), /same currency/);
+    const plain = await pay([{ documentId: id('usd'), amountCents: 5000 }], 5000);
+    assert.deepEqual(plain.ledgerTransaction.lines.map((l: { amountCents: number }) => l.amountCents), [5000, -5000]);
+  });
+});

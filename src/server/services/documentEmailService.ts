@@ -7,6 +7,7 @@ import { formatCurrency, formatTzDate } from '../../lib/utils';
 import { renderEmail, resolveTemplate } from '../../lib/emailTemplates';
 import type { EmailTemplateKey, EmailTemplates, TemplateValues } from '../../lib/emailTemplates';
 import { isMailConfigured, sendMail } from './mailer';
+import { notify } from './notificationService';
 import { generateDocumentPdf } from './pdfService';
 
 /**
@@ -125,6 +126,15 @@ export async function emailInvoice(db: Firestore, input: EmailInvoiceInput) {
     metadata,
     updatedAt: now,
   });
+  if (input.template === 'invoice') {
+    await notify(db, {
+      workspaceId: input.workspaceId, workspace, kind: 'invoice.sent',
+      title: `Invoice ${values.number} emailed`,
+      message: `Sent to ${to} (${values.customer || 'customer'}, ${values.amount_due} due).`,
+      eventKey: `invoice.sent:${input.invoiceId}:${now}`, recordId: input.invoiceId,
+      actorUid: input.system ? undefined : input.uid,
+    });
+  }
   return { to, subject: message.subject, provider: result.provider, messageId: result.messageId || null, invoiceUrl: values.link };
 }
 

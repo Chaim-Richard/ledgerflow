@@ -3,6 +3,7 @@ import { verifyIdToken } from '../auth/supabaseAuth';
 import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { verifyInviteTokenSignature } from '../../lib/inviteManager';
+import { notify } from '../services/notificationService';
 import { writeServerAuditLog } from '../services/auditLogService';
 
 export const invitePublicRouter = express.Router();
@@ -192,6 +193,12 @@ invitePublicRouter.post('/:token/accept', async (req, res) => {
       }, { db, tx });
     });
 
+    await notify(db, {
+      workspaceId: invite.workspaceId, kind: 'member.joined',
+      title: `${user.email || invite.email} joined the workspace`,
+      message: `They accepted the invitation as ${invite.role}.`,
+      eventKey: `member.joined:${inviteDoc.id}`, actorUid: user.uid,
+    });
     res.json({
       status: 'success',
       workspaceId: invite.workspaceId,

@@ -45,7 +45,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
   useEffect(() => {
     if (initialInvoice) {
-      setInvoice(initialInvoice);
+      // an existing invoice replaces the form; a new one (e.g. for a customer) fills in the defaults
+      setInvoice(prev => (initialInvoice.id ? initialInvoice : { ...prev, ...initialInvoice }));
       if (initialInvoice.items && initialInvoice.items.length > 0) {
         setItems(initialInvoice.items as any);
       }

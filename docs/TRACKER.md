@@ -3,9 +3,14 @@
 This is the working plan: what is done, what is next, and the full 864-item list. Claude
 updates it as work lands. Things that need the owner are in [FOR_YOU.md](FOR_YOU.md).
 
-**Automatic restart:** a Routine ("LedgerFlow: keep working after limit reset") wakes the
+**Automatic restart:** a Routine ("LedgerFlow: keep working (wakes this session)") wakes this
 Claude session every 5 hours, so work continues by itself after a 5-hour or weekly usage limit
-resets. To stop it: tell Claude, or delete it under Routines on claude.ai.
+resets, and any approval still waiting is cancelled so the session can't stay stuck. (A version
+that started separate new sessions did nothing: they had no code or connectors.) To stop it:
+tell Claude, or delete it under Routines on claude.ai.
+
+**Second AI:** if another AI works on the repository too, the lanes and the "who edits which
+files" board are in [COORDINATION.md](COORDINATION.md).
 
 **Setting up a fresh machine (for Claude):** Node 24 and PostgreSQL 16. Create a local test
 database, apply `supabase/migrations/*` with `LF_TEST_DATABASE_URL=... npx tsx scripts/db-test.ts setup`,
@@ -42,6 +47,8 @@ then the 488 LATER items. Claude works through them in that order and ticks them
 | Banking 2 | L-92 + Y-08: bank connections belong to the workspace, expired bank logins can be reconnected · K-20: Undeposited Funds + "Make deposit" · Y-03: saved CSV column layouts per bank |
 | Bulk import | K-01 (= M-18 BK-01 BK-05 BK-06 CA-11): Settings → Import Data — customers, vendors, items, accounts from CSV/Excel; columns matched by name; every row checked, all or nothing; duplicates skipped; items' opening stock posted; undo keeps records already in use (12 tests) |
 | Period close 1 | R-01 R-02 R-03 R-08 R-10 BA-15: one lock rule (hard close, soft close for bookkeepers, partial unlock) in database + server + screens; close / reopen (reason; owner for hard) / unlock only through the server, audited; checklist with sign-offs; drafts block the close. Fixed: the close screen never loaded invoices/bills/bank lines; a lock on the 28th closed the month; "clear lock date" only changed the screen; bookkeepers could close months (11 tests) |
+| Notifications | S-01 S-03 S-04 S-06 S-14 S-19 + bounces: real notifications from the server (one per person, stored in the database, live bell): invoice emailed, invoice overdue (daily), customer payment received, email bounced / marked spam, bank connection expired, person invited / joined. Each person marks their own read and chooses which types they get (bell → gear). Only their own are visible (database rules tested). **The old bell showed made-up alerts kept only in the open page** |
+| Reminders | BE-01 K-26: payment reminders emailed every morning on the days set in Settings → Emails & Reminders (workspace's own date, next step only, once a day); "Reminders on / No reminders" switch per customer. Fixed: **L-107 the "+" on a customer row saved an empty invoice** instead of opening the form; **L-108 every customer showed a made-up "Preferred Partner" label** |
 | Email 1 | S-01 BL-01 BL-03 BL-05 BL-08 K-08: invoices and reminders emailed by the server (writers; drafts refused; invoice currency; PDF), templates per workspace with preview (Settings → Emails & Reminders), plain-text part, send log per invoice, bounce/complaint reports skip that address. **L-106: emailing an invoice never worked** (no login token sent); the three copies of the email-provider code are now one |
 | Period close 4 | CA-03: repost check in Month-End Close (missing, doubled, left-over, wrong-amount entries) with Repost. **L-105 fixed: foreign-currency invoices, bills, credits and payments were converted twice in the ledger** (EUR 100 at 1.10 booked as 121.00) |
 | Period close 3 | K-19: bad debt write-off keeps the sale (the old one voided the invoice **and** booked the loss: counted twice), base currency, reversal when the customer pays |
@@ -1522,7 +1529,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-23 Purchase requisitions
 - [ ] K-24 Payment runs + bank file
 - [ ] K-25 Remittance advice
-- [ ] K-26 Dunning workflow
+- [x] K-26 Dunning: reminders on chosen days after the due date, per-customer opt-out (tested)
 - [ ] K-27 Customer portal
 - [ ] K-28 Scheduled reports
 - [ ] K-29 Exchange-rate history at posting
@@ -1640,6 +1647,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-100 Time zone / fiscal year / server-set workspace fields refused by the database (settings save failed)
 - [x] L-101 Adding a customer failed (`status` not allowed by the database)
 - [x] L-106 Emailing an invoice never worked (browser sent no login token); now sent by the server after posting
+- [x] L-107 "+" on a customer row saved an empty invoice (misspelled field) instead of opening the invoice form
+- [x] L-108 Customers list showed a made-up "Preferred Partner" label on everyone; now the reminders switch
+- [ ] L-109 Online card payments (Stripe webhook in server.ts) guess accounts, create no payment record and convert currency twice — rebuild with K-11
 - [x] L-105 Foreign-currency documents converted twice in the ledger (amounts converted, then the rate applied again); fixed, test proves it; old entries: Month-End Close → Repost
 - [x] L-104 Bad debt write-off counted the loss twice (voided the sale and booked the expense); FX ignored
 - [x] L-103 Fixed Asset Register saved nothing (assets + depreciation only in the page); now saved + server run
@@ -1776,10 +1786,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] S-01 invoice.sent (email to the customer, logged)
 - [ ] S-02 invoice.viewed
-- [ ] S-03 invoice.overdue
-- [ ] S-04 payment.received
+- [x] S-03 invoice.overdue (daily, once per invoice, workspace date; tested)
+- [x] S-04 payment.received (recorded payments and bank-line payments; online card payments with K-11)
 - [ ] S-05 payment.failed
-- [ ] S-06 bank.feed.disconnected
+- [x] S-06 bank.feed.disconnected (when a bank login expires)
 - [ ] S-07 reconciliation.discrepancy
 - [ ] S-08 period.close.reminder
 - [ ] S-09 approval events
@@ -1787,12 +1797,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] S-11 cash.low
 - [ ] S-12 job.failed
 - [ ] S-13 export.ready
-- [ ] S-14 user.invited / joined
+- [x] S-14 user.invited / joined
 - [ ] S-15 permission.changed
 - [ ] S-16 subscription events
 - [ ] S-17 transaction.unusual
 - [ ] S-18 Digest vs immediate
-- [ ] S-19 Per-type opt-out
+- [x] S-19 Per-type opt-out (each person, bell → gear)
 - [ ] S-20 Push delivery
 
 # SECTION T — TAX DEPTH
@@ -2003,7 +2013,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION BE — DOCUMENT WORKFLOW
 
-- [ ] BE-01 Reminder schedule
+- [x] BE-01 Reminder schedule (daily job; tested)
 - [ ] BE-02 Thank-you email after payment
 - [ ] BE-03 Recurring invoice pause/resume
 - [ ] BE-04 Invoice approval

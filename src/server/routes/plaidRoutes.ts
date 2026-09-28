@@ -5,6 +5,7 @@ import { getDb, validateWorkspaceMember } from "../db/firestore.ts";
 import { SecurityService } from "../../services/securityService.ts";
 import { getLocalDateISO } from "../../lib/utils.ts";
 import { requireWorkspaceRole } from "./workspaceRoutes.ts";
+import { notify } from "../services/notificationService.ts";
 
 /**
  * Bank feeds through Plaid. A connection (collection `banks`) belongs to one workspace: only its
@@ -169,7 +170,17 @@ plaidRouter.post("/sync", async (req, res) => {
       } catch (err) {
         if (plaidErrorCode(err) !== 'ITEM_LOGIN_REQUIRED') throw err;
         needsReconnect.push({ bankId: doc.id, institutionName: bank.institutionName || '' });
-        await doc.ref.update({ status: 'login_required', updatedAt: new Date().toISOString() });
+        const now = new Date().toISOString();
+        await doc.ref.update({ status: 'login_required', updatedAt: now });
+        if (bank.status !== 'login_required') {
+          const name = bank.institutionName || 'A bank';
+          await notify(db, {
+            workspaceId: body.workspaceId, kind: 'bank.disconnected',
+            title: `${name} needs to be reconnected`,
+            message: `The bank login expired, so new bank lines can't be downloaded. Open Banking and choose Reconnect.`,
+            eventKey: `bank.disconnected:${doc.id}:${now}`, recordId: doc.id, actorUid: (req as AuthedRequest).user?.uid,
+          });
+        }
       }
     }
     res.json({ success: transactions.length > 0, transactions, needsReconnect, banks: banksSnap.size });

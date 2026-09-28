@@ -3,6 +3,8 @@ import crypto from 'crypto';
 import { runDailyMaintenance } from '../services/maintenanceService';
 import { processAllRecurring } from '../services/recurringService';
 import { processErrorDigest } from '../services/errorDigestService';
+import { runNotificationJobs } from '../services/notificationService';
+import { runDailyReminders } from '../services/reminderService';
 
 /**
  * Scheduled jobs for Vercel Cron (see vercel.json). Vercel calls them with
@@ -22,6 +24,8 @@ const DAILY_JOBS: [string, () => Promise<unknown>][] = [
   ['maintenance', runDailyMaintenance],
   ['recurring', processAllRecurring],
   ['errorDigest', () => processErrorDigest()],
+  ['notifications', runNotificationJobs],
+  ['reminders', runDailyReminders],
 ];
 
 cronRouter.get('/daily', async (req, res) => {

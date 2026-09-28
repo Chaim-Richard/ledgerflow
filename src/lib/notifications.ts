@@ -1,0 +1,75 @@
+/**
+ * In-app notifications (S-01 S-03 S-04 S-06 S-14) and each person's choice of which ones they
+ * get (S-19). The server creates one row per person in the `notifications` table
+ * (src/server/services/notificationService.ts); the bell in the header shows the signed-in
+ * person's rows and marks them read (NotificationDrawer.tsx).
+ */
+import { workspaceRole } from './periodLock';
+
+type Role = 'owner' | 'accountant' | 'bookkeeper' | 'viewer';
+const BOOKS: Role[] = ['owner', 'accountant', 'bookkeeper'];
+
+export const NOTIFICATION_TYPES = {
+  'invoice.sent': { label: 'An invoice was emailed to a customer', roles: BOOKS, tab: 'sales' },
+  'invoice.overdue': { label: 'An invoice became overdue', roles: BOOKS, tab: 'sales' },
+  'payment.received': { label: 'A customer payment was received', roles: BOOKS, tab: 'payments' },
+  'email.bounced': { label: 'An email to a customer bounced or was marked as spam', roles: BOOKS, tab: 'sales' },
+  'bank.disconnected': { label: 'A bank connection needs to be reconnected', roles: BOOKS, tab: 'banking' },
+  'member.invited': { label: 'Someone was invited to the workspace', roles: ['owner'] as Role[], tab: 'settings' },
+  'member.joined': { label: 'Someone joined the workspace', roles: ['owner', 'accountant'] as Role[], tab: 'settings' },
+} as const;
+
+export type NotificationType = keyof typeof NOTIFICATION_TYPES;
+export const NOTIFICATION_TYPE_KEYS = Object.keys(NOTIFICATION_TYPES) as NotificationType[];
+
+/** A person's choices: `false` turns a type off; anything else (or missing) means on. */
+export type NotificationPrefs = Partial<Record<NotificationType, boolean>>;
+
+export function isNotificationType(value: unknown): value is NotificationType {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(NOTIFICATION_TYPES, value);
+}
+
+export function wantsNotification(prefs: NotificationPrefs | null | undefined, type: NotificationType): boolean {
+  return prefs?.[type] !== false;
+}
+
+interface WorkspaceMembership {
+  uid?: unknown;
+  members?: unknown;
+  roles?: unknown;
+  admins?: unknown;
+}
+
+/** Everyone in the workspace: the owner, the member list and everyone with a role. */
+export function workspaceMemberIds(workspace: WorkspaceMembership): string[] {
+  const ids = new Set<string>();
+  if (typeof workspace.uid === 'string' && workspace.uid) ids.add(workspace.uid);
+  if (Array.isArray(workspace.members)) workspace.members.forEach(m => typeof m === 'string' && m && ids.add(m));
+  if (workspace.roles && typeof workspace.roles === 'object') Object.keys(workspace.roles).forEach(m => ids.add(m));
+  if (workspace.admins && typeof workspace.admins === 'object') {
+    Object.entries(workspace.admins).forEach(([m, on]) => on === true && ids.add(m));
+  }
+  return [...ids];
+}
+
+/** Types a person with this role can receive (for the choices screen). */
+export function typesForRole(role: string): NotificationType[] {
+  return NOTIFICATION_TYPE_KEYS.filter(t => (NOTIFICATION_TYPES[t].roles as readonly string[]).includes(role));
+}
+
+/**
+ * Who gets a notification: members whose role receives this type, except the person who did it,
+ * and except those who turned the type off.
+ */
+export function notificationRecipients(
+  workspace: WorkspaceMembership,
+  type: NotificationType,
+  prefsByUid: Map<string, NotificationPrefs | null | undefined>,
+  actorUid?: string,
+): string[] {
+  const roles = NOTIFICATION_TYPES[type].roles as readonly string[];
+  return workspaceMemberIds(workspace).filter(uid =>
+    uid !== actorUid
+    && roles.includes(workspaceRole(workspace, uid))
+    && wantsNotification(prefsByUid.get(uid), type));
+}

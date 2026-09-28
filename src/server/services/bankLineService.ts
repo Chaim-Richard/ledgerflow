@@ -3,6 +3,7 @@ import type { DocumentData, Firestore } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import type { ChartAccount } from '../../types';
+import { notifyPaymentReceived } from './notificationService';
 import { createPaymentInTransaction } from './paymentService';
 
 /**
@@ -54,7 +55,7 @@ export interface PayFromBankLineInput {
 
 export async function payFromBankLine(db: Firestore, input: PayFromBankLineInput) {
   if (input.allocations.length === 0) throw new BankLineError(400, 'Choose at least one invoice or bill');
-  return db.runTransaction(async (t) => {
+  const { record, ...result } = await db.runTransaction(async (t) => {
     const { ref, line, amountCents } = await readPendingLine(db, t, input.workspaceId, input.bankLineId);
     const bank = await readBankAccount(db, t, input.workspaceId, input.bankAccountId || line.accountId);
     const isDeposit = amountCents > 0;
@@ -83,8 +84,10 @@ export async function payFromBankLine(db: Firestore, input: PayFromBankLineInput
       allocations: input.allocations.map(a => ({ ...a, documentType })),
     });
     t.update(ref, { status: 'matched', matchedTransactionId: payment.transactionId, matchedPaymentId: payment.paymentId, accountId: bank.id, updatedAt: new Date().toISOString() });
-    return { paymentId: payment.paymentId, transactionId: payment.transactionId, unappliedCents: Math.abs(amountCents) - allocated };
+    return { paymentId: payment.paymentId, transactionId: payment.transactionId, unappliedCents: Math.abs(amountCents) - allocated, record: payment.payment };
   });
+  await notifyPaymentReceived(db, record, input.uid);
+  return result;
 }
 
 export interface SplitBankLineInput {

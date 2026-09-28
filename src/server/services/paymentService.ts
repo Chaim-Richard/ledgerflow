@@ -3,6 +3,7 @@ import { writeServerAuditLog } from './auditLogService';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import type { ChartAccount } from '../../types';
 import { assertPostingOpen } from '../../lib/periodLock';
+import { formatCurrency } from '../../lib/utils';
 
 export interface CreatePaymentPayload {
   workspaceId: string;
@@ -92,6 +93,11 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
 
     const docUpdates: Array<{ ref: { id?: string; [k: string]: unknown }; updates: Record<string, unknown> }> = [];
     let totalAllocatedCents = 0;
+    // A payment is in the currency of the documents it pays (all the same one); the ledger gets
+    // it converted at the documents' rate, like the documents themselves (L-105).
+    const baseCurrency = String(wsData.currency || 'USD');
+    let paymentCurrency: string | null = null;
+    let paymentRate = 1;
 
     for (const alloc of allocations) {
       totalAllocatedCents += alloc.amountCents;
@@ -111,6 +117,13 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       if (docData.status === 'void' || docData.status === 'draft') {
         throw new Error(`Cannot record a payment against a ${docData.status} document`);
       }
+      const docCurrency = String(docData.currency || baseCurrency);
+      const docRate = typeof docData.exchangeRate === 'number' && docData.exchangeRate > 0 ? docData.exchangeRate : 1;
+      if (paymentCurrency !== null && (docCurrency !== paymentCurrency || docRate !== paymentRate)) {
+        throw new Error('One payment can only pay documents in the same currency (and exchange rate); record separate payments');
+      }
+      paymentCurrency = docCurrency;
+      paymentRate = docCurrency === baseCurrency ? 1 : docRate;
 
       const currentPaid = docData.amountPaidCents || 0;
       const total = docData.amountCents || 0;
@@ -191,7 +204,8 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       reference: referenceNumber,
       depositAccountId: cashAccountId,
       unappliedCents: amountCents - totalAllocatedCents,
-      currency: wsData.currency || 'USD',
+      currency: paymentCurrency || baseCurrency,
+      exchangeRate: paymentRate,
       status: 'posted',
       date: paymentDate,
       paymentDate,
@@ -211,6 +225,7 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     // 5. Build General Ledger Transaction
     const isReceipt = isReceiptPayment;
     const ledgerTxRef = db.collection('transactions').doc();
+    const baseAmountCents = Math.round(amountCents * paymentRate);
 
     const ledgerTxData = {
       id: ledgerTxRef.id,
@@ -218,25 +233,26 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       workspaceId,
       date: paymentDate,
       description: `Payment ${paymentId} (${paymentMethod}) - ${entityName || memo || 'Payment'}`,
-      totalAmountCents: amountCents,
-      currency: 'USD',
+      totalAmountCents: baseAmountCents,
+      currency: baseCurrency,
       exchangeRate: 1,
       status: 'completed',
       type: 'actual',
       createdAt: new Date().toISOString(),
       metadata: {
         paymentId,
-        type: 'payment-posting'
+        type: 'payment-posting',
+        ...(paymentRate !== 1 ? { documentCurrency: paymentCurrency, documentAmountCents: amountCents, documentExchangeRate: paymentRate } : {})
       },
       lines: [
         {
           accountId: cashAccountId,
-          amountCents: isReceipt ? amountCents : -amountCents,
+          amountCents: isReceipt ? baseAmountCents : -baseAmountCents,
           description: `Cash ${isReceipt ? 'Debit' : 'Credit'} for Payment ${paymentId}`
         },
         {
           accountId: resolvedOffsetAccountId,
-          amountCents: isReceipt ? -amountCents : amountCents,
+          amountCents: isReceipt ? -baseAmountCents : baseAmountCents,
           description: `Offset ${isReceipt ? 'Credit' : 'Debit'} for Payment ${paymentId}`
         }
       ]
@@ -256,7 +272,7 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       entityType: 'payment',
       entityId: paymentId,
       details: {
-        description: `Payment ${paymentNumber} of $${(amountCents / 100).toFixed(2)} recorded for ${entityName || 'contact'}.`,
+        description: `Payment ${paymentNumber} of ${formatCurrency(amountCents, paymentCurrency || baseCurrency)} recorded for ${entityName || 'contact'}.`,
         paymentNumber,
         amountCents,
         paymentMethod

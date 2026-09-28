@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Trash2, DollarSign,
-  Eye, Ban, Undo2
+  Eye, Ban, Undo2, Bell, BellOff
 } from 'lucide-react';
 import { parseLocalDate, cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { getIdToken } from '../../firebase';
@@ -119,6 +119,7 @@ export default function Sales() {
   const onAddCustomer = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('customers', id, updates); } return addEntity('customers', data); };
   const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'customers' | 'pipeline'>('pipeline');
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [newInvoiceFor, setNewInvoiceFor] = useState<Partial<Invoice> | undefined>(undefined);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [paymentDocumentId, setPaymentDocumentId] = useState<string | null>(null);
   const [paymentContactId, setPaymentContactId] = useState<string | null>(null);
@@ -498,10 +499,14 @@ export default function Sales() {
                           </div>
                           <div className="flex flex-col">
                             <span className="font-black text-[var(--text)] text-lg tracking-tight">{cust.name}</span>
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1">
-                               <ShieldCheck size={10} />
-                               Preferred Partner
-                            </div>
+                            <button type="button"
+                              onClick={(e) => { e.stopPropagation(); updateEntity('customers', cust.id, { noReminders: !cust.noReminders }, cust.noReminders ? `Automatic reminders on for ${cust.name}` : `No automatic reminders for ${cust.name}`); }}
+                              className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest mt-1 ${cust.noReminders ? 'text-[var(--muted)]' : 'text-emerald-500'}`}
+                              aria-pressed={!cust.noReminders}
+                              title="Automatic payment reminders (Settings → Emails & Reminders)">
+                               {cust.noReminders ? <BellOff size={10} aria-hidden="true" /> : <Bell size={10} aria-hidden="true" />}
+                               {cust.noReminders ? 'No reminders' : 'Reminders on'}
+                            </button>
                           </div>
                        </div>
                     </td>
@@ -517,7 +522,7 @@ export default function Sales() {
                     <td className="p-4 md:p-8">
                       <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all justify-end">
                         
-                        <button onClick={(e)=> {e.stopPropagation(); onAddInvoice({ custorId: cust.id }); toast.info(`Opening inv creation for ${cust.name}`)}} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Invoice"><Plus size={14}/></button>
+                        <button onClick={(e)=> {e.stopPropagation(); setNewInvoiceFor({ customerId: cust.id, customerName: cust.name }); setIsInvoiceModalOpen(true); }} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Invoice"><Plus size={14}/></button>
                         
                       </div>
                     </td>
@@ -544,13 +549,15 @@ export default function Sales() {
 
       <InvoiceModal
         isOpen={isInvoiceModalOpen}
-        onClose={() => setIsInvoiceModalOpen(false)}
+        onClose={() => { setIsInvoiceModalOpen(false); setNewInvoiceFor(undefined); }}
         onSave={async (inv) => {
           await onAddInvoice(inv);
           setIsInvoiceModalOpen(false);
+          setNewInvoiceFor(undefined);
         }}
         customers={customers}
         accounts={accounts}
+        initialInvoice={newInvoiceFor}
       />
       <CustomerModal
         isOpen={isCustomerModalOpen}

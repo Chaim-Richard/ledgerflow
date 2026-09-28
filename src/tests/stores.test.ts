@@ -4,7 +4,7 @@ import { useLedgerStore } from '../stores/useLedgerStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useUIStore } from '../stores/useUIStore';
 import { useSavedViewsStore } from '../stores/useSavedViewsStore';
-import { useNotificationStore } from '../stores/useNotificationStore';
+import { unreadCount, useNotificationStore } from '../stores/useNotificationStore';
 import { ChartAccount, Transaction } from '../types';
 
 describe('Client Stores State & Mutator Suite (src/stores)', () => {
@@ -121,18 +121,16 @@ describe('Client Stores State & Mutator Suite (src/stores)', () => {
     });
   });
 
-  describe('5. useNotificationStore Toasts & Alerts', () => {
-    test('addNotification enqueues toast notification', () => {
-      useNotificationStore.getState().addNotification({
-        kind: 'insight-ready',
-        title: 'Period Closed',
-        message: 'September 2026 successfully locked',
-        workspaceId: 'ws_test'
-      });
-
-      const notifications = useNotificationStore.getState().notifications;
-      assert.ok(notifications.length > 0);
-      assert.equal(notifications[0].title, 'Period Closed');
+  describe('5. useNotificationStore (notifications from the server)', () => {
+    test('holds the loaded notifications and counts the unread ones', () => {
+      const base = { workspaceId: 'ws_test', uid: 'u1', kind: 'payment.received' as const, message: 'Acme paid', createdAt: '2026-09-28T10:00:00Z' };
+      useNotificationStore.getState().setNotifications([
+        { ...base, id: 'n1', title: 'Payment received', read: false },
+        { ...base, id: 'n2', title: 'Older', read: true },
+      ]);
+      const { notifications } = useNotificationStore.getState();
+      assert.equal(notifications[0].title, 'Payment received');
+      assert.equal(unreadCount(notifications), 1);
     });
   });
 });

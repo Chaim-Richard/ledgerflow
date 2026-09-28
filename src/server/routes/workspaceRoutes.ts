@@ -256,6 +256,7 @@ workspaceRouter.all('/:workspaceId/next-number', (req, res) => {
   return sendError(res, 'Method Not Allowed: allocate next document number must be called via POST.', 405);
 });
 
+import { notify } from '../services/notificationService';
 import { generateInviteToken } from '../../lib/inviteManager';
 
 export function countWorkspaceOwners(workspaceData: any): { count: number; ownerUids: string[] } {
@@ -432,6 +433,12 @@ workspaceRouter.post('/:workspaceId/invites', requireWorkspaceRole(['owner']), a
       }
     }, { db });
 
+    await notify(db, {
+      workspaceId, kind: 'member.invited',
+      title: `${invite.email} was invited`,
+      message: `Invited as ${invite.role} by ${(req as any).user.email || 'a team member'}.`,
+      eventKey: `member.invited:${invite.id || invite.token}`, actorUid: (req as any).user.uid,
+    });
     res.json({ status: 'success', invite });
   } catch (err: any) {
     sendError(res, 'Failed to create workspace invite', 500, err.message);
