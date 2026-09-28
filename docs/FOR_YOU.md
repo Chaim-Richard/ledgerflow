@@ -5,10 +5,17 @@ is needed, it takes the default written below and moves on. When you have time, 
 as you like in one message, e.g. **"1 done, 4 yes, 11 hide, 10 keep Hebrew"**. Answered items are
 removed from this list.
 
-Last updated: 2026-09-25.
+Last updated: 2026-09-28.
 
 ## A. Settings only you can change (a few minutes each)
 
+0. **Most important: let database changes go through without you (1 minute).** Open
+   https://claude.ai/customize/connectors → **Supabase** → tool permissions → set
+   `apply_migration`, `execute_sql` and `list_migrations` to **Always allow**.
+   *Why:* these tools ask you to approve every single time, and while an approval is waiting
+   the whole session stops. That is what paused work from 26 to 28 September. Until you do
+   this, Claude calls them as rarely as possible, and the 5-hour check-in cancels any
+   approval that is still waiting so work carries on.
 1. **Sign-in addresses (Supabase).** supabase.com → project *ledgerflow* → Authentication → URL
    Configuration. Site URL: `https://ledgerflow-one-pearl.vercel.app`. Redirect URLs: add
    `https://ledgerflow-one-pearl.vercel.app/**` and `http://localhost:3000/**`.
