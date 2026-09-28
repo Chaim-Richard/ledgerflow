@@ -715,7 +715,13 @@ export interface PurchaseOrder {
   approvalStatus?: 'pending' | 'approved' | 'rejected';
   approvedBy?: string;
   approvedAt?: string;
+  currency?: string;
+  /** Goods received against this order (saved with it). */
+  receipts?: GoodsReceipt[];
+  /** The bill created from this order (BE-11). */
+  billId?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface GoodsReceiptItem {
@@ -917,6 +923,8 @@ export interface RecurringTransaction {
   payee?: string;
   type?: string;
   template: Partial<Transaction>;
+  /** Recurring invoices: the invoice to copy as a draft each time (dueDays after its date). */
+  invoiceTemplate?: Partial<Invoice> & { dueDays?: number };
   createdAt: string;
   generatedCount?: number;
   lastErrorCode?: string;

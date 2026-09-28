@@ -399,6 +399,17 @@ select pg_temp.expect_denied('member poses as support staff', 'u-view',
   $$insert into "supportMessages"(id,data) values ('m2', '{"ticketId":"t1","workspaceId":"ws1","authorUid":"u-view","authorRole":"admin","body":"Hi"}')$$);
 select pg_temp.expect_denied('edit a message', 'u-view', $$select lf_update('supportMessages','m1','{"body":"changed"}'::jsonb)$$);
 
+-- purchase orders: members read; owners, accountants and bookkeepers write
+select pg_temp.expect_ok('bookkeeper saves a purchase order', 'u-book',
+  $$insert into "purchaseOrders"(id,data) values ('po1', '{"workspaceId":"ws1","poNumber":"PO-2026-001","vendorId":"v1","vendorName":"V","status":"approved","items":[],"totalAmountCents":1000,"receipts":[]}')$$);
+select pg_temp.expect_count('viewer reads purchase orders', 'u-view', $$select count(*) from "purchaseOrders"$$, 1);
+select pg_temp.expect_denied('viewer changes a purchase order', 'u-view', $$select lf_update('purchaseOrders','po1','{"status":"cancelled"}'::jsonb)$$);
+select pg_temp.expect_count('outsider reads purchase orders', 'u-out', $$select count(*) from "purchaseOrders"$$, 0);
+select pg_temp.expect_denied('purchase order with an unknown field', 'u-book',
+  $$insert into "purchaseOrders"(id,data) values ('po2', '{"workspaceId":"ws1","poNumber":"PO-2","hacked":true}')$$);
+select pg_temp.expect_ok('accountant records goods received and the bill', 'u-acct',
+  $$select lf_update('purchaseOrders','po1','{"status":"billed","billId":"b1","receipts":[{"id":"r1"}]}'::jsonb)$$);
+
 -- notifications: the server writes one row per person; each person sees and marks only their own
 select set_config('request.jwt.claims', '', true);
 insert into notifications (id, data) values

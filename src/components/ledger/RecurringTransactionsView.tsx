@@ -7,28 +7,39 @@ import {
   Clock, 
   Play, 
   Pause, 
-  Trash2, 
-  Edit2, 
-  ArrowRight,
-  MoreVertical,
-  CheckCircle2,
+  Trash2,
   AlertCircle,
   FileText,
   DollarSign
 } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { RecurringTransaction } from '../../types';
-import { formatCurrency, resolveAccountName } from '../../lib/utils';
-import { format, parseISO, addMonths, addDays, addWeeks } from 'date-fns';
-import { motion, AnimatePresence } from 'motion/react';
+import { formatCurrency } from '../../lib/utils';
+import { format, parseISO, addDays } from 'date-fns';
 import { cn } from '../../lib/utils';
-import { toast } from 'sonner';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
 
+/**
+ * Recurring invoices and entries. The daily job (src/server/services/recurringService.ts) runs
+ * the active ones: an invoice becomes a draft to review and send; an entry is posted. Pause
+ * stops a schedule until it is resumed (BE-03).
+ */
 export default function RecurringTransactionsView() {
   const recurring = useLedgerStore(s => s.recurring) || [];
-  const accounts = useLedgerStore(s => s.accounts) || [];
   const [searchTerm, setSearchTerm] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
+  const { updateEntity, deleteEntity } = useEntityOperations();
+  const role = useCurrentRole();
+  const canEdit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
+
+  const togglePause = (rule: RecurringTransaction) => updateEntity('recurring', rule.id,
+    { isActive: !rule.isActive, status: rule.isActive ? 'paused' : 'active' },
+    rule.isActive ? `Paused: ${rule.description}` : `Resumed: ${rule.description}`);
+
+  const remove = (rule: RecurringTransaction) => {
+    if (!window.confirm(`Delete the schedule "${rule.description}"? Invoices and entries it already created stay.`)) return;
+    deleteEntity('recurring', rule.id, 'Schedule deleted');
+  };
 
   const filteredRecurring = useMemo(() => {
     return recurring.filter(r => 
@@ -83,13 +94,9 @@ export default function RecurringTransactionsView() {
             />
           </div>
           
-          <button 
-            onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20"
-          >
-            <Plus size={18} />
-            New Recurring
-          </button>
+          <p className="text-xs text-zinc-500 max-w-[220px]">
+            <Plus size={12} className="inline" aria-hidden="true" /> New recurring invoice: create an invoice in Sales and choose "Recurring".
+          </p>
         </div>
       </div>
 
@@ -97,18 +104,18 @@ export default function RecurringTransactionsView() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 bg-[var(--bg)]">
         <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--line)]">
           <p className="text-xs text-zinc-500 uppercase font-bold tracking-wider mb-1">Active Rules</p>
-          <p className="text-2xl font-bold text-[var(--text)]">{recurring.filter(r => r.status === 'active').length}</p>
+          <p className="text-2xl font-bold text-[var(--text)]">{recurring.filter(r => r.isActive).length}</p>
         </div>
         <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--line)]">
           <p className="text-xs text-zinc-500 uppercase font-bold tracking-wider mb-1">Monthly Volume</p>
           <p className="text-2xl font-bold text-emerald-500">
-            {formatCurrency(recurring.filter(r => r.status === 'active' && r.frequency === 'monthly').reduce((acc, curr) => acc + (curr.template.totalAmountCents || 0), 0))}
+            {formatCurrency(recurring.filter(r => r.isActive && r.frequency === 'monthly').reduce((acc, curr) => acc + (curr.amountCents || 0), 0))}
           </p>
         </div>
         <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--line)]">
           <p className="text-xs text-zinc-500 uppercase font-bold tracking-wider mb-1">Next 7 Days</p>
           <p className="text-2xl font-bold text-indigo-500">
-            {recurring.filter(r => r.status === 'active' && r.nextOccurrence && new Date(r.nextOccurrence) <= addDays(new Date(), 7)).length}
+            {recurring.filter(r => r.isActive && r.nextOccurrence && new Date(r.nextOccurrence) <= addDays(new Date(), 7)).length}
           </p>
         </div>
         <div className="bg-[var(--surface)] p-4 rounded-xl border border-[var(--line)]">
@@ -138,7 +145,7 @@ export default function RecurringTransactionsView() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-lg bg-zinc-500/10 text-zinc-500 flex items-center justify-center shrink-0">
-                        {((rule.template?.type as any) === 'invoice' || (rule.template as any)?.metadata?.type === 'invoice') ? <FileText size={16} /> : <DollarSign size={16} />}
+                        {(rule.type === 'invoice' || rule.invoiceTemplate || rule.template?.tags?.includes('invoice')) ? <FileText size={16} aria-label="Invoice" /> : <DollarSign size={16} aria-label="Entry" />}
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-[var(--text)]">{rule.description}</p>
@@ -165,29 +172,37 @@ export default function RecurringTransactionsView() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <p className="text-sm font-bold text-[var(--text)]">
-                      {formatCurrency(rule.template.totalAmountCents || 0)}
+                      {formatCurrency(rule.amountCents || 0)}
                     </p>
                   </td>
                   <td className="px-6 py-4">
                     <span className={cn(
                       "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                      getStatusColor(rule.status || 'paused')
+                      getStatusColor(rule.isActive ? 'active' : 'paused')
                     )}>
-                      {rule.status}
+                      {rule.isActive ? 'active' : 'paused'}
                     </span>
+                    {rule.lastErrorCode && (
+                      <p className="mt-1 max-w-[220px] text-[11px] text-[var(--neg)]" title={rule.lastErrorAt || ''}>
+                        <AlertCircle size={11} className="inline mr-1" aria-hidden="true" />{rule.lastErrorCode}
+                      </p>
+                    )}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-all" title="Run Now">
-                        <Play size={16} />
-                      </button>
-                      <button className="p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all" title="Delete">
-                        <Trash2 size={16} />
-                      </button>
-                      <button className="p-1.5 text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg)] rounded-lg transition-all">
-                        <MoreVertical size={16} />
-                      </button>
-                    </div>
+                    {canEdit && (
+                      <div className="flex items-center justify-end gap-2">
+                        <button type="button" onClick={() => togglePause(rule)}
+                          className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-all"
+                          aria-label={rule.isActive ? `Pause ${rule.description}` : `Resume ${rule.description}`} title={rule.isActive ? 'Pause' : 'Resume'}>
+                          {rule.isActive ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
+                        </button>
+                        <button type="button" onClick={() => remove(rule)}
+                          className="p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                          aria-label={`Delete ${rule.description}`} title="Delete">
+                          <Trash2 size={16} aria-hidden="true" />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -195,13 +210,8 @@ export default function RecurringTransactionsView() {
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-zinc-500">
                     <RefreshCw size={48} className="mx-auto mb-4 opacity-10" />
-                    <p className="text-sm font-medium">No recurring transactions found</p>
-                    <button 
-                      onClick={() => setIsAdding(true)}
-                      className="mt-4 text-indigo-500 hover:underline text-sm font-semibold"
-                    >
-                      Create your first automated rule
-                    </button>
+                    <p className="text-sm font-medium">No recurring invoices or entries yet</p>
+                    <p className="mt-2 text-xs">Create an invoice in Sales and choose "Recurring" to send the same invoice on a schedule.</p>
                   </td>
                 </tr>
               )}

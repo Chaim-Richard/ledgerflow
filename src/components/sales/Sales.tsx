@@ -99,6 +99,10 @@ export default function Sales() {
       const startDateStr = data.date || getLocalDateISO();
       const anchorDay = Number(startDateStr.split('-')[2]) || 1;
       const nextOcc = calculateNextOccurrence(startDateStr, data.recurringInterval || 'monthly', anchorDay);
+      // The daily job copies this invoice as a draft on each date (recurringService.ts)
+      const { id: _id, number: _number, status: _status, date: _date, dueDate, amountPaidCents: _paid, paymentToken: _token,
+        metadata: _metadata, type: _type, recurringInterval: _interval, createdAt: _created, updatedAt: _updated, ...invoiceFields } = data;
+      const dueDays = dueDate && startDateStr ? Math.max(0, Math.round((Date.parse(`${String(dueDate).slice(0, 10)}T00:00:00Z`) - Date.parse(`${startDateStr.slice(0, 10)}T00:00:00Z`)) / 86400000)) : 30;
       await addEntity('recurring', {
         description: `Recurring Invoice: ${data.customerName || 'Customer'} - ${data.number || 'Standard'}`,
         amountCents: data.amountCents || 0,
@@ -106,6 +110,10 @@ export default function Sales() {
         nextOccurrence: nextOcc,
         anchorDay,
         isActive: true,
+        status: 'active',
+        type: 'invoice',
+        payee: data.customerName || '',
+        invoiceTemplate: { ...invoiceFields, dueDays },
         template: {
           description: `Invoice: ${data.customerName || 'Customer'}`,
           amountCents: data.amountCents || 0,

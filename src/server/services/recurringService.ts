@@ -1,8 +1,21 @@
+/**
+ * The daily recurring job (Vercel Cron, cronRoutes.ts). Only active schedules run (Pause on the
+ * Recurring screen stops them; BE-03). Each occurrence runs once (its occurrence key):
+ *  - a recurring **invoice** creates a draft invoice for the team to review and send, and tells
+ *    them (invoices are posted when a person saves them, like any other invoice);
+ *  - a recurring **entry** is posted to the ledger only if its lines use real accounts of the
+ *    workspace and balance; otherwise nothing is written and the schedule shows the problem.
+ * Before this, invoice schedules wrote ledger entries with blank accounts and no workspace.
+ */
 import { getDb, FieldValue } from '../db/firestore';
-import { RecurringTransaction } from '../../types';
+import type { DocumentData, Firestore } from '../db/firestore';
+import type { Invoice, RecurringTransaction, Transaction } from '../../types';
 import { findDueRecurring } from '../../lib/recurringEngine';
-import { executeIdempotent, deriveScopedOperationKey } from '../utils/idempotency';
-import crypto from 'crypto';
+import { addDaysYMD } from '../../lib/fiscalCalendar';
+import { assertPostingOpen } from '../../lib/periodLock';
+import { allocateNextNumber } from '../routes/workspaceRoutes';
+import { notify } from './notificationService';
+import { logger } from '../utils/logger';
 
 export interface ProcessRecurringResult {
   processedCount: number;
@@ -14,131 +27,159 @@ export interface ProcessRecurringResult {
     status: 'success' | 'skipped' | 'failed';
     error?: string;
     txId?: string;
+    invoiceId?: string;
   }>;
 }
 
-export async function processAllRecurring(): Promise<ProcessRecurringResult> {
-  const db = getDb();
-  console.info('[RecurringService] Starting background recurring processing...');
+class RecurringSkip extends Error {}
 
-  const result: ProcessRecurringResult = {
-    processedCount: 0,
-    skippedCount: 0,
-    failedCount: 0,
-    totalDue: 0,
-    details: []
+export function isInvoiceSchedule(rule: Partial<RecurringTransaction>): boolean {
+  return rule.type === 'invoice' || Boolean(rule.invoiceTemplate) || Boolean(rule.template?.tags?.includes('invoice'));
+}
+
+/** Why a recurring entry can't be posted, or null when it can. */
+export function invalidEntryReason(lines: Transaction['lines'] | undefined, accountIds: Set<string>): string | null {
+  if (!Array.isArray(lines) || lines.length < 2) return 'The entry needs at least two lines';
+  if (lines.some(l => !l.accountId || !accountIds.has(l.accountId))) return 'A line has no account, or an account that is not in this workspace';
+  if (lines.some(l => !Number.isInteger(l.amountCents))) return 'A line amount is not in whole cents';
+  if (lines.reduce((sum, l) => sum + l.amountCents, 0) !== 0) return 'Debits and credits are not equal';
+  return null;
+}
+
+async function markProblem(db: Firestore, ruleId: string, message: string) {
+  await db.collection('recurring').doc(ruleId).update({ lastErrorCode: message.slice(0, 200), lastErrorAt: new Date().toISOString() });
+}
+
+async function generateInvoice(db: Firestore, rule: RecurringTransaction, date: string, nextOccurrence: string) {
+  const key = `${rule.id}:${date}`;
+  const existing = await db.collection('invoices').where('workspaceId', '==', rule.workspaceId).where('recurrenceOccurrenceKey', '==', key).limit(1).get();
+  if (!existing.empty) throw new RecurringSkip(`Occurrence ${key} already generated`);
+  const workspace = (await db.collection('workspaces').doc(rule.workspaceId).get()).data() || {};
+
+  const t = rule.invoiceTemplate || {};
+  const legacy = (rule.template || {}) as DocumentData;
+  // the schedule's amount (saved with the schedule since it was created)
+  const amountCents = typeof t.amountCents === 'number' ? t.amountCents : Number(rule.amountCents) || 0;
+  const dueDays = Number.isInteger(t.dueDays) ? Number(t.dueDays) : 30;
+  const items = Array.isArray(t.items) && t.items.length
+    ? t.items
+    : [{ id: `${rule.id}-line`, description: String(legacy.description || rule.description || ''), quantity: 1, rateCents: amountCents, amountCents, accountId: '' }];
+  const number = await allocateNextNumber(db, rule.workspaceId, 'invoice');
+  const invoiceRef = db.collection('invoices').doc();
+  const invoice: Partial<Invoice> & DocumentData = {
+    ...t,
+    id: invoiceRef.id,
+    workspaceId: rule.workspaceId,
+    uid: rule.uid,
+    number,
+    status: 'draft',
+    date,
+    dueDate: addDaysYMD(date, dueDays),
+    customerId: t.customerId || legacy.customerId || '',
+    customerName: t.customerName || rule.payee || '',
+    currency: t.currency || workspace.currency || 'USD',
+    items,
+    amountCents,
+    recurrenceOccurrenceKey: key,
+    metadata: { recurringTemplateId: rule.id, generatedAt: new Date().toISOString() },
+    createdAt: new Date().toISOString(),
   };
+  delete invoice.dueDays;
 
+  await db.runTransaction(async (tx) => {
+    const ruleSnap = await tx.get(db.collection('recurring').doc(rule.id));
+    const again = await tx.get(db.collection('invoices').where('workspaceId', '==', rule.workspaceId).where('recurrenceOccurrenceKey', '==', key).limit(1));
+    if (!ruleSnap.exists || !ruleSnap.data()?.isActive) throw new RecurringSkip(`Schedule ${rule.id} is paused`);
+    if (!again.empty) throw new RecurringSkip(`Occurrence ${key} already generated`);
+    tx.set(invoiceRef, invoice);
+    tx.update(db.collection('recurring').doc(rule.id), {
+      nextOccurrence, lastOccurrence: date, generatedCount: (Number(ruleSnap.data()?.generatedCount) || 0) + 1,
+      lastErrorCode: FieldValue.delete(), lastErrorAt: FieldValue.delete(), updatedAt: new Date().toISOString(),
+    });
+  });
+  await notify(db, {
+    workspaceId: rule.workspaceId, workspace, kind: 'invoice.draft_ready',
+    title: `Recurring invoice ${number} is ready`,
+    message: `A draft for ${String(invoice.customerName || 'the customer')} dated ${date}. Check it, save it as final and send it.`,
+    eventKey: `invoice.draft_ready:${key}`, recordId: invoiceRef.id,
+  });
+  return { invoiceId: invoiceRef.id };
+}
+
+async function generateEntry(db: Firestore, rule: RecurringTransaction, generated: Partial<Transaction>, nextOccurrence: string) {
+  const date = String(generated.date);
+  const key = `${rule.id}:${date}`;
+  const workspace = (await db.collection('workspaces').doc(rule.workspaceId).get()).data() || {};
+  const accounts = await db.collection('chartAccounts').where('workspaceId', '==', rule.workspaceId).get();
+  const problem = invalidEntryReason(rule.template?.lines, new Set(accounts.docs.map(d => d.id)));
+  if (problem) {
+    await markProblem(db, rule.id, problem);
+    throw new Error(problem);
+  }
   try {
-    // 1. Fetch all active recurring transactions
-    const recurringSnap = await db.collection('recurring')
-      .where('isActive', '==', true)
-      .get();
+    assertPostingOpen(date, workspace, rule.uid);
+  } catch {
+    await markProblem(db, rule.id, `The period of ${date} is closed`);
+    throw new Error(`The period of ${date} is closed`);
+  }
+  const txRef = db.collection('transactions').doc();
+  await db.runTransaction(async (tx) => {
+    const ruleSnap = await tx.get(db.collection('recurring').doc(rule.id));
+    const existing = await tx.get(db.collection('transactions').where('workspaceId', '==', rule.workspaceId).where('recurrenceOccurrenceKey', '==', key).limit(1));
+    if (!ruleSnap.exists || !ruleSnap.data()?.isActive) throw new RecurringSkip(`Schedule ${rule.id} is paused`);
+    if (!existing.empty) throw new RecurringSkip(`Occurrence ${key} already generated`);
+    tx.set(txRef, {
+      ...generated,
+      id: txRef.id,
+      workspaceId: rule.workspaceId,
+      uid: rule.uid,
+      currency: rule.template?.currency || workspace.currency || 'USD',
+      exchangeRate: rule.template?.exchangeRate ?? 1,
+      lines: rule.template?.lines,
+      totalAmountCents: rule.template!.lines!.reduce((sum, l) => sum + Math.max(0, l.amountCents), 0),
+      createdAt: new Date().toISOString(),
+    });
+    tx.update(db.collection('recurring').doc(rule.id), {
+      nextOccurrence, lastOccurrence: date, generatedCount: (Number(ruleSnap.data()?.generatedCount) || 0) + 1,
+      lastErrorCode: FieldValue.delete(), lastErrorAt: FieldValue.delete(), updatedAt: new Date().toISOString(),
+    });
+  });
+  return { txId: txRef.id };
+}
 
-    const recurringList = recurringSnap.docs.map(doc => ({
-      ...doc.data(),
-      id: doc.id
-    })) as RecurringTransaction[];
+export async function processRecurring(db: Firestore, asOf?: string): Promise<ProcessRecurringResult> {
+  const result: ProcessRecurringResult = { processedCount: 0, skippedCount: 0, failedCount: 0, totalDue: 0, details: [] };
+  const snap = await db.collection('recurring').where('isActive', '==', true).get();
+  const rules = new Map(snap.docs.map(d => [d.id, { ...d.data(), id: d.id } as RecurringTransaction]));
+  const { generatedTransactions } = findDueRecurring([...rules.values()], asOf);
+  result.totalDue = generatedTransactions.length;
+  const failedRules = new Set<string>();
 
-    if (recurringList.length === 0) {
-      console.info('[RecurringService] No active recurring transactions found.');
-      return result;
-    }
-
-    // 2. Find which ones are due
-    const { generatedTransactions } = findDueRecurring(recurringList);
-    result.totalDue = generatedTransactions.length;
-
-    if (generatedTransactions.length === 0) {
-      console.info('[RecurringService] No recurring transactions due today.');
-      return result;
-    }
-
-    console.info(`[RecurringService] Found ${generatedTransactions.length} transactions to generate.`);
-
-    // 3. Process each generated transaction within a single atomic Firestore transaction per operation
-    for (const item of generatedTransactions) {
-      const { transaction, templateId, updatedNextOccurrence } = item;
-      const txDate = transaction.date || 'unknown_date';
-      const rawOpId = `${templateId}:${txDate}`;
-      const wsId = transaction.workspaceId || 'system';
-      const scopedKey = deriveScopedOperationKey(wsId, 'RECURRING_TX_GENERATION', rawOpId);
-
-      try {
-        const opResult = await executeIdempotent(scopedKey, {
-          actor: 'system:recurring_engine',
-          workspaceId: wsId,
-          operationType: 'RECURRING_TX_GENERATION'
-        }, async (t) => {
-          const txId = crypto.randomUUID();
-          const recurringRef = db.collection('recurring').doc(templateId);
-          const txRef = db.collection('transactions').doc(txId);
-
-          // Step A: All reads first
-          const recDoc = await t.get(recurringRef);
-          if (!recDoc.exists || !recDoc.data()?.isActive) {
-            throw new Error(`Template ${templateId} is no longer active.`);
-          }
-
-          const existingTx = await t.get(db.collection('transactions')
-            .where('workspaceId', '==', wsId)
-            .where('recurrenceOccurrenceKey', '==', `${templateId}:${txDate}`)
-            .limit(1));
-
-          if (!existingTx.empty) {
-            const err = new Error(`Occurrence ${templateId}:${txDate} already generated.`);
-            (err as any).status = 409;
-            throw err;
-          }
-
-          // Step B: Ledger mutation writes
-          t.set(txRef, {
-            ...transaction,
-            id: txId,
-            createdAt: new Date().toISOString(),
-            updatedAt: FieldValue.serverTimestamp()
-          });
-
-          // Step C: Update next occurrence state
-          t.update(recurringRef, {
-            nextOccurrence: updatedNextOccurrence,
-            updatedAt: FieldValue.serverTimestamp()
-          });
-
-          return { txId, templateId, date: txDate };
-        });
-
-        console.info(`[RecurringService] Successfully processed ${scopedKey}`);
-        result.processedCount++;
-        result.details.push({
-          operationId: scopedKey,
-          status: 'success',
-          txId: opResult?.txId
-        });
-      } catch (err: any) {
-        if (err.message?.includes('already succeeded') || err.status === 409) {
-          console.info(`[RecurringService] Skipping ${scopedKey} - already processed.`);
-          result.skippedCount++;
-          result.details.push({
-            operationId: scopedKey,
-            status: 'skipped'
-          });
-        } else {
-          console.error(`[RecurringService] Failed to process ${scopedKey}:`, err);
-          result.failedCount++;
-          result.details.push({
-            operationId: scopedKey,
-            status: 'failed',
-            error: err.message
-          });
-        }
+  for (const item of generatedTransactions) {
+    const rule = rules.get(item.templateId);
+    const operationId = `${item.templateId}:${item.transaction.date}`;
+    if (!rule?.workspaceId || failedRules.has(item.templateId)) continue; // later occurrences wait for the first
+    try {
+      const out = isInvoiceSchedule(rule)
+        ? await generateInvoice(db, rule, String(item.transaction.date), item.updatedNextOccurrence)
+        : await generateEntry(db, rule, item.transaction, item.updatedNextOccurrence);
+      result.processedCount++;
+      result.details.push({ operationId, status: 'success', ...out });
+    } catch (err) {
+      if (err instanceof RecurringSkip) {
+        result.skippedCount++;
+        result.details.push({ operationId, status: 'skipped', error: err.message });
+      } else {
+        failedRules.add(item.templateId);
+        result.failedCount++;
+        result.details.push({ operationId, status: 'failed', error: err instanceof Error ? err.message : String(err) });
+        logger.warn('recurring occurrence failed', { operationId, error: err instanceof Error ? err.message : String(err) });
       }
     }
-
-    console.info(`[RecurringService] Completed. Processed: ${result.processedCount}, Skipped: ${result.skippedCount}, Failed: ${result.failedCount}`);
-    return result;
-  } catch (error: any) {
-    console.error('[RecurringService] Error processing recurring transactions:', error);
-    throw error;
   }
+  return result;
+}
+
+export async function processAllRecurring(): Promise<ProcessRecurringResult> {
+  return processRecurring(getDb());
 }

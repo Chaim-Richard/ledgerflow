@@ -1,316 +1,201 @@
-import React, { useState, useMemo } from 'react';
-import { PurchaseOrder, PurchaseOrderItem, GoodsReceipt, GoodsReceiptItem, Bill } from '../../types';
+import React, { useId, useMemo, useState } from 'react';
+import { ShoppingCart, Plus, ShieldCheck, X, Check, CheckCircle2, FileText, Ban } from 'lucide-react';
+import type { Bill, GoodsReceipt, PurchaseOrder, PurchaseOrderItem, Vendor } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { performThreeWayMatch, ThreeWayMatchSummary } from '../../lib/threeWayMatchEngine';
+import { useCollection } from '../../hooks/useCollection';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { performThreeWayMatch } from '../../lib/threeWayMatchEngine';
+import { billLinesFromOrder, nextPoNumber } from '../../lib/purchaseOrders';
 import { formatCurrency, formatDate, formatTzDate } from '../../lib/utils';
-import { RequireRole } from '../ui/RequireRole';
-import { useTimeout } from '../../hooks/useTimeout';
-import { 
-  ShoppingCart, 
-  Plus, 
-  PackageCheck, 
-  Layers, 
-  CheckCircle2, 
-  AlertTriangle, 
-  FileCheck, 
-  ShieldCheck, 
-  Search,
-  X,
-  Check,
-  Building,
-  DollarSign
-} from 'lucide-react';
+import BillModal from './BillModal';
+
+/**
+ * Purchase orders (saved in `purchaseOrders`), goods received against them, and turning an order
+ * into a bill (BE-11): the bill form opens filled with the vendor and the received (or ordered)
+ * lines; the bill is posted like any other bill, and the order is marked billed. The 3-way match
+ * compares order, receipts and bill. Before, orders and receipts lived only in the open page.
+ */
+
+type Tab = 'pos' | 'match' | 'receipts';
+interface DraftLine { key: string; desc: string; qty: string; unitPrice: string }
+
+const newLine = (): DraftLine => ({ key: crypto.randomUUID(), desc: '', qty: '1', unitPrice: '' });
+const inputClass = 'w-full p-2 bg-[var(--panel)] border border-[var(--line)] rounded-lg text-[var(--text)]';
 
 export const PurchaseOrdersView: React.FC = () => {
   const bills = useLedgerStore(s => (s.bills || []) as Bill[]);
-  const accounts = useLedgerStore(s => s.accounts);
-  const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
-  const user = useAuthStore(s => s.user);
-  const currentWorkspace = getCurrentWorkspace();
+  const vendors = useLedgerStore(s => (s.vendors || []) as Vendor[]);
+  const accounts = useLedgerStore(s => s.accounts || []);
+  const workspace = useAuthStore(s => s.getCurrentWorkspace());
+  const role = useCurrentRole();
+  const canEdit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
+  const { addEntity, updateEntity } = useEntityOperations();
+  const { data: purchaseOrders, loading } = useCollection<PurchaseOrder>('purchaseOrders', { orderByField: 'createdAt', orderDirection: 'desc', limit: 500 });
+  const goodsReceipts = useMemo(() => purchaseOrders.flatMap(po => po.receipts || []), [purchaseOrders]);
+  const matchSummary = useMemo(() => performThreeWayMatch(purchaseOrders, goodsReceipts, bills), [purchaseOrders, goodsReceipts, bills]);
+  const ids = useId();
+  const today = formatTzDate(new Date(), workspace?.timezone);
 
-  // Local state for POs and Receipts (or persistent in store)
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
-    return [
-      {
-        id: 'po_demo_101',
-        uid: 'system',
-        workspaceId: currentWorkspace?.id || 'default',
-        poNumber: 'PO-2026-001',
-        vendorId: 'vend_aws',
-        vendorName: 'Acme Hardware Supplies',
-        issueDate: '2026-02-15',
-        expectedDeliveryDate: '2026-02-28',
-        status: 'received',
-        items: [
-          {
-            id: 'item_1',
-            description: 'Ergonomic Desk Stations',
-            quantity: 5,
-            unitPriceCents: 45000,
-            totalCents: 225000,
-            receivedQuantity: 5
-          }
-        ],
-        totalAmountCents: 225000,
-        createdAt: '2026-02-15T10:00:00Z'
-      }
-    ];
-  });
-
-  const [goodsReceipts, setGoodsReceipts] = useState<GoodsReceipt[]>(() => {
-    return [
-      {
-        id: 'gr_demo_101',
-        uid: 'system',
-        workspaceId: currentWorkspace?.id || 'default',
-        receiptNumber: 'GR-2026-001',
-        poId: 'po_demo_101',
-        poNumber: 'PO-2026-001',
-        vendorId: 'vend_aws',
-        vendorName: 'Acme Hardware Supplies',
-        receivedDate: '2026-02-26',
-        items: [
-          {
-            poItemId: 'item_1',
-            description: 'Ergonomic Desk Stations',
-            quantityReceived: 5,
-            unitPriceCents: 45000,
-            condition: 'good'
-          }
-        ],
-        status: 'verified',
-        createdAt: '2026-02-26T14:00:00Z'
-      }
-    ];
-  });
-
-  const [activeTab, setActiveTab] = useState<'pos' | 'match' | 'receipts'>('pos');
+  const [activeTab, setActiveTab] = useState<Tab>('pos');
   const [isCreatingPO, setIsCreatingPO] = useState(false);
+  const [poVendorId, setPoVendorId] = useState('');
+  const [poExpectedDate, setPoExpectedDate] = useState(today);
+  const [poItems, setPoItems] = useState<DraftLine[]>([newLine()]);
   const [receivingPO, setReceivingPO] = useState<PurchaseOrder | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const { setSafeTimeout } = useTimeout();
-
-  // Form State
-  const [poVendor, setPoVendor] = useState('');
-  const [poExpectedDate, setPoExpectedDate] = useState(() => formatTzDate(new Date(), currentWorkspace?.timezone));
-  const [poItems, setPoItems] = useState<Array<{ desc: string; qty: string; unitPrice: string }>>([
-    { desc: '', qty: '1', unitPrice: '' }
-  ]);
-
-  // Receiving Form State
-  const [receivedCondition, setReceivedCondition] = useState<'good' | 'damaged' | 'rejected'>('good');
+  const [receivedCondition, setReceivedCondition] = useState<GoodsReceipt['items'][number]['condition']>('good');
   const [receivedQuantities, setReceivedQuantities] = useState<Record<string, number>>({});
+  const [billingPO, setBillingPO] = useState<PurchaseOrder | null>(null);
+  const [saving, setSaving] = useState(false);
+  const billFromOrder = useMemo<Partial<Bill> | undefined>(() => (billingPO
+    ? { vendorId: billingPO.vendorId, vendorName: billingPO.vendorName, currency: billingPO.currency, splits: billLinesFromOrder(billingPO), metadata: { poId: billingPO.id, poNumber: billingPO.poNumber } }
+    : undefined), [billingPO]);
 
-  // 3-Way Match evaluation
-  const matchSummary = useMemo(() => {
-    return performThreeWayMatch(purchaseOrders, goodsReceipts, bills);
-  }, [purchaseOrders, goodsReceipts, bills]);
+  const setLine = (key: string, field: keyof Omit<DraftLine, 'key'>, value: string) =>
+    setPoItems(lines => lines.map(l => (l.key === key ? { ...l, [field]: value } : l)));
 
-  const handleSavePO = () => {
-    if (!poVendor || poItems.some(i => !i.desc || !i.unitPrice)) return;
-
-    let totalCents = 0;
-    const items: PurchaseOrderItem[] = poItems.map((item, idx) => {
-      const qty = parseFloat(item.qty) || 1;
-      const priceCents = Math.round(parseFloat(item.unitPrice) * 100);
-      const lineCents = Math.round(qty * priceCents);
-      totalCents += lineCents;
-
-      return {
-        id: `item_${Date.now()}_${idx}`,
-        description: item.desc,
-        quantity: qty,
-        unitPriceCents: priceCents,
-        totalCents: lineCents
-      };
+  const handleSavePO = async () => {
+    const vendor = vendors.find(v => v.id === poVendorId);
+    if (!vendor || poItems.some(i => !i.desc.trim() || !(Number(i.unitPrice) > 0) || !(Number(i.qty) > 0))) return;
+    const items: PurchaseOrderItem[] = poItems.map(line => {
+      const quantity = Number(line.qty);
+      const unitPriceCents = Math.round(Number(line.unitPrice) * 100);
+      return { id: line.key, description: line.desc.trim(), quantity, unitPriceCents, totalCents: Math.round(quantity * unitPriceCents), receivedQuantity: 0 };
     });
-
-    const newPO: PurchaseOrder = {
-      id: `po_${Date.now()}`,
-      uid: user?.uid || 'system',
-      workspaceId: currentWorkspace?.id || 'default',
-      poNumber: `PO-2026-${String(purchaseOrders.length + 1).padStart(3, '0')}`,
-      vendorId: `vend_${Date.now()}`,
-      vendorName: poVendor,
-      issueDate: formatTzDate(new Date(), currentWorkspace?.timezone),
-      expectedDeliveryDate: poExpectedDate,
-      status: 'approved',
-      items,
-      totalAmountCents: totalCents,
-      createdAt: new Date().toISOString()
-    };
-
-    setPurchaseOrders([...purchaseOrders, newPO]);
-    setIsCreatingPO(false);
-    setPoVendor('');
-    setPoItems([{ desc: '', qty: '1', unitPrice: '' }]);
-    setSuccessMessage(`Created Purchase Order ${newPO.poNumber} for ${poVendor}`);
-    setSafeTimeout(() => setSuccessMessage(null), 4000);
+    setSaving(true);
+    const poNumber = nextPoNumber(purchaseOrders, today.slice(0, 4));
+    const saved = await addEntity('purchaseOrders', {
+      poNumber, vendorId: vendor.id, vendorName: vendor.name, issueDate: today, expectedDeliveryDate: poExpectedDate,
+      status: 'approved', items, totalAmountCents: items.reduce((sum, i) => sum + i.totalCents, 0),
+      currency: workspace?.currency || 'USD', receipts: [],
+    }, `Purchase order ${poNumber} saved`);
+    setSaving(false);
+    if (saved) {
+      setIsCreatingPO(false);
+      setPoVendorId('');
+      setPoItems([newLine()]);
+    }
   };
 
-  const handleOpenReceive = (po: PurchaseOrder) => {
+  const openReceive = (po: PurchaseOrder) => {
     setReceivingPO(po);
-    const initialQty: Record<string, number> = {};
-    po.items.forEach(item => {
-      initialQty[item.id] = item.quantity;
-    });
-    setReceivedQuantities(initialQty);
+    setReceivedCondition('good');
+    setReceivedQuantities(Object.fromEntries(po.items.map(i => [i.id, Math.max(0, i.quantity - (i.receivedQuantity || 0))])));
   };
 
-  const handleSaveGoodsReceipt = () => {
-    if (!receivingPO) return;
-
-    const receiptItems: GoodsReceiptItem[] = receivingPO.items.map(item => ({
-      poItemId: item.id,
-      description: item.description,
-      quantityReceived: receivedQuantities[item.id] ?? item.quantity,
-      unitPriceCents: item.unitPriceCents,
-      condition: receivedCondition
-    }));
-
-    const newReceipt: GoodsReceipt = {
-      id: `gr_${Date.now()}`,
-      uid: user?.uid || 'system',
-      workspaceId: currentWorkspace?.id || 'default',
-      receiptNumber: `GR-2026-${String(goodsReceipts.length + 1).padStart(3, '0')}`,
-      poId: receivingPO.id,
-      poNumber: receivingPO.poNumber,
-      vendorId: receivingPO.vendorId,
-      vendorName: receivingPO.vendorName,
-      receivedDate: formatTzDate(new Date(), currentWorkspace?.timezone),
-      items: receiptItems,
+  const handleSaveGoodsReceipt = async () => {
+    const po = receivingPO;
+    if (!po) return;
+    const receipt: GoodsReceipt = {
+      id: crypto.randomUUID(),
+      uid: useAuthStore.getState().user?.uid || '',
+      workspaceId: po.workspaceId,
+      receiptNumber: `GR-${po.poNumber}-${(po.receipts?.length || 0) + 1}`,
+      poId: po.id,
+      poNumber: po.poNumber,
+      vendorId: po.vendorId,
+      vendorName: po.vendorName,
+      receivedDate: today,
+      items: po.items.map(item => ({ poItemId: item.id, description: item.description, quantityReceived: receivedQuantities[item.id] ?? 0, unitPriceCents: item.unitPriceCents, condition: receivedCondition })),
       status: receivedCondition === 'good' ? 'verified' : 'discrepancy',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
-
-    // Update PO status
-    const updatedPOs = purchaseOrders.map(p => p.id === receivingPO.id ? { ...p, status: 'received' as const } : p);
-
-    setGoodsReceipts([...goodsReceipts, newReceipt]);
-    setPurchaseOrders(updatedPOs);
+    const accepted = receivedCondition === 'rejected' ? 0 : 1;
+    const items = po.items.map(item => ({ ...item, receivedQuantity: (item.receivedQuantity || 0) + accepted * (receivedQuantities[item.id] ?? 0) }));
+    const complete = items.every(i => (i.receivedQuantity || 0) >= i.quantity);
+    setSaving(true);
+    await updateEntity('purchaseOrders', po.id, {
+      items, receipts: [...(po.receipts || []), receipt],
+      status: po.status === 'billed' ? 'billed' : complete ? 'received' : 'partially_received',
+    }, `Goods received for ${po.poNumber}`);
+    setSaving(false);
     setReceivingPO(null);
-    setSuccessMessage(`Goods Receipt ${newReceipt.receiptNumber} recorded. Ready for 3-Way Match.`);
-    setSafeTimeout(() => setSuccessMessage(null), 4000);
   };
+
+  const handleBillSaved = async (bill: Partial<Bill>) => {
+    const po = billingPO;
+    if (!po) return;
+    const ref = await addEntity('bills', { ...bill, metadata: { ...(bill.metadata || {}), poId: po.id, poNumber: po.poNumber } }, `Bill recorded from ${po.poNumber}`);
+    if (ref) await updateEntity('purchaseOrders', po.id, { status: 'billed', billId: ref.id });
+    setBillingPO(null);
+  };
+
+  const cancelPO = (po: PurchaseOrder) => {
+    if (!window.confirm(`Cancel purchase order ${po.poNumber}?`)) return;
+    updateEntity('purchaseOrders', po.id, { status: 'cancelled' }, `${po.poNumber} cancelled`);
+  };
+
+  const tabs: [Tab, string][] = [
+    ['pos', `Purchase orders (${purchaseOrders.length})`],
+    ['match', `3-way match (${matchSummary.varianceCount} differences)`],
+    ['receipts', `Goods received (${goodsReceipts.length})`],
+  ];
+  const statusClass = (status: string) => status === 'received' || status === 'billed' || status === 'matched'
+    ? 'bg-[var(--pos)]/10 text-[var(--pos)]' : status === 'cancelled' ? 'bg-[var(--line)] text-[var(--muted)]' : 'bg-[var(--brass-soft)] text-[var(--text)]';
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6" id="purchase-orders-view">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 pb-5">
+    <div className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6 text-[var(--text)]" id="purchase-orders-view">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--line)] pb-5">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5 text-neutral-800" />
-            Purchase Orders & 3-Way Matching
-          </h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            Reconcile Purchase Orders, Goods Receipts, and Supplier Invoices to eliminate overpayments.
-          </p>
+          <h1 className="text-xl font-bold flex items-center gap-2"><ShoppingCart className="w-5 h-5" aria-hidden="true" /> Purchase orders</h1>
+          <p className="text-sm text-[var(--muted)] mt-1">Order from a vendor, record what arrives, then turn the order into a bill. The 3-way match compares all three.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsCreatingPO(true)}
-            className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors"
-            id="create-po-btn"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Create Purchase Order
+        {canEdit && (
+          <button type="button" onClick={() => setIsCreatingPO(true)} id="create-po-btn"
+            className="px-4 py-2 text-xs font-semibold bg-[var(--brass)] text-black rounded-lg flex items-center gap-1.5">
+            <Plus className="w-3.5 h-3.5" aria-hidden="true" /> New purchase order
           </button>
-        </div>
+        )}
       </div>
 
-      {successMessage && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-sm flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>{successMessage}</span>
-          </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-emerald-700 hover:text-emerald-900">
-            <X className="w-4 h-4" />
+      <div className="flex gap-1 p-1 rounded-lg w-fit bg-[var(--panel)] border border-[var(--line)]" role="tablist" aria-label="Purchase orders">
+        {tabs.map(([id, label]) => (
+          <button key={id} type="button" role="tab" aria-selected={activeTab === id} onClick={() => setActiveTab(id)}
+            className={`px-4 py-1.5 text-xs font-semibold rounded-md ${activeTab === id ? 'bg-[var(--surface)] text-[var(--text)]' : 'text-[var(--muted)]'}`}>
+            {id === 'match' && <ShieldCheck className="w-3.5 h-3.5 inline mr-1" aria-hidden="true" />}{label}
           </button>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex border-b border-neutral-200 bg-neutral-100/60 p-1 rounded-lg w-fit">
-        <button
-          onClick={() => setActiveTab('pos')}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-            activeTab === 'pos' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
-          }`}
-        >
-          Purchase Orders ({purchaseOrders.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('match')}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 ${
-            activeTab === 'match' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
-          }`}
-        >
-          <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
-          3-Way Match Monitor ({matchSummary.varianceCount} Discrepancies)
-        </button>
-        <button
-          onClick={() => setActiveTab('receipts')}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-            activeTab === 'receipts' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
-          }`}
-        >
-          Goods Receipts ({goodsReceipts.length})
-        </button>
+        ))}
       </div>
 
-      {/* Main Content */}
       {activeTab === 'pos' && (
-        <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-xs">
+        <div className="bg-[var(--surface)] border border-[var(--line)] rounded-lg overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
+            <caption className="sr-only">Purchase orders</caption>
+            <thead className="border-b border-[var(--line)] text-[var(--muted)] font-semibold uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-4">PO Number</th>
-                <th className="py-3 px-4">Vendor</th>
-                <th className="py-3 px-4">Issue Date</th>
-                <th className="py-3 px-4">Expected Delivery</th>
-                <th className="py-3 px-4 text-right">Order Amount</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th scope="col" className="py-3 px-4">Number</th><th scope="col" className="py-3 px-4">Vendor</th>
+                <th scope="col" className="py-3 px-4">Issued</th><th scope="col" className="py-3 px-4">Expected</th>
+                <th scope="col" className="py-3 px-4 text-right">Amount</th><th scope="col" className="py-3 px-4 text-center">Status</th>
+                <th scope="col" className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100">
+            <tbody className="divide-y divide-[var(--line)]">
+              {loading && <tr><td colSpan={7} className="py-6 px-4 text-center text-[var(--muted)]">Loading…</td></tr>}
+              {!loading && purchaseOrders.length === 0 && (
+                <tr><td colSpan={7} className="py-10 px-4 text-center text-[var(--muted)]">No purchase orders yet.{canEdit ? ' Choose "New purchase order" to create one.' : ''}</td></tr>
+              )}
               {purchaseOrders.map(po => (
-                <tr key={po.id} className="hover:bg-neutral-50/80 transition-colors">
-                  <td className="py-3 px-4 font-mono font-bold text-neutral-900">
-                    {po.poNumber}
-                  </td>
-                  <td className="py-3 px-4 font-medium text-neutral-800">
-                    {po.vendorName}
-                  </td>
-                  <td className="py-3 px-4 text-neutral-600 font-mono">
-                    {formatDate(po.issueDate)}
-                  </td>
-                  <td className="py-3 px-4 text-neutral-600 font-mono">
-                    {po.expectedDeliveryDate ? formatDate(po.expectedDeliveryDate) : '—'}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono font-bold text-neutral-900">
-                    {formatCurrency(po.totalAmountCents)}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                      po.status === 'received'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-amber-50 text-amber-700 border border-amber-200'
-                    }`}>
-                      {po.status.replace('_', ' ').toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    {po.status !== 'received' && (
-                      <button
-                        onClick={() => handleOpenReceive(po)}
-                        className="px-2.5 py-1 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-md transition-colors"
-                      >
-                        Receive Goods
+                <tr key={po.id}>
+                  <td className="py-3 px-4 font-mono font-bold">{po.poNumber}</td>
+                  <td className="py-3 px-4">{po.vendorName}</td>
+                  <td className="py-3 px-4 font-mono">{formatDate(po.issueDate)}</td>
+                  <td className="py-3 px-4 font-mono">{po.expectedDeliveryDate ? formatDate(po.expectedDeliveryDate) : '—'}</td>
+                  <td className="py-3 px-4 text-right font-mono font-bold">{formatCurrency(po.totalAmountCents, po.currency)}</td>
+                  <td className="py-3 px-4 text-center"><span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass(po.status)}`}>{po.status.replace('_', ' ')}</span></td>
+                  <td className="py-3 px-4 text-right whitespace-nowrap space-x-2">
+                    {canEdit && !['received', 'billed', 'cancelled', 'closed'].includes(po.status) && (
+                      <button type="button" onClick={() => openReceive(po)} className="px-2.5 py-1 font-semibold border border-[var(--line)] rounded-md">Receive goods</button>
+                    )}
+                    {canEdit && !po.billId && po.status !== 'cancelled' && (
+                      <button type="button" onClick={() => setBillingPO(po)} className="px-2.5 py-1 font-semibold bg-[var(--brass)] text-black rounded-md inline-flex items-center gap-1">
+                        <FileText className="w-3 h-3" aria-hidden="true" /> Create bill
                       </button>
                     )}
+                    {canEdit && !po.billId && po.status !== 'cancelled' && (
+                      <button type="button" onClick={() => cancelPO(po)} className="p-1 text-[var(--muted)]" aria-label={`Cancel ${po.poNumber}`} title="Cancel"><Ban className="w-3.5 h-3.5" aria-hidden="true" /></button>
+                    )}
+                    {po.billId && <span className="text-[var(--muted)]">Billed</span>}
                   </td>
                 </tr>
               ))}
@@ -321,92 +206,36 @@ export const PurchaseOrdersView: React.FC = () => {
 
       {activeTab === 'match' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="p-4 bg-white rounded-lg border border-neutral-200 shadow-xs">
-              <div className="text-xs font-semibold text-neutral-500 uppercase">Fully Matched Orders</div>
-              <div className="text-xl font-mono font-bold text-emerald-600 mt-1">
-                {matchSummary.matchedCount}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {([['Fully matched', matchSummary.matchedCount], ['Price / quantity differences', matchSummary.varianceCount], ['Awaiting delivery', matchSummary.unreceivedCount], ['Awaiting the vendor\'s bill', matchSummary.missingBillCount]] as [string, number][]).map(([label, n]) => (
+              <div key={label} className="p-4 bg-[var(--surface)] rounded-lg border border-[var(--line)]">
+                <div className="text-xs font-semibold text-[var(--muted)] uppercase">{label}</div>
+                <div className="text-xl font-mono font-bold mt-1">{n}</div>
               </div>
-            </div>
-            <div className="p-4 bg-white rounded-lg border border-neutral-200 shadow-xs">
-              <div className="text-xs font-semibold text-neutral-500 uppercase">Price / Qty Variances</div>
-              <div className="text-xl font-mono font-bold text-amber-600 mt-1">
-                {matchSummary.varianceCount}
-              </div>
-            </div>
-            <div className="p-4 bg-white rounded-lg border border-neutral-200 shadow-xs">
-              <div className="text-xs font-semibold text-neutral-500 uppercase">Awaiting Delivery</div>
-              <div className="text-xl font-mono font-bold text-neutral-700 mt-1">
-                {matchSummary.unreceivedCount}
-              </div>
-            </div>
-            <div className="p-4 bg-white rounded-lg border border-neutral-200 shadow-xs">
-              <div className="text-xs font-semibold text-neutral-500 uppercase">Awaiting Supplier Bill</div>
-              <div className="text-xl font-mono font-bold text-indigo-600 mt-1">
-                {matchSummary.missingBillCount}
-              </div>
-            </div>
+            ))}
           </div>
-
-          <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-xs">
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-lg overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
+              <caption className="sr-only">3-way match</caption>
+              <thead className="border-b border-[var(--line)] text-[var(--muted)] font-semibold uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-4">PO Reference</th>
-                  <th className="py-3 px-4 text-right">PO Amount</th>
-                  <th className="py-3 px-4 text-right">Received Amount</th>
-                  <th className="py-3 px-4 text-right">Billed Amount</th>
-                  <th className="py-3 px-4 text-center">Match Status</th>
-                  <th className="py-3 px-4">Validation Notes</th>
+                  <th scope="col" className="py-3 px-4">Order</th><th scope="col" className="py-3 px-4 text-right">Ordered</th>
+                  <th scope="col" className="py-3 px-4 text-right">Received</th><th scope="col" className="py-3 px-4 text-right">Billed</th>
+                  <th scope="col" className="py-3 px-4 text-center">Result</th><th scope="col" className="py-3 px-4">Notes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
-                {matchSummary.results.map((res, idx) => (
-                  <tr key={idx} className="hover:bg-neutral-50/80 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-neutral-900">
-                      {res.poNumber}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-neutral-700">
-                      {formatCurrency(res.poAmountCents)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-neutral-700">
-                      {formatCurrency(res.receiptAmountCents)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-neutral-700">
-                      {res.billAmountCents > 0 ? formatCurrency(res.billAmountCents) : '—'}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                        res.status === 'matched'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : res.status === 'unreceived'
-                          ? 'bg-neutral-100 text-neutral-600 border border-neutral-200'
-                          : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}>
-                        {res.status.replace('_', ' ').toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-neutral-600 text-[11px]">
-                      {res.discrepancies.length > 0 ? (
-                        <div className="flex flex-col gap-2">
-                          <div className="space-y-0.5 text-amber-700">
-                            {res.discrepancies.map((d, i) => (
-                              <div key={i}>&bull; {d}</div>
-                            ))}
-                          </div>
-                          {/* eslint-disable-next-line jsx-a11y/aria-role */}
-                          <RequireRole role="owner" disableOnly tooltip="Only the workspace owner can override exceptions">
-                            <button className="self-start px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded font-bold uppercase tracking-wider text-[9px] transition-colors">
-                              Approve Anyway
-                            </button>
-                          </RequireRole>
-                        </div>
-                      ) : (
-                        <span className="text-emerald-600 flex items-center gap-1 font-medium">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          3-Way Reconciled (PO = GR = Bill)
-                        </span>
-                      )}
+              <tbody className="divide-y divide-[var(--line)]">
+                {matchSummary.results.map(res => (
+                  <tr key={res.poId}>
+                    <td className="py-3 px-4 font-mono font-bold">{res.poNumber}</td>
+                    <td className="py-3 px-4 text-right font-mono">{formatCurrency(res.poAmountCents)}</td>
+                    <td className="py-3 px-4 text-right font-mono">{formatCurrency(res.receiptAmountCents)}</td>
+                    <td className="py-3 px-4 text-right font-mono">{res.billAmountCents > 0 ? formatCurrency(res.billAmountCents) : '—'}</td>
+                    <td className="py-3 px-4 text-center"><span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass(res.status)}`}>{res.status.replace('_', ' ')}</span></td>
+                    <td className="py-3 px-4 text-[11px]">
+                      {res.discrepancies.length > 0
+                        ? <ul className="space-y-0.5 text-[var(--neg)]">{res.discrepancies.map(d => <li key={d}>• {d}</li>)}</ul>
+                        : <span className="text-[var(--pos)] inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" /> Order, receipt and bill agree</span>}
                     </td>
                   </tr>
                 ))}
@@ -417,41 +246,25 @@ export const PurchaseOrdersView: React.FC = () => {
       )}
 
       {activeTab === 'receipts' && (
-        <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-xs">
+        <div className="bg-[var(--surface)] border border-[var(--line)] rounded-lg overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
+            <caption className="sr-only">Goods received</caption>
+            <thead className="border-b border-[var(--line)] text-[var(--muted)] font-semibold uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-4">Receipt #</th>
-                <th className="py-3 px-4">PO Linked</th>
-                <th className="py-3 px-4">Vendor</th>
-                <th className="py-3 px-4">Received Date</th>
-                <th className="py-3 px-4">Items Inspected</th>
-                <th className="py-3 px-4 text-center">Status</th>
+                <th scope="col" className="py-3 px-4">Receipt</th><th scope="col" className="py-3 px-4">Order</th><th scope="col" className="py-3 px-4">Vendor</th>
+                <th scope="col" className="py-3 px-4">Date</th><th scope="col" className="py-3 px-4">Items</th><th scope="col" className="py-3 px-4 text-center">Condition</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100">
+            <tbody className="divide-y divide-[var(--line)]">
+              {goodsReceipts.length === 0 && <tr><td colSpan={6} className="py-8 px-4 text-center text-[var(--muted)]">Nothing received yet.</td></tr>}
               {goodsReceipts.map(gr => (
-                <tr key={gr.id} className="hover:bg-neutral-50/80 transition-colors">
-                  <td className="py-3 px-4 font-mono font-bold text-neutral-900">
-                    {gr.receiptNumber}
-                  </td>
-                  <td className="py-3 px-4 font-mono text-neutral-700">
-                    {gr.poNumber}
-                  </td>
-                  <td className="py-3 px-4 font-medium text-neutral-800">
-                    {gr.vendorName || 'Vendor'}
-                  </td>
-                  <td className="py-3 px-4 text-neutral-600 font-mono">
-                    {formatDate(gr.receivedDate)}
-                  </td>
-                  <td className="py-3 px-4 text-neutral-600">
-                    {gr.items.map(i => `${i.description} (${i.quantityReceived} units)`).join(', ')}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-semibold">
-                      VERIFIED
-                    </span>
-                  </td>
+                <tr key={gr.id}>
+                  <td className="py-3 px-4 font-mono font-bold">{gr.receiptNumber}</td>
+                  <td className="py-3 px-4 font-mono">{gr.poNumber}</td>
+                  <td className="py-3 px-4">{gr.vendorName}</td>
+                  <td className="py-3 px-4 font-mono">{formatDate(gr.receivedDate)}</td>
+                  <td className="py-3 px-4">{gr.items.map(i => `${i.description} (${i.quantityReceived})`).join(', ')}</td>
+                  <td className="py-3 px-4 text-center">{gr.items[0]?.condition || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -459,106 +272,43 @@ export const PurchaseOrdersView: React.FC = () => {
         </div>
       )}
 
-      {/* Create PO Modal */}
       {isCreatingPO && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-xl w-full overflow-hidden border border-neutral-200">
-            <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
-              <h3 className="text-sm font-bold text-neutral-900">Create Purchase Order</h3>
-              <button onClick={() => setIsCreatingPO(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
-                <X className="w-4 h-4" />
-              </button>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-labelledby={`${ids}-new`}>
+          <div className="bg-[var(--surface)] rounded-xl shadow-xl max-w-xl w-full border border-[var(--line)]">
+            <div className="p-4 border-b border-[var(--line)] flex items-center justify-between">
+              <h2 id={`${ids}-new`} className="text-sm font-bold">New purchase order</h2>
+              <button type="button" onClick={() => setIsCreatingPO(false)} className="p-1.5 text-[var(--muted)]" aria-label="Close"><X className="w-4 h-4" aria-hidden="true" /></button>
             </div>
-
             <div className="p-5 space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Vendor / Supplier</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Dell Enterprise Hardware"
-                    value={poVendor}
-                    onChange={e => setPoVendor(e.target.value)}
-                    className="w-full p-2 bg-white border border-neutral-300 rounded-lg"
-                  />
+                  <label htmlFor={`${ids}-vendor`} className="block font-semibold mb-1">Vendor</label>
+                  <select id={`${ids}-vendor`} value={poVendorId} onChange={e => setPoVendorId(e.target.value)} className={inputClass}>
+                    <option value="">Choose a vendor…</option>
+                    {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                  </select>
+                  {vendors.length === 0 && <p className="mt-1 text-[var(--muted)]">Add the vendor in Purchases first.</p>}
                 </div>
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Expected Delivery Date</label>
-                  <input
-                    type="date"
-                    value={poExpectedDate}
-                    onChange={e => setPoExpectedDate(e.target.value)}
-                    className="w-full p-2 bg-white border border-neutral-300 rounded-lg"
-                  />
+                  <label htmlFor={`${ids}-expected`} className="block font-semibold mb-1">Expected delivery</label>
+                  <input id={`${ids}-expected`} type="date" value={poExpectedDate} onChange={e => setPoExpectedDate(e.target.value)} className={inputClass} />
                 </div>
               </div>
-
-              {/* Items */}
-              <div className="space-y-2">
-                <label className="block font-semibold text-neutral-700">Line Items</label>
-                {poItems.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-6 gap-2">
-                    <input
-                      type="text"
-                      placeholder="Item description"
-                      value={item.desc}
-                      onChange={e => {
-                        const updated = [...poItems];
-                        updated[idx].desc = e.target.value;
-                        setPoItems(updated);
-                      }}
-                      className="col-span-3 p-2 bg-white border border-neutral-300 rounded-lg"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Qty"
-                      value={item.qty}
-                      onChange={e => {
-                        const updated = [...poItems];
-                        updated[idx].qty = e.target.value;
-                        setPoItems(updated);
-                      }}
-                      className="col-span-1 p-2 bg-white border border-neutral-300 rounded-lg text-center"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Unit Price ($)"
-                      value={item.unitPrice}
-                      onChange={e => {
-                        const updated = [...poItems];
-                        updated[idx].unitPrice = e.target.value;
-                        setPoItems(updated);
-                      }}
-                      className="col-span-2 p-2 bg-white border border-neutral-300 rounded-lg text-right font-mono"
-                    />
+              <fieldset className="space-y-2">
+                <legend className="font-semibold">Items</legend>
+                {poItems.map((line, n) => (
+                  <div key={line.key} className="grid grid-cols-6 gap-2">
+                    <input aria-label={`Item ${n + 1} description`} placeholder="Description" value={line.desc} onChange={e => setLine(line.key, 'desc', e.target.value)} className={`${inputClass} col-span-3`} />
+                    <input aria-label={`Item ${n + 1} quantity`} type="number" min="0" step="any" value={line.qty} onChange={e => setLine(line.key, 'qty', e.target.value)} className={`${inputClass} col-span-1 text-center`} />
+                    <input aria-label={`Item ${n + 1} unit price`} type="number" min="0" step="0.01" placeholder="Unit price" value={line.unitPrice} onChange={e => setLine(line.key, 'unitPrice', e.target.value)} className={`${inputClass} col-span-2 text-right font-mono`} />
                   </div>
                 ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setPoItems([...poItems, { desc: '', qty: '1', unitPrice: '' }])}
-                className="text-xs text-neutral-700 hover:text-neutral-900 font-semibold flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add Item Line
-              </button>
-
+              </fieldset>
+              <button type="button" onClick={() => setPoItems(lines => [...lines, newLine()])} className="font-semibold flex items-center gap-1"><Plus className="w-3.5 h-3.5" aria-hidden="true" /> Add item</button>
               <div className="pt-3 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCreatingPO(false)}
-                  className="px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 rounded-lg"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSavePO}
-                  className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  Issue Purchase Order
+                <button type="button" onClick={() => setIsCreatingPO(false)} className="px-4 py-2 font-semibold border border-[var(--line)] rounded-lg">Cancel</button>
+                <button type="button" disabled={saving} onClick={handleSavePO} className="px-4 py-2 font-semibold bg-[var(--brass)] text-black rounded-lg flex items-center gap-1.5 disabled:opacity-50">
+                  <Check className="w-3.5 h-3.5" aria-hidden="true" /> Save purchase order
                 </button>
               </div>
             </div>
@@ -566,67 +316,52 @@ export const PurchaseOrdersView: React.FC = () => {
         </div>
       )}
 
-      {/* Goods Receipt Modal */}
       {receivingPO && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden border border-neutral-200">
-            <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
-              <h3 className="text-sm font-bold text-neutral-900">Record Goods Receipt ({receivingPO.poNumber})</h3>
-              <button onClick={() => setReceivingPO(null)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
-                <X className="w-4 h-4" />
-              </button>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-labelledby={`${ids}-receive`}>
+          <div className="bg-[var(--surface)] rounded-xl shadow-xl max-w-md w-full border border-[var(--line)]">
+            <div className="p-4 border-b border-[var(--line)] flex items-center justify-between">
+              <h2 id={`${ids}-receive`} className="text-sm font-bold">Goods received for {receivingPO.poNumber}</h2>
+              <button type="button" onClick={() => setReceivingPO(null)} className="p-1.5 text-[var(--muted)]" aria-label="Close"><X className="w-4 h-4" aria-hidden="true" /></button>
             </div>
-
             <div className="p-5 space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">Inspection Condition</label>
-                <select
-                  value={receivedCondition}
-                  onChange={e => setReceivedCondition(e.target.value as any)}
-                  className="w-full p-2 bg-white border border-neutral-300 rounded-lg"
-                >
-                  <option value="good">Good Condition (Accept All)</option>
-                  <option value="damaged">Damaged Goods (Flag Discrepancy)</option>
-                  <option value="rejected">Rejected Delivery</option>
+                <label htmlFor={`${ids}-condition`} className="block font-semibold mb-1">Condition</label>
+                <select id={`${ids}-condition`} value={receivedCondition} onChange={e => setReceivedCondition(e.target.value as typeof receivedCondition)} className={inputClass}>
+                  <option value="good">Good</option>
+                  <option value="damaged">Damaged (flag a difference)</option>
+                  <option value="rejected">Rejected (not counted as received)</option>
                 </select>
               </div>
-
-              <div className="space-y-2">
-                <label className="block font-semibold text-neutral-700">Delivered Quantities</label>
+              <fieldset className="space-y-2">
+                <legend className="font-semibold">Quantities delivered now</legend>
                 {receivingPO.items.map(item => (
-                  <div key={item.id} className="flex items-center justify-between p-2 bg-neutral-50 rounded-lg border border-neutral-200">
-                    <span className="font-medium text-neutral-800">{item.description}</span>
-                    <input
-                      type="number"
-                      value={receivedQuantities[item.id] ?? item.quantity}
-                      onChange={e => setReceivedQuantities({ ...receivedQuantities, [item.id]: parseFloat(e.target.value) || 0 })}
-                      className="w-16 p-1 bg-white border border-neutral-300 rounded-md text-center"
-                    />
+                  <div key={item.id} className="flex items-center justify-between gap-2 p-2 rounded-lg border border-[var(--line)]">
+                    <label htmlFor={`${ids}-q-${item.id}`}>{item.description} <span className="text-[var(--muted)]">({item.receivedQuantity || 0} of {item.quantity} so far)</span></label>
+                    <input id={`${ids}-q-${item.id}`} type="number" min="0" step="any" value={receivedQuantities[item.id] ?? 0}
+                      onChange={e => setReceivedQuantities({ ...receivedQuantities, [item.id]: Number(e.target.value) || 0 })}
+                      className="w-20 p-1 bg-[var(--panel)] border border-[var(--line)] rounded-md text-center" />
                   </div>
                 ))}
-              </div>
-
+              </fieldset>
               <div className="pt-3 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setReceivingPO(null)}
-                  className="px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 rounded-lg"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveGoodsReceipt}
-                  className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  Save Goods Receipt
+                <button type="button" onClick={() => setReceivingPO(null)} className="px-4 py-2 font-semibold border border-[var(--line)] rounded-lg">Cancel</button>
+                <button type="button" disabled={saving} onClick={handleSaveGoodsReceipt} className="px-4 py-2 font-semibold bg-[var(--brass)] text-black rounded-lg flex items-center gap-1.5 disabled:opacity-50">
+                  <Check className="w-3.5 h-3.5" aria-hidden="true" /> Save
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      <BillModal
+        isOpen={!!billingPO}
+        onClose={() => setBillingPO(null)}
+        onSave={handleBillSaved}
+        vendors={vendors}
+        accounts={accounts}
+        initialBill={billFromOrder}
+      />
     </div>
   );
 };

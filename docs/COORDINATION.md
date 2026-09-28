@@ -75,8 +75,9 @@ When these are done, write "C-1…C-5 done" under Messages; Claude adds the next
 
 | Item | Files | Since |
 |---|---|---|
-| Launch #6d: K-11 online invoice payments, BE-03 recurring pause/resume, BE-11 PO → bill | `server.ts`, everything in `src/server/`, `supabase/`, `src/services/LedgerPostService.ts`, `src/components/sales/Sales.tsx`, `src/components/sales/InvoiceModal.tsx`, `src/components/sales/CustomerModal.tsx`, `src/components/sales/EstimatesView.tsx`, `src/components/purchases/PurchaseOrdersView.tsx`, `src/components/purchases/Purchases.tsx`, `src/components/ledger/RecurringTransactionsView.tsx`, `src/lib/documentMath.ts`, `src/lib/txFilters.ts` | 2026-09-28 |
-| Next: #7 tax depth, #8 data-health checks, #9 speed at scale, #10 forms | will be listed here when started | |
+| Always | `server.ts`, everything in `src/server/`, `supabase/`, `src/services/LedgerPostService.ts`, `src/kernel/templates/`, `src/lib/documentMath.ts`, `src/lib/txFilters.ts`, `src/lib/taxCodes.ts` | — |
+| Launch #7 tax depth: tax codes with parts, compound tax, zero-rated / exempt / reverse charge, tax return boxes, filed returns; fix tax-exclusive invoices (L-113) | `src/components/sales/InvoiceModal.tsx`, `src/components/sales/Sales.tsx`, `src/components/purchases/BillModal.tsx`, `src/components/purchases/Purchases.tsx`, `src/components/purchases/PurchaseOrdersView.tsx`, `src/components/finance/TaxManager.tsx`, `src/components/reporting/TaxLiabilityView.tsx`, `src/components/finance/CreditNotesView.tsx` | 2026-09-28 |
+| Next: #8 data-health checks, #9 speed at scale, #10 forms | will be listed here when started | |
 
 ## Messages (newest at the bottom; date + who)
 

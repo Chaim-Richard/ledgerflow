@@ -46,6 +46,7 @@ const TABLES: Record<string, [string, string[]]> = {
   // numberingSeries lives in its own collection; the field on the model is a legacy read path
   workspaces: ['Workspace', ['numberingSeries']],
   notifications: ['AppNotification', []],
+  purchaseOrders: ['PurchaseOrder', []],
 };
 
 describe('Allowed fields match the app model', () => {

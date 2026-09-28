@@ -39,8 +39,16 @@ Last updated: 2026-09-28.
    also add `EMAIL_WEBHOOK_SECRET` (any long random text) and in the provider's webhook settings
    use `https://ledgerflow-one-pearl.vercel.app/api/v1/email-events?token=<that secret>`.
    *Until then, "Email invoice" says email is not set up yet.*
-8. **Optional keys** for features that say "not set up yet": Stripe (billing), currency rates,
-   tax. Tell Claude which ones you want.
+8. **Stripe (customers pay invoices online by card) — 2 steps left.** Claude connected your Stripe
+   *sandbox* ("terranex sandbox", test mode: no real money): the webhook that tells LedgerFlow an
+   invoice was paid exists and its secret is saved in Vercel (`STRIPE_WEBHOOK_SECRET`).
+   Stripe never shows secret keys to Claude, so you copy two keys: Stripe dashboard (sandbox) →
+   Developers → API keys. In Vercel → Environment Variables set `STRIPE_SECRET_KEY` = the
+   **Secret key** (`sk_test_…`) and `VITE_STRIPE_PUBLIC_KEY` = the **Publishable key** (`pk_test_…`).
+   Payments reach LedgerFlow only once item 4 (deployment protection) is off. Later, for real
+   money, the same with the live keys. Other optional keys (currency rates, tax): tell Claude
+   which ones you want. Plaid (bank feeds): Claude has no Plaid connection; the `PLAID_*` values
+   in Vercel must come from your Plaid dashboard (use the sandbox first).
 9. **Old settings to delete** in Vercel (unused since the move to Supabase): `FIREBASE_PROJECT_ID`,
    `SQL_*`, `JWT_SECRET`.
 

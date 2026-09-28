@@ -1,3 +1,4 @@
+import { notify } from '../services/notificationService';
 import express from 'express';
 import type { DecodedIdToken } from '../auth/supabaseAuth';
 import { z } from 'zod';
@@ -256,7 +257,6 @@ workspaceRouter.all('/:workspaceId/next-number', (req, res) => {
   return sendError(res, 'Method Not Allowed: allocate next document number must be called via POST.', 405);
 });
 
-import { notify } from '../services/notificationService';
 import { generateInviteToken } from '../../lib/inviteManager';
 
 export function countWorkspaceOwners(workspaceData: any): { count: number; ownerUids: string[] } {

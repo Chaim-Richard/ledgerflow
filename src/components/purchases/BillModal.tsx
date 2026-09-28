@@ -18,9 +18,11 @@ interface BillModalProps {
   onSave: (bill: Partial<Bill>) => void;
   vendors: Vendor[];
   accounts: ChartAccount[];
+  /** Pre-filled bill, e.g. from a purchase order (BE-11). */
+  initialBill?: Partial<Bill>;
 }
 
-export default function BillModal({ isOpen, onClose, onSave, vendors = [], accounts = [] }: BillModalProps) {
+export default function BillModal({ isOpen, onClose, onSave, vendors = [], accounts = [], initialBill }: BillModalProps) {
   // Ensure we have arrays even if props were passed as null
   const safeVendors = Array.isArray(vendors) ? vendors : [];
   const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'expense' || a?.type === 'cost_of_goods' || a?.type === 'asset') : [];
@@ -72,6 +74,15 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
   const [memo, setMemo] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
+
+  const [filledFrom, setFilledFrom] = useState<Partial<Bill> | undefined>(undefined);
+  if (isOpen && initialBill && initialBill !== filledFrom) {
+    // copy the pre-filled bill into the form once per opening (adjusting state during render)
+    setFilledFrom(initialBill);
+    const { splits: initialSplits, ...fields } = initialBill;
+    setBill(prev => ({ ...prev, ...fields }));
+    if (initialSplits?.length) setSplits(initialSplits.map(s => ({ id: crypto.randomUUID(), amountCents: s.amountCents, accountId: s.accountId || '', description: s.description || '' })));
+  }
 
   const total = splits.reduce((sum, split) => sum + split.amountCents, 0);
 
@@ -163,6 +174,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
       amountCents: total,
       splits,
       metadata: {
+        ...(bill.metadata || {}),
         memo,
         hasAttachments: attachments.length > 0
       }
