@@ -48,6 +48,7 @@ then the 488 LATER items. Claude works through them in that order and ticks them
 | Bulk import | K-01 (= M-18 BK-01 BK-05 BK-06 CA-11): Settings → Import Data — customers, vendors, items, accounts from CSV/Excel; columns matched by name; every row checked, all or nothing; duplicates skipped; items' opening stock posted; undo keeps records already in use (12 tests) |
 | Period close 1 | R-01 R-02 R-03 R-08 R-10 BA-15: one lock rule (hard close, soft close for bookkeepers, partial unlock) in database + server + screens; close / reopen (reason; owner for hard) / unlock only through the server, audited; checklist with sign-offs; drafts block the close. Fixed: the close screen never loaded invoices/bills/bank lines; a lock on the 28th closed the month; "clear lock date" only changed the screen; bookkeepers could close months (11 tests) |
 | Notifications | S-01 S-03 S-04 S-06 S-14 S-19 + bounces: real notifications from the server (one per person, stored in the database, live bell): invoice emailed, invoice overdue (daily), customer payment received, email bounced / marked spam, bank connection expired, person invited / joined. Each person marks their own read and chooses which types they get (bell → gear). Only their own are visible (database rules tested). **The old bell showed made-up alerts kept only in the open page** |
+| Tax 2 | T-03 T-06 T-07: the Tax return screen shows 9 boxes in the home currency (tax on sales, reverse-charge tax due, total due, reclaimable, net to pay, sales and purchases excluding tax, zero-rated and exempt sales), sales and purchases by treatment, and "File this return" (owners/accountants) keeps an unchangeable copy on the server; later changes in that period show box by box. Reverse-charge bills post the tax as due and reclaimable. Fixed **L-118** (credit notes never reduced the tax owed) |
 | Tax 1 | T-01 T-02 T-04: tax codes with parts (GST + PST), a part on top of the others (compound), and how the amount is reported (taxed, zero-rated, exempt, reverse charge, out of scope), edited under Taxes. Invoices and bills pick a tax code, prices with or without tax, and show subtotal, discount, each tax part and the total in the document's currency; the PDF too. Fixed **L-113** (tax added on top was never billed), **L-114** (server dropped discount / tax-inclusive / bill currency), **L-115** (every line posted to one account), L-116, L-117 |
 | Recurring + POs | BE-03: recurring schedules can be paused, resumed and deleted; a recurring invoice now becomes a **draft invoice** to check and send (team notified); a recurring entry is posted only with real, balanced accounts, otherwise the schedule shows why. BE-11: purchase orders are saved, goods received are recorded on them, "Create bill" opens the bill filled from the order (received quantities), and the 3-way match compares all three. Fixed **L-111** (recurring invoices wrote blank-account entries with no workspace) and **L-112** (orders were never saved) |
 | Online payments | K-11: the emailed invoice link lets the customer pay by card; Stripe's confirmation becomes a real payment (payment record, invoice paid, one ledger entry in the home currency into a "Stripe Clearing" account, team notified); replays ignored; overpayment stays as a credit. Fixed **L-109** (the old handler guessed accounts and kept no payment record) and **L-110** (payments on foreign-currency invoices were booked unconverted) |
@@ -1661,6 +1662,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-115 **Invoices and bills ignored the account chosen on each line** (everything went to one income / expense account); now each line's account gets its share (tested)
 - [x] L-116 Editing an existing invoice gave it a new number and wiped its stored details (email history, reminder counters)
 - [x] L-117 Invoice PDF always showed "$" and no tax or discount lines
+- [x] L-118 **Credit notes carried no tax**: crediting a taxed sale never reduced the tax owed (or a vendor credit the input tax); credits for a document now take its share of tax, currency and rate (tested)
+- [ ] L-119 Later: the old sales-tax report function (`computeTaxLiability`, server /reports) adds document-currency amounts; the Tax return screen uses the home-currency return. Retire it once nothing calls it.
 - [x] L-105 Foreign-currency documents converted twice in the ledger (amounts converted, then the rate applied again); fixed, test proves it; old entries: Month-End Close → Repost
 - [x] L-104 Bad debt write-off counted the loss twice (voided the sale and booked the expense); FX ignored
 - [x] L-103 Fixed Asset Register saved nothing (assets + depreciation only in the page); now saved + server run
@@ -1820,12 +1823,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] T-01 Compound tax (a part charged on top of the others; tested)
 - [x] T-02 Tax groups (a tax code with several parts, e.g. GST + PST; tested)
-- [ ] T-03 Reverse charge
+- [x] T-03 Reverse charge (bill carries no tax; posted as due and reclaimable; boxes 2 and 4; tested)
 - [x] T-04 Zero-rated vs exempt (treatment on the tax code; reported separately in the return)
 - [ ] T-05 Party exemption certificates
-- [ ] T-06 VAT return boxes
-- [ ] T-07 Filed-return snapshot
-- [ ] T-08 Late-claim handling
+- [x] T-06 Tax return boxes (generic 9-box layout, home currency, credits included; tested)
+- [x] T-07 Filed-return copy (server keeps it, once per period, owners/accountants; tested)
+- [~] T-08 Late changes: changes after filing are shown box by box with the difference to report; carrying them into the next return automatically is later
 - [ ] T-09 MTD / HMRC (UK only)
 - [ ] T-10 EC Sales List (EU only)
 - [ ] T-11 Intrastat (EU only)

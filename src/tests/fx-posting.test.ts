@@ -9,6 +9,7 @@ import { lineAmount } from '../lib/txFilters';
 import { makeBill, makeChartAccount, makeInvoice, makeTransaction } from './fixtures';
 import { findPostingMismatches } from '../lib/postingCheck';
 import { allocateCents } from '../kernel/templates/TransactionTemplates';
+import { creditTaxFrom } from '../lib/taxCodes';
 import type { Invoice, Transaction, Workspace } from '../types';
 
 type Posted = Transaction & { metadata?: Record<string, unknown> };
@@ -122,6 +123,36 @@ describe('Foreign-currency postings', () => {
     }, 'w1', 'u1', undefined, withSecondAccounts());
     const lines = byAccount(sent[0][0]);
     assert.deepEqual([lines.rent, lines.exp, lines.ap], [3000, 1000, -4000]);
+  });
+
+  test('reverse charge: the bill has no tax, but the tax is posted as due and as reclaimable', async () => {
+    sent.length = 0;
+    await LedgerPostService.postBillLedger('b3', {
+      number: 'B-3', vendorId: 'v1', vendorName: 'Overseas Software', date: '2026-03-10', dueDate: '2026-04-10', status: 'pending',
+      amountCents: 2000, taxInclusive: true, taxVersion: 2, taxTreatment: 'reverse_charge', selfAssessedTaxCents: 400,
+      splits: [{ accountId: 'exp', amountCents: 2000 }],
+    }, 'w1', 'u1', undefined, withSecondAccounts());
+    const [tx] = sent[0];
+    assert.equal(byAccount(tx).ap, -2000, 'the vendor is owed only the bill');
+    assert.equal(byAccount(tx).exp, 2000);
+    const rc = tx.lines.filter(l => /Reverse-charge/.test(String(l.description)));
+    assert.deepEqual(rc.map(l => l.amountCents).sort((a, b) => a - b), [-400, 400]);
+    assert.equal(tx.lines.reduce((s, l) => s + lineAmount(l, tx), 0), 0);
+  });
+
+  test('L-118: a credit for half of a taxed invoice reverses half the tax; a vendor credit its input tax', async () => {
+    sent.length = 0;
+    // invoice 120.00 including 20.00 tax; a credit of 60.00 carries 10.00 tax
+    const credit = { amountCents: 6000, ...creditTaxFrom(6000, { amountCents: 12000, taxAmountCents: 2000, taxInclusive: true, taxVersion: 2 }) };
+    assert.equal(credit.taxAmountCents, 1000);
+    await LedgerPostService.postCreditNoteLedger('cn2', { number: 'CN-2', customerId: 'c1', customerName: 'Acme', date: '2026-03-10', status: 'open', remainingCents: 6000, ...credit }, 'w1', 'u1', undefined, context());
+    const cn = byAccount(sent[0][0]);
+    assert.deepEqual([cn.ar, cn.tax], [-6000, 1000]);
+    assert.equal(cn.rev ?? cn.ret, 5000);
+    // an older invoice with tax on top (100.00 + 20% = 20.00 tax): a full credit of 120.00 carries 20.00
+    assert.equal(creditTaxFrom(12000, { amountCents: 10000, taxRate: 20 }).taxAmountCents, 2000);
+    // no tax on the document: none on the credit
+    assert.equal(creditTaxFrom(5000, { amountCents: 5000 }).taxAmountCents, 0);
   });
 
   test('splitting an amount by weights adds up exactly', () => {

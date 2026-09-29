@@ -14,7 +14,8 @@
  * All money is integer cents; the return is in the home currency (amount × the document's rate).
  */
 
-import { netFromGross } from './documentMath';
+import { calculateDocumentNet, calculateDocumentTax, netFromGross } from './documentMath';
+import type { DocumentTaxInput } from './documentMath';
 
 export type TaxTreatment = 'standard' | 'zero_rated' | 'exempt' | 'reverse_charge' | 'out_of_scope';
 
@@ -133,6 +134,23 @@ export function documentTotals(linesCents: number, discountCents: number, code: 
   return { ...tax, subtotalCents: subtotal, discountCents: discount, amountCents: pricesIncludeTax ? base : base + tax.taxCents };
 }
 
+/**
+ * The tax inside a credit for part (or all) of a document (L-118): the document's share of tax,
+ * so crediting a taxed sale also reduces the tax owed. Works for old and new documents (the
+ * total including tax is net + tax by the shared money rules).
+ */
+export function creditTaxFrom(creditCents: number, doc: DocumentTaxInput & { taxTreatment?: TaxTreatment }) {
+  const tax = calculateDocumentTax(doc);
+  const gross = calculateDocumentNet(doc) + tax;
+  const taxAmountCents = gross > 0 && tax > 0 ? Math.round((Math.max(0, creditCents) * tax) / gross) : 0;
+  return {
+    taxAmountCents,
+    taxInclusive: true,
+    taxVersion: 2 as const,
+    taxTreatment: doc.taxTreatment || (tax > 0 ? 'standard' as const : undefined),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // The tax return
 // ---------------------------------------------------------------------------
@@ -163,8 +181,8 @@ export interface TaxReturn {
   documentCount: number;
 }
 
-const COUNTED_SALES = new Set(['sent', 'pending', 'approved', 'paid', 'partially_paid', 'overdue', 'issued', 'applied', 'open']);
-const COUNTED_PURCHASES = new Set(['pending', 'approved', 'paid', 'partially_paid', 'overdue', 'unpaid', 'issued', 'applied', 'open']);
+const COUNTED_SALES = new Set(['sent', 'pending', 'approved', 'paid', 'partially_paid', 'overdue', 'issued', 'applied', 'partially_applied', 'open']);
+const COUNTED_PURCHASES = new Set(['pending', 'approved', 'paid', 'partially_paid', 'overdue', 'unpaid', 'issued', 'applied', 'partially_applied', 'open']);
 
 const emptyTotals = (): Record<TaxTreatment, { netCents: number; taxCents: number }> => ({
   standard: { netCents: 0, taxCents: 0 }, zero_rated: { netCents: 0, taxCents: 0 }, exempt: { netCents: 0, taxCents: 0 },

@@ -466,6 +466,11 @@ export interface CreditNote {
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt?: string;
+  /** The tax part of amountCents, from the credited invoice (taxCodes.ts creditTaxFrom). */
+  taxAmountCents?: number;
+  taxInclusive?: boolean;
+  taxVersion?: number;
+  taxTreatment?: TaxTreatment;
 }
 
 export interface VendorCredit {
@@ -487,6 +492,11 @@ export interface VendorCredit {
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt?: string;
+  /** The tax part of amountCents, from the credited bill (taxCodes.ts creditTaxFrom). */
+  taxAmountCents?: number;
+  taxInclusive?: boolean;
+  taxVersion?: number;
+  taxTreatment?: TaxTreatment;
 }
 
 export interface Customer {

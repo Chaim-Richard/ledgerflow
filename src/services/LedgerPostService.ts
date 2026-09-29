@@ -499,6 +499,22 @@ export class LedgerPostService {
       lineAccounts: this.lineAccounts(billData.splits, accounts, expenseAccount, a => !['cash', 'ar', 'ap'].includes(resolveAccountRole(a)))
     });
 
+    // Reverse charge (T-03): the vendor charged no tax; the business owes it and reclaims it,
+    // so the same amount goes to input tax (reclaimable) and to tax payable (due)
+    const selfAssessed = roundCents((billData.selfAssessedTaxCents || 0) * rate);
+    if (selfAssessed > 0) {
+      const outputTaxAccount = this.findAccount(
+        accounts,
+        mappings,
+        ['tax payable', 'sales tax', 'tax liability'],
+        a => a.type === 'liability' && (a.name.toLowerCase().includes('tax') || a.category === 'Taxes')
+      ) || taxAccount;
+      accrualLines.push(
+        { accountId: taxAccount.id, accountName: taxAccount.name, amountCents: selfAssessed, description: `Reverse-charge tax reclaimable on Bill ${billNum}`, exchangeRate: rate },
+        { accountId: outputTaxAccount.id, accountName: outputTaxAccount.name, amountCents: -selfAssessed, description: `Reverse-charge tax due on Bill ${billNum}`, exchangeRate: rate }
+      );
+    }
+
     const accrualTx = {
       uid,
       workspaceId,
@@ -646,6 +662,15 @@ export class LedgerPostService {
     const rate = creditNoteData.exchangeRate || 1;
     const amount = roundCents(rawAmount * rate);
     if (amount <= 0) return;
+    // The credited invoice's share of tax comes off tax payable too (L-118)
+    const cnTax = creditNoteData.taxVersion === 2 ? Math.min(amount, roundCents((creditNoteData.taxAmountCents || 0) * rate)) : 0;
+    const cnTaxAccount = cnTax > 0 ? this.resolveAccount(
+      accounts,
+      mappings,
+      ['tax payable', 'sales tax', 'tax liability', 'tax'],
+      a => a.type === 'liability' && (a.name.toLowerCase().includes('tax') || a.category === 'Taxes'),
+      'Sales Tax Payable'
+    ) : null;
 
     const cnTx = {
       uid,
@@ -664,7 +689,8 @@ export class LedgerPostService {
         type: 'credit-note-issuance'
       },
       lines: [
-        { accountId: salesReturnAccount.id, accountName: salesReturnAccount.name, amountCents: amount, debitCents: amount, creditCents: 0, description: 'Sales Return / Discount' },
+        { accountId: salesReturnAccount.id, accountName: salesReturnAccount.name, amountCents: amount - cnTax, debitCents: amount - cnTax, creditCents: 0, description: 'Sales Return / Discount' },
+        ...(cnTax > 0 && cnTaxAccount ? [{ accountId: cnTaxAccount.id, accountName: cnTaxAccount.name, amountCents: cnTax, debitCents: cnTax, creditCents: 0, description: 'Sales tax reversed by the credit' }] : []),
         { accountId: arAccount.id, accountName: arAccount.name, amountCents: -amount, debitCents: 0, creditCents: amount, description: 'Accounts Receivable Credit' }
       ]
     };
@@ -760,6 +786,15 @@ export class LedgerPostService {
     const rate = vendorCreditData.exchangeRate || 1;
     const amount = roundCents(rawAmount * rate);
     if (amount <= 0) return;
+    // The credited bill's share of input tax is no longer reclaimable (L-118)
+    const vcTax = vendorCreditData.taxVersion === 2 ? Math.min(amount, roundCents((vendorCreditData.taxAmountCents || 0) * rate)) : 0;
+    const vcTaxAccount = vcTax > 0 ? this.resolveAccount(
+      accounts,
+      mappings,
+      ['tax paid', 'input tax', 'tax asset', 'tax', 'tax expense'],
+      a => (a.type === 'asset' || a.type === 'expense' || a.type === 'liability') && a.name.toLowerCase().includes('tax'),
+      'Tax Paid'
+    ) : null;
 
     const vcTx = {
       uid,
@@ -779,7 +814,8 @@ export class LedgerPostService {
       },
       lines: [
         { accountId: apAccount.id, accountName: apAccount.name, amountCents: amount, debitCents: amount, creditCents: 0, description: 'Accounts Payable Reduction' },
-        { accountId: expenseAccount.id, accountName: expenseAccount.name, amountCents: -amount, debitCents: 0, creditCents: amount, description: 'Purchase Rebate / Expense Discount' }
+        { accountId: expenseAccount.id, accountName: expenseAccount.name, amountCents: -(amount - vcTax), debitCents: 0, creditCents: amount - vcTax, description: 'Purchase Rebate / Expense Discount' },
+        ...(vcTax > 0 && vcTaxAccount ? [{ accountId: vcTaxAccount.id, accountName: vcTaxAccount.name, amountCents: -vcTax, debitCents: 0, creditCents: vcTax, description: 'Input tax reversed by the credit' }] : [])
       ]
     };
     txsToPost.push(this.inBaseCurrency(vcTx, workspaceId, context));

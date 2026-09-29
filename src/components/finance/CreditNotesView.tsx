@@ -25,6 +25,7 @@ import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { toast } from 'sonner';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { creditTaxFrom } from '../../lib/taxCodes';
 
 export default function CreditNotesView() {
   const [activeTab, setActiveTab] = useState<'customer' | 'vendor'>('customer');
@@ -36,7 +37,10 @@ export default function CreditNotesView() {
   const vendors = useLedgerStore(s => s.vendors);
   const creditNotes = useLedgerStore(s => s.creditNotes || []);
   const vendorCredits = useLedgerStore(s => s.vendorCredits || []);
-  
+  const invoices = useLedgerStore(s => s.invoices || []);
+  const bills = useLedgerStore(s => s.bills || []);
+  const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
+
   const { addEntity } = useEntityOperations();
   const [creditAction, setCreditAction] = useState<CreditActionTarget | null>(null);
   const usable = (c: CreditNote | VendorCredit) => (c.status === 'open' || c.status === 'partially_applied') && (c.remainingCents ?? c.amountCents) > 0;
@@ -63,6 +67,8 @@ export default function CreditNotesView() {
     }
 
     const customer = customers.find(c => c.id === customerId);
+    // A credit for an invoice is in its currency and reverses its share of the tax (L-118)
+    const invoice = invoiceId ? invoices.find(i => i.id === invoiceId) : undefined;
     const newCreditNote: Partial<CreditNote> = {
       customerId,
       customerName: customer?.name || 'Customer',
@@ -73,7 +79,9 @@ export default function CreditNotesView() {
       date: dateStr,
       reason: reason || 'Customer Refund / Return Credit',
       status: 'open',
-      currency: 'USD'
+      currency: invoice?.currency || workspaceCurrency,
+      ...(invoice?.exchangeRate ? { exchangeRate: invoice.exchangeRate } : {}),
+      ...(invoice ? creditTaxFrom(amountCents, invoice) : {}),
     };
 
     await addEntity('creditNotes', newCreditNote, `Credit Note ${newCreditNote.number} issued successfully!`);
@@ -93,6 +101,7 @@ export default function CreditNotesView() {
     }
 
     const vendor = vendors.find(v => v.id === vendorId);
+    const bill = billId ? bills.find(b => b.id === billId) : undefined;
     const newVendorCredit: Partial<VendorCredit> = {
       vendorId,
       vendorName: vendor?.name || 'Vendor',
@@ -103,7 +112,9 @@ export default function CreditNotesView() {
       date: dateStr,
       reason: reason || 'Vendor Rebate / Supplier Credit',
       status: 'open',
-      currency: 'USD'
+      currency: bill?.currency || workspaceCurrency,
+      ...(bill?.exchangeRate ? { exchangeRate: bill.exchangeRate } : {}),
+      ...(bill ? creditTaxFrom(amountCents, bill) : {}),
     };
 
     await addEntity('vendorCredits', newVendorCredit, `Vendor Credit ${newVendorCredit.number} logged successfully!`);

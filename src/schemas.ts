@@ -224,6 +224,14 @@ const documentTaxFields = {
   pricesIncludeTax: z.boolean().optional(),
 };
 
+/** A credit note / vendor credit carries the tax of the document it credits (L-118). */
+const creditTaxFields = {
+  taxAmountCents: z.number().int().nonnegative().optional(),
+  taxInclusive: z.boolean().optional(),
+  taxVersion: z.literal(2).optional(),
+  taxTreatment: documentTaxFields.taxTreatment,
+};
+
 export const InvoiceSchema = z.object({
   id: z.string().optional(),
   uid: z.string().optional(),
@@ -473,6 +481,7 @@ export const CreditNoteSchema = z.object({
   exchangeRate: z.number().positive().finite().optional(),
   tags: z.array(z.string()).optional(),
   metadata: z.record(z.string(), z.any()).optional(),
+  ...creditTaxFields,
 });
 
 export const VendorCreditSchema = z.object({
@@ -492,6 +501,7 @@ export const VendorCreditSchema = z.object({
   exchangeRate: z.number().positive().finite().optional(),
   tags: z.array(z.string()).optional(),
   metadata: z.record(z.string(), z.any()).optional(),
+  ...creditTaxFields,
 });
 
 export const AutoRuleConditionSchema = z.object({

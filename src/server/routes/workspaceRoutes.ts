@@ -13,6 +13,7 @@ import { IMPORT_KINDS, MAX_IMPORT_ROWS } from '../../lib/recordImport';
 import { periodRouter } from './periodRoutes';
 import { badDebtRouter } from './badDebtRoutes';
 import { emailRouter } from './emailRoutes';
+import { taxRouter } from './taxRoutes';
 
 export const workspaceRouter = express.Router();
 
@@ -189,6 +190,8 @@ workspaceRouter.post('/:workspaceId/import-maps', requireWorkspaceRole(['owner',
 workspaceRouter.use('/:workspaceId/periods', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), periodRouter);
 // Emails to customers and their send log (src/server/routes/emailRoutes.ts)
 workspaceRouter.use('/:workspaceId/emails', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), emailRouter);
+// Tax returns: members see them; filing checks owner/accountant in taxReturnService.ts
+workspaceRouter.use('/:workspaceId/tax-returns', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), taxRouter);
 // Bad debt write-off and its reversal (src/server/routes/badDebtRoutes.ts)
 workspaceRouter.use('/:workspaceId/invoices', requireWorkspaceRole(['owner', 'accountant']), badDebtRouter);
 
