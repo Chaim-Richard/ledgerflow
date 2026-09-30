@@ -41,8 +41,10 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     amountCents: 0
   }));
 
+  const editingExisting = Boolean(initialBill?.id);
   useEffect(() => {
-    if (isOpen) {
+    // an existing bill keeps its number; only a new one gets the next number in the series
+    if (isOpen && !editingExisting) {
       const fetchNextNumber = async () => {
         try {
           const wsId = useAuthStore.getState().currentWorkspaceId;
@@ -68,7 +70,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
       };
       fetchNextNumber();
     }
-  }, [isOpen]);
+  }, [isOpen, editingExisting]);
 
   const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string }>>([
     { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }

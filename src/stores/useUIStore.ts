@@ -1,8 +1,16 @@
 import { create } from 'zustand';
 import { AppTab } from '../types';
+import { parseRecordHash, recordHash } from '../lib/recordLinks';
+import type { RecordRef } from '../lib/recordLinks';
+
+const initialHash = typeof window !== 'undefined' ? parseRecordHash(window.location.hash) : { tab: '' };
 
 interface UIState {
   activeTab: AppTab;
+  /** The record a link (`#sales/invoice/<id>`) points to; its screen highlights and opens it (Z-32). */
+  focusRecord: RecordRef | null;
+  openRecord: (record: RecordRef) => void;
+  clearFocusRecord: () => void;
   isSidebarOpen: boolean;
   isCompactMode: boolean;
   isProMode: boolean;
@@ -107,8 +115,14 @@ interface UIState {
 }
 
 export const useUIStore = create<UIState>((set) => ({
-  activeTab: (typeof window !== 'undefined' && window.location.hash) ? 
-    (window.location.hash.slice(1) as AppTab) : 'dashboard',
+  activeTab: (initialHash.tab || 'dashboard') as AppTab,
+  focusRecord: initialHash.record || null,
+  openRecord: (record) => {
+    const { tab } = parseRecordHash(recordHash(record));
+    if (typeof window !== 'undefined') window.location.hash = recordHash(record);
+    set({ activeTab: tab as AppTab, focusRecord: record });
+  },
+  clearFocusRecord: () => set({ focusRecord: null }),
   isSidebarOpen: true,
   isCompactMode: false,
   isProMode: false,
@@ -299,7 +313,7 @@ export const useUIStore = create<UIState>((set) => ({
     if (typeof window !== 'undefined' && window.location.hash !== `#${activeTab}`) {
       window.location.hash = activeTab;
     }
-    set({ activeTab });
+    set({ activeTab, focusRecord: null });
   },
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
   setSidebarOpen: (isSidebarOpen) => set({ isSidebarOpen }),
@@ -405,9 +419,10 @@ export const useUIStore = create<UIState>((set) => ({
 
 if (typeof window !== 'undefined') {
   window.addEventListener('hashchange', () => {
-    const hash = window.location.hash.slice(1) as AppTab;
-    if (hash && useUIStore.getState().activeTab !== hash) {
-      useUIStore.setState({ activeTab: hash });
+    const { tab, record } = parseRecordHash(window.location.hash);
+    const state = useUIStore.getState();
+    if (tab && (state.activeTab !== tab || record)) {
+      useUIStore.setState({ activeTab: tab as AppTab, focusRecord: record || null });
     }
   });
 

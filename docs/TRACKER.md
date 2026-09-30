@@ -48,6 +48,7 @@ then the 488 LATER items. Claude works through them in that order and ticks them
 | Bulk import | K-01 (= M-18 BK-01 BK-05 BK-06 CA-11): Settings → Import Data — customers, vendors, items, accounts from CSV/Excel; columns matched by name; every row checked, all or nothing; duplicates skipped; items' opening stock posted; undo keeps records already in use (12 tests) |
 | Period close 1 | R-01 R-02 R-03 R-08 R-10 BA-15: one lock rule (hard close, soft close for bookkeepers, partial unlock) in database + server + screens; close / reopen (reason; owner for hard) / unlock only through the server, audited; checklist with sign-offs; drafts block the close. Fixed: the close screen never loaded invoices/bills/bank lines; a lock on the 28th closed the month; "clear lock date" only changed the screen; bookkeepers could close months (11 tests) |
 | Notifications | S-01 S-03 S-04 S-06 S-14 S-19 + bounces: real notifications from the server (one per person, stored in the database, live bell): invoice emailed, invoice overdue (daily), customer payment received, email bounced / marked spam, bank connection expired, person invited / joined. Each person marks their own read and chooses which types they get (bell → gear). Only their own are visible (database rules tested). **The old bell showed made-up alerts kept only in the open page** |
+| Data health | Z-07 Z-08 Z-09 Z-10 Z-14 Z-15 Z-32: Data Health now runs 11 checks from one list (`src/lib/dataChecks.ts`): entries that don't balance (with exchange rates), lines on missing accounts, duplicate invoice numbers, the same vendor bill entered twice, future-dated entries, empty invoices or lines without an account, overpaid invoices, foreign documents at rate 1, negative stock, recurring schedules with problems, invoices long overdue; each says what to do and opens the record. **Links to any record** (`#sales/invoice/<id>`) open the screen and highlight it (transactions open directly). Invoices and bills can now be **edited from the lists**. Fixed **L-120** |
 | Tax 2 | T-03 T-06 T-07: the Tax return screen shows 9 boxes in the home currency (tax on sales, reverse-charge tax due, total due, reclaimable, net to pay, sales and purchases excluding tax, zero-rated and exempt sales), sales and purchases by treatment, and "File this return" (owners/accountants) keeps an unchangeable copy on the server; later changes in that period show box by box. Reverse-charge bills post the tax as due and reclaimable. Fixed **L-118** (credit notes never reduced the tax owed) |
 | Tax 1 | T-01 T-02 T-04: tax codes with parts (GST + PST), a part on top of the others (compound), and how the amount is reported (taxed, zero-rated, exempt, reverse charge, out of scope), edited under Taxes. Invoices and bills pick a tax code, prices with or without tax, and show subtotal, discount, each tax part and the total in the document's currency; the PDF too. Fixed **L-113** (tax added on top was never billed), **L-114** (server dropped discount / tax-inclusive / bill currency), **L-115** (every line posted to one account), L-116, L-117 |
 | Recurring + POs | BE-03: recurring schedules can be paused, resumed and deleted; a recurring invoice now becomes a **draft invoice** to check and send (team notified); a recurring entry is posted only with real, balanced accounts, otherwise the schedule shows why. BE-11: purchase orders are saved, goods received are recorded on them, "Create bill" opens the bill filled from the order (received quantities), and the 3-way match compares all three. Fixed **L-111** (recurring invoices wrote blank-account entries with no workspace) and **L-112** (orders were never saved) |
@@ -1664,6 +1665,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-117 Invoice PDF always showed "$" and no tax or discount lines
 - [x] L-118 **Credit notes carried no tax**: crediting a taxed sale never reduced the tax owed (or a vendor credit the input tax); credits for a document now take its share of tax, currency and rate (tested)
 - [ ] L-119 Later: the old sales-tax report function (`computeTaxLiability`, server /reports) adds document-currency amounts; the Tax return screen uses the home-currency return. Retire it once nothing calls it.
+- [x] L-120 **Duplicate invoice** posted a copy at once with the original's payments, write-off and an invalid status; it now opens a new draft with the same customer and lines. Also: invoices and bills couldn't be edited from their lists, and the bill dialog would have renumbered a bill being edited
 - [x] L-105 Foreign-currency documents converted twice in the ledger (amounts converted, then the rate applied again); fixed, test proves it; old entries: Month-End Close → Repost
 - [x] L-104 Bad debt write-off counted the loss twice (voided the sale and booked the expense); FX ignored
 - [x] L-103 Fixed Asset Register saved nothing (assets + depreciation only in the page); now saved + server run
@@ -1933,15 +1935,15 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] Z-04 Sparse fieldsets
 - [ ] Z-05 ETag
 - [ ] Z-06 Client SDK
-- [ ] Z-07 Duplicate invoice number check
-- [ ] Z-08 Duplicate vendor bill ref check
-- [ ] Z-09 Negative inventory check
-- [ ] Z-10 Future-dated posting check
+- [x] Z-07 Duplicate invoice number check
+- [x] Z-08 Duplicate vendor bill ref check
+- [x] Z-09 Negative inventory check
+- [x] Z-10 Future-dated posting check
 - [ ] Z-11 Non-zero suspense check
 - [ ] Z-12 Missing dimension check
 - [ ] Z-13 Stale unreconciled check
-- [ ] Z-14 Empty invoice / accountless line check
-- [ ] Z-15 FX line with no rate check
+- [x] Z-14 Empty invoice / accountless line check
+- [x] Z-15 FX line with no rate check
 - [ ] Z-16 Parent/child entities
 - [ ] Z-17 Currency translation rates
 - [ ] Z-18 CTA account
@@ -1958,7 +1960,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] Z-29 Sync log per integration
 - [ ] Z-30 Disconnect with cleanup
 - [ ] Z-31 Recent items
-- [ ] Z-32 Deep links to any record
+- [x] Z-32 Deep links to any record
 - [ ] Z-33 Grouped search results
 - [ ] Z-34 Web app manifest
 - [ ] Z-35 44px touch targets

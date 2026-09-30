@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Trash2, DollarSign,
-  Eye, Ban, Undo2, Bell, BellOff
+  Eye, Ban, Undo2, Bell, BellOff, Pencil
 } from 'lucide-react';
 import { parseLocalDate, cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { getIdToken } from '../../firebase';
@@ -22,6 +22,7 @@ import { format, differenceInDays } from 'date-fns';
 import { motion } from 'motion/react';
 
 import InvoiceModal from './InvoiceModal';
+import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { EmptyState } from '../ui/EmptyState';
 import CustomerModal from './CustomerModal';
 import { PartyDetailView } from '../common/PartyDetailView';
@@ -138,6 +139,8 @@ export default function Sales() {
   const [emailInvoice, setEmailInvoice] = useState<Invoice | null>(null);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [searchTerm, setSearchTerm] = useState('');
+  // A record link (#sales/invoice/<id>, e.g. from Data Health) shows and highlights the invoice
+  const focusedInvoiceId = useRecordFocus('invoice', { ready: invoices.length > 0, onFocus: () => { setActiveSubTab('invoices'); setSearchTerm(''); } });
 
   // The customer paid after all: reverse the bad debt write-off (server, badDebtService.ts); the
   // invoice is open again for the payment.
@@ -305,7 +308,7 @@ export default function Sales() {
           <p className="text-2xl sm:text-3xl font-mono font-bold text-[var(--text)] tracking-tight relative z-10 tabular-nums">{formatCurrency(agingBuckets.total)}</p>
           <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
              <ShieldCheck size={12} className="text-[var(--brass)]" />
-             Verified System Liability
+             Unpaid invoices, all customers
           </div>
         </motion.div>
       </div>
@@ -316,23 +319,23 @@ export default function Sales() {
             <table className="w-full border-collapse min-w-[700px]">
               <thead>
                 <tr className="text-left border-b border-[var(--line)]/50">
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Liability Node</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Supplier</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Timestamp</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Maturity</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-right">Magnitude</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Number</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Customer</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Date</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Due</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-right">Amount</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">State</th>
                   <th className="p-4 md:p-8 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ledger-line/30">
                 {filteredInvoices.map((inv) => (
-                  <tr key={inv.id} className="group hover:bg-[var(--ink)]/30 transition-all cursor-pointer">
+                  <tr key={inv.id} id={recordElementId('invoice', inv.id)} aria-current={focusedInvoiceId === inv.id ? 'true' : undefined}
+                    className={cn("group hover:bg-[var(--ink)]/30 transition-all", focusedInvoiceId === inv.id && "ring-2 ring-inset ring-[var(--brass)]")}>
                     <td className="p-4 md:p-8 font-mono font-bold text-slate-500 group-hover:text-[var(--text)] transition-colors">{inv.number}</td>
                     <td className="p-4 md:p-8">
                        <div className="flex flex-col">
                           <span className="font-black text-[var(--text)] text-base tracking-tight">{inv.customerName}</span>
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 opacity-50">KYB Verified</span>
                        </div>
                     </td>
                     <td className="p-4 md:p-8">
@@ -377,6 +380,17 @@ export default function Sales() {
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex items-center gap-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                        {inv.status !== 'void' && (
+                          <button
+                            type="button"
+                            onClick={() => { setNewInvoiceFor(inv); setIsInvoiceModalOpen(true); }}
+                            className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
+                            title="Edit invoice"
+                            aria-label={`Edit invoice ${inv.number || ''}`.trim()}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                        )}
                         {inv.status !== 'paid' && (
                           <button 
                             onClick={() => {
@@ -442,19 +456,26 @@ export default function Sales() {
                         </button>
                         <button 
                           onClick={() => {
-                            const newBill = { ...inv, id: `inv-${crypto.randomUUID()}`, number: `${inv.number}-COPY`, status: 'unpaid' as any };
-                            onAddInvoice(newBill);
-                            toast.success('Liability Copied');
+                            // a new draft with the same customer and lines: no number (the series gives one), no payments,
+                            // write-offs, links or sent/viewed history carried over
+                            const { id: _id, uid: _uid, number: _number, status: _status, amountPaidCents: _paid, settledByRecordsCents: _settled,
+                              writtenOffCents: _wo, writeOffTransactionId: _woTx, writeOffReason: _wr, writtenOffAt: _woAt, writeOffReversalTransactionId: _woRev,
+                              paymentDate: _pd, paidAt: _pa, posted: _posted, isLocked: _locked, lockedAt: _lockedAt, paymentToken: _token, metadata: _meta,
+                              dueDate: _due, ...fields } = inv;
+                            setNewInvoiceFor({ ...fields, date: getLocalDateISO(), status: 'draft' });
+                            setIsInvoiceModalOpen(true);
                           }}
                           className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
-                          title="Duplicate Instrument"
+                          title="Duplicate as a new draft"
+                          aria-label="Duplicate as a new draft"
                         >
                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         </button>
                         <button 
                           onClick={() => onAddInvoice({ id: inv.id, status: 'void' })} 
                           className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-rose-500 transition-all"
-                          title="Void Liability"
+                          title="Void invoice"
+                          aria-label="Void invoice"
                         >
                            <Trash2 size={16} />
                         </button>
@@ -555,7 +576,9 @@ export default function Sales() {
         </div>
       )}
 
-      <InvoiceModal
+      {/* mounted per opening, so a new invoice never inherits the last one's fields */}
+      {isInvoiceModalOpen && <InvoiceModal
+        key={newInvoiceFor?.id || 'new'}
         isOpen={isInvoiceModalOpen}
         onClose={() => { setIsInvoiceModalOpen(false); setNewInvoiceFor(undefined); }}
         onSave={async (inv) => {
@@ -566,7 +589,7 @@ export default function Sales() {
         customers={customers}
         accounts={accounts}
         initialInvoice={newInvoiceFor}
-      />
+      />}
       <CustomerModal
         isOpen={isCustomerModalOpen}
         onClose={() => setIsCustomerModalOpen(false)}

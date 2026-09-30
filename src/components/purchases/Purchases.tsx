@@ -13,8 +13,11 @@ import {
   AlertCircle,
   DollarSign,
   Ban,
-  Download
+  Download,
+  Pencil
 } from 'lucide-react';
+import type { Bill } from '../../types';
+import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { formatCurrency } from '../../lib/utils';
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
@@ -33,6 +36,9 @@ export default function Purchases() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+  const [editingBill, setEditingBill] = useState<Partial<Bill> | undefined>(undefined);
+  // A record link (#purchases/bill/<id>, e.g. from Data Health) shows and highlights the bill
+  const focusedBillId = useRecordFocus('bill', { ready: bills.length > 0, onFocus: () => { setActiveSubTab('bills'); setSelectedVendorId(null); setSearchTerm(''); } });
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -63,8 +69,14 @@ export default function Purchases() {
   };
 
   const handleAddBill = async (data: any) => {
-    await addEntity('bills', data, 'Bill successfully recorded');
+    if (data.id) {
+      const { id, ...updates } = data;
+      await updateEntity('bills', id, updates, 'Bill updated');
+    } else {
+      await addEntity('bills', data, 'Bill successfully recorded');
+    }
     setIsBillModalOpen(false);
+    setEditingBill(undefined);
   };
 
   const handleDeleteBill = async (id: string) => {
@@ -135,6 +147,7 @@ export default function Purchases() {
           <button
             onClick={() => {
               if (activeSubTab === 'bills') {
+                setEditingBill(undefined);
                 setIsBillModalOpen(true);
               } else {
                 setIsVendorModalOpen(true);
@@ -206,7 +219,8 @@ export default function Purchases() {
                 {filteredBills.map(b => {
                   const isOverdue = b.dueDate && new Date(b.dueDate) < new Date() && b.status !== 'paid' && b.status !== 'void';
                   return (
-                    <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                    <tr key={b.id} id={recordElementId('bill', b.id)} aria-current={focusedBillId === b.id ? 'true' : undefined}
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${focusedBillId === b.id ? 'ring-2 ring-inset ring-[var(--brass)]' : ''}`}>
                       <td className="p-4 font-semibold text-slate-900 dark:text-white">
                         {b.vendorName || 'Unknown Vendor'}
                       </td>
@@ -235,6 +249,17 @@ export default function Purchases() {
                         {formatCurrency(b.amountCents || 0)}
                       </td>
                       <td className="p-4 text-right flex items-center justify-end gap-2">
+                        {b.status !== 'void' && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setEditingBill(b); setIsBillModalOpen(true); }}
+                            className="p-1 text-slate-500 hover:text-slate-800 rounded-lg"
+                            title="Edit bill"
+                            aria-label={`Edit bill ${b.number || ''}`.trim()}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
                         {b.status !== 'paid' && b.status !== 'void' && (
                           <>
                             <button
@@ -336,13 +361,16 @@ export default function Purchases() {
       </div>
 
       {/* Bill creation modal */}
-      <BillModal 
+      {/* mounted per opening, so a new bill never inherits the last edited one */}
+      {isBillModalOpen && <BillModal
+        key={editingBill?.id || 'new'}
         isOpen={isBillModalOpen}
-        onClose={() => setIsBillModalOpen(false)}
+        onClose={() => { setIsBillModalOpen(false); setEditingBill(undefined); }}
         onSave={handleAddBill}
         vendors={vendors}
         accounts={accounts}
-      />
+        initialBill={editingBill}
+      />}
 
       {/* Vendor creation modal */}
       <VendorModal 

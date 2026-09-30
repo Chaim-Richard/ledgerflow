@@ -42,6 +42,7 @@ import SavedViewsBar from '../ui/SavedViewsBar';
 import DeepSearchBar from '../ui/DeepSearchBar';
 import { useSavedViewsStore } from '../../stores/useSavedViewsStore';
 import { useTimeout } from '../../hooks/useTimeout';
+import { useRecordFocus } from '../../hooks/useRecordFocus';
 
 
 
@@ -329,6 +330,16 @@ export default function TransactionGrid() {
   const [editingCell, setEditingCell] = useState<{ id: string, field: string } | null>(null);
   const [editingDetailsTx, setEditingDetailsTx] = useState<Transaction | null>(null);
   const [isReverseModeModal, setIsReverseModeModal] = useState(false);
+  // A record link (#transactions/transaction/<id>, e.g. from Data Health) opens that entry once it has loaded
+  const focusedTxId = useRecordFocus('transaction', { ready: false });
+  const openedFocusId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusedTxId || openedFocusId.current === focusedTxId) return;
+    const tx = safeTransactions.find(t => t.id === focusedTxId);
+    if (!tx) return;
+    openedFocusId.current = focusedTxId;
+    setEditingDetailsTx(tx);
+  }, [focusedTxId, safeTransactions]);
   const lockDate = useLedgerStore(state => state.lockDate);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const toggleSelectAll = () => {

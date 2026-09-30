@@ -19,6 +19,7 @@ import { format, parseISO, addDays } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 
 /**
  * Recurring invoices and entries. The daily job (src/server/services/recurringService.ts) runs
@@ -28,6 +29,7 @@ import { useCurrentRole } from '../../hooks/useCurrentRole';
 export default function RecurringTransactionsView() {
   const recurring = useLedgerStore(s => s.recurring) || [];
   const [searchTerm, setSearchTerm] = useState('');
+  const focusedId = useRecordFocus('recurring', { ready: recurring.length > 0, onFocus: () => setSearchTerm('') });
   const { updateEntity, deleteEntity } = useEntityOperations();
   const role = useCurrentRole();
   const canEdit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
@@ -141,7 +143,8 @@ export default function RecurringTransactionsView() {
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
               {filteredRecurring.map((rule) => (
-                <tr key={rule.id} className="hover:bg-zinc-500/5 transition-colors group">
+                <tr key={rule.id} id={recordElementId('recurring', rule.id)} aria-current={focusedId === rule.id ? 'true' : undefined}
+                  className={cn("hover:bg-zinc-500/5 transition-colors group", focusedId === rule.id && "ring-2 ring-inset ring-[var(--brass)]")}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-lg bg-zinc-500/10 text-zinc-500 flex items-center justify-center shrink-0">
