@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, getLocalDateISO } from '../../lib/utils';
+import { errorMessage } from '../../lib/errorRemedies';
 // Keep utility modules reachable for the structural module guard.
 import { convertXeroAccounts as _convertXeroAccounts } from '../../lib/xeroAdapter';
 import { db, getIdToken } from '../../firebase';
@@ -44,6 +45,12 @@ const AVAILABLE_SCOPES = [
   { id: 'brain:analyze', label: 'Brain / AI Analysis', desc: 'Allows calling Bayesian classification and AI analysis endpoints.' }
 ];
 
+/** One request in the server's recent API log (GET /api/v1/logs). */
+interface ApiLogEntry { id: string; timestamp: string; method: string; path: string; statusCode: number; latencyMs?: number; apiKeyUsed: string }
+
+/** A workspace API key as listed on the Keys tab. */
+interface PublicKeyRow { id: string; name: string; scopes: string[]; expiresAt: string; lastUsedAt: string | null; totalRequests: number; createdAt?: string }
+
 export default function ApiHub() {
   const formId = useId();
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -54,7 +61,7 @@ export default function ApiHub() {
   const currentWorkspace = getCurrentWorkspace();
   const [nowMs] = useState(() => Date.now());
   const [apiKey, setApiKey] = useState('');
-  const [apiLogs, setApiLogs] = useState<any[]>([]);
+  const [apiLogs, setApiLogs] = useState<ApiLogEntry[]>([]);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const { setSafeTimeout } = useTimeout();
@@ -62,28 +69,13 @@ export default function ApiHub() {
   const [activeDoc, setActiveDoc] = useState('post-transaction');
   const [docLang, setDocLang] = useState<'curl' | 'python' | 'node'>('curl');
 
-  const [publicKeys, setPublicKeys] = useState<any[]>([]);
+  const [publicKeys, setPublicKeys] = useState<PublicKeyRow[]>([]);
   const [newKeyName, setNewKeyName] = useState('Production Integration Key');
   const [selectedScopes, setSelectedScopes] = useState<string[]>(AVAILABLE_SCOPES.map(s => s.id));
   const [expiration, setExpiration] = useState<'never' | '1h' | '24h' | '30d' | '90d'>('never');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Corporate Billing and Computational Resource Metering
-  const [, setBillingStatus] = useState<any>({
-    plan: 'sandbox',
-    billingCycle: 'free',
-    concurrentUserLimit: 50,
-    activeUserCount: 1,
-    seatCount: 1,
-    maxSeats: 3,
-    totalQueriesThisMonth: 0,
-    computeHardnessScore: 0,
-    computeCreditBalance: 100000,
-    apiQuotaTotalCentsUsed: 0,
-    apiQuotaMonthlyLimitCents: 0,
-  });
-  const [, setBillingLedger] = useState<any[]>([]);
-  const [, setIsLoadingBilling] = useState(false);
   const [simSeatsCount, setSimSeatsCount] = useState(1);
   const [simRequestsCount, setSimRequestsCount] = useState(50);
   const [isSimulatingBurst, setIsSimulatingBurst] = useState(false);
@@ -93,7 +85,7 @@ export default function ApiHub() {
   const [sandboxEndpoint, setSandboxEndpoint] = useState<string>('GET_v1_status');
   const [sandboxCredType, setSandboxCredType] = useState<'session' | 'key'>('session');
   const [sandboxSelectedKey, setSandboxSelectedKey] = useState<string>('');
-  const [sandboxResult, setSandboxResult] = useState<any>(null);
+  const [sandboxResult, setSandboxResult] = useState<unknown>(null);
   const [sandboxStatus, setSandboxStatus] = useState<number | null>(null);
   const [sandboxLatency, setSandboxLatency] = useState<number | null>(null);
   const [sandboxLoading, setSandboxLoading] = useState<boolean>(false);
@@ -115,7 +107,6 @@ export default function ApiHub() {
 
   const loadBillingStatus = async () => {
     if (!currentWorkspace?.id || !user) return;
-    setIsLoadingBilling(true);
     try {
       const token = await getIdToken();
       const res = await fetch(`/api/v1/billing/status?workspaceId=${currentWorkspace.id}`, {
@@ -125,31 +116,12 @@ export default function ApiHub() {
       });
       if (res.ok) {
         const data = await res.json();
-        setBillingStatus(data);
         if (data.seatCount) {
           setSimSeatsCount(data.seatCount);
         }
       }
     } catch (e) {
       console.error("Failed to load billing status", e);
-    } finally {
-      setIsLoadingBilling(false);
-    }
-  };
-
-  const loadBillingLedger = async () => {
-    if (!currentWorkspace?.id) return;
-    try {
-      const q = query(
-        collection(db, 'billingLedgerTraces'),
-        where('workspaceId', '==', currentWorkspace.id)
-      );
-      const snap = await getDocs(q);
-      const logs = snap.docs.map(doc => doc.data() as any);
-      logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setBillingLedger(logs);
-    } catch (e) {
-      console.error("Failed to query billing ledger", e);
     }
   };
 
@@ -174,8 +146,8 @@ export default function ApiHub() {
       } else {
         throw new Error(data.message || 'Failed to create checkout session');
       }
-    } catch (e: any) {
-      toast.error('Checkout Error', { description: e.message || String(e) });
+    } catch (e) {
+      toast.error('Checkout Error', { description: errorMessage(e) });
     }
   };
 
@@ -229,9 +201,6 @@ export default function ApiHub() {
     if (!currentWorkspace?.id) return;
     const timer = setTimeout(() => {
       loadBillingStatus();
-      if (activeTab === 'billing') {
-        loadBillingLedger();
-      }
       loadWorkspaceKeys();
       fetchLogs();
     }, 0);
@@ -273,9 +242,9 @@ export default function ApiHub() {
       });
       loadWorkspaceKeys();
       setShowCreateModal(false);
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast.error('Failed to generate key', { description: e.message || String(e) });
+      toast.error('Failed to generate key', { description: errorMessage(e) });
     } finally {
       setIsRegenerating(false);
     }
@@ -302,9 +271,9 @@ export default function ApiHub() {
       if (apiKey.startsWith(keyId)) {
         setApiKey('');
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast.error('Failed to revoke key', { description: e.message || String(e) });
+      toast.error('Failed to revoke key', { description: errorMessage(e) });
     }
   };
 
@@ -418,7 +387,7 @@ export default function ApiHub() {
     try {
       let endpointUrl = '';
       let method = 'GET';
-      let bodyData: any = null;
+      let bodyData: Record<string, unknown> | null = null;
 
       switch (sandboxEndpoint) {
         case 'GET_v1_status':
@@ -572,13 +541,13 @@ export default function ApiHub() {
         description: `HTTP Status ${res.status}`
       });
 
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       const endTime = performance.now();
       setSandboxLatency(Math.round(endTime - startTime));
       setSandboxStatus(500);
-      setSandboxResult({ error: e.message || String(e) });
-      toast.error('Sandbox Execution Faulted', { description: e.message });
+      setSandboxResult({ error: errorMessage(e) });
+      toast.error('Sandbox Execution Faulted', { description: errorMessage(e) });
     } finally {
       setSandboxLoading(false);
     }
@@ -809,14 +778,14 @@ export default function ApiHub() {
                            </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-[var(--surface)]">
-                           {publicKeys.map((k: any) => {
+                           {publicKeys.map((k) => {
                              const isExpired = k.expiresAt !== 'never' && new Date(k.expiresAt).getTime() < nowMs;
                              return (
                                <tr key={k.id} className="hover:bg-[var(--ink)]/40 transition-colors">
                                   <td className="p-4">
                                      <div className="font-bold text-slate-950 text-xs">{k.name}</div>
                                      <div className="font-mono text-[10px] text-[var(--muted)] mt-0.5">{k.id}</div>
-                                     <div className="text-[10px] text-slate-400/90 mt-1">Created: {new Date(k.createdAt).toLocaleDateString()}</div>
+                                     <div className="text-[10px] text-slate-400/90 mt-1">Created: {k.createdAt ? new Date(k.createdAt).toLocaleDateString() : '—'}</div>
                                   </td>
                                   <td className="p-4 max-w-xs">
                                      <div className="flex flex-wrap gap-1">
@@ -928,7 +897,7 @@ export default function ApiHub() {
                     <Labelled labelClassName="text-xs font-black uppercase tracking-wider text-[var(--muted)] block" label="TTL / Expiration Age">
                       <select 
                         value={expiration}
-                        onChange={(e: any) => setExpiration(e.target.value)}
+                        onChange={(e) => setExpiration(e.target.value as typeof expiration)}
                         className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-3xs"
                       >
                         <option value="never">Indefinite (Never Expire)</option>
@@ -2560,7 +2529,7 @@ fetch(url, {
                 )}
               </div>
 
-              {!sandboxLoading && !sandboxResult && (
+              {!sandboxLoading && sandboxResult == null && (
                 <div className="p-4 md:p-8 text-center text-[var(--muted)] italic text-xs space-y-2 border border-dashed border-[var(--line)] bg-[var(--ink)]/50 rounded-xl">
                   <p>Execute an API query inside the left configuration deck to view operational responses in real-time.</p>
                   <p className="text-[10px] text-slate-350 font-mono">Payload parameters are completely sanitised & verified against your active database ledger nodes.</p>
@@ -2577,7 +2546,7 @@ fetch(url, {
                 </div>
               )}
 
-              {sandboxResult && (
+              {sandboxResult != null && (
                 <div className="space-y-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-4 border border-[#292E42] max-h-[350px] overflow-y-auto select-all relative">
                     <button
@@ -2651,8 +2620,8 @@ fetch(url, {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-[var(--surface)]">
-                    {apiLogs.map((log: any) => {
-                      const isSuccess = log.status >= 200 && log.status < 300;
+                    {apiLogs.map((log) => {
+                      const isSuccess = log.statusCode >= 200 && log.statusCode < 300;
                       return (
                         <tr key={log.id} className="hover:bg-[var(--ink)]/50 transition-colors">
                           <td className="p-4 whitespace-nowrap text-xs font-mono font-bold text-slate-450 text-[11px]">
@@ -2686,7 +2655,7 @@ fetch(url, {
                               "px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide font-mono uppercase text-white",
                               isSuccess ? "bg-emerald-500" : "bg-rose-500"
                             )}>
-                              {log.status || 200} {isSuccess ? 'Success' : 'Error'}
+                              {log.statusCode} {isSuccess ? 'Success' : 'Error'}
                             </span>
                           </td>
                           <td className="p-4 text-right">

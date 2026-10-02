@@ -168,6 +168,9 @@ export interface Transaction {
   // Atomic Double-Entry Splits
   lines: TransactionLine[];
   
+  /** Cheque number, bank or document reference (shown in the journal; exported). */
+  reference?: string;
+
   // Total absolute value (for display convenience, though derived from lines)
   totalAmountCents: number; 
   taxAmountCents?: number;

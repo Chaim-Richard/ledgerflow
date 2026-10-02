@@ -75,8 +75,8 @@ export class TransactionQueryEngine {
 
     const hasFilter = filterCriteria && Object.keys(filterCriteria).length > 0;
     
-    // Determine effective search term from component props AND active view
-    const effectiveSearchTerm = searchTerm.trim();
+    // The search box, or a search set from elsewhere (the command palette's "show …")
+    const effectiveSearchTerm = (searchTerm.trim() || filterCriteria?.searchTerm?.trim() || '');
     const hasSearch = effectiveSearchTerm.length > 0;
     
     const allowSimulations = Boolean(filterCriteria?.includeSimulations || activeView?.filter?.includeSimulations);

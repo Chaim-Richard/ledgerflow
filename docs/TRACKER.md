@@ -1339,13 +1339,13 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] C-19 `transactionsArchive` tier for closed years
 - [ ] C-20 Seed 200k transactions, record load time + reads
 
-# SECTION D — TYPE SAFETY (484 `any` by the ratchet count, was 1,365)
+# SECTION D — TYPE SAFETY (420 `any` by the ratchet count, was 1,365; every named file done)
 
 - [x] D-01 `computeReports.ts` (0 `any`)
 - [x] D-02 `LedgerPostService.ts` (18 → 0)
 - [x] D-03 `useTransactionActions.ts` (codex, `codex/c-5-explicit-types`)
 - [x] D-04 `useLedgerStore.ts` (codex, `codex/c-5-explicit-types`)
-- [ ] D-05 `useLedgerData.ts` (reserved for Claude; untouched by codex C-5)
+- [x] D-05 `useLedgerData.ts` (0 `any`)
 - [x] D-06 `server.ts` and the route files split from it (0 `any`; Stripe webhook objects typed)
 - [x] D-07 `transactionRoutes.ts` (92 → 0 `any`; typed caller, `HttpError`, database types)
 - [x] D-08 `reportRoutes.ts` (23 → 0; found L-139, L-140)
@@ -1353,19 +1353,19 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] D-10 `documentRoutes.ts` (0 `any`, one lookup instead of the if/else chain; found L-137)
 - [x] D-11 `TransactionQueryEngine.ts` (codex, `codex/c-5-explicit-types`)
 - [x] D-12 `algorithms/niche-tools.ts` (codex, `codex/c-5-explicit-types`)
-- [ ] D-13 `algorithms.ts`
+- [x] D-13 `algorithms.ts` (0 `any`; two unused engines removed, 180 lines)
 - [x] D-14 `IntelligenceCenter.tsx` (codex, `codex/c-5-explicit-types`)
 - [x] D-15 `SystemCommandCenter.tsx` (codex, `codex/d-15-command-center-types`; owner-authorized follow-up)
-- [ ] D-16 `ApiHub.tsx`
+- [x] D-16 `ApiHub.tsx` (0 `any`; found L-144; billing data it loaded and threw away no longer loaded)
 - [x] D-17 `StatementImporter.tsx` (codex, `codex/c-5-explicit-types`)
 - [x] D-18 `TransactionGrid.tsx` (codex, `codex/c-5-explicit-types`)
 - [x] D-19 `BudgetManager.tsx` (codex, `codex/c-5-explicit-types`)
-- [ ] D-20 `useUIStore.ts`
+- [x] D-20 `useUIStore.ts` (0 `any`; display choices from storage checked against the allowed values; found L-143)
 - [x] D-21 `ToolSandbox.tsx` (codex, `codex/c-5-explicit-types`)
 - [x] D-22 `registry.tsx` (codex, `codex/c-5-explicit-types`)
-- [ ] D-23 `Ledger.tsx`
-- [ ] D-24 `Reconciliation.tsx` / `App.tsx`
-- [ ] D-25 Enable `noImplicitAny`
+- [x] D-23 `Ledger.tsx` (0 `any`)
+- [x] D-24 `Reconciliation.tsx` / `App.tsx` (0 `any`)
+- [x] D-25 `noImplicitAny`: on (part of `strict: true` in tsconfig.json)
 
 # SECTION E — ACCESSIBILITY
 
@@ -1703,6 +1703,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-140 Server aging report ignored deposits and foreign currency and left out approved bills; now uses calculateAmountDue in the base currency and the shared open-document rule (cancelled documents are closed everywhere) (tested)
 - [x] L-141 **SECURITY** `POST /api/v1/auth/audit` needed no sign-in and wrote a sign-in record for any user id in the body (shown in that person's "Download my data"); now signed-in only, for yourself, body checked (guard test)
 - [x] L-142 Bank CSV upload: dates without a clear format fell back to the UTC day (the workspace was never read); now the workspace's time zone, members only
+- [x] L-143 Command palette "show …" never filtered the transaction list (it set a filter field nobody read); saved views put fields the filter doesn't know into the filter chips (they did nothing). Now the palette search filters (tested) and a view only adds its date range
+- [x] L-144 API Hub request log showed every request as "Error" (read `status`, the server sends `statusCode`)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

@@ -9,6 +9,8 @@ import { motion } from 'motion/react';
 import { useAuthStore } from './stores/useAuthStore';
 import { useLedgerStore } from './stores/useLedgerStore';
 import { useUIStore } from './stores/useUIStore';
+import type { AppTab } from './types';
+import { errorMessage } from './lib/errorRemedies';
 import { useLedgerData } from './hooks/useLedgerData';
 import { useAIActions } from './hooks/useAIActions';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -168,13 +170,13 @@ export default function App() {
     };
   }, []);
 
-  const navigateTool = useCallback((tab: any) => {
+  const navigateTool = useCallback((tab: string) => {
     startTransition(() => {
         navigateToolStore(tab);
     });
   }, [navigateToolStore]);
 
-  const setActiveTab = useCallback((tab: any) => {
+  const setActiveTab = useCallback((tab: AppTab) => {
     startTransition(() => {
         setActiveTabStore(tab);
     });
@@ -198,11 +200,11 @@ const shortcutMap = useMemo(() => {
       'mod+shift+k': () => setDiagnosticConsoleOpen(!isDiagnosticConsoleOpen),
       'mod+/?': () => setShortcutOverlayOpen(!isShortcutOverlayOpen),
       '?': () => setShortcutOverlayOpen(!isShortcutOverlayOpen),
-      'mod+1': () => setActiveTab('dashboard' as any),
-      'mod+2': () => setActiveTab('transactions' as any),
-      'mod+3': () => setActiveTab('ledger' as any),
-      'mod+e': () => handleAction('export' as any),
-      'mod+p': () => setActiveTab('reports' as any),
+      'mod+1': () => setActiveTab('dashboard'),
+      'mod+2': () => setActiveTab('transactions'),
+      'mod+3': () => setActiveTab('ledger'),
+      'mod+e': () => handleAction('export'),
+      'mod+p': () => setActiveTab('reports'),
       'mod+shift+d': () => useUIStore.getState().setTheme(useUIStore.getState().theme === 'dark' ? 'light' : 'dark'),
       'mod+i': () => setImporterOpen(true),
       'mod+shift+a': () => setArchitectureOpen(!isArchitectureOpen),
@@ -269,9 +271,9 @@ const shortcutMap = useMemo(() => {
       await sendEmailVerification(cred.user);
       setIsGuest(false);
       toast.success('Account created! Please check your email for a verification link.');
-    } catch (e: any) {
+    } catch (e) {
       console.error("Signup failed:", e);
-      toast.error(e.message || 'Signup failed');
+      toast.error(errorMessage(e) || 'Signup failed');
       throw e;
     }
   };
@@ -280,8 +282,8 @@ const shortcutMap = useMemo(() => {
     try {
       await sendPasswordResetEmail(auth, email);
       toast.success('Password reset email sent! Please check your inbox.');
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to send reset email');
+    } catch (e) {
+      toast.error(errorMessage(e) || 'Failed to send reset email');
     }
   };
 
@@ -298,9 +300,9 @@ const shortcutMap = useMemo(() => {
       } else {
         toast.success('SUCCESSFULLY LOGGED IN');
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error("Login failed:", e);
-      toast.error('Login failed: ' + e.message);
+      toast.error('Login failed: ' + errorMessage(e));
       throw e;
     }
   };

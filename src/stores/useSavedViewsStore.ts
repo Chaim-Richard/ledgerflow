@@ -1,3 +1,4 @@
+import type { AppTab } from '../types';
 import { create } from 'zustand';
 import { Transaction, ChartAccount } from '../types';
 import { useUIStore } from './useUIStore';
@@ -297,29 +298,14 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
   },
 
   applySavedView: (view) => {
-    useUIStore.getState().setFilterCriteria({
-      searchTerm: view.filter.searchTerm || '',
-      startDate: view.filter.startDate,
-      endDate: view.filter.endDate,
-      minAmountCents: view.filter.minAmountCents,
-      maxAmountCents: view.filter.maxAmountCents,
-      accountIds: view.filter.accountIds,
-      accountTypes: view.filter.accountTypes,
-      status: view.filter.status,
-      type: view.filter.type,
-      projectId: view.filter.projectId,
-      customerId: view.filter.customerId,
-      vendorId: view.filter.vendorId,
-      tags: view.filter.tags,
-      payee: view.filter.payee,
-      isTaxDeductibleOnly: view.filter.isTaxDeductibleOnly,
-      hasAttachmentOnly: view.filter.hasAttachmentOnly,
-      viewId: view.id,
-      viewName: view.name,
-    });
+    // The view's own conditions are applied by the transaction query (activeView); only its date
+    // range goes into the filters (before, fields the filter doesn't know showed up as chips and
+    // did nothing)
+    const { startDate, endDate } = view.filter;
+    useUIStore.getState().setFilterCriteria(startDate || endDate ? { startDate, endDate } : null);
 
     if (view.targetTab && view.targetTab !== 'all') {
-      useUIStore.getState().setActiveTab(view.targetTab as any);
+      useUIStore.getState().setActiveTab(view.targetTab as AppTab);
     }
   },
 }));
