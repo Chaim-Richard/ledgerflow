@@ -1347,7 +1347,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] D-04 `useLedgerStore.ts` (codex, `codex/c-5-explicit-types`)
 - [ ] D-05 `useLedgerData.ts` (reserved for Claude; untouched by codex C-5)
 - [ ] D-06 `server.ts`
-- [ ] D-07 `transactionRoutes.ts`
+- [x] D-07 `transactionRoutes.ts` (92 → 0 `any`; typed caller, `HttpError`, database types)
 - [ ] D-08 `reportRoutes.ts`
 - [ ] D-09 `workspaceRoutes.ts`
 - [ ] D-10 `documentRoutes.ts`
