@@ -583,7 +583,7 @@ export default function TransactionGrid() {
       groups[key].total += t.totalAmountCents;
       groups[key].count += 1;
     });
-    return Object.entries(groups).map(([name, data]) => ({ name, value: data.total / 100, count: data.count })).sort((a, b) => b.value - a.value);
+    return Object.entries(groups).map(([name, data]) => ({ name, value: data.total, count: data.count })).sort((a, b) => b.value - a.value);
   }, [smartFilteredTransactions, accounts]);
 
   const [isMobileGrid, setIsMobileGrid] = useState(false);

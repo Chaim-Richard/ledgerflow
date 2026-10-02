@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, Check, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Transaction, ChartAccount } from '../../types';
-import { cn, reportError, OperationType } from '../../lib/utils';
+import { cn, reportError, OperationType, formatCurrency } from '../../lib/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { toast } from 'sonner';
@@ -400,7 +400,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                         <td className="px-4 py-4 text-[11px] font-mono font-bold text-[var(--muted)]">{tx.date}</td>
                         <td className="px-4 py-4 font-black text-[var(--text)] italic uppercase tracking-tight text-xs">{tx.description}</td>
                         <td className="px-4 py-4 font-mono font-black text-[var(--text)] text-sm tabular-nums">
-                          {(tx.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                          {formatCurrency(tx.amountCents)}
                         </td>
                         <td className="px-4 py-4">
                           {isMapping ? (

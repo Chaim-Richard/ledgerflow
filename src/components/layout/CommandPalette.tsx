@@ -8,7 +8,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { parseNaturalLanguageEntry, ParsedCommandIntent } from '../../lib/algorithms/nl-parser';
 import { useShallow } from 'zustand/react/shallow';
 import { DimensionNode } from '../../types';
-import { getLocalDateISO, resolveAccountName } from '../../lib/utils';
+import { getLocalDateISO, resolveAccountName, formatCurrency } from '../../lib/utils';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -169,7 +169,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
         results.push({
           id: `tx-${t.id}`,
           type: 'data',
-          label: `${t.description || 'Transaction'} - ${(absAmount / 100).toLocaleString('en-US', { style: 'currency', currency: t.currency || 'USD' })}`,
+          label: `${t.description || 'Transaction'} - ${formatCurrency(absAmount, t.currency)}`,
           category: `Transaction • ${t.date} ${t.tags ? '• ' + t.tags.join(', ') : ''}`,
           actionId: 'switch-tab',
           payload: { tab: 'transactions', id: t.id },
@@ -186,7 +186,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
               id: `tx-line-${t.id}-${line.accountId}`,
               type: 'data',
               label: `${line.description || t.description} (in ${accName})`,
-              category: `Transaction Line • ${(Math.abs(amount) / 100).toLocaleString('en-US', { style: 'currency', currency: t.currency || 'USD' })} ${line.tags ? '• ' + line.tags.join(', ') : ''}`,
+              category: `Transaction Line • ${formatCurrency(Math.abs(amount), t.currency || 'USD')} ${line.tags ? '• ' + line.tags.join(', ') : ''}`,
               actionId: 'switch-tab',
               payload: { tab: 'transactions', id: t.id },
               icon: <FileText aria-hidden="true" size={16} className="text-blue-500 shrink-0" />
@@ -278,7 +278,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
         results.push({
           id: `inv-${i.id}`,
           type: 'data',
-          label: `Invoice ${i.number || 'Draft'} - ${(i.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`,
+          label: `Invoice ${i.number || 'Draft'} - ${formatCurrency(i.amountCents, i.currency)}`,
           category: `Invoice • ${i.customerName} • ${i.number}`,
           actionId: 'switch-tab',
           payload: { tab: 'sales', id: i.id },
@@ -293,7 +293,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
         results.push({
           id: `bill-${b.id}`,
           type: 'data',
-          label: `Bill ${b.number || 'Draft'} - ${(b.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`,
+          label: `Bill ${b.number || 'Draft'} - ${formatCurrency(b.amountCents, b.currency)}`,
           category: `Bill • ${b.vendorName} • ${b.number}`,
           actionId: 'switch-tab',
           payload: { tab: 'purchases', id: b.id },

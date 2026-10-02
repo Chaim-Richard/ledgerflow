@@ -15,7 +15,7 @@ import {
   Brain,
   Sparkles
 } from 'lucide-react';
-import { cn, safeConfirm } from '../../lib/utils';
+import { cn, safeConfirm, formatCurrency } from '../../lib/utils';
 import AsyncButton from '../ui/AsyncButton';
 import { 
   collection, 
@@ -527,7 +527,7 @@ export default function Vault() {
                            </div>
                            <div>
                               <p className="text-[9px] font-black text-emerald-800/50 uppercase tracking-widest mb-1">Total Amount</p>
-                              <p className="text-sm font-bold font-mono text-emerald-900 tabular-nums">${((extractedData.totalAmountCents || 0) / 100).toFixed(2)}</p>
+                              <p className="text-sm font-bold font-mono text-emerald-900 tabular-nums">{formatCurrency(extractedData.totalAmountCents || 0)}</p>
                            </div>
                            <div>
                               <p className="text-[9px] font-black text-emerald-800/50 uppercase tracking-widest mb-1">Confidence</p>

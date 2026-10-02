@@ -1,3 +1,4 @@
+import { formatCurrency } from '../../lib/utils';
 import React, { useState, useRef, useEffect } from "react";
 import { Sparkles, Send, User, ChevronRight, ShieldCheck, Database } from "lucide-react";
 import { useAuthStore } from "../../stores/useAuthStore";
@@ -94,7 +95,7 @@ export default function Copilot() {
           name: a.name,
           category: a.category,
           type: a.type,
-          balanceFormatted: `$${(bal / 100).toFixed(2)}`
+          balanceFormatted: formatCurrency(bal)
         };
       });
 
@@ -105,7 +106,7 @@ export default function Copilot() {
           date: t.date,
           description: t.description || '',
           category: t.lines?.[0]?.category || (t as any).category || '',
-          amountFormatted: `$${((t.totalAmountCents || 0) / 100).toFixed(2)}`
+          amountFormatted: formatCurrency(t.totalAmountCents || 0, t.currency)
         }));
 
       const monthlyBurnCents = totalExpensesCents > totalRevenueCents 
@@ -117,11 +118,11 @@ export default function Copilot() {
 
       const ledgerSummary = {
         workspaceId: currentWorkspaceId,
-        totalCash: `$${(totalCashCents / 100).toFixed(2)}`,
-        monthlyBurn: `$${(monthlyBurnCents / 100).toFixed(2)}`,
+        totalCash: formatCurrency(totalCashCents),
+        monthlyBurn: formatCurrency(monthlyBurnCents),
         runwayMonths,
-        totalAccountsReceivable: `$${(totalArCents / 100).toFixed(2)}`,
-        totalAccountsPayable: `$${(totalApCents / 100).toFixed(2)}`,
+        totalAccountsReceivable: formatCurrency(totalArCents),
+        totalAccountsPayable: formatCurrency(totalApCents),
         keyAccounts: accountsSummary.slice(0, 15),
         recentTransactions: postableTx
       };

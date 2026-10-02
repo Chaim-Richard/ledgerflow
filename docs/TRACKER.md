@@ -1488,7 +1488,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] I-07 Unsaved-changes warning in the invoice and bill dialogs (tested)
 - [x] I-08 Void/delete confirmations name the record (Sales, Purchases)
 - [ ] I-09 30-second undo
-- [ ] I-10 Discoverable keyboard shortcuts
+- [x] I-10 Discoverable keyboard shortcuts — one list (`src/config/shortcuts.ts`) feeds the keys and the card (press ?, or "Keyboard shortcuts" in the command palette); Ctrl/⌘ shown per platform; keys the browser keeps freed: Quick entry ⌘Q → ⌘⇧E (⌘Q quits the browser on a Mac), Focus mode ⌘F → ⌘⇧F (find works again), Reports ⌘P → ⌘4 (print works again); tested
 - [ ] I-11 Tabular figures everywhere
 - [x] I-12 Dates follow the user's chosen format (formatDate; Preferences); tested
 - [ ] I-13 Persist column layout per user
@@ -1497,7 +1497,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] I-16 Breadcrumb on drill-down
 - [~] I-17 Deep-linkable report settings done; list filters elsewhere not yet
 - [x] I-18 Print stylesheet (Reports page)
-- [ ] I-19 Active filters as chips
+- [x] I-19 Active filters as chips — the transaction list shows each active filter as a chip with a remove button and "Clear All"; the command palette's search now shows there too (L-143)
 - [ ] I-20 "What changed since I last looked"
 
 # SECTION J — MISSING REPORTS
@@ -1705,7 +1705,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-142 Bank CSV upload: dates without a clear format fell back to the UTC day (the workspace was never read); now the workspace's time zone, members only
 - [x] L-143 Command palette "show …" never filtered the transaction list (it set a filter field nobody read); saved views put fields the filter doesn't know into the filter chips (they did nothing). Now the palette search filters (tested) and a view only adds its date range
 - [x] L-144 API Hub request log showed every request as "Error" (read `status`, the server sends `statusCode`)
-- [x] L-145 Six amounts were printed with a hard-coded "$" and their own division by 100 (owner overview totals, rule previews, saved-view minimum, transfer matches): wrong in any other currency; now `formatCurrency`, and a guard test stops it
+- [x] L-145 Six amounts were printed with a hard-coded "$" and their own division by 100 (owner overview totals, rule previews, saved-view minimum, transfer matches): wrong in any other currency; now `formatCurrency`, and a guard test stops it · L-146 same for 17 more: command palette results (invoices and bills always "USD"), statement and bank-feed import previews, Copilot's figures sent to the AI, tax reserve card, insights, Magic Entry, document vault, transaction pivot; two more guard patterns
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

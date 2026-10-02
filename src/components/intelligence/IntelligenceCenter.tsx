@@ -8,7 +8,7 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis
 } from 'recharts';
 import { BarChart3, ShieldCheck, Target, Download, Maximize2, Minimize2, BrainCircuit, TrendingUp, Activity, Info, ChevronRight, Sparkles, Menu, X, Search, Calendar, Flame, Loader2, LayoutGrid, Building, DollarSign, Users, BarChart as BarChartIcon, Calculator, Zap } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuditTelemetry } from '../../hooks/useAuditTelemetry';
 import { select } from 'd3-selection';
@@ -704,7 +704,7 @@ export default function AnalyticalCenter() {
                         {metrics.kpis.runwayMonths.toFixed(1)} Months
                       </p>
                       <p className="text-[9px] text-[var(--muted)] font-mono tracking-tight leading-normal whitespace-nowrap truncate">
-                        At ${Math.round((metrics.kpis.burnRate * 30) / 100).toLocaleString()}/Mo burn
+                        At {formatCurrency(Math.round(metrics.kpis.burnRate * 30))}/Mo burn
                       </p>
                     </div>
                   </div>
@@ -789,7 +789,7 @@ export default function AnalyticalCenter() {
                              },
                              { 
                                title: 'Average Burn Rate', 
-                               text: `Average operational burn sits at $${((metrics.kpis.burnRate * 30) / 100).toLocaleString()}/Mo.`, 
+                               text: `Average operational burn sits at ${formatCurrency((metrics.kpis.burnRate * 30))}/Mo.`, 
                                status: 'AUDITED',
                                color: 'border-indigo-500'
                              },

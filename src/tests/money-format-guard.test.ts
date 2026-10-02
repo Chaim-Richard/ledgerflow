@@ -62,6 +62,21 @@ describe('Money Format Guard', () => {
     assert.deepStrictEqual(violations, []);
   });
 
+  it('no screen formats cents by hand with toLocaleString (use formatCurrency: workspace currency, right decimals)', () => {
+    const srcDir = path.resolve(__dirname, '../components');
+    const violations = scanDirForPattern(srcDir, /\/\s*100\)\.toLocaleString\(/, ['.tsx']);
+    assert.deepStrictEqual(violations, []);
+  });
+
+  it('no text puts a literal $ before cents divided by 100 (template text or JSX)', () => {
+    const srcDir = path.resolve(__dirname, '../components');
+    // the admin panel's platform quotas are billed in US dollars
+    const allowed = new Set(['SystemCommandCenter.tsx']);
+    const pattern = /\$\$\{[^}]*\/\s*100\b|(^|[^$\w`])\$\{\(+[^}]*\/\s*100\)\.to(Fixed|LocaleString)/;
+    const violations = scanDirForPattern(srcDir, pattern, ['.tsx']).filter(v => !allowed.has(path.basename(v.file)));
+    assert.deepStrictEqual(violations, []);
+  });
+
   it('no screen prints a hard-coded $ in front of its own division by 100 (workspace currency ignored)', () => {
     const srcDir = path.resolve(__dirname, '../components');
     // JSX like  ${(amountCents / 100).toFixed(2)}  — a literal dollar sign, then cents turned into units by hand

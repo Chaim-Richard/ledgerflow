@@ -259,7 +259,8 @@ export const SYSTEM_COMMANDS: CommandDefinition[] = [
   { id: 'settings-currency', label: { en: 'Change Currency (Settings)', he: 'שינוי מטבע (הגדרות)' }, category: 'Settings', actionId: 'switch-tab', payload: { tab: 'settings', subTab: 'localization' } },
   { id: 'settings-taxes', label: { en: 'Tax Settings', he: 'הגדרות מס' }, category: 'Settings', actionId: 'switch-tab', payload: { tab: 'settings', subTab: 'taxes' } },
   { id: 'settings-team', label: { en: 'Team & Roles', he: 'צוות והרשאות' }, category: 'Settings', actionId: 'switch-tab', payload: { tab: 'settings', subTab: 'team' } },
-  { id: 'settings-profile', label: { en: 'User Profile', he: 'פרופיל משתמש' }, category: 'Settings', actionId: 'switch-tab', payload: { tab: 'settings', subTab: 'profile' } }
+  { id: 'settings-profile', label: { en: 'User Profile', he: 'פרופיל משתמש' }, category: 'Settings', actionId: 'switch-tab', payload: { tab: 'settings', subTab: 'profile' } },
+  { id: 'keyboard-shortcuts', label: { en: 'Keyboard shortcuts (?)', he: 'קיצורי מקלדת (?)' }, category: 'Help', actionId: 'open-shortcuts' }
 ];
 
 interface DashboardKpiStats {

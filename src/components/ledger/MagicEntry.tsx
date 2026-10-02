@@ -5,7 +5,7 @@ import { parseNaturalLanguageEntry } from '../../lib/algorithms/nl-parser';
 import { Check, Wand2, Camera, X, Loader2, Edit2 } from 'lucide-react';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { toast } from 'sonner';
-import { getLocalDateISO } from '../../lib/utils';
+import { getLocalDateISO, formatCurrency } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isCashAccount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
@@ -215,7 +215,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
               <div>
                 <p className="text-xs text-[var(--faint)] mb-1">Amount</p>
                 <p className={`text-xl font-bold tabular-nums ${parsed.action === 'expense' ? 'text-[var(--neg)]' : 'text-[var(--pos)]'}`}>
-                  ${Math.abs(parsed.amount / 100).toFixed(2)} {parsed.action === 'expense' ? 'Out' : 'In'}
+                  {formatCurrency(Math.abs(parsed.amount))} {parsed.action === 'expense' ? 'Out' : 'In'}
                 </p>
               </div>
               <div>
