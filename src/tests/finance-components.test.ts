@@ -1,3 +1,4 @@
+import type { TransactionLine } from '../types';
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { IntercompanyEliminationEngine } from '../lib/intercompanyElimination';
@@ -368,8 +369,8 @@ describe('Finance Components & Modules Suite (src/components/finance)', () => {
     ];
 
     test('IntercompanyEliminationEngine partitions world statements and applies eliminations', () => {
-      const isIncomeLine = (l: any) => l.category?.toLowerCase().includes('revenue') || false;
-      const isExpenseLine = (l: any) => l.category?.toLowerCase().includes('expense') || false;
+      const isIncomeLine = (l: TransactionLine) => l.category?.toLowerCase().includes('revenue') || false;
+      const isExpenseLine = (l: TransactionLine) => l.category?.toLowerCase().includes('expense') || false;
 
       const summary = IntercompanyEliminationEngine.generateConsolidatedSummary(
         multiEntityTx,

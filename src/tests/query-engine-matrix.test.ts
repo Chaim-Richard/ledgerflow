@@ -1,3 +1,6 @@
+import type { Transaction, ChartAccount, FilterCriteria } from '../types';
+import type { QueryEngineOptions } from '../lib/TransactionQueryEngine';
+type NormalizedTransaction = QueryEngineOptions['normalized'][number];
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { TransactionQueryEngine } from '../lib/TransactionQueryEngine.js';
@@ -24,7 +27,7 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
       { id: 'acc-rev', name: 'Revenue', type: 'revenue' as const, category: 'Revenue', balanceCents: 0 }
     ];
 
-    const tx: any = {
+    const tx: Transaction = ({
       id: 'tx-fx-overflow',
       workspaceId: 'ws-1',
       date: '2026-01-01',
@@ -35,10 +38,10 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
         { accountId: 'acc-cash', amountCents: hugeAmount, exchangeRate: rate },
         { accountId: 'acc-rev', amountCents: -hugeAmount, exchangeRate: rate }
       ]
-    };
+    }) as unknown as Transaction;
 
     assert.throws(() => {
-      LedgerEngine.computeDimensionalBalances(accounts as any, [tx]);
+      LedgerEngine.computeDimensionalBalances(accounts as unknown as ChartAccount[], [tx]);
     }, /Monetary overflow/);
   });
 
@@ -179,7 +182,7 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
     ];
 
     // Large transactions that prior code erroneously guessed as capital assets
-    const txs: any[] = [
+    const txs: Transaction[] = ([
       {
         id: 'tx-large-1',
         status: 'completed',
@@ -190,9 +193,9 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
           { accountId: 'ar-1', amountCents: -500000 }
         ]
       }
-    ];
+    ]) as unknown as Transaction[];
 
-    const ctx = buildAlgorithmContext(txs as any, accounts as any, '2026-01-01', { start: '2026-01-01', end: '2026-12-31' });
+    const ctx = buildAlgorithmContext(txs as unknown as Transaction[], accounts as unknown as ChartAccount[], '2026-01-01', { start: '2026-01-01', end: '2026-12-31' });
     const res = assetAmortizer.compute(ctx, { life: 5, salvageValuePct: 10, taxRate: 25, convention: 'half-year' });
 
     assert.equal(res.metrics.find(m => m.label === 'Status')?.value, 'Insufficient Data');
@@ -204,13 +207,13 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
   // #99 & #100: TransactionQueryEngine End-to-End Operator Test Matrix
   // =========================================================================
   test('#99 & #100: TransactionQueryEngine correctly executes all supported query operators and isolates simulations', () => {
-    const accounts: any[] = [
+    const accounts: ChartAccount[] = ([
       { id: '101', name: 'Checking Account', code: '1010', category: 'Cash', type: 'asset' },
       { id: '501', name: 'Software Subscriptions', code: '5010', category: 'Operating Expense', type: 'expense' },
       { id: '502', name: 'Office Equipment', code: '1510', category: 'Fixed Assets', type: 'asset' }
-    ];
+    ]) as unknown as ChartAccount[];
 
-    const makeTx = (id: string, amtDollars: number, date: string, desc: string, opts: any = {}) => ({
+    const makeTx = (id: string, amtDollars: number, date: string, desc: string, opts: { payee?: string; project?: string; status?: Transaction['status']; type?: string; isCleared?: boolean; metadata?: Transaction['metadata']; accountId?: string; class?: string; location?: string } = {}) => ({
       id,
       date,
       description: desc,
@@ -229,7 +232,7 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
         sanitizedDescription: desc.toLowerCase(),
         primaryCategory: 'Expense'
       }
-    });
+    } as unknown as NormalizedTransaction);
 
     const dataset = [
       makeTx('tx-1', 50, '2026-01-10', 'Stripe payment processor fee', { payee: 'Stripe' }),
@@ -261,7 +264,7 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
     // Opt-in to simulations (#100)
     const withSimulations = TransactionQueryEngine.query({
       ...baseOptions,
-      filterCriteria: { includeSimulations: true } as any
+      filterCriteria: { includeSimulations: true } as unknown as FilterCriteria
     });
     assert.equal(withSimulations.some(t => t.id === 'tx-ghost'), true);
 
@@ -354,7 +357,7 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
   // =========================================================================
   test('#102: Canonical validators enforce absolute totals, lock dates, status immutability, and double entry', () => {
     // 1. Valid balanced transaction
-    const validTx: any = {
+    const validTx: Transaction = ({
       id: 'tx-valid-stripe',
       uid: 'user-1',
       workspaceId: 'ws-1',
@@ -368,12 +371,12 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
         { accountId: 'acc-cash', amountCents: 5000 },
         { accountId: 'acc-ar', amountCents: -5000 }
       ]
-    };
+    }) as unknown as Transaction;
 
     assert.equal(DoubleEntryValidator.validateJournalEntry(validTx), true);
 
     // 2. Unbalanced transaction rejected
-    const unbalancedTx: any = {
+    const unbalancedTx: Transaction = ({
       id: 'tx-unbalanced',
       uid: 'user-1',
       workspaceId: 'ws-1',
@@ -387,7 +390,7 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
         { accountId: 'acc-cash', amountCents: 5000 },
         { accountId: 'acc-ar', amountCents: -3000 }
       ]
-    };
+    }) as unknown as Transaction;
     assert.throws(() => {
       DoubleEntryValidator.validateJournalEntry(unbalancedTx);
     }, /Debits must exactly equal Credits/);
@@ -403,11 +406,11 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
     }, /Period Locked/);
 
     // 4. Status Lock rejected for non-admin
-    const certifiedTx: any = {
+    const certifiedTx: Transaction = ({
       ...validTx,
       date: '2026-10-01',
       status: 'certified'
-    };
+    }) as unknown as Transaction;
     assert.throws(() => {
       TransactionValidator.validateTransactionState(certifiedTx, {
         workspaceId: 'ws-1',
@@ -421,12 +424,12 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
   // Saved View and User Search Term AND Combination Test
   // =========================================================================
   test('Saved View and User Search Term AND Combination Test', () => {
-    const accounts: any[] = [
+    const accounts: ChartAccount[] = ([
       { id: 'acc-cash', name: 'Operating Cash', type: 'asset', category: 'Cash' },
       { id: 'acc-rev', name: 'Revenue Account', type: 'revenue', category: 'Revenue' }
-    ];
+    ]) as unknown as ChartAccount[];
 
-    const transactions: any[] = [
+    const transactions: Transaction[] = ([
       {
         id: 'tx-1',
         description: 'Cash bank operating savings description',
@@ -443,7 +446,7 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
         _normalized: { absAmount: 5 },
         lines: [{ accountId: 'acc-rev', amountCents: 500 }]
       }
-    ];
+    ]) as unknown as Transaction[];
 
     const view = {
       id: 'view-cash',

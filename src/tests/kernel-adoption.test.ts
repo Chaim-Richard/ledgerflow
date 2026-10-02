@@ -28,12 +28,12 @@ test('Kernel modules must be adopted outside of src/kernel/ and src/tests/', () 
       // Just search for the base name in import/require statements
       const regex = `from ['"][^'"]*${base}(\\.js)?['"]`;
       output = execFileSync('grep', ['-rn', '-E', regex, 'src/'], { encoding: 'utf8' });
-    } catch (e: any) {
-      if (e.stderr && e.stderr.length > 0) {
-        console.error('grep error:', e.stderr.toString());
+    } catch (e) {
+      if ((e as { stdout: string | Buffer; stderr: string | Buffer }).stderr && (e as { stdout: string | Buffer; stderr: string | Buffer }).stderr.length > 0) {
+        console.error('grep error:', (e as { stdout: string | Buffer; stderr: string | Buffer }).stderr.toString());
       }
-      if (e.stdout) {
-         output = e.stdout.toString();
+      if ((e as { stdout: string | Buffer; stderr: string | Buffer }).stdout) {
+         output = (e as { stdout: string | Buffer; stderr: string | Buffer }).stdout.toString();
       }
     }
     

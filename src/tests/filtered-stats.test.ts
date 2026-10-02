@@ -152,10 +152,10 @@ describe('Filtered Totals & Inflow/Outflow Calculation Suite', () => {
   });
 
   test('isPostable correctly rejects draft, void, failed, and soft-deleted records', () => {
-    assert.equal(isPostable({ id: '1', status: 'completed' } as any), true);
-    assert.equal(isPostable({ id: '2', status: 'void' } as any), false);
-    assert.equal(isPostable({ id: '3', status: 'draft' } as any), false);
-    assert.equal(isPostable({ id: '4', status: 'failed' } as any), false);
-    assert.equal(isPostable({ id: '5', status: 'completed', deletedAt: '2026-09-01' } as any), false);
+    assert.equal(isPostable({ id: '1', status: 'completed' } as unknown as Transaction), true);
+    assert.equal(isPostable({ id: '2', status: 'void' } as unknown as Transaction), false);
+    assert.equal(isPostable({ id: '3', status: 'draft' } as unknown as Transaction), false);
+    assert.equal(isPostable({ id: '4', status: 'failed' } as unknown as Transaction), false);
+    assert.equal(isPostable({ id: '5', status: 'completed', deletedAt: '2026-09-01' } as unknown as Transaction), false);
   });
 });

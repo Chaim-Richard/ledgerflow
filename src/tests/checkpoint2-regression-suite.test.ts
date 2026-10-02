@@ -118,7 +118,7 @@ describe('Checkpoint 2 Regression & Security Hardening Suite (N1 - N18)', () => 
     delete process.env.APP_URL;
 
     // 2. Mock request with malicious host header
-    const maliciousReq: any = {
+    const maliciousReq = {
       get: (header: string) => {
         if (header.toLowerCase() === 'host') return 'evil-phishing.run.app';
         return null;
@@ -126,7 +126,7 @@ describe('Checkpoint 2 Regression & Security Hardening Suite (N1 - N18)', () => 
       protocol: 'https'
     };
 
-    const trusted = getTrustedAppUrl(maliciousReq);
+    const trusted = getTrustedAppUrl(maliciousReq as unknown as Parameters<typeof getTrustedAppUrl>[0]);
     assert.notEqual(trusted, 'https://evil-phishing.run.app', 'Must not trust arbitrary run.app hosts');
   });
 

@@ -1,3 +1,4 @@
+import type { Transaction, ChartAccount } from '../types';
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { ALTMAN_Z_SCORE_ALGO } from '../lib/algorithms/altman-z-score.js';
@@ -30,7 +31,7 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
       ]}
     ];
 
-    const ctx = buildAlgorithmContext(transactions as any, accounts as any, '2026-09-06', { start: '2026-01-01', end: '2026-12-31' });
+    const ctx = buildAlgorithmContext(transactions as unknown as Transaction[], accounts as unknown as ChartAccount[], '2026-09-06', { start: '2026-01-01', end: '2026-12-31' });
     const res = computeFn(ctx, { publicCompany: 0 });
     assert.ok(res.metrics.length > 0);
   });
@@ -43,10 +44,10 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
     ];
 
     // Create 10 days of base expenses ($100/day = 10000 cents) and a spike on day 10 ($1000 = 100000 cents)
-    const txs: any[] = [];
+    const txs: Transaction[] = ([]) as unknown as Transaction[];
     for (let day = 1; day <= 9; day++) {
       const dayStr = day < 10 ? `0${day}` : `${day}`;
-      txs.push({
+      txs.push(({
         id: `tx-exp-${day}`,
         date: `2026-06-${dayStr}T12:00:00.000Z`,
         status: 'completed',
@@ -55,11 +56,11 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
           { accountId: 'exp1', amountCents: 10000 },
           { accountId: 'cash1', amountCents: -10000 }
         ]
-      });
+      }) as unknown as Transaction);
     }
 
     // Spike on day 10
-    txs.push({
+    txs.push(({
       id: 'tx-exp-10',
       date: '2026-06-10T12:00:00.000Z',
       status: 'completed',
@@ -68,10 +69,10 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
         { accountId: 'exp1', amountCents: 100000 },
         { accountId: 'cash1', amountCents: -100000 }
       ]
-    });
+    }) as unknown as Transaction);
 
     // Also add an incoming revenue transaction of $500,000 which must NOT count as an expense spike!
-    txs.push({
+    txs.push(({
       id: 'tx-rev-10',
       date: '2026-06-10T14:00:00.000Z',
       status: 'completed',
@@ -80,9 +81,9 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
         { accountId: 'cash1', amountCents: 50000000 },
         { accountId: 'rev1', amountCents: -50000000 }
       ]
-    });
+    }) as unknown as Transaction);
 
-    const ctx = buildAlgorithmContext(txs, accounts as any, '2026-06-11', { start: '2026-06-01', end: '2026-06-11' });
+    const ctx = buildAlgorithmContext(txs, accounts as unknown as ChartAccount[], '2026-06-11', { start: '2026-06-01', end: '2026-06-11' });
     const res = EXPENSE_VELOCITY_ALGO.compute(ctx, { spikeThresholdPct: 50, movingAverageDays: 7 });
 
     assert.ok(res.metrics.length >= 3);
@@ -101,11 +102,11 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
       { id: 'exp1', name: 'Depreciation Expense', type: 'expense', balanceCents: 0 }
     ];
 
-    const txs: any[] = [];
+    const txs: Transaction[] = ([]) as unknown as Transaction[];
     // 10 days of cash transactions
     for (let day = 1; day <= 10; day++) {
       const dayStr = day < 10 ? `0${day}` : `${day}`;
-      txs.push({
+      txs.push(({
         id: `tx-cash-${day}`,
         date: `2026-05-${dayStr}`,
         status: 'completed',
@@ -114,11 +115,11 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
           { accountId: 'bank1', amountCents: 20000 },
           { accountId: 'ar1', amountCents: -20000 }
         ]
-      });
+      }) as unknown as Transaction);
     }
 
     // Non-cash depreciation entry of $1,000,000
-    txs.push({
+    txs.push(({
       id: 'tx-deprec',
       date: '2026-05-11',
       status: 'completed',
@@ -127,9 +128,9 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
         { accountId: 'exp1', amountCents: 100000000 },
         { accountId: 'fa1', amountCents: -100000000 }
       ]
-    });
+    }) as unknown as Transaction);
 
-    const ctx = buildAlgorithmContext(txs, accounts as any, '2026-05-12', { start: '2026-05-01', end: '2026-05-12' });
+    const ctx = buildAlgorithmContext(txs, accounts as unknown as ChartAccount[], '2026-05-12', { start: '2026-05-01', end: '2026-05-12' });
     const res = MONTE_CARLO_ALGO.compute(ctx, { simulationDays: 90, iterations: 10 });
 
     assert.ok(res.metrics.length > 0);
@@ -145,7 +146,7 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
       { id: 'fa1', name: 'CNC Milling Machine', type: 'asset', category: 'Fixed Assets', balanceCents: 10000000 }
     ];
 
-    const ctx = buildAlgorithmContext([], accounts as any, '2026-01-01', { start: '2026-01-01', end: '2026-12-31' });
+    const ctx = buildAlgorithmContext([], accounts as unknown as ChartAccount[], '2026-01-01', { start: '2026-01-01', end: '2026-12-31' });
     const res = assetAmortizer.compute(ctx, { life: 5, salvageValuePct: 10, taxRate: 25, convention: 'half-year' });
 
     assert.ok(res.metrics.length > 0);
@@ -160,15 +161,15 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
   });
 
   test('Simulation / Ghost Transaction Isolation protects real reports', () => {
-    const realTx: any = {
+    const realTx: Transaction = ({
       id: 'tx-real-1',
       status: 'completed',
       date: '2026-01-15',
       totalAmountCents: 5000,
       lines: [{ accountId: 'cash', amountCents: 5000 }]
-    };
+    }) as unknown as Transaction;
 
-    const ghostTx: any = {
+    const ghostTx: Transaction = ({
       id: 'ghost-scenario-1-20260115',
       status: 'pending',
       type: 'forecast',
@@ -176,7 +177,7 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
       totalAmountCents: 5000,
       metadata: { isGhost: true },
       lines: [{ accountId: 'ghost-acc', amountCents: 5000 }]
-    };
+    }) as unknown as Transaction;
 
     assert.equal(isPostable(realTx), true);
     assert.equal(isSimulationTransaction(realTx), false);

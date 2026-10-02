@@ -60,7 +60,7 @@ describe('Client Stores State & Mutator Suite (src/stores)', () => {
     });
 
     test('resetStore clears state back to empty baseline', () => {
-      useLedgerStore.getState().setTransactions([{ id: 'tx_1', totalAmountCents: 500 } as any]);
+      useLedgerStore.getState().setTransactions([{ id: 'tx_1', totalAmountCents: 500 } as unknown as Transaction]);
       useLedgerStore.getState().resetStore();
 
       const state = useLedgerStore.getState();
@@ -89,7 +89,7 @@ describe('Client Stores State & Mutator Suite (src/stores)', () => {
         getIdTokenResult: async () => ({ claims: {} })
       };
 
-      useAuthStore.getState().setUser(mockUser as any);
+      useAuthStore.getState().setUser(mockUser as unknown as Parameters<ReturnType<typeof useAuthStore.getState>['setUser']>[0]);
       const state = useAuthStore.getState();
 
       assert.equal(state.user?.email, 'accountant@ledgerflow.io');

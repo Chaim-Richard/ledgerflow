@@ -1,3 +1,4 @@
+import type { TransactionLine } from '../types';
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import { IntercompanyEliminationEngine } from '../lib/intercompanyElimination';
@@ -32,8 +33,8 @@ describe('Repair Board Verification: Phase 2-4 Accounting, Security & Algorithms
   test('#44: Cash Flow Financing sign convention and categories', () => {
     const cashFlow = {
       operating: { total: 0 },
-      investing: { total: 0, items: [] as any[] },
-      financing: { total: 0, items: [] as any[] },
+      investing: { total: 0, items: [] as { name: string; amount: number }[] },
+      financing: { total: 0, items: [] as { name: string; amount: number }[] },
       netChange: 0
     };
 
@@ -45,7 +46,7 @@ describe('Repair Board Verification: Phase 2-4 Accounting, Security & Algorithms
     ];
 
     // Transaction 1: Issue $50,000 Common Stock (DR Cash +50k, CR Equity -50k)
-    const tx1: any = {
+    const tx1: Transaction = ({
       id: 'tx_stock',
       status: 'completed',
       type: 'actual',
@@ -54,10 +55,10 @@ describe('Repair Board Verification: Phase 2-4 Accounting, Security & Algorithms
         { accountId: 'acc_cash', amountCents: 5000000 },
         { accountId: 'acc_equity', amountCents: -5000000 }
       ]
-    };
+    }) as unknown as Transaction;
 
     // Transaction 2: Repay $10,000 Loan (DR Loan +10k, CR Cash -10k)
-    const tx2: any = {
+    const tx2: Transaction = ({
       id: 'tx_loan_repay',
       status: 'completed',
       type: 'actual',
@@ -66,11 +67,11 @@ describe('Repair Board Verification: Phase 2-4 Accounting, Security & Algorithms
         { accountId: 'acc_loan', amountCents: 1000000 },
         { accountId: 'acc_cash', amountCents: -1000000 }
       ]
-    };
+    }) as unknown as Transaction;
 
     // Process transactions
-    [tx1, tx2].forEach((tx: any) => {
-      tx.lines.forEach((line: any) => {
+    [tx1, tx2].forEach((tx) => {
+      tx.lines.forEach((line) => {
         const acc = mockAccounts.find(a => a.id === line.accountId);
         if (!acc) return;
         const amount = line.amountCents;
@@ -106,7 +107,7 @@ describe('Repair Board Verification: Phase 2-4 Accounting, Security & Algorithms
       total: 0
     };
 
-    invoices.forEach((item: any) => {
+    invoices.forEach((item) => {
       if (item.status === 'paid') return;
       const rawTotal = item.amountCents || 0;
       const rawPaid = item.amountPaidCents || 0;
@@ -162,8 +163,8 @@ describe('Repair Board Verification: Phase 2-4 Accounting, Security & Algorithms
       }
     ];
 
-    const isIncomeLine = (l: any) => l.accountId === 'acc_rev';
-    const isExpenseLine = (l: any) => l.accountId === 'acc_exp';
+    const isIncomeLine = (l: TransactionLine) => l.accountId === 'acc_rev';
+    const isExpenseLine = (l: TransactionLine) => l.accountId === 'acc_exp';
 
     const result = IntercompanyEliminationEngine.generateConsolidatedSummary(
       transactions,
