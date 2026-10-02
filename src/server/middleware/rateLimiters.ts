@@ -63,3 +63,37 @@ export const brainRateLimiter = rateLimit({
     message: 'AI Brain request quota temporarily exceeded. Please throttle request intensity.'
   }
 });
+
+/**
+ * The app-wide limiters (F-01, moved from server.ts). A new set per app, so each app (and each
+ * test) counts on its own.
+ */
+export function createAppRateLimiters() {
+  // Rate Limiting - Increased for production SPA load
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 1000, // increased to 1000 to prevent false positives in high-density SPA usage
+    message: { status: "error", message: "Maximum rate limit reached. Please hold for calibration." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Rate limiter specifically for transaction matching to prevent abuse / DOS (Strategic Key Protection)
+  const matchLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 120, // 120 matching inquiries per minute
+    message: { status: "error", message: "Transaction matching rate limit exceeded. Please throttle request intensity." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Interceptor middleware for Developer API Logging
+  const apiLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute window
+    max: 100, // Limit each IP to 100 requests per `window` (here, per minute)
+    message: { status: "error", message: "Too many requests from this IP, please try again after a minute." },
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  });
+  return { limiter, matchLimiter, apiLimiter };
+}

@@ -1374,7 +1374,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] E-03 Eligible selects linked to labels or given accessible names (codex, branch `codex/c-3-accessible-form-labels`, PR pending)
 - [x] E-04 Icon-only buttons and switches named (lint rule now clean)
 - [ ] E-05 23 tables without caption
-- [ ] E-06 2 `<img>` without alt
+- [x] E-06 Both images have alt text (receipt viewer, document vault)
 - [x] E-07 Eligible labels use matching htmlFor/id; per-instance IDs verified in Chromium; label-has-associated-control 185 → 46 → 0 (codex, branch `codex/c-3-accessible-form-labels`, PR pending)
 - [x] E-08 InvoiceModal — dialog role + name, focus in, Tab kept inside, Escape (asks before discarding), focus returned; axe 0 (browser test)
 - [x] E-09 BillModal — same; title says "Edit bill …" when editing; axe 0 (browser test)
@@ -1402,7 +1402,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION F — CODE STRUCTURE
 
-- [~] F-01 Split `server.ts` (**824** lines, was 5,383; target < 300): routes in `src/server/routes/*Routes.ts` (registered in the same order, checked), shared helpers in `src/server/http/serverKit.ts`; left: the start-up code (security headers, rate limits, Stripe webhook)
+- [x] F-01 Split `server.ts`: 5,383 → 188 lines. Start-up settings, allowed origins, security headers, rate limits, request log and the long-running server live in `src/server/config` and `src/server/http`; every route in `src/server/routes` (same order: checked by comparing the live route table, 108 entries)
 - [x] F-02 Lint rule blocking new routes in `server.ts`
 - [ ] F-03 `ApiHub.tsx` (3,147)
 - [x] F-04 `algorithms.ts` (codex, PR #38; six implementation modules below 800 lines)
