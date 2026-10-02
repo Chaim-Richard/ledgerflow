@@ -174,7 +174,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
     setLineKeys(keys => keys.filter((_, i) => i !== index));
   };
 
-  const handleLineChange = (index: number, field: keyof JournalLine, value: any) => {
+  const handleLineChange = (index: number, field: keyof JournalLine, value: string) => {
     setLines(prev => prev.map((lineItem, i) => {
       if (i !== index) return lineItem;
       const updated = { ...lineItem };
@@ -190,7 +190,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         if (field === 'debit' && cents > 0) updated.credit = 0;
         if (field === 'credit' && cents > 0) updated.debit = 0;
       } else {
-        (updated as any)[field] = value;
+        (updated as unknown as Record<string, string>)[field] = value;
       }
       return updated;
     }));
@@ -225,7 +225,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         if (l.class && !dims.class) dims.class = l.class;
         if (l.location && !dims.location) dims.location = l.location;
         if (l.project && !dims.project) dims.project = l.project;
-        if ((l as any).world && !dims.world) dims.world = (l as any).world;
+        if ((l as typeof l & { world?: string }).world && !dims.world) dims.world = (l as typeof l & { world: string }).world;
         
         return {
           accountId: l.accountId,
@@ -254,7 +254,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
           location: undefined,
           project: undefined,
           dimensions: undefined
-        } as any);
+        } as unknown as { accountId: string; accountName: string; amountCents: number; class: string | undefined; location: string | undefined; project: string | undefined; dimensions: Record<string, string> | undefined; });
       }
 
       const totalAmountCents = mappedLines
@@ -525,7 +525,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                                 <input 
                                   id={`je-dim-${dim.id}-${idx}`}
                                   aria-label={`${dim.name} for line ${idx + 1}`}
-                                  value={line.dimensions?.[dim.id.toLowerCase()] || (line as any)[dim.id.toLowerCase()] || ''}
+                                  value={line.dimensions?.[dim.id.toLowerCase()] || (line as unknown as Record<string, string>)[dim.id.toLowerCase()] || ''}
                                   onChange={(e) => handleDimensionChange(idx, dim.id, e.target.value)}
                                   placeholder={`Select ${dim.name}...`}
                                   className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] font-bold min-w-[120px] text-[var(--text)]"

@@ -36,7 +36,7 @@ function ensureTemplateAccounts(accounts: Partial<ChartAccount>[]): Partial<Char
   if (!existingCodes.has('3200')) {
     enriched.push({ code: '3200', name: 'Opening Balance Equity', type: 'equity', category: 'Equity' });
   }
-  if (!existingCodes.has('8999') && !enriched.some(a => (a as any).role === 'fx_rounding' || a.subtype === 'rounding')) {
+  if (!existingCodes.has('8999') && !enriched.some(a => a.role === 'fx_rounding' || a.subtype === 'rounding')) {
     enriched.push(DEFAULT_ROUNDING_ACCOUNT);
   }
   return enriched;

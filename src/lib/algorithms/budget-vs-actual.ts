@@ -23,13 +23,13 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
       defaultValue: '2026'
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "period": string; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounts, accounting } = ctx;
     const budgets = ctx.entities?.budgets || [];
     const targetPeriod = inputs['period'] || '2026';
     
     // Filter budgets for the period
-    const activeBudgets = budgets.filter((b: any) => b.period === targetPeriod && b.targetType === 'account');
+    const activeBudgets = budgets.filter((b) => b.period === targetPeriod && b.targetType === 'account');
     
     if (activeBudgets.length === 0) {
       return {
@@ -40,12 +40,12 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
       };
     }
 
-    const rows: any[] = [];
+    const rows: ({ id: string; account: string; budget: string; actual: string; variance: string; variancePct: string })[] = [];
     const sourceTransactionIds = new Set<string>();
     let totalBudget = 0;
     let totalActual = 0;
 
-    activeBudgets.forEach((budget: any) => {
+    activeBudgets.forEach((budget) => {
       const accountId = budget.targetId;
       const account = accounts.find(a => a.id === accountId);
       

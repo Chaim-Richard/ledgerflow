@@ -90,7 +90,7 @@ export const FIND_MY_ERROR_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'discrepancyAmount', label: 'Trial Balance Error (Cents)', min: 100, max: 100000, step: 100, defaultValue: 5400 } // $54.00
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "discrepancyAmount": number; [key: string]: unknown }) => {
     const { transactions } = ctx;
     
     // Inject a synthetic error into a copy of the ledger to ensure we find something

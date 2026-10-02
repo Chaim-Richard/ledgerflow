@@ -67,14 +67,14 @@ export const AccountRegisterView: React.FC = () => {
             id: `${tx.id}-${lineIdx}`,
             txId: tx.id,
             date: tx.date,
-            reference: (tx as any).reference || (tx as any).checkNumber || '',
-            payee: (tx as any).payee || (tx as any).entity || '',
+            reference: (tx as typeof tx & { reference?: string; checkNumber?: string; entity?: string; isReconciled?: boolean }).reference || (tx as typeof tx & { reference?: string; checkNumber?: string; entity?: string; isReconciled?: boolean }).checkNumber || '',
+            payee: (tx as typeof tx & { reference?: string; checkNumber?: string; entity?: string; isReconciled?: boolean }).payee || (tx as typeof tx & { reference?: string; checkNumber?: string; entity?: string; isReconciled?: boolean }).entity || '',
             description: line.description || tx.description || 'Transaction',
             accountId: line.accountId,
             deltaMinor: delta,
             debitMinor: amt > 0 ? amt : 0,
             creditMinor: amt < 0 ? Math.abs(amt) : 0,
-            isCleared: (line as any).isCleared === true || (tx as any).isReconciled === true,
+            isCleared: (line as typeof line & { isCleared?: boolean }).isCleared === true || (tx as typeof tx & { reference?: string; checkNumber?: string; entity?: string; isReconciled?: boolean }).isReconciled === true,
             originalTx: tx
           });
         }
@@ -130,7 +130,7 @@ export const AccountRegisterView: React.FC = () => {
     updateTransaction(txId, {
       ...tx,
       isReconciled: !currentCleared
-    } as any);
+    } as unknown as Partial<Transaction>);
   };
 
   return (

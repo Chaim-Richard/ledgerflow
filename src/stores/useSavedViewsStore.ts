@@ -319,7 +319,7 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
     });
 
     if (view.targetTab && view.targetTab !== 'all') {
-      useUIStore.getState().setActiveTab(view.targetTab as any);
+      useUIStore.getState().setActiveTab(view.targetTab as unknown as string);
     }
   },
 }));
@@ -331,8 +331,8 @@ export function computeSavedViewMetrics(
   view: SavedView,
   transactions: Transaction[] = [],
   accounts: ChartAccount[] = [],
-  _invoices: any[] = [],
-  _bills: any[] = []
+  _invoices: unknown[] = [],
+  _bills: unknown[] = []
 ): ViewMetrics {
   const filter = view.filter || {};
   const searchLower = (filter.searchTerm || '').toLowerCase();

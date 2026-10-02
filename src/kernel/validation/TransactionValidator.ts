@@ -9,8 +9,8 @@ import { assertPostingOpen, lockMessage, postingLock } from '../../lib/periodLoc
 export interface ValidationContext {
   workspaceId: string;
   user: { uid: string; admin?: boolean };
-  wsData: any;
-  accountsMap?: Map<string, any>;
+  wsData: import("../../lib/periodLock").PeriodLockSettings | undefined;
+  accountsMap?: Map<string, { workspaceId?: string; name?: string } | undefined>;
 }
 
 export class TransactionValidator {
@@ -38,10 +38,10 @@ export class TransactionValidator {
   }
 
   static async validateAndPrepare(
-    transaction: any,
+    transaction: Omit<Partial<Transaction>, 'type' | 'status' | 'lines'> & { type?: string; status?: string; lines?: Partial<Transaction['lines'][number]>[] },
     context: ValidationContext,
     existingTx?: Transaction,
-    t?: any
+    t?: Pick<import("../../server/db/pgFirestore").Transaction, 'getAll'>
   ): Promise<Transaction> {
     const db = getDb();
     
@@ -56,7 +56,7 @@ export class TransactionValidator {
 
     // #88 & N15 - Semantic contract: totalAmountCents is ALWAYS absolute positive safe integer, using FX-aware line amounts
     if (Array.isArray(transaction.lines) && transaction.lines.length > 0) {
-      const calculatedTotal = getAbsoluteTotal(transaction);
+      const calculatedTotal = getAbsoluteTotal(transaction as Transaction);
       if (!Number.isSafeInteger(calculatedTotal)) {
         throw new Error(`Validation Failed: totalAmountCents exceeds safe integer bounds.`);
       }
@@ -97,15 +97,15 @@ export class TransactionValidator {
 
     // 4. Account Verification
     if (validatedTx.lines) {
-      const accountIds = Array.from(new Set<string>(validatedTx.lines.map((l: any) => l.accountId).filter(Boolean)));
+      const accountIds = Array.from(new Set<string>(validatedTx.lines.map((l) => l.accountId).filter(Boolean)));
       if (accountIds.length > 0) {
         let accMap = context.accountsMap;
         if (!accMap) {
           const accRefs = accountIds.map(id => db.collection('chartAccounts').doc(id));
           const accSnaps = t ? await t.getAll(...accRefs) : await db.getAll(...accRefs);
-          accMap = new Map<string, any>();
+          accMap = new Map<string, { workspaceId?: string; name?: string } | undefined>();
           for (const snap of accSnaps) {
-            accMap.set(snap.id, snap.data());
+            accMap.set(snap.id, snap.data() as { workspaceId?: string; name?: string } | undefined);
           }
         }
         for (const id of accountIds) {

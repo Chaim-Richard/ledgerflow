@@ -157,7 +157,7 @@ describe('Financial Algorithms & Platform Semantics Test Suite', () => {
     
     // Half-year convention: 5-year asset produces 6 periods (Year 1 to Year 6)
     assert.equal(res.charts[0].data.length, 6);
-    assert.ok(res.charts[0].data[0].year.includes('Half'));
+    assert.ok((res.charts[0].data[0] as { year: string }).year.includes('Half'));
   });
 
   test('Simulation / Ghost Transaction Isolation protects real reports', () => {

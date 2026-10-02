@@ -63,7 +63,7 @@ export const SUBSET_SUM_RECONCILIATION: AlgorithmDefinition = {
     { key: 'targetAmount', label: 'Target Bank Deposit', min: 1000, max: 1000000, step: 1000, defaultValue: 481266 },
     { key: 'numInvoices', label: 'Candidate Invoices', min: 5, max: 40, step: 1, defaultValue: 15 }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "targetAmount": number; "numInvoices": number; [key: string]: unknown }) => {
     const { transactions } = ctx;
     const numInvoices = Number(inputs?.numInvoices) || 15;
     const target = typeof inputs?.targetAmount === 'number' ? inputs.targetAmount : 481266;

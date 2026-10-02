@@ -292,7 +292,7 @@ export class StrategicEngine {
     }
 
     // 13. Revenue Acceleration Analysis
-    const revs = data.metrics.timeSeries.map((d: any) => d.inflow);
+    const revs = data.metrics.timeSeries.map((d) => d.inflow);
     if (revs.length > 30) {
        const firstHalf = revs.slice(0, Math.floor(revs.length / 2)).reduce((a: number, b: number) => a + b, 0);
        const secondHalf = revs.slice(Math.floor(revs.length / 2)).reduce((a: number, b: number) => a + b, 0);
@@ -396,7 +396,7 @@ export class StrategicEngine {
     return results.sort((a, b) => b.score - a.score).slice(0, 5);
   }
 
-  private static calculateLaggedPearson(daily: any, dates: string[], catA: string, catB: string, lag: number) {
+  private static calculateLaggedPearson(daily: Record<string, Record<string, number>>, dates: string[], catA: string, catB: string, lag: number) {
     const seriesA: number[] = [];
     const seriesB: number[] = [];
 
@@ -421,7 +421,7 @@ export class StrategicEngine {
     return denom === 0 ? 0 : (n * sumAB - sumA * sumB) / denom;
   }
 
-  static getForecast(transactions: Transaction[], accounts: ChartAccount[]): any {
+  static getForecast(transactions: Transaction[], accounts: ChartAccount[]) {
     const monthlyInflow: Record<string, number> = {};
     const monthlyOutflow: Record<string, number> = {};
     const accountMap = new Map(accounts.map(a => [a.id, a]));
@@ -480,7 +480,7 @@ export class StrategicEngine {
     };
   }
 
-  static analyzeUnitEconomics(items: any[], transactions: Transaction[], accounts: ChartAccount[]): any {
+  static analyzeUnitEconomics(items: import("../types").InventoryItem[], transactions: Transaction[], accounts: ChartAccount[]) {
     if (!items.length) return [];
 
     const now = new Date().getTime();

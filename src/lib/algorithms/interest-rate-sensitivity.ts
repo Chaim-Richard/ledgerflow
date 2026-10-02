@@ -10,7 +10,7 @@ export const INTEREST_RATE_SENSITIVITY_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'rateShockBps', label: 'Rate Shock (Basis Points)', min: -500, max: 500, step: 25, defaultValue: 100 }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "rateShockBps": number; [key: string]: unknown }): AlgoResult => {
     const { accounts } = ctx;
     const rateShock = (inputs.rateShockBps ?? 100) / 10000;
 

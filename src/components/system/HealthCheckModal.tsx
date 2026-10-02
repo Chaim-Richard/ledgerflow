@@ -22,7 +22,7 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
   
 
   const [isScanning, setIsScanning] = useState(false);
-  const [report, setReport] = useState<any>(null);
+  const [report, setReport] = useState<{ results: { id: string; title: string; status: string; message: string }[]; score: number; pending: number } | null>(null);
   const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
@@ -224,7 +224,7 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
                 </div>
 
                 <div className="space-y-3">
-                  {report.results.map((r: any) => (
+                  {report.results.map((r) => (
                     <div key={r.id} className="p-4 rounded-xl border border-slate-200 bg-white flex items-start gap-4">
                       <div className="mt-0.5">
                         {r.status === 'pass' && <CheckCircle2 aria-hidden="true" className="text-emerald-500" size={20} />}

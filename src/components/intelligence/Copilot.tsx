@@ -104,7 +104,7 @@ export default function Copilot() {
         .map((t) => ({
           date: t.date,
           description: t.description || '',
-          category: t.lines?.[0]?.category || (t as any).category || '',
+          category: t.lines?.[0]?.category || (t as typeof t & { category?: string }).category || '',
           amountFormatted: `$${((t.totalAmountCents || 0) / 100).toFixed(2)}`
         }));
 
@@ -150,14 +150,14 @@ export default function Copilot() {
         } else {
             throw new Error(data.detail || data.message || "Execution exception");
         }
-      } catch (err: any) {
+      } catch (err) {
         console.warn("AI Backend unreachable:", err);
-        answer = `*Ledger Intelligence Offline Fallback*\n\n**Financial Snapshot:**\n- **Verified Cash:** ${ledgerSummary.totalCash}\n- **Estimated Burn Rate:** ${ledgerSummary.monthlyBurn} / mo\n- **Runway:** ${ledgerSummary.runwayMonths} months\n- **Accounts Receivable:** ${ledgerSummary.totalAccountsReceivable}\n- **Accounts Payable:** ${ledgerSummary.totalAccountsPayable}\n\n*(Notice: Live Gemini backend unreachable: ${err.message}. Operating in deterministic heuristic mode).*`;
+        answer = `*Ledger Intelligence Offline Fallback*\n\n**Financial Snapshot:**\n- **Verified Cash:** ${ledgerSummary.totalCash}\n- **Estimated Burn Rate:** ${ledgerSummary.monthlyBurn} / mo\n- **Runway:** ${ledgerSummary.runwayMonths} months\n- **Accounts Receivable:** ${ledgerSummary.totalAccountsReceivable}\n- **Accounts Payable:** ${ledgerSummary.totalAccountsPayable}\n\n*(Notice: Live Gemini backend unreachable: ${(err as Error).message}. Operating in deterministic heuristic mode).*`;
       }
       
       appendMessage('assistant', answer);
-    } catch (err: any) {
-      appendMessage('assistant', "**Error computing metric**: " + err.message);
+    } catch (err) {
+      appendMessage('assistant', "**Error computing metric**: " + (err as Error).message);
     } finally {
       setLoading(false);
     }

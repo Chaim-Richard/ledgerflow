@@ -1,3 +1,4 @@
+import type { AlgoResultRow } from './types';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
 import { lineAmount } from '../../lib/txFilters';
@@ -7,7 +8,7 @@ import { calculateDocumentTax, calculateDocumentNet } from '../documentMath';
  * Normalizes taxRate input into a canonical decimal fraction (e.g. 8.25% -> 0.0825).
  * Accepts percentage numbers (e.g. 5, 8.25, 10, 100) or decimal fractions (0.05, 0.0825, 1.0).
  */
-export function normalizeTaxRate(rate: any): number {
+export function normalizeTaxRate(rate: unknown): number {
   if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) return 0;
   if (rate > 1) {
     return rate / 100;
@@ -63,7 +64,7 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
       defaultValue: ''
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "accountingBasis": string; "period": { start: string; end: string }; "sourcingRule": string; "jurisdiction": string; [key: string]: unknown }): AlgoResult => {
     const invoices = ctx.entities?.invoices || [];
     const customers = ctx.entities?.customers || [];
     
@@ -81,7 +82,7 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
       endDate.setHours(23, 59, 59, 999);
     }
 
-    let relevantInvoices = invoices.filter((i: any) => {
+    let relevantInvoices = invoices.filter((i) => {
       if (i.deletedAt || i.status === 'void' || i.status === 'draft' || i.status === 'rejected' || i.status === 'cancelled') {
         return false;
       }
@@ -93,7 +94,7 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
     });
 
     if (startDate && endDate) {
-      relevantInvoices = relevantInvoices.filter((i: any) => {
+      relevantInvoices = relevantInvoices.filter((i) => {
         const dateStr = basis === 'cash' ? (i.paidAt || i.paymentDate || i.paidDate || i.date) : (i.date || i.dueDate);
         if (!dateStr) return false;
         const d = parseLocalDate(dateStr);
@@ -101,7 +102,7 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
       });
     }
 
-    const rows: any[] = [];
+    const rows: (AlgoResultRow & { taxDue: string })[] = [];
     const sourceTransactionIds = new Set<string>();
 
     let totalSales = 0;
@@ -110,10 +111,10 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
 
     const jurisdictionTotals: Record<string, { sales: number, taxable: number, tax: number }> = {};
 
-    relevantInvoices.forEach((inv: any) => {
-      const customer = customers.find((c: any) => c.id === inv.customerId);
+    relevantInvoices.forEach((inv) => {
+      const customer = customers.find((c) => c.id === inv.customerId);
       const jurisdiction = sourcingRule === 'origin'
-        ? (inv.originState || (ctx as any).workspace?.state || 'Origin State')
+        ? (inv.originState || (ctx as typeof ctx & { workspace?: { state?: string } }).workspace?.state || 'Origin State')
         : (inv.shippingAddress?.state || 
            inv.taxJurisdiction || 
            customer?.shippingAddress?.state || 
@@ -131,7 +132,7 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
         : undefined;
       const totalInvCents = rawAmount !== undefined
         ? Math.round(rawAmount * (inv.exchangeRate || 1)) 
-        : lineAmount(inv as any);
+        : lineAmount(inv as unknown as import("../../types").TransactionLine);
         
       let salesCents = totalInvCents;
       if (basis === 'cash') {

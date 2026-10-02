@@ -17,7 +17,7 @@ export const PARETO_ANALYSIS_ALGO: AlgorithmDefinition = {
       defaultValue: 0
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "analyzeRevenue": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounts } = ctx;
     const isRevenue = inputs['analyzeRevenue'] === 1;
     

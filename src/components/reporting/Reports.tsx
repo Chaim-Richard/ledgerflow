@@ -358,7 +358,7 @@ const Reports = React.memo(() => {
                 onDrillDown: (name: string) => setDrillDownAccount(name)
               };
 
-              const reportTitle = typeof tab.label === 'string' ? tab.label : ((tab.label as any)?.en || tab.id);
+              const reportTitle = typeof tab.label === 'string' ? tab.label : (tab.label?.en || tab.id);
 
               return (
                 <ViewErrorBoundary key={tab.id} viewName={reportTitle}>

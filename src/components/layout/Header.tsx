@@ -116,7 +116,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
       <div className="flex items-center gap-3 flex-1 justify-end">
         {/* Help & Guide Button */}
         <button
-          onClick={() => setActiveTab('help' as any)}
+          onClick={() => setActiveTab('help' as unknown as string)}
           className="p-2 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] rounded-lg transition-colors"
           title="Open Help & Operational Guide"
           aria-label="Open Help & Operational Guide"
@@ -154,7 +154,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           <div className="flex items-center gap-2">
             {isAdmin && developerMode && (
               <button
-                onClick={() => setActiveTab('system-command-center' as any)}
+                onClick={() => setActiveTab('system-command-center' as unknown as string)}
                 title="Open Admin Control Panel"
                 className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono font-bold text-[var(--brass)] bg-[var(--brass-soft)] hover:bg-[var(--brass)] hover:text-black border border-[var(--brass-line)] rounded-md transition-colors cursor-pointer"
               >

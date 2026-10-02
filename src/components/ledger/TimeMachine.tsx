@@ -46,8 +46,8 @@ export default function TimeMachine() {
       }
       acc[date].txs.push(tx);
       return acc;
-    }, {} as Record<string, any>);
-    return Object.values(commits).sort((a: any, b: any) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
+    }, {} as Record<string, { date: string; id: string; hash: string; txs: import("../../types").Transaction[] }>);
+    return Object.values(commits).sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
   }, [transactions]);
 
   const handleCreateBranch = () => {
@@ -98,7 +98,7 @@ export default function TimeMachine() {
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as unknown as React.SetStateAction<"history" | "branches" | "diff">)}
             className={cn(
               "pb-3 px-2 text-sm font-bold flex items-center gap-2 transition-all border-b-2",
               activeTab === tab.id 
@@ -186,7 +186,7 @@ export default function TimeMachine() {
                           <select aria-label="Scenario transaction type"
                             className="w-1/2 text-sm p-2 rounded-lg border border-[var(--line)]"
                             value={ghostForm.type}
-                            onChange={e => setGhostForm({...ghostForm, type: e.target.value as any})}
+                            onChange={e => setGhostForm({...ghostForm, type: e.target.value as unknown as "expense"})}
                           >
                             <option value="expense">Expense</option>
                             <option value="income">Income</option>
@@ -246,7 +246,7 @@ export default function TimeMachine() {
           </div>
           
           <div className="relative border-l-2 border-[var(--line)] ml-6 space-y-8 py-6">
-            {commitList.map((commit: any) => (
+            {commitList.map((commit) => (
               <div key={commit.id} className="relative pl-8 group">
                 <div className="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full border-2 border-white bg-slate-300 group-hover:bg-[#0047AB] transition-colors" />
                 <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -274,7 +274,7 @@ export default function TimeMachine() {
                   </div>
                   
                   <div className="space-y-1 mt-4">
-                    {(expandedCommitHash === commit.hash ? commit.txs : commit.txs.slice(0, 3)).map((tx: any) => (
+                    {(expandedCommitHash === commit.hash ? commit.txs : commit.txs.slice(0, 3)).map((tx) => (
                       <div key={tx.id} className="text-sm py-2 flex justify-between border-t border-slate-50">
                         <span className="text-slate-700 font-medium truncate flex items-center gap-2">
                           <FileText aria-hidden="true" size={14} className="text-[var(--muted)]" />

@@ -13,7 +13,7 @@ export const LIQUIDITY_STRESS_ALGO: AlgorithmDefinition = {
     { key: 'haircutPct', label: 'Receivables Haircut (%)', min: 0, max: 100, step: 5, defaultValue: 30 },
     { key: 'outflowShockPct', label: 'Unplanned Outflow Shock (%)', min: 0, max: 50, step: 5, defaultValue: 15 }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "haircutPct": number; "outflowShockPct": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounts } = ctx;
     const haircut = (inputs.haircutPct ?? 30) / 100;
     const shock = (inputs.outflowShockPct ?? 15) / 100;

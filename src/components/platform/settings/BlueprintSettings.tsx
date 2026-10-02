@@ -95,9 +95,9 @@ export default function BlueprintSettings() {
       toast.success('Ingestion Mappings Active', {
         description: 'Default transaction split and fallback routing channels updated.'
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to commit default account mappings:", err);
-      toast.error('Saving Failed', { description: err.message || String(err) });
+      toast.error('Saving Failed', { description: (err as Error).message || String(err) });
     } finally {
       setIsSavingMappings(false);
     }
@@ -465,7 +465,7 @@ export default function BlueprintSettings() {
                   </div>
                   <div className="text-left">
                     <p className={`text-xs font-black uppercase tracking-wider ${isHidden ? 'line-through text-gray-400' : 'text-[var(--text)]'}`}>
-                      {((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id}
+                      {((tab as typeof tab & { name?: string }).label?.[language] || (tab as typeof tab & { name?: string }).label?.['en']) || (tab as typeof tab & { name?: string }).name || tab.id}
                     </p>
                     <p className="text-[9px] text-gray-400 font-mono tracking-tight capitalize mt-0.5">{tab.groupId} module</p>
                   </div>

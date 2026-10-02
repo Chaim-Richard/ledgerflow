@@ -67,13 +67,13 @@ export async function migrateWorkspaceDimensionNodesToCollection(
       workspaceId,
       success: true
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error(`[DimensionNodesMigration] Failed for workspace ${workspaceId}:`, err);
     return {
       migratedCount: 0,
       workspaceId,
       success: false,
-      error: err?.message || String(err)
+      error: (err as Error)?.message || String(err)
     };
   }
 }

@@ -2,7 +2,7 @@ import React, { useState, useId } from 'react';
 import { z } from 'zod';
 import { Field } from './Field';
 
-export interface SchemaFormProps<T extends z.ZodObject<any>> {
+export interface SchemaFormProps<T extends z.ZodObject<z.ZodRawShape>> {
   schema: T;
   initialValues?: Partial<z.infer<T>>;
   onSubmit: (data: z.infer<T>) => void | Promise<void>;
@@ -16,7 +16,7 @@ export interface SchemaFormProps<T extends z.ZodObject<any>> {
   className?: string;
 }
 
-export function SchemaForm<T extends z.ZodObject<any>>({
+export function SchemaForm<T extends z.ZodObject<z.ZodRawShape>>({
   schema,
   initialValues = {},
   onSubmit,
@@ -30,8 +30,8 @@ export function SchemaForm<T extends z.ZodObject<any>>({
   className = '',
 }: SchemaFormProps<T>) {
   const formId = useId();
-  const [formData, setFormData] = useState<Record<string, any>>(() => {
-    const defaults: Record<string, any> = {};
+  const [formData, setFormData] = useState<Record<string, unknown>>(() => {
+    const defaults: Record<string, unknown> = {};
     const shape = schema.shape;
     for (const key in shape) {
       if (initialValues[key] !== undefined) {
@@ -46,7 +46,7 @@ export function SchemaForm<T extends z.ZodObject<any>>({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (fieldKey: string, value: any) => {
+  const handleChange = (fieldKey: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [fieldKey]: value }));
     if (errors[fieldKey]) {
       setErrors(prev => {
@@ -78,8 +78,8 @@ export function SchemaForm<T extends z.ZodObject<any>>({
 
     try {
       await onSubmit(result.data);
-    } catch (err: any) {
-      setErrors({ _form: err.message || 'An error occurred during submission' });
+    } catch (err) {
+      setErrors({ _form: (err as Error).message || 'An error occurred during submission' });
     } finally {
       setIsSubmitting(false);
     }
@@ -92,17 +92,17 @@ export function SchemaForm<T extends z.ZodObject<any>>({
     let currentType: z.ZodTypeAny = zodType;
 
     if (currentType instanceof z.ZodOptional || currentType instanceof z.ZodNullable) {
-      currentType = (currentType as any)._def.innerType;
+      currentType = currentType._def.innerType as z.ZodTypeAny;
     }
 
     const value = formData[key] ?? '';
     const isDisabled = disabledFields.includes(key);
 
     if (currentType instanceof z.ZodEnum) {
-      const options = (currentType.options || (currentType as any)._def?.values || []) as readonly string[];
+      const options = (currentType.options || (currentType._def as typeof currentType._def & { values?: readonly string[] })?.values || []) as readonly string[];
       return (
         <select
-          value={value}
+          value={value as string | number | readonly string[]}
           disabled={isDisabled}
           onChange={e => handleChange(key, e.target.value)}
           className="w-full bg-[var(--bg-input,#ffffff)] border border-[var(--border,#d4d4d4)] text-[var(--text,#171717)] text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
@@ -137,7 +137,7 @@ export function SchemaForm<T extends z.ZodObject<any>>({
       return (
         <input
           type="number"
-          value={value}
+          value={value as string | number | readonly string[]}
           disabled={isDisabled}
           onChange={e => handleChange(key, e.target.value === '' ? '' : Number(e.target.value))}
           className="w-full bg-[var(--bg-input,#ffffff)] border border-[var(--border,#d4d4d4)] text-[var(--text,#171717)] text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
@@ -148,7 +148,7 @@ export function SchemaForm<T extends z.ZodObject<any>>({
     return (
       <input
         type="text"
-        value={value}
+        value={value as string | number | readonly string[]}
         disabled={isDisabled}
         onChange={e => handleChange(key, e.target.value)}
         className="w-full bg-[var(--bg-input,#ffffff)] border border-[var(--border,#d4d4d4)] text-[var(--text,#171717)] text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
@@ -184,7 +184,7 @@ export function SchemaForm<T extends z.ZodObject<any>>({
             hint={customHints[key]}
             required={isRequired}
           >
-            {renderControl(key, fieldDef)}
+            {renderControl(key, fieldDef as z.ZodTypeAny)}
           </Field>
         );
       })}

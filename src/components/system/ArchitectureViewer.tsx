@@ -12,7 +12,7 @@ export default function ArchitectureViewer() {
   
   const filteredAlgos = useMemo(() => {
     if (!searchQuery) return algorithmsList;
-    return algorithmsList.filter((a: any) => 
+    return algorithmsList.filter((a) =>
       a.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       a.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -20,7 +20,7 @@ export default function ArchitectureViewer() {
 
   const filteredModules = useMemo(() => {
     if (!searchQuery) return APP_TABS;
-    return APP_TABS.filter((t: any) => 
+    return APP_TABS.filter((t) =>
       t.label.en.toLowerCase().includes(searchQuery.toLowerCase()) || 
       t.id.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -43,7 +43,7 @@ export default function ArchitectureViewer() {
           {['topology', 'modules', 'algorithms', 'data'].map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => setActiveTab(tab as unknown as React.SetStateAction<"topology" | "modules" | "algorithms" | "data">)}
               className={`px-6 py-2.5 rounded-xl text-sm font-bold capitalize transition-all ${
                 activeTab === tab 
                   ? 'bg-[var(--surface)] text-indigo-700 shadow-sm ring-1 ring-slate-900/5' 
@@ -140,7 +140,7 @@ export default function ArchitectureViewer() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {filteredModules.map((tab: any) => (
+              {filteredModules.map((tab) => (
                 <div key={tab.id} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--line)] hover:border-indigo-300 hover:shadow-md transition-all group">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-xl bg-[var(--ink)] flex items-center justify-center text-[var(--muted)] group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
@@ -194,7 +194,7 @@ export default function ArchitectureViewer() {
             
             <div className="flex flex-col gap-8">
               {['finance', 'operations', 'forensics', 'planning', 'treasury', 'system', 'uncategorized'].map(domain => {
-                const domainAlgos = filteredAlgos.filter((a: any) => (a.domain || 'uncategorized') === domain);
+                const domainAlgos = filteredAlgos.filter((a) => (a.domain || 'uncategorized') === domain);
                 if (domainAlgos.length === 0) return null;
                 return (
                   <div key={domain} className="bg-[var(--ink)] p-6 rounded-2xl border border-[var(--line)]">
@@ -203,7 +203,7 @@ export default function ArchitectureViewer() {
                       {domain} ({domainAlgos.length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {domainAlgos.map((algo: any) => (
+                      {domainAlgos.map((algo) => (
                         <div key={algo.id} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--line)] hover:border-emerald-400 hover:shadow-lg transition-all flex flex-col h-full group">
                           <div className="flex-grow">
                             <div className="flex items-center justify-between mb-2">
@@ -225,7 +225,7 @@ export default function ArchitectureViewer() {
                             <div className="mt-auto pt-3 border-t border-[var(--line)]">
                               <div className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2">Required Inputs</div>
                               <div className="flex flex-wrap gap-1.5">
-                                {algo.inputs.map((input: any) => (
+                                {algo.inputs.map((input) => (
                                   <span key={input.key} className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-[10px] font-medium border border-emerald-100">
                                     {input.label}
                                   </span>

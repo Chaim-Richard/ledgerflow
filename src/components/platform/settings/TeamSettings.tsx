@@ -59,8 +59,8 @@ export default function TeamSettings() {
       if (invitesData.status === 'success' && Array.isArray(invitesData.invites)) {
         setInvites(invitesData.invites.filter((i: WorkspaceInvite) => i.status === 'pending'));
       }
-    } catch (err: any) {
-      toast.error('Failed to load team settings', { description: err.message });
+    } catch (err) {
+      toast.error('Failed to load team settings', { description: (err as Error).message });
     } finally {
       setLoading(false);
     }
@@ -118,8 +118,8 @@ export default function TeamSettings() {
       } else {
         toast.error('Failed to send invitation', { description: data.message || data.error || 'Unknown error' });
       }
-    } catch (err: any) {
-      toast.error('Error creating invitation', { description: err.message });
+    } catch (err) {
+      toast.error('Error creating invitation', { description: (err as Error).message });
     } finally {
       setSubmitting(false);
     }
@@ -148,8 +148,8 @@ export default function TeamSettings() {
         toast.error('Failed to update role', { description: data.message || data.error || 'Could not change role' });
         fetchTeamData(); // revert UI state
       }
-    } catch (err: any) {
-      toast.error('Error updating role', { description: err.message });
+    } catch (err) {
+      toast.error('Error updating role', { description: (err as Error).message });
       fetchTeamData();
     }
   };
@@ -172,8 +172,8 @@ export default function TeamSettings() {
       } else {
         toast.error('Failed to remove member', { description: data.message || data.error || 'Unknown error' });
       }
-    } catch (err: any) {
-      toast.error('Error removing member', { description: err.message });
+    } catch (err) {
+      toast.error('Error removing member', { description: (err as Error).message });
     }
   };
 
@@ -194,8 +194,8 @@ export default function TeamSettings() {
       } else {
         toast.error('Failed to revoke invite', { description: data.message || 'Error revoking invite' });
       }
-    } catch (err: any) {
-      toast.error('Error revoking invite', { description: err.message });
+    } catch (err) {
+      toast.error('Error revoking invite', { description: (err as Error).message });
     }
   };
 

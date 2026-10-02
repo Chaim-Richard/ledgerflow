@@ -6,7 +6,7 @@ import { auditDescription, auditTime } from '../../lib/auditFormat';
 import { auth } from '../../firebase';
 import { Labelled } from '../ui/Labelled';
 
-const fetchWithAuth = async (url: string, options: any = {}) => {
+const fetchWithAuth = async (url: string, options: RequestInit & { headers?: Record<string, string> } = {}) => {
   const token = await auth.currentUser?.getIdToken();
   const headers = { ...options.headers, 'Authorization': `Bearer ${token}` };
   return fetch(url, { ...options, headers });
@@ -14,7 +14,7 @@ const fetchWithAuth = async (url: string, options: any = {}) => {
 
 export default function AuditLogViewer() {
   const filterId = useId();
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<(import("../../lib/auditFormat").DisplayAuditLog & { id: string; action: string; userEmail?: string; workspaceId?: string; userId?: string; before?: Record<string, unknown>; after?: Record<string, unknown> })[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filters, setFilters] = useState({
@@ -28,7 +28,7 @@ export default function AuditLogViewer() {
 
   const fetchLogs = async () => {
     try {
-      const queryParams = new URLSearchParams(filters as any).toString();
+      const queryParams = new URLSearchParams(filters as unknown as string | Record<string, string> | URLSearchParams | string[][] | undefined).toString();
       const res = await fetchWithAuth(`/api/v1/admin/audit-logs?${queryParams}`);
       if (res.ok) {
         const data = await res.json();
@@ -46,7 +46,7 @@ export default function AuditLogViewer() {
     
     async function init() {
       try {
-        const queryParams = new URLSearchParams(filters as any).toString();
+        const queryParams = new URLSearchParams(filters as unknown as string | Record<string, string> | URLSearchParams | string[][] | undefined).toString();
         const res = await fetchWithAuth(`/api/v1/admin/audit-logs?${queryParams}`);
         if (res.ok && mounted) {
           const data = await res.json();
@@ -76,7 +76,7 @@ export default function AuditLogViewer() {
     setFilters(prev => ({ ...prev, [name]: value }));
   };
 
-  const renderDiff = (before: any, after: any) => {
+  const renderDiff = (before: Record<string, unknown> | undefined, after: Record<string, unknown> | undefined) => {
     if (!before || !after) return null;
     
     const allKeys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));

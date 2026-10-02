@@ -8,7 +8,7 @@ import {
 import { AuthAdapter, AuthUser } from '../../services/auth/types';
 
 export class FirebaseAuthAdapter implements AuthAdapter {
-  private mapUser(user: any): AuthUser | null {
+  private mapUser(user: import('../../lib/db/auth').User | null): AuthUser | null {
     if (!user) return null;
     return {
       uid: user.uid,

@@ -230,7 +230,7 @@ export function validateReceiptPayload(data: ParsedReceiptData): { valid: boolea
  */
 export function isAccountActiveAndAvailable(a: ChartAccount | undefined | null): boolean {
   if (!a) return false;
-  if ((a as any).archived === true || (a as any).isArchived === true) return false;
+  if ((a as typeof a & { archived?: boolean }).archived === true || (a as typeof a & { isArchived?: boolean }).isArchived === true) return false;
   if (a.isActive === false) return false;
   return true;
 }
@@ -402,7 +402,7 @@ export function mapReceiptToCoordinates(
   const taxCents = data.taxAmountCents || 0;
   if (taxCents > 0) {
     const taxAccount = accounts.find(a =>
-      (a as any).role === 'tax' ||
+      a.role === 'tax' ||
       (resolveAccountRole(a) as string) === 'tax' ||
       ((a.type === 'expense' || a.type === 'liability') && (a.name.toLowerCase().includes('tax') || (a.category && a.category.toLowerCase().includes('tax'))))
     ) || accounts.find(a => a.name.toLowerCase().includes('tax')) || fallbackReviewAccount;

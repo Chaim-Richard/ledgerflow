@@ -13,7 +13,7 @@ import { ChevronDown, ChevronUp, ChevronsLeft, ChevronsRight, ChevronLeft, Chevr
 
 interface TanStackDataGridProps<TData extends object> {
   data: TData[];
-  columns: ColumnDef<TData, any>[];
+  columns: ColumnDef<TData, unknown>[];
   pageSize?: number;
   searchPlaceholder?: string;
   enableGlobalFilter?: boolean;
@@ -72,9 +72,9 @@ export function TanStackDataGrid<TData extends object>({
       <div className="overflow-x-auto border border-slate-200 rounded-2xl bg-white shadow-2xs">
         <table className="w-full text-left border-collapse">
           <thead>
-            {table.getHeaderGroups().map((headerGroup: any) => (
+            {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="bg-slate-50 border-b border-slate-200">
-                {headerGroup.headers.map((header: any) => (
+                {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
                     scope="col"
@@ -108,9 +108,9 @@ export function TanStackDataGrid<TData extends object>({
                 </td>
               </tr>
             ) : (
-              table.getRowModel().rows.map((row: any) => (
+              table.getRowModel().rows.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
-                  {row.getVisibleCells().map((cell: any) => (
+                  {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-4 py-3 text-xs text-slate-700 font-medium">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>

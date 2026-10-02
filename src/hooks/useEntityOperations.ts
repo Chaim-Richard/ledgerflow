@@ -9,6 +9,11 @@ import { LedgerPostService } from '../services/LedgerPostService';
 import { isOpenInvoice, isOpenBill, lineAmount } from '../lib/txFilters';
 import type { Bill, CreditNote, Customer, Invoice, VendorCredit } from '../types';
 
+interface EntityInput {
+  customerId?: string; vendorId?: string; description?: string; vendorName?: string; customerName?: string; categoryId?: string; categoryName?: string; status?: string; forceSend?: boolean;
+  lines?: { accountId?: string; accountName?: string }[];
+}
+
 type StoredDocumentPath = 'invoices' | 'bills' | 'creditNotes' | 'vendorCredits' | 'customers';
 
 /**
@@ -45,7 +50,7 @@ export function useEntityOperations() {
         );
         const snap = await getDocs(q);
         const customerInvoices = snap.docs.map(d => d.data()).filter(isOpenInvoice);
-        balanceCents = customerInvoices.reduce((sum, inv) => sum + lineAmount(inv as any), 0);
+        balanceCents = customerInvoices.reduce((sum, inv) => sum + lineAmount(inv as unknown as import("../types").TransactionLine), 0);
       } else {
         const q = query(
           collection(db, 'bills'),
@@ -54,7 +59,7 @@ export function useEntityOperations() {
         );
         const snap = await getDocs(q);
         const vendorBills = snap.docs.map(d => d.data()).filter(isOpenBill);
-        balanceCents = vendorBills.reduce((sum, b) => sum + lineAmount(b as any), 0);
+        balanceCents = vendorBills.reduce((sum, b) => sum + lineAmount(b as unknown as import("../types").TransactionLine), 0);
       }
 
       await updateDoc(doc(db, entityType, entityId), {
@@ -103,7 +108,7 @@ export function useEntityOperations() {
     }
   };
 
-  const addEntity = async (path: string, data: any, successMsg?: string) => {
+  const addEntity = async <T extends object>(path: string, data: T & EntityInput, successMsg?: string) => {
     if (!user || !currentWorkspaceId) return;
     try {
       const docId = doc(collection(db, path)).id;
@@ -116,20 +121,20 @@ export function useEntityOperations() {
       };
 
       if (path === 'invoices') {
-        const posted = await LedgerPostService.postInvoiceLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
+        const posted = await LedgerPostService.postInvoiceLedger(docId, finalData as unknown as Partial<Invoice>, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
         if (posted.cogsPendingReason) toast.warning(posted.cogsPendingReason);
         if (finalData.customerId) {
           syncEntityBalance('customers', finalData.customerId);
         }
       } else if (path === 'bills') {
-        await LedgerPostService.postBillLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
+        await LedgerPostService.postBillLedger(docId, finalData as unknown as Partial<Bill>, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
         if (finalData.vendorId) {
           syncEntityBalance('vendors', finalData.vendorId);
         }
       } else if (path === 'creditNotes') {
-        await LedgerPostService.postCreditNoteLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
+        await LedgerPostService.postCreditNoteLedger(docId, finalData as unknown as Partial<CreditNote>, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
       } else if (path === 'vendorCredits') {
-        await LedgerPostService.postVendorCreditLedger(docId, finalData, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
+        await LedgerPostService.postVendorCreditLedger(docId, finalData as unknown as Partial<VendorCredit>, currentWorkspaceId, user.uid, { collection: path, docId, action: 'create', data: finalData });
       } else {
         await setDoc(doc(db, path, docId), finalData);
       }
@@ -141,10 +146,10 @@ export function useEntityOperations() {
         if (data.lines && data.lines.length > 0) {
           const mainLine = data.lines[0];
           if (mainLine.accountId && mainLine.accountName && mainLine.accountName !== 'Uncategorized') {
-            recordLearnedPattern(desc, mainLine.accountId, mainLine.accountName);
+            recordLearnedPattern(desc as string, mainLine.accountId, mainLine.accountName);
           }
         } else if (data.categoryId && data.categoryName) {
-           recordLearnedPattern(desc, data.categoryId, data.categoryName);
+           recordLearnedPattern(desc as string, data.categoryId, data.categoryName);
         }
       }
 
@@ -192,7 +197,7 @@ export function useEntityOperations() {
     }
   };
 
-  const updateEntity = async (path: string, id: string, updates: any, successMsg?: string) => {
+  const updateEntity = async <T extends object>(path: string, id: string, updates: T & EntityInput, successMsg?: string) => {
     try {
       const { forceSend, ...changes } = updates || {};
       const finalData = {
@@ -207,7 +212,7 @@ export function useEntityOperations() {
       if (path === 'invoices' && user && currentWorkspaceId) {
         const existingInvoice = previousInvoice || {};
         const mergedData = { ...existingInvoice, ...finalData };
-        const posted = await LedgerPostService.postInvoiceLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
+        const posted = await LedgerPostService.postInvoiceLedger(id, mergedData as unknown as Partial<Invoice>, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
         if (posted.cogsPendingReason) toast.warning(posted.cogsPendingReason);
         const targetCustId = mergedData.customerId || finalData.customerId;
         if (targetCustId) {
@@ -216,7 +221,7 @@ export function useEntityOperations() {
       } else if (path === 'bills' && user && currentWorkspaceId) {
         const existingBill = (await savedRecord<Bill>('bills', id)) || {};
         const mergedData = { ...existingBill, ...finalData };
-        await LedgerPostService.postBillLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
+        await LedgerPostService.postBillLedger(id, mergedData as unknown as Partial<Bill>, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
         const targetVendId = mergedData.vendorId || finalData.vendorId;
         if (targetVendId) {
           syncEntityBalance('vendors', targetVendId);
@@ -224,11 +229,11 @@ export function useEntityOperations() {
       } else if (path === 'creditNotes' && user && currentWorkspaceId) {
         const existing = (await savedRecord<CreditNote>('creditNotes', id)) || {};
         const mergedData = { ...existing, ...finalData };
-        await LedgerPostService.postCreditNoteLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
+        await LedgerPostService.postCreditNoteLedger(id, mergedData as unknown as Partial<CreditNote>, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
       } else if (path === 'vendorCredits' && user && currentWorkspaceId) {
         const existing = (await savedRecord<VendorCredit>('vendorCredits', id)) || {};
         const mergedData = { ...existing, ...finalData };
-        await LedgerPostService.postVendorCreditLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
+        await LedgerPostService.postVendorCreditLedger(id, mergedData as unknown as Partial<VendorCredit>, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
       } else {
         await updateDoc(doc(db, path, id), finalData);
       }
@@ -255,9 +260,9 @@ export function useEntityOperations() {
           syncEntityBalance('vendors', existingBill.vendorId);
         }
       } else if (path === 'creditNotes' && currentWorkspaceId) {
-        await LedgerPostService.deletePostings(id, 'creditNoteId' as any, currentWorkspaceId, { collection: path, docId: id, action: 'delete' });
+        await LedgerPostService.deletePostings(id, 'creditNoteId' as unknown as "invoiceId" | "billId" | "creditNoteId" | "vendorCreditId", currentWorkspaceId, { collection: path, docId: id, action: 'delete' });
       } else if (path === 'vendorCredits' && currentWorkspaceId) {
-        await LedgerPostService.deletePostings(id, 'vendorCreditId' as any, currentWorkspaceId, { collection: path, docId: id, action: 'delete' });
+        await LedgerPostService.deletePostings(id, 'vendorCreditId' as unknown as "invoiceId" | "billId" | "creditNoteId" | "vendorCreditId", currentWorkspaceId, { collection: path, docId: id, action: 'delete' });
       } else {
         await deleteDoc(doc(db, path, id));
       }

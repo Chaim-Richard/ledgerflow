@@ -55,8 +55,8 @@ export default function Projects() {
   const { loading } = useLedgerCollections('bills', 'budgets', 'vendors');
   useCommandDispatcher();
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
-  const onAdd = (data: any) => addEntity('projects', data);
-  const onUpdate = (id: string, data: any) => updateEntity('projects', id, data);
+  const onAdd = (data: Partial<Project>) => addEntity('projects', data);
+  const onUpdate = (id: string, data: Partial<Project>) => updateEntity('projects', id, data);
   const onDelete = (id: string) => deleteEntity('projects', id);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'pipeline' | 'list'>('pipeline');
@@ -112,7 +112,7 @@ export default function Projects() {
     }
   };
 
-  const isProjectLine = (l: any, p: Project) => {
+  const isProjectLine = (l: import("../../types").TransactionLine, p: Project) => {
     if (!l || !p) return false;
     return l.project === p.id || 
            l.project === p.name || 
@@ -577,7 +577,7 @@ export default function Projects() {
                     <button
                       key={type.id}
                       aria-pressed={newProject.type === type.id}
-                      onClick={() => setNewProject({ ...newProject, type: type.id as any })}
+                      onClick={() => setNewProject({ ...newProject, type: type.id as unknown as "book" | "event" | "campaign" | "general" | undefined })}
                       className={cn(
                         "flex items-center gap-3 p-4 rounded-[32px] border transition-all text-left",
                         newProject.type === type.id 
@@ -671,7 +671,7 @@ export default function Projects() {
                     <button
                       key={status.id}
                       aria-pressed={editingProject.status === status.id}
-                      onClick={() => setEditingProject({ ...editingProject, status: status.id as any })}
+                      onClick={() => setEditingProject({ ...editingProject, status: status.id as unknown as "completed" | "archived" | "active" })}
                       className={cn(
                         "p-3 rounded-[32px] border transition-all text-xs font-bold uppercase tracking-wider",
                         editingProject.status === status.id 
@@ -697,7 +697,7 @@ export default function Projects() {
                       <button
                         key={type.id}
                         aria-pressed={editingProject.type === type.id}
-                        onClick={() => setEditingProject({ ...editingProject, type: type.id as any })}
+                        onClick={() => setEditingProject({ ...editingProject, type: type.id as unknown as "book" | "event" | "campaign" | "general" })}
                         className={cn(
                           "flex items-center gap-3 p-4 rounded-[32px] border transition-all text-left",
                           editingProject.type === type.id 

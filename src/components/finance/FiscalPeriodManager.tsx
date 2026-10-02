@@ -76,7 +76,7 @@ export default function FiscalPeriodManager() {
     }
   };
 
-  const runPeriodAudit = (period: any) => {
+  const runPeriodAudit = (period: { id: string; startDate: string; endDate: string; label: string; isLocked: boolean }) => {
     const periodTxs = transactions.filter(t => 
       isPostable(t) && 
       t.date >= period.startDate && 
@@ -100,7 +100,7 @@ export default function FiscalPeriodManager() {
     };
   };
 
-  const handleClosePeriod = async (period: any) => {
+  const handleClosePeriod = async (period: { id: string; startDate: string; endDate: string; label: string; isLocked: boolean }) => {
     const audit = runPeriodAudit(period);
     
     if (!audit.isBalanced) {
@@ -223,20 +223,20 @@ export default function FiscalPeriodManager() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-600">Total Transactions</span>
-                      <span className="text-xs font-mono font-bold">{runPeriodAudit(periods.find(p => p.id === selectedPeriod)).txCount}</span>
+                      <span className="text-xs font-mono font-bold">{runPeriodAudit(periods.find(p => p.id === selectedPeriod)!).txCount}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-600">Net Period Impact</span>
                       <span className={cn(
                         "text-xs font-mono font-bold",
-                        runPeriodAudit(periods.find(p => p.id === selectedPeriod)).netImpact >= 0 ? "text-emerald-600" : "text-rose-600"
+                        runPeriodAudit(periods.find(p => p.id === selectedPeriod)!).netImpact >= 0 ? "text-emerald-600" : "text-rose-600"
                       )}>
-                        {formatCurrency(runPeriodAudit(periods.find(p => p.id === selectedPeriod)).netImpact)}
+                        {formatCurrency(runPeriodAudit(periods.find(p => p.id === selectedPeriod)!).netImpact)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                       <span className="text-xs font-bold text-slate-900">Integrity Check</span>
-                      {runPeriodAudit(periods.find(p => p.id === selectedPeriod)).isBalanced ? (
+                      {runPeriodAudit(periods.find(p => p.id === selectedPeriod)!).isBalanced ? (
                         <div className="flex items-center gap-1 text-emerald-600">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span className="text-[10px] font-bold uppercase">Balanced</span>
@@ -254,7 +254,7 @@ export default function FiscalPeriodManager() {
                 <div className="space-y-3">
                   <button 
                     disabled={isProcessing || periods.find(p => p.id === selectedPeriod)?.isLocked}
-                    onClick={() => handleClosePeriod(periods.find(p => p.id === selectedPeriod))}
+                    onClick={() => handleClosePeriod(periods.find(p => p.id === selectedPeriod)!)}
                     className="w-full py-3 bg-slate-900 hover:bg-black disabled:bg-slate-300 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Lock className="w-3.5 h-3.5" />

@@ -142,8 +142,8 @@ export default function Inventory() {
 
       toast.success(`Recognized COGS for ${cogsQty} units (${formatCurrency(data.totalCogsCents)})`);
       setCogsItem(null);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to recognize COGS');
+    } catch (err) {
+      toast.error((err as Error).message || 'Failed to recognize COGS');
     } finally {
       setIsPostingCogs(false);
     }
@@ -230,10 +230,10 @@ export default function Inventory() {
     item.sku.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const displayItems = showRuleIntel ? economicItems.filter((i: any) => 
+  const displayItems = showRuleIntel ? economicItems.filter((i) =>
     i.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     i.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  ) : filteredItems;
+  ) : filteredItems as ReturnType<typeof StrategicEngine.analyzeUnitEconomics>;
 
 
   return (
@@ -319,7 +319,7 @@ export default function Inventory() {
                  <div className="flex items-baseline gap-3">
                     <span className="text-7xl font-black tracking-tighter text-white">
                        {economicItems.length > 0 
-                          ? Math.round(economicItems.reduce((acc: number, i: any) => acc + i.integrityScore, 0) / (economicItems.length || 1)) 
+                          ? Math.round(economicItems.reduce((acc: number, i: ReturnType<typeof StrategicEngine.analyzeUnitEconomics>[number]) => acc + i.integrityScore, 0) / (economicItems.length || 1))
                           : 0}
                     </span>
                     <div className="flex flex-col">
@@ -330,7 +330,7 @@ export default function Inventory() {
                  <div className="w-48 h-1.5 bg-[var(--surface)]/10 rounded-full mt-6 overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${economicItems.length > 0 ? Math.round(economicItems.reduce((acc: number, i: any) => acc + i.integrityScore, 0) / (economicItems.length || 1)) : 0}%` }}
+                      animate={{ width: `${economicItems.length > 0 ? Math.round(economicItems.reduce((acc: number, i: ReturnType<typeof StrategicEngine.analyzeUnitEconomics>[number]) => acc + i.integrityScore, 0) / (economicItems.length || 1)) : 0}%` }}
                       className="h-full bg-indigo-600 shadow-[0_0_15px_rgba(251,191,36,0.3)]"
                       transition={{ duration: 2, ease: "easeOut" }}
                     />
@@ -349,7 +349,7 @@ export default function Inventory() {
               </div>
               <div className="flex items-baseline gap-3">
                  <span className="text-3xl md:text-5xl font-black text-[var(--text)]">
-                    {economicItems.filter((i: any) => i.anomaly || i.resilience === 'Critical').length}
+                    {economicItems.filter((i) => i.anomaly || i.resilience === 'Critical').length}
                  </span>
                  <span className="text-xs font-black text-rose-500 uppercase tracking-widest">At Risk</span>
               </div>
@@ -359,10 +359,10 @@ export default function Inventory() {
               <div className="flex items-center gap-2">
                  <div className={cn(
                     "w-2 h-2 rounded-full animate-pulse",
-                    economicItems.some((i: any) => i.anomaly) ? "bg-rose-500" : "bg-emerald-500"
+                    economicItems.some((i) => i.anomaly) ? "bg-rose-500" : "bg-emerald-500"
                  )} />
                  <span className="text-[10px] font-black text-[var(--text)] uppercase">
-                    {economicItems.some((i: any) => i.anomaly) ? "Anomalous Price Drift" : "Optimal Sourcing"}
+                    {economicItems.some((i) => i.anomaly) ? "Anomalous Price Drift" : "Optimal Sourcing"}
                  </span>
               </div>
            </div>
@@ -382,7 +382,7 @@ export default function Inventory() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
-            {displayItems.map((item: any) => (
+            {displayItems.map((item) => (
               <tr key={item.id} className="hover:bg-[var(--ink)]/50 transition-colors group">
                 <td className="px-8 py-5">
                   <div>

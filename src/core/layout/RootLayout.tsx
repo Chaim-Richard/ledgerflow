@@ -1,3 +1,4 @@
+import type { FilterCriteria } from '../../types';
 import React, { Suspense } from 'react';
 import { cn } from '../../lib/utils';
 
@@ -66,7 +67,7 @@ export function RootLayout() {
     commandPalette: useUIStore(state => state.isCommandPaletteOpen),
     quickEntry: useUIStore(state => state.isQuickEntryOpen),
     importer: useUIStore(state => state.isImporterOpen),
-    qboMigration: useUIStore(state => (state as any).isQBOMigrationOpen),
+    qboMigration: useUIStore(state => state.isQBOMigrationOpen),
     template: useUIStore(state => state.isTemplateSelectorOpen),
     aiBlueprint: useUIStore(state => state.isAIBlueprintOpen),
     commandCenter: useUIStore(state => state.isCommandCenterOpen),
@@ -81,7 +82,7 @@ export function RootLayout() {
     closeCommandPalette: () => useUIStore.getState().setCommandPaletteOpen(false),
     closeQuickEntry: () => useUIStore.getState().setQuickEntryOpen(false),
     closeImporter: () => useUIStore.getState().setImporterOpen(false),
-    closeQBOMigration: () => (useUIStore.getState() as any).setQBOMigrationOpen(false),
+    closeQBOMigration: () => (useUIStore.getState() as ReturnType<typeof useUIStore.getState> & { setQBOMigrationOpen(value: boolean): void }).setQBOMigrationOpen(false),
     closeTemplate: () => useUIStore.getState().setTemplateSelectorOpen(false),
     closeAIBlueprint: () => useUIStore.getState().setAIBlueprintOpen(false),
     closeCommandCenter: () => useUIStore.getState().setCommandCenterOpen(false),
@@ -102,9 +103,9 @@ export function RootLayout() {
       if (ai?.handleAIQuery) return await ai.handleAIQuery(q);
       return { response: `Analyzed query: ${q}` };
     },
-    handleFilter: (filter: any) => {
+    handleFilter: (filter: FilterCriteria) => {
       useUIStore.getState().setFilterCriteria(filter);
-      useUIStore.getState().setActiveTab('transactions' as any);
+      useUIStore.getState().setActiveTab('transactions' as unknown as string);
       useUIStore.getState().setCommandCenterOpen(false);
     },
     handleSelectTemplate,
@@ -138,7 +139,7 @@ export function RootLayout() {
         onSelectWorkspace={(id) => useAuthStore.getState().setCurrentWorkspaceId(id)}
         onNewWorkspace={handleCreateWorkspace}
         projects={projects}
-        onNewProject={() => setActiveTab('projects' as any)}
+        onNewProject={() => setActiveTab('projects' as unknown as string)}
         onAction={handleAction}
       />
 
@@ -156,11 +157,11 @@ export function RootLayout() {
         <PendingDeletionBanner />
         <DataStatusBar />
         {!isFocusMode && <Header onLogout={handleLogout} onLoginPrompt={handleLoginPrompt} />}
-        {!isFocusMode && <ModuleSubNav activeTab={activeTab as any} onTabChange={setActiveTab as any} />}
+        {!isFocusMode && <ModuleSubNav activeTab={activeTab as unknown as string} onTabChange={setActiveTab as unknown as (tabId: string) => void} />}
         
         {/* Main Content Area */}
         <div id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto overflow-x-hidden relative custom-scrollbar focus:outline-none">
-          <MainViewSwitcher activeTab={activeTab as any} />
+          <MainViewSwitcher activeTab={activeTab as unknown as string} />
         </div>
 
       </main>
@@ -168,9 +169,9 @@ export function RootLayout() {
       </div>
       
       {/* Overlays & Global Components */}
-      <BottomNav activeTab={activeTab as any} onTabChange={setActiveTab as any} />
+      <BottomNav activeTab={activeTab as unknown as string} onTabChange={setActiveTab as unknown as (tabId: string) => void} />
          <Suspense fallback={null}><CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} onAction={handleAction} /></Suspense>
-         <Suspense fallback={null}><CommandPortal modals={modals} handlers={handlers as any} /></Suspense>
+         <Suspense fallback={null}><CommandPortal modals={modals} handlers={handlers as unknown as React.ComponentProps<typeof CommandPortal>['handlers']} /></Suspense>
          <Suspense fallback={null}><ShortcutOverlay isOpen={isShortcutOverlayOpen} onClose={() => setShortcutOverlayOpen(false)} /></Suspense>
          
          <Suspense fallback={null}><DiagnosticConsole isOpen={isDiagnosticConsoleOpen} onClose={() => setDiagnosticConsoleOpen(false)} /></Suspense>

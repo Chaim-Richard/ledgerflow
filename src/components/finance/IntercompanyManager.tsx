@@ -81,8 +81,8 @@ export default function IntercompanyManager() {
         sourceAccountId: '',
         targetAccountId: ''
       });
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error((err as Error).message);
     }
   };
 

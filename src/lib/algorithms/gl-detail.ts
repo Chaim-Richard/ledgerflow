@@ -1,3 +1,4 @@
+import type { AlgoResultRow } from './types';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { parseLocalDate, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
@@ -24,7 +25,7 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
       defaultValue: ''
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "period": { start: string; end: string }; "accountId": string; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounts, accounting } = ctx;
     const period = inputs['period'];
     const accountId = inputs['accountId'];
@@ -79,7 +80,7 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
       });
     }
 
-    const rows: any[] = [];
+    const rows: AlgoResultRow[] = [];
     const sourceTransactionIds = new Set<string>();
     let totalDebits = 0;
     let totalCredits = 0;
@@ -102,7 +103,7 @@ export const GL_DETAIL_ALGO: AlgorithmDefinition = {
         runningBalance += impact;
 
         rows.push({
-          id: `${t.id}_${(e as any).id || idx}`,
+          id: `${t.id}_${(e as typeof e & { id?: string }).id || idx}`,
           date: t.date,
           account: account ? `${account.code ? `${account.code} - ` : ''}${account.name}` : e.accountId,
           description: e.description || t.description || 'No description',

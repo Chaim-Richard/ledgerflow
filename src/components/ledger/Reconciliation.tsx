@@ -39,11 +39,11 @@ import type { BankLineActionTarget } from './BankLineActionDialog';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function Reconciliation() {
-  const user = useAuthStore((s: any) => s.user);
-  useAuthStore((s: any) => s.currentWorkspaceId);
-  const transactions = useLedgerStore((s: any) => s.transactions);
-  const bankLines = useLedgerStore((s: any) => s.bankLines || []);
-  const accounts = useLedgerStore((s: any) => s.accounts);
+  const user = useAuthStore((s) => s.user);
+  useAuthStore((s) => s.currentWorkspaceId);
+  const transactions = useLedgerStore((s) => s.transactions);
+  const bankLines = useLedgerStore((s) => s.bankLines || []);
+  const accounts = useLedgerStore((s) => s.accounts);
   useLedgerCollections('bankLines');
   const txActions = useTransactionActions();
   const onMatch = txActions.handleReconcileMatch;
@@ -91,7 +91,7 @@ export default function Reconciliation() {
     return safeTransactions.filter(tx => {
       if (!isPostable(tx) || tx.status === 'reconciled') return false;
       if (selectedAccountId !== 'all') {
-        const touchesAccount = tx.lines?.some((l: any) => l.accountId === selectedAccountId);
+        const touchesAccount = tx.lines?.some((l) => l.accountId === selectedAccountId);
         if (!touchesAccount) return false;
       }
       return true;
@@ -107,11 +107,11 @@ export default function Reconciliation() {
       
       unclearedLedgerTransactions.forEach(ltx => {
         // Sign direction validation for cash account movement
-        const cashLines = ltx.lines?.filter((l: any) => {
+        const cashLines = ltx.lines?.filter((l) => {
           const acc = safeAccounts.find(a => a.id === l.accountId);
           return acc && resolveAccountRole(acc) === 'cash';
         }) || [];
-        const cashDelta = cashLines.reduce((s: number, l: any) => s + lineAmount(l, ltx), 0);
+        const cashDelta = cashLines.reduce((s: number, l) => s + lineAmount(l, ltx), 0);
 
         // Disallow matching positive bank deposits with negative cash outflows and vice versa
         if (cashDelta !== 0 && Math.sign(cashDelta) !== Math.sign(btx.amountCents)) {
@@ -206,9 +206,9 @@ export default function Reconciliation() {
         }
         toast.success(`Synapses Active: Successfully integrated ${matchedCount} verified bonds.`);
         setShowAutoConfirm(false);
-    } catch(err:any) {
+    } catch(err) {
         toast.error("Could not complete reconciliation cycle.", {
-          description: `Please try again. (${err?.message || 'Network sync error'})`
+          description: `Please try again. (${(err as Error)?.message || 'Network sync error'})`
         });
     } finally {
         setIsProcessing(false);
@@ -220,9 +220,9 @@ export default function Reconciliation() {
     try {
        await onAutoReconcile();
        toast.success("Autonomous batch matching complete!");
-    } catch (e: any) {
+    } catch (e) {
         toast.error("Could not complete batch alignment.", {
-          description: `Please try again. (${e?.message || 'Network sync error'})`
+          description: `Please try again. (${(e as Error)?.message || 'Network sync error'})`
         });
     } finally {
        setIsAutoReconciling(false);
@@ -239,8 +239,8 @@ export default function Reconciliation() {
     setIsProcessing(true);
     try {
       await onUndoMatch(bankLineId, matchedTxId);
-    } catch (e: any) {
-      toast.error("Failed to break alignment link: " + e.message);
+    } catch (e) {
+      toast.error("Failed to break alignment link: " + (e as Error).message);
     } finally {
       setIsProcessing(false);
     }

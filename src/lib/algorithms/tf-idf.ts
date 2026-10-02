@@ -71,7 +71,7 @@ export const TF_IDF_MATCHER: AlgorithmDefinition = {
   inputs: [
     { key: 'targetIdx', label: 'Sample Transaction Index', min: 0, max: 100, step: 1, defaultValue: 0 }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "targetIdx": number; [key: string]: unknown }) => {
     const { transactions } = ctx;
     const start = performance.now();
     const idf = computeTFIDFWeights(transactions);

@@ -58,7 +58,7 @@ const ForensicAudit = React.memo(() => {
 
   // 2. Z-SCORE ANOMALY DETECTION
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
-  const [anomalies, setAnomalies] = useState<any[]>([]);
+  const [anomalies, setAnomalies] = useState<(import("../../types").Transaction & { zScore: number })[]>([]);
   const [, setIsScanning] = useState(false);
 
   useEffect(() => {
@@ -94,7 +94,7 @@ const ForensicAudit = React.memo(() => {
       if (!isPostable(t)) continue;
       
       // Unbalanced check
-      const lineSum = (t.lines || []).reduce((sum: number, l: any) => sum + lineAmount(l, t), 0);
+      const lineSum = (t.lines || []).reduce((sum: number, l) => sum + lineAmount(l, t), 0);
       if (lineSum !== 0) unbalancedCount++;
       
       // Project Check
@@ -203,7 +203,7 @@ const ForensicAudit = React.memo(() => {
            </div>
 
            <div className="space-y-4">
-              {anomalies.length > 0 ? anomalies.map((t: any, _i: number) => (
+              {anomalies.length > 0 ? anomalies.map((t, _i: number) => (
                  <div key={t.id} className="p-6 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] flex items-center justify-between group hover:border-indigo-600 transition-all">
                     <div className="flex items-center gap-6">
                        <div className="w-12 h-12 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-[var(--text)] border border-[var(--line)] font-black text-sm">

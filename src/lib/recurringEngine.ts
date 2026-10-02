@@ -84,10 +84,10 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
       
       let lines = template.lines;
       if (!lines || lines.length === 0) {
-        const primaryAccountId = (template as any).accountId || '';
-        const primaryAccountName = (template as any).accountName || 'Operating Expense';
-        const offsetAccountId = (template as any).offsetAccountId || '';
-        const offsetAccountName = (template as any).offsetAccountName || 'Operating Cash';
+        const primaryAccountId = (template as typeof template & { accountId?: string; accountName?: string; offsetAccountId?: string; offsetAccountName?: string }).accountId || '';
+        const primaryAccountName = (template as typeof template & { accountId?: string; accountName?: string; offsetAccountId?: string; offsetAccountName?: string }).accountName || 'Operating Expense';
+        const offsetAccountId = (template as typeof template & { accountId?: string; accountName?: string; offsetAccountId?: string; offsetAccountName?: string }).offsetAccountId || '';
+        const offsetAccountName = (template as typeof template & { accountId?: string; accountName?: string; offsetAccountId?: string; offsetAccountName?: string }).offsetAccountName || 'Operating Cash';
 
         lines = [
           {

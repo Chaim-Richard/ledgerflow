@@ -24,7 +24,7 @@ export default function PaymentsView() {
   useLedgerStore(s => s.vendors);
   const { loading } = useLedgerCollections('customers', 'payments', 'vendors');
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
-  const [previewPayment, setPreviewPayment] = useState<any | null>(null);
+  const [previewPayment, setPreviewPayment] = useState<import("../../types").Payment | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
 

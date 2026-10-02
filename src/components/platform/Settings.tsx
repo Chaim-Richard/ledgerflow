@@ -41,7 +41,7 @@ export default function Settings() {
               )}
             >
               <tab.icon size={14} />
-              {((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id}
+              {((tab as typeof tab & { name?: string }).label?.[language] || (tab as typeof tab & { name?: string }).label?.['en']) || (tab as typeof tab & { name?: string }).name || tab.id}
             </button>
           ))}
         </div>
@@ -59,7 +59,7 @@ export default function Settings() {
             >
               {ActiveComponent && (
                 <Suspense fallback={<div className="h-40 flex items-center justify-center font-bold text-[var(--muted)] uppercase tracking-widest text-xs">Loading module...</div>}>
-                  <ViewErrorBoundary viewName={(activeTabDef as any)?.label?.en || activeSubTab}>
+                  <ViewErrorBoundary viewName={(activeTabDef as typeof activeTabDef & { name?: string })?.label?.en || activeSubTab}>
                     <ActiveComponent />
                   </ViewErrorBoundary>
                 </Suspense>

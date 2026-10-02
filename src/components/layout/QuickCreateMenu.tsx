@@ -18,7 +18,7 @@ export default function QuickCreateMenu() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const handleAction = (tab: any, _action?: string) => {
+  const handleAction = (tab: string, _action?: string) => {
     setActiveTab(tab);
     setIsOpen(false);
     // Ideally we would trigger a specific 'create' modal here. 

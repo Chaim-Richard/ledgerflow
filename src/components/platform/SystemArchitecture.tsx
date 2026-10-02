@@ -9,8 +9,8 @@ import {
 import ArchitectureMonitor from './ArchitectureMonitor';
 import { useAuditTelemetry } from '../../hooks/useAuditTelemetry';
 
-export default function SystemArchitecture({ isOpen, onClose, transactions, accounts }: any) {
-  const telemetry = useAuditTelemetry(transactions, accounts);
+export default function SystemArchitecture({ isOpen, onClose, transactions, accounts }: { isOpen: boolean; onClose: () => void; transactions?: import("../../types").Transaction[]; accounts: import("../../types").ChartAccount[] }) {
+  const telemetry = useAuditTelemetry(transactions!, accounts);
 
   return (
     <AnimatePresence>

@@ -41,7 +41,7 @@ export class TruthEngine {
     return new Decimal(amountCents).mul(taxRate).round().toNumber();
   }
   
-  static deriveSignedTotal(lines: any[], accounts?: any[]): number {
+  static deriveSignedTotal(lines: Array<Partial<import("../../types").TransactionLine>>, accounts?: ChartAccount[]): number {
     if (!lines || lines.length === 0) return 0;
     
     if (accounts && accounts.length > 0) {
@@ -50,7 +50,7 @@ export class TruthEngine {
         return acc && acc.type === 'asset';
       });
       if (assetLines.length > 0) {
-        return assetLines.reduce((sum, l) => sum + lineAmount(l as any), 0);
+        return assetLines.reduce((sum, l) => sum + lineAmount(l as unknown as import("../../types").TransactionLine), 0);
       }
       
       const liabilityLines = lines.filter(l => {
@@ -59,15 +59,15 @@ export class TruthEngine {
       });
       if (liabilityLines.length > 0) {
         // Liability increasing (credit/negative) means inflow of cash
-        return -liabilityLines.reduce((sum, l) => sum + lineAmount(l as any), 0);
+        return -liabilityLines.reduce((sum, l) => sum + lineAmount(l as unknown as import("../../types").TransactionLine), 0);
       }
     }
     
     // Fallback when accounts context is absent: sum of debit legs
     const debitSum = lines
       .filter(l => (l.amountCents || 0) > 0)
-      .reduce((sum, l) => sum + lineAmount(l as any), 0);
-    return debitSum || Math.abs(lineAmount(lines[0] as any));
+      .reduce((sum, l) => sum + lineAmount(l as unknown as import("../../types").TransactionLine), 0);
+    return debitSum || Math.abs(lineAmount(lines[0] as unknown as import("../../types").TransactionLine));
   }
 
   static parseAmountToCents(amountString: string | number | null | undefined): number {
@@ -462,7 +462,7 @@ export class TruthEngine {
     return score;
   }
 
-  static scanOrphanedAccountReferences(accounts: Array<{ id: string }>, transactions: any[]): {
+  static scanOrphanedAccountReferences(accounts: Array<{ id: string }>, transactions: import("../../types").Transaction[]): {
     orphanedAccountIds: string[];
     orphanedLines: Array<{
       transactionId: string;

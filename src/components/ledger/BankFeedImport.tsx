@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Check, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Transaction, ChartAccount } from '../../types';
+import { Transaction, ChartAccount, AutoRule } from '../../types';
 import { cn, reportError, OperationType } from '../../lib/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -14,6 +14,11 @@ import { generateImportIdentity } from '../../lib/algorithms';
 import { isPostable } from '../../lib/txFilters';
 import CategoryWhyPopover from '../common/CategoryWhyPopover';
 import PlaidConnectButton from '../finance/PlaidConnectButton';
+
+interface BankFeedRow {
+  id: string; date: string; description: string; amountCents: number; category?: string; accountId?: string; confidence?: number; matchSource?: string; dimensions?: Record<string, string>;
+}
+interface PlaidFeedRow { date: string; name?: string; merchant_name?: string; amount: number; transaction_id: string }
 
 interface BankFeedImportProps {
   workspaceId: string;
@@ -31,8 +36,8 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isMapping, setIsMapping] = useState(false);
-  const [rawTransactions, setRawTransactions] = useState<any[]>([]);
-  const [mappedTransactions, setMappedTransactions] = useState<any[]>([]);
+  const [rawTransactions, setRawTransactions] = useState<BankFeedRow[]>([]);
+  const [mappedTransactions, setMappedTransactions] = useState<BankFeedRow[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const user = useAuthStore(s => s.user);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -95,7 +100,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
         toast.warning(`${data.needsReconnect.length} bank connection(s) need you to log in again: open Banking → Reconnect.`);
       }
       
-      const mappedFormat = (data.transactions || []).map((t: any) => ({
+      const mappedFormat = (data.transactions || []).map((t: PlaidFeedRow) => ({
         date: t.date,
         description: t.name || t.merchant_name || 'Plaid Transaction',
         amountCents: Math.round(t.amount * -100), // Plaid positive is expense
@@ -111,7 +116,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
     }
   };
 
-  const handleAutoMap = async (transactions: any[]) => {
+  const handleAutoMap = async (transactions: BankFeedRow[]) => {
     if (!user) return;
     setIsMapping(true);
     try {
@@ -122,7 +127,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
         where('uid', '==', user.uid)
       );
       const rulesSnap = await getDocs(qRules);
-      const activeRules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      const activeRules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as AutoRule));
 
       // Fetch sample historical fields to train dynamic Bayesian auto-learner
       const qHistory = query(
@@ -137,8 +142,8 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       const dimensionNodes = useLedgerStore.getState().dimensionNodes;
       const localEngine = new MatchingEngine(activeRules, {}, '', Math.max(0.5, matchingThreshold - 0.03), historicalTxs, dimensionNodes, accounts);
 
-      const resolvedBatch: any[] = [];
-      const outstandingForAI: any[] = [];
+      const resolvedBatch: BankFeedRow[] = [];
+      const outstandingForAI: BankFeedRow[] = [];
 
       for (const t of transactions) {
         // Step A: Check if Excel/CSV row already contains a pre-labeled category! (Bypass of AI)
@@ -147,7 +152,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
           
           // Try to map exactly to account name or account code (skip archived/inactive)
           const matchedAcct = accounts.find(a => 
-            !a.archived && !(a as any).isArchived && a.isActive !== false && (
+            !a.archived && !(a as ChartAccount & { isArchived?: boolean }).isArchived && a.isActive !== false && (
               a.name.toLowerCase() === rawCat || 
               a.code === rawCat ||
               a.name.toLowerCase().includes(rawCat)
@@ -189,7 +194,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       }
 
       // Step C: Process remaining using fast mathematical model fallback (Bypassing LLMs for speed and strict deterministic mapping)
-      const aiMapped: any[] = [];
+      const aiMapped: Partial<BankFeedRow>[] = [];
       if (outstandingForAI.length > 0) {
         outstandingForAI.forEach(t => {
           const dbg = localEngine.debugResolveCategory(t.description);

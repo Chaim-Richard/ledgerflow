@@ -11,7 +11,7 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'churnThresholdDays', label: 'Churn Threshold (Days)', min: 30, max: 365, step: 30, defaultValue: 90 }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "churnThresholdDays": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounting } = ctx;
     const thresholdDays = inputs.churnThresholdDays ?? 90;
     
@@ -56,7 +56,7 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
     let activeCustomers = 0;
     
     let lostRevenue = 0;
-    const chartData: any[] = [];
+    const chartData: ({ Customer: string; Status: string; DaysSinceActive: number })[] = [];
 
     Object.entries(customerLastSeen).forEach(([customer, lastSeen]) => {
        totalCustomers++;

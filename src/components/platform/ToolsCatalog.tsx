@@ -99,7 +99,7 @@ const getIconForGroup = (group: string) => {
   }
 };
 
-const TOOLS = Object.values(FINANCIAL_ALGORITHMS).map((algo: any) => {
+const TOOLS = Object.values(FINANCIAL_ALGORITHMS).map((algo) => {
   const group = getMomentGroup(algo);
   return {
     id: algo.id,

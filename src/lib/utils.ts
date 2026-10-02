@@ -72,7 +72,7 @@ export function formatCurrency(cents: number | undefined | null, currency?: stri
   let targetCurrency = currency;
   if (!targetCurrency) {
     try {
-      targetCurrency = (typeof window !== 'undefined' && (window as any).__ledgerBaseCurrency) || 'USD';
+      targetCurrency = (typeof window !== 'undefined' && window.__ledgerBaseCurrency) || 'USD';
     } catch {
       targetCurrency = 'USD';
     }
@@ -147,7 +147,7 @@ export function getLocalDateISO(d: Date = new Date()): string {
   let timezone = '';
   try {
     const state = useAuthStore.getState();
-    const activeWorkspace = state?.workspaces?.find((w: any) => w.id === state?.currentWorkspaceId);
+    const activeWorkspace = state?.workspaces?.find((w) => w.id === state?.currentWorkspaceId);
     if (activeWorkspace?.timezone) {
       timezone = activeWorkspace.timezone;
     }
@@ -274,7 +274,7 @@ export function parseLocalDate(s: string): Date {
     let timezone = '';
     try {
       const state = useAuthStore.getState();
-      const activeWorkspace = state?.workspaces?.find((w: any) => w.id === state?.currentWorkspaceId);
+      const activeWorkspace = state?.workspaces?.find((w) => w.id === state?.currentWorkspaceId);
       if (activeWorkspace?.timezone) {
         timezone = activeWorkspace.timezone;
       }
@@ -365,7 +365,7 @@ export function cn(...inputs: ClassValue[]) {
  * Sanitizes a string value against CSV/Formula injection attacks.
  * Prevents execution of spreadsheet formulas starting with =, +, -, @, \t, \r
  */
-export function sanitizeCsvCell(value: any): string {
+export function sanitizeCsvCell(value: unknown): string {
   if (value === null || value === undefined) return '""';
   if (typeof value === 'number') return String(value);
   
@@ -397,7 +397,7 @@ export interface AppErrorInfo {
   operationType: OperationType;
   path: string | null;
   timestamp: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   stack?: string;
 }
 
@@ -405,7 +405,7 @@ export interface AppErrorInfo {
  * Enhanced Error Logger
  * Captures deep context for forensic debugging
  */
-export function reportError(error: unknown, operationType: OperationType, path: string | null = null, context?: Record<string, any>) {
+export function reportError(error: unknown, operationType: OperationType, path: string | null = null, context?: Record<string, unknown>) {
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
   
@@ -435,7 +435,7 @@ export async function safeAsync<T>(
   promise: Promise<T>, 
   operationType: OperationType, 
   path: string | null = null,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<[T | null, AppErrorInfo | null]> {
   try {
     const result = await promise;
@@ -458,9 +458,9 @@ export async function withRetry<T>(
   while (true) {
     try {
       return await operation();
-    } catch (error: any) {
+    } catch (error) {
       attempt++;
-      if (attempt > maxRetries || (error?.code && error.code === 'permission-denied')) {
+      if (attempt > maxRetries || ((error as Error & { code: string })?.code && (error as Error & { code: string }).code === 'permission-denied')) {
         throw error;
       }
       const delay = baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 200;
@@ -491,7 +491,7 @@ export function safeConfirm(message: string): boolean {
  * Resolves account name dynamically from chart of accounts using accountId first,
  * falling back to line.accountName or line.accountId if deleted/archived.
  */
-export function resolveAccountName(accounts: any[], accountId?: string, fallbackName?: string): string {
+export function resolveAccountName(accounts: { id: string; name?: string }[], accountId?: string, fallbackName?: string): string {
   if (!accountId && !fallbackName) return 'Uncategorized';
   if (accountId && Array.isArray(accounts)) {
     const matched = accounts.find(a => a.id === accountId);

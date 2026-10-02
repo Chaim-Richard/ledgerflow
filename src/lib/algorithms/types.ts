@@ -1,4 +1,4 @@
-import { Transaction, ChartAccount } from '../../types';
+import { Transaction, ChartAccount, Invoice, Bill, Vendor, Employee, Budget, Customer } from '../../types';
 import { isPostable, isTransactionInDateRange } from '../txFilters';
 import { resolveAccountRole } from '../accountUtils';
 
@@ -13,12 +13,12 @@ export type AlgoInput =
   | { kind: 'account'; key: string; label: string; defaultValue?: string; multiple?: boolean };
 
 export interface AlgoResultRow {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AlgoResult {
   metrics: { label: string; value: string | number; trend?: string; color?: string }[];
-  charts: { data: any[]; config: { xKey: string; yKeys: { key: string; color: string; name: string; type?: 'bar' | 'line' | string }[] } }[];
+  charts: { data: (AlgoResultRow | string)[]; config: { xKey: string; yKeys: { key: string; color: string; name: string; type?: 'bar' | 'line' | string }[] } }[];
   insights: string[];
   rows?: AlgoResultRow[];
   sourceTransactionIds?: string[];
@@ -28,6 +28,23 @@ export interface AlgoResult {
 // All algorithms receive the raw `Transaction[]` and `ChartAccount[]` within AlgorithmContext as the absolute source of integrity.
 // Do NOT fetch data directly inside the algorithm. Only compute based on the provided context.
 
+export type AlgorithmInvoice = Partial<Invoice> & Pick<Invoice, 'id' | 'status' | 'amountCents'> & {
+  deletedAt?: string;
+  paidDate?: string;
+  paymentDate?: string;
+  originState?: string;
+  shippingAddress?: { state?: string };
+  billingAddress?: { state?: string };
+  taxJurisdiction?: string;
+  transactionId?: string;
+  paymentTransactionIds?: string[];
+};
+export type AlgorithmCustomer = Customer & {
+  shippingAddress?: { state?: string };
+  billingAddress?: { state?: string };
+  state?: string;
+};
+
 export interface AlgorithmContext {
   readonly transactions: readonly PostableTransaction[];
   readonly accounts: readonly ChartAccount[];
@@ -35,12 +52,12 @@ export interface AlgorithmContext {
   readonly asOfDate: string;
   readonly reportingCurrency: string;
   readonly entities?: {
-    invoices?: any[];
-    bills?: any[];
-    vendors?: any[];
-    employees?: any[];
-    budgets?: any[];
-    customers?: any[];
+    invoices?: AlgorithmInvoice[];
+    bills?: (Bill & { paidDate?: string })[];
+    vendors?: Vendor[];
+    employees?: Employee[];
+    budgets?: Budget[];
+    customers?: AlgorithmCustomer[];
   };
   readonly accounting: {
     isCash: (accountId: string) => boolean;
@@ -55,7 +72,7 @@ export interface AlgorithmContext {
   };
 }
 
-export type AlgoFn = (ctx: AlgorithmContext, inputs: Record<string, any>) => AlgoResult;
+export type AlgoFn = (ctx: AlgorithmContext, inputs: Record<string, unknown>) => AlgoResult;
 
 export function buildAlgorithmContext(
   transactions: Transaction[],
@@ -117,5 +134,5 @@ export interface AlgorithmDefinition {
   name: string;
   description: string;
   inputs: AlgoInput[];
-  compute: AlgoFn;
+  compute(ctx: AlgorithmContext, inputs: Record<string, unknown>): AlgoResult;
 }

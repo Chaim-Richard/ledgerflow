@@ -1,3 +1,4 @@
+import type { AlgoResultRow } from './types';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { calculateNPV, calculateIRR } from './math';
 import { isPostable, lineAmount } from '../../lib/txFilters';
@@ -15,7 +16,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     { key: 'taxRatePct', label: 'Corporate Tax Rate (%)', min: 0, max: 50, step: 1, defaultValue: 21 },
     { key: 'equityDebtRatio', label: 'Equity Weight (%)', min: 0, max: 100, step: 5, defaultValue: 70 }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "initialInvestment": number; "costOfEquityPct": number; "costOfDebtPct": number; "taxRatePct": number; "equityDebtRatio": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounting } = ctx;
     const ke = (inputs['costOfEquityPct'] ?? 10) / 100;
     const kd = (inputs['costOfDebtPct'] ?? 5) / 100;
@@ -99,7 +100,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     let discountedPayback = -1;
     let cumulativeDCF = -initialInvestment;
     
-    const dcfChartData: any[] = [];
+    const dcfChartData: AlgoResultRow[] = [];
     
     for (let i = 0; i < cashFlowArray.length; i++) {
        const dcf = cashFlowArray[i] / Math.pow(1 + wacc, i + 1);

@@ -1,4 +1,5 @@
-export function auditDescription(log: any): string {
+export interface DisplayAuditLog { details?: string | { description?: unknown } | null; timestamp?: string | number | { toDate(): Date } }
+export function auditDescription(log: DisplayAuditLog | null | undefined): string {
   if (!log) return '';
   if (typeof log.details === 'string') return log.details;
   if (log.details && typeof log.details === 'object' && log.details.description) {
@@ -7,15 +8,15 @@ export function auditDescription(log: any): string {
   return '';
 }
 
-export function auditTime(log: any): Date | null {
+export function auditTime(log: DisplayAuditLog | null | undefined): Date | null {
   if (!log || !log.timestamp) return null;
   if (typeof log.timestamp === 'string') {
     const d = new Date(log.timestamp);
     return isNaN(d.getTime()) ? null : d;
   }
-  if (typeof log.timestamp.toDate === 'function') {
+  if (typeof (log.timestamp as { toDate?: unknown }).toDate === 'function') {
     try {
-      const d = log.timestamp.toDate();
+      const d = (log.timestamp as { toDate(): Date }).toDate();
       return isNaN(d.getTime()) ? null : d;
     } catch {
       return null;

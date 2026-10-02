@@ -1,3 +1,6 @@
+interface ApiLog { id: string; timestamp?: string; status: number; method: string; path: string; apiKeyUsed?: string }
+interface PublicApiKey { id: string; name: string; scopes: string[]; createdAt?: string; expiresAt: string; lastUsedAt: string | null; totalRequests: number }
+interface BillingTrace { timestamp: string; [field: string]: unknown }
 import React, { useState, useEffect, useId } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import {
@@ -54,7 +57,7 @@ export default function ApiHub() {
   const currentWorkspace = getCurrentWorkspace();
   const [nowMs] = useState(() => Date.now());
   const [apiKey, setApiKey] = useState('');
-  const [apiLogs, setApiLogs] = useState<any[]>([]);
+  const [apiLogs, setApiLogs] = useState<ApiLog[]>([]);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const { setSafeTimeout } = useTimeout();
@@ -62,14 +65,14 @@ export default function ApiHub() {
   const [activeDoc, setActiveDoc] = useState('post-transaction');
   const [docLang, setDocLang] = useState<'curl' | 'python' | 'node'>('curl');
 
-  const [publicKeys, setPublicKeys] = useState<any[]>([]);
+  const [publicKeys, setPublicKeys] = useState<PublicApiKey[]>([]);
   const [newKeyName, setNewKeyName] = useState('Production Integration Key');
   const [selectedScopes, setSelectedScopes] = useState<string[]>(AVAILABLE_SCOPES.map(s => s.id));
   const [expiration, setExpiration] = useState<'never' | '1h' | '24h' | '30d' | '90d'>('never');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Corporate Billing and Computational Resource Metering
-  const [, setBillingStatus] = useState<any>({
+  const [, setBillingStatus] = useState({
     plan: 'sandbox',
     billingCycle: 'free',
     concurrentUserLimit: 50,
@@ -82,7 +85,7 @@ export default function ApiHub() {
     apiQuotaTotalCentsUsed: 0,
     apiQuotaMonthlyLimitCents: 0,
   });
-  const [, setBillingLedger] = useState<any[]>([]);
+  const [, setBillingLedger] = useState<BillingTrace[]>([]);
   const [, setIsLoadingBilling] = useState(false);
   const [simSeatsCount, setSimSeatsCount] = useState(1);
   const [simRequestsCount, setSimRequestsCount] = useState(50);
@@ -93,7 +96,7 @@ export default function ApiHub() {
   const [sandboxEndpoint, setSandboxEndpoint] = useState<string>('GET_v1_status');
   const [sandboxCredType, setSandboxCredType] = useState<'session' | 'key'>('session');
   const [sandboxSelectedKey, setSandboxSelectedKey] = useState<string>('');
-  const [sandboxResult, setSandboxResult] = useState<any>(null);
+  const [sandboxResult, setSandboxResult] = useState<unknown>(null);
   const [sandboxStatus, setSandboxStatus] = useState<number | null>(null);
   const [sandboxLatency, setSandboxLatency] = useState<number | null>(null);
   const [sandboxLoading, setSandboxLoading] = useState<boolean>(false);
@@ -145,7 +148,7 @@ export default function ApiHub() {
         where('workspaceId', '==', currentWorkspace.id)
       );
       const snap = await getDocs(q);
-      const logs = snap.docs.map(doc => doc.data() as any);
+      const logs = snap.docs.map(doc => doc.data() as BillingTrace);
       logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setBillingLedger(logs);
     } catch (e) {
@@ -174,8 +177,8 @@ export default function ApiHub() {
       } else {
         throw new Error(data.message || 'Failed to create checkout session');
       }
-    } catch (e: any) {
-      toast.error('Checkout Error', { description: e.message || String(e) });
+    } catch (e) {
+      toast.error('Checkout Error', { description: (e as Error).message || String(e) });
     }
   };
 
@@ -273,9 +276,9 @@ export default function ApiHub() {
       });
       loadWorkspaceKeys();
       setShowCreateModal(false);
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast.error('Failed to generate key', { description: e.message || String(e) });
+      toast.error('Failed to generate key', { description: (e as Error).message || String(e) });
     } finally {
       setIsRegenerating(false);
     }
@@ -302,9 +305,9 @@ export default function ApiHub() {
       if (apiKey.startsWith(keyId)) {
         setApiKey('');
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast.error('Failed to revoke key', { description: e.message || String(e) });
+      toast.error('Failed to revoke key', { description: (e as Error).message || String(e) });
     }
   };
 
@@ -418,7 +421,7 @@ export default function ApiHub() {
     try {
       let endpointUrl = '';
       let method = 'GET';
-      let bodyData: any = null;
+      let bodyData: Record<string, unknown> | null = null;
 
       switch (sandboxEndpoint) {
         case 'GET_v1_status':
@@ -572,13 +575,13 @@ export default function ApiHub() {
         description: `HTTP Status ${res.status}`
       });
 
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       const endTime = performance.now();
       setSandboxLatency(Math.round(endTime - startTime));
       setSandboxStatus(500);
-      setSandboxResult({ error: e.message || String(e) });
-      toast.error('Sandbox Execution Faulted', { description: e.message });
+      setSandboxResult({ error: (e as Error).message || String(e) });
+      toast.error('Sandbox Execution Faulted', { description: (e as Error).message });
     } finally {
       setSandboxLoading(false);
     }
@@ -809,14 +812,14 @@ export default function ApiHub() {
                            </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-[var(--surface)]">
-                           {publicKeys.map((k: any) => {
+                           {publicKeys.map((k) => {
                              const isExpired = k.expiresAt !== 'never' && new Date(k.expiresAt).getTime() < nowMs;
                              return (
                                <tr key={k.id} className="hover:bg-[var(--ink)]/40 transition-colors">
                                   <td className="p-4">
                                      <div className="font-bold text-slate-950 text-xs">{k.name}</div>
                                      <div className="font-mono text-[10px] text-[var(--muted)] mt-0.5">{k.id}</div>
-                                     <div className="text-[10px] text-slate-400/90 mt-1">Created: {new Date(k.createdAt).toLocaleDateString()}</div>
+                                     <div className="text-[10px] text-slate-400/90 mt-1">Created: {new Date(k.createdAt as string).toLocaleDateString()}</div>
                                   </td>
                                   <td className="p-4 max-w-xs">
                                      <div className="flex flex-wrap gap-1">
@@ -928,7 +931,7 @@ export default function ApiHub() {
                     <Labelled labelClassName="text-xs font-black uppercase tracking-wider text-[var(--muted)] block" label="TTL / Expiration Age">
                       <select 
                         value={expiration}
-                        onChange={(e: any) => setExpiration(e.target.value)}
+                        onChange={(e) => setExpiration(e.target.value as typeof expiration)}
                         className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-3xs"
                       >
                         <option value="never">Indefinite (Never Expire)</option>
@@ -2577,7 +2580,7 @@ fetch(url, {
                 </div>
               )}
 
-              {sandboxResult && (
+              {(sandboxResult as React.ReactNode) && (
                 <div className="space-y-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="bg-[#1A1B26] text-[#A9B1D6] rounded-xl p-4 border border-[#292E42] max-h-[350px] overflow-y-auto select-all relative">
                     <button
@@ -2651,7 +2654,7 @@ fetch(url, {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-[var(--surface)]">
-                    {apiLogs.map((log: any) => {
+                    {apiLogs.map((log) => {
                       const isSuccess = log.status >= 200 && log.status < 300;
                       return (
                         <tr key={log.id} className="hover:bg-[var(--ink)]/50 transition-colors">

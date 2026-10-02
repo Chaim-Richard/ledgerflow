@@ -16,7 +16,7 @@ export const BENFORDS_LAW_ALGO: AlgorithmDefinition = {
       defaultValue: 10
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "minAmount": number; [key: string]: unknown }): AlgoResult => {
     const { transactions } = ctx;
     const minAmount = inputs['minAmount'] ?? 10;
     

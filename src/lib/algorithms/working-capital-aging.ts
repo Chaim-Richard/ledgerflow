@@ -12,7 +12,7 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'lateThresholdDays', label: 'Overdue Warning (Days)', min: 1, max: 120, step: 5, defaultValue: 30 }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "lateThresholdDays": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounts } = ctx;
     let arPending = 0;
     let apPending = 0;
@@ -36,7 +36,7 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
         const dueDateStr = inv.dueDate || inv.date;
         const dueDate = dueDateStr ? parseLocalDate(dueDateStr).getTime() : now;
         const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
-        const amount = Math.abs(lineAmount(inv as any));
+        const amount = Math.abs(lineAmount(inv as unknown as import("../../types").TransactionLine));
 
         arPending += amount;
         if (daysOverdue > thresholdDays) arOverdue += amount;
@@ -56,7 +56,7 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
         const dueDateStr = bill.dueDate || bill.date;
         const dueDate = dueDateStr ? parseLocalDate(dueDateStr).getTime() : now;
         const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
-        const amount = Math.abs(lineAmount(bill as any));
+        const amount = Math.abs(lineAmount(bill as unknown as import("../../types").TransactionLine));
 
         apPending += amount;
 

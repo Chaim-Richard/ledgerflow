@@ -212,7 +212,7 @@ export default function FinancialChartsDashboard() {
                     <Cell key={entry.id} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(val: any) => `$${formatDecimal(val)}`} />
+                <Tooltip formatter={(val: number | string | readonly (number | string)[]) => `$${formatDecimal(val as number)}`} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -233,7 +233,7 @@ export default function FinancialChartsDashboard() {
                     <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(val: any) => `$${formatDecimal(val)}`} />
+                <Tooltip formatter={(val: number | string | readonly (number | string)[]) => `$${formatDecimal(val as number)}`} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>

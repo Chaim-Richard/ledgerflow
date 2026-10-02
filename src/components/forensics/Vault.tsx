@@ -52,7 +52,7 @@ export default function Vault() {
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<CloudDocument | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [extractedData, setExtractedData] = useState<any>(null);
+  const [extractedData, setExtractedData] = useState<(import("../../lib/receiptIngestion").ParsedReceiptData & { merchant?: string; description?: string; category?: string; confidence: number }) | null>(null);
   const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
@@ -126,16 +126,16 @@ export default function Vault() {
           }
 
           toast.success('Document uploaded to Vault', { id: toastId });
-        } catch (uploadErr: any) {
-          toast.error(uploadErr?.message || 'Failed to save document to database', { id: toastId });
+        } catch (uploadErr) {
+          toast.error((uploadErr as Error)?.message || 'Failed to save document to database', { id: toastId });
         }
       };
       reader.onerror = () => {
         toast.error('Failed to read file', { id: toastId });
       };
       reader.readAsDataURL(file);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to upload document', { id: toastId });
+    } catch (err) {
+      toast.error((err as Error)?.message || 'Failed to upload document', { id: toastId });
     }
   };
 
@@ -157,15 +157,15 @@ export default function Vault() {
       const parsedData = await aiService.parseReceipt(file);
       
       if (parsedData && parsedData.totalAmountCents !== undefined) {
-        setExtractedData(parsedData);
+        setExtractedData(parsedData as typeof parsedData & { confidence: number });
         toast.success('Document analysis complete', { id: toastId });
       } else {
         throw new Error("Could not extract meaningful ledger data from document.");
       }
-    } catch (err: any) {
+    } catch (err) {
       toast.error('AI processing failed', { 
         id: toastId,
-        description: err?.message || 'Unknown network error'
+        description: (err as Error)?.message || 'Unknown network error'
       });
     } finally {
       setIsScanning(false);

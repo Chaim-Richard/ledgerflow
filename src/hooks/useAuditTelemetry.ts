@@ -397,7 +397,7 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
         metrics.graphCentrality = Array.from(centralityMap.entries())
           .map(([name, score]) => {
             const acc = accountMap.get(name) || accountNameMap.get(name);
-            return { id: name, name: acc ? acc.name : name, score: score as number, type: (acc ? 'account' : 'merchant') as any };
+            return { id: name, name: acc ? acc.name : name, score: score as number, type: (acc ? 'account' : 'merchant') as 'account' | 'merchant' };
           })
           .sort((a, b) => b.score - a.score)
           .slice(0, 5);

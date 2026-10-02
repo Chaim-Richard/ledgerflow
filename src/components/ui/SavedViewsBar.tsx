@@ -10,7 +10,7 @@ import { cn } from '../../lib/utils';
 import SavedViewsManagerModal from './SavedViewsManagerModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, React.ElementType> = {
   Wallet,
   TrendingUp,
   TrendingDown,

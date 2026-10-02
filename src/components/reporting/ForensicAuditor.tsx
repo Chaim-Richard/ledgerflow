@@ -111,9 +111,9 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
         toast.success("Audit Log Downloaded!", {
           description: "Your full transactional integrity audit trail has been generated and exported."
         });
-      } catch (err: any) {
+      } catch (err) {
         toast.error("Could not generate audit report.", { 
-          description: `Please try again. (${err?.message || 'Unknown network error'})` 
+          description: `Please try again. (${(err as Error)?.message || 'Unknown network error'})`
         });
       } finally {
         setIsRunning(false);

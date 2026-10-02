@@ -14,7 +14,7 @@ export const LOAN_AMORTIZATION_ALGO: AlgorithmDefinition = {
     { key: 'annualRate', label: 'Interest Rate (%)', min: 1, max: 15, step: 0.1, defaultValue: 6.5 },
     { key: 'termYears', label: 'Term (Years)', min: 1, max: 30, step: 1, defaultValue: 30 },
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { principal?: number; annualRate?: number; termYears?: number; [key: string]: unknown }) => {
     const principal = inputs.principal ?? 400000;
     const rate = (inputs.annualRate ?? 6.5) / 100 / 12;
     const numPayments = (inputs.termYears ?? 30) * 12;
@@ -82,7 +82,7 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'lookbackMonths', label: 'Lookback Window (Months)', min: 1, max: 12, step: 1, defaultValue: 6 }
   ],
-  compute: (ctx, _inputs: Record<string, number> = {}) => {
+  compute: (ctx, _inputs: { taxRate?: number; targetCapRate?: number; minMargin?: number; [key: string]: unknown } = {}) => {
     const { transactions, accounts } = ctx;
     const payeeMap = new Map<string, { count: number; totalCents: number; avgCents: number; lastDate: string }>();
 
@@ -148,7 +148,7 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'taxRate', label: 'Estimated Tax Rate (%)', min: 10, max: 50, step: 1, defaultValue: 25 }
   ],
-  compute: (ctx, inputs: Record<string, number> = {}) => {
+  compute: (ctx, inputs: { taxRate?: number; targetCapRate?: number; minMargin?: number; [key: string]: unknown } = {}) => {
     const { transactions, accounts } = ctx;
     let deductibleCents = 0;
     const categoryBreakdown: Record<string, number> = {};
@@ -216,7 +216,7 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'targetCapRate', label: 'Target Cap Rate (%)', min: 3, max: 12, step: 0.5, defaultValue: 6.5 }
   ],
-  compute: (ctx, inputs: Record<string, number> = {}) => {
+  compute: (ctx, inputs: { taxRate?: number; targetCapRate?: number; minMargin?: number; [key: string]: unknown } = {}) => {
     const { transactions, accounts } = ctx;
     const propertyMap = new Map<string, { revCents: number; expCents: number }>();
 
@@ -294,7 +294,7 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'warningThreshold', label: 'Warning Burn %', min: 50, max: 95, step: 5, defaultValue: 80 }
   ],
-  compute: (ctx, _inputs: Record<string, number> = {}) => {
+  compute: (ctx, _inputs: { taxRate?: number; targetCapRate?: number; minMargin?: number; [key: string]: unknown } = {}) => {
     const { transactions, accounts } = ctx;
     const grantMap = new Map<string, { receivedCents: number; spentCents: number }>();
 
@@ -370,7 +370,7 @@ export const PROJECT_PROFITABILITY_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'minMargin', label: 'Minimum Target Margin (%)', min: 10, max: 70, step: 5, defaultValue: 30 }
   ],
-  compute: (ctx, inputs: Record<string, number> = {}) => {
+  compute: (ctx, inputs: { taxRate?: number; targetCapRate?: number; minMargin?: number; [key: string]: unknown } = {}) => {
     const { transactions, accounts } = ctx;
     const projMap = new Map<string, { revCents: number; expCents: number }>();
 

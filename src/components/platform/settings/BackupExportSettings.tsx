@@ -21,7 +21,7 @@ export default function BackupExportSettings() {
         throw new Error("No active workspace selected");
       }
 
-      let payload: any = null;
+      let payload = null;
       let usedServer = false;
 
       // 1. Authoritative Server-side complete streaming export
@@ -76,7 +76,7 @@ export default function BackupExportSettings() {
         const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        payload.metadata.checksum = hashHex;
+        (payload.metadata as typeof payload.metadata & { checksum?: string }).checksum = hashHex;
       }
 
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -95,9 +95,9 @@ export default function BackupExportSettings() {
       } else {
         toast.warning('Offline backup: only what this page has loaded, not a complete archive.');
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast.error('Failed to export backup: ' + (e.message || 'Unknown error'));
+      toast.error('Failed to export backup: ' + ((e as Error).message || 'Unknown error'));
     } finally {
       setIsExporting(false);
     }
@@ -145,9 +145,9 @@ export default function BackupExportSettings() {
             amountStr,
             `"${(t.description || '').replace(/"/g, '""')}"`,
             `"${categoryName.replace(/"/g, '""')}"`,
-            (t as any).type || 'actual',
-            (t as any).status || 'posted',
-            `"${((t as any).reference || '').replace(/"/g, '""')}"`
+            (t as typeof t & { merchant?: string; notes?: string; category?: string; reference?: string }).type || 'actual',
+            (t as typeof t & { merchant?: string; notes?: string; category?: string; reference?: string }).status || 'posted',
+            `"${((t as typeof t & { merchant?: string; notes?: string; category?: string; reference?: string }).reference || '').replace(/"/g, '""')}"`
           ];
           csvContent += row.join(",") + "\n";
         });
@@ -167,9 +167,9 @@ export default function BackupExportSettings() {
         recordBackupCompleted(workspaceId);
       }
       toast.success('Transactions CSV exported successfully');
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast.error('Failed to export CSV: ' + (e.message || 'Unknown error'));
+      toast.error('Failed to export CSV: ' + ((e as Error).message || 'Unknown error'));
     } finally {
       setIsExporting(false);
     }
@@ -232,9 +232,9 @@ export default function BackupExportSettings() {
 
       const result = await res.json();
       toast.success(result.message || "Workspace general ledger successfully restored from backup snapshot.");
-    } catch (e: any) {
+    } catch (e) {
       console.error("Restore failed:", e);
-      toast.error(`Restore failed: ${e.message}`);
+      toast.error(`Restore failed: ${(e as Error).message}`);
     } finally {
       setIsRestoring(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

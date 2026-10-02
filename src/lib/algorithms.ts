@@ -1,3 +1,8 @@
+import type { Transaction, ChartAccount } from '../types';
+
+interface TrieNode { next: Record<string, number>; fail: number; output: string[] }
+interface TemporalFinding { id: string; type: string; confidence: number; resolution: string }
+type TemporalTransaction = Pick<Transaction, 'id'> & { totalAmountCents?: number; amount?: number };
 import { isPostable, lineAmount, calculateTransactionImpact } from './txFilters';
 import { getLocalDateISO, addToDateISO } from './utils';
 import { PerformanceTelemetry } from "./telemetry";
@@ -29,8 +34,8 @@ const defaultRandom = seedPRNG(globalSeed);
  * @param options Configuration options for days and aggregation metrics
  */
 export function aggregateLedgerToDailySeries(
-  transactions: any[],
-  accounts: any[],
+  transactions: Transaction[],
+  accounts: ChartAccount[],
   options: {
     days?: number;
     metric?: 'volume' | 'debit' | 'credit' | 'net_flow' | 'running_balance';
@@ -72,7 +77,7 @@ export function aggregateLedgerToDailySeries(
       // but here we usually mean the balance of a specific set of accounts.
       // If no account filter is provided, we assume "Cash" impact or similar.
       // However, historically this function was used for cash-flow-like running balances.
-      txValue = tx.lines?.reduce((sum: number, l: any) => sum + lineAmount(l, tx), 0) || 0;
+      txValue = tx.lines?.reduce((sum: number, l) => sum + lineAmount(l, tx), 0) || 0;
       
       if (txDay < firstDay) {
         initialBalDelta += txValue;
@@ -86,17 +91,17 @@ export function aggregateLedgerToDailySeries(
       }
     } else if (metric === 'volume') {
       // Volume is the absolute activity
-      txValue = tx.lines?.reduce((sum: number, l: any) => sum + Math.abs(lineAmount(l, tx)), 0) / 2 || 0;
+      txValue = tx.lines?.reduce((sum: number, l) => sum + Math.abs(lineAmount(l, tx)), 0) / 2 || 0;
       if (seriesMap[txDay] !== undefined) {
         seriesMap[txDay] += txValue;
       }
     } else if (metric === 'debit') {
-      txValue = tx.lines?.reduce((sum: number, l: any) => sum + Math.max(0, lineAmount(l, tx)), 0) || 0;
+      txValue = tx.lines?.reduce((sum: number, l) => sum + Math.max(0, lineAmount(l, tx)), 0) || 0;
       if (seriesMap[txDay] !== undefined) {
         seriesMap[txDay] += txValue;
       }
     } else if (metric === 'credit') {
-      txValue = tx.lines?.reduce((sum: number, l: any) => sum + Math.abs(Math.min(0, lineAmount(l, tx))), 0) || 0;
+      txValue = tx.lines?.reduce((sum: number, l) => sum + Math.abs(Math.min(0, lineAmount(l, tx))), 0) || 0;
       if (seriesMap[txDay] !== undefined) {
         seriesMap[txDay] += txValue;
       }
@@ -722,7 +727,7 @@ export function lexicalSimilarity(s1: string | undefined | null, s2: string | un
  * O(TextLength + NumberOfMatches)
  */
 export class AhoCorasick {
-  private trie: any[] = [{ next: {}, fail: 0, output: [] }];
+  private trie: TrieNode[] = [{ next: {}, fail: 0, output: [] }];
 
   constructor(patterns: { pattern: string, ruleId: string }[]) {
     // Build Trie
@@ -2000,11 +2005,11 @@ export class AuditEngine {
   /**
    * Identifies "Temporal Variations" - transactions that violate predicted patterns.
    */
-  static detectTemporalVariations(transactions: any[], baseline: number[]): any[] {
+  static detectTemporalVariations(transactions: TemporalTransaction[], baseline: number[]): TemporalFinding[] {
     return this.detectTemporalParadoxes(transactions, baseline);
   }
 
-  static detectTemporalParadoxes(transactions: any[], baseline: number[]): any[] {
+  static detectTemporalParadoxes(transactions: TemporalTransaction[], baseline: number[]): TemporalFinding[] {
     const findings = [];
     const mean = baseline.reduce((a, b) => a + b, 0) / (baseline.length || 1);
     const variance = baseline.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (baseline.length || 1);
@@ -2029,7 +2034,7 @@ export class AuditEngine {
   /**
    * Self-Healing Resolution: Suggests corrections for categorization conflicts.
    */
-  static suggestHealing(_conflict: any): string {
+  static suggestHealing(_conflict: unknown): string {
     const scores = {
       'RECONCILE': 0.8,
       'AMORTIZE': 0.6,

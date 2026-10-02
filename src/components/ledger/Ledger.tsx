@@ -30,7 +30,7 @@ type ModalType = 'account' | 'journal' | 'recon' | 'period' | 'bank_import' | nu
 interface LedgerSubTabConfig {
   id: SubTab;
   label: string;
-  icon: any;
+  icon: import("lucide-react").LucideIcon;
   cardKey: string;
 }
 
@@ -40,7 +40,7 @@ const LEDGER_SUB_TABS: LedgerSubTabConfig[] = [
   { id: 'trial', label: 'Trial Balance', icon: Scale, cardKey: 'ledger.tab.trial' }
 ];
 
-const TabButton = ({ label, icon: Icon, active, onClick, cardKey }: { id: SubTab, label: string, icon: any, active: boolean, onClick: () => void, cardKey?: string }) => (
+const TabButton = ({ label, icon: Icon, active, onClick, cardKey }: { id: SubTab, label: string, icon: import("lucide-react").LucideIcon, active: boolean, onClick: () => void, cardKey?: string }) => (
   <button
     onClick={onClick}
     className={cn(
@@ -65,7 +65,7 @@ import { Labelled } from '../ui/Labelled';
 
 const Ledger = React.memo(() => {
   const formId = useId();
-  const user = useAuthStore(s => s.user) || ({} as any);
+  const user = useAuthStore(s => s.user) || ({} as unknown as import("../../lib/db/auth").User | null);
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const transactions = useLedgerStore(s => s.transactions);
   const rawAccounts = useLedgerStore(s => s.accounts);
@@ -79,7 +79,7 @@ const Ledger = React.memo(() => {
     workspaceId: tx.workspaceId || '',
     date: tx.date || '',
     description: tx.description || '',
-    reference: (tx as any).reference || tx.id,
+    reference: (tx as typeof tx & { reference?: string }).reference || tx.id,
     lines: (tx.lines || []).map(l => {
       const amt = lineAmount(l, tx);
       return {
@@ -103,7 +103,7 @@ const Ledger = React.memo(() => {
   const txActions = useTransactionActions();
   const { addEntity, updateEntity } = useEntityOperations();
 
-  const onCompleteReconciliation = async (data: any) => {
+  const onCompleteReconciliation = async (data: import("./ReconciliationWizard").ReconciliationCompletion) => {
     try {
       const recRecord = {
         accountId: data.accountId,
@@ -383,7 +383,7 @@ const Ledger = React.memo(() => {
           <BankFeedImport 
             workspaceId={workspaceId || ""}
             onClose={() => setActiveModal(null)}
-            onImport={(data: any) => {
+            onImport={(data) => {
               onAction('import_bank_csv', data);
               setActiveModal(null);
             }}
@@ -434,7 +434,7 @@ const Ledger = React.memo(() => {
                     <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50" label="Account Type">
                       <select 
                         value={newAccount.type}
-                        onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value as any })}
+                        onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value as unknown as "asset" })}
                         className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)] appearance-none cursor-pointer"
                       >
                         <option value="asset">Asset</option>
@@ -640,7 +640,7 @@ const Ledger = React.memo(() => {
       <JournalEntryModal 
         isOpen={activeModal === 'journal'}
         onClose={() => setActiveModal(null)}
-        user={user as any}
+        user={user as unknown as import("../../lib/db/auth").User}
         accounts={accounts}
         workspaceId={workspaceId || ""}
       />

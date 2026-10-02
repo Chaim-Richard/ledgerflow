@@ -18,7 +18,7 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
       defaultValue: 100
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "minRoundAmount": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounts } = ctx;
     const minRoundAmount = (inputs['minRoundAmount'] ?? 100) * 100; // in cents
     
@@ -33,7 +33,7 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
     
     transactions.forEach(tx => {
       // Look at expense/liability accounts or general spending
-      if (!isOutflow(tx, accounts as any)) return;
+      if (!isOutflow(tx, accounts as unknown as import("../../types").ChartAccount[] | Map<string, import("../../types").ChartAccount> | undefined)) return;
       
       const absAmount = Math.abs(tx.totalAmountCents);
       if (absAmount < 500) return; // Skip tiny transactions

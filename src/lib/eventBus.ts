@@ -1,4 +1,4 @@
-type SubscriptionCallback<T = any> = (data: T) => void;
+type SubscriptionCallback<T = unknown> = (data: T) => void;
 
 class EventBus {
   private listeners: Record<string, SubscriptionCallback[]> = {};
@@ -6,11 +6,11 @@ class EventBus {
   /**
    * Register a subscriber for an event. Returns a function to unsubscribe.
    */
-  public subscribe<T = any>(event: string, callback: SubscriptionCallback<T>): () => void {
+  public subscribe<T = unknown>(event: string, callback: SubscriptionCallback<T>): () => void {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
     }
-    this.listeners[event].push(callback);
+    this.listeners[event].push(callback as SubscriptionCallback<unknown>);
     
     return () => {
       this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
@@ -20,7 +20,7 @@ class EventBus {
   /**
    * Broadcast/Publish an event with structured data.
    */
-  public publish<T = any>(event: string, data: T): void {
+  public publish<T = unknown>(event: string, data: T): void {
     if (!this.listeners[event]) return;
     this.listeners[event].forEach(callback => {
       try {

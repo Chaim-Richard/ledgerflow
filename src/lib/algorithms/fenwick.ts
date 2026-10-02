@@ -87,7 +87,7 @@ export const FENWICK_TIME_TRAVEL_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'targetDayIndex', label: 'Timeline Scrub (Days from Start)', min: 1, max: 365, step: 1, defaultValue: 90 }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "targetDayIndex": number; [key: string]: unknown }) => {
     const { transactions } = ctx;
     const start = performance.now();
     

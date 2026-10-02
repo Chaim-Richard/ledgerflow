@@ -1,3 +1,4 @@
+import type { TransactionLine } from '../../types';
 import React, { useState, useMemo } from 'react';
 import { Transaction } from '../../types';
 import { Table as TableIcon, Search, Download, ChevronDown, ChevronRight, Calculator, Grid3X3, ListCollapse, ExternalLink, Calendar } from 'lucide-react';
@@ -96,7 +97,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
   }, [transactions, startDate, endDate]);
 
   // Helper code to map a Transaction/Line to a group key representation
-  const getLineDimensionValue = (t: Transaction, line: any, dim: GroupBy): string => {
+  const getLineDimensionValue = (t: Transaction, line: TransactionLine, dim: GroupBy): string => {
     if (dim === 'payee') {
       return t.payee || t.description || 'Direct Entry';
     }

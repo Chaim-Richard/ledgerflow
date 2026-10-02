@@ -1,3 +1,4 @@
+import type { Transaction } from '../../types';
 import React, { useId, useState, useMemo, useEffect, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -12,10 +13,12 @@ import { getComparePeriod } from '../../lib/fiscalCalendar';
 import MonthNavigator from '../ui/MonthNavigator';
 import DrillDownModal from '../layout/DrillDownModal';
 
+interface PLAccount { name: string; code?: string; balance: number }
+
 interface PLData {
-  income: { total: number; accounts: Record<string, any> };
-  cogs: { total: number; accounts: Record<string, any> };
-  expense: { total: number; accounts: Record<string, any> };
+  income: { total: number; accounts: Record<string, PLAccount> };
+  cogs: { total: number; accounts: Record<string, PLAccount> };
+  expense: { total: number; accounts: Record<string, PLAccount> };
   grossProfit: number;
   netIncome: number;
   orphanedLines?: Array<{ accountId: string; transactionId?: string; date?: string; amountCents: number }>;
@@ -41,7 +44,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   const [isComparative, setIsComparative] = useState(false);
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('balance');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: any[] } | null>(null);
+  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[] } | null>(null);
 
   const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
   const { fetchPL, loadingStates } = useFinancialReporting();
@@ -148,7 +151,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   }, [businessType]);
 
   const localCalculation = useMemo(() => {
-    const defaultData = {
+    const defaultData: PLData = {
       income: { total: 0, accounts: {} },
       cogs: { total: 0, accounts: {} },
       expense: { total: 0, accounts: {} },
@@ -249,11 +252,11 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
       [`Period: ${dateRange.start} to ${dateRange.end}`]
     ];
 
-    const rows: any[] = [];
+    const rows: (Record<string, string | number | null> | string[])[] = [];
 
     rows.push([labels.revenueStreams.toUpperCase()]);
-    Object.entries(data.income?.accounts || {}).forEach(([id, acc]: [string, any]) => {
-      const pBal = (prevData?.income?.accounts as any)[id]?.balance || 0;
+    Object.entries(data.income?.accounts || {}).forEach(([id, acc]: [string, PLAccount]) => {
+      const pBal = (prevData?.income?.accounts as Record<string, PLAccount>)[id]?.balance || 0;
       const varPct = pBal !== 0 ? (((acc.balance || 0) - pBal) / Math.abs(pBal)) * 100 : 0;
       rows.push({
         account: acc.name,
@@ -270,8 +273,8 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
 
     rows.push([]);
     rows.push([labels.expenseClusters.toUpperCase()]);
-    Object.entries(data.expense?.accounts || {}).forEach(([id, acc]: [string, any]) => {
-      const pBal = (prevData?.expense?.accounts as any)[id]?.balance || 0;
+    Object.entries(data.expense?.accounts || {}).forEach(([id, acc]: [string, PLAccount]) => {
+      const pBal = (prevData?.expense?.accounts as Record<string, PLAccount>)[id]?.balance || 0;
       const varPct = pBal !== 0 ? (((acc.balance || 0) - pBal) / Math.abs(pBal)) * 100 : 0;
       rows.push({
         account: acc.name,
@@ -554,15 +557,15 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(data.income?.accounts || {})
-                .sort(([, a]: [string, any], [, b]: [string, any]) => {
+                .sort(([, a]: [string, PLAccount], [, b]: [string, PLAccount]) => {
                   let comp: number;
                   if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
                   else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
                   else comp = (a.balance || 0) - (b.balance || 0);
                   return sortDir === 'asc' ? comp : -comp;
                 })
-                .map(([id, acc]: [string, any]) => {
-                const prevAcc = (prevData.income?.accounts as any)[id];
+                .map(([id, acc]: [string, PLAccount]) => {
+                const prevAcc = (prevData.income?.accounts as Record<string, PLAccount>)[id];
                 const prevBalance = prevAcc ? prevAcc.balance : 0;
                 const balance = acc.balance || 0;
                 const variance = isComparative && prevBalance !== 0 ? ((balance - prevBalance) / Math.abs(prevBalance)) * 100 : null;
@@ -633,15 +636,15 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(data.expense?.accounts || {})
-                .sort(([, a]: [string, any], [, b]: [string, any]) => {
+                .sort(([, a]: [string, PLAccount], [, b]: [string, PLAccount]) => {
                   let comp: number;
                   if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
                   else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
                   else comp = (a.balance || 0) - (b.balance || 0);
                   return sortDir === 'asc' ? comp : -comp;
                 })
-                .map(([id, acc]: [string, any]) => {
-                const prevAcc = (prevData.expense?.accounts as any)[id];
+                .map(([id, acc]: [string, PLAccount]) => {
+                const prevAcc = (prevData.expense?.accounts as Record<string, PLAccount>)[id];
                 const prevBalance = prevAcc ? prevAcc.balance : 0;
                 const balance = acc.balance || 0;
                 const variance = isComparative && prevBalance !== 0 ? ((balance - prevBalance) / Math.abs(prevBalance)) * 100 : null;

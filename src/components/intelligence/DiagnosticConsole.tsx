@@ -95,7 +95,7 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
             totalCash,
             runwayMonths: runway
           }
-        } as any;
+        } as unknown as Parameters<typeof StrategicEngine.analyze>[0]['metrics'];
         const insights = StrategicEngine.analyze({ metrics: metrics, projects: projects }, transactions, accounts);
         const advice = insights.map(i => `${i.title}: ${i.description}`);
         if (advice.length === 0) advice.push("No significant anomalies or strategic deviations detected at this time.");

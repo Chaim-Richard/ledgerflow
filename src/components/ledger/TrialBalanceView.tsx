@@ -123,7 +123,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
     journalEntries.forEach(je => {
       if (je.deletedAt || !isTransactionInDateRange(je, undefined, asOfDate)) return;
       // Skip JEs that are auto-generated from transactions (already handled in step 3)
-      if ((je as any).transactionId || (je as any).parentEventId) return;
+      if ((je as typeof je & { transactionId?: string; parentEventId?: string }).transactionId || (je as typeof je & { transactionId?: string; parentEventId?: string }).parentEventId) return;
 
       je.lines?.forEach(line => {
         const acc = accountById.get(line.accountId) || accountByName.get(line.accountName || '');
@@ -207,7 +207,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
         id: acc.id,
         code: acc.code || '',
         name: acc.name,
-        type: acc.type as any,
+        type: acc.type as string,
         debit: acc.debit,
         credit: acc.credit,
         netBalance: acc.netSigned
@@ -494,7 +494,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                       {line.name}
                     </p>
                     <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider">
-                      {line.type} Classification • {((line as any).category) || 'Standard'}
+                      {line.type} Classification • {((line as typeof line & { category?: string }).category) || 'Standard'}
                     </p>
                   </div>
                 </td>

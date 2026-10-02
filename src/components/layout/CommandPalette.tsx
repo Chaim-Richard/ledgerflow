@@ -1,3 +1,4 @@
+interface PaletteResult { id: string; type: string; label: string; category: string; actionId?: string; payload?: unknown; icon?: React.ReactNode }
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Loader2, ArrowRight, FileText, User, Building, FolderKanban, Tags, DollarSign, Zap, FolderPlus } from 'lucide-react';
@@ -19,8 +20,8 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
-  onAction?: (action: string, details?: any) => void;
-  onQuery?: (q: string) => Promise<any>;
+  onAction?: (action: string, details?: unknown) => void;
+  onQuery?: (q: string) => Promise<unknown>;
   recentQueries?: string[];
 }
 
@@ -117,10 +118,10 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       icon: <ArrowRight aria-hidden="true" size={16} />
     }));
     
-    const lenses = ANALYTICAL_LENSES_REGISTRY.map((lens: any) => ({
+    const lenses = ANALYTICAL_LENSES_REGISTRY.map((lens) => ({
       id: `lens-${lens.id}`,
       type: 'command',
-      label: `Open: ${(lens.label && lens.label[language]) || (lens.label && lens.label['en']) || lens.name || lens.id}`,
+      label: `Open: ${(lens.label && lens.label[language]) || (lens.label && lens.label['en']) || (lens as typeof lens & { name?: string }).name || lens.id}`,
       category: 'Calculators & Analytics',
       actionId: 'switch-tab',
       payload: { tab: 'intelligence', channel: lens.id },
@@ -135,7 +136,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
     if (!query || query.length < 2) return [];
     
     const lowerQ = query.toLowerCase();
-    const results: any[] = [];
+    const results: PaletteResult[] = [];
     const searchTerms = lowerQ.split(' ').filter(t => t.length > 0);
 
     // Helper to check if all search terms match a string
@@ -229,12 +230,12 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
     // 3. Customers
     ledger.customers.forEach(c => {
-      if (match(c.name) || match(c.email) || matchArray(c.tags) || match((c as any).group)) {
+      if (match(c.name) || match(c.email) || matchArray(c.tags) || match((c as typeof c & { group?: string }).group)) {
         results.push({
           id: `cust-${c.id}`,
           type: 'data',
           label: c.name,
-          category: `Customer ${(c as any).group ? '• ' + (c as any).group : ''}`,
+          category: `Customer ${(c as typeof c & { group?: string }).group ? '• ' + (c as typeof c & { group?: string }).group : ''}`,
           actionId: 'switch-tab',
           payload: { tab: 'sales', id: c.id },
           icon: <User aria-hidden="true" size={16} className="text-amber-500 shrink-0" />
@@ -244,12 +245,12 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
     // 4. Vendors
     ledger.vendors.forEach(v => {
-      if (match(v.name) || match(v.email) || matchArray(v.tags) || match((v as any).group)) {
+      if (match(v.name) || match(v.email) || matchArray(v.tags) || match((v as typeof v & { group?: string }).group)) {
         results.push({
           id: `vend-${v.id}`,
           type: 'data',
           label: v.name,
-          category: `Vendor ${(v as any).group ? '• ' + (v as any).group : ''}`,
+          category: `Vendor ${(v as typeof v & { group?: string }).group ? '• ' + (v as typeof v & { group?: string }).group : ''}`,
           actionId: 'switch-tab',
           payload: { tab: 'expenses', id: v.id },
           icon: <Building aria-hidden="true" size={16} className="text-rose-500 shrink-0" />
@@ -340,7 +341,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
   const combinedResults = [...dataResults, ...filteredCommands];
 
-  const handleSelect = async (item: any) => {
+  const handleSelect = async (item: PaletteResult) => {
     setIsExecuting(true);
     await new Promise(r => setTimeout(r, 400));
     

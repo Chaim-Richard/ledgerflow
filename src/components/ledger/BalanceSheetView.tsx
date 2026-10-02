@@ -230,7 +230,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
       [`Reporting Date: As of ${asOfDate}`, isComparative ? `Prior Reference: As of ${priorDate}` : '']
     ];
 
-    const rows: any[] = [];
+    const rows: (Record<string, string | number | null> | string[])[] = [];
 
     rows.push([labels.assetsLabel.toUpperCase()]);
     accounts.filter(a => a.type === 'asset').forEach(acc => {

@@ -422,7 +422,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                                  >
                                    {isFlagType ? (
                                      <span className={val === 'Exact' ? 'text-rose-400 font-bold' : 'text-amber-400 font-medium'}>
-                                       {val || 'Flagged'}
+                                       {(val as React.ReactNode) || 'Flagged'}
                                      </span>
                                    ) : (
                                      val !== undefined && val !== null ? String(val) : '-'

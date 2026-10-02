@@ -3,6 +3,11 @@ import { isPostable } from '../../lib/txFilters';
 import { allocateCents } from '../../lib/Allocation';
 import { resolveAccountRole } from '../../lib/accountUtils';
 
+export interface NormalizedLedgerTransaction extends Transaction {
+  notes?: string;
+  _normalized: { searchStr: string; month: string; absAmount: number; sanitizedDescription: string; year: string; isLarge: boolean; isTiny: boolean; isBalanced: boolean };
+}
+
 export class LedgerEngine {
   /**
    * Validates if a transaction satisfies the fundamental double-entry invariant.
@@ -14,7 +19,7 @@ export class LedgerEngine {
     return sum === 0;
   }
 
-  private static normalizationCache = new Map<string, any>();
+  private static normalizationCache = new Map<string, NormalizedLedgerTransaction>();
   private static MAX_CACHE_SIZE = 150000;
 
   private static CACHED_SANITIZE_REGEX_CORP = /\b(inc|ltd|corp|co|llc|plc|gmbh|sa|bv|nv|ag|sas)\b/g;
@@ -27,7 +32,7 @@ export class LedgerEngine {
         .trim();
   }
 
-  static normalize(transactions: Transaction[]) {
+  static normalize(transactions: Transaction[]): NormalizedLedgerTransaction[] {
     // Basic high-speed eviction if cache grows too large
     if (this.normalizationCache.size > this.MAX_CACHE_SIZE) {
       this.normalizationCache.clear();
@@ -40,7 +45,7 @@ export class LedgerEngine {
       const cacheKey = `${t.id}-${t.totalAmountCents}-${t.exchangeRate || 1}-${t.date}-${t.status}-${t.description || ''}-${t.isCleared ? 1 : 0}-${t.tags?.join(',')}-${t.project || ''}-${linesSignature}`;
       
       if (this.normalizationCache.has(cacheKey)) {
-        return this.normalizationCache.get(cacheKey);
+        return this.normalizationCache.get(cacheKey)!;
       }
 
       const absAmount = Math.abs(Math.round((t.totalAmountCents || 0) * (t.exchangeRate || 1))) / 100;
@@ -121,8 +126,8 @@ export class LedgerEngine {
           const convertedLines = tx.lines.map(line => {
             if (!line || typeof line !== 'object') return { line, amount: 0, rawAmount: 0, rate: 1 };
             const rawAmount = typeof line.amountCents === 'number' && Number.isSafeInteger(line.amountCents) ? line.amountCents : 0;
-            const rate = (typeof (line as any).exchangeRate === 'number' && (line as any).exchangeRate > 0 && Number.isFinite((line as any).exchangeRate))
-              ? (line as any).exchangeRate
+            const rate = (typeof line.exchangeRate === 'number' && line.exchangeRate > 0 && Number.isFinite(line.exchangeRate))
+              ? line.exchangeRate
               : ((typeof tx.exchangeRate === 'number' && tx.exchangeRate > 0 && Number.isFinite(tx.exchangeRate)) ? tx.exchangeRate : 1);
             
             // #90: Enforce Number.isSafeInteger after FX conversion - fail closed on overflow
@@ -198,15 +203,15 @@ export class LedgerEngine {
       journalEntries.forEach(je => {
         if (!je || typeof je !== 'object') return;
         if (je.deletedAt) return; // Journal entries only have deletedAt, not status
-        if ((je as any).transactionId || (je as any).parentEventId) return; // Skip journal entries originating from transactions to prevent double-counting
+        if ((je as JournalEntry & { transactionId?: string; parentEventId?: string }).transactionId || (je as JournalEntry & { transactionId?: string; parentEventId?: string }).parentEventId) return; // Skip journal entries originating from transactions to prevent double-counting
         if (Array.isArray(je.lines)) {
           je.lines.forEach(line => {
             if (!line || typeof line !== 'object') return;
             const accId = typeof line.accountId === 'string' ? line.accountId : '';
             const accData = balances.get(accId);
             if (accData) {
-              const debit = typeof line.debit === 'number' ? line.debit : ((line as any).debitCents || 0);
-              const credit = typeof line.credit === 'number' ? line.credit : ((line as any).creditCents || 0);
+              const debit = typeof line.debit === 'number' ? line.debit : ((line as typeof line & { debitCents?: number }).debitCents || 0);
+              const credit = typeof line.credit === 'number' ? line.credit : ((line as typeof line & { creditCents?: number }).creditCents || 0);
               accData.total += debit - credit;
             }
           });

@@ -21,6 +21,15 @@ export interface AppNotification {
   eventKey?: string;
 }
 
+export interface EntityMetadata extends Record<string, unknown> {
+  vendorId?: string;
+  dueDate?: string;
+  memo?: string;
+  cogsPending?: boolean;
+  amountPaidCents?: number;
+  lines?: { description?: string; quantity?: number; rateCents?: number; amountCents: number }[];
+}
+
 export interface Workspace {
   id: string;
   uid: string;
@@ -145,7 +154,7 @@ export interface TransactionLine {
   dimensions?: Record<string, string>; // Hierarchical coordinate map: { world: 'bookco', property: 'homes/maui', class: 'ops' }
   splitAllocations?: SplitAllocation[]; // Split allocations with 1.0 weight integrity
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: EntityMetadata;
   quantity?: number;
   unitPriceCents?: number;
   isAutoTagged?: boolean; // System-detected line
@@ -205,7 +214,7 @@ export interface Transaction {
   locationId?: string;   // Explicit Location tracking
   employeeId?: string;   // Employee map
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: EntityMetadata;
   // Audit & History
   verification?: {
     status: 'verified' | 'unverified';
@@ -252,7 +261,7 @@ export interface Project {
   subcontractCosts?: Array<{ id: string, vendorId: string, description: string, amountCents: number }>;
   dimensions: string[];
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: EntityMetadata;
   splitRules?: Array<{
     partnerId: string;
     partnerName?: string;
@@ -276,7 +285,7 @@ export interface Vendor {
   isForeign?: boolean;
   rating?: number;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: EntityMetadata;
   balanceCents?: number;
   /** Set when the vendor came from a spreadsheet import (src/lib/recordImport.ts); lets the import be undone. */
   importBatchId?: string;
@@ -299,7 +308,7 @@ export interface Bill {
   salesTaxCents?: number;
   receiptUrl?: string;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: EntityMetadata;
   splits?: Array<{
     amountCents: number;
   exchangeRate?: number;
@@ -360,7 +369,7 @@ export interface Invoice {
   date?: string;
   dueDate: string;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: EntityMetadata;
   status: 'pending' | 'paid' | 'partially_paid' | 'overdue' | 'sent' | 'draft' | 'approved' | 'rejected' | 'invoiced' | 'void' | 'cancelled';
   type?: 'standard' | 'recurring' | 'progress' | 'estimate' | 'quote' | 'change-order' | 'time-materials'; // For advanced billing workflows
   recurringInterval?: 'monthly' | 'weekly' | 'yearly';
@@ -375,7 +384,7 @@ export interface Invoice {
     accountId: string;
     taxRate?: number;
     unitCostCents?: number;
-    metadata?: Record<string, any>;
+    metadata?: EntityMetadata;
   }>;
   progressPercentage?: number;
   discountCents?: number;
@@ -471,7 +480,7 @@ export interface CreditNote {
   currency?: string;
   exchangeRate?: number;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: EntityMetadata;
   createdAt: string;
   updatedAt?: string;
   /** The tax part of amountCents, from the credited invoice (taxCodes.ts creditTaxFrom). */
@@ -497,7 +506,7 @@ export interface VendorCredit {
   currency?: string;
   exchangeRate?: number;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: EntityMetadata;
   createdAt: string;
   updatedAt?: string;
   /** The tax part of amountCents, from the credited bill (taxCodes.ts creditTaxFrom). */
@@ -522,7 +531,7 @@ export interface Customer {
   probability?: number;
   score?: number;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: EntityMetadata;
   notes?: string;
   isForeign?: boolean;
   /** No automatic payment reminders for this customer (Settings → Emails & Reminders). */
@@ -1023,7 +1032,7 @@ export interface User {
   geminiApiKey?: string;
   createdAt?: string;
   lastLoginAt?: string;
-  metadata?: Record<string, any>;
+  metadata?: EntityMetadata;
   plan?: 'free' | 'growth' | 'enterprise';
   seatIndex?: number;
   isActiveSession?: boolean;
@@ -1070,7 +1079,7 @@ export interface CloudDocument {
   mimeType: string;
   sizeBytes: number;
   linkedTransactionId?: string;
-  tags?: string[]; metadata?: Record<string, any>;
+  tags?: string[]; metadata?: EntityMetadata;
   createdAt: string;
 }
 
@@ -1179,7 +1188,7 @@ export interface ExpenseClaim {
   category: string;
   status: 'pending' | 'approved' | 'rejected';
   receiptUrl?: string;
-  tags?: string[]; metadata?: Record<string, any>;
+  tags?: string[]; metadata?: EntityMetadata;
   createdAt: string;
 }
 
@@ -1231,7 +1240,7 @@ export interface ErrorLogRecord {
   release?: string;
   source: 'frontend' | 'backend' | 'api';
   severity: 'error' | 'warning' | 'fatal';
-  metadata?: Record<string, any>;
+  metadata?: EntityMetadata;
   ticketId?: string;
   createdAt: string;
 }
