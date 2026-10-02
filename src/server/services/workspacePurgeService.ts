@@ -2,8 +2,10 @@ import type { Firestore } from '../db/firestore';
 import { deleteFilesWithPrefix, StorageNotConfiguredError } from '../storage/supabaseStorage';
 import { WORKSPACE_PURGE_ORDER } from '../../constants/collections';
 import { writeServerAuditLog } from './auditLogService';
+import { retentionFor } from '../../lib/retention';
 
-export async function purgePendingWorkspaces(db: Firestore): Promise<{ purgedWorkspaces: string[]; errors: string[] }> {
+/** `only` limits the run to these workspaces (tests: so parallel runs don't purge each other's). */
+export async function purgePendingWorkspaces(db: Firestore, only?: string[]): Promise<{ purgedWorkspaces: string[]; errors: string[] }> {
   const nowISO = new Date().toISOString();
   const purgedWorkspaces: string[] = [];
   const errors: string[] = [];
@@ -20,6 +22,9 @@ export async function purgePendingWorkspaces(db: Firestore): Promise<{ purgedWor
 
     for (const wsDoc of wsSnap.docs) {
       const workspaceId = wsDoc.id;
+      if (only && !only.includes(workspaceId)) continue;
+      // legal hold (BJ-05): a deleted workspace on hold is kept until the hold is lifted
+      if (retentionFor(wsDoc.data()).legalHold) continue;
       const jobRunRef = db.collection('jobRuns').doc(`purge_workspace_${workspaceId}`);
 
       try {
@@ -94,13 +99,13 @@ export async function purgePendingWorkspaces(db: Firestore): Promise<{ purgedWor
         try {
           await deleteFilesWithPrefix(`workspaces/${workspaceId}/`);
           await deleteFilesWithPrefix(`${workspaceId}/`);
-        } catch (storageErr: any) {
+        } catch (storageErr) {
           if (process.env.NODE_ENV !== 'production' && storageErr instanceof StorageNotConfiguredError) {
             // Tolerate unconfigured storage bucket only in non-production/test environments
-            console.warn(`[Workspace Purge] Non-production storage tolerance for workspace ${workspaceId}:`, storageErr?.message);
+            console.warn(`[Workspace Purge] Non-production storage tolerance for workspace ${workspaceId}:`, storageErr instanceof Error ? storageErr.message : String(storageErr));
           } else {
             console.error(`[Workspace Purge] Storage file deletion failed for workspace ${workspaceId}:`, storageErr);
-            throw new Error(`Storage purge failed: ${storageErr?.message || String(storageErr)}`, { cause: storageErr });
+            throw new Error(`Storage purge failed: ${storageErr instanceof Error ? storageErr.message : String(storageErr)}`, { cause: storageErr });
           }
         }
 
@@ -129,19 +134,20 @@ export async function purgePendingWorkspaces(db: Firestore): Promise<{ purgedWor
         }, { merge: true });
 
         purgedWorkspaces.push(workspaceId);
-      } catch (err: any) {
+      } catch (err) {
         console.error(`[Workspace Purge] Failed purging workspace ${workspaceId}:`, err);
-        errors.push(`Workspace ${workspaceId}: ${err.message}`);
+        const message = err instanceof Error ? err.message : String(err);
+        errors.push(`Workspace ${workspaceId}: ${message}`);
         await jobRunRef.set({
           status: 'failed',
-          lastError: err.message,
+          lastError: message,
           updatedAt: new Date().toISOString()
         }, { merge: true });
       }
     }
-  } catch (err: any) {
+  } catch (err) {
     console.error('[Workspace Purge] Failed querying pending workspaces:', err);
-    errors.push(err.message);
+    errors.push(err instanceof Error ? err.message : String(err));
   }
 
   return { purgedWorkspaces, errors };

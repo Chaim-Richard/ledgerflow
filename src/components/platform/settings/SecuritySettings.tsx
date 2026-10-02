@@ -12,6 +12,8 @@ import { auth } from '../../../firebase';
 import { toast } from 'sonner';
 import { RequireRole } from '../../ui/RequireRole';
 import { useUIStore } from '../../../stores/useUIStore';
+import RetentionSettingsPanel from './RetentionSettingsPanel';
+import { retentionFor } from '../../../lib/retention';
 
 export default function SecuritySettings() {
   const lockDate = useLedgerStore(s => s.lockDate);
@@ -285,11 +287,13 @@ export default function SecuritySettings() {
                 </button>
             </div>
 
+            <RetentionSettingsPanel />
+
             <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-1">
                   <h4 className="text-base font-black text-rose-500 uppercase tracking-tight">Delete this workspace</h4>
                   <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
-                    Everything in this workspace is deleted after 30 days; until then an owner can keep it. The audit trail is kept.</p>
+                    Everything in this workspace is deleted after {retentionFor(useAuthStore.getState().getCurrentWorkspace()).deletionGraceDays} days (Data retention above); until then an owner can keep it. The audit trail is kept.</p>
                 </div>
                 <RequireRole requiredRole="owner" disableOnly tooltip="Only an owner can delete the workspace">
                   <button 

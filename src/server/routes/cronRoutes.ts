@@ -6,6 +6,7 @@ import { processErrorDigest } from '../services/errorDigestService';
 import { runNotificationJobs } from '../services/notificationService';
 import { runDailyReminders } from '../services/reminderService';
 import { recordDailyJobRun } from '../services/statusService';
+import { runDailyRetention } from '../services/retentionService';
 import { getDb } from '../db/firestore';
 
 /**
@@ -28,6 +29,7 @@ const DAILY_JOBS: [string, () => Promise<unknown>][] = [
   ['errorDigest', () => processErrorDigest()],
   ['notifications', runNotificationJobs],
   ['reminders', runDailyReminders],
+  ['retention', runDailyRetention],
 ];
 
 cronRouter.get('/daily', async (req, res) => {

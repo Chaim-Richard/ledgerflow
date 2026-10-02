@@ -11,6 +11,7 @@
  */
 import type { Firestore } from '../db/firestore';
 import { writeServerAuditLog } from './auditLogService';
+import { scheduledPurgeAt as purgeDate } from '../../lib/retention';
 
 export interface WorkspaceForDeletion { id: string; data: Record<string, unknown> }
 export interface AccountDeletionPlan {
@@ -79,8 +80,8 @@ export async function deleteAccount(db: Firestore, user: { uid: string; email?: 
   if (plan.blocked.length) throw new AccountDeletionBlocked(plan.blocked);
 
   const now = new Date();
-  const scheduledPurgeAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
   for (const ws of plan.scheduleDeletion) {
+    const scheduledPurgeAt = purgeDate(ws.data, now);
     await db.collection('workspaces').doc(ws.id).update({ status: 'pending_deletion', deletedAt: now.toISOString(), scheduledPurgeAt, updatedAt: now.toISOString() });
     await writeServerAuditLog({
       workspaceId: ws.id, uid: user.uid, email: user.email || '', action: 'WORKSPACE_DELETION_SCHEDULED', entityType: 'workspace', entityId: ws.id,

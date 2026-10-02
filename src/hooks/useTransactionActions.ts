@@ -36,6 +36,7 @@ import {
   jaroWinklerSimilarity
 } from '../lib/algorithms';
 import { safeAsync, safeConfirm, getLocalDateISO, workspaceYearMonth } from '../lib/utils';
+import { retentionFor } from '../lib/retention';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { useBillingStore } from '../modules/billing/BillingService';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
@@ -977,13 +978,14 @@ export function useTransactionActions() {
     }
   };
 
-  // "Delete this workspace": the server keeps it for 30 days (an owner can keep it until then),
+  // "Delete this workspace": the server keeps it for the recovery window, 30 days by default (an owner can keep it until then),
   // then deletes everything in it; the audit trail stays (workspaceRoutes.ts, workspacePurgeService.ts)
   const handleResetWorkspace = async () => {
     if (!user || !currentWorkspaceId) return;
     const workspace = useAuthStore.getState().getCurrentWorkspace();
     const name = workspace?.name || 'this workspace';
-    if (!safeConfirm(`Delete "${name}"? Everything in it (entries, invoices, bills, contacts, files) will be deleted in 30 days. Until then an owner can keep it. The audit trail is kept.`)) return;
+    const graceDays = retentionFor(workspace).deletionGraceDays;
+    if (!safeConfirm(`Delete "${name}"? Everything in it (entries, invoices, bills, contacts, files) will be deleted in ${graceDays} days. Until then an owner can keep it. The audit trail is kept.`)) return;
     try {
       const response = await fetch(`/api/v1/workspaces/${encodeURIComponent(currentWorkspaceId)}`, {
         method: 'DELETE',
@@ -991,7 +993,7 @@ export function useTransactionActions() {
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.message || body.error || 'The workspace could not be deleted');
-      const when = body.scheduledPurgeAt ? formatDate(String(body.scheduledPurgeAt).slice(0, 10)) : 'in 30 days';
+      const when = body.scheduledPurgeAt ? formatDate(String(body.scheduledPurgeAt).slice(0, 10)) : `in ${graceDays} days`;
       toast.success(`"${name}" will be deleted on ${when}`, { description: 'Until then, an owner can keep it from the banner at the top of the screen.' });
       useAuthStore.getState().setWorkspaces(useAuthStore.getState().workspaces.map(w => w.id === currentWorkspaceId ? { ...w, status: 'pending_deletion', scheduledPurgeAt: body.scheduledPurgeAt } as typeof w : w));
     } catch (error) {

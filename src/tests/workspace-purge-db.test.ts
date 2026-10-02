@@ -51,7 +51,7 @@ describe('Workspace purge (database)', { skip: !url && 'LF_TEST_DATABASE_URL not
 
   test('the workspace and all its data go; its audit trail and other workspaces stay', async () => {
     const { purgePendingWorkspaces } = await import('../server/services/workspacePurgeService');
-    const result = await purgePendingWorkspaces(db);
+    const result = await purgePendingWorkspaces(db, [ws]);
     assert.ok(result.purgedWorkspaces.includes(ws), JSON.stringify(result));
     for (const t of tables) {
       assert.equal((await db.collection(t).doc(`${ws}_${t}`).get()).exists, false, `${t} row of the purged workspace`);

@@ -7,7 +7,8 @@ import { formatDate } from '../../lib/utils';
 import { describeError } from '../../lib/errorRemedies';
 
 /**
- * A deleted workspace waits 30 days before it is purged (workspacePurgeService.ts). Until then this
+ * A deleted workspace waits its recovery window (30 days by default; Settings → Security → Data
+ * retention) before it is purged (workspacePurgeService.ts). Until then this
  * says when, and an owner can keep it (POST /api/v1/workspaces/:id/cancel-deletion).
  */
 export default function PendingDeletionBanner() {

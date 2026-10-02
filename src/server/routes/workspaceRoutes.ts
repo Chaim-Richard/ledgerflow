@@ -14,6 +14,8 @@ import { periodRouter } from './periodRoutes';
 import { badDebtRouter } from './badDebtRoutes';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
+import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } from '../../lib/retention';
+import { RetentionError, updateRetention } from '../services/retentionService';
 
 export const workspaceRouter = express.Router();
 
@@ -471,8 +473,23 @@ workspaceRouter.delete('/:workspaceId/invites/:inviteId', requireWorkspaceRole([
   }
 });
 
+/** Retention (L-08): how long logs are kept, the recovery window, legal hold. Owners only. */
+workspaceRouter.put('/:workspaceId/retention', requireWorkspaceRole(['owner']), async (req, res) => {
+  const { workspaceId } = req.params as Record<string, string>;
+  const parsed = RetentionSettingsSchema.safeParse(req.body);
+  if (!parsed.success) return sendError(res, 'Invalid retention settings', 400, parsed.error.issues.map(i => i.message).join('; '));
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const retention = await updateRetention(getDb(), { workspaceId, uid: user.uid, email: user.email, settings: parsed.data });
+    res.json({ status: 'success', retention });
+  } catch (err) {
+    if (err instanceof RetentionError) return sendError(res, err.message, err.status);
+    sendError(res, 'Failed to save retention settings', 500, err instanceof Error ? err.message : String(err));
+  }
+});
+
 /**
- * Task 4: Soft-delete workspace with 30-day retention (Owner only)
+ * Task 4: Soft-delete workspace with a recovery window (30 days by default; retention settings) (Owner only)
  * Never hard-deletes financial records or auditLogs (Finding Section 13A).
  */
 workspaceRouter.delete('/:workspaceId', requireWorkspaceRole(['owner']), async (req, res) => {
@@ -486,7 +503,7 @@ workspaceRouter.delete('/:workspaceId', requireWorkspaceRole(['owner']), async (
     }
 
     const now = new Date();
-    const scheduledPurgeAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const scheduledPurgeAt = purgeDate(wsSnap.data(), now);
 
     await wsRef.update({
       status: 'pending_deletion',
@@ -509,9 +526,10 @@ workspaceRouter.delete('/:workspaceId', requireWorkspaceRole(['owner']), async (
       }
     }, { db });
 
+    const graceDays = retentionFor(wsSnap.data()).deletionGraceDays;
     res.json({
       status: 'success',
-      message: 'Workspace marked as pending deletion with a 30-day recovery window.',
+      message: `Workspace marked as pending deletion with a ${graceDays}-day recovery window.`,
       scheduledPurgeAt
     });
   } catch (err: any) {

@@ -1567,7 +1567,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-05 TZ matrix in CI: Auckland + Los Angeles (94661cd) — found L-79 on its first run
 - [~] L-06 Dependencies: all in-range updates applied on main 2026-10-02 (the Dependabot group PR closes itself); majors wait for a feature that needs them (Vite 8, TypeScript 7, Recharts 3, Plaid 47, Stripe 23, React Window 2…); npm audit clean
 - [x] L-07 Backup restore test: export → change → restore gives the same trial balance and documents (database test); backup holds all the books
-- [ ] L-08 Per-workspace retention settings
+- [x] L-08 Per-workspace retention (Settings → Security → Data retention, owners): recovery window after deletion 30–365 days, email send log, browser error reports; pruned by the daily job; bounces/spam reports always kept; audited (tested)
 - [x] L-09 Account deletion: shared workspaces handed over (or blocked with a clear message), solo ones scheduled for deletion, personal data removed (tested)
 - [x] L-10 Download my data (Settings → Security; tested)
 - [x] L-11 Record of processing activities: docs/privacy/ROPA.md (controller + processor parts, rights; company details for you to fill in)
@@ -2110,7 +2110,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BJ-02 Audit evidence pack
 - [ ] BJ-03 Access review report
 - [x] BJ-04 Retention per kind of data: docs/privacy/RETENTION.md
-- [ ] BJ-05 Legal hold
+- [x] BJ-05 Legal hold: nothing pruned, a deleted workspace is not purged until lifted; audited (tested)
 - [x] BJ-06 Personal data inventory: docs/privacy/PERSONAL_DATA.md
 - [ ] BJ-07 Breach notification
 - [x] BJ-08 Sub-processor list: docs/privacy/SUBPROCESSORS.md

@@ -44,7 +44,7 @@ const TABLES: Record<string, [string, string[]]> = {
   creditNotes: ['CreditNote', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment']],
   vendorCredits: ['VendorCredit', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment']],
   // numberingSeries lives in its own collection; the field on the model is a legacy read path
-  workspaces: ['Workspace', ['numberingSeries']],
+  workspaces: ['Workspace', ['numberingSeries', 'retention']],
   notifications: ['AppNotification', []],
   purchaseOrders: ['PurchaseOrder', []],
 };

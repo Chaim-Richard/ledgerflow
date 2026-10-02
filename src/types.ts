@@ -81,6 +81,8 @@ export interface Workspace {
   lastUpgradedAt?: string;
   deletedAt?: string;
   scheduledPurgeAt?: string;
+  /** How long logs are kept, recovery window, legal hold (src/lib/retention.ts). Server-only. */
+  retention?: Partial<import('./lib/retention').RetentionSettings>;
   /** 'pending_deletion' while a deleted workspace waits out its 30 days */
   status?: string;
   creditCostMultiplier?: number;
