@@ -1495,7 +1495,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] I-14 Sticky headers + totals row — report tables (shared report layout, data grid) scroll in their box with the header kept in view (full length when printed); balance summaries have a totals row over the rows shown (component test)
 - [x] I-15 Inline row editing — description, account and amount can be changed in the transaction list; changing the amount now resizes both lines of a simple entry (L-147); split entries open the dialog
 - [x] I-16 Breadcrumb on drill-down — the account drill-down from P&L, Balance Sheet, Reports and the pivot sheet shows "Report › Account" and goes back from it; it is a proper dialog now (component test)
-- [~] I-17 Deep-linkable report settings done; list filters elsewhere not yet
+- [x] I-17 Shareable links: report settings and the transaction list (search + date range) live in the address; opening the link restores them (tested)
 - [x] I-18 Print stylesheet (Reports page)
 - [x] I-19 Active filters as chips — the transaction list shows each active filter as a chip with a remove button and "Clear All"; the command palette's search now shows there too (L-143)
 - [x] I-20 "What changed since I last looked" — the Overview opens with "Since your last visit (date): 3 new transactions · 1 invoice paid…" per person and workspace on this device (tested)

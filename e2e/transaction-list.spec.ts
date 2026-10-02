@@ -35,6 +35,14 @@ test.describe('Transaction list', () => {
     await expect(page.getByText('Consensus Balanced')).toBeVisible();
   });
 
+  test('the search is in the address and a shared link opens it (I-17)', async ({ page }) => {
+    await page.goto('/?search=Acme#transactions');
+    await page.locator('[data-testid="filtered-totals-bar"]').waitFor({ timeout: 15000 });
+    await expect(page.getByRole('textbox', { name: /^(Search within view|Deep search ledger)/ })).toHaveValue('Acme');
+    await page.getByRole('textbox', { name: /^(Search within view|Deep search ledger)/ }).fill('AWS');
+    await expect.poll(() => new URL(page.url()).searchParams.get('search')).toBe('AWS');
+  });
+
   test('a column switched off stays off after a reload', async ({ page }) => {
     await openAllTransactions(page);
     await expect(page.getByRole('button', { name: 'Filter by project' })).toBeAttached();

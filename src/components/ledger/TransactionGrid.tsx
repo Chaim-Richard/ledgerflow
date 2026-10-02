@@ -22,6 +22,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { withNewAmount } from '../../lib/transactionEdits';
 import { gridMinWidth, gridTemplate, OPTIONAL_COLUMNS, readHiddenColumns } from '../../lib/transactionColumns';
+import { listStateFromParams, listStateToParams, replaceSearchParams } from '../../lib/listPermalink';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
@@ -299,7 +300,15 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
 export default function TransactionGrid() {
   const formId = useId();
   const transactions = useLedgerStore(s => s.transactions);
+  // search and date range can come from a shared link (?search=&from=&to=) and stay in the address (I-17)
+  const [linkedList] = useState(() => listStateFromParams(new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)));
   const filterCriteria = useUIStore(s => s.filterCriteria);
+  useEffect(() => {
+    if (linkedList.from || linkedList.to) {
+      const current = useUIStore.getState().filterCriteria || {};
+      useUIStore.getState().setFilterCriteria({ ...current, startDate: linkedList.from, endDate: linkedList.to });
+    }
+  }, [linkedList]);
   const onFilterApplied = (c: FilterCriteria) => useUIStore.getState().setFilterCriteria(c);
   const { handleAction: onAction } = useCommandDispatcher();
   const txActions = useTransactionActions();
@@ -342,7 +351,12 @@ export default function TransactionGrid() {
   // Defensive array checks
   const safeTransactions = useMemo(() => Array.isArray(transactions) ? transactions : [], [transactions]);
   
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(linkedList.search);
+  useEffect(() => {
+    replaceSearchParams(listStateToParams({ search: searchTerm, from: filterCriteria?.startDate, to: filterCriteria?.endDate }, new URLSearchParams(window.location.search)));
+  }, [searchTerm, filterCriteria?.startDate, filterCriteria?.endDate]);
+  // leaving the list: its filters leave the address too
+  useEffect(() => () => replaceSearchParams(listStateToParams({}, new URLSearchParams(window.location.search))), []);
   const [viewMode, setViewMode] = useState<'grid' | 'pivot'>('grid');
   const [focusedCell, setFocusedCell] = useState<{ id: string, field: string, index: number } | null>(null);
   const [editingCell, setEditingCell] = useState<{ id: string, field: string } | null>(null);
