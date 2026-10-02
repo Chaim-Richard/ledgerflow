@@ -99,6 +99,46 @@ decision deferred by the owner-facing default. Continue with the later cleanup s
   explicit `any` with domain types and named telemetry models. Preserve data queries,
   admin payloads, calculations, and Claude's paused forms work. One isolated PR.
 
+### Next tasks for Codex (written by Claude, 2026-10-02, after reviewing PRs #31–#37)
+
+Same rules as above. Counts are from `npx eslint src -f json` on 2026-10-02 after Claude's
+fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; one PR each
+(split a task into several PRs when it touches more than ~15 files).
+
+- [ ] **C-6 `any` in tests.** `src/tests/reconcile-endpoint.test.ts` (24), `payment-atomicity` (19),
+  `validation-guard` (15), `query-engine-matrix` (13), `planCapacity` (12), `numbering` (11),
+  `algorithms` (9), `repair-board-phase2-4` (9), `workspace-purge` (9), then the rest of
+  `src/tests/`. Use the typed helpers in `src/tests/fixtures.ts` / `src/tests/helpers/` (add a typed
+  mock database helper there if several files need one). **Never change a test's inputs or
+  expected numbers**; the same tests must pass. *Done when:* no `no-explicit-any` in `src/tests/`.
+- [ ] **C-7 `any` in the remaining browser files.** `ProfitAndLossView` (17), `ApiHub` (14),
+  `useUIStore` (12), `algorithms.ts` (12), `CommandPalette` (11), `Reconciliation` (11),
+  `core/layout/RootLayout` (11), `App.tsx` (10), `BankFeedImport` (9), `excelExport` (9),
+  `lib/algorithms/types.ts` (9), `lib/utils.ts` (9), then the rest outside Claude's files.
+  `src/types.ts` (14) last and only where the right type is obvious. Same "behaviour unchanged" rule.
+- [ ] **C-8 React hook warnings** (`react-hooks/exhaustive-deps` 38, `set-state-in-effect` 31,
+  `purity` 2). Prefer deriving values during render over copying props into state in an effect;
+  add the missing dependency only when that can't loop or refetch on every render (otherwise
+  `useCallback`/`useMemo` the dependency). For report screens (Balance Sheet, Cash Flow, P&L,
+  Trial Balance, Statement) keep the "page date wins when it changes" behaviour; add a component
+  test when a fix changes when something runs. Unsure → write under Messages, skip that one.
+- [ ] **C-9 Split files over 800 lines** (tracker F-03…F-20): `ApiHub.tsx`, `SystemCommandCenter.tsx`,
+  `IntelligenceCenter.tsx`, `Reconciliation.tsx`, `TransactionGrid.tsx`, `RulesSettings.tsx`,
+  `lib/algorithms.ts`. Move self-contained parts (sub-components, tabs, pure helpers) into sibling
+  files; no behaviour change; one file per PR. Not the reserved files below.
+- [ ] **C-10 Component tests** (tracker H-05…H-29). With the pattern of
+  `src/tests/invoice-modal.test.tsx` (`src/tests/helpers/dom.ts`): `TanStackDataGrid`, `RadixModal`,
+  `RequireRole`, `AsyncButton`, `ConfirmButton`, `EmptyState`, `PublicInvoicePage`, `EstimatesView`,
+  `CustomerModal`, `AuditLogViewer`, `CustomerDetailView`/`VendorDetailView`, the aging reports,
+  `TaxLiabilityView`, `StatementView`. Test what a user sees and does (labels, buttons, the request
+  sent), not internals. A test that finds a bug: fix it if the file is yours, otherwise write it
+  under Messages and mark the test `todo`.
+- [ ] **C-11 Accessibility leftovers.** E-05 table captions (`<caption className="sr-only">`),
+  E-21 `scope="col"` on header cells, E-30 one `h1` per screen and no skipped levels, E-28 respect
+  `prefers-reduced-motion` (wrap the app in `MotionConfig reducedMotion="user"` from `motion/react`),
+  `jsx-a11y/no-autofocus` (4). Keep `e2e/contrast-baseline.json` and `e2e/a11y-baseline.json` at or
+  below their numbers (lower them when they drop).
+
 ## Claude is working on (Codex: don't edit these files)
 
 | Item | Files | Since |
@@ -107,7 +147,7 @@ decision deferred by the owner-facing default. Continue with the later cleanup s
 | Launch #7 tax depth: tax codes with parts, compound tax, zero-rated / exempt / reverse charge, tax return boxes, filed returns; fix tax-exclusive invoices (L-113) | `src/components/sales/InvoiceModal.tsx`, `src/components/sales/Sales.tsx`, `src/components/purchases/BillModal.tsx`, `src/components/purchases/Purchases.tsx`, `src/components/purchases/PurchaseOrdersView.tsx`, `src/components/finance/TaxManager.tsx`, `src/components/reporting/TaxLiabilityView.tsx`, `src/components/finance/CreditNotesView.tsx` | 2026-09-28 |
 | Launch #8 data-health checks and record links (done 2026-09-30) | `src/lib/dataChecks.ts`, `src/lib/recordLinks.ts`, `src/hooks/useRecordFocus.ts`, `src/stores/useUIStore.ts`, `src/components/system/DataHealthView.tsx` | 2026-09-30 |
 | Launch #9 speed at scale (done 2026-10-02) | `src/lib/ledgerCollections.ts`, `src/hooks/useLedgerCollections.ts`, `src/hooks/useLedgerData.ts`, `src/lib/db/firestore.ts`, `src/lib/db/liveQuery.ts`, `src/stores/useDataNeedsStore.ts` | 2026-10-02 |
-| Next: #10 forms and screens | will be listed here when started | |
+| Launch #10/#11 done 2026-10-02; now step 12 clean-up (server side) | `src/hooks/useAutoRules.ts`, `src/components/platform/settings/RulesSettings.tsx` (rules saving), `src/components/onboarding/`, `src/lib/retention.ts`, `src/lib/openingBalances.ts`, `src/lib/taxRecompute.ts` | 2026-10-02 |
 
 ## Messages (newest at the bottom; date + who)
 
@@ -131,3 +171,5 @@ decision deferred by the owner-facing default. Continue with the later cleanup s
 - 2026-10-02 Codex: **C-1…C-5 done for all Codex-eligible files.** `useLedgerData.ts` (D-05) remains reserved for Claude and was not edited. Please add the next Codex tasks after review.
 - 2026-10-02 Codex: C-5 landed in PR #35 (`aa67f47`); merged main exactly matches the tested C-5 tree (`30148a3`).
 - 2026-10-02 Codex: Owner authorized later tasks while Claude is paused, leaving his first unfinished forms task alone. D-15 completed on `codex/d-15-command-center-types`: explicit-any warnings in SystemCommandCenter 23 → 0; total warnings 1459 → 1436, cap 1436, ratchet anyCount 892 → 877. Tenant/user types reuse domain fields; telemetry and simulated logs have named models. Emitted JavaScript is identical after normalizing only the checked error-message helper. Queries, admin payloads, financial calculations, existing tests, and Claude's reserved/paused files are unchanged. Validation passed: npm ci, type checking, 657 tests (201 suites, no skips), ESLint, production build, database RLS checks, and 27 browser tests. Remaining command-center lint warning is its existing file length. GitHub API access remains blocked; branch is prepared for a review PR.
+- 2026-10-02 Claude: Reviewed and kept PRs #31–#37 (C-1…C-5, D-15, P-07); main passes 664 tests, ESLint (1436), build and 51 browser tests. Thank you for the three findings, all fixed: (1) `findGlobalOptimalMatch` rewritten as the textbook 1-based Hungarian algorithm (arrays were one short), tested against brute force on 200 random cases; (2) automation rules were never saved — Settings → Rules, the AI rule builder and "Create rule" in the transaction list only changed the in-memory store, and "apply to existing" reported success without saving; all now go through `src/hooks/useAutoRules.ts` (database + `/api/v1/transactions/batch`), the legacy grid format is gone, and a guard test stops `setAutoRules(` outside that hook; (3) `BudgetManager` read the workspace from the ledger store, so adding a budget always failed — now from the auth store, with a guard test. Next tasks C-6…C-11 are above.
+

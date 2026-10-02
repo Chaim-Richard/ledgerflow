@@ -471,52 +471,46 @@ export function findGlobalOptimalMatch(
     }
   }
 
-  // Hungarian Algorithm O(V^3)
-  const u = new Float64Array(dim);
-  const v = new Float64Array(dim);
-  const p = new Int32Array(dim);
-  const way = new Int32Array(dim);
+  // Hungarian algorithm, O(dim^3), 1-based as in the textbook form: row i (1..dim) is source i-1,
+  // column j (1..dim) is target j-1; p[j] is the row assigned to column j (0 = none yet).
+  // u, v are the row/column potentials; minv/way track the shortest augmenting path.
+  const u = new Float64Array(dim + 1);
+  const v = new Float64Array(dim + 1);
+  const p = new Int32Array(dim + 1);
+  const way = new Int32Array(dim + 1);
 
   for (let i = 1; i <= dim; i++) {
     p[0] = i;
     let j0 = 0;
     const minv = new Float64Array(dim + 1).fill(Infinity);
-    const used = new Uint8Array(dim + 1).fill(0);
-    
+    const used = new Uint8Array(dim + 1);
     do {
       used[j0] = 1;
-      const i0 = p[j0] - 1; // 0-based index for cost
+      const i0 = p[j0];
       let delta = Infinity;
       let j1 = 0;
-      
       for (let j = 1; j <= dim; j++) {
-        if (!used[j]) {
-          const c_i0_j1 = i0 >= 0 && (j - 1) >= 0 ? cost[i0][j - 1] : 0;
-          const cur = c_i0_j1 - u[i0 >= 0 ? i0 : 0] - v[j - 1]; // We only use 1-based logic structurally, but array access is 0-based
-          
-          if (cur < minv[j]) {
-            minv[j] = cur;
-            way[j] = j0;
-          }
-          if (minv[j] < delta) {
-            delta = minv[j];
-            j1 = j;
-          }
+        if (used[j]) continue;
+        const cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
+        if (cur < minv[j]) {
+          minv[j] = cur;
+          way[j] = j0;
+        }
+        if (minv[j] < delta) {
+          delta = minv[j];
+          j1 = j;
         }
       }
-      
       for (let j = 0; j <= dim; j++) {
         if (used[j]) {
-          const idx = p[j] - 1;
-          if (idx >= 0) u[idx] += delta;
-          if (j > 0) v[j - 1] -= delta;
+          u[p[j]] += delta;
+          v[j] -= delta;
         } else {
           minv[j] -= delta;
         }
       }
       j0 = j1;
     } while (p[j0] !== 0);
-    
     do {
       const j1 = way[j0];
       p[j0] = p[j1];
@@ -528,7 +522,7 @@ export function findGlobalOptimalMatch(
   for (let j = 1; j <= dim; j++) {
     const sIdx = p[j] - 1;
     const tIdx = j - 1;
-    if (sIdx < n && tIdx < m) {
+    if (sIdx >= 0 && sIdx < n && tIdx < m) {
       const originalWeightSq = maxWeight - cost[sIdx][tIdx];
       // Only record valid matches with non-zero objective utility
       if (originalWeightSq > 0) {

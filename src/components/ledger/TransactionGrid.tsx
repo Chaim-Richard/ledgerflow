@@ -41,6 +41,7 @@ import SavedViewsBar from '../ui/SavedViewsBar';
 import DeepSearchBar from '../ui/DeepSearchBar';
 import { useSavedViewsStore } from '../../stores/useSavedViewsStore';
 import { useTimeout } from '../../hooks/useTimeout';
+import { useAutoRules } from '../../hooks/useAutoRules';
 import { useRecordFocus } from '../../hooks/useRecordFocus';
 
 
@@ -303,26 +304,31 @@ export default function TransactionGrid() {
   const setProMode = useUIStore(s => s.setProMode);
   const setCompactMode = useUIStore(s => s.setCompactMode);
 
-  const onCreateRule = (tx: Transaction) => {
+  const { saveRule } = useAutoRules();
+  // "Create rule" from a row: future transactions with this description go to this row's account
+  const onCreateRule = async (tx: Transaction) => {
     if (!tx || !tx.description) return;
     const accountId = tx.lines?.[0]?.accountId;
     const accountName = tx.lines?.[0]?.accountName || 'Unassigned';
-    
-    const newRule = {
-      id: `rule-${Date.now()}`,
-      name: `Auto-categorize: ${tx.description.slice(0, 30)}`,
-      pattern: tx.description.trim(),
-      targetAccountId: accountId,
-      targetAccountName: accountName,
+    if (!accountId) {
+      toast.error('Pick an account for this transaction first; the rule sends matching ones there.');
+      return;
+    }
+    const pattern = tx.description.trim();
+    const saved = await saveRule({
+      id: `rule_${Date.now()}_${tx.id.slice(-6)}`,
+      uid: '',
+      name: `Auto-categorize: ${pattern.slice(0, 30)}`,
+      groupName: 'General',
       priority: 10,
-      enabled: true,
-      conditions: [{ field: 'description', operator: 'contains', value: tx.description.trim() }],
-      actions: [{ type: 'setAccount', accountId, accountName }]
-    };
-
-    const currentRules = useLedgerStore.getState().autoRules || [];
-    useLedgerStore.getState().setAutoRules([...currentRules, newRule]);
-    toast.success(`Rule created for "${tx.description.slice(0, 25)}" → ${accountName}`);
+      isActive: true,
+      confidence: 1,
+      isHardened: true,
+      createdAt: new Date().toISOString(),
+      condition: { descriptionContains: pattern },
+      action: { targetNodeId: accountId },
+    });
+    if (saved) toast.success(`Rule saved: "${pattern.slice(0, 25)}" → ${accountName}`);
   };
   const dateFormat = 'MMM dd, yyyy';
   // Defensive array checks

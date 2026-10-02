@@ -3,13 +3,14 @@ import { AutoRule, Transaction } from '../../../types';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useCurrentRole } from '../../../hooks/useCurrentRole';
-import { dryRunRules, executeRulesOnTransactions, sortRulesByPriority, evaluateRuleCondition } from '../../../lib/rulesEngine';
+import { dryRunRules, sortRulesByPriority, evaluateRuleCondition } from '../../../lib/rulesEngine';
 import { useTimeout } from '../../../hooks/useTimeout';
 import { SlidersHorizontal, Plus, Play, Trash2, Copy, CheckCircle2, AlertCircle, Filter, Tag, RotateCw, Search, Eye, Check, X, Sparkles } from 'lucide-react';
 
 import { aiService } from '../../../services/aiService';
 import { AutoRuleSchema } from '../../../schemas';
 import { Labelled } from '../../ui/Labelled';
+import { useAutoRules } from '../../../hooks/useAutoRules';
 
 function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
   const occurrences = new Map<string, number>();
@@ -27,10 +28,9 @@ export const RulesSettings: React.FC = () => {
   const canBuildRules = currentRole === 'owner' || currentRole === 'accountant';
 
   const autoRules = useLedgerStore(s => (s.autoRules || []) as AutoRule[]);
-  const setAutoRules = useLedgerStore(s => s.setAutoRules);
+  const { saveRule, setRuleActive, deleteRule, applyToExisting } = useAutoRules();
   const transactions = useLedgerStore(s => s.transactions);
   useLedgerStore(s => s.setTransactions);
-  const updateTransaction = useLedgerStore(s => s.updateTransaction);
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const user = useAuthStore(s => s.user);
   const currentWorkspace = getCurrentWorkspace();
@@ -101,13 +101,12 @@ export const RulesSettings: React.FC = () => {
   }, [sortedRules, selectedGroup, searchQuery]);
 
   const handleToggleActive = (ruleId: string) => {
-    const updated = autoRules.map(r => r.id === ruleId ? { ...r, isActive: r.isActive === false ? true : false } : r);
-    setAutoRules(updated);
+    const rule = autoRules.find(r => r.id === ruleId);
+    if (rule) void setRuleActive(ruleId, rule.isActive === false);
   };
 
   const handleDeleteRule = (ruleId: string) => {
-    const updated = autoRules.filter(r => r.id !== ruleId);
-    setAutoRules(updated);
+    void deleteRule(ruleId);
   };
 
   const handleDuplicateRule = (rule: AutoRule) => {
@@ -118,7 +117,7 @@ export const RulesSettings: React.FC = () => {
       hitCount: 0,
       createdAt: new Date().toISOString()
     };
-    setAutoRules([...autoRules, newRule]);
+    void saveRule(newRule);
   };
 
   const openCreateModal = () => {
@@ -161,14 +160,14 @@ export const RulesSettings: React.FC = () => {
     setIsCreatingRule(true);
   };
 
-  const handleSaveRule = () => {
+  const handleSaveRule = async () => {
     const tags = formAddTags.split(',').map(t => t.trim()).filter(Boolean);
     const amountThresh = formAmountThreshold ? parseFloat(formAmountThreshold) : undefined;
 
     const ruleData: AutoRule = {
       id: editingRule ? editingRule.id : `rule_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      uid: user?.uid || 'system',
-      workspaceId: currentWorkspace?.id || 'default',
+      uid: editingRule?.uid || user?.uid || '',
+      workspaceId: currentWorkspace?.id || '',
       name: formName || `Rule: ${formDescContains || formVendor || 'Untitled'}`,
       groupName: formGroup || 'General',
       priority: Number(formPriority) || 10,
@@ -194,12 +193,7 @@ export const RulesSettings: React.FC = () => {
       }
     };
 
-    if (editingRule) {
-      setAutoRules(autoRules.map(r => r.id === editingRule.id ? ruleData : r));
-    } else {
-      setAutoRules([...autoRules, ruleData]);
-    }
-    setIsCreatingRule(false);
+    if (await saveRule(ruleData)) setIsCreatingRule(false);
   };
 
   const handleTestSingleRule = () => {
@@ -275,13 +269,13 @@ export const RulesSettings: React.FC = () => {
     }
   };
 
-  const handleSaveAiRule = (activate: boolean) => {
+  const handleSaveAiRule = async (activate: boolean) => {
     if (!aiPreview) return;
     const ruleToSave: AutoRule = {
       ...aiPreview.rule,
       isActive: activate
     };
-    setAutoRules([...autoRules, ruleToSave]);
+    if (!(await saveRule(ruleToSave))) return;
     setAiPreview(null);
     setAiSentence('');
   };
@@ -295,23 +289,9 @@ export const RulesSettings: React.FC = () => {
   const handleApplyToExisting = async () => {
     setIsApplyingExisting(true);
     try {
-      const result = await executeRulesOnTransactions(
-        autoRules,
-        transactions,
-        (updatedTx) => {
-          updateTransaction(updatedTx.id, updatedTx);
-        }
-      );
-
-      // Update hit counts
-      const dry = dryRunRules(autoRules, transactions);
-      const updatedRules = autoRules.map(r => {
-        const hits = dry.summary.rulesTriggered[r.id] || 0;
-        return hits > 0 ? { ...r, hitCount: (r.hitCount || 0) + hits, lastTriggeredAt: new Date().toISOString() } : r;
-      });
-      setAutoRules(updatedRules);
-
-      setApplySuccessMessage(`Successfully applied automation rules to ${result.modifiedCount} matching transactions.`);
+      const modified = await applyToExisting(autoRules, transactions);
+      if (modified === 0) return;
+      setApplySuccessMessage(`Applied the rules to ${modified} transactions (saved).`);
       setIsTestingRule(false);
       setSafeTimeout(() => setApplySuccessMessage(null), 5000);
     } finally {

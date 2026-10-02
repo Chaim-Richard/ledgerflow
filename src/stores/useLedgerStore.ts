@@ -47,19 +47,6 @@ declare global {
   }
 }
 
-// The grid still submits the legacy rule format; keep its payload unchanged at this boundary.
-export interface LegacyGridRule {
-  id: string;
-  name: string;
-  pattern: string;
-  targetAccountId?: string;
-  targetAccountName: string;
-  priority: number;
-  enabled: boolean;
-  conditions: { field: string; operator: string; value: string }[];
-  actions: { type: string; accountId?: string; accountName: string }[];
-}
-
 type StoredAuditLog = Omit<AuditLog, 'uid'> & { uid?: string; targetId?: string };
 type StoredPartner = Pick<Partner, 'id'> & Partial<Partner>;
 type StoredReconciliation = ReconciliationSession & { accountId?: string; accountName?: string };
@@ -179,7 +166,7 @@ export interface LedgerState {
   setBankLines: (data: BankStatementLine[]) => void;
   setPeriods: (data: PeriodStatus[]) => void;
   setCustomTemplates: (data: CustomTemplate[]) => void;
-  setAutoRules: (data: (AutoRule | LegacyGridRule)[]) => void;
+  setAutoRules: (data: AutoRule[]) => void;
   setInvites: (data: WorkspaceInvite[]) => void;
   setWorkspaceShards: (data: Record<string, unknown>[]) => void;
   setBillingLedgerTraces: (data: Record<string, unknown>[]) => void;
@@ -574,7 +561,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   setBankLines: (bankLines) => set({ bankLines }),
   setPeriods: (periods) => set({ periods }),
   setCustomTemplates: (customTemplates) => set({ customTemplates }),
-  setAutoRules: (autoRules) => set({ autoRules: autoRules as AutoRule[] }),
+  setAutoRules: (autoRules) => set({ autoRules }),
   setInvites: (invites) => set({ invites }),
   setWorkspaceShards: (workspaceShards) => set({ workspaceShards }),
   setBillingLedgerTraces: (billingLedgerTraces) => set({ billingLedgerTraces }),

@@ -1,6 +1,5 @@
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import type { Budget } from '../../types';
-import type { LedgerState } from '../../stores/useLedgerStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
@@ -32,7 +31,8 @@ import { Labelled } from '../ui/Labelled';
 export default function BudgetManager() {
   const formId = useId();
   const user = useAuthStore((s) => s.user);
-  const currentWorkspaceId = useLedgerStore((s: LedgerState & { currentWorkspaceId?: string }) => s.currentWorkspaceId);
+  // the open workspace lives in the auth store (reading it from the ledger store always gave nothing)
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const budgets = useLedgerStore((s) => s.budgets);
   const transactions = useLedgerStore((s) => s.transactions);
   const accounts = useLedgerStore((s) => s.accounts);

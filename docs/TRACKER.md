@@ -1692,6 +1692,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-103 Fixed Asset Register saved nothing (assets + depreciation only in the page); now saved + server run
 - [x] L-102 Applying a chart-of-accounts template failed (`role` not allowed, dashboard layout protected) — now applied by the server
 - [x] L-80 "Today in the workspace" (`getLocalDateISO()`) split from "the day a Date stands for" (`calendarDateISO`) and plain date maths (`addToDateISO`, `monthBoundsISO`, `workspaceYearMonth`); month navigator, report defaults, tax reserve, exports and algorithms no longer shift a day when the workspace and device time zones differ (tested; utcDateCount 37 → 35)
+- [x] L-132 Automation rules were never saved (Settings → Rules, AI rule builder, "Create rule" in the list only changed the open page; legacy format the engine ignored) — now saved, guard test (found by Codex)
+- [x] L-133 "Apply rules to existing transactions" said it applied them but saved nothing — now saved through the server (role, period lock, balance checked)
+- [x] L-134 Adding a budget always failed ("Workspace context missing") — fixed, guard test (found by Codex)
+- [x] L-135 Reconciliation matching hung on a single strong match (Hungarian algorithm arrays one short) — rewritten, tested against brute force (found by Codex)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
