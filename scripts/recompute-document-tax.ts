@@ -1,86 +1,43 @@
+/**
+ * Tax recompute (AE-04): lists the posted invoices and bills whose tax in the ledger differs from
+ * the document's tax, and with --apply posts one adjusting entry per document (never edits the
+ * old entry). Dry run by default.
+ *
+ *   npx tsx scripts/recompute-document-tax.ts --workspace <id> --uid <owner uid> [--apply] [--date YYYY-MM-DD]
+ */
 import { getDb } from '../src/server/db/firestore';
-import { calculateDocumentTax } from '../src/lib/documentMath';
+import { recomputeDocumentTax } from '../src/server/services/taxRecomputeService';
+import { logger } from '../src/server/utils/logger';
+
+function arg(args: string[], name: string): string | undefined {
+  const i = args.indexOf(name);
+  return i !== -1 ? args[i + 1] : undefined;
+}
 
 async function run() {
   const args = process.argv.slice(2);
-  const workspaceIndex = args.indexOf('--workspace');
-  const workspaceId = workspaceIndex !== -1 ? args[workspaceIndex + 1] : null;
+  const workspaceId = arg(args, '--workspace');
+  const uid = arg(args, '--uid');
   const apply = args.includes('--apply');
-
-  if (!workspaceId) {
-    console.error("Usage: npx tsx scripts/recompute-document-tax.ts --workspace <workspaceId> [--apply]");
+  if (!workspaceId || (apply && !uid)) {
+    process.stderr.write('Usage: npx tsx scripts/recompute-document-tax.ts --workspace <workspaceId> [--apply --uid <uid>] [--date YYYY-MM-DD]\n');
     process.exit(1);
   }
 
-  if (apply) {
-    console.log("not implemented yet");
-    process.exit(0);
-  }
-
   const db = getDb();
-
-  console.log(`Recomputing document tax for workspace: ${workspaceId} (Read-only mode)`);
-
-  // 1. Fetch Invoices
-  const invoicesSnap = await db.collection('invoices')
-    .where('workspaceId', '==', workspaceId)
-    .get();
-
-  console.log(`Found ${invoicesSnap.size} invoices total.`);
-
-  for (const doc of invoicesSnap.docs) {
-    const data = doc.data() || {};
-    if (data.status === 'draft' || data.status === 'void') {
-      continue;
-    }
-
-    const storedTax = data.taxAmountCents ?? data.taxCents ?? data.salesTaxCents ?? 0;
-    const correctTax = calculateDocumentTax({
-      amountCents: data.amountCents,
-      taxRate: data.taxRate,
-      taxInclusive: data.taxInclusive,
-      discountCents: data.discountCents,
-      retainageCents: data.retainageCents
-    });
-
-    if (storedTax !== correctTax) {
-      console.log(`Invoice mismatch [${doc.id}]: stored tax = ${storedTax}, correct tax = ${correctTax}`);
-    }
+  const result = await recomputeDocumentTax(db, { workspaceId, uid: uid || 'script', apply, date: arg(args, '--date') });
+  for (const d of result.differences) {
+    logger.info('tax differs', { kind: d.kind, id: d.id, number: d.number, postedTaxCents: d.postedTaxCents, expectedTaxCents: d.expectedTaxCents, differenceCents: d.differenceCents });
   }
-
-  // 2. Fetch Bills
-  const billsSnap = await db.collection('bills')
-    .where('workspaceId', '==', workspaceId)
-    .get();
-
-  console.log(`Found ${billsSnap.size} bills total.`);
-
-  for (const doc of billsSnap.docs) {
-    const data = doc.data() || {};
-    if (data.status === 'draft' || data.status === 'void') {
-      continue;
-    }
-
-    const storedTax = data.taxAmountCents ?? data.taxCents ?? data.salesTaxCents ?? 0;
-    const correctTax = calculateDocumentTax({
-      amountCents: data.amountCents,
-      taxRate: data.taxRate,
-      taxInclusive: data.taxInclusive,
-      discountCents: data.discountCents,
-      retainageCents: data.retainageCents
-    });
-
-    if (storedTax !== correctTax) {
-      console.log(`Bill mismatch [${doc.id}]: stored tax = ${storedTax}, correct tax = ${correctTax}`);
-    }
-  }
-
-  console.log("Recomputation completed successfully.");
+  logger.info(apply ? 'tax recompute applied' : 'tax recompute dry run (add --apply to post adjusting entries)', {
+    workspaceId, differences: result.differences.length, posted: result.posted.length, failed: result.failed.length,
+  });
+  for (const f of result.failed) logger.warn('not adjusted', f);
   await db.terminate();
-  process.exit(0);
+  process.exit(result.failed.length ? 2 : 0);
 }
 
 run().catch(err => {
-  console.error("Recomputation script failed:", err);
+  logger.error('tax recompute failed', { error: err instanceof Error ? err.message : String(err) });
   process.exit(1);
 });

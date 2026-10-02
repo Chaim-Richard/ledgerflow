@@ -7,6 +7,7 @@
 import type { Bill, ChartAccount, Invoice, RecurringTransaction, Transaction } from '../types';
 import { isPostable, lineAmount } from './txFilters';
 import { calculateAmountDue } from './documentMath';
+import { findTaxDifferences } from './taxRecompute';
 import type { RecordType } from './recordLinks';
 
 export { RECORD_TABS } from './recordLinks';
@@ -210,6 +211,17 @@ export const DATA_CHECKS: DataCheck[] = [
         description: `Due ${i.dueDate.slice(0, 10)}; ${calculateAmountDue(i)} cents still due.`,
         record: { type: 'invoice' as const, id: i.id },
       })),
+  },
+  {
+    id: 'tax-posting',
+    label: 'Tax in the ledger differs from the document',
+    remedy: 'Repost the document (Month-end close → Postings), or have the owner run the tax recompute, which posts an adjusting entry.',
+    run: ({ invoices, bills, transactions }) => findTaxDifferences({ invoices, bills, transactions }).map(d => ({
+      id: `tax-${d.id}`, checkId: 'tax-posting', severity: 'medium' as const,
+      title: `${d.kind === 'invoice' ? 'Invoice' : 'Bill'} ${d.number}: tax in the ledger is ${d.postedTaxCents} cents, the document says ${d.expectedTaxCents}`,
+      description: `${d.party ? `${d.party}. ` : ''}Difference ${d.differenceCents} cents (home currency).`,
+      record: { type: d.kind, id: d.id },
+    })),
   },
 ];
 

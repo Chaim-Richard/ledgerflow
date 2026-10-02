@@ -70,7 +70,11 @@ function computeOrphanFiles(rootDir: string): number {
     path.resolve(rootDir, 'src/main.tsx'),
     path.resolve(rootDir, 'src/App.tsx'),
     path.resolve(rootDir, 'server.ts'),
-    path.resolve(rootDir, 'src/config/registry.tsx')
+    path.resolve(rootDir, 'src/config/registry.tsx'),
+    // scripts run by hand (npx tsx scripts/<name>.ts) are entry points too
+    ...(fs.existsSync(path.resolve(rootDir, 'scripts'))
+      ? fs.readdirSync(path.resolve(rootDir, 'scripts')).filter(f => f.endsWith('.ts')).map(f => path.resolve(rootDir, 'scripts', f))
+      : []),
   ].filter(f => fs.existsSync(f));
 
   const visited = new Set<string>();

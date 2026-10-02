@@ -30,14 +30,20 @@ const NOT_POSTED = new Set(['draft', 'void', 'cancelled', 'rejected']);
 type Meta = { invoiceId?: string; billId?: string; type?: string; reversesTxId?: string; reversedTransactionId?: string; isReversal?: boolean };
 const meta = (t: Transaction) => (t.metadata || {}) as Meta;
 
-/** Accrual entries per document that are still in effect (not reversed). */
-function activeAccruals(transactions: Transaction[], key: 'invoiceId' | 'billId', type: string): Map<string, Transaction[]> {
+/** Ids of the entries that a reversal cancels (or that are marked reversed). */
+export function reversedTransactionIds(transactions: Transaction[]): Set<string> {
   const reversed = new Set<string>();
   for (const t of transactions) {
     const m = meta(t);
     if (m.isReversal || m.reversesTxId) reversed.add(String(m.reversesTxId || m.reversedTransactionId || ''));
     if (t.reversalEventId) reversed.add(t.id);
   }
+  return reversed;
+}
+
+/** Accrual entries per document that are still in effect (not reversed). */
+export function activeAccruals(transactions: Transaction[], key: 'invoiceId' | 'billId', type: string): Map<string, Transaction[]> {
+  const reversed = reversedTransactionIds(transactions);
   const byDoc = new Map<string, Transaction[]>();
   for (const t of transactions) {
     const m = meta(t);

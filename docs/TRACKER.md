@@ -1708,7 +1708,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] AE-01 Tax-inclusive branch in posting
 - [x] AE-02 Shared `calculateDocumentTax`
 - [x] AE-03 Posting === reporting test matrix
-- [~] AE-04 Recompute-tax script: read-only listing done (94661cd); `--apply` (adjusting entries) later
+- [x] AE-04 Recompute tax: `scripts/recompute-document-tax.ts --workspace <id> [--apply --uid <uid>] [--date]` lists documents whose ledger tax differs and posts one audited adjusting entry each (tax ↔ revenue/expense, never edits old entries, period lock respected, runs twice safely); Data Health lists them too (tested)
 - [x] AF-01 Discount/retainage in tax
 - [x] AF-02 In shared `documentMath`
 - [x] AF-03 Deposits = payment in advance (FOR_YOU 13 default): tax on the full invoice, the deposit lowers the amount due; posted DR Customer Deposits / CR A/R; payments, credits, Stripe link, PDF and public page follow it (tested)
