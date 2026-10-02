@@ -1355,7 +1355,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] D-12 `algorithms/niche-tools.ts` (codex, `codex/c-5-explicit-types`)
 - [ ] D-13 `algorithms.ts`
 - [x] D-14 `IntelligenceCenter.tsx` (codex, `codex/c-5-explicit-types`)
-- [ ] D-15 `SystemCommandCenter.tsx`
+- [x] D-15 `SystemCommandCenter.tsx` (codex, `codex/d-15-command-center-types`; owner-authorized follow-up)
 - [ ] D-16 `ApiHub.tsx`
 - [x] D-17 `StatementImporter.tsx` (codex, `codex/c-5-explicit-types`)
 - [x] D-18 `TransactionGrid.tsx` (codex, `codex/c-5-explicit-types`)

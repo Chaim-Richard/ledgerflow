@@ -33,10 +33,50 @@ import { BookA } from 'lucide-react';
 import { auth, db } from '../../firebase';
 import { collection, getDocs } from '../../lib/db/firestore';
 import { Labelled } from '../ui/Labelled';
+import type { Transaction, User, Workspace } from '../../types';
 
+type AdminUser = Pick<User, 'uid' | 'email' | 'role'> & {
+  customLimit?: number | null;
+  computeCreditLimit?: number | null;
+};
 
+type TenantTelemetry = Required<Pick<Workspace,
+  'id' | 'name' | 'concurrentUserLimit' | 'activeUserCount' | 'seatCount' | 'maxSeats' |
+  'computeCreditBalance' | 'apiQuotaTotalCentsUsed' | 'apiQuotaMonthlyLimitCents' |
+  'creditCostMultiplier' | 'quotaCentsMultiplier' | 'customKeyCreditCharge' | 'customKeyCentsCharge'
+>> & {
+  plan: NonNullable<Workspace['plan']> | 'sandbox';
+  bypassBilling: boolean;
+  txCount: number;
+  requestCount: number;
+  errorCount: number;
+};
 
-const fetchWithAuth = async (url: string, options: any = {}) => {
+interface TelemetryLog {
+  id?: string;
+  timestamp: string;
+  statusCode: number;
+  method: string;
+  path: string;
+  ip: string;
+  apiKeyUsed?: string;
+  simulated?: boolean;
+}
+
+interface CommandCenterTelemetry {
+  status: 'success';
+  tenants: TenantTelemetry[];
+  liveLogs: TelemetryLog[];
+}
+
+function errorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  return 'Unexpected error';
+}
+
+const fetchWithAuth = async (url: string, options: Omit<RequestInit, 'headers'> & { headers?: Record<string, string> } = {}) => {
   const token = await auth.currentUser?.getIdToken();
   const headers = { ...options.headers, 'Authorization': `Bearer ${token}` };
   return fetch(url, { ...options, headers });
@@ -54,21 +94,21 @@ function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
 
 export default function SystemCommandCenter() {
   const formId = useId();
-  const [telemetry, setTelemetry] = useState<any>(null);
+  const [telemetry, setTelemetry] = useState<CommandCenterTelemetry | null>(null);
   const [loading, setLoading] = useState(true);
   useAuthStore(s => s.user);
   useAuthStore(s => s.userProfile);
   const lexiconOverrides = useUIStore(state => state.lexiconOverrides);
   const setLexiconOverride = useUIStore(state => state.setLexiconOverride);
 
-  const [editingWorkspace, setEditingWorkspace] = useState<any | null>(null);
+  const [editingWorkspace, setEditingWorkspace] = useState<TenantTelemetry | null>(null);
   const [savingWorkspace, setSavingWorkspace] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState<'tier' | 'access' | 'credits' | 'rates' | 'roadmap'>('tier');
   
   // Advanced Simulation & Modeler variables
   const [simulatedQueries, setSimulatedQueries] = useState(250000);
   const [customKeyRatio, setCustomKeyRatio] = useState(30);
-  const [simulatedLogs, setSimulatedLogs] = useState<any[]>([]);
+  const [simulatedLogs, setSimulatedLogs] = useState<TelemetryLog[]>([]);
 
   // Bulk deployment / Synchronization Engine
   const [bulkSyncing, setBulkSyncing] = useState(false);
@@ -78,10 +118,10 @@ export default function SystemCommandCenter() {
   const [showBulkSuccess, setShowBulkSuccess] = useState(false);
 
   // User Management Engine
-  const [usersList, setUsersList] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<AdminUser[]>([]);
   const [, setLoadingUsers] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState<'workspaces' | 'users' | 'global' | 'lexicon' | 'audit'>('workspaces');
-  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [savingUser, setSavingUser] = useState(false);
   const [userFormState, setUserFormState] = useState({
     role: 'client',
@@ -102,7 +142,7 @@ export default function SystemCommandCenter() {
     customKeyCentsCharge: 0
   });
 
-  const startEditing = (tenant: any) => {
+  const startEditing = (tenant: TenantTelemetry) => {
     setEditingWorkspace(tenant);
     setActiveFormTab('tier'); // Reset to first tab on launch
     setFormState({
@@ -143,8 +183,8 @@ export default function SystemCommandCenter() {
       } else {
          throw new Error('Administrative database returned non-success code.');
       }
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(errorMessage(err));
     } finally {
       setSavingWorkspace(false);
     }
@@ -191,8 +231,8 @@ export default function SystemCommandCenter() {
       setBulkSyncStatusText('Refreshing global configurations...');
       await fetchTelemetry();
       setShowBulkSuccess(true);
-    } catch (error: any) {
-      toast.error(`Bulk Sync Error: ${error.message}`);
+    } catch (error) {
+      toast.error(`Bulk Sync Error: ${errorMessage(error)}`);
     } finally {
       setBulkSyncing(false);
     }
@@ -200,7 +240,7 @@ export default function SystemCommandCenter() {
 
   // Trigger System Diagnostic event directly in system telemetry logs
   const handleTriggerStressEvent = (type: 'db_timeout' | 'quota_low' | 'normal_gemini') => {
-    const freshLog: any = {
+    const freshLog: TelemetryLog = {
       timestamp: new Date().toISOString(),
       statusCode: type === 'db_timeout' ? 503 : type === 'quota_low' ? 429 : 200,
       method: type === 'normal_gemini' ? 'POST' : 'GET',
@@ -224,7 +264,7 @@ export default function SystemCommandCenter() {
   });
   const [updatingGlobal, setUpdatingGlobal] = useState(false);
 
-  const startEditingUser = (u: any) => {
+  const startEditingUser = (u: AdminUser) => {
     setEditingUser(u);
     setUserFormState({
       role: u.role || 'client',
@@ -260,8 +300,8 @@ export default function SystemCommandCenter() {
       // Re-fetch users instantly
       await fetchUsersData();
       setEditingUser(null);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(errorMessage(err));
     } finally {
       setSavingUser(false);
     }
@@ -289,8 +329,8 @@ export default function SystemCommandCenter() {
       } else {
         throw new Error('Server returned non-success response code.');
       }
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(errorMessage(err));
     } finally {
       setUpdatingGlobal(false);
     }
@@ -300,11 +340,11 @@ export default function SystemCommandCenter() {
       try {
         const workspacesSnap = await getDocs(collection(db, "workspaces"));
         const transactionsSnap = await getDocs(collection(db, "transactions"));
-        const transactions = transactionsSnap.docs.map(doc => doc.data() as any);
+        const transactions = transactionsSnap.docs.map(doc => doc.data() as Transaction);
         
-        const tenants: Record<string, any> = {};
+        const tenants: Record<string, TenantTelemetry> = {};
         workspacesSnap.docs.forEach(doc => {
-           const data = doc.data() || {};
+           const data: Partial<Workspace> = doc.data() || {};
            tenants[doc.id] = {
                id: doc.id,
                name: data.name || "Default Workspace",
@@ -353,8 +393,8 @@ export default function SystemCommandCenter() {
       setLoadingUsers(true);
       try {
         const usersSnap = await getDocs(collection(db, "users"));
-        const usersData = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
-        setUsersList(usersData as any);
+        const usersData = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() as Omit<AdminUser, 'uid'> }));
+        setUsersList(usersData);
       } catch (e) {
         console.warn('Admin users fetch error', e);
       } finally {
@@ -393,8 +433,8 @@ export default function SystemCommandCenter() {
   }, []);
 
   const allLogsCombined = [...simulatedLogs, ...(telemetry?.liveLogs || [])];
-  const totalErrors = allLogsCombined.filter((l: any) => l.statusCode >= 500).length;
-  const liveErrors = allLogsCombined.filter((l: any) => l.statusCode >= 400);
+  const totalErrors = allLogsCombined.filter((l) => l.statusCode >= 500).length;
+  const liveErrors = allLogsCombined.filter((l) => l.statusCode >= 400);
 
   useAuthStore(s => s.isAdmin);
 
@@ -541,7 +581,7 @@ export default function SystemCommandCenter() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ledger-line/50">
-                        {usersList.map((u: any) => (
+                        {usersList.map((u) => (
                           <tr key={u.uid} className="hover:bg-[var(--ink)]/50 transition-colors group">
                             <td className="py-4 px-6">
                               <div className="flex flex-col">
@@ -727,7 +767,7 @@ export default function SystemCommandCenter() {
                   <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Global Ledger Rows</h4>
                 </div>
                 <h3 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">
-                  {telemetry.tenants.reduce((acc: number, t: any) => acc + t.txCount, 0).toLocaleString()}
+                  {telemetry.tenants.reduce((acc, t) => acc + t.txCount, 0).toLocaleString()}
                 </h3>
                 <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-2">Total transactional assertions</p>
               </div>
@@ -1073,7 +1113,7 @@ export default function SystemCommandCenter() {
                         </td>
                       </tr>
                     ) : (
-                      [...telemetry.tenants].sort((a: any, b: any) => b.requestCount - a.requestCount).map((tenant: any) => {
+                      [...telemetry.tenants].sort((a, b) => b.requestCount - a.requestCount).map((tenant) => {
                         const isSpiking = tenant.requestCount > 500;
                         const usedDollars = ((tenant.apiQuotaTotalCentsUsed || 0) / 100).toFixed(2);
                         const activeUsers = tenant.activeUserCount || 1;
