@@ -1,3 +1,4 @@
+import { errorMessage } from '../auth/requestUser';
 import express from "express";
 import { 
   DepreciationRequestSchema,
@@ -48,8 +49,8 @@ mathRouter.post("/depreciation", async (req: express.Request, res: express.Respo
       type,
       depreciationPerPeriodCents: amount
     });
-  } catch (err: any) {
-    sendError(res, err.message, 400);
+  } catch (err) {
+    sendError(res, errorMessage(err), 400);
   }
 });
 
@@ -72,8 +73,8 @@ mathRouter.post("/inventory/wac", async (req: express.Request, res: express.Resp
       totalQuantity: currentQty + incomingQty,
       totalValueCents: currentValueCents + incomingValueCents
     });
-  } catch (err: any) {
-    sendError(res, err.message, 400);
+  } catch (err) {
+    sendError(res, errorMessage(err), 400);
   }
 });
 
@@ -97,8 +98,8 @@ mathRouter.post("/amortization", async (req: express.Request, res: express.Respo
       annualInterestRate: annualInterestRate,
       totalPeriods: totalPeriods
     });
-  } catch (err: any) {
-    sendError(res, err.message, 400);
+  } catch (err) {
+    sendError(res, errorMessage(err), 400);
   }
 });
 
@@ -119,8 +120,8 @@ mathRouter.post("/inventory/eoq", async (req: express.Request, res: express.Resp
       success: true,
       eoq
     });
-  } catch (err: any) {
-    sendError(res, err.message, 400);
+  } catch (err) {
+    sendError(res, errorMessage(err), 400);
   }
 });
 
@@ -165,8 +166,8 @@ mathRouter.post("/kpi", async (req: express.Request, res: express.Response) => {
     }
     
     res.json(result);
-  } catch (err: any) {
-    sendError(res, err.message, 400);
+  } catch (err) {
+    sendError(res, errorMessage(err), 400);
   }
 });
 
@@ -197,8 +198,8 @@ mathRouter.post("/temporal", async (req: express.Request, res: express.Response)
       effectiveValue,
       calculatedAmountCents
     });
-  } catch (err: any) {
-    sendError(res, err.message, 400);
+  } catch (err) {
+    sendError(res, errorMessage(err), 400);
   }
 });
 
@@ -235,7 +236,7 @@ mathRouter.post("/valuation", async (req: express.Request, res: express.Response
     }
 
     res.json(result);
-  } catch (err: any) {
-    sendError(res, err.message, 400);
+  } catch (err) {
+    sendError(res, errorMessage(err), 400);
   }
 });

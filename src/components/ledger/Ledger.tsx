@@ -2,7 +2,9 @@ import React, { useId, useState, useMemo } from 'react';
 import { usePerformanceTrace } from '../../hooks/usePerformanceTrace';
 import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, Plus, Search, ArrowRightLeft, Scale, ShieldCheck, AlertCircle, Activity, Cpu, Layers, Zap } from 'lucide-react';
-import { JournalEntry } from '../../types';
+import type { LucideIcon } from 'lucide-react';
+import type { ChartAccount, JournalEntry } from '../../types';
+import type { ReconciliationResult } from './ReconciliationWizard';
 import { cn, reportError, OperationType, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { format } from 'date-fns';
@@ -30,7 +32,7 @@ type ModalType = 'account' | 'journal' | 'recon' | 'period' | 'bank_import' | nu
 interface LedgerSubTabConfig {
   id: SubTab;
   label: string;
-  icon: import("lucide-react").LucideIcon;
+  icon: LucideIcon;
   cardKey: string;
 }
 
@@ -40,7 +42,7 @@ const LEDGER_SUB_TABS: LedgerSubTabConfig[] = [
   { id: 'trial', label: 'Trial Balance', icon: Scale, cardKey: 'ledger.tab.trial' }
 ];
 
-const TabButton = ({ label, icon: Icon, active, onClick, cardKey }: { id: SubTab, label: string, icon: import("lucide-react").LucideIcon, active: boolean, onClick: () => void, cardKey?: string }) => (
+const TabButton = ({ label, icon: Icon, active, onClick, cardKey }: { id: SubTab, label: string, icon: LucideIcon, active: boolean, onClick: () => void, cardKey?: string }) => (
   <button
     onClick={onClick}
     className={cn(
@@ -65,7 +67,7 @@ import { Labelled } from '../ui/Labelled';
 
 const Ledger = React.memo(() => {
   const formId = useId();
-  const user = useAuthStore(s => s.user) || ({} as unknown as import("../../lib/db/auth").User | null);
+  const user = useAuthStore(s => s.user);
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const transactions = useLedgerStore(s => s.transactions);
   const rawAccounts = useLedgerStore(s => s.accounts);
@@ -79,7 +81,7 @@ const Ledger = React.memo(() => {
     workspaceId: tx.workspaceId || '',
     date: tx.date || '',
     description: tx.description || '',
-    reference: (tx as typeof tx & { reference?: string }).reference || tx.id,
+    reference: tx.reference || tx.id,
     lines: (tx.lines || []).map(l => {
       const amt = lineAmount(l, tx);
       return {
@@ -103,7 +105,7 @@ const Ledger = React.memo(() => {
   const txActions = useTransactionActions();
   const { addEntity, updateEntity } = useEntityOperations();
 
-  const onCompleteReconciliation = async (data: import("./ReconciliationWizard").ReconciliationCompletion) => {
+  const onCompleteReconciliation = async (data: ReconciliationResult) => {
     try {
       const recRecord = {
         accountId: data.accountId,
@@ -147,7 +149,7 @@ const Ledger = React.memo(() => {
   const [newAccount, setNewAccount] = useState({
     code: '',
     name: '',
-    type: 'asset' as const,
+    type: 'asset' as ChartAccount['type'],
     category: '',
     description: '',
     parentId: '',
@@ -342,11 +344,11 @@ const Ledger = React.memo(() => {
         <React.Suspense fallback={
           <div className="py-24 text-center space-y-4">
             <div className="flex justify-center gap-2">
-              {[0, 1, 2].map(i => (
+              {[0, 1, 2].map(dot => (
                 <motion.div 
-                  key={i}
+                  key={dot}
                   animate={{ scale: [1, 1.2, 1], opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
+                  transition={{ duration: 0.8, repeat: Infinity, delay: dot * 0.15 }}
                   className="w-3 h-3 bg-indigo-600 rounded-full"
                 />
               ))}
@@ -434,7 +436,7 @@ const Ledger = React.memo(() => {
                     <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50" label="Account Type">
                       <select 
                         value={newAccount.type}
-                        onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value as unknown as "asset" })}
+                        onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value as ChartAccount['type'] })}
                         className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)] appearance-none cursor-pointer"
                       >
                         <option value="asset">Asset</option>
@@ -637,13 +639,13 @@ const Ledger = React.memo(() => {
       />
 
       {/* Journal Entry Modal */}
-      <JournalEntryModal 
+      {user && <JournalEntryModal 
         isOpen={activeModal === 'journal'}
         onClose={() => setActiveModal(null)}
-        user={user as unknown as import("../../lib/db/auth").User}
+        user={user}
         accounts={accounts}
         workspaceId={workspaceId || ""}
-      />
+      />}
     </div>
   );
 });

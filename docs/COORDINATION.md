@@ -111,9 +111,9 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
   `src/tests/`. Use the typed helpers in `src/tests/fixtures.ts` / `src/tests/helpers/` (add a typed
   mock database helper there if several files need one). **Never change a test's inputs or
   expected numbers**; the same tests must pass. *Done when:* no `no-explicit-any` in `src/tests/`.
-- [x] **C-7 `any` in the remaining browser files.** `ProfitAndLossView` (17), `ApiHub` (14),
-  `useUIStore` (12), `algorithms.ts` (12), `CommandPalette` (11), `Reconciliation` (11),
-  `core/layout/RootLayout` (11), `App.tsx` (10), `BankFeedImport` (9), `excelExport` (9),
+- [x] **C-7 `any` in the remaining browser files.** `ProfitAndLossView` (17),
+  `CommandPalette` (11), `core/layout/RootLayout` (11) (Claude already did `ApiHub`, `useUIStore`,
+  `algorithms.ts`, `Reconciliation`, `App.tsx`, `Ledger.tsx`, `useLedgerData` on 2026-10-02), `BankFeedImport` (9), `excelExport` (9),
   `lib/algorithms/types.ts` (9), `lib/utils.ts` (9), then the rest outside Claude's files.
   `src/types.ts` (14) last and only where the right type is obvious. Same "behaviour unchanged" rule.
 - [ ] **C-8 React hook warnings** (`react-hooks/exhaustive-deps` 38, `set-state-in-effect` 31,
@@ -138,6 +138,10 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
   `prefers-reduced-motion` (wrap the app in `MotionConfig reducedMotion="user"` from `motion/react`),
   `jsx-a11y/no-autofocus` (4). Keep `e2e/contrast-baseline.json` and `e2e/a11y-baseline.json` at or
   below their numbers (lower them when they drop).
+  Also: give the remaining full-screen overlays (`fixed inset-0`) the dialog behaviour with
+  `src/hooks/useDialog.ts` (`const { dialogProps, titleId } = useDialog(onClose, isOpen)`, spread
+  `dialogProps` on the overlay, `id={titleId}` on its title; see `CustomerModal.tsx`), then
+  `npm run ratchet:update` (`overlaysWithoutDialog`, 40 today). Decorative overlays: `aria-hidden`.
 
 ## Claude is working on (Codex: don't edit these files)
 
@@ -177,3 +181,5 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
 - 2026-10-02 Codex: Owner requested completing C-6…C-11 as one continuous batch and pushing only the final validated branch. Local commits retain task boundaries. C-6 is complete: zero explicit-any warnings in src/tests, warnings 1436 → 1288 (cap lowered), 664 tests passed with no skips, type check/build/clean install passed, and all 22 changed existing tests emit identical JavaScript after type-only parentheses are removed. Mock types are shared in src/tests/helpers/mockTypes.ts; inputs, expectations, registration, and executable mocks are unchanged. Ratchet unchanged (its source-any metric excludes tests).
 
 - 2026-10-02 Codex: C-7 completed for all eligible browser files, including the obvious metadata models in types.ts. Explicit-any warnings 549 → 0 in eligible files; total ESLint warnings 1288 → 739 (zero errors), cap 739, source ratchet anyCount 877 → 465. All 664 tests pass with no skips; type checking passed, and 156 existing source files emit identical JavaScript after type-only parentheses are normalized. useUIStore remains reserved despite its mention in C-7; it was not edited. Types expose existing boundary gaps (legacy split imports omit descriptions; MagicEntry legacy revenue type; optional blueprint nodes/links used as required); no payloads or calculations were changed. Production build passed.
+
+- 2026-10-02 Codex: Owner now authorizes incremental pushes of validated checkpoints. PR #38 integrates main through 28c3c28 with a normal merge. Claude’s newer App, Ledger, Reconciliation/Wizard, ApiHub and algorithms implementations are retained exactly; automatic merges preserve his dialog/currency/server changes elsewhere. Remaining diff against main emits identical JavaScript in 172 files. Combined validation: 680 tests, no skips/failures, ESLint 299 warnings/0 errors (cap lowered to 299), production build passed; source anyCount 420 → 58. C-8 date synchronization work is saved separately and resumes after this integration.

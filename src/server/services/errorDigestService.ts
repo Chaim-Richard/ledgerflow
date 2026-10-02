@@ -1,3 +1,4 @@
+import { errorMessage } from '../auth/requestUser';
 import { getDb } from '../db/firestore';
 import { sendErrorDigestEmail, ErrorGroupSummary } from './emailService';
 import { sha256Sync } from '../../lib/algorithms';
@@ -157,14 +158,14 @@ export async function processErrorDigest(options?: ProcessErrorDigestOptions): P
             provider: delivery.provider,
             groups: []
           };
-        } catch (err: any) {
+        } catch (err) {
           return {
             processed: true,
             totalErrors: 0,
             uniqueErrors: 0,
             delivered: false,
             recipient,
-            error: err.message || String(err),
+            error: errorMessage(err) || String(err),
             groups: []
           };
         }
@@ -197,8 +198,8 @@ export async function processErrorDigest(options?: ProcessErrorDigestOptions): P
       });
       delivered = delivery.delivered;
       provider = delivery.provider;
-    } catch (sendErr: any) {
-      deliveryError = sendErr.message || String(sendErr);
+    } catch (sendErr) {
+      deliveryError = errorMessage(sendErr) || String(sendErr);
       console.warn(`[ErrorDigestService] Error digest delivery skipped or failed (${deliveryError}). Digest summary: ${totalErrors} errors across ${uniqueErrors} signatures.`);
     }
 
@@ -212,7 +213,7 @@ export async function processErrorDigest(options?: ProcessErrorDigestOptions): P
       error: deliveryError,
       groups
     };
-  } catch (dbErr: any) {
+  } catch (dbErr) {
     console.error('[ErrorDigestService] Failed to query errorLogs collection:', dbErr);
     return {
       processed: false,
@@ -220,7 +221,7 @@ export async function processErrorDigest(options?: ProcessErrorDigestOptions): P
       uniqueErrors: 0,
       delivered: false,
       recipient,
-      error: dbErr.message || String(dbErr),
+      error: errorMessage(dbErr) || String(dbErr),
       groups: []
     };
   }

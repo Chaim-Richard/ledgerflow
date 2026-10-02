@@ -1,3 +1,4 @@
+import { requestUser } from '../auth/requestUser';
 import { Request, Response, NextFunction } from 'express';
 import { getDb } from '../db/firestore';
 import { lockMessage, postingLock } from '../../lib/periodLock';
@@ -17,7 +18,7 @@ export function requireOpenPeriod(collectionOrDb?: string | any, dbOverride?: an
         (req.body?.payment?.workspaceId as string) ||
         (req.body?.creditNote?.workspaceId as string) ||
         (req.query?.workspaceId as string) ||
-        (req as any).user?.developerWorkspaceId;
+        requestUser(req)?.developerWorkspaceId;
 
       let date =
         req.body?.date ||
@@ -73,7 +74,7 @@ export function requireOpenPeriod(collectionOrDb?: string | any, dbOverride?: an
       }
 
       return next();
-    } catch (err: any) {
+    } catch (err) {
       return next(err);
     }
   };

@@ -4,6 +4,7 @@ import type { ListeningServer, TestRequest } from './helpers/mockTypes';
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { allocateNextNumber } from '../server/routes/workspaceRoutes';
+import type { Firestore } from '../server/db/firestore';
 
 class MockTransactionalDb {
   private data: Map<string, TestDocument> = new Map();
@@ -66,7 +67,7 @@ describe('Atomic Gapless Numbering Series Test Suite (Task 3)', () => {
     const workspaceId = 'ws-concurrent-test';
 
     const promises = Array.from({ length: 50 }, () => 
-      allocateNextNumber(mockDb, workspaceId, 'invoice')
+      allocateNextNumber(mockDb as unknown as Firestore, workspaceId, 'invoice', '2026-10-02')
     );
 
     const allocatedNumbers = await Promise.all(promises);
@@ -82,6 +83,13 @@ describe('Atomic Gapless Numbering Series Test Suite (Task 3)', () => {
     );
 
     assert.deepEqual(sorted, expected, 'Allocated numbers must be strictly sequential (INV-2026-0001 through INV-2026-0050) with no gaps');
+  });
+
+  test('a new series takes the year of the day it starts', async () => {
+    const mockDb = new MockTransactionalDb() as unknown as Firestore;
+    assert.equal(await allocateNextNumber(mockDb, 'ws-2027', 'invoice', '2027-01-01'), 'INV-2027-0001');
+    assert.equal(await allocateNextNumber(mockDb, 'ws-2027', 'bill', '2027-01-01'), 'BIL-2027-0001');
+    assert.equal(await allocateNextNumber(mockDb, 'ws-2027', 'invoice', '2028-01-01'), 'INV-2027-0002', 'an existing series keeps its prefix');
   });
 
   test('GET /:workspaceId/next-number returns 405 Method Not Allowed and does not change nextNumber (Finding E)', async () => {

@@ -203,8 +203,10 @@ export function useLedgerData() {
         let nodes = snapDimensionNodes.docs.map(d => ({ ...d.data() } as DimensionNode));
         if (snapDimensionNodes.empty) {
           const currentWorkspace = useAuthStore.getState().workspaces.find(w => w.id === currentWorkspaceId);
-          if ((currentWorkspace as any)?.dimensionNodes && (currentWorkspace as any).dimensionNodes.length > 0) {
-            nodes = (currentWorkspace as any).dimensionNodes;
+          // older workspaces kept their dimension tree on the workspace document
+          const legacyNodes = (currentWorkspace as { dimensionNodes?: DimensionNode[] } | undefined)?.dimensionNodes;
+          if (legacyNodes && legacyNodes.length > 0) {
+            nodes = legacyNodes;
             if (db && currentWorkspaceId) {
               migrateWorkspaceDimensionNodesToCollection(db, currentWorkspaceId).catch(e => {
                 console.warn('[Ledger] Background dimension migration error:', e);

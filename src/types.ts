@@ -23,6 +23,7 @@ export interface AppNotification {
 
 export interface EntityMetadata extends Record<string, unknown> {
   vendorId?: string;
+  taxState?: string;
   dueDate?: string;
   memo?: string;
   cogsPending?: boolean;
@@ -177,6 +178,9 @@ export interface Transaction {
   // Atomic Double-Entry Splits
   lines: TransactionLine[];
   
+  /** Cheque number, bank or document reference (shown in the journal; exported). */
+  reference?: string;
+
   // Total absolute value (for display convenience, though derived from lines)
   totalAmountCents: number; 
   taxAmountCents?: number;

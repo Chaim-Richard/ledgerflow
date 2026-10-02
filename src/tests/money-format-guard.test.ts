@@ -46,12 +46,27 @@ describe('Money Format Guard', () => {
     assert.equal(formatCurrency(50, 'USD'), '$0.50');
   });
 
+  it('signed amounts say the direction in text, not only colour (E-26)', async () => {
+    const { formatSignedAmount } = await import('../lib/utils');
+    assert.equal(formatSignedAmount(150000, 'in', 'USD'), '+$1,500.00');
+    assert.equal(formatSignedAmount(-2550, 'out', 'USD'), '\u2212$25.50');
+    assert.equal(formatSignedAmount(2550, 'none', 'USD'), '$25.50');
+  });
+
   it('ensures no src components call formatCurrency with / 100', () => {
     const srcDir = path.resolve(__dirname, '../components');
     // Pattern to catch formatCurrency with division by 100
     const pattern = /formatCurrency\([^)]*\/\s*100/;
     const violations = scanDirForPattern(srcDir, pattern, ['.ts', '.tsx']);
 
+    assert.deepStrictEqual(violations, []);
+  });
+
+  it('no screen prints a hard-coded $ in front of its own division by 100 (workspace currency ignored)', () => {
+    const srcDir = path.resolve(__dirname, '../components');
+    // JSX like  ${(amountCents / 100).toFixed(2)}  — a literal dollar sign, then cents turned into units by hand
+    const pattern = /(^|[^`])\$\{\(?[A-Za-z_][A-Za-z0-9_.?]*\s*\/\s*100\b/;
+    const violations = scanDirForPattern(srcDir, pattern, ['.tsx']).filter(v => !v.match.includes('`'));
     assert.deepStrictEqual(violations, []);
   });
 });

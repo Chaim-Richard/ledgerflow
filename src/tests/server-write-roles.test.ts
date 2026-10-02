@@ -8,7 +8,10 @@ import fs from 'node:fs';
 import type express from 'express';
 import { LEDGER_WRITER_ROLES, roleInWorkspace, targetWorkspaces } from '../server/middleware/requireLedgerWriter';
 
-const server = fs.readFileSync('server.ts', 'utf8');
+import { serverSource } from './helpers/serverSource';
+
+// server.ts plus the helpers and route files it was split into (F-01)
+const server = serverSource();
 
 describe('Server write roles', () => {
   test('role from the workspace document', () => {
@@ -52,12 +55,17 @@ describe('Server write roles', () => {
     assert.match(server.slice(start, start + 1500), /await assertWorkspaceAccess\(db, finalWorkspaceId, /);
   });
 
+  test('sign-in records are written only for the signed-in person', () => {
+    assert.match(server, /app\.post\("\/api\/v1\/auth\/audit", apiAuthenticate,/);
+    assert.match(server, /recordAuthEvent\(\{ uid: user\.uid,/);
+  });
+
   test('billing changes (checkout, portal, confirming a payment) are owner-only', () => {
     const billing = fs.readFileSync('src/server/routes/billingRoutes.ts', 'utf8');
     for (const route of ['/checkout', '/portal', '/verify-session']) {
       const start = billing.indexOf(`billingRouter.post("${route}"`);
       const next = billing.indexOf('billingRouter.', start + 10);
-      assert.match(billing.slice(start, next), /await authorizeWorkspace\(\(req as any\)\.user, workspaceId, \['owner'\]\)/, route);
+      assert.match(billing.slice(start, next), /await authorizeWorkspace\(requestUser\(req\), workspaceId, \['owner'\]\)/, route);
     }
   });
 

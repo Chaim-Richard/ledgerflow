@@ -7,9 +7,10 @@ import { TransactionValidator } from '../../kernel/validation/TransactionValidat
 import { ClosingEntryEngine } from '../../kernel/ledger/ClosingEntryEngine';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
 import { TransactionSchema, InvoiceSchema, BillSchema, OrderSchema, ProjectSchema, BankLineUpdateSchema, BankLineImportSchema, CreditNoteSchema, VendorCreditSchema } from '../../schemas';
-import { Transaction } from '../../types';
+import type { ChartAccount, Transaction, TransactionLine } from '../../types';
 import { parseLocalDate, getLocalDateISO } from '../../lib/utils';
 import { getDb, assertWorkspaceAccess } from '../db/firestore';
+import type { DocumentData, Firestore } from '../db/firestore';
 import { isPostable, getAbsoluteTotal } from '../../lib/txFilters';
 import { optimizedTransactionSimilarity } from '../../lib/algorithms';
 import { executeCommand } from '../utils/commandExecutor';
@@ -23,6 +24,10 @@ import { z } from 'zod';
 import { writeServerAuditLog } from '../services/auditLogService';
 import { assertPostingOpen, lockMessage, postingLock } from '../../lib/periodLock';
 import { closePeriod, PeriodCloseError } from '../services/periodCloseService';
+import { errorMessage, HttpError, requestUser } from '../auth/requestUser';
+
+/** A bank line sent by the browser for match suggestions (statement import, not yet stored). */
+type ExternalBankLine = { id?: string; amountCents?: number; amount?: number; description?: string; merchant?: string; date?: string };
 
 export const transactionRouter = express.Router();
 transactionRouter.use(requireLedgerWriter);
@@ -67,7 +72,7 @@ export function enforceDoubleEntrySafety(req: Request, res: Response, next: Next
   }
 
   try {
-    const netSum = transaction.lines.reduce((acc: any, line: any) => {
+    const netSum = transaction.lines.reduce((acc: Decimal, line: { amountCents?: unknown }) => {
       if (typeof line.amountCents !== 'number' || !Number.isSafeInteger(line.amountCents)) {
         throw new Error("Invalid cents integer format.");
       }
@@ -82,21 +87,23 @@ export function enforceDoubleEntrySafety(req: Request, res: Response, next: Next
 
     DoubleEntryValidator.validateJournalEntry(transaction);
     next();
-  } catch (err: any) {
-    return res.status(400).json({ error: err.message });
+  } catch (err) {
+    return res.status(400).json({ error: errorMessage(err) });
   }
 }
 
 /**
  * Optimistic Concurrency Control: detects if existing transaction was updated since client read it.
  */
-function isUpdatedAtMismatch(expected: any, current: any): boolean {
+function isUpdatedAtMismatch(expected: unknown, current: unknown): boolean {
   if (!expected || !current) return false;
-  const getMs = (v: any): number | null => {
-    if (typeof v?.toMillis === 'function') return v.toMillis();
-    if (typeof v?.toDate === 'function') return v.toDate().getTime();
-    if (typeof v?.seconds === 'number') return v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6);
-    const ms = new Date(v).getTime();
+  type TimestampLike = { toMillis?: () => number; toDate?: () => Date; seconds?: number; nanoseconds?: number };
+  const getMs = (raw: unknown): number | null => {
+    const v = (raw && typeof raw === 'object' ? raw : {}) as TimestampLike;
+    if (typeof v.toMillis === 'function') return v.toMillis();
+    if (typeof v.toDate === 'function') return v.toDate().getTime();
+    if (typeof v.seconds === 'number') return v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6);
+    const ms = new Date(raw as string | number | Date).getTime();
     return isNaN(ms) ? null : ms;
   };
   const expMs = getMs(expected);
@@ -110,7 +117,7 @@ function isUpdatedAtMismatch(expected: any, current: any): boolean {
 
 transactionRouter.get('/', async (req, res) => {
   try {
-    const user = (req as any).user;
+    const user = requestUser(req);
     const workspaceId = (req.query.workspaceId as string) || user.developerWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: "Missing workspaceId query parameters" });
 
@@ -126,7 +133,7 @@ transactionRouter.get('/', async (req, res) => {
 
     const { startDate, endDate, accountId, limit, cursor } = req.query;
 
-    let queryFn: any = db.collection("transactions").where("workspaceId", "==", workspaceId);
+    let queryFn = db.collection("transactions").where("workspaceId", "==", workspaceId);
     
     // HushLedger-style cursor + ledger revision pagination
     queryFn = queryFn.orderBy("date", "desc").orderBy("__name__", "desc");
@@ -146,10 +153,10 @@ transactionRouter.get('/', async (req, res) => {
     queryFn = queryFn.limit(fetchLimit);
 
     const transactionsSnap = await queryFn.get();
-    let transactions = transactionsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    let transactions = transactionsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
     if (accountId) {
-      transactions = transactions.filter((t: any) => t.lines?.some((l: any) => l.accountId === accountId));
+      transactions = transactions.filter((t: DocumentData) => t.lines?.some((l: TransactionLine) => l.accountId === accountId));
     }
 
     const nextCursor = transactionsSnap.docs.length === fetchLimit 
@@ -163,8 +170,8 @@ transactionRouter.get('/', async (req, res) => {
       nextCursor,
       transactions
     });
-  } catch (err: any) {
-    if (err.message === "FORBIDDEN") return res.status(403).json({ error: "Forbidden workspace access" });
+  } catch (err) {
+    if (errorMessage(err) === "FORBIDDEN") return res.status(403).json({ error: "Forbidden workspace access" });
     console.error('[TRANSACTION ROUTE ERROR]', err);
     res.status(500).json({ error: "An unexpected internal server error occurred." });
   }
@@ -179,12 +186,10 @@ transactionRouter.post('/', requirePlanCapacity('transactions'), requireOpenPeri
 
   return executeCommand(req, res, workspaceId, 'TRANSACTION_CREATE', async (ctx, t) => {
     const { transaction } = req.body;
-    const user = (req as any).user;
+    const user = requestUser(req);
     
     if (!transaction || !transaction.workspaceId) {
-      const err = new Error('Invalid payload') as any;
-      err.status = 400;
-      throw err;
+      throw new HttpError('Invalid payload', 400);
     }
     
     transaction.uid = user.uid;
@@ -195,10 +200,7 @@ transactionRouter.post('/', requirePlanCapacity('transactions'), requireOpenPeri
 
     const parsed = TransactionSchema.safeParse(transaction);
     if (!parsed.success) {
-      const err = new Error('Schema validation failed') as any;
-      err.status = 400;
-      err.details = parsed.error.issues;
-      throw err;
+      throw Object.assign(new HttpError('Schema validation failed', 400), { details: parsed.error.issues });
     }
 
     const db = getDb();
@@ -209,9 +211,7 @@ transactionRouter.post('/', requirePlanCapacity('transactions'), requireOpenPeri
     
     const wsDoc = await db.collection('workspaces').doc(transactionToSave.workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
-      const err = new Error('Not a member') as any;
-      err.status = 403;
-      throw err;
+      throw new HttpError('Not a member', 403);
     }
     const wsData = wsDoc.data();
 
@@ -243,7 +243,7 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
     const { id } = req.params as Record<string, string>;
     const { partialUpdate } = req.body;
     let { transaction } = req.body;
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
 
     // Support flat API payloads: { workspaceId, lines, date, ... }
@@ -254,7 +254,7 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
     // For partial updates (like flagging or voiding)
     if (partialUpdate) {
       let authoritativeWsId = '';
-      await db.runTransaction(async (t: any) => {
+      await db.runTransaction(async (t) => {
          const txRef = db.collection('transactions').doc(id);
          const doc = await t.get(txRef);
          if (!doc.exists) throw new Error('Not found');
@@ -263,9 +263,7 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
          // Optimistic concurrency check
          const expectedUpdatedAt = req.body.expectedUpdatedAt || partialUpdate.expectedUpdatedAt;
          if (isUpdatedAtMismatch(expectedUpdatedAt, txData?.updatedAt)) {
-           const err: any = new Error('version_conflict');
-           err.currentTransaction = { ...txData, id: doc.id };
-           throw err;
+           throw Object.assign(new Error('version_conflict'), { currentTransaction: { ...txData, id: doc.id } });
          }
 
          const wsId = txData?.workspaceId;
@@ -333,7 +331,7 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
       wsData
     }, existingTx);
 
-    await db.runTransaction(async (t: any) => {
+    await db.runTransaction(async (t) => {
       const txRef = db.collection('transactions').doc(id);
       const doc = await t.get(txRef);
       if (!doc.exists) throw new Error('Not found');
@@ -341,9 +339,7 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
       // Optimistic concurrency check
       const expectedUpdatedAt = req.body.expectedUpdatedAt || transaction?.expectedUpdatedAt;
       if (isUpdatedAtMismatch(expectedUpdatedAt, doc.data()?.updatedAt)) {
-        const err: any = new Error('version_conflict');
-        err.currentTransaction = { ...doc.data(), id: doc.id };
-        throw err;
+        throw Object.assign(new Error('version_conflict'), { currentTransaction: { ...doc.data(), id: doc.id } });
       }
 
       if (doc.data()?.workspaceId !== transaction.workspaceId) throw new Error('Workspace mismatch');
@@ -353,7 +349,7 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
       if (doc.data()?.date) assertPostingOpen(doc.data()?.date, wsData, user.uid);
 
       const txToSave = { ...validatedTx };
-      delete (txToSave as any).expectedUpdatedAt;
+      delete (txToSave as { expectedUpdatedAt?: unknown }).expectedUpdatedAt;
 
       t.update(txRef, { ...txToSave, updatedAt: FieldValue.serverTimestamp() });
     });
@@ -371,21 +367,21 @@ transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEn
     }, { db });
 
     res.json({ status: 'ok', transactionId: id, data: transaction });
-  } catch (e: any) {
-    if (e.message === 'version_conflict') {
+  } catch (e) {
+    if (errorMessage(e) === 'version_conflict') {
        return res.status(409).json({
          error: 'version_conflict',
          message: 'This transaction was modified by another user.',
-         currentTransaction: e.currentTransaction
+         currentTransaction: (e as { currentTransaction?: unknown }).currentTransaction
        });
     }
-    if (e.message === 'Not found') {
-       return res.status(404).json({ error: e.message });
+    if (errorMessage(e) === 'Not found') {
+       return res.status(404).json({ error: errorMessage(e) });
     }
-    if (e.message === 'Not a member' || e.message === 'Workspace mismatch' || e.message?.includes('Forbidden')) {
-       return res.status(403).json({ error: e.message });
+    if (errorMessage(e) === 'Not a member' || errorMessage(e) === 'Workspace mismatch' || errorMessage(e).includes('Forbidden')) {
+       return res.status(403).json({ error: errorMessage(e) });
     }
-    res.status(400).json({ error: e.message }); 
+    res.status(400).json({ error: errorMessage(e) }); 
   }
 });
 
@@ -393,7 +389,7 @@ transactionRouter.delete('/:id', requireOpenPeriod('transactions'), async (req, 
   try {
     const { id } = req.params as Record<string, string>;
     const workspaceId = (req.query.workspaceId as string) || (req.body?.workspaceId as string);
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
     const txRef = db.collection('transactions').doc(id);
     const doc = await txRef.get();
@@ -436,8 +432,8 @@ transactionRouter.delete('/:id', requireOpenPeriod('transactions'), async (req, 
     }, { db });
 
     res.json({ status: 'ok', deletedId: id });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+  } catch (e) {
+    res.status(500).json({ error: errorMessage(e) });
   }
 });
 
@@ -447,7 +443,7 @@ transactionRouter.post('/bulk', async (req, res) => {
     const { transactions, workspaceId, entityMutation } = req.body;
     // Imported bank statement lines (the browser may not write bankLines itself)
     const bankLines = BankLineImportSchema.array().max(5000).parse(req.body.bankLines ?? []);
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
     const wsId = workspaceId || transactions?.[0]?.workspaceId;
     if (!wsId) return res.status(400).json({ error: 'Missing workspaceId' });
@@ -492,7 +488,7 @@ transactionRouter.post('/bulk', async (req, res) => {
     // Period lock, duplicate ID check, and account verification (TransactionValidator) for transactions
     const seenTxIds = new Set<string>();
 
-    const validatedTransactions: any[] = [];
+    const validatedTransactions: Transaction[] = [];
     for (const tx of (transactions || [])) {
       if (tx.id) {
         if (seenTxIds.has(tx.id)) {
@@ -514,7 +510,7 @@ transactionRouter.post('/bulk', async (req, res) => {
     // ONE database transaction: the document change, the ledger entries, stock moved by cost of
     // goods sold entries, and the idempotency record all commit together or not at all.
     let body: Record<string, unknown> = { status: 'ok', count: validatedTransactions.length };
-    await db.runTransaction(async (t: any) => {
+    await db.runTransaction(async (t) => {
       // Reads first
       const entityRef = entityMutation ? db.collection(entityMutation.collection).doc(entityMutation.docId) : null;
       if (entityRef) {
@@ -526,7 +522,7 @@ transactionRouter.post('/bulk', async (req, res) => {
       const refs = validatedTransactions.map(tx => db.collection('transactions').doc(tx.id));
       if (refs.length > 0) {
         const snaps = await t.getAll(...refs);
-        const taken = snaps.find((s: any) => s.exists);
+        const taken = snaps.find((s) => s.exists);
         if (taken) throw new LedgerPostingError(409, `Transaction ${taken.id} already exists`);
       }
       const stock = await prepareStockMoves(db, t, wsId, validatedTransactions);
@@ -546,7 +542,7 @@ transactionRouter.post('/bulk', async (req, res) => {
 
       // Writes
       if (entityRef && (entityMutation.action === 'create' || entityMutation.action === 'update')) {
-        const schemaMap: any = { invoices: InvoiceSchema, bills: BillSchema, orders: OrderSchema, projects: ProjectSchema, creditNotes: CreditNoteSchema, vendorCredits: VendorCreditSchema };
+        const schemaMap: Record<string, z.ZodObject<z.ZodRawShape>> = { invoices: InvoiceSchema, bills: BillSchema, orders: OrderSchema, projects: ProjectSchema, creditNotes: CreditNoteSchema, vendorCredits: VendorCreditSchema };
         const schema = schemaMap[entityMutation.collection];
         if (!schema) throw new Error(`Forbidden: No schema for entityMutation collection '${entityMutation.collection}'.`);
         // An update sends only the changed fields: check those, and never fill in defaults for the rest
@@ -565,9 +561,9 @@ transactionRouter.post('/bulk', async (req, res) => {
     });
 
     res.json(body);
-  } catch (e: any) {
+  } catch (e) {
     console.error('[BULK TRANSACTIONS ERROR]', e);
-    res.status(e instanceof LedgerPostingError ? e.status : 400).json({ error: e.message });
+    res.status(e instanceof LedgerPostingError ? e.status : 400).json({ error: errorMessage(e) });
   }
 });
 
@@ -575,7 +571,7 @@ transactionRouter.post('/bulk', async (req, res) => {
 transactionRouter.post('/batch', async (req, res) => {
    try {
      const { updates, workspaceId } = req.body;
-     const user = (req as any).user;
+     const user = requestUser(req);
      const db = getDb();
      if (!workspaceId || !Array.isArray(updates) || updates.length === 0) {
        return res.status(400).json({ error: "Missing workspaceId or updates" });
@@ -591,7 +587,7 @@ transactionRouter.post('/batch', async (req, res) => {
      const BATCH_CHUNK_SIZE = 400;
      for (let offset = 0; offset < updates.length; offset += BATCH_CHUNK_SIZE) {
        const chunkUpdates = updates.slice(offset, offset + BATCH_CHUNK_SIZE);
-       const txRefs = chunkUpdates.map((u: any) => db.collection('transactions').doc(u.id));
+       const txRefs = chunkUpdates.map((u: { id: string }) => db.collection('transactions').doc(u.id));
        const txDocs = await db.getAll(...txRefs);
        const batch = db.batch();
 
@@ -624,7 +620,7 @@ transactionRouter.post('/batch', async (req, res) => {
 
          if (updateData.lines !== undefined) {
            const simulatedTx = { ...txData, ...updateData };
-           DoubleEntryValidator.validateJournalEntry(simulatedTx as any);
+           DoubleEntryValidator.validateJournalEntry(simulatedTx as Transaction);
          }
 
          if (updateData.status && !allowedStatuses.includes(updateData.status)) {
@@ -638,16 +634,16 @@ transactionRouter.post('/batch', async (req, res) => {
      }
 
      res.json({ status: 'ok' });
-   } catch (e: any) {
-    if (e.message === 'Not a member') {
-       return res.status(403).json({ error: e.message });
+   } catch (e) {
+    if (errorMessage(e) === 'Not a member') {
+       return res.status(403).json({ error: errorMessage(e) });
     }
-    res.status(400).json({ error: e.message }); 
+    res.status(400).json({ error: errorMessage(e) }); 
   }
 });
 
 // An endpoint for complex reconciliations
-export async function handleReconcile(req: express.Request, res: express.Response, dbOverride?: any) {
+export async function handleReconcile(req: express.Request, res: express.Response, dbOverride?: Firestore) {
   try {
      const { workspaceId, operations } = req.body;
      if (!workspaceId || !Array.isArray(operations) || operations.length === 0) {
@@ -694,15 +690,15 @@ export async function handleReconcile(req: express.Request, res: express.Respons
        }
      }
      
-     await db.runTransaction(async (t: any) => {
+     await db.runTransaction(async (t) => {
         // STEP 1: ALL READS UPFRONT (Guarantees zero read-after-write violations)
-        const bankLineSnaps = new Map<string, any>();
+        const bankLineSnaps = new Map<string, DocumentData>();
         for (const id of bankLineIds) {
           const snap = await t.get(db.collection('bankLines').doc(id));
           bankLineSnaps.set(id, snap);
         }
 
-        const txSnaps = new Map<string, any>();
+        const txSnaps = new Map<string, DocumentData>();
         for (const id of txIds) {
           const snap = await t.get(db.collection('transactions').doc(id));
           txSnaps.set(id, snap);
@@ -725,13 +721,13 @@ export async function handleReconcile(req: express.Request, res: express.Respons
           }
         }
 
-        const accMap = new Map<string, any>();
+        const accMap = new Map<string, DocumentData>();
         if (accountIds.size > 0) {
           const accRefs = Array.from(accountIds).map(id => db.collection('chartAccounts').doc(id));
           const accSnaps = await t.getAll(...accRefs);
           for (const snap of accSnaps) {
             if (snap.exists) {
-              accMap.set(snap.id, snap.data());
+              accMap.set(snap.id, snap.data() || {});
             }
           }
         }
@@ -859,7 +855,7 @@ transactionRouter.patch('/bank-lines/:id', async (req, res) => {
     if (!workspaceId) {
       return res.status(400).json({ error: 'Missing workspaceId' });
     }
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
@@ -876,11 +872,11 @@ transactionRouter.patch('/bank-lines/:id', async (req, res) => {
     const validatedData = BankLineUpdateSchema.parse(updatePayload);
     await lineRef.update({ ...validatedData, updatedAt: FieldValue.serverTimestamp() });
     res.json({ status: 'ok', id, data: validatedData });
-  } catch (e: any) {
-    if (e.name === 'ZodError') {
+  } catch (e) {
+    if (e instanceof z.ZodError) {
       return res.status(400).json({ error: 'Schema validation failed', details: e.issues });
     }
-    res.status(400).json({ error: e.message });
+    res.status(400).json({ error: errorMessage(e) });
   }
 });
 
@@ -893,7 +889,7 @@ transactionRouter.patch('/bank-lines/:id', async (req, res) => {
 
 transactionRouter.get('/reconciliation/status', async (req, res) => {
   try {
-    const user = (req as any).user;
+    const user = requestUser(req);
     const workspaceId = (req.query.workspaceId as string) || user.developerWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: "Missing workspaceId" });
 
@@ -912,7 +908,7 @@ transactionRouter.get('/reconciliation/status', async (req, res) => {
       
     const unclearedDocs = snapshot.docs.filter(doc => {
       const data = doc.data();
-      return !data.isCleared && isPostable(data as any);
+      return !data.isCleared && isPostable(data as Transaction);
     });
 
     const unclearedCount = unclearedDocs.length;
@@ -922,8 +918,8 @@ transactionRouter.get('/reconciliation/status', async (req, res) => {
       unclearedCount,
       message: `There are ${unclearedCount} uncleared transactions awaiting reconciliation.`
     });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+  } catch (e) {
+    res.status(500).json({ error: errorMessage(e) });
   }
 });
 
@@ -933,7 +929,7 @@ transactionRouter.post('/reconciliation/match', async (req, res) => {
     if (!workspaceId || !Array.isArray(externalBankLines)) {
       return res.status(400).json({ error: "Missing workspaceId or externalBankLines array" });
     }
-    const user = (req as any).user;
+    const user = requestUser(req);
     if (user.developerWorkspaceId && user.developerWorkspaceId !== workspaceId) {
       return res.status(403).json({ error: `Forbidden: API key is scoped strictly to workspace ${user.developerWorkspaceId}` });
     }
@@ -947,10 +943,10 @@ transactionRouter.post('/reconciliation/match', async (req, res) => {
       .get();
 
     const unclearedTxs = snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() } as any))
+      .map(doc => ({ id: doc.id, ...doc.data() } as Transaction & { isCleared?: boolean }))
       .filter(tx => !tx.isCleared && isPostable(tx));
 
-    const suggestions = externalBankLines.map((bankLine: any) => {
+    const suggestions = externalBankLines.map((bankLine: ExternalBankLine) => {
       const lineAmt = Math.abs(bankLine.amountCents || Math.round((bankLine.amount || 0) * 100));
       const lineDesc = bankLine.description || bankLine.merchant || '';
       let lineTime: number | null = null;
@@ -1016,8 +1012,8 @@ transactionRouter.post('/reconciliation/match', async (req, res) => {
       matchedCount,
       suggestions
     });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+  } catch (e) {
+    res.status(500).json({ error: errorMessage(e) });
   }
 });
 
@@ -1030,7 +1026,7 @@ transactionRouter.post('/reconciliation/clear', async (req, res) => {
     if (transactionIds.length > 500) {
       return res.status(400).json({ error: "Batch size exceeds limit of 500 items" });
     }
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
@@ -1068,8 +1064,8 @@ transactionRouter.post('/reconciliation/clear', async (req, res) => {
       clearedCount: transactionIds.length,
       message: 'Transactions successfully cleared.'
     });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+  } catch (e) {
+    res.status(500).json({ error: errorMessage(e) });
   }
 });
 
@@ -1082,7 +1078,7 @@ import { FxService } from "../services/FxService";
 transactionRouter.post('/revaluation/run', async (req, res) => {
   try {
     const { workspaceId, targetCurrency } = req.body;
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
@@ -1101,8 +1097,8 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
 
     // Ensure real chartAccounts exist for Unrealized FX and Foreign Clearing
     const accSnap = await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get();
-    let fxGainLossAcc = accSnap.docs.find(d => (d.data().name || '').toLowerCase().includes('fx gain') || (d.data().name || '').toLowerCase().includes('unrealized'));
-    let fxClearingAcc = accSnap.docs.find(d => (d.data().name || '').toLowerCase().includes('fx clearing') || (d.data().name || '').toLowerCase().includes('foreign'));
+    let fxGainLossAcc: { id: string; data: () => DocumentData } | undefined = accSnap.docs.find(d => (d.data().name || '').toLowerCase().includes('fx gain') || (d.data().name || '').toLowerCase().includes('unrealized'));
+    let fxClearingAcc: { id: string; data: () => DocumentData } | undefined = accSnap.docs.find(d => (d.data().name || '').toLowerCase().includes('fx clearing') || (d.data().name || '').toLowerCase().includes('foreign'));
 
     const batchSetup = db.batch();
     if (!fxGainLossAcc) {
@@ -1119,7 +1115,7 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
         createdAt: new Date().toISOString()
       };
       batchSetup.set(newRef, accData);
-      fxGainLossAcc = { id: newRef.id, data: () => accData } as any;
+      fxGainLossAcc = { id: newRef.id, data: () => accData };
     }
     if (!fxClearingAcc) {
       const newRef = db.collection('chartAccounts').doc();
@@ -1135,24 +1131,24 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
         createdAt: new Date().toISOString()
       };
       batchSetup.set(newRef, accData);
-      fxClearingAcc = { id: newRef.id, data: () => accData } as any;
+      fxClearingAcc = { id: newRef.id, data: () => accData };
     }
     await batchSetup.commit();
 
     // --- REAL REVALUATION CALCULATION ---
     // 1. Fetch all transactions to compute current functional balances vs expected market value
     const txSnap = await db.collection('transactions').where('workspaceId', '==', workspaceId).get();
-    const transactions = txSnap.docs.map(d => d.data());
+    const transactions = txSnap.docs.map(d => d.data() as Transaction);
     
-    const revalLines: any[] = [];
+    const revalLines: TransactionLine[] = [];
     let totalAdjustmentCents = 0;
 
     // Group lines by account
     const accountBalances = new Map<string, { foreignCents: number, functionalCents: number, name: string }>();
     
-    transactions.forEach((tx: any) => {
+    transactions.forEach((tx) => {
       if (!isPostable(tx)) return;
-      (tx.lines || []).forEach((l: any) => {
+      (tx.lines || []).forEach((l: TransactionLine) => {
         if (!l.accountId) return;
         const rate = l.exchangeRate || tx.exchangeRate || 1;
         const stats = accountBalances.get(l.accountId) || { foreignCents: 0, functionalCents: 0, name: l.accountName || l.accountId };
@@ -1221,7 +1217,7 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
       wsData
     });
 
-    await db.runTransaction(async (t: any) => {
+    await db.runTransaction(async (t) => {
       const txRef = db.collection('transactions').doc(validatedRevalTx.id);
       t.set(txRef, { ...validatedRevalTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     });
@@ -1231,15 +1227,15 @@ transactionRouter.post('/revaluation/run', async (req, res) => {
       message: `Month-end revaluation completed. Posted ${revalLines.length + 1} lines adjusting for ${totalAdjustmentCents} cents net.`,
       transactionId: revalTx.id
     });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+  } catch (e) {
+    res.status(500).json({ error: errorMessage(e) });
   }
 });
 
 transactionRouter.post('/close-year', async (req, res) => {
   try {
     const { workspaceId, closingDate, lockPeriod } = req.body;
-    const user = (req as any).user;
+    const user = requestUser(req);
     if (!workspaceId || !closingDate) {
       return res.status(400).json({ error: 'Missing required parameters: workspaceId and closingDate (YYYY-MM-DD).' });
     }
@@ -1268,14 +1264,14 @@ transactionRouter.post('/close-year', async (req, res) => {
 
     // 1. Fetch all chartAccounts for workspace
     const accountsSnap = await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get();
-    const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+    const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }) as ChartAccount);
 
     // 2. Fetch all transactions for workspace on or before closingDate
     const txSnap = await db.collection('transactions')
       .where('workspaceId', '==', workspaceId)
       .where('date', '<=', closingDate)
       .get();
-    const transactions = txSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+    const transactions = txSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Transaction);
 
     // 3. Generate closing journal entry via ClosingEntryEngine
     const result = ClosingEntryEngine.generateClosingJournalEntry({
@@ -1340,8 +1336,8 @@ transactionRouter.post('/close-year', async (req, res) => {
       summary: result.summary,
       accountsClosed: result.revenueAccountsClosed + result.expenseAccountsClosed
     });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+  } catch (e) {
+    res.status(500).json({ error: errorMessage(e) });
   }
 });
 
@@ -1366,7 +1362,7 @@ transactionRouter.post('/close-month', async (req, res) => {
 transactionRouter.post('/reset', async (req, res) => {
   try {
     const { workspaceId, confirmReset } = req.body;
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
     const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
     
@@ -1425,8 +1421,8 @@ transactionRouter.post('/reset', async (req, res) => {
     }, { db });
 
     res.json({ status: 'ok' });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+  } catch (e) {
+    res.status(500).json({ error: errorMessage(e) });
   }
 });
 
@@ -1439,84 +1435,64 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
   try {
     const { id } = req.params as Record<string, string>;
     const { reversalDate, reason, replacement, workspaceId } = req.body;
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
 
-    let resultReversal: any = null;
-    let resultReplacement: any = null;
+    let resultReversal = null as Transaction | null; // set inside the database transaction below
+    let resultReplacement = null as Transaction | null;
     let targetWsId = '';
 
-    await db.runTransaction(async (t: any) => {
+    await db.runTransaction(async (t) => {
       // 1. ALL READS UPFRONT
       const txRef = db.collection('transactions').doc(id);
       const origDoc = await t.get(txRef);
       if (!origDoc.exists) {
-        const err: any = new Error('Transaction not found');
-        err.statusCode = 404;
-        throw err;
+        throw new HttpError('Transaction not found', 404);
       }
       const origData = origDoc.data() as Transaction;
       targetWsId = origData.workspaceId || workspaceId;
       if (!targetWsId) {
-        const err: any = new Error('Corrupt transaction: missing workspaceId');
-        err.statusCode = 400;
-        throw err;
+        throw new HttpError('Corrupt transaction: missing workspaceId', 400);
       }
 
       if (workspaceId && workspaceId !== origData.workspaceId) {
-        const err: any = new Error('Workspace mismatch: transaction belongs to a different workspace');
-        err.statusCode = 403;
-        throw err;
+        throw new HttpError('Workspace mismatch: transaction belongs to a different workspace', 403);
       }
 
       if (user.developerWorkspaceId && user.developerWorkspaceId !== targetWsId) {
-        const err: any = new Error(`Forbidden: API key is scoped strictly to workspace ${user.developerWorkspaceId}`);
-        err.statusCode = 403;
-        throw err;
+        throw new HttpError(`Forbidden: API key is scoped strictly to workspace ${user.developerWorkspaceId}`, 403);
       }
 
       // Verify workspace membership & period lock date
       const wsDoc = await t.get(db.collection('workspaces').doc(targetWsId));
       if (!wsDoc.exists) {
-        const err: any = new Error('Workspace not found');
-        err.statusCode = 404;
-        throw err;
+        throw new HttpError('Workspace not found', 404);
       }
       const wsData = wsDoc.data();
       if (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin) {
-        const err: any = new Error('Not a member');
-        err.statusCode = 403;
-        throw err;
+        throw new HttpError('Not a member', 403);
       }
 
       // Check if already reversed — reversing twice must be impossible
       if (origData.reversalEventId) {
-        const err: any = new Error(`Transaction ${id} has already been reversed by ${origData.reversalEventId}.`);
-        err.statusCode = 400;
-        throw err;
+        throw new HttpError(`Transaction ${id} has already been reversed by ${origData.reversalEventId}.`, 400);
       }
 
       // Reject reversing a reversal transaction
       if (origData.type === 'reversal') {
-        const err: any = new Error(`Cannot reverse a transaction that is already a reversal.`);
-        err.statusCode = 400;
-        throw err;
+        throw new HttpError(`Cannot reverse a transaction that is already a reversal.`, 400);
       }
 
       // Status lock check on original
       if ((origData.status === 'certified' || origData.status === 'void') && !user.admin) {
-        const err: any = new Error(`Forbidden: Transaction ${id} status is locked (${origData.status}).`);
-        err.statusCode = 403;
-        throw err;
+        throw new HttpError(`Forbidden: Transaction ${id} status is locked (${origData.status}).`, 403);
       }
 
       // Validate reversal date against period lock (must land in an open period)
       const revDate = reversalDate || formatTzDate(new Date(), wsData?.timezone);
       const revLock = postingLock(revDate, wsData, user.uid);
       if (revLock) {
-        const err: any = new Error(`${lockMessage(revDate, revLock)} Choose a reversal date in an open period.`);
-        err.statusCode = 400;
-        throw err;
+        throw new HttpError(`${lockMessage(revDate, revLock)} Choose a reversal date in an open period.`, 400);
       }
 
       // Validate replacement date against period lock (must land in an open period)
@@ -1524,9 +1500,7 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
         const replDate = replacement.date || revDate;
         const replLock = postingLock(replDate, wsData, user.uid);
         if (replLock) {
-          const err: any = new Error(`${lockMessage(replDate, replLock)} Choose a replacement date in an open period.`);
-          err.statusCode = 400;
-          throw err;
+          throw new HttpError(`${lockMessage(replDate, replLock)} Choose a replacement date in an open period.`, 400);
         }
       }
 
@@ -1543,13 +1517,13 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
         }
       }
 
-      const accMap = new Map<string, any>();
+      const accMap = new Map<string, DocumentData>();
       if (accountIds.size > 0) {
         const accRefs = Array.from(accountIds).map(aid => db.collection('chartAccounts').doc(aid));
         const accSnaps = await t.getAll(...accRefs);
         for (const snap of accSnaps) {
           if (snap.exists) {
-            accMap.set(snap.id, snap.data());
+            accMap.set(snap.id, snap.data() || {});
           }
         }
       }
@@ -1558,14 +1532,14 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
       const reversalId = db.collection('transactions').doc().id;
       const reversalLines = TransactionTemplates.buildReversalLines(origData.lines || [], origData.description);
       const allowedMetaKeys = ['confidence', 'vaultDocId', 'tags', 'note', 'category', 'source', 'batchId', 'project', 'department'];
-      const cleanOrigMeta: Record<string, any> = {};
+      const cleanOrigMeta: Record<string, unknown> = {};
       if (origData.metadata) {
         for (const k of allowedMetaKeys) {
           if (k in origData.metadata) cleanOrigMeta[k] = origData.metadata[k];
         }
       }
 
-      const reversalTxPayload: any = {
+      const reversalTxPayload: Record<string, unknown> = {
         id: reversalId,
         workspaceId: targetWsId,
         uid: user.uid,
@@ -1598,12 +1572,10 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
       let validatedReplacement: Transaction | null = null;
       if (replacement) {
         if (!replacement.lines || !Array.isArray(replacement.lines) || replacement.lines.length === 0) {
-          const err = new Error('Replacement transaction must specify non-empty lines') as any;
-          err.status = 400;
-          throw err;
+          throw new HttpError('Replacement transaction must specify non-empty lines', 400);
         }
         const replId = replacement.id || db.collection('transactions').doc().id;
-        const replPayload: any = {
+        const replPayload: Record<string, unknown> = {
           ...replacement,
           id: replId,
           workspaceId: targetWsId,
@@ -1689,9 +1661,9 @@ transactionRouter.post('/:id/reverse', async (req, res) => {
       reversal: resultReversal,
       replacement: resultReplacement
     });
-  } catch (e: any) {
-    const statusCode = e.statusCode || (e instanceof LedgerPostingError ? e.status : (e.message === 'Transaction not found' ? 404 : (e.message?.includes('Forbidden') || e.message === 'Not a member' ? 403 : 400)));
-    res.status(statusCode).json({ error: e.message });
+  } catch (e) {
+    const statusCode = (e as { statusCode?: number }).statusCode || (e instanceof LedgerPostingError ? e.status : (errorMessage(e) === 'Transaction not found' ? 404 : (errorMessage(e).includes('Forbidden') || errorMessage(e) === 'Not a member' ? 403 : 400)));
+    res.status(statusCode).json({ error: errorMessage(e) });
   }
 });
 
@@ -1716,7 +1688,7 @@ transactionRouter.post('/intercompany/post', async (req, res) => {
       return res.status(400).json({ error: 'Missing required intercompany parameters (source, target, amount)' });
     }
 
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
 
     // 1. Validate permissions for BOTH entities (Intercompany requires group-level access)
@@ -1735,8 +1707,8 @@ transactionRouter.post('/intercompany/post', async (req, res) => {
       db.collection('chartAccounts').where('workspaceId', '==', targetWorkspaceId).get()
     ]);
 
-    const sourceAccounts = sourceAccsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-    const targetAccounts = targetAccsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    const sourceAccounts = sourceAccsSnap.docs.map(d => ({ id: d.id, ...d.data() } as DocumentData & { id: string }));
+    const targetAccounts = targetAccsSnap.docs.map(d => ({ id: d.id, ...d.data() } as DocumentData & { id: string }));
 
     let sourceClearing = sourceAccounts.find(a => a.role === 'intercompany' || (a.name || '').toLowerCase().includes('intercompany'));
     let targetClearing = targetAccounts.find(a => a.role === 'intercompany' || (a.name || '').toLowerCase().includes('intercompany'));
@@ -1780,7 +1752,7 @@ transactionRouter.post('/intercompany/post', async (req, res) => {
     const targetTxId = db.collection('transactions').doc().id;
 
     // SOURCE: Dr Intercompany Clearing / Cr Cash (Asset Transfer Out)
-    const sourceTx: any = {
+    const sourceTx: Record<string, unknown> = {
       id: sourceTxId,
       uid: user.uid,
       workspaceId: sourceWorkspaceId,
@@ -1809,7 +1781,7 @@ transactionRouter.post('/intercompany/post', async (req, res) => {
     };
 
     // TARGET: Dr Asset/Expense / Cr Intercompany Clearing (Liability Up)
-    const targetTx: any = {
+    const targetTx: Record<string, unknown> = {
       id: targetTxId,
       uid: user.uid,
       workspaceId: targetWorkspaceId,
@@ -1855,7 +1827,7 @@ transactionRouter.post('/intercompany/post', async (req, res) => {
       sourceTxId,
       targetTxId
     });
-  } catch (err: any) {
-    res.status(err.status || 500).json({ error: err.message });
+  } catch (err) {
+    res.status((err as { status?: number }).status || 500).json({ error: errorMessage(err) });
   }
 });

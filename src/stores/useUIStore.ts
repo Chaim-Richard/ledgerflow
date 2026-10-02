@@ -1,8 +1,21 @@
 import { create } from 'zustand';
-import { AppTab } from '../types';
+import type { AppTab, FilterCriteria } from '../types';
 import { parseRecordHash, recordHash } from '../lib/recordLinks';
 import { setDateDisplayFormat } from '../lib/utils';
 import type { RecordRef } from '../lib/recordLinks';
+
+/** A file being read into transactions (shown above the transaction list). */
+export interface ParsingItem { id: string; name: string; status: 'uploading' | 'parsing' | 'done' | 'error'; idempotencyKey?: string }
+
+/** A saved display choice, or the default when it is missing, unknown or storage is blocked. */
+function storedChoice<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
+  try {
+    const value = localStorage.getItem(key);
+    return allowed.includes(value as T) ? (value as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 const initialHash = typeof window !== 'undefined' ? parseRecordHash(window.location.hash) : { tab: '' };
 
@@ -38,8 +51,8 @@ interface UIState {
   isOnline: boolean;
   isSyncing: boolean;
   language: 'en' | 'he';
-  filterCriteria: any | null;
-  parsingQueue: Array<{ id: string, name: string, status: 'uploading' | 'parsing' | 'done' | 'error', idempotencyKey?: string }>;
+  filterCriteria: FilterCriteria | null;
+  parsingQueue: ParsingItem[];
   splittingTxId: string | null;
   isDevMode: boolean;
   theme: 'light' | 'dark' | 'system';
@@ -100,13 +113,13 @@ interface UIState {
   setArchitectureOpen: (val: boolean) => void;
   togglePrivacyMode: () => void;
   setShortcutOverlayOpen: (val: boolean) => void;
-  setFilterCriteria: (val: any | null) => void;
+  setFilterCriteria: (val: FilterCriteria | null) => void;
   setIsOnline: (val: boolean) => void;
   setIsSyncing: (val: boolean) => void;
-  setParsingQueue: (queue: any[]) => void;
+  setParsingQueue: (queue: ParsingItem[]) => void;
   setSplittingTxId: (id: string | null) => void;
-  addParsingItem: (item: { id: string, name: string, status: 'uploading' | 'parsing' | 'done' | 'error', idempotencyKey?: string }) => void;
-  updateParsingItem: (id: string, updates: any) => void;
+  addParsingItem: (item: ParsingItem) => void;
+  updateParsingItem: (id: string, updates: Partial<ParsingItem>) => void;
   setDevMode: (val: boolean) => void;
   setLexiconOverride: (key: string, lang: 'en' | 'he', value: string) => void;
   resetLexiconOverrides: () => void;
@@ -202,16 +215,16 @@ export const useUIStore = create<UIState>((set) => ({
     try { return Number(localStorage.getItem('lf_font_size_scale')) || 100; } catch (e) { return 100; }
   })(),
   fontSizePreset: (() => {
-    try { return (localStorage.getItem('lf_font_size_preset') as any) || 'normal'; } catch (e) { return 'normal'; }
+    return storedChoice('lf_font_size_preset', ['small', 'normal', 'medium', 'large', 'xlarge'] as const, 'normal');
   })(),
   fontFamily: (() => {
-    try { return (localStorage.getItem('lf_font_family') as any) || 'system'; } catch (e) { return 'system'; }
+    return storedChoice('lf_font_family', ['system', 'inter', 'jakarta', 'serif', 'mono'] as const, 'system');
   })(),
   rowDensity: (() => {
-    try { return (localStorage.getItem('lf_row_density') as any) || 'normal'; } catch (e) { return 'normal'; }
+    return storedChoice('lf_row_density', ['compact', 'normal', 'comfortable'] as const, 'normal');
   })(),
   accentColor: (() => {
-    try { return (localStorage.getItem('lf_accent_color') as any) || 'emerald'; } catch (e) { return 'emerald'; }
+    return storedChoice('lf_accent_color', ['emerald', 'indigo', 'amber', 'teal', 'violet', 'rose', 'slate'] as const, 'emerald');
   })(),
   highContrast: (() => {
     try { return localStorage.getItem('lf_high_contrast') === 'true'; } catch (e) { return false; }
@@ -292,22 +305,22 @@ export const useUIStore = create<UIState>((set) => ({
     
     // Check Intelligence & Lenses
     if (['radar', 'roi', 'signals', 'yield', 'burn', 'fx-exposure', 'growth-model', 'working-capital', 'pricing-optimizer', 'valuation'].includes(id)) {
-      s.activeTab = 'intelligence' as any;
+      s.activeTab = 'intelligence' as AppTab;
       s.activeIntelChannel = id;
     }
     // Check Settings
     else if (['billing', 'rule', 'blueprint', 'developer', 'security', 'shortcuts'].includes(id)) {
-      s.activeTab = 'settings' as any;
+      s.activeTab = 'settings' as AppTab;
       s.activeSettingsTab = id;
     }
     // Check Reports
     else if (['pnl', 'balance-sheet', 'cash-flow', 'trial-balance', 'general-ledger', 'tax', 'segment', 'compliance', 'financial-goals', 'ratios', 'profitability', 'forecast'].includes(id)) {
-      s.activeTab = 'reports' as any;
+      s.activeTab = 'reports' as AppTab;
       s.activeReportTab = id;
     }
     // Default to main tab
     else {
-      s.activeTab = id as any;
+      s.activeTab = id as AppTab;
     }
     
     if (typeof window !== 'undefined') {

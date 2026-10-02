@@ -59,6 +59,7 @@ export default function AsyncButton({
       {...props}
       onClick={handleClick}
       disabled={disabled || isPending}
+      aria-busy={isPending || undefined}
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all focus:outline-none focus:ring-2 focus:ring-[var(--brass)]/30 disabled:opacity-50 disabled:cursor-not-allowed",
         variants[variant],
@@ -67,7 +68,7 @@ export default function AsyncButton({
       )}
     >
       {isPending ? (
-        <Loader2 size={size === 'sm' || size === 'icon' ? 14 : 16} className="animate-spin" />
+        <Loader2 aria-hidden="true" size={size === 'sm' || size === 'icon' ? 14 : 16} className="animate-spin" />
       ) : icon ? (
         icon
       ) : null}

@@ -268,6 +268,10 @@ describe('Master Repair Board Verification Suite (#90, #78, #94, #95, #100, #99,
     });
     assert.equal(withSimulations.some(t => t.id === 'tx-ghost'), true);
 
+    // A search set from elsewhere (command palette "show …") filters like the search box
+    const paletteRes = TransactionQueryEngine.query({ ...baseOptions, filterCriteria: { searchTerm: '> 200' } });
+    assert.deepEqual(paletteRes.map(t => t.id), ['tx-3', 'tx-4']);
+
     // 2. Numeric Operator >
     const gtRes = TransactionQueryEngine.query({ ...baseOptions, searchTerm: '> 200' });
     assert.deepEqual(gtRes.map(t => t.id), ['tx-3', 'tx-4']);

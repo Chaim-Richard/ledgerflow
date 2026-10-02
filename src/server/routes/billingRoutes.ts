@@ -1,3 +1,4 @@
+import { errorMessage, requestUser, type RequestUser } from '../auth/requestUser';
 import express from "express";
 import crypto from "crypto";
 import { getDb, validateWorkspaceMember, FieldValue } from "../db/firestore.ts";
@@ -8,10 +9,10 @@ import { incrementShardedCounter, getShardedCounterValue } from "../services/sha
 
 export const billingRouter = express.Router();
 
-const errorStatus = (err: { message?: string }) => (err?.message?.startsWith('FORBIDDEN') ? 403 : err?.message?.startsWith('NOT_FOUND') ? 404 : 500);
+const errorStatus = (err: unknown) => (errorMessage(err).startsWith('FORBIDDEN') ? 403 : errorMessage(err).startsWith('NOT_FOUND') ? 404 : 500);
 
 /** Member check; with `roles`, the user must also hold one of them (billing changes are owner-only). */
-async function authorizeWorkspace(user: any, workspaceId: string, roles?: string[]) {
+async function authorizeWorkspace(user: RequestUser, workspaceId: string, roles?: string[]) {
   const db = getDb();
   if (!workspaceId || typeof workspaceId !== 'string') {
     throw new Error("NOT_FOUND: Invalid workspace identifier provided.");
@@ -22,8 +23,8 @@ async function authorizeWorkspace(user: any, workspaceId: string, roles?: string
       throw new Error(`FORBIDDEN: requires the ${roles.join(' or ')} role.`);
     }
     return data;
-  } catch (err: any) {
-    if (err.message?.includes("Forbidden") || err.message?.includes("not authorized") || err.message?.includes("not a member")) {
+  } catch (err) {
+    if (errorMessage(err).includes("Forbidden") || errorMessage(err).includes("not authorized") || errorMessage(err).includes("not a member")) {
       throw new Error("FORBIDDEN: User does not belong to this workspace.", { cause: err });
     }
     throw err;
@@ -32,10 +33,10 @@ async function authorizeWorkspace(user: any, workspaceId: string, roles?: string
 
 billingRouter.post("/checkout", async (req: express.Request, res: express.Response) => {
   try {
-    const workspaceId = (req.body.workspaceId as string) || (req as any).user?.developerWorkspaceId;
+    const workspaceId = (req.body.workspaceId as string) || requestUser(req)?.developerWorkspaceId;
     if (!workspaceId) return res.status(400).json({ status: "error", message: "Missing workspaceId" });
 
-    await authorizeWorkspace((req as any).user, workspaceId, ['owner']);
+    await authorizeWorkspace(requestUser(req), workspaceId, ['owner']);
 
     const stripe = getStripe();
     const { plan } = req.body;
@@ -105,18 +106,18 @@ billingRouter.post("/checkout", async (req: express.Request, res: express.Respon
     });
 
     res.json({ url: session.url });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[Stripe] Failed:", err);
-    res.status(errorStatus(err)).json({ status: "error", message: err.message });
+    res.status(errorStatus(err)).json({ status: "error", message: errorMessage(err) });
   }
 });
 
 billingRouter.post("/portal", async (req: express.Request, res: express.Response) => {
   try {
-    const workspaceId = (req.body.workspaceId as string) || (req as any).user?.developerWorkspaceId;
+    const workspaceId = (req.body.workspaceId as string) || requestUser(req)?.developerWorkspaceId;
     if (!workspaceId) return res.status(400).json({ status: "error", message: "Missing workspaceId" });
 
-    await authorizeWorkspace((req as any).user, workspaceId, ['owner']);
+    await authorizeWorkspace(requestUser(req), workspaceId, ['owner']);
 
     const db = getDb();
     const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
@@ -135,9 +136,9 @@ billingRouter.post("/portal", async (req: express.Request, res: express.Response
     });
 
     res.json({ url: session.url });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[Stripe Portal] Failed:", err);
-    res.status(errorStatus(err)).json({ status: "error", message: err.message });
+    res.status(errorStatus(err)).json({ status: "error", message: errorMessage(err) });
   }
 });
 
@@ -148,7 +149,7 @@ billingRouter.post("/verify-session", async (req: express.Request, res: express.
       return res.status(400).json({ status: "error", message: "Missing required parameters" });
     }
 
-    await authorizeWorkspace((req as any).user, workspaceId, ['owner']);
+    await authorizeWorkspace(requestUser(req), workspaceId, ['owner']);
 
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.retrieve(session_id);
@@ -187,9 +188,9 @@ billingRouter.post("/verify-session", async (req: express.Request, res: express.
     } else {
        return res.status(400).json({ status: "incomplete", message: "Session not paid or metadata mismatch" });
     }
-  } catch (err: any) {
+  } catch (err) {
      console.error("[Stripe Verify] Error:", err);
-     res.status(errorStatus(err)).json({ status: "error", message: errorStatus(err) === 403 ? err.message : "Stripe verification failed" });
+     res.status(errorStatus(err)).json({ status: "error", message: errorStatus(err) === 403 ? errorMessage(err) : "Stripe verification failed" });
   }
 });
 
@@ -198,7 +199,7 @@ billingRouter.get("/status", async (req: express.Request, res: express.Response)
     const workspaceId = (req.query.workspaceId as string);
     if (!workspaceId) return res.status(400).json({ status: "error", message: "Missing workspaceId" });
 
-    const wsData: any = (await authorizeWorkspace((req as any).user, workspaceId)) || {};
+    const wsData: any = (await authorizeWorkspace(requestUser(req), workspaceId)) || {};
 
     const db = getDb();
     const baselineQueries = wsData.totalQueriesThisMonth || 0;
@@ -224,9 +225,9 @@ billingRouter.get("/status", async (req: express.Request, res: express.Response)
     };
 
     res.json(statusData);
-  } catch (err: any) {
+  } catch (err) {
     console.error("[Billing Status Error]:", err);
-    res.status(errorStatus(err)).json({ status: "error", message: err.message });
+    res.status(errorStatus(err)).json({ status: "error", message: errorMessage(err) });
   }
 });
 
@@ -237,7 +238,7 @@ billingRouter.post("/record-compute", async (req: express.Request, res: express.
       return res.status(400).json({ status: "error", message: "Missing required query parameters: workspaceId and algorithmName" });
     }
 
-    const user = (req as any).user;
+    const user = requestUser(req);
     const wsData: any = (await authorizeWorkspace(user, workspaceId)) || {};
 
     const sanitizedWeight = Math.max(1, Math.min(1000, Math.floor(Math.abs(Number(weightScore) || 10))));
@@ -282,8 +283,8 @@ billingRouter.post("/record-compute", async (req: express.Request, res: express.
       traceRecord: ledgerEntry,
       updatedMetrics
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[Record Compute Error]:", err);
-    res.status(errorStatus(err)).json({ status: "error", message: err.message });
+    res.status(errorStatus(err)).json({ status: "error", message: errorMessage(err) });
   }
 });

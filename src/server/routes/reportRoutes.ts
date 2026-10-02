@@ -1,9 +1,12 @@
+import { errorMessage, requestUser } from '../auth/requestUser';
 import express from "express";
 import type { DecodedIdToken } from "../auth/supabaseAuth";
-import type { Query } from "../db/firestore";
+import type { DocumentData, Query } from "../db/firestore";
 import { z } from "zod";
 import { getDb, validateWorkspaceMember } from "../db/firestore";
-import { isPostable } from "../../lib/txFilters";
+import { isOpenBill, isOpenInvoice, isPostable, lineAmount } from "../../lib/txFilters";
+import { calculateAmountDue } from "../../lib/documentMath";
+import { toBaseCents } from "../reports/partyReports";
 import { ReportRangeSchema, WorkspaceIdSchema } from "../../schemas";
 import { parseLocalDate, getLocalDateISO } from "../../lib/utils";
 import crypto from "crypto";
@@ -16,15 +19,15 @@ import {
   computeStatement,
   computeTaxLiability
 } from "../reports/computeReports";
-import { Customer } from "../../types";
+import type { Bill, Budget, ChartAccount, Customer, Invoice, Payment, Transaction as LedgerTransaction } from "../../types";
 
 export const reportRouter = express.Router();
 
-const REPORT_CACHE = new Map<string, { data: any; expiry: number }>();
+const REPORT_CACHE = new Map<string, { data: unknown; expiry: number }>();
 const CACHE_TTL_MS = 60000; // 60 seconds
 
 function getCacheKey(req: express.Request): string {
-  const payload = JSON.stringify({ path: req.path, query: req.query, body: req.body, user: (req as any).user?.uid });
+  const payload = JSON.stringify({ path: req.path, query: req.query, body: req.body, user: requestUser(req)?.uid });
   return crypto.createHash('sha256').update(payload).digest('hex');
 }
 
@@ -36,12 +39,12 @@ interface AuthenticatedRequest extends express.Request {
   user: AuthUser;
 }
 
-function sendError(res: express.Response, message: string, status: number = 500, details?: any) {
+function sendError(res: express.Response, message: string, status: number = 500, details?: unknown) {
   console.error(`[API Error] ${status}: ${message} (Path: ${res.req?.originalUrl || "unknown"})`, details || "");
   res.status(status).json({
     status: "error",
     message,
-    ...(details && { details })
+    ...(details ? { details } : {})
   });
 }
 
@@ -63,15 +66,15 @@ async function getReportContext(req: AuthenticatedRequest, workspaceId: string, 
     txQuery = txQuery.where("date", "<=", endDate);
   }
   
-  const transactions: any[] = [];
+  const transactions: LedgerTransaction[] = [];
   const txStream = txQuery.stream();
   
-  for await (const chunk of txStream as any) {
-    transactions.push((chunk as any).data());
+  for await (const chunk of txStream as AsyncIterable<{ data: () => DocumentData }>) {
+    transactions.push(chunk.data() as LedgerTransaction);
   }
   
   return {
-    accounts: accountsSnap.docs.map((doc: any) => ({ id: doc.id, ...(doc.data() as any) })),
+    accounts: accountsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as ChartAccount),
     transactions
   };
 }
@@ -89,10 +92,10 @@ reportRouter.get(["/profit-and-loss", "/pl"], async (req, res) => {
     const pl = computeProfitAndLoss(accounts, transactions, startDate, endDate);
     REPORT_CACHE.set(cacheKey, { data: pl, expiry: Date.now() + CACHE_TTL_MS });
     res.json(pl);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Internal Reporting Error", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Internal Reporting Error", 500, errorMessage(error));
   }
 });
 
@@ -109,10 +112,10 @@ reportRouter.get("/balance-sheet", async (req, res) => {
     const bs = computeBalanceSheet(accounts, transactions, endDate);
     REPORT_CACHE.set(cacheKey, { data: bs, expiry: Date.now() + CACHE_TTL_MS });
     res.json(bs);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Internal Reporting Error", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Internal Reporting Error", 500, errorMessage(error));
   }
 });
 
@@ -130,10 +133,10 @@ reportRouter.get("/aging", async (req, res) => {
       .where("workspaceId", "==", workspaceId)
       .get();
 
-    let items = snap.docs.map((doc: any) => doc.data());
+    let items = snap.docs.map((doc) => doc.data() as Invoice | Bill);
     
-    const allowedStatuses = ["unpaid", "pending", "overdue", "sent", "partially_paid"];
-    items = items.filter(item => allowedStatuses.includes(item.status));
+    // open documents only (approved bills too; drafts, void, cancelled and paid are not owed)
+    items = items.filter(item => (type === 'ar' ? isOpenInvoice(item) : isOpenBill(item)));
     const today = parseLocalDate(getLocalDateISO());
     
     const aging = {
@@ -145,10 +148,9 @@ reportRouter.get("/aging", async (req, res) => {
       total: 0
     };
 
-    items.forEach((item: any) => {
-      const rawTotal = item.amountCents || 0;
-      const rawPaid = item.amountPaidCents || 0;
-      const outstanding = Math.max(0, rawTotal - rawPaid);
+    items.forEach((item) => {
+      // what is still owed (total less any deposit and what was paid), in the base currency
+      const outstanding = toBaseCents(calculateAmountDue(item), item.exchangeRate);
       if (outstanding <= 0) return;
 
       let diffDays = 0;
@@ -174,10 +176,10 @@ reportRouter.get("/aging", async (req, res) => {
     });
 
     res.json(aging);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate aging report", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate aging report", 500, errorMessage(error));
   }
 });
 
@@ -191,10 +193,10 @@ reportRouter.get("/trial-balance", async (req, res) => {
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, asOfDate);
     const tb = computeTrialBalance(accounts, transactions, asOfDate);
     res.json(tb);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Trial Balance Failure", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Trial Balance Failure", 500, errorMessage(error));
   }
 });
 
@@ -208,10 +210,10 @@ reportRouter.get("/cash-flow", async (req, res) => {
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, startDate, endDate);
     const cf = computeCashFlow(accounts, transactions, startDate, endDate);
     res.json(cf);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate cash flow statement", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate cash flow statement", 500, errorMessage(error));
   }
 });
 
@@ -252,15 +254,15 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
       db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get()
     ]);
 
-    let transactions: any[] = [];
+    let transactions: LedgerTransaction[] = [];
     await new Promise<void>((resolve, reject) => {
       txQuery.stream()
-        .on("data", (doc: any) => transactions.push(doc.data()))
+        .on("data", (doc: { data: () => DocumentData }) => transactions.push(doc.data() as LedgerTransaction))
         .on("end", () => resolve())
-        .on("error", async (err: any) => {
+        .on("error", async (err: unknown) => {
           try {
             const snap = await txQuery.get();
-            transactions = snap.docs.map((doc: any) => doc.data());
+            transactions = snap.docs.map((doc) => doc.data() as LedgerTransaction);
             resolve();
           } catch (fallbackErr) {
             reject(err);
@@ -268,25 +270,30 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
         });
     });
 
-    const budgets = budgetsSnap.docs.map((doc: any) => doc.data());
-    const accounts = accountsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    // Budgets name their account in targetId (by id, name or code, as Budgets → BudgetManager
+    // shows them); older budgets used accountId.
+    const budgets = budgetsSnap.docs.map((doc) => doc.data() as Budget & { accountId?: string });
+    const accounts = accountsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as ChartAccount);
 
     transactions = transactions.filter(tx => tx.date && tx.date.startsWith(targetMonth));
 
-    const report = budgets.map((b: any) => {
-      const account = accounts.find(a => a.id === b.accountId);
+    const report = budgets.map((b) => {
+      const target = b.targetId || b.accountId || '';
+      const targetLower = target.toLowerCase();
+      const account = accounts.find(a =>
+        a.id === target || (a.name || '').toLowerCase() === targetLower || (a.code || '').toLowerCase() === targetLower);
       let actual = 0;
-      transactions.forEach((tx: any) => {
+      transactions.forEach((tx) => {
         if (!isPostable(tx)) return;
-        tx.lines?.forEach((line: any) => {
-          if (line.accountId === b.accountId) {
-            actual += Math.abs(line.amountCents);
+        tx.lines?.forEach((line) => {
+          if (line.accountId === target || (account && line.accountId === account.id)) {
+            actual += Math.max(0, lineAmount(line, tx));
           }
         });
       });
 
       return {
-        accountName: account?.name || 'Unknown',
+        accountName: account?.name || target || 'Unknown',
         budget: b.amountCents,
         actual,
         variance: b.amountCents - actual,
@@ -295,10 +302,10 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
     });
 
     res.json(report);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate budget vs actual report", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate budget vs actual report", 500, errorMessage(error));
   }
 });
 
@@ -312,10 +319,10 @@ reportRouter.get("/general-ledger", async (req, res) => {
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, endDate);
     const gl = computeGeneralLedger(accounts, transactions, startDate, endDate, accountId);
     res.json(gl);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate General Ledger report", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate General Ledger report", 500, errorMessage(error));
   }
 });
 
@@ -344,9 +351,9 @@ reportRouter.get("/statement", async (req, res) => {
       db.collection("payments").where("workspaceId", "==", workspaceId).get()
     ]);
 
-    const invoices = invSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-    const bills = billSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-    const payments = paySnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const invoices = invSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Invoice);
+    const bills = billSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Bill);
+    const payments = paySnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Payment);
 
     const statement = computeStatement(
       { id: contactSnap.id, ...contactSnap.data() } as unknown as Customer,
@@ -359,10 +366,10 @@ reportRouter.get("/statement", async (req, res) => {
     );
 
     res.json(statement);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate Statement", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate Statement", 500, errorMessage(error));
   }
 });
 
@@ -381,14 +388,14 @@ reportRouter.get("/tax-liability", async (req, res) => {
       db.collection("bills").where("workspaceId", "==", workspaceId).get()
     ]);
 
-    const invoices = invSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-    const bills = billSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    const invoices = invSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Invoice);
+    const bills = billSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Bill);
 
     const taxLiability = computeTaxLiability(invoices, bills, startDate, endDate);
     res.json(taxLiability);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate Tax Liability report", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate Tax Liability report", 500, errorMessage(error));
   }
 });

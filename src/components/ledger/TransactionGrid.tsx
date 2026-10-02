@@ -459,7 +459,7 @@ export default function TransactionGrid() {
   }, [safeTransactions, accounts]);
 
   const toggleColumnFilter = (column: string, value: string) => {
-    const keyMap: Record<string, string> = {
+    const keyMap: Record<string, 'selectedCategories' | 'selectedProjects' | 'selectedClasses' | 'selectedLocations' | 'selectedStatuses'> = {
       category: 'selectedCategories',
       project: 'selectedProjects',
       class: 'selectedClasses',
@@ -1146,7 +1146,7 @@ export default function TransactionGrid() {
                    aria-label={`Remove ${key} filter`}
                    onClick={() => {
                      const next = { ...filterCriteria };
-                     delete next[key];
+                     delete next[key as keyof FilterCriteria];
                      onFilterApplied(next);
                    }}
                    className="hover:text-rose-600 transition-colors ml-1"
@@ -1262,7 +1262,7 @@ export default function TransactionGrid() {
                   <button 
                     aria-label="Filter by category"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'category' ? null : 'category'); }}
-                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedCategories?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", ((filterCriteria?.selectedCategories?.length ?? 0) > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter aria-hidden="true" size={10} />
                   </button>
@@ -1325,7 +1325,7 @@ export default function TransactionGrid() {
                   <button 
                     aria-label="Filter by project"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'project' ? null : 'project'); }}
-                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedProjects?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", ((filterCriteria?.selectedProjects?.length ?? 0) > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter aria-hidden="true" size={10} />
                   </button>
@@ -1535,7 +1535,7 @@ export default function TransactionGrid() {
                   <button 
                     aria-label="Filter by status"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'status' ? null : 'status'); }}
-                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedStatuses?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", ((filterCriteria?.selectedStatuses?.length ?? 0) > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter aria-hidden="true" size={10} />
                   </button>

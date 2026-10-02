@@ -1,3 +1,4 @@
+import { formatCurrency } from '../../../lib/utils';
 import React, { useState, useMemo, useId } from 'react';
 import { AutoRule, Transaction } from '../../../types';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
@@ -659,7 +660,7 @@ export const RulesSettings: React.FC = () => {
                     <div key={JSON.stringify([match.transactionId, match.matchedRule.id])} className="p-3 bg-white text-xs hover:bg-neutral-50 flex items-start justify-between gap-4">
                       <div>
                         <div className="font-semibold text-neutral-900">
-                          {match.txOriginal.date} — {match.txOriginal.description} (${(match.txOriginal.totalAmountCents / 100).toFixed(2)})
+                          {match.txOriginal.date} — {match.txOriginal.description} ({formatCurrency(match.txOriginal.totalAmountCents)})
                         </div>
                         <div className="text-[11px] text-neutral-500 mt-0.5">
                           Matched rule: <span className="font-medium text-neutral-800">"{match.matchedRule.name || match.matchedRule.id}"</span>
@@ -905,7 +906,7 @@ export const RulesSettings: React.FC = () => {
                         <div className="max-h-32 overflow-y-auto space-y-1 bg-white p-2 rounded-sm border border-neutral-200">
                           {singleRuleTestResult.slice(0, 5).map(tx => (
                             <div key={tx.id} className="text-[11px] text-neutral-600 truncate">
-                              {tx.date} — {tx.description} (${(tx.totalAmountCents / 100).toFixed(2)})
+                              {tx.date} — {tx.description} ({formatCurrency(tx.totalAmountCents)})
                             </div>
                           ))}
                           {singleRuleTestResult.length > 5 && (

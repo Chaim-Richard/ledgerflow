@@ -1,3 +1,4 @@
+import { errorMessage, requestUser } from '../auth/requestUser';
 import express from 'express';
 import { getDb } from '../db/firestore';
 
@@ -17,7 +18,7 @@ export function requirePlanCapacity(resource: 'transactions' | 'seats' | 'storag
         (req.body?.workspaceId as string) ||
         (req.body?.transaction?.workspaceId as string) ||
         (req.query?.workspaceId as string) ||
-        (req as any).user?.developerWorkspaceId;
+        requestUser(req)?.developerWorkspaceId;
 
       if (!workspaceId) {
         return res.status(400).json({ status: 'error', message: 'Missing workspaceId parameter' });
@@ -89,9 +90,9 @@ export function requirePlanCapacity(resource: 'transactions' | 'seats' | 'storag
       }
 
       next();
-    } catch (err: any) {
+    } catch (err) {
       console.error('[requirePlanCapacity] Quota check error:', err);
-      return res.status(500).json({ status: 'error', message: err.message || 'Capacity verification failed' });
+      return res.status(500).json({ status: 'error', message: errorMessage(err) || 'Capacity verification failed' });
     }
   };
 }

@@ -3,6 +3,7 @@ import type { TestDocument, TestResponseBody } from './helpers/mockTypes';
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { handlePdfRequest } from '../server/routes/documentRoutes';
+import type { Firestore } from '../server/db/firestore';
 import { generateDocumentPdf } from '../server/services/pdfService';
 
 class MockPdfDb {
@@ -148,7 +149,7 @@ function createMockHttp(type: string, id: string, workspaceId = 'ws-test') {
 }
 
 describe('Document PDF Generator & Endpoint (%PDF- Magic Bytes Guarantee)', () => {
-  const mockDb = new MockPdfDb();
+  const mockDb = new MockPdfDb() as unknown as Firestore;
 
   const testCases = [
     { type: 'invoice', id: 'inv-101' },

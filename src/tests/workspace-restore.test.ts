@@ -84,7 +84,7 @@ describe('Workspace restore', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, 
 });
 
 test('the restore endpoint is owner-only', async () => {
-  const fs = await import('node:fs');
-  const server = fs.readFileSync('server.ts', 'utf8');
+  const { serverSource } = await import('./helpers/serverSource');
+  const server = serverSource();
   assert.match(server, /app\.post\("\/api\/v1\/workspaces\/:workspaceId\/restore", apiAuthenticate, requireWorkspaceRole\(\['owner'\]\)/);
 });

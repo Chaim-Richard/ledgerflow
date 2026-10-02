@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Save, CreditCard, Sparkles } from 'lucide-react';
@@ -220,10 +221,11 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     if (!dirty || safeConfirm('Discard your changes to this bill?')) onClose();
   };
 
+  const { dialogProps, titleId } = useDialog(requestClose, isOpen);
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+    <div {...dialogProps} className="fixed inset-0 z-[600] flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -244,7 +246,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <CreditCard size={24} />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Record New Bill</h3>
+              <h2 id={titleId} className="text-2xl font-black text-[var(--text)] tracking-tight">{editingExisting ? `Edit bill ${bill.number || ''}`.trim() : 'Record New Bill'}</h2>
               <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Purchases & Payables</p>
             </div>
           </div>
@@ -345,7 +347,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="micro-label">Expense Allocation</h4>
+              <h3 className="micro-label">Expense Allocation</h3>
               <button 
                 type="button"
                 aria-label="Add Split Expense"
@@ -445,8 +447,8 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 </div>
                 {attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
-                     {attachments.map((f, i) => (
-                       <span key={i} className="px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded-lg">{f.name}</span>
+                     {attachments.map(f => (
+                       <span key={`${f.name}-${f.size}-${f.lastModified}`} className="px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded-lg">{f.name}</span>
                      ))}
                   </div>
                 )}

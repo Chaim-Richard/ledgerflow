@@ -1,3 +1,4 @@
+import { errorMessage } from '../../lib/errorRemedies';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
@@ -39,11 +40,11 @@ import type { BankLineActionTarget } from './BankLineActionDialog';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function Reconciliation() {
-  const user = useAuthStore((s) => s.user);
-  useAuthStore((s) => s.currentWorkspaceId);
-  const transactions = useLedgerStore((s) => s.transactions);
-  const bankLines = useLedgerStore((s) => s.bankLines || []);
-  const accounts = useLedgerStore((s) => s.accounts);
+  const user = useAuthStore(s => s.user);
+  useAuthStore(s => s.currentWorkspaceId);
+  const transactions = useLedgerStore(s => s.transactions);
+  const bankLines = useLedgerStore(s => s.bankLines || []);
+  const accounts = useLedgerStore(s => s.accounts);
   useLedgerCollections('bankLines');
   const txActions = useTransactionActions();
   const onMatch = txActions.handleReconcileMatch;
@@ -206,9 +207,9 @@ export default function Reconciliation() {
         }
         toast.success(`Synapses Active: Successfully integrated ${matchedCount} verified bonds.`);
         setShowAutoConfirm(false);
-    } catch(err) {
+    } catch (err) {
         toast.error("Could not complete reconciliation cycle.", {
-          description: `Please try again. (${(err as Error)?.message || 'Network sync error'})`
+          description: `Please try again. (${errorMessage(err) || 'Network sync error'})`
         });
     } finally {
         setIsProcessing(false);
@@ -222,7 +223,7 @@ export default function Reconciliation() {
        toast.success("Autonomous batch matching complete!");
     } catch (e) {
         toast.error("Could not complete batch alignment.", {
-          description: `Please try again. (${(e as Error)?.message || 'Network sync error'})`
+          description: `Please try again. (${errorMessage(e) || 'Network sync error'})`
         });
     } finally {
        setIsAutoReconciling(false);
@@ -240,7 +241,7 @@ export default function Reconciliation() {
     try {
       await onUndoMatch(bankLineId, matchedTxId);
     } catch (e) {
-      toast.error("Failed to break alignment link: " + (e as Error).message);
+      toast.error("Failed to break alignment link: " + errorMessage(e));
     } finally {
       setIsProcessing(false);
     }

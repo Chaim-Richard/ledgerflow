@@ -22,13 +22,21 @@ import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { Labelled } from '../ui/Labelled';
 
-export interface ReconciliationCompletion { accountId?: string; accountName: string; statementDate: string; statementBalanceCents: number; reconciledIds: string[]; timestamp: string }
+/** What a finished reconciliation reports back (saved by the Ledger screen). */
+export interface ReconciliationResult {
+  accountId?: string;
+  accountName: string;
+  statementDate: string;
+  statementBalanceCents: number;
+  reconciledIds: string[];
+  timestamp: string;
+}
 
 interface ReconciliationWizardProps {
   isOpen: boolean;
   onClose: () => void;
   accounts: ChartAccount[];
-  onComplete: (data: ReconciliationCompletion) => Promise<void> | void;
+  onComplete: (data: ReconciliationResult) => Promise<void> | void;
   formatCurrency: (val: number) => string;
 }
 

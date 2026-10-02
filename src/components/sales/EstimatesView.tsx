@@ -172,7 +172,7 @@ export default function EstimatesView() {
       {/* New Estimate Modal / Form */}
       {isCreating && (
         <form onSubmit={handleCreateEstimate} className="p-6 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Create New Quote / Estimate</h3>
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Create New Quote / Estimate</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Labelled labelClassName="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" label="Customer *">

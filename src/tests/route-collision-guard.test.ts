@@ -1,7 +1,8 @@
 /**
  * No two server routes answer the same method and path (L-130: the backup import in server.ts and
  * "undo workspace deletion" in workspaceRoutes.ts were both POST /api/v1/workspaces/:id/restore,
- * so the second could never run). Reads server.ts and the routers it mounts.
+ * so the second could never run). Reads server.ts, the route files it registers on the app
+ * (registerXRoutes, F-01) and the routers it mounts.
  */
 import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,6 +25,14 @@ function serverRoutes(): Array<{ method: string; path: string; where: string }> 
   }
   for (const m of server.matchAll(METHOD)) {
     if (m[1] === 'app') routes.push({ method: m[2], path: norm(m[4]), where: 'server.ts' });
+  }
+  // route files that add routes to the app directly: registerXRoutes(app, …)
+  for (const m of server.matchAll(/import\s*\{\s*(register\w+Routes)\s*\}\s*from\s*["'](\.\/src\/server\/routes\/[\w./-]+?)(?:\.ts)?["']/g)) {
+    const file = path.join(ROOT, `${m[2]}.ts`);
+    const text = fs.readFileSync(file, 'utf8');
+    for (const r of text.matchAll(METHOD)) {
+      if (r[1] === 'app') routes.push({ method: r[2], path: norm(r[4]), where: path.relative(ROOT, file) });
+    }
   }
   for (const m of server.matchAll(/app\.use\(\s*["'`]([^"'`]+)["'`][^)]*?\b(\w+Router)\s*\)/g)) {
     const file = routerFiles.get(m[2]);

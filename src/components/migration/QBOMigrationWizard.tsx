@@ -577,12 +577,12 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
             </div>
             
             <div className="flex items-center gap-2 self-end sm:self-center">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${step >= i ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>
-                    {step > i ? <CheckCircle2 aria-hidden="true" size={16} /> : i}
+              {[1, 2, 3].map(n => (
+                <div key={n} className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${step >= n ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>
+                    {step > n ? <CheckCircle2 aria-hidden="true" size={16} /> : n}
                   </div>
-                  {i < 3 && <div className={`w-6 h-0.5 ${step > i ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
+                  {n < 3 && <div className={`w-6 h-0.5 ${step > n ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
                 </div>
               ))}
             </div>

@@ -68,6 +68,15 @@ export function getCurrencyDivisor(currency?: string): number {
 /**
  * Safe currency formatter with fallback
  */
+/**
+ * An amount with its direction as text, not only colour (E-26): "+$12.00" for money in,
+ * "−$12.00" (minus sign) for money out, no sign when neither. `cents` is the size (any sign).
+ */
+export function formatSignedAmount(cents: number, direction: 'in' | 'out' | 'none', currency?: string): string {
+  const sign = direction === 'in' ? '+' : direction === 'out' ? '\u2212' : '';
+  return `${sign}${formatCurrency(Math.abs(cents || 0), currency)}`;
+}
+
 export function formatCurrency(cents: number | undefined | null, currency?: string): string {
   let targetCurrency = currency;
   if (!targetCurrency) {

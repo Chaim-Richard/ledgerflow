@@ -17,6 +17,7 @@ function updateBaseline() {
     orphanFiles: Infinity,
     eslintWarnings: Infinity,
     untestedViews: Infinity,
+    overlaysWithoutDialog: Infinity,
   };
 
   if (fs.existsSync(baselinePath)) {

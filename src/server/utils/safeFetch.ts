@@ -1,3 +1,4 @@
+import { errorMessage } from '../auth/requestUser';
 import dns from 'node:dns/promises';
 import net from 'node:net';
 
@@ -154,11 +155,11 @@ export async function validateSafeUrl(urlString: string, allowedHostnames?: stri
         }
       }
     }
-  } catch (err: any) {
-    if (err.message.includes('SSRF Prevention')) {
+  } catch (err) {
+    if (errorMessage(err).includes('SSRF Prevention')) {
       throw err;
     }
-    throw new Error(`DNS resolution failed for host ${hostname}: ${err.message}`, { cause: err });
+    throw new Error(`DNS resolution failed for host ${hostname}: ${errorMessage(err)}`, { cause: err });
   }
 
   return url;

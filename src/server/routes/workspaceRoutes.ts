@@ -1,3 +1,4 @@
+import { errorMessage, requestUser } from '../auth/requestUser';
 import { notify } from '../services/notificationService';
 import express from 'express';
 import type { DecodedIdToken } from '../auth/supabaseAuth';
@@ -28,11 +29,11 @@ export interface AuthenticatedRequest extends express.Request {
   user: AuthUser;
 }
 
-function sendError(res: express.Response, message: string, status: number = 500, details?: any) {
+function sendError(res: express.Response, message: string, status: number = 500, details?: unknown) {
   res.status(status).json({
     status: 'error',
     message,
-    ...(details && { details })
+    ...(details ? { details } : {})
   });
 }
 
@@ -63,21 +64,26 @@ export function requireWorkspaceRole(allowedRoles: string[]) {
         return sendError(res, `Forbidden: requires one of roles [${allowedRoles.join(', ')}]`, 403);
       }
 
-      (authReq as any).userRole = userRole;
+      (authReq as AuthenticatedRequest & { userRole?: string }).userRole = userRole;
       next();
-    } catch (err: any) {
-      if (err.message === 'FORBIDDEN' || /Unauthorized|not a member/i.test(err.message || '')) return sendError(res, 'Forbidden', 403);
-      if (err.message === 'NOT_FOUND' || /Workspace not found/i.test(err.message || '')) return sendError(res, 'Workspace not found', 404);
-      sendError(res, 'Role Authorization Error', 500, err.message);
+    } catch (err) {
+      if (errorMessage(err) === 'FORBIDDEN' || /Unauthorized|not a member/i.test(errorMessage(err) || '')) return sendError(res, 'Forbidden', 403);
+      if (errorMessage(err) === 'NOT_FOUND' || /Workspace not found/i.test(errorMessage(err) || '')) return sendError(res, 'Workspace not found', 404);
+      sendError(res, 'Role Authorization Error', 500, errorMessage(err));
     }
   };
 }
 
-export async function allocateNextNumber(db: any, workspaceId: string, type: 'invoice' | 'bill' | 'estimate'): Promise<string> {
+/**
+ * Next number of a workspace's invoice/bill/estimate series, in one database transaction (no gaps,
+ * no duplicates). A new series starts with this year in its prefix (INV-<year>-0001).
+ */
+export async function allocateNextNumber(db: Firestore, workspaceId: string, type: 'invoice' | 'bill' | 'estimate', today: string = formatTzDate(new Date())): Promise<string> {
+  const defaultPrefix = `${type === 'invoice' ? 'INV' : type === 'bill' ? 'BIL' : 'EST'}-${today.slice(0, 4)}-`;
   const nsDocRef = db.collection('numberingSeries').doc(`${workspaceId}_${type}`);
   const wsRef = db.collection('workspaces').doc(workspaceId);
 
-  return await db.runTransaction(async (tx: any) => {
+  return await db.runTransaction(async (tx) => {
     const nsSnap = await tx.get(nsDocRef);
     
     let prefix: string;
@@ -86,7 +92,7 @@ export async function allocateNextNumber(db: any, workspaceId: string, type: 'in
 
     if (nsSnap.exists) {
       const data = nsSnap.data() || {};
-      prefix = data.prefix ?? (type === 'invoice' ? 'INV-2026-' : type === 'bill' ? 'BIL-2026-' : 'EST-2026-');
+      prefix = data.prefix ?? defaultPrefix;
       nextNum = data.nextNumber ?? 1;
       padding = data.padding ?? 4;
 
@@ -101,22 +107,22 @@ export async function allocateNextNumber(db: any, workspaceId: string, type: 'in
       const ns = wsData.numberingSeries || {};
 
       if (ns[type] && typeof ns[type] === 'object') {
-        prefix = ns[type].prefix ?? (type === 'invoice' ? 'INV-2026-' : type === 'bill' ? 'BIL-2026-' : 'EST-2026-');
+        prefix = ns[type].prefix ?? defaultPrefix;
         nextNum = ns[type].nextNumber ?? 1;
         padding = ns[type].padding ?? 4;
       } else {
         // Fallback for legacy simple fields
         if (type === 'invoice') {
-          prefix = ns.invoicePrefix || 'INV-2026-';
+          prefix = ns.invoicePrefix || defaultPrefix;
           nextNum = ns.invoiceNextNumber || 1;
         } else if (type === 'bill') {
-          prefix = ns.billPrefix || 'BIL-2026-';
+          prefix = ns.billPrefix || defaultPrefix;
           nextNum = ns.billNextNumber || 1;
         } else if (type === 'estimate') {
-          prefix = ns.estimatePrefix || 'EST-2026-';
+          prefix = ns.estimatePrefix || defaultPrefix;
           nextNum = ns.estimateNextNumber || 1;
         } else {
-          prefix = type === 'invoice' ? 'INV-2026-' : type === 'bill' ? 'BIL-2026-' : 'EST-2026-';
+          prefix = defaultPrefix;
           nextNum = 1;
         }
       }
@@ -155,8 +161,8 @@ workspaceRouter.post('/:workspaceId/apply-template', requireWorkspaceRole(['owne
     res.json({ status: 'success', ...result });
   } catch (err) {
     if (err instanceof z.ZodError) return sendError(res, 'Invalid template request', 400, err.issues);
-    if (err instanceof TemplateError) return sendError(res, err.message, err.status);
-    sendError(res, 'Could not apply the template', 500, err instanceof Error ? err.message : String(err));
+    if (err instanceof TemplateError) return sendError(res, errorMessage(err), err.status);
+    sendError(res, 'Could not apply the template', 500, err instanceof Error ? errorMessage(err) : String(err));
   }
 });
 
@@ -185,7 +191,7 @@ workspaceRouter.post('/:workspaceId/import-maps', requireWorkspaceRole(['owner',
     res.json({ status: 'success' });
   } catch (err) {
     if (err instanceof z.ZodError) return sendError(res, 'Invalid column layout', 400, err.issues);
-    sendError(res, 'Could not save the column layout', 500, err instanceof Error ? err.message : String(err));
+    sendError(res, 'Could not save the column layout', 500, err instanceof Error ? errorMessage(err) : String(err));
   }
 });
 
@@ -219,8 +225,8 @@ workspaceRouter.post('/:workspaceId/import-records', requireWorkspaceRole(['owne
     res.json({ status: 'success', ...result });
   } catch (err) {
     if (err instanceof z.ZodError) return sendError(res, 'Invalid import request', 400, err.issues);
-    if (err instanceof ImportError) return sendError(res, err.message, err.status, err.issues.length ? err.issues : undefined);
-    sendError(res, 'Could not import the records', 500, err instanceof Error ? err.message : String(err));
+    if (err instanceof ImportError) return sendError(res, errorMessage(err), err.status, err.issues.length ? err.issues : undefined);
+    sendError(res, 'Could not import the records', 500, err instanceof Error ? errorMessage(err) : String(err));
   }
 });
 
@@ -231,8 +237,8 @@ workspaceRouter.post('/:workspaceId/import-records/:batchId/undo', requireWorksp
     const result = await undoImport(getDb(), { workspaceId, uid: user.uid, email: user.email, batchId, allowAccounts: LEDGER_ADMIN_ROLES.includes(roleOf(req)) });
     res.json({ status: 'success', ...result });
   } catch (err) {
-    if (err instanceof ImportError) return sendError(res, err.message, err.status);
-    sendError(res, 'Could not undo the import', 500, err instanceof Error ? err.message : String(err));
+    if (err instanceof ImportError) return sendError(res, errorMessage(err), err.status);
+    sendError(res, 'Could not undo the import', 500, err instanceof Error ? errorMessage(err) : String(err));
   }
 });
 
@@ -250,10 +256,10 @@ workspaceRouter.post('/:workspaceId/next-number', requireWorkspaceRole(['owner',
     const formattedNumber = await allocateNextNumber(db, workspaceId, type);
 
     res.json({ number: formattedNumber });
-  } catch (err: any) {
-    if (err.message === 'FORBIDDEN') return sendError(res, 'Forbidden', 403);
-    if (err.message === 'NOT_FOUND') return sendError(res, 'Workspace not found', 404);
-    sendError(res, 'Failed to allocate next document number', 500, err.message);
+  } catch (err) {
+    if (errorMessage(err) === 'FORBIDDEN') return sendError(res, 'Forbidden', 403);
+    if (errorMessage(err) === 'NOT_FOUND') return sendError(res, 'Workspace not found', 404);
+    sendError(res, 'Failed to allocate next document number', 500, errorMessage(err));
   }
 });
 
@@ -265,7 +271,7 @@ workspaceRouter.all('/:workspaceId/next-number', (req, res) => {
 
 import { generateInviteToken } from '../../lib/inviteManager';
 
-export function countWorkspaceOwners(workspaceData: any): { count: number; ownerUids: string[] } {
+export function countWorkspaceOwners(workspaceData: { uid?: string; roles?: Record<string, unknown> }): { count: number; ownerUids: string[] } {
   const ownerUids: string[] = [];
   if (workspaceData.uid) ownerUids.push(workspaceData.uid);
   if (workspaceData.roles) {
@@ -296,9 +302,9 @@ workspaceRouter.get('/:workspaceId/roles', async (req, res) => {
       ownerUid: data.uid,
       roles: data.roles || {}
     });
-  } catch (err: any) {
-    if (err.message === 'FORBIDDEN') return sendError(res, 'Forbidden', 403);
-    sendError(res, 'Failed to fetch roles', 500, err.message);
+  } catch (err) {
+    if (errorMessage(err) === 'FORBIDDEN') return sendError(res, 'Forbidden', 403);
+    sendError(res, 'Failed to fetch roles', 500, errorMessage(err));
   }
 });
 
@@ -342,8 +348,8 @@ const handleUpdateRole = async (req: express.Request, res: express.Response) => 
       // Record audit log entry
       await writeServerAuditLog({
         workspaceId,
-        uid: (req as any).user.uid,
-        email: (req as any).user.email || '',
+        uid: requestUser(req).uid,
+        email: requestUser(req).email || '',
         action: 'ROLE_CHANGE',
         entityType: 'workspace',
         entityId: workspaceId,
@@ -357,12 +363,12 @@ const handleUpdateRole = async (req: express.Request, res: express.Response) => 
     });
 
     res.json({ status: 'success', targetUid, role, previousRole });
-  } catch (err: any) {
-    if (err.message === 'LAST_OWNER_PROTECTION') {
+  } catch (err) {
+    if (errorMessage(err) === 'LAST_OWNER_PROTECTION') {
       return sendError(res, 'Cannot demote or remove the last owner of the workspace.', 400);
     }
-    if (err.message === 'NOT_FOUND') return sendError(res, 'Workspace not found', 404);
-    sendError(res, 'Failed to update workspace role', 500, err.message);
+    if (errorMessage(err) === 'NOT_FOUND') return sendError(res, 'Workspace not found', 404);
+    sendError(res, 'Failed to update workspace role', 500, errorMessage(err));
   }
 };
 
@@ -379,8 +385,8 @@ workspaceRouter.get('/:workspaceId/invites', requireWorkspaceRole(['owner', 'acc
     const snap = await db.collection('invites').where('workspaceId', '==', workspaceId).limit(100).get();
     const invites = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     res.json({ status: 'success', invites });
-  } catch (err: any) {
-    sendError(res, 'Failed to fetch invites', 500, err.message);
+  } catch (err) {
+    sendError(res, 'Failed to fetch invites', 500, errorMessage(err));
   }
 });
 
@@ -419,15 +425,15 @@ workspaceRouter.post('/:workspaceId/invites', requireWorkspaceRole(['owner']), a
 
     await inviteRef.set({
       ...invite,
-      invitedByUid: (req as any).user.uid,
+      invitedByUid: requestUser(req).uid,
       createdAt: new Date().toISOString()
     });
 
     // Write audit log entry
     await writeServerAuditLog({
       workspaceId,
-      uid: (req as any).user.uid,
-      email: (req as any).user.email || '',
+      uid: requestUser(req).uid,
+      email: requestUser(req).email || '',
       action: 'INVITE_SENT',
       entityType: 'workspace',
       entityId: workspaceId,
@@ -442,12 +448,12 @@ workspaceRouter.post('/:workspaceId/invites', requireWorkspaceRole(['owner']), a
     await notify(db, {
       workspaceId, kind: 'member.invited',
       title: `${invite.email} was invited`,
-      message: `Invited as ${invite.role} by ${(req as any).user.email || 'a team member'}.`,
-      eventKey: `member.invited:${invite.id || invite.token}`, actorUid: (req as any).user.uid,
+      message: `Invited as ${invite.role} by ${requestUser(req).email || 'a team member'}.`,
+      eventKey: `member.invited:${invite.id || invite.token}`, actorUid: requestUser(req).uid,
     });
     res.json({ status: 'success', invite });
-  } catch (err: any) {
-    sendError(res, 'Failed to create workspace invite', 500, err.message);
+  } catch (err) {
+    sendError(res, 'Failed to create workspace invite', 500, errorMessage(err));
   }
 });
 
@@ -469,8 +475,8 @@ workspaceRouter.delete('/:workspaceId/invites/:inviteId', requireWorkspaceRole([
     });
 
     res.json({ status: 'success', message: 'Invite revoked successfully' });
-  } catch (err: any) {
-    sendError(res, 'Failed to revoke invite', 500, err.message);
+  } catch (err) {
+    sendError(res, 'Failed to revoke invite', 500, errorMessage(err));
   }
 });
 
@@ -489,8 +495,8 @@ workspaceRouter.post('/:workspaceId/opening-balances', requireWorkspaceRole(['ow
     const result = await recordOpeningBalances(getDb(), { workspaceId, uid: user.uid, email: user.email, ...parsed.data });
     res.json({ status: 'success', ...result });
   } catch (err) {
-    if (err instanceof SetupError) return sendError(res, err.message, err.status);
-    sendError(res, 'Failed to record the opening balances', 500, err instanceof Error ? err.message : String(err));
+    if (err instanceof SetupError) return sendError(res, errorMessage(err), err.status);
+    sendError(res, 'Failed to record the opening balances', 500, err instanceof Error ? errorMessage(err) : String(err));
   }
 });
 
@@ -500,8 +506,8 @@ workspaceRouter.post('/:workspaceId/setup-complete', requireWorkspaceRole(['owne
     await completeSetup(getDb(), { workspaceId, uid: (req as AuthenticatedRequest).user.uid });
     res.json({ status: 'success' });
   } catch (err) {
-    if (err instanceof SetupError) return sendError(res, err.message, err.status);
-    sendError(res, 'Failed to finish the setup', 500, err instanceof Error ? err.message : String(err));
+    if (err instanceof SetupError) return sendError(res, errorMessage(err), err.status);
+    sendError(res, 'Failed to finish the setup', 500, err instanceof Error ? errorMessage(err) : String(err));
   }
 });
 
@@ -515,8 +521,8 @@ workspaceRouter.put('/:workspaceId/retention', requireWorkspaceRole(['owner']), 
     const retention = await updateRetention(getDb(), { workspaceId, uid: user.uid, email: user.email, settings: parsed.data });
     res.json({ status: 'success', retention });
   } catch (err) {
-    if (err instanceof RetentionError) return sendError(res, err.message, err.status);
-    sendError(res, 'Failed to save retention settings', 500, err instanceof Error ? err.message : String(err));
+    if (err instanceof RetentionError) return sendError(res, errorMessage(err), err.status);
+    sendError(res, 'Failed to save retention settings', 500, err instanceof Error ? errorMessage(err) : String(err));
   }
 });
 
@@ -547,8 +553,8 @@ workspaceRouter.delete('/:workspaceId', requireWorkspaceRole(['owner']), async (
     // Audit log entry - auditLogs must NEVER be deleted
     await writeServerAuditLog({
       workspaceId,
-      uid: (req as any).user.uid,
-      email: (req as any).user.email || '',
+      uid: requestUser(req).uid,
+      email: requestUser(req).email || '',
       action: 'WORKSPACE_DELETION_SCHEDULED',
       entityType: 'workspace',
       entityId: workspaceId,
@@ -564,8 +570,8 @@ workspaceRouter.delete('/:workspaceId', requireWorkspaceRole(['owner']), async (
       message: `Workspace marked as pending deletion with a ${graceDays}-day recovery window.`,
       scheduledPurgeAt
     });
-  } catch (err: any) {
-    sendError(res, 'Failed to delete workspace', 500, err.message);
+  } catch (err) {
+    sendError(res, 'Failed to delete workspace', 500, errorMessage(err));
   }
 });
 
@@ -599,8 +605,8 @@ workspaceRouter.post('/:workspaceId/cancel-deletion', requireWorkspaceRole(['own
     // Audit log entry
     await writeServerAuditLog({
       workspaceId,
-      uid: (req as any).user.uid,
-      email: (req as any).user.email || '',
+      uid: requestUser(req).uid,
+      email: requestUser(req).email || '',
       action: 'WORKSPACE_RESTORED',
       entityType: 'workspace',
       entityId: workspaceId,
@@ -613,8 +619,8 @@ workspaceRouter.post('/:workspaceId/cancel-deletion', requireWorkspaceRole(['own
       status: 'success',
       message: 'Workspace restored successfully.'
     });
-  } catch (err: any) {
-    sendError(res, 'Failed to restore workspace', 500, err.message);
+  } catch (err) {
+    sendError(res, 'Failed to restore workspace', 500, errorMessage(err));
   }
 });
 
@@ -639,19 +645,19 @@ workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accou
     // Write demo chart accounts
     demoData.accounts.forEach(acc => {
       const ref = db.collection('chartAccounts').doc(`${workspaceId}_${acc.id}`);
-      batch.set(ref, { ...acc, uid: (req as any).user.uid, workspaceId });
+      batch.set(ref, { ...acc, uid: requestUser(req).uid, workspaceId });
     });
 
     // Write demo transactions
     demoData.transactions.forEach(tx => {
       const ref = db.collection('transactions').doc(`${workspaceId}_${tx.id}`);
-      batch.set(ref, { ...tx, uid: (req as any).user.uid, workspaceId });
+      batch.set(ref, { ...tx, uid: requestUser(req).uid, workspaceId });
     });
     
     // Add Demo Customer
     const customerRef = db.collection('customers').doc();
     batch.set(customerRef, {
-      uid: (req as any).user.uid,
+      uid: requestUser(req).uid,
       workspaceId,
       name: 'Acme Corporation',
       email: 'billing@acme.com',
@@ -661,7 +667,7 @@ workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accou
     // Add Demo Vendor
     const vendorRef = db.collection('vendors').doc();
     batch.set(vendorRef, {
-      uid: (req as any).user.uid,
+      uid: requestUser(req).uid,
       workspaceId,
       name: 'Cloud Services Ltd',
       category: 'Software',
@@ -671,7 +677,7 @@ workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accou
     // Add Demo Invoice
     const invoiceRef = db.collection('invoices').doc();
     batch.set(invoiceRef, {
-      uid: (req as any).user.uid,
+      uid: requestUser(req).uid,
       workspaceId,
       customerId: customerRef.id,
       customerName: 'Acme Corporation',
@@ -696,7 +702,7 @@ workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accou
     // Add Demo Bill
     const billRef = db.collection('bills').doc();
     batch.set(billRef, {
-      uid: (req as any).user.uid,
+      uid: requestUser(req).uid,
       workspaceId,
       vendorId: vendorRef.id,
       vendorName: 'Cloud Services Ltd',
@@ -716,7 +722,7 @@ workspaceRouter.post('/:workspaceId/seed', requireWorkspaceRole(['owner', 'accou
 
     await batch.commit();
     res.json({ status: 'success', message: 'Demo data seeded' });
-  } catch (e: any) {
-    sendError(res, 'Failed to seed demo data', 500, e.message);
+  } catch (e) {
+    sendError(res, 'Failed to seed demo data', 500, errorMessage(e));
   }
 });

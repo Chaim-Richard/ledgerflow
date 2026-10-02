@@ -1,3 +1,5 @@
+import { errorMessage, requestUser } from '../auth/requestUser';
+import type { UserRequest } from '../auth/requestUser';
 import express from 'express';
 import { verifyIdToken } from '../auth/supabaseAuth';
 import { z } from 'zod';
@@ -18,7 +20,7 @@ const populateUserAuth = async (req: express.Request, res: express.Response, nex
     const token = authHeader.split('Bearer ')[1];
     try {
       const decoded = await verifyIdToken(token);
-      (req as any).user = decoded;
+      (req as UserRequest).user = decoded;
     } catch (e) {
       // Ignore token decoding failure for public GET lookup
     }
@@ -86,8 +88,8 @@ invitePublicRouter.get('/:token', async (req, res) => {
         status: invite.status
       }
     });
-  } catch (err: any) {
-    sendError(res, 'Failed to lookup invite', 500, err.message);
+  } catch (err) {
+    sendError(res, 'Failed to lookup invite', 500, errorMessage(err));
   }
 });
 
@@ -100,7 +102,7 @@ invitePublicRouter.post('/:token/accept', async (req, res) => {
     return sendError(res, 'Invalid invite token format', 400, parsedParams.error.issues);
   }
   const { token } = parsedParams.data;
-  const user = (req as any).user;
+  const user = requestUser(req);
 
   if (!user || !user.uid) {
     return sendError(res, 'Authentication required to accept invite', 401);
@@ -205,11 +207,11 @@ invitePublicRouter.post('/:token/accept', async (req, res) => {
       role: invite.role,
       message: 'Successfully joined workspace'
     });
-  } catch (err: any) {
-    if (err.message === 'WORKSPACE_NOT_FOUND') return sendError(res, 'Workspace not found', 404);
-    if (err.message === 'SEAT_LIMIT_EXCEEDED') {
+  } catch (err) {
+    if (errorMessage(err) === 'WORKSPACE_NOT_FOUND') return sendError(res, 'Workspace not found', 404);
+    if (errorMessage(err) === 'SEAT_LIMIT_EXCEEDED') {
       return sendError(res, 'Payment Required: Workspace seat limit reached. The workspace owner must upgrade the plan.', 402);
     }
-    sendError(res, 'Failed to accept invite', 500, err.message);
+    sendError(res, 'Failed to accept invite', 500, errorMessage(err));
   }
 });

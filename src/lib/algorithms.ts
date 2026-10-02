@@ -1,10 +1,3 @@
-import type { Transaction, ChartAccount } from '../types';
-
-interface TrieNode { next: Record<string, number>; fail: number; output: string[] }
-interface TemporalFinding { id: string; type: string; confidence: number; resolution: string }
-type TemporalTransaction = Pick<Transaction, 'id'> & { totalAmountCents?: number; amount?: number };
-import { isPostable, lineAmount, calculateTransactionImpact } from './txFilters';
-import { getLocalDateISO, addToDateISO } from './utils';
 import { PerformanceTelemetry } from "./telemetry";
 
 const globalSeed = 42;
@@ -24,107 +17,6 @@ const defaultRandom = seedPRNG(globalSeed);
  * Deterministic "Google-Style" Math for Fiscal Intelligence
  */
 
-/**
- * Transforms irregular ledger entries into a uniform time-series vector.
- * Maps transactions to fixed calendar slots [Day 1, Day 2, Day 3...] and fills empty days with 0/previous balances.
- * This is a mathematical prerequisite for Holt-Winters, ARIMA, and Kalman Filter forecasting to run on equal intervals.
- * 
- * @param transactions Array of transactions containing dates and value splits
- * @param accounts Chart of accounts for role resolution
- * @param options Configuration options for days and aggregation metrics
- */
-export function aggregateLedgerToDailySeries(
-  transactions: Transaction[],
-  accounts: ChartAccount[],
-  options: {
-    days?: number;
-    metric?: 'volume' | 'debit' | 'credit' | 'net_flow' | 'running_balance';
-    initialBalance?: number;
-    endDateStr?: string;
-  } = {}
-): { dateStr: string; value: number }[] {
-  const days = options.days || 30;
-  const metric = options.metric || 'net_flow';
-  
-  // calendar days ending on endDateStr (default: today in the workspace), in plain date maths (L-80)
-  const endStr = (options.endDateStr || getLocalDateISO()).slice(0, 10);
-
-  const accountMap = new Map(accounts.map(a => [a.id, a]));
-
-  // Pre-seed the calendar series
-  const seriesMap: Record<string, number> = {};
-  const datesList: string[] = [];
-
-  for (let i = 0; i < days; i++) {
-    const dateStr = addToDateISO(endStr, { days: i - days + 1 });
-    datesList.push(dateStr);
-    seriesMap[dateStr] = 0;
-  }
-
-  const firstDay = datesList[0];
-  let initialBalDelta = 0;
-
-  // Canonical accounting-aware summation
-  for (let i = 0; i < transactions.length; i++) {
-    const tx = transactions[i];
-    if (!isPostable(tx)) continue;
-    
-    const txDay = tx.date.substring(0, 10);
-    let txValue: number;
-    
-    if (metric === 'running_balance') {
-      // For running balance, we sum ALL lines (Total DR - Total CR) which should be 0 if balanced,
-      // but here we usually mean the balance of a specific set of accounts.
-      // If no account filter is provided, we assume "Cash" impact or similar.
-      // However, historically this function was used for cash-flow-like running balances.
-      txValue = tx.lines?.reduce((sum: number, l) => sum + lineAmount(l, tx), 0) || 0;
-      
-      if (txDay < firstDay) {
-        initialBalDelta += txValue;
-      } else if (seriesMap[txDay] !== undefined) {
-        seriesMap[txDay] += txValue;
-      }
-    } else if (metric === 'net_flow') {
-      txValue = calculateTransactionImpact(tx, accountMap);
-      if (seriesMap[txDay] !== undefined) {
-        seriesMap[txDay] += txValue;
-      }
-    } else if (metric === 'volume') {
-      // Volume is the absolute activity
-      txValue = tx.lines?.reduce((sum: number, l) => sum + Math.abs(lineAmount(l, tx)), 0) / 2 || 0;
-      if (seriesMap[txDay] !== undefined) {
-        seriesMap[txDay] += txValue;
-      }
-    } else if (metric === 'debit') {
-      txValue = tx.lines?.reduce((sum: number, l) => sum + Math.max(0, lineAmount(l, tx)), 0) || 0;
-      if (seriesMap[txDay] !== undefined) {
-        seriesMap[txDay] += txValue;
-      }
-    } else if (metric === 'credit') {
-      txValue = tx.lines?.reduce((sum: number, l) => sum + Math.abs(Math.min(0, lineAmount(l, tx))), 0) || 0;
-      if (seriesMap[txDay] !== undefined) {
-        seriesMap[txDay] += txValue;
-      }
-    } else {
-      continue;
-    }
-  }
-
-  const finalSeries: { dateStr: string; value: number }[] = [];
-  let currentRunningBal = (options.initialBalance || 0) + initialBalDelta;
-  
-  for (let i = 0; i < datesList.length; i++) {
-    const dateStr = datesList[i];
-    if (metric === 'running_balance') {
-      currentRunningBal += seriesMap[dateStr];
-      finalSeries.push({ dateStr, value: currentRunningBal / 100 });
-    } else {
-      finalSeries.push({ dateStr, value: seriesMap[dateStr] / 100 });
-    }
-  }
-
-  return finalSeries;
-}
 
 /**
  * Holt-Winters Triple Exponential Smoothing
@@ -727,7 +619,7 @@ export function lexicalSimilarity(s1: string | undefined | null, s2: string | un
  * O(TextLength + NumberOfMatches)
  */
 export class AhoCorasick {
-  private trie: TrieNode[] = [{ next: {}, fail: 0, output: [] }];
+  private trie: Array<{ next: Record<string, number>; fail: number; output: string[] }> = [{ next: {}, fail: 0, output: [] }];
 
   constructor(patterns: { pattern: string, ruleId: string }[]) {
     // Build Trie
@@ -1997,85 +1889,6 @@ export class SpellChecker {
   }
 }
 
-/**
- * AuditEngine: Advanced Ledger Diagnostics
- * Identifies structural anomalies and suggests resolutions for data integrity.
- */
-export class AuditEngine {
-  /**
-   * Identifies "Temporal Variations" - transactions that violate predicted patterns.
-   */
-  static detectTemporalVariations(transactions: TemporalTransaction[], baseline: number[]): TemporalFinding[] {
-    return this.detectTemporalParadoxes(transactions, baseline);
-  }
-
-  static detectTemporalParadoxes(transactions: TemporalTransaction[], baseline: number[]): TemporalFinding[] {
-    const findings = [];
-    const mean = baseline.reduce((a, b) => a + b, 0) / (baseline.length || 1);
-    const variance = baseline.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (baseline.length || 1);
-    const sigma = Math.sqrt(variance);
-
-    for (const tx of transactions) {
-      const amount = typeof tx.totalAmountCents === 'number' ? tx.totalAmountCents : tx.amount;
-      if (typeof amount !== 'number') continue;
-      const zScore = Math.abs(amount - mean) / (sigma || 1);
-      if (zScore > 3.0) { // Standard anomaly threshold
-        findings.push({
-          id: tx.id,
-          type: 'STATISTICAL_OUTLIER',
-          confidence: Math.min(0.99, zScore / 10),
-          resolution: 'MANUAL_REVIEW'
-        });
-      }
-    }
-    return findings;
-  }
-
-  /**
-   * Self-Healing Resolution: Suggests corrections for categorization conflicts.
-   */
-  static suggestHealing(_conflict: unknown): string {
-    const scores = {
-      'RECONCILE': 0.8,
-      'AMORTIZE': 0.6,
-      'QUARANTINE': 0.4
-    };
-    return Object.keys(scores)[0]; // Simplified for now
-  }
-
-  /**
-   * Probabilistic Forecast Simulation.
-   * Simulates potential fiscal futures using Monte Carlo state transitions.
-   */
-  static simulateFiscalFutures(currentBalance: number, historicalDiffs: number[], iterations: number = 5000) {
-    const results = [];
-    for (let i = 0; i < iterations; i++) {
-      let balance = currentBalance;
-      const path = [balance];
-      for (let day = 0; day < 30; day++) {
-        const randomDiff = historicalDiffs[Math.floor(defaultRandom() * historicalDiffs.length)] || 0;
-        // Add random volatility (variance flux)
-        const flux = (defaultRandom() - 0.5) * 0.1 * Math.abs(randomDiff);
-        balance += randomDiff + flux;
-        path.push(balance);
-      }
-      results.push(path);
-    }
-
-    // Collapse paths into percentiles (P10, P50, P90)
-    const collapsed = [];
-    for (let day = 0; day <= 30; day++) {
-      const dayValues = results.map(r => r[day]).sort((a, b) => a - b);
-      collapsed.push({
-        day,
-        p10: dayValues[Math.floor(iterations * 0.1)],
-        p50: dayValues[Math.floor(iterations * 0.5)],
-        p90: dayValues[Math.floor(iterations * 0.9)],
-      });
-    }
-    return collapsed;
-  }
-}
 
 /**
  * InvariantReconciliation: Multidimensional Discrepancy Finder
@@ -2393,7 +2206,6 @@ export class ARIMAModel {
 }
 
 export const AnalyticalMatcher = SmartMatchingEngine;
-export const DiagnosticEngine = AuditEngine;
 export const FlowAnalyzer = InvariantReconciliation;
 
 /**

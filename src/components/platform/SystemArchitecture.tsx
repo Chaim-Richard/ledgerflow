@@ -62,8 +62,8 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
                </div>
                <div className="flex items-center gap-4 pt-4 border-t border-zinc-800 relative z-10">
                   <div className="flex -space-x-2">
-                     {[1,2,3].map(i => (
-                        <div key={i} className="w-6 h-6 rounded-full border-2 border-zinc-900 bg-zinc-800 flex items-center justify-center">
+                     {[1,2,3].map(dot => (
+                        <div key={dot} className="w-6 h-6 rounded-full border-2 border-zinc-900 bg-zinc-800 flex items-center justify-center">
                            <Activity size={10} className="text-emerald-500" />
                         </div>
                      ))}

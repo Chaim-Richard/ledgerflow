@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useEffect, useRef, useId } from 'react';
 import { Transaction, TransactionLine, ChartAccount } from '../../types';
 import { 
@@ -247,11 +248,12 @@ export default function TransactionEditModal({
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [isOpen, handleSave, onClose]);
 
+  const { dialogProps, titleId } = useDialog(onClose, isOpen);
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[210] flex items-center justify-center p-4">
+      <div {...dialogProps} className="fixed inset-0 z-[210] flex items-center justify-center p-4">
         {/* Backdrop overlay */}
         <motion.div 
           initial={{ opacity: 0 }}
@@ -278,9 +280,9 @@ export default function TransactionEditModal({
                 {isReverseMode ? <RefreshCcw aria-hidden="true" size={18} className="text-white" /> : <Sliders aria-hidden="true" size={18} className="text-zinc-100" />}
               </div>
               <div>
-                <h3 className="text-lg font-bold text-[var(--text)] tracking-tight flex items-center gap-2">
+                <h2 id={titleId} className="text-lg font-bold text-[var(--text)] tracking-tight flex items-center gap-2">
                   {isReverseMode ? 'Reverse & Correct Entry' : 'Edit Ledger Entry details'}
-                </h3>
+                </h2>
                 <p className="text-[10px] text-zinc-400 font-mono uppercase tracking-widest mt-0.5">
                   ID: {transaction.id.slice(0, 12)}... • {isReverseMode ? 'Atomic Reversal & Correction' : 'SHA-255 Audit Sealed'}
                 </p>
@@ -544,9 +546,9 @@ export default function TransactionEditModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-[var(--line)] pb-2">
                 <div>
-                  <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
                     <Hash aria-hidden="true" size={13} className="text-zinc-500" /> Ledger Line Distribution Coordinates
-                  </h4>
+                  </h3>
                   <p className="text-[10px] text-zinc-400">Specify precise split mappings to enforce trial balance zero-sum equivalence</p>
                 </div>
 
@@ -762,9 +764,9 @@ export default function TransactionEditModal({
             <div className="bg-[var(--ink)]/50 p-4 rounded-[32px] border border-zinc-150 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
                     <FileText aria-hidden="true" size={13} className="text-zinc-500" /> Source Documents & Receipts
-                  </h4>
+                  </h3>
                   <p className="text-[10px] text-zinc-400">Attach underlying evidence for this specific vector node.</p>
                 </div>
                 <label htmlFor={`${formId}-documents`} className="flex items-center gap-1 px-3 py-1 bg-[var(--surface)] hover:bg-zinc-100 text-[var(--text)] border border-[var(--line)] text-[11px] font-bold rounded-lg transition-all cursor-pointer">
