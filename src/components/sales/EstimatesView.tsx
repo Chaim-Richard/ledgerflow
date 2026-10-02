@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
+import { Labelled } from '../ui/Labelled';
 
 export default function EstimatesView() {
   const user = useAuthStore(s => s.user);
@@ -174,49 +175,53 @@ export default function EstimatesView() {
           <h3 className="text-sm font-bold text-slate-900 dark:text-white">Create New Quote / Estimate</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Customer *</label>
-              <select
-                value={customerId}
-                onChange={e => setCustomerId(e.target.value)}
-                required
-                className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-              >
-                <option value="">Select Customer...</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <Labelled labelClassName="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" label="Customer *">
+                <select
+                  value={customerId}
+                  onChange={e => setCustomerId(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                >
+                  <option value="">Select Customer...</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </Labelled>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Amount ($) *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder="0.00"
-                value={amountDollars}
-                onChange={e => setAmountDollars(e.target.value)}
-                required
-                className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono"
-              />
+              <Labelled labelClassName="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" label="Amount ($) *">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                  value={amountDollars}
+                  onChange={e => setAmountDollars(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono"
+                />
+              </Labelled>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Expiration Date</label>
-              <input
-                type="date"
-                value={expiryDate}
-                onChange={e => setExpiryDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-              />
+              <Labelled labelClassName="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" label="Expiration Date">
+                <input
+                  type="date"
+                  value={expiryDate}
+                  onChange={e => setExpiryDate(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                />
+              </Labelled>
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Description / Project Scope</label>
-            <input
-              type="text"
-              placeholder="e.g. Website Design & Custom ERP Development"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-            />
+            <Labelled labelClassName="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" label="Description / Project Scope">
+              <input
+                type="text"
+                placeholder="e.g. Website Design & Custom ERP Development"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              />
+            </Labelled>
           </div>
           <div className="flex justify-end gap-2">
             <button

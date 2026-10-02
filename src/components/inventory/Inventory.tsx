@@ -43,6 +43,7 @@ import { InventoryItem } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
+import { Labelled } from '../ui/Labelled';
 
 export default function Inventory() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -760,18 +761,17 @@ export default function Inventory() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                    Units Sold / Dispatched
-                  </label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max={cogsItem.quantityAtHand}
-                    value={cogsQty} 
-                    onChange={(e) => setCogsQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                    required 
-                    className="w-full px-5 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900 font-bold" 
-                  />
+                  <Labelled labelClassName="text-[10px] font-bold text-zinc-400 uppercase tracking-widest" label="Units Sold / Dispatched">
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max={cogsItem.quantityAtHand}
+                      value={cogsQty} 
+                      onChange={(e) => setCogsQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      required 
+                      className="w-full px-5 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900 font-bold" 
+                    />
+                  </Labelled>
                 </div>
 
                 <div className="pt-2">

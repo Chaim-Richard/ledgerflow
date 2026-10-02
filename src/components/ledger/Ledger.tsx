@@ -90,6 +90,7 @@ import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { Labelled } from '../ui/Labelled';
 
 const Ledger = React.memo(() => {
   const user = useAuthStore(s => s.user) || ({} as any);
@@ -477,64 +478,69 @@ const Ledger = React.memo(() => {
               <form onSubmit={handleAddAccount} className="space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Account Code</label>
+                    <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Account Code">
+                      <input 
+                        type="text" 
+                        required
+                        value={newAccount.code}
+                        onChange={(e) => setNewAccount({ ...newAccount, code: e.target.value })}
+                        placeholder="e.g. 1001"
+                        className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-mono text-[var(--text)]"
+                      />
+                    </Labelled>
+                  </div>
+                  <div className="space-y-2">
+                    <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Account Type">
+                      <select 
+                        value={newAccount.type}
+                        onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value as any })}
+                        className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)] appearance-none cursor-pointer"
+                      >
+                        <option value="asset">Asset</option>
+                        <option value="liability">Liability</option>
+                        <option value="equity">Equity</option>
+                        <option value="income">Income</option>
+                        <option value="expense">Expense</option>
+                      </select>
+                    </Labelled>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Account Name">
                     <input 
                       type="text" 
                       required
-                      value={newAccount.code}
-                      onChange={(e) => setNewAccount({ ...newAccount, code: e.target.value })}
-                      placeholder="e.g. 1001"
-                      className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-mono text-[var(--text)]"
+                      value={newAccount.name}
+                      onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
+                      placeholder="e.g. Main Operating Account"
+                      className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Account Type</label>
-                    <select 
-                      value={newAccount.type}
-                      onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value as any })}
-                      className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)] appearance-none cursor-pointer"
-                    >
-                      <option value="asset">Asset</option>
-                      <option value="liability">Liability</option>
-                      <option value="equity">Equity</option>
-                      <option value="income">Income</option>
-                      <option value="expense">Expense</option>
-                    </select>
-                  </div>
+                  </Labelled>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Account Name</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={newAccount.name}
-                    onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
-                    placeholder="e.g. Main Operating Account"
-                    className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
-                  />
+                  <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Category (Optional)">
+                    <input 
+                      type="text" 
+                      value={newAccount.category}
+                      onChange={(e) => setNewAccount({ ...newAccount, category: e.target.value })}
+                      placeholder="e.g. Current Assets"
+                      className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all text-[var(--text)]"
+                    />
+                  </Labelled>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Category (Optional)</label>
-                  <input 
-                    type="text" 
-                    value={newAccount.category}
-                    onChange={(e) => setNewAccount({ ...newAccount, category: e.target.value })}
-                    placeholder="e.g. Current Assets"
-                    className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all text-[var(--text)]"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Description</label>
-                  <textarea 
-                    value={newAccount.description}
-                    onChange={(e) => setNewAccount({ ...newAccount, description: e.target.value })}
-                    placeholder="Briefly describe the purpose of this account..."
-                    rows={3}
-                    className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all resize-none text-[var(--text)]"
-                  />
+                  <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Description">
+                    <textarea 
+                      value={newAccount.description}
+                      onChange={(e) => setNewAccount({ ...newAccount, description: e.target.value })}
+                      placeholder="Briefly describe the purpose of this account..."
+                      rows={3}
+                      className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all resize-none text-[var(--text)]"
+                    />
+                  </Labelled>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
@@ -559,28 +565,30 @@ const Ledger = React.memo(() => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Opening Balance ($)</label>
-                    <input 
-                      type="number" 
-                      step="0.01"
-                      value={newAccount.openingBalanceCents / 100}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value || '0');
-                        setNewAccount({ ...newAccount, openingBalanceCents: Math.round((Math.round(val * 100) / 100) * 100) });
-                      }}
-                      className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-mono text-[var(--text)] text-right"
-                    />
+                    <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Opening Balance ($)">
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        value={newAccount.openingBalanceCents / 100}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value || '0');
+                          setNewAccount({ ...newAccount, openingBalanceCents: Math.round((Math.round(val * 100) / 100) * 100) });
+                        }}
+                        className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-mono text-[var(--text)] text-right"
+                      />
+                    </Labelled>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">As of Date</label>
-                  <input 
-                    type="date" 
-                    value={newAccount.asOfDate}
-                    onChange={(e) => setNewAccount({ ...newAccount, asOfDate: e.target.value })}
-                    className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
-                  />
+                  <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="As of Date">
+                    <input 
+                      type="date" 
+                      value={newAccount.asOfDate}
+                      onChange={(e) => setNewAccount({ ...newAccount, asOfDate: e.target.value })}
+                      className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
+                    />
+                  </Labelled>
                 </div>
 
                 <div className="pt-4 flex gap-4">

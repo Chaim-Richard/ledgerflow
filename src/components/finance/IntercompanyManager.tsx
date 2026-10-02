@@ -15,6 +15,7 @@ import { cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
 import { motion, AnimatePresence } from 'motion/react';
+import { Labelled } from '../ui/Labelled';
 
 export default function IntercompanyManager() {
   const user = useAuthStore(s => s.user);
@@ -247,51 +248,55 @@ export default function IntercompanyManager() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Entity</label>
-                    <select 
-                      value={formData.targetWorkspaceId}
-                      onChange={e => setFormData({...formData, targetWorkspaceId: e.target.value})}
-                      className="w-full p-4 bg-white rounded-2xl border-2 border-[var(--line)] font-bold text-sm focus:border-[#0047AB] outline-none transition-all"
-                    >
-                      <option value="">Select Target...</option>
-                      {otherWorkspaces.map(w => (
-                        <option key={w.id} value={w.id}>{w.name}</option>
-                      ))}
-                    </select>
+                    <Labelled labelClassName="text-[10px] font-black text-slate-400 uppercase tracking-widest" label="Target Entity">
+                      <select 
+                        value={formData.targetWorkspaceId}
+                        onChange={e => setFormData({...formData, targetWorkspaceId: e.target.value})}
+                        className="w-full p-4 bg-white rounded-2xl border-2 border-[var(--line)] font-bold text-sm focus:border-[#0047AB] outline-none transition-all"
+                      >
+                        <option value="">Select Target...</option>
+                        {otherWorkspaces.map(w => (
+                          <option key={w.id} value={w.id}>{w.name}</option>
+                        ))}
+                      </select>
+                    </Labelled>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Monthly management fee recharge..."
-                    value={formData.description}
-                    onChange={e => setFormData({...formData, description: e.target.value})}
-                    className="w-full p-4 bg-white rounded-2xl border-2 border-[var(--line)] font-bold text-sm focus:border-[#0047AB] outline-none transition-all"
-                  />
+                  <Labelled labelClassName="text-[10px] font-black text-slate-400 uppercase tracking-widest" label="Description">
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Monthly management fee recharge..."
+                      value={formData.description}
+                      onChange={e => setFormData({...formData, description: e.target.value})}
+                      className="w-full p-4 bg-white rounded-2xl border-2 border-[var(--line)] font-bold text-sm focus:border-[#0047AB] outline-none transition-all"
+                    />
+                  </Labelled>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transfer Amount ($)</label>
-                    <input 
-                      type="number" 
-                      placeholder="0.00"
-                      value={formData.amountCents / 100}
-                      onChange={e => setFormData({...formData, amountCents: Math.round(parseFloat(e.target.value || '0') * 100)})}
-                      className="w-full p-4 bg-white rounded-2xl border-2 border-[var(--line)] font-black text-2xl font-mono focus:border-[#0047AB] outline-none transition-all"
-                    />
+                    <Labelled labelClassName="text-[10px] font-black text-slate-400 uppercase tracking-widest" label="Transfer Amount ($)">
+                      <input 
+                        type="number" 
+                        placeholder="0.00"
+                        value={formData.amountCents / 100}
+                        onChange={e => setFormData({...formData, amountCents: Math.round(parseFloat(e.target.value || '0') * 100)})}
+                        className="w-full p-4 bg-white rounded-2xl border-2 border-[var(--line)] font-black text-2xl font-mono focus:border-[#0047AB] outline-none transition-all"
+                      />
+                    </Labelled>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Effective Date</label>
-                    <input 
-                      type="date" 
-                      value={formData.date}
-                      onChange={e => setFormData({...formData, date: e.target.value})}
-                      className="w-full p-4 bg-white rounded-2xl border-2 border-[var(--line)] font-bold text-sm focus:border-[#0047AB] outline-none transition-all"
-                    />
+                    <Labelled labelClassName="text-[10px] font-black text-slate-400 uppercase tracking-widest" label="Effective Date">
+                      <input 
+                        type="date" 
+                        value={formData.date}
+                        onChange={e => setFormData({...formData, date: e.target.value})}
+                        className="w-full p-4 bg-white rounded-2xl border-2 border-[var(--line)] font-bold text-sm focus:border-[#0047AB] outline-none transition-all"
+                      />
+                    </Labelled>
                   </div>
                 </div>
 

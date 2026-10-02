@@ -44,7 +44,8 @@ export default tseslint.config(
       'jsx-a11y/click-events-have-key-events': 'warn',
       'jsx-a11y/no-static-element-interactions': 'warn',
       'jsx-a11y/no-noninteractive-element-interactions': 'warn',
-      'jsx-a11y/control-has-associated-label': 'warn',
+      // depth: text inside a cell's wrapper divs counts; table cells and datalist options are not controls
+      'jsx-a11y/control-has-associated-label': ['warn', { depth: 4, ignoreElements: ['audio', 'canvas', 'embed', 'input', 'textarea', 'tr', 'td', 'option', 'video'] }],
     },
   },
   {

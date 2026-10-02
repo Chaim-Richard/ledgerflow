@@ -5,6 +5,7 @@ import { Plus, Trash2, Save, X, AlertCircle, Layers } from 'lucide-react';
 import { motion } from 'motion/react';
 import { resolveAccountName, cn, parseAmountToCents } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { Labelled } from '../ui/Labelled';
 
 interface SplitEditorProps {
   transaction: Transaction;
@@ -225,17 +226,16 @@ export default function SplitEditor({
                         </div>
                       </div>
                       <div className="flex-[2] space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
-                          Custom Labels / Tags
-                          <span className="text-[9px] lowercase italic font-medium opacity-50">Separate by comma</span>
-                        </label>
-                        <input 
-                          type="text"
-                          placeholder="e.g. Organic, Office Supplies, High Priority"
-                          value={line.tags?.join(', ') || ''}
-                          onChange={(e) => updateLine(idx, { tags: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
-                          className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-medium text-[var(--text)] focus:border-indigo-600 outline-none"
-                        />
+                        <Labelled labelClassName="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between" label={<>Custom Labels / Tags
+                          <span className="text-[9px] lowercase italic font-medium opacity-50">Separate by comma</span></>}>
+                          <input 
+                            type="text"
+                            placeholder="e.g. Organic, Office Supplies, High Priority"
+                            value={line.tags?.join(', ') || ''}
+                            onChange={(e) => updateLine(idx, { tags: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                            className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-medium text-[var(--text)] focus:border-indigo-600 outline-none"
+                          />
+                        </Labelled>
                       </div>
                     </div>
                   </motion.div>

@@ -26,6 +26,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { BloomFilter, MinHash, AnalyticalMatcher, generateImportIdentity } from '../../lib/algorithms';
 import CategoryWhyPopover from '../common/CategoryWhyPopover';
 import { normalizeDateString } from '../../lib/dateParsing';
+import { Labelled } from '../ui/Labelled';
 
 interface StatementImporterProps {
   isOpen: boolean;
@@ -473,22 +474,24 @@ export default function StatementImporter({
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-3 md:col-span-3">
-                    <label className="micro-label !text-[var(--text)]">Header Rows to Skip</label>
-                    <input type="number" min="0" value={(mapping as any).skipRows} onChange={(e) => setMapping({...mapping, skipRows: parseInt(e.target.value) || 0})} className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)]" />
+                    <Labelled labelClassName="micro-label !text-[var(--text)]" label="Header Rows to Skip">
+                      <input type="number" min="0" value={(mapping as any).skipRows} onChange={(e) => setMapping({...mapping, skipRows: parseInt(e.target.value) || 0})} className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)]" />
+                    </Labelled>
                   </div>
                   {(['date', 'description', 'amount', 'debit', 'credit', 'payee', 'memo'] as const).map(field => (
                     <div key={field} className="space-y-3">
-                      <label className="micro-label !text-[var(--text)] capitalize">{field} Column</label>
-                      <select 
-                        value={mapping[field]}
-                        onChange={(e) => setMapping({...mapping, [field]: parseInt(e.target.value, 10)})}
-                        className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)] cursor-pointer"
-                      >
-                        <option value={-1}>Select Column</option>
-                        {csvData[0]?.map((col, idx) => (
-                          <option key={idx} value={idx}>{col || `Column ${idx + 1}`}</option>
-                        ))}
-                      </select>
+                      <Labelled labelClassName="micro-label !text-[var(--text)] capitalize" label={<>{field} Column</>}>
+                        <select 
+                          value={mapping[field]}
+                          onChange={(e) => setMapping({...mapping, [field]: parseInt(e.target.value, 10)})}
+                          className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)] cursor-pointer"
+                        >
+                          <option value={-1}>Select Column</option>
+                          {csvData[0]?.map((col, idx) => (
+                            <option key={idx} value={idx}>{col || `Column ${idx + 1}`}</option>
+                          ))}
+                        </select>
+                      </Labelled>
                     </div>
                   ))}
                 </div>

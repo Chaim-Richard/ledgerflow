@@ -602,7 +602,7 @@ export default function Reconciliation() {
 
                       return (
                         <div key={line.id} className="hover:bg-[var(--ink)] transition-all">
-                          <div role="button" tabIndex={0} 
+                          <div role="presentation" aria-hidden="true" 
                              onClick={() => setSelectedBankId(isSelected ? null : line.id)}
                              className="flex flex-col lg:flex-row items-start lg:items-center justify-between p-5 gap-4 cursor-pointer"
                           >
@@ -845,7 +845,7 @@ export default function Reconciliation() {
       <AnimatePresence>
          {showAutoConfirm && Array.from(optimizedMatches.values()).length > 0 && (
              <>
-               <div role="button" tabIndex={0} className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-[150]" onClick={() => setShowAutoConfirm(false)} />
+               <div role="presentation" aria-hidden="true" className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-[150]" onClick={() => setShowAutoConfirm(false)} />
                <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -893,7 +893,7 @@ export default function Reconciliation() {
                         const isChecked = !!selectedBatchIds[btx.id];
 
                         return (
-                           <div role="button" tabIndex={0} 
+                           <div role="presentation" aria-hidden="true" 
                              key={btx.id} 
                              onClick={() => setSelectedBatchIds(prev => ({ ...prev, [btx.id]: !prev[btx.id] }))}
                              className={cn(

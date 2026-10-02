@@ -28,6 +28,7 @@ import {
   backfillDimensionNodesFromTransactions
 } from '../../../lib/dimensionUtils';
 import AsyncButton from '../../ui/AsyncButton';
+import { Labelled } from '../../ui/Labelled';
 
 function EditableNodeDescription({
   initialValue,
@@ -508,24 +509,26 @@ export default function DimensionsSettings() {
             <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-400">Add New Dimension Axis</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Axis Key / ID (Immutable)</label>
-                <input
-                  type="text"
-                  value={newAxisId}
-                  onChange={e => setNewAxisId(e.target.value)}
-                  placeholder="e.g. cost_center or region"
-                  className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2 text-xs text-[var(--text)] outline-none focus:border-indigo-500 font-mono"
-                />
+                <Labelled labelClassName="text-[10px] font-bold text-slate-400 uppercase" label="Axis Key / ID (Immutable)">
+                  <input
+                    type="text"
+                    value={newAxisId}
+                    onChange={e => setNewAxisId(e.target.value)}
+                    placeholder="e.g. cost_center or region"
+                    className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2 text-xs text-[var(--text)] outline-none focus:border-indigo-500 font-mono"
+                  />
+                </Labelled>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Display Name</label>
-                <input
-                  type="text"
-                  value={newAxisName}
-                  onChange={e => setNewAxisName(e.target.value)}
-                  placeholder="e.g. Cost Center or Region"
-                  className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2 text-xs text-[var(--text)] outline-none focus:border-indigo-500"
-                />
+                <Labelled labelClassName="text-[10px] font-bold text-slate-400 uppercase" label="Display Name">
+                  <input
+                    type="text"
+                    value={newAxisName}
+                    onChange={e => setNewAxisName(e.target.value)}
+                    placeholder="e.g. Cost Center or Region"
+                    className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2 text-xs text-[var(--text)] outline-none focus:border-indigo-500"
+                  />
+                </Labelled>
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">

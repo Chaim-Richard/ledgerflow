@@ -6,6 +6,7 @@ import { computeStatement } from '../../server/reports/computeReports';
 import { FileText, Printer, Eye, Download } from 'lucide-react';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { Labelled } from '../ui/Labelled';
 
 export default function StatementView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -121,38 +122,41 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Select {type === 'customer' ? 'Customer' : 'Vendor'}</label>
-          <select
-            value={selectedContact?.id || ''}
-            onChange={e => setContactId(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white min-w-[200px]"
-          >
-            {type === 'customer' ? (
-              customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
-            ) : (
-              vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)
-            )}
-          </select>
+          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label={<>Select {type === 'customer' ? 'Customer' : 'Vendor'}</>}>
+            <select
+              value={selectedContact?.id || ''}
+              onChange={e => setContactId(e.target.value)}
+              className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white min-w-[200px]"
+            >
+              {type === 'customer' ? (
+                customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
+              ) : (
+                vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)
+              )}
+            </select>
+          </Labelled>
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">From</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={e => setStartDate(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-          />
+          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label="From">
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+            />
+          </Labelled>
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">To</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={e => setEndDate(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-          />
+          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label="To">
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+            />
+          </Labelled>
         </div>
       </div>
 

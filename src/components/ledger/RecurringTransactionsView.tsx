@@ -141,7 +141,7 @@ export default function RecurringTransactionsView() {
                 <th className="px-6 py-4">Next Occurrence</th>
                 <th className="px-6 py-4 text-right">Amount</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 w-20"></th>
+                <th className="px-6 py-4 w-20"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">

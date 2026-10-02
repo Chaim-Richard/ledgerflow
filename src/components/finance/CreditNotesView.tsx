@@ -28,6 +28,7 @@ import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { creditTaxFrom } from '../../lib/taxCodes';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
+import { Labelled } from '../ui/Labelled';
 
 export default function CreditNotesView() {
   const [activeTab, setActiveTab] = useState<'customer' | 'vendor'>('customer');
@@ -327,70 +328,75 @@ export default function CreditNotesView() {
             <form onSubmit={activeTab === 'customer' ? handleCreateCustomerCreditNote : handleCreateVendorCredit} className="space-y-4">
               {activeTab === 'customer' ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Customer</label>
-                  <select
-                    value={customerId}
-                    onChange={(e) => setCustomerId(e.target.value)}
-                    required
-                    className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white"
-                  >
-                    <option value="">-- Choose Customer --</option>
-                    {customers.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                  <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" label="Select Customer">
+                    <select
+                      value={customerId}
+                      onChange={(e) => setCustomerId(e.target.value)}
+                      required
+                      className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white"
+                    >
+                      <option value="">-- Choose Customer --</option>
+                      {customers.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </Labelled>
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Vendor</label>
-                  <select
-                    value={vendorId}
-                    onChange={(e) => setVendorId(e.target.value)}
-                    required
-                    className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white"
-                  >
-                    <option value="">-- Choose Vendor --</option>
-                    {vendors.map(v => (
-                      <option key={v.id} value={v.id}>{v.name}</option>
-                    ))}
-                  </select>
+                  <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" label="Select Vendor">
+                    <select
+                      value={vendorId}
+                      onChange={(e) => setVendorId(e.target.value)}
+                      required
+                      className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white"
+                    >
+                      <option value="">-- Choose Vendor --</option>
+                      {vendors.map(v => (
+                        <option key={v.id} value={v.id}>{v.name}</option>
+                      ))}
+                    </select>
+                  </Labelled>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={amountStr}
-                    onChange={(e) => setAmountStr(e.target.value)}
-                    placeholder="0.00"
-                    required
-                    className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white"
-                  />
+                  <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" label="Amount ($)">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={amountStr}
+                      onChange={(e) => setAmountStr(e.target.value)}
+                      placeholder="0.00"
+                      required
+                      className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white"
+                    />
+                  </Labelled>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
-                  <input
-                    type="date"
-                    value={dateStr}
-                    onChange={(e) => setDateStr(e.target.value)}
-                    required
-                    className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white"
-                  />
+                  <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" label="Date">
+                    <input
+                      type="date"
+                      value={dateStr}
+                      onChange={(e) => setDateStr(e.target.value)}
+                      required
+                      className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white"
+                    />
+                  </Labelled>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason / Description</label>
-                <input
-                  type="text"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder={activeTab === 'customer' ? 'e.g. Returned merchandise / price adjustment' : 'e.g. Volume discount rebate'}
-                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white"
-                />
+                <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" label="Reason / Description">
+                  <input
+                    type="text"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder={activeTab === 'customer' ? 'e.g. Returned merchandise / price adjustment' : 'e.g. Volume discount rebate'}
+                    className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white"
+                  />
+                </Labelled>
               </div>
 
               <div className="flex justify-end gap-3 pt-2">

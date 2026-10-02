@@ -103,7 +103,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
             <AnimatePresence>
               {showOptionsId === account.id && (
                 <>
-                  <div role="button" tabIndex={0} className="fixed inset-0 z-[100]" onClick={() => setShowOptionsId(null)} />
+                  <div role="presentation" aria-hidden="true" className="fixed inset-0 z-[100]" onClick={() => setShowOptionsId(null)} />
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95, y: -5 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -147,7 +147,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
               <th className="p-4 font-bold text-[9px] text-slate-400">Topology Type</th>
               <th className="p-4 font-bold text-[9px] text-slate-400">Classification</th>
               <th className="p-4 font-bold text-[9px] text-slate-400 text-right">Total Aggregate</th>
-              <th className="p-4 w-10"></th>
+              <th className="p-4 w-10"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

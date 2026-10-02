@@ -18,9 +18,12 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
   
   useEffect(() => {
     if (scrollRef.current) {
-      const activeElement = scrollRef.current.querySelector<HTMLButtonElement>('[data-state="active"]');
+      const strip = scrollRef.current;
+      const activeElement = strip.querySelector<HTMLButtonElement>('[data-state="active"]');
       if (activeElement) {
-        activeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        // scroll the strip only: scrollIntoView would also move the browser's Tab starting point
+        // (keyboard users would skip "Skip to content") and could scroll the page
+        strip.scrollTo?.({ left: activeElement.offsetLeft - strip.clientWidth / 2 + activeElement.clientWidth / 2, behavior: 'smooth' });
       }
     }
   }, [activeTab]);

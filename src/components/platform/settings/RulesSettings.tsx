@@ -28,6 +28,7 @@ import {
 
 import { aiService } from '../../../services/aiService';
 import { AutoRuleSchema } from '../../../schemas';
+import { Labelled } from '../../ui/Labelled';
 
 export const RulesSettings: React.FC = () => {
   const currentRole = useCurrentRole();
@@ -751,24 +752,26 @@ export const RulesSettings: React.FC = () => {
               {/* Basic Info */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-neutral-700 mb-1">Rule Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. AWS Cloud Services"
-                    value={formName}
-                    onChange={e => setFormName(e.target.value)}
-                    className="w-full p-2 border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                  />
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Rule Name">
+                    <input
+                      type="text"
+                      placeholder="e.g. AWS Cloud Services"
+                      value={formName}
+                      onChange={e => setFormName(e.target.value)}
+                      className="w-full p-2 border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                    />
+                  </Labelled>
                 </div>
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Rule Group</label>
-                  <input
-                    type="text"
-                    placeholder="General / SaaS / Vendors"
-                    value={formGroup}
-                    onChange={e => setFormGroup(e.target.value)}
-                    className="w-full p-2 border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                  />
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Rule Group">
+                    <input
+                      type="text"
+                      placeholder="General / SaaS / Vendors"
+                      value={formGroup}
+                      onChange={e => setFormGroup(e.target.value)}
+                      className="w-full p-2 border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                    />
+                  </Labelled>
                 </div>
               </div>
 
@@ -780,44 +783,48 @@ export const RulesSettings: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-neutral-600 mb-1">Description contains</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. AMZN, GSUITE, UBER"
-                      value={formDescContains}
-                      onChange={e => setFormDescContains(e.target.value)}
-                      className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                    />
+                    <Labelled labelClassName="block text-neutral-600 mb-1" label="Description contains">
+                      <input
+                        type="text"
+                        placeholder="e.g. AMZN, GSUITE, UBER"
+                        value={formDescContains}
+                        onChange={e => setFormDescContains(e.target.value)}
+                        className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                      />
+                    </Labelled>
                   </div>
                   <div>
-                    <label className="block text-neutral-600 mb-1">Vendor / Payee</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Amazon Web Services"
-                      value={formVendor}
-                      onChange={e => setFormVendor(e.target.value)}
-                      className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                    />
+                    <Labelled labelClassName="block text-neutral-600 mb-1" label="Vendor / Payee">
+                      <input
+                        type="text"
+                        placeholder="e.g. Amazon Web Services"
+                        value={formVendor}
+                        onChange={e => setFormVendor(e.target.value)}
+                        className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                      />
+                    </Labelled>
                   </div>
                   <div>
-                    <label className="block text-neutral-600 mb-1">Current Category / Account</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Uncategorized"
-                      value={formCategory}
-                      onChange={e => setFormCategory(e.target.value)}
-                      className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                    />
+                    <Labelled labelClassName="block text-neutral-600 mb-1" label="Current Category / Account">
+                      <input
+                        type="text"
+                        placeholder="e.g. Uncategorized"
+                        value={formCategory}
+                        onChange={e => setFormCategory(e.target.value)}
+                        className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                      />
+                    </Labelled>
                   </div>
                   <div>
-                    <label className="block text-neutral-600 mb-1">Amount &ge; ($ threshold)</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 500"
-                      value={formAmountThreshold}
-                      onChange={e => setFormAmountThreshold(e.target.value)}
-                      className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                    />
+                    <Labelled labelClassName="block text-neutral-600 mb-1" label="Amount &ge; ($ threshold)">
+                      <input
+                        type="number"
+                        placeholder="e.g. 500"
+                        value={formAmountThreshold}
+                        onChange={e => setFormAmountThreshold(e.target.value)}
+                        className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                      />
+                    </Labelled>
                   </div>
                 </div>
               </div>
@@ -830,44 +837,48 @@ export const RulesSettings: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-neutral-600 mb-1">Assign Category</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Software & Subscriptions"
-                      value={formTargetCategory}
-                      onChange={e => setFormTargetCategory(e.target.value)}
-                      className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                    />
+                    <Labelled labelClassName="block text-neutral-600 mb-1" label="Assign Category">
+                      <input
+                        type="text"
+                        placeholder="e.g. Software & Subscriptions"
+                        value={formTargetCategory}
+                        onChange={e => setFormTargetCategory(e.target.value)}
+                        className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                      />
+                    </Labelled>
                   </div>
                   <div>
-                    <label className="block text-neutral-600 mb-1">Add Tags (comma-separated)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. saas, dev-tools, recurring"
-                      value={formAddTags}
-                      onChange={e => setFormAddTags(e.target.value)}
-                      className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                    />
+                    <Labelled labelClassName="block text-neutral-600 mb-1" label="Add Tags (comma-separated)">
+                      <input
+                        type="text"
+                        placeholder="e.g. saas, dev-tools, recurring"
+                        value={formAddTags}
+                        onChange={e => setFormAddTags(e.target.value)}
+                        className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                      />
+                    </Labelled>
                   </div>
                   <div>
-                    <label className="block text-neutral-600 mb-1">Assign Class Dimension</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Engineering, Sales, Ops"
-                      value={formTargetClass}
-                      onChange={e => setFormTargetClass(e.target.value)}
-                      className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                    />
+                    <Labelled labelClassName="block text-neutral-600 mb-1" label="Assign Class Dimension">
+                      <input
+                        type="text"
+                        placeholder="e.g. Engineering, Sales, Ops"
+                        value={formTargetClass}
+                        onChange={e => setFormTargetClass(e.target.value)}
+                        className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                      />
+                    </Labelled>
                   </div>
                   <div>
-                    <label className="block text-neutral-600 mb-1">Assign Location Dimension</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. HQ - New York"
-                      value={formTargetLocation}
-                      onChange={e => setFormTargetLocation(e.target.value)}
-                      className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                    />
+                    <Labelled labelClassName="block text-neutral-600 mb-1" label="Assign Location Dimension">
+                      <input
+                        type="text"
+                        placeholder="e.g. HQ - New York"
+                        value={formTargetLocation}
+                        onChange={e => setFormTargetLocation(e.target.value)}
+                        className="w-full p-2 bg-white border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                      />
+                    </Labelled>
                   </div>
                 </div>
 

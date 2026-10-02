@@ -48,6 +48,7 @@ then the 488 LATER items. Claude works through them in that order and ticks them
 | Bulk import | K-01 (= M-18 BK-01 BK-05 BK-06 CA-11): Settings → Import Data — customers, vendors, items, accounts from CSV/Excel; columns matched by name; every row checked, all or nothing; duplicates skipped; items' opening stock posted; undo keeps records already in use (12 tests) |
 | Period close 1 | R-01 R-02 R-03 R-08 R-10 BA-15: one lock rule (hard close, soft close for bookkeepers, partial unlock) in database + server + screens; close / reopen (reason; owner for hard) / unlock only through the server, audited; checklist with sign-offs; drafts block the close. Fixed: the close screen never loaded invoices/bills/bank lines; a lock on the 28th closed the month; "clear lock date" only changed the screen; bookkeepers could close months (11 tests) |
 | Notifications | S-01 S-03 S-04 S-06 S-14 S-19 + bounces: real notifications from the server (one per person, stored in the database, live bell): invoice emailed, invoice overdue (daily), customer payment received, email bounced / marked spam, bank connection expired, person invited / joined. Each person marks their own read and chooses which types they get (bell → gear). Only their own are visible (database rules tested). **The old bell showed made-up alerts kept only in the open page** |
+| Accessibility 1 | E-02 E-03 E-07 (most) E-04 E-22 E-29: 142 form labels are now linked to their fields (`Labelled`, unique id per field, same look; done by a codemod), icon-only buttons and switches have names, empty action-column headers say "Actions", backdrops are no longer fake focusable buttons; every keyboard-focused control shows a ring; "Skip to content" is the first Tab stop (it was skipped: the sub-navigation's scrollIntoView moved the browser's Tab starting point); browser test. Lint warnings 2,612 → 2,420 |
 | Loading and confirmations | I-01 I-02 I-05 I-07 I-08 (AA-02): one data status line above every screen says what is loading, what failed to load (with "Try again") and which lists are cut at their limit (the old banner said "2,000 of N"); Sales, Purchases, Payments, Credit notes, Estimates, Recurring and Data Health show "Loading…" instead of "nothing here" (Data Health said "Everything checks out" before checking); guard test. Void and delete name the record and ask first (voiding an invoice happened on one click); Delete only on draft bills (the database refuses the rest). Invoice and bill dialogs ask before discarding unsaved changes. Removed the "seed demo data" button that wrote 20 fake records into a real workspace (**L-127**) |
 | Money dialogs | H-01 H-02 H-03 H-04: component tests (jsdom + Testing Library, `src/tests/*.test.tsx`) for the invoice, bill, payment and bad debt dialogs check what each saves or sends: lines, tax on top or included, totals, numbers kept on edit, approval limit, allocations, refusals. Fixed **L-125** (invoice dialog: a customer typed but not on the list was saved as a made-up customer id; editing wiped the memo, terms and email text; currency defaulted to USD in any workspace) and **L-126** (payments: "apply" paid the newest invoices first, and drafts were offered though the server refuses them) |
 | Speed at scale | C-14 C-16 (C-15, AA-06 partly): screens ask for the data they read (`useLedgerCollections`); the ledger and chart of accounts load when a workspace opens, everything else the first time a screen needs it, then stays live; a guard test fails if a screen reads data without asking. Live lists now fetch **only the rows that changed** (by `updated_at`), not the whole list after every edit (tested on a fake database). Fixed **L-121**: balances and reports used only the last 12 months of entries, and invoices/bills loaded only on a few tabs (Reports, Data Health and the dashboard saw none or an old copy); editing a document whose list wasn't loaded now reads it from the database instead of posting a partial one. Removed 6 listeners nobody read and **L-122** (a writer that failed on every balance change) |
@@ -1363,12 +1364,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION E — ACCESSIBILITY
 
 - [x] E-01 Lint script — type check and ESLint are separate CI steps now
-- [ ] E-02 319 `<input>` with no id/aria-label
-- [ ] E-03 75 `<select>`
-- [ ] E-04 39 icon-only buttons
+- [~] E-02 Inputs: 142 labels linked (Labelled codemod); 46 labels in other layouts left
+- [~] E-03 Selects: linked with the same codemod where label + select are siblings
+- [x] E-04 Icon-only buttons and switches named (lint rule now clean)
 - [ ] E-05 23 tables without caption
 - [ ] E-06 2 `<img>` without alt
-- [ ] E-07 `htmlFor` coverage
+- [~] E-07 htmlFor coverage: label-has-associated-control 185 → 46
 - [ ] E-08 InvoiceModal
 - [ ] E-09 BillModal
 - [ ] E-10 ReceivePaymentModal
@@ -1383,14 +1384,14 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] E-19 Payment run
 - [ ] E-20 WriteOffModal
 - [ ] E-21 `scope="col"` on headers
-- [ ] E-22 Visible focus rings
+- [x] E-22 Visible focus ring on every keyboard-focused control (index.css; browser test)
 - [ ] E-23 Keyboard-only pass through invoicing
 - [ ] E-24 Screen-reader pass
 - [ ] E-25 `aria-live` for async results
 - [ ] E-26 Colour not the only +/− signal
 - [ ] E-27 Contrast in both themes
 - [ ] E-28 `prefers-reduced-motion`
-- [ ] E-29 Skip-to-content link
+- [x] E-29 Skip-to-content link, first Tab stop (browser test)
 - [ ] E-30 Heading hierarchy
 
 # SECTION F — CODE STRUCTURE

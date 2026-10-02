@@ -24,6 +24,7 @@ import { db } from '../../firebase';
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { Labelled } from '../ui/Labelled';
 
 
 
@@ -350,16 +351,17 @@ export default function BudgetManager() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-50">Velocity Period</label>
-                    <select 
-                      value={newBudget.period}
-                      onChange={(e) => setNewBudget({ ...newBudget, period: e.target.value as any })}
-                      className="w-full px-8 py-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-[var(--text)] appearance-none cursor-pointer uppercase tracking-widest"
-                    >
-                      <option value="monthly">Monthly Cycle</option>
-                      <option value="quarterly">Quarterly Cycle</option>
-                      <option value="yearly">Yearly Cycle</option>
-                    </select>
+                    <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-50" label="Velocity Period">
+                      <select 
+                        value={newBudget.period}
+                        onChange={(e) => setNewBudget({ ...newBudget, period: e.target.value as any })}
+                        className="w-full px-8 py-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-[var(--text)] appearance-none cursor-pointer uppercase tracking-widest"
+                      >
+                        <option value="monthly">Monthly Cycle</option>
+                        <option value="quarterly">Quarterly Cycle</option>
+                        <option value="yearly">Yearly Cycle</option>
+                      </select>
+                    </Labelled>
                   </div>
                 </div>
 

@@ -210,3 +210,10 @@
   body:has([data-print-root]) [data-print-root] { position: absolute; inset: 0 auto auto 0; width: 100%; }
   [data-print-hide] { display: none !important; }
 }
+
+/* E-22: every control focused from the keyboard shows a ring, whatever outline classes it has
+   (many use outline-none for mouse users). */
+:where(a, button, input, select, textarea, summary, [tabindex], [role="button"], [role="switch"]):focus-visible {
+  outline: 2px solid var(--brass) !important;
+  outline-offset: 2px;
+}

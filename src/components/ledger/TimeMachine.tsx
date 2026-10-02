@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { Labelled } from '../ui/Labelled';
 
 export default function TimeMachine() {
   const transactions = useLedgerStore(s => s.transactions);
@@ -368,23 +369,25 @@ export default function TimeMachine() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Branch Name</label>
-                  <input 
-                    type="text" 
-                    value={newBranchName}
-                    onChange={e => setNewBranchName(e.target.value)}
-                    placeholder="e.g. hire-new-developer" 
-                    className="w-full px-4 py-3 rounded-xl border border-[var(--line)] text-sm font-medium focus:border-[#0047AB] outline-none transition-colors"
-                  />
+                  <Labelled labelClassName="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2" label="Branch Name">
+                    <input 
+                      type="text" 
+                      value={newBranchName}
+                      onChange={e => setNewBranchName(e.target.value)}
+                      placeholder="e.g. hire-new-developer" 
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--line)] text-sm font-medium focus:border-[#0047AB] outline-none transition-colors"
+                    />
+                  </Labelled>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Description</label>
-                  <textarea 
-                    value={newBranchDesc}
-                    onChange={e => setNewBranchDesc(e.target.value)}
-                    placeholder="What if we hire a new developer in Q3?" 
-                    className="w-full px-4 py-3 rounded-xl border border-[var(--line)] text-sm font-medium focus:border-[#0047AB] outline-none transition-colors resize-none h-24"
-                  />
+                  <Labelled labelClassName="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2" label="Description">
+                    <textarea 
+                      value={newBranchDesc}
+                      onChange={e => setNewBranchDesc(e.target.value)}
+                      placeholder="What if we hire a new developer in Q3?" 
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--line)] text-sm font-medium focus:border-[#0047AB] outline-none transition-colors resize-none h-24"
+                    />
+                  </Labelled>
                 </div>
               </div>
 

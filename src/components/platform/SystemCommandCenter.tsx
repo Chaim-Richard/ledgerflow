@@ -32,6 +32,7 @@ import { SYSTEM_GLOSSARY } from '../../config/registry';
 import { BookA } from 'lucide-react';
 import { auth, db } from '../../firebase';
 import { collection, getDocs, doc, setDoc } from '../../lib/db/firestore';
+import { Labelled } from '../ui/Labelled';
 
 
 
@@ -492,13 +493,14 @@ export default function SystemCommandCenter() {
                         const currentVal = lexiconOverrides[key]?.en || originalVal.en;
                         return (
                           <div key={key} className="space-y-2 p-4 bg-[var(--ink)] rounded-[20px] border border-[var(--line)]">
-                            <label className="block text-xs font-bold text-slate-700 tracking-wide break-all">{key}</label>
-                            <input 
-                              type="text"
-                              value={currentVal}
-                              onChange={e => setLexiconOverride(key, 'en', e.target.value)}
-                              className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2 text-sm font-medium focus:border-[#0047AB] focus:ring-2 focus:ring-[#0047AB]/20 transition-all"
-                            />
+                            <Labelled labelClassName="block text-xs font-bold text-slate-700 tracking-wide break-all" label={<>{key}</>}>
+                              <input 
+                                type="text"
+                                value={currentVal}
+                                onChange={e => setLexiconOverride(key, 'en', e.target.value)}
+                                className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2 text-sm font-medium focus:border-[#0047AB] focus:ring-2 focus:ring-[#0047AB]/20 transition-all"
+                              />
+                            </Labelled>
                           </div>
                         );
                     })}
@@ -602,41 +604,38 @@ export default function SystemCommandCenter() {
                     <form onSubmit={handleSaveUser} className="space-y-6">
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                            Authority Role
-                          </label>
-                          <select 
-                            value={userFormState.role}
-                            onChange={e => setUserFormState(prev => ({ ...prev, role: e.target.value }))}
-                            className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
-                          >
-                            <option value="client">Client (Standard Access)</option>
-                            <option value="admin">Admin (System Access)</option>
-                          </select>
+                          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Authority Role">
+                            <select 
+                              value={userFormState.role}
+                              onChange={e => setUserFormState(prev => ({ ...prev, role: e.target.value }))}
+                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
+                            >
+                              <option value="client">Client (Standard Access)</option>
+                              <option value="admin">Admin (System Access)</option>
+                            </select>
+                          </Labelled>
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                            Custom Monetary Limit (Cents)
-                          </label>
-                          <input 
-                            type="number"
-                            value={userFormState.customLimit}
-                            onChange={e => setUserFormState(prev => ({ ...prev, customLimit: Number(e.target.value) }))}
-                            className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
-                            placeholder="0 = Use System Default"
-                          />
+                          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Custom Monetary Limit (Cents)">
+                            <input 
+                              type="number"
+                              value={userFormState.customLimit}
+                              onChange={e => setUserFormState(prev => ({ ...prev, customLimit: Number(e.target.value) }))}
+                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
+                              placeholder="0 = Use System Default"
+                            />
+                          </Labelled>
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                            Compute Credit Ceiling
-                          </label>
-                          <input 
-                            type="number"
-                            value={userFormState.computeCreditLimit}
-                            onChange={e => setUserFormState(prev => ({ ...prev, computeCreditLimit: Number(e.target.value) }))}
-                            className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
-                            placeholder="0 = Use System Default"
-                          />
+                          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Compute Credit Ceiling">
+                            <input 
+                              type="number"
+                              value={userFormState.computeCreditLimit}
+                              onChange={e => setUserFormState(prev => ({ ...prev, computeCreditLimit: Number(e.target.value) }))}
+                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
+                              placeholder="0 = Use System Default"
+                            />
+                          </Labelled>
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
@@ -843,65 +842,61 @@ export default function SystemCommandCenter() {
 
                 {/* Self API key credits */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
-                    Key Overhead Credits
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="1000"
-                    value={globalConfig.customKeyCreditCharge}
-                    onChange={(e) => setGlobalConfig(prev => ({ ...prev, customKeyCreditCharge: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
-                  />
+                  <Labelled labelClassName="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5" label="Key Overhead Credits">
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      value={globalConfig.customKeyCreditCharge}
+                      onChange={(e) => setGlobalConfig(prev => ({ ...prev, customKeyCreditCharge: Number(e.target.value || 0) }))}
+                      className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
+                    />
+                  </Labelled>
                   <p className="text-[9px] text-white/30 uppercase font-black">standard: 10 per call</p>
                 </div>
 
                 {/* Self API key cents */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
-                    Key Overhead Cents
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={globalConfig.customKeyCentsCharge}
-                    onChange={(e) => setGlobalConfig(prev => ({ ...prev, customKeyCentsCharge: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
-                  />
+                  <Labelled labelClassName="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5" label="Key Overhead Cents">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={globalConfig.customKeyCentsCharge}
+                      onChange={(e) => setGlobalConfig(prev => ({ ...prev, customKeyCentsCharge: Number(e.target.value || 0) }))}
+                      className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
+                    />
+                  </Labelled>
                   <p className="text-[9px] text-white/30 uppercase font-black">standard: 0 cents</p>
                 </div>
 
                 {/* User Limit Cap */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
-                    User Registration Limit
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="10000"
-                    value={globalConfig.maxRegistrationLimit ?? 100}
-                    onChange={(e) => setGlobalConfig(prev => ({ ...prev, maxRegistrationLimit: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
-                  />
+                  <Labelled labelClassName="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5" label="User Registration Limit">
+                    <input
+                      type="number"
+                      min="1"
+                      max="10000"
+                      value={globalConfig.maxRegistrationLimit ?? 100}
+                      onChange={(e) => setGlobalConfig(prev => ({ ...prev, maxRegistrationLimit: Number(e.target.value || 0) }))}
+                      className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
+                    />
+                  </Labelled>
                   <p className="text-[9px] text-white/30 uppercase font-black">limit total users</p>
                 </div>
 
                 {/* Free Tx Cap */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
-                    Free Tier Tx Cap
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100000"
-                    value={globalConfig.freeWorkspaceTxCap ?? 100}
-                    onChange={(e) => setGlobalConfig(prev => ({ ...prev, freeWorkspaceTxCap: Number(e.target.value || 0) }))}
-                    className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
-                  />
+                  <Labelled labelClassName="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5" label="Free Tier Tx Cap">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100000"
+                      value={globalConfig.freeWorkspaceTxCap ?? 100}
+                      onChange={(e) => setGlobalConfig(prev => ({ ...prev, freeWorkspaceTxCap: Number(e.target.value || 0) }))}
+                      className="w-full h-11 bg-[var(--surface)]/5 border border-white/10 rounded-xl px-4 text-xs font-mono font-bold text-white focus:border-[#0047AB] outline-none transition-all"
+                    />
+                  </Labelled>
                   <p className="text-[9px] text-white/30 uppercase font-black">cap per free workspace</p>
                 </div>
 
@@ -1240,18 +1235,17 @@ export default function SystemCommandCenter() {
                     {activeFormTab === 'tier' && (
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                            Assigned Plan Model
-                          </label>
-                          <select
-                            value={formState.plan}
-                            onChange={(e) => setFormState(prev => ({ ...prev, plan: e.target.value }))}
-                            className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-3 text-xs font-bold text-[var(--text)] focus:border-[#0047AB] focus:ring-1 focus:ring-[#0047AB] outline-none cursor-pointer transition-all"
-                          >
-                            <option value="sandbox">Sandbox Tier (Capped default offline development)</option>
-                            <option value="growth">Growth Platform Tier (Professional Core Business - Paid)</option>
-                            <option value="enterprise">Enterprise VIP Tier (High-volume Dedicated Capacity - Paid Custom)</option>
-                          </select>
+                          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Assigned Plan Model">
+                            <select
+                              value={formState.plan}
+                              onChange={(e) => setFormState(prev => ({ ...prev, plan: e.target.value }))}
+                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-3 text-xs font-bold text-[var(--text)] focus:border-[#0047AB] focus:ring-1 focus:ring-[#0047AB] outline-none cursor-pointer transition-all"
+                            >
+                              <option value="sandbox">Sandbox Tier (Capped default offline development)</option>
+                              <option value="growth">Growth Platform Tier (Professional Core Business - Paid)</option>
+                              <option value="enterprise">Enterprise VIP Tier (High-volume Dedicated Capacity - Paid Custom)</option>
+                            </select>
+                          </Labelled>
                         </div>
 
                         {/* Interactive plan features visual guide */}
@@ -1309,32 +1303,30 @@ export default function SystemCommandCenter() {
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                              Seat authorization (Max Seats)
-                            </label>
-                            <input
-                              type="number"
-                              value={formState.maxSeats}
-                              min={1}
-                              max={500}
-                              onChange={(e) => setFormState(prev => ({ ...prev, maxSeats: Number(e.target.value) }))}
-                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
-                            />
+                            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Seat authorization (Max Seats)">
+                              <input
+                                type="number"
+                                value={formState.maxSeats}
+                                min={1}
+                                max={500}
+                                onChange={(e) => setFormState(prev => ({ ...prev, maxSeats: Number(e.target.value) }))}
+                                className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
+                              />
+                            </Labelled>
                             <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Capped at 500 seats/tenant</p>
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                              Rate limit (Queries rate/min)
-                            </label>
-                            <input
-                              type="number"
-                              value={formState.concurrentUserLimit}
-                              min={5}
-                              max={10000}
-                              onChange={(e) => setFormState(prev => ({ ...prev, concurrentUserLimit: Number(e.target.value) }))}
-                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
-                            />
+                            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Rate limit (Queries rate/min)">
+                              <input
+                                type="number"
+                                value={formState.concurrentUserLimit}
+                                min={5}
+                                max={10000}
+                                onChange={(e) => setFormState(prev => ({ ...prev, concurrentUserLimit: Number(e.target.value) }))}
+                                className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
+                              />
+                            </Labelled>
                             <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Prevents endpoint throttling</p>
                           </div>
                         </div>
@@ -1381,17 +1373,16 @@ export default function SystemCommandCenter() {
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                            Compute balance credits
-                          </label>
-                          <input
-                            type="number"
-                            value={formState.computeCreditBalance}
-                            min={0}
-                            max={10000000}
-                            onChange={(e) => setFormState(prev => ({ ...prev, computeCreditBalance: Number(e.target.value) }))}
-                            className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
-                          />
+                          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Compute balance credits">
+                            <input
+                              type="number"
+                              value={formState.computeCreditBalance}
+                              min={0}
+                              max={10000000}
+                              onChange={(e) => setFormState(prev => ({ ...prev, computeCreditBalance: Number(e.target.value) }))}
+                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
+                            />
+                          </Labelled>
                           <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Required dynamically by rule classifying pipeline & algorithms on API routes</p>
                         </div>
 
@@ -1438,16 +1429,15 @@ export default function SystemCommandCenter() {
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                              API Monthly Limit ($)
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={(formState.apiQuotaMonthlyLimitCents / 100).toFixed(2)}
-                              onChange={(e) => setFormState(prev => ({ ...prev, apiQuotaMonthlyLimitCents: Math.round(Number(e.target.value || 0) * 100) }))}
-                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
-                            />
+                            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="API Monthly Limit ($)">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={(formState.apiQuotaMonthlyLimitCents / 100).toFixed(2)}
+                                onChange={(e) => setFormState(prev => ({ ...prev, apiQuotaMonthlyLimitCents: Math.round(Number(e.target.value || 0) * 100) }))}
+                                className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
+                              />
+                            </Labelled>
                             <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Auto-caps programmatic use</p>
                           </div>
 
@@ -1502,36 +1492,34 @@ export default function SystemCommandCenter() {
                         {/* Cost Multipliers */}
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                              Compute Credit Cost Multiplier
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              max="10"
-                              value={formState.creditCostMultiplier}
-                              onChange={(e) => setFormState(prev => ({ ...prev, creditCostMultiplier: Number(e.target.value || 0) }))}
-                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
-                            />
+                            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Compute Credit Cost Multiplier">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="10"
+                                value={formState.creditCostMultiplier}
+                                onChange={(e) => setFormState(prev => ({ ...prev, creditCostMultiplier: Number(e.target.value || 0) }))}
+                                className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
+                              />
+                            </Labelled>
                             <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">
                               0.00 = Free, 1.0 = Base, 2.0 = Double cost
                             </p>
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                              Platform Spend Multiplier (Cents)
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              max="10"
-                              value={formState.quotaCentsMultiplier}
-                              onChange={(e) => setFormState(prev => ({ ...prev, quotaCentsMultiplier: Number(e.target.value || 0) }))}
-                              className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
-                            />
+                            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Platform Spend Multiplier (Cents)">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="10"
+                                value={formState.quotaCentsMultiplier}
+                                onChange={(e) => setFormState(prev => ({ ...prev, quotaCentsMultiplier: Number(e.target.value || 0) }))}
+                                className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
+                              />
+                            </Labelled>
                             <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">
                               0.00 = Free spend, 1.0 = Base multiplier
                             </p>
@@ -1547,32 +1535,30 @@ export default function SystemCommandCenter() {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                                Overhead Credits Per Query
-                              </label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={formState.customKeyCreditCharge}
-                                onChange={(e) => setFormState(prev => ({ ...prev, customKeyCreditCharge: Number(e.target.value || 0) }))}
-                                className="w-full h-10 bg-[var(--surface)] border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-850 focus:border-[#0047AB] outline-none transition-all"
-                              />
+                              <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Overhead Credits Per Query">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={formState.customKeyCreditCharge}
+                                  onChange={(e) => setFormState(prev => ({ ...prev, customKeyCreditCharge: Number(e.target.value || 0) }))}
+                                  className="w-full h-10 bg-[var(--surface)] border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-850 focus:border-[#0047AB] outline-none transition-all"
+                                />
+                              </Labelled>
                               <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">
                                 Credits (default is 10)
                               </p>
                             </div>
 
                             <div>
-                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
-                                Overhead Cents Per Query
-                              </label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={formState.customKeyCentsCharge}
-                                onChange={(e) => setFormState(prev => ({ ...prev, customKeyCentsCharge: Number(e.target.value || 0) }))}
-                                className="w-full h-10 bg-[var(--surface)] border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-855 focus:border-[#0047AB] outline-none transition-all"
-                              />
+                              <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Overhead Cents Per Query">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={formState.customKeyCentsCharge}
+                                  onChange={(e) => setFormState(prev => ({ ...prev, customKeyCentsCharge: Number(e.target.value || 0) }))}
+                                  className="w-full h-10 bg-[var(--surface)] border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-855 focus:border-[#0047AB] outline-none transition-all"
+                                />
+                              </Labelled>
                               <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">
                                 Platform cents (default is 0)
                               </p>

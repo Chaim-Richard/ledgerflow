@@ -3,6 +3,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeGeneralLedger } from '../../server/reports/computeReports';
 import { Search, Filter, BookOpen, Download } from 'lucide-react';
+import { Labelled } from '../ui/Labelled';
 
 export default function GeneralLedgerView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
   const accounts = useLedgerStore(s => s.accounts);
@@ -56,37 +57,40 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
         <div className="flex flex-wrap items-center gap-3">
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">From</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-            />
+            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label="From">
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              />
+            </Labelled>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">To</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-            />
+            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label="To">
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              />
+            </Labelled>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Account</label>
-            <select
-              value={selectedAccountId}
-              onChange={e => setSelectedAccountId(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-            >
-              <option value="all">All Accounts ({accounts.length})</option>
-              {accounts.map(a => (
-                <option key={a.id} value={a.id}>
-                  {a.code ? `${a.code} - ${a.name}` : a.name}
-                </option>
-              ))}
-            </select>
+            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label="Account">
+              <select
+                value={selectedAccountId}
+                onChange={e => setSelectedAccountId(e.target.value)}
+                className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              >
+                <option value="all">All Accounts ({accounts.length})</option>
+                {accounts.map(a => (
+                  <option key={a.id} value={a.id}>
+                    {a.code ? `${a.code} - ${a.name}` : a.name}
+                  </option>
+                ))}
+              </select>
+            </Labelled>
           </div>
         </div>
 

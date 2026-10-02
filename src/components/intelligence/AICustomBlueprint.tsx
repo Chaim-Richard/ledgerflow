@@ -15,6 +15,7 @@ import { aiService } from '../../services/aiService';
 import { BUSINESS_TEMPLATES } from '../../lib/businessTemplates';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
+import { Labelled } from '../ui/Labelled';
 
 interface AICustomBlueprintProps {
   isOpen: boolean;
@@ -156,15 +157,14 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
           {!generatedData ? (
             <div className="max-w-2xl mx-auto space-y-8 py-10">
               <div className="space-y-4">
-                <label className="block text-xs font-medium uppercase tracking-wider text-zinc-400">
-                  How does your business work?
-                </label>
-                <textarea 
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g., I run a boutique coffee shop that also sells beans online. I have 3 employees and rent a space in downtown..."
-                  className="w-full h-48 px-8 py-6 bg-[var(--ink)] border-2 border-[var(--line)] rounded-[32px] focus:outline-none focus:border-orange-500 transition-all text-lg leading-relaxed resize-none"
-                />
+                <Labelled labelClassName="block text-xs font-medium uppercase tracking-wider text-zinc-400" label="How does your business work?">
+                  <textarea 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="e.g., I run a boutique coffee shop that also sells beans online. I have 3 employees and rent a space in downtown..."
+                    className="w-full h-48 px-8 py-6 bg-[var(--ink)] border-2 border-[var(--line)] rounded-[32px] focus:outline-none focus:border-orange-500 transition-all text-lg leading-relaxed resize-none"
+                  />
+                </Labelled>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

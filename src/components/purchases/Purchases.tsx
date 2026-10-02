@@ -220,7 +220,7 @@ export default function Purchases() {
                   <th className="p-4">Due Date</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-right">Amount</th>
-                  <th className="p-4 w-10"></th>
+                  <th className="p-4 w-10"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">

@@ -17,6 +17,7 @@ import {
   Check
 } from 'lucide-react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { Labelled } from '../ui/Labelled';
 
 export const PayrollView: React.FC = () => {
   const employees = useLedgerStore(s => (s.employees || []) as Employee[]);
@@ -401,87 +402,94 @@ export const PayrollView: React.FC = () => {
 
             <div className="p-5 space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Alex Morgan"
-                  value={empName}
-                  onChange={e => setEmpName(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    placeholder="alex@company.com"
-                    value={empEmail}
-                    onChange={e => setEmpEmail(e.target.value)}
-                    className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Job Role / Title</label>
+                <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Full Name">
                   <input
                     type="text"
-                    placeholder="Senior Engineer"
-                    value={empRole}
-                    onChange={e => setEmpRole(e.target.value)}
+                    placeholder="e.g. Alex Morgan"
+                    value={empName}
+                    onChange={e => setEmpName(e.target.value)}
                     className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
                   />
+                </Labelled>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Email">
+                    <input
+                      type="email"
+                      placeholder="alex@company.com"
+                      value={empEmail}
+                      onChange={e => setEmpEmail(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                    />
+                  </Labelled>
+                </div>
+                <div>
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Job Role / Title">
+                    <input
+                      type="text"
+                      placeholder="Senior Engineer"
+                      value={empRole}
+                      onChange={e => setEmpRole(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                    />
+                  </Labelled>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Annual Salary ($)</label>
-                  <input
-                    type="number"
-                    placeholder="95000"
-                    value={empSalary}
-                    onChange={e => setEmpSalary(e.target.value)}
-                    className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden font-mono"
-                  />
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Annual Salary ($)">
+                    <input
+                      type="number"
+                      placeholder="95000"
+                      value={empSalary}
+                      onChange={e => setEmpSalary(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden font-mono"
+                    />
+                  </Labelled>
                 </div>
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Pay Frequency</label>
-                  <select
-                    value={empFrequency}
-                    onChange={e => setEmpFrequency(e.target.value as Employee['payFrequency'])}
-                    className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                  >
-                    <option value="Weekly">Weekly (52/yr)</option>
-                    <option value="Bi-Weekly">Bi-Weekly (26/yr)</option>
-                    <option value="Monthly">Monthly (12/yr)</option>
-                  </select>
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Pay Frequency">
+                    <select
+                      value={empFrequency}
+                      onChange={e => setEmpFrequency(e.target.value as Employee['payFrequency'])}
+                      className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                    >
+                      <option value="Weekly">Weekly (52/yr)</option>
+                      <option value="Bi-Weekly">Bi-Weekly (26/yr)</option>
+                      <option value="Monthly">Monthly (12/yr)</option>
+                    </select>
+                  </Labelled>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Filing Status</label>
-                  <select
-                    value={empStatus}
-                    onChange={e => setEmpStatus(e.target.value as Employee['filingStatus'])}
-                    className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                  >
-                    <option value="Single">Single</option>
-                    <option value="Married">Married Filing Jointly</option>
-                    <option value="Head of Household">Head of Household</option>
-                  </select>
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Filing Status">
+                    <select
+                      value={empStatus}
+                      onChange={e => setEmpStatus(e.target.value as Employee['filingStatus'])}
+                      className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                    >
+                      <option value="Single">Single</option>
+                      <option value="Married">Married Filing Jointly</option>
+                      <option value="Head of Household">Head of Household</option>
+                    </select>
+                  </Labelled>
                 </div>
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">State Tax Code</label>
-                  <input
-                    type="text"
-                    maxLength={2}
-                    placeholder="CA / NY / TX"
-                    value={empState}
-                    onChange={e => setEmpState(e.target.value.toUpperCase())}
-                    className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden uppercase"
-                  />
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="State Tax Code">
+                    <input
+                      type="text"
+                      maxLength={2}
+                      placeholder="CA / NY / TX"
+                      value={empState}
+                      onChange={e => setEmpState(e.target.value.toUpperCase())}
+                      className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden uppercase"
+                    />
+                  </Labelled>
                 </div>
               </div>
 
@@ -527,26 +535,28 @@ export const PayrollView: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Disbursement Date</label>
-                  <input
-                    type="date"
-                    value={runPayDate}
-                    onChange={e => setRunPayDate(e.target.value)}
-                    className="w-full p-2 bg-white border border-neutral-300 rounded-lg"
-                  />
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Disbursement Date">
+                    <input
+                      type="date"
+                      value={runPayDate}
+                      onChange={e => setRunPayDate(e.target.value)}
+                      className="w-full p-2 bg-white border border-neutral-300 rounded-lg"
+                    />
+                  </Labelled>
                 </div>
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Disbursement Bank Account</label>
-                  <select
-                    value={selectedBankAccountId}
-                    onChange={e => setSelectedBankAccountId(e.target.value)}
-                    className="w-full p-2 bg-white border border-neutral-300 rounded-lg"
-                  >
-                    <option value="">Default Operating Account</option>
-                    {accounts.map(acc => (
-                      <option key={acc.id} value={acc.id}>{acc.name} ({acc.code || acc.category})</option>
-                    ))}
-                  </select>
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Disbursement Bank Account">
+                    <select
+                      value={selectedBankAccountId}
+                      onChange={e => setSelectedBankAccountId(e.target.value)}
+                      className="w-full p-2 bg-white border border-neutral-300 rounded-lg"
+                    >
+                      <option value="">Default Operating Account</option>
+                      {accounts.map(acc => (
+                        <option key={acc.id} value={acc.id}>{acc.name} ({acc.code || acc.category})</option>
+                      ))}
+                    </select>
+                  </Labelled>
                 </div>
               </div>
 

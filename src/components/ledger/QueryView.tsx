@@ -8,6 +8,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Filter, Download, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { Transaction } from '../../types';
+import { Labelled } from '../ui/Labelled';
 
 // Credit note for Fava (MIT License) inspiration:
 // Inspired by Fava (beancount/fava - MIT License) ad-hoc ledger query engine architecture.
@@ -217,45 +218,49 @@ export default function QueryView() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Text Search</label>
-            <input
-              type="text"
-              value={queryFilter.searchTerm || ''}
-              onChange={e => setQueryFilter({ ...queryFilter, searchTerm: e.target.value })}
-              placeholder="Search payee, memo, tx #..."
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+            <Labelled labelClassName="block text-xs font-semibold text-slate-700 mb-1" label="Text Search">
+              <input
+                type="text"
+                value={queryFilter.searchTerm || ''}
+                onChange={e => setQueryFilter({ ...queryFilter, searchTerm: e.target.value })}
+                placeholder="Search payee, memo, tx #..."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </Labelled>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Start Date</label>
-            <input
-              type="date"
-              value={queryFilter.startDate || ''}
-              onChange={e => setQueryFilter({ ...queryFilter, startDate: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+            <Labelled labelClassName="block text-xs font-semibold text-slate-700 mb-1" label="Start Date">
+              <input
+                type="date"
+                value={queryFilter.startDate || ''}
+                onChange={e => setQueryFilter({ ...queryFilter, startDate: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </Labelled>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">End Date</label>
-            <input
-              type="date"
-              value={queryFilter.endDate || ''}
-              onChange={e => setQueryFilter({ ...queryFilter, endDate: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+            <Labelled labelClassName="block text-xs font-semibold text-slate-700 mb-1" label="End Date">
+              <input
+                type="date"
+                value={queryFilter.endDate || ''}
+                onChange={e => setQueryFilter({ ...queryFilter, endDate: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </Labelled>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Min Amount ($)</label>
-            <input
-              type="number"
-              value={queryFilter.minAmountCents !== undefined ? queryFilter.minAmountCents / 100 : ''}
-              onChange={e => setQueryFilter({ ...queryFilter, minAmountCents: e.target.value ? Number(e.target.value) * 100 : undefined })}
-              placeholder="0.00"
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+            <Labelled labelClassName="block text-xs font-semibold text-slate-700 mb-1" label="Min Amount ($)">
+              <input
+                type="number"
+                value={queryFilter.minAmountCents !== undefined ? queryFilter.minAmountCents / 100 : ''}
+                onChange={e => setQueryFilter({ ...queryFilter, minAmountCents: e.target.value ? Number(e.target.value) * 100 : undefined })}
+                placeholder="0.00"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </Labelled>
           </div>
         </div>
       </div>

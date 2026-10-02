@@ -26,6 +26,7 @@ import {
 import { toast } from 'sonner';
 import AsyncButton from '../../ui/AsyncButton';
 import { useTimeout } from '../../../hooks/useTimeout';
+import { Labelled } from '../../ui/Labelled';
 
 export default function BlueprintSettings() {
   const language = useUIStore(state => state.language);
@@ -401,24 +402,26 @@ export default function BlueprintSettings() {
           {/* Add Option Form */}
           <div className="pt-4 border-t border-[var(--line)] grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             <div className="space-y-2">
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Category Name (Lower-Case Match)</label>
-              <input
-                type="text"
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                placeholder="e.g. software, rent, utilities"
-                className="w-full bg-[var(--surface)] hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3 rounded-[32px] text-xs font-bold tracking-wider"
-              />
+              <Labelled labelClassName="text-[9px] font-black text-slate-500 uppercase tracking-wider" label="Category Name (Lower-Case Match)">
+                <input
+                  type="text"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="e.g. software, rent, utilities"
+                  className="w-full bg-[var(--surface)] hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3 rounded-[32px] text-xs font-bold tracking-wider"
+                />
+              </Labelled>
             </div>
             <div className="space-y-2">
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Debit Override Account</label>
-              <select
-                value={newCatAccountId}
-                onChange={(e) => setNewCatAccountId(e.target.value)}
-                className="w-full bg-[var(--surface)] hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
-              >
-                {renderAccountOptions()}
-              </select>
+              <Labelled labelClassName="text-[9px] font-black text-slate-500 uppercase tracking-wider" label="Debit Override Account">
+                <select
+                  value={newCatAccountId}
+                  onChange={(e) => setNewCatAccountId(e.target.value)}
+                  className="w-full bg-[var(--surface)] hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
+                >
+                  {renderAccountOptions()}
+                </select>
+              </Labelled>
             </div>
             <button
               type="button"

@@ -371,7 +371,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                 <table className="w-full text-left text-sm border-collapse">
                   <thead>
                     <tr className="bg-[var(--ink)]/50 border-b border-[var(--line)]">
-                      <th className="px-6 py-4 w-12"></th>
+                      <th className="px-6 py-4 w-12"><span className="sr-only">Actions</span></th>
                       <th className="px-4 py-4 font-black text-slate-500 uppercase tracking-widest text-[9px]">Timestamp</th>
                       <th className="px-4 py-4 font-black text-slate-500 uppercase tracking-widest text-[9px]">Description</th>
                       <th className="px-4 py-4 font-black text-slate-500 uppercase tracking-widest text-[9px]">Amount</th>

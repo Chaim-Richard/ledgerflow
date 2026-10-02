@@ -337,7 +337,7 @@ export default function Sales() {
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Due</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-right">Amount</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">State</th>
-                  <th className="p-4 md:p-8 w-10"></th>
+                  <th className="p-4 md:p-8 w-10"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ledger-line/30">
@@ -528,7 +528,7 @@ export default function Sales() {
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Customer Profile</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Contact</th>
                   <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap text-right">Net Receivable</th>
-                  <th className="p-4 md:p-8 w-10"></th>
+                  <th className="p-4 md:p-8 w-10"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ledger-line/30">

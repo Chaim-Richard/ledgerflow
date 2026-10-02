@@ -30,6 +30,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { Labelled } from '../ui/Labelled';
 
 export default function Projects() {
   const user = useAuthStore(s => s.user);
@@ -527,15 +528,16 @@ export default function Projects() {
             
             <div className="p-4 md:p-8 space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-1">Protocol Name</label>
-                <input 
-                  type="text"
-                  dir="auto"
-                  value={newProject.name}
-                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                  placeholder="e.g., Project Overlord"
-                  className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all"
-                />
+                <Labelled labelClassName="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-1" label="Protocol Name">
+                  <input 
+                    type="text"
+                    dir="auto"
+                    value={newProject.name}
+                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                    placeholder="e.g., Project Overlord"
+                    className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all"
+                  />
+                </Labelled>
               </div>
 
               <div className="space-y-4">
@@ -565,14 +567,15 @@ export default function Projects() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-1">Strategic Description</label>
-                <textarea 
-                  dir="auto"
-                  value={newProject.description || ''}
-                  onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                  placeholder="Intelligence briefing on project goals..."
-                  className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-medium focus:outline-none focus:border-indigo-600 transition-all h-24"
-                />
+                <Labelled labelClassName="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-1" label="Strategic Description">
+                  <textarea 
+                    dir="auto"
+                    value={newProject.description || ''}
+                    onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                    placeholder="Intelligence briefing on project goals..."
+                    className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-medium focus:outline-none focus:border-indigo-600 transition-all h-24"
+                  />
+                </Labelled>
               </div>
             </div>
 
@@ -619,14 +622,15 @@ export default function Projects() {
             
             <div className="p-4 md:p-8 space-y-6">
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Protocol Name</label>
-                <input 
-                  type="text"
-                  dir="auto"
-                  value={editingProject.name}
-                  onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
-                  className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all"
-                />
+                <Labelled labelClassName="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1" label="Protocol Name">
+                  <input 
+                    type="text"
+                    dir="auto"
+                    value={editingProject.name}
+                    onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
+                    className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all"
+                  />
+                </Labelled>
               </div>
 
               <div className="space-y-4">
@@ -695,13 +699,14 @@ export default function Projects() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Strategic Description</label>
-                <textarea 
-                  dir="auto"
-                  value={editingProject.description || ''}
-                  onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
-                  className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-medium focus:outline-none focus:border-indigo-600 transition-all h-24"
-                />
+                <Labelled labelClassName="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1" label="Strategic Description">
+                  <textarea 
+                    dir="auto"
+                    value={editingProject.description || ''}
+                    onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
+                    className="w-full p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-medium focus:outline-none focus:border-indigo-600 transition-all h-24"
+                  />
+                </Labelled>
               </div>
             </div>
 

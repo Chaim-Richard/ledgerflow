@@ -17,6 +17,7 @@ import {
   Calendar,
   DollarSign
 } from 'lucide-react';
+import { Labelled } from '../ui/Labelled';
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -170,35 +171,37 @@ export const TransferModal: React.FC<TransferModalProps> = ({
           ) : activeTab === 'create' ? (
             <div className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">From Account (Source)</label>
-                <select
-                  value={fromAccountId}
-                  onChange={e => setFromAccountId(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                >
-                  <option value="">Select source bank/cash account...</option>
-                  {cashAccounts.map(a => (
-                    <option key={a.id} value={a.id} disabled={a.id === toAccountId}>
-                      {a.name} ({a.code || a.category})
-                    </option>
-                  ))}
-                </select>
+                <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="From Account (Source)">
+                  <select
+                    value={fromAccountId}
+                    onChange={e => setFromAccountId(e.target.value)}
+                    className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                  >
+                    <option value="">Select source bank/cash account...</option>
+                    {cashAccounts.map(a => (
+                      <option key={a.id} value={a.id} disabled={a.id === toAccountId}>
+                        {a.name} ({a.code || a.category})
+                      </option>
+                    ))}
+                  </select>
+                </Labelled>
               </div>
 
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">To Account (Destination)</label>
-                <select
-                  value={toAccountId}
-                  onChange={e => setToAccountId(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                >
-                  <option value="">Select destination bank/cash account...</option>
-                  {cashAccounts.map(a => (
-                    <option key={a.id} value={a.id} disabled={a.id === fromAccountId}>
-                      {a.name} ({a.code || a.category})
-                    </option>
-                  ))}
-                </select>
+                <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="To Account (Destination)">
+                  <select
+                    value={toAccountId}
+                    onChange={e => setToAccountId(e.target.value)}
+                    className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                  >
+                    <option value="">Select destination bank/cash account...</option>
+                    {cashAccounts.map(a => (
+                      <option key={a.id} value={a.id} disabled={a.id === fromAccountId}>
+                        {a.name} ({a.code || a.category})
+                      </option>
+                    ))}
+                  </select>
+                </Labelled>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -218,25 +221,27 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Transfer Date</label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={e => setDate(e.target.value)}
-                    className="w-full p-2 bg-white border border-neutral-300 rounded-lg text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                  />
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Transfer Date">
+                    <input
+                      type="date"
+                      value={date}
+                      onChange={e => setDate(e.target.value)}
+                      className="w-full p-2 bg-white border border-neutral-300 rounded-lg text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                    />
+                  </Labelled>
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">Reference / Note (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sweep to high-yield savings"
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  className="w-full p-2 bg-white border border-neutral-300 rounded-lg text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
-                />
+                <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Reference / Note (Optional)">
+                  <input
+                    type="text"
+                    placeholder="e.g. Sweep to high-yield savings"
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    className="w-full p-2 bg-white border border-neutral-300 rounded-lg text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
+                  />
+                </Labelled>
               </div>
 
               <div className="p-3 bg-neutral-50 rounded-lg border border-neutral-200 text-[11px] text-neutral-600 flex items-start gap-2">

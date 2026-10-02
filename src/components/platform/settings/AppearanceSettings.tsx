@@ -409,6 +409,10 @@ export default function AppearanceSettings() {
               <p className="text-[10px] text-[var(--muted)] mt-0.5">Increases text contrast and border legibility.</p>
             </div>
             <button
+              type="button"
+              role="switch"
+              aria-checked={highContrast}
+              aria-label="High contrast"
               onClick={() => setHighContrast(!highContrast)}
               className={cn(
                 "w-12 h-6 rounded-full transition-colors relative cursor-pointer p-0.5",
@@ -429,6 +433,10 @@ export default function AppearanceSettings() {
               <p className="text-[10px] text-[var(--muted)] mt-0.5">Minimizes page transitions and animations.</p>
             </div>
             <button
+              type="button"
+              role="switch"
+              aria-checked={reduceMotion}
+              aria-label="Reduce motion"
               onClick={() => setReduceMotion(!reduceMotion)}
               className={cn(
                 "w-12 h-6 rounded-full transition-colors relative cursor-pointer p-0.5",

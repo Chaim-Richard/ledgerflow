@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useUIStore } from '../../../stores/useUIStore';
 import { APP_TABS, SETTINGS_TABS_REGISTRY, REPORT_TABS_REGISTRY, INTELLIGENCE_TABS_REGISTRY, ANALYTICAL_LENSES_REGISTRY } from '../../../config/registry';
 import { Command, Plus, Trash2, Keyboard } from 'lucide-react';
+import { Labelled } from '../../ui/Labelled';
 
 export default function ShortcutSettings() {
   const language = useUIStore(state => state.language);
@@ -45,30 +46,32 @@ export default function ShortcutSettings() {
         <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-wider mb-4">Add New Speed Dial</h3>
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-1 space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Key (e.g. 1, 2, A)</label>
-            <input 
-              type="text" 
-              maxLength={1}
-              value={newKey}
-              onChange={(e) => setNewKey(e.target.value)}
-              className="w-full px-4 py-2 border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-slate-900 outline-none bg-[var(--surface)]"
-              placeholder="Key"
-            />
+            <Labelled labelClassName="text-xs font-semibold text-slate-500 uppercase tracking-wider" label="Key (e.g. 1, 2, A)">
+              <input 
+                type="text" 
+                maxLength={1}
+                value={newKey}
+                onChange={(e) => setNewKey(e.target.value)}
+                className="w-full px-4 py-2 border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-slate-900 outline-none bg-[var(--surface)]"
+                placeholder="Key"
+              />
+            </Labelled>
           </div>
           <div className="flex-1 space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Target Tool</label>
-            <select 
-              value={selectedTab}
-              onChange={(e) => setSelectedTab(e.target.value)}
-              className="w-full px-4 py-2 border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-slate-900 outline-none bg-[var(--surface)]"
-            >
-              <option value="">Select a tool...</option>
-              {ALL_TOOLS.map(tab => (
-                <option key={tab.id} value={tab.id}>
-                  {((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id}
-                </option>
-              ))}
-            </select>
+            <Labelled labelClassName="text-xs font-semibold text-slate-500 uppercase tracking-wider" label="Target Tool">
+              <select 
+                value={selectedTab}
+                onChange={(e) => setSelectedTab(e.target.value)}
+                className="w-full px-4 py-2 border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-slate-900 outline-none bg-[var(--surface)]"
+              >
+                <option value="">Select a tool...</option>
+                {ALL_TOOLS.map(tab => (
+                  <option key={tab.id} value={tab.id}>
+                    {((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id}
+                  </option>
+                ))}
+              </select>
+            </Labelled>
           </div>
           <button 
             onClick={handleAdd}

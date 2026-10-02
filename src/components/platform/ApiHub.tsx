@@ -30,6 +30,7 @@ import { convertXeroAccounts } from '../../lib/xeroAdapter';
 import { db, getIdToken } from '../../firebase';
 import { collection, query, where, getDocs } from '../../lib/db/firestore';
 import { useTimeout } from '../../hooks/useTimeout';
+import { Labelled } from '../ui/Labelled';
 
 const AVAILABLE_SCOPES = [
   { id: 'read:transactions', label: 'Read Transactions', desc: 'Allows querying and reading financial ledger transactions and journal entries.' },
@@ -1153,30 +1154,32 @@ export default function ApiHub() {
                 <div className="p-6 space-y-6">
                   {/* Name Input */}
                   <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Credential Name</label>
-                    <input 
-                      type="text"
-                      value={newKeyName}
-                      onChange={(e) => setNewKeyName(e.target.value)}
-                      placeholder="e.g. Acme Production Integration"
-                      className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-3xs"
-                    />
+                    <Labelled labelClassName="text-xs font-black uppercase tracking-wider text-slate-500 block" label="Credential Name">
+                      <input 
+                        type="text"
+                        value={newKeyName}
+                        onChange={(e) => setNewKeyName(e.target.value)}
+                        placeholder="e.g. Acme Production Integration"
+                        className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-3xs"
+                      />
+                    </Labelled>
                   </div>
 
                   {/* Expiration dropdown */}
                   <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">TTL / Expiration Age</label>
-                    <select 
-                      value={expiration}
-                      onChange={(e: any) => setExpiration(e.target.value)}
-                      className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-3xs"
-                    >
-                      <option value="never">Indefinite (Never Expire)</option>
-                      <option value="1h">1 Hour (Ephemeral Transient Testing)</option>
-                      <option value="24h">24 Hours (Daily Rotation)</option>
-                      <option value="30d">30 Days</option>
-                      <option value="90d">90 Days</option>
-                    </select>
+                    <Labelled labelClassName="text-xs font-black uppercase tracking-wider text-slate-500 block" label="TTL / Expiration Age">
+                      <select 
+                        value={expiration}
+                        onChange={(e: any) => setExpiration(e.target.value)}
+                        className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-3xs"
+                      >
+                        <option value="never">Indefinite (Never Expire)</option>
+                        <option value="1h">1 Hour (Ephemeral Transient Testing)</option>
+                        <option value="24h">24 Hours (Daily Rotation)</option>
+                        <option value="30d">30 Days</option>
+                        <option value="90d">90 Days</option>
+                      </select>
+                    </Labelled>
                   </div>
 
                   {/* Scopes selection */}
@@ -2386,44 +2389,45 @@ fetch(url, {
 
               {/* Endpoint select dropdown */}
               <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-wider text-slate-500">Select API Route</label>
-                <select
-                  value={sandboxEndpoint}
-                  onChange={(e) => {
-                    setSandboxEndpoint(e.target.value);
-                    setSandboxResult(null);
-                    setSandboxStatus(null);
-                    setSandboxLatency(null);
-                  }}
-                  className="w-full bg-[var(--ink)] border border-[var(--line)] rounded-xl p-3 text-xs font-bold font-mono focus:ring-1 focus:ring-slate-950 focus:outline-none"
-                >
-                  <option value="GET_v1_status">GET /api/v1/status (Verify Core Gateway Status)</option>
-                  <option value="GET_v1_workspaces">GET /api/v1/workspaces (Query Tenant Profiles)</option>
-                  <option value="GET_v1_ledger">GET /api/v1/ledger (Check Chart of Accounts)</option>
-                  <option value="POST_v1_ledger">POST /api/v1/ledger (Provison COA Ledger Node)</option>
-                  <option value="GET_v1_transactions">GET /api/v1/transactions (Sync Decisive Postings)</option>
-                  <option value="POST_v1_transactions">POST /api/v1/transactions (Ingest Posting + Bayesian Learn)</option>
-                  <option value="POST_v1_transactions_bulk">POST /api/v1/transactions/bulk (10x Bulk Ingest Engine)</option>
-                  <option value="GET_v1_ledger_diagnostics">GET /api/v1/ledger/diagnostics (10x Ledger Sanity Diagnostics)</option>
-                  <option value="GET_v1_projects">GET /api/v1/projects (Query Active Ventures)</option>
-                  <option value="POST_v1_projects">POST /api/v1/projects (Map Corporate Scenario Submodule)</option>
-                  <option value="GET_v1_metrics">GET /api/v1/metrics (Retrieve Sifting KPIs)</option>
-                  <option value="POST_ledger_match">POST /api/v1/ledger/match (Parallel Rule Matching)</option>
-                  <option value="POST_brain_analyze">POST /api/v1/brain/analyze (Query LedgerFlow AI Cognitive AI)</option>
-                  <option value="POST_v1_brain_classify_batch">POST /api/v1/brain/classify-batch (10x Cognitive NLP Batch Categorizer)</option>
-                  <option value="GET_v1_ecommerce">GET /api/v1/ecommerce (Fetch Channels)</option>
-                  <option value="POST_v1_ecommerce">POST /api/v1/ecommerce (Sync Channel)</option>
-                  <option value="GET_v1_marketing">GET /api/v1/marketing (Fetch Campaigns)</option>
-                  <option value="POST_v1_marketing">POST /api/v1/marketing (Create Campaign)</option>
-                  <option value="GET_v1_helpdesk">GET /api/v1/helpdesk (Fetch Tickets)</option>
-                  <option value="POST_v1_helpdesk">POST /api/v1/helpdesk (Create Ticket)</option>
-                  <option value="GET_v1_hr">GET /api/v1/hr (Fetch Headcount)</option>
-                  <option value="POST_v1_hr">POST /api/v1/hr (Add Employee)</option>
-                  <option value="GET_v1_manufacturing">GET /api/v1/manufacturing (Fetch Work Orders)</option>
-                  <option value="POST_v1_manufacturing">POST /api/v1/manufacturing (Create WO)</option>
-                  <option value="GET_v1_universal_ops">GET /api/v1/universal-ops (Fetch Dimensions)</option>
-                  <option value="POST_v1_universal_ops">POST /api/v1/universal-ops (Tag Dimension)</option>
-                </select>
+                <Labelled labelClassName="text-[11px] font-black uppercase tracking-wider text-slate-500" label="Select API Route">
+                  <select
+                    value={sandboxEndpoint}
+                    onChange={(e) => {
+                      setSandboxEndpoint(e.target.value);
+                      setSandboxResult(null);
+                      setSandboxStatus(null);
+                      setSandboxLatency(null);
+                    }}
+                    className="w-full bg-[var(--ink)] border border-[var(--line)] rounded-xl p-3 text-xs font-bold font-mono focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                  >
+                    <option value="GET_v1_status">GET /api/v1/status (Verify Core Gateway Status)</option>
+                    <option value="GET_v1_workspaces">GET /api/v1/workspaces (Query Tenant Profiles)</option>
+                    <option value="GET_v1_ledger">GET /api/v1/ledger (Check Chart of Accounts)</option>
+                    <option value="POST_v1_ledger">POST /api/v1/ledger (Provison COA Ledger Node)</option>
+                    <option value="GET_v1_transactions">GET /api/v1/transactions (Sync Decisive Postings)</option>
+                    <option value="POST_v1_transactions">POST /api/v1/transactions (Ingest Posting + Bayesian Learn)</option>
+                    <option value="POST_v1_transactions_bulk">POST /api/v1/transactions/bulk (10x Bulk Ingest Engine)</option>
+                    <option value="GET_v1_ledger_diagnostics">GET /api/v1/ledger/diagnostics (10x Ledger Sanity Diagnostics)</option>
+                    <option value="GET_v1_projects">GET /api/v1/projects (Query Active Ventures)</option>
+                    <option value="POST_v1_projects">POST /api/v1/projects (Map Corporate Scenario Submodule)</option>
+                    <option value="GET_v1_metrics">GET /api/v1/metrics (Retrieve Sifting KPIs)</option>
+                    <option value="POST_ledger_match">POST /api/v1/ledger/match (Parallel Rule Matching)</option>
+                    <option value="POST_brain_analyze">POST /api/v1/brain/analyze (Query LedgerFlow AI Cognitive AI)</option>
+                    <option value="POST_v1_brain_classify_batch">POST /api/v1/brain/classify-batch (10x Cognitive NLP Batch Categorizer)</option>
+                    <option value="GET_v1_ecommerce">GET /api/v1/ecommerce (Fetch Channels)</option>
+                    <option value="POST_v1_ecommerce">POST /api/v1/ecommerce (Sync Channel)</option>
+                    <option value="GET_v1_marketing">GET /api/v1/marketing (Fetch Campaigns)</option>
+                    <option value="POST_v1_marketing">POST /api/v1/marketing (Create Campaign)</option>
+                    <option value="GET_v1_helpdesk">GET /api/v1/helpdesk (Fetch Tickets)</option>
+                    <option value="POST_v1_helpdesk">POST /api/v1/helpdesk (Create Ticket)</option>
+                    <option value="GET_v1_hr">GET /api/v1/hr (Fetch Headcount)</option>
+                    <option value="POST_v1_hr">POST /api/v1/hr (Add Employee)</option>
+                    <option value="GET_v1_manufacturing">GET /api/v1/manufacturing (Fetch Work Orders)</option>
+                    <option value="POST_v1_manufacturing">POST /api/v1/manufacturing (Create WO)</option>
+                    <option value="GET_v1_universal_ops">GET /api/v1/universal-ops (Fetch Dimensions)</option>
+                    <option value="POST_v1_universal_ops">POST /api/v1/universal-ops (Tag Dimension)</option>
+                  </select>
+                </Labelled>
               </div>
 
               {/* Credentials auth select */}
@@ -2487,34 +2491,37 @@ fetch(url, {
                   <div className="space-y-3 animate-in fade-in duration-150">
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-slate-500">Transaction Date</label>
-                        <input
-                          type="date"
-                          value={fieldDate}
-                          onChange={(e) => setFieldDate(e.target.value)}
-                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
-                        />
+                        <Labelled labelClassName="text-[9px] font-black uppercase text-slate-500" label="Transaction Date">
+                          <input
+                            type="date"
+                            value={fieldDate}
+                            onChange={(e) => setFieldDate(e.target.value)}
+                            className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
+                          />
+                        </Labelled>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-slate-500">Amount (Cents)</label>
-                        <input
-                          type="number"
-                          value={fieldAmountCents}
-                          onChange={(e) => setFieldAmountCents(parseFloat(e.target.value) || 0)}
-                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950 font-mono"
-                        />
+                        <Labelled labelClassName="text-[9px] font-black uppercase text-slate-500" label="Amount (Cents)">
+                          <input
+                            type="number"
+                            value={fieldAmountCents}
+                            onChange={(e) => setFieldAmountCents(parseFloat(e.target.value) || 0)}
+                            className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950 font-mono"
+                          />
+                        </Labelled>
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-slate-500">Transaction Narration / Description</label>
-                      <input
-                        type="text"
-                        value={fieldDesc}
-                        onChange={(e) => setFieldDesc(e.target.value)}
-                        placeholder="e.g. AWS S3 Storage Billing Tier"
-                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
-                      />
+                      <Labelled labelClassName="text-[9px] font-black uppercase text-slate-500" label="Transaction Narration / Description">
+                        <input
+                          type="text"
+                          value={fieldDesc}
+                          onChange={(e) => setFieldDesc(e.target.value)}
+                          placeholder="e.g. AWS S3 Storage Billing Tier"
+                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-950"
+                        />
+                      </Labelled>
                     </div>
 
                     <div className="space-y-1.5 p-3 rounded-lg border border-[var(--line)] bg-[var(--ink)]/50">
@@ -2554,38 +2561,41 @@ fetch(url, {
                 {sandboxEndpoint === 'POST_v1_ledger' && (
                   <div className="space-y-3 animate-in fade-in duration-150">
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-slate-500">Account Node Name</label>
-                      <input
-                        type="text"
-                        value={fieldCOAName}
-                        onChange={(e) => setFieldCOAName(e.target.value)}
-                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
-                      />
+                      <Labelled labelClassName="text-[9px] font-black uppercase text-slate-500" label="Account Node Name">
+                        <input
+                          type="text"
+                          value={fieldCOAName}
+                          onChange={(e) => setFieldCOAName(e.target.value)}
+                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                        />
+                      </Labelled>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-slate-500">Account Type Class</label>
-                        <select
-                          value={fieldCOAType}
-                          onChange={(e) => setFieldCOAType(e.target.value)}
-                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none font-sans"
-                        >
-                          <option value="asset">Asset (Liquid/Tangible)</option>
-                          <option value="liability">Liability (Leases/Payable)</option>
-                          <option value="equity">Equity (Shares/Retained)</option>
-                          <option value="revenue">Revenue (Sales/Interest)</option>
-                          <option value="expense">Expense (Procurement/Wages)</option>
-                        </select>
+                        <Labelled labelClassName="text-[9px] font-black uppercase text-slate-500" label="Account Type Class">
+                          <select
+                            value={fieldCOAType}
+                            onChange={(e) => setFieldCOAType(e.target.value)}
+                            className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none font-sans"
+                          >
+                            <option value="asset">Asset (Liquid/Tangible)</option>
+                            <option value="liability">Liability (Leases/Payable)</option>
+                            <option value="equity">Equity (Shares/Retained)</option>
+                            <option value="revenue">Revenue (Sales/Interest)</option>
+                            <option value="expense">Expense (Procurement/Wages)</option>
+                          </select>
+                        </Labelled>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-slate-500">Subledger Account Code</label>
-                        <input
-                          type="text"
-                          value={fieldCOACode}
-                          onChange={(e) => setFieldCOACode(e.target.value)}
-                          placeholder="e.g. 5230"
-                          className="w-full text-xs font-mono p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1"
-                        />
+                        <Labelled labelClassName="text-[9px] font-black uppercase text-slate-500" label="Subledger Account Code">
+                          <input
+                            type="text"
+                            value={fieldCOACode}
+                            onChange={(e) => setFieldCOACode(e.target.value)}
+                            placeholder="e.g. 5230"
+                            className="w-full text-xs font-mono p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none focus:ring-1"
+                          />
+                        </Labelled>
                       </div>
                     </div>
                   </div>
@@ -2595,23 +2605,25 @@ fetch(url, {
                 {sandboxEndpoint === 'POST_v1_projects' && (
                   <div className="space-y-3 animate-in fade-in duration-150">
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-slate-500">Venture/Project Name</label>
-                      <input
-                        type="text"
-                        value={fieldProjectName}
-                        onChange={(e) => setFieldProjectName(e.target.value)}
-                        className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
-                      />
+                      <Labelled labelClassName="text-[9px] font-black uppercase text-slate-500" label="Venture/Project Name">
+                        <input
+                          type="text"
+                          value={fieldProjectName}
+                          onChange={(e) => setFieldProjectName(e.target.value)}
+                          className="w-full text-xs font-semibold p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:ring-1 focus:ring-slate-950 focus:outline-none"
+                        />
+                      </Labelled>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-slate-500">Designation Code ID</label>
-                      <input
-                        type="text"
-                        value={fieldProjectCode}
-                        onChange={(e) => setFieldProjectCode(e.target.value)}
-                        placeholder="INT-PHX-11"
-                        className="w-full text-xs font-mono p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none"
-                      />
+                      <Labelled labelClassName="text-[9px] font-black uppercase text-slate-500" label="Designation Code ID">
+                        <input
+                          type="text"
+                          value={fieldProjectCode}
+                          onChange={(e) => setFieldProjectCode(e.target.value)}
+                          placeholder="INT-PHX-11"
+                          className="w-full text-xs font-mono p-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg focus:outline-none"
+                        />
+                      </Labelled>
                     </div>
                   </div>
                 )}

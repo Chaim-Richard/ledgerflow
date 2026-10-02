@@ -196,7 +196,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Sales & Receivables</p>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => window.print()} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400" title="Print Invoice">
+            <button type="button" onClick={() => window.print()} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400" title="Print invoice" aria-label="Print invoice">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
             </button>
             <button aria-label="Close" onClick={requestClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400"><X size={24} /></button>

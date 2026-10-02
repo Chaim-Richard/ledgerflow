@@ -293,7 +293,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </span>
                 </th>
-                <th className="p-4 w-10"></th>
+                <th className="p-4 w-10"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { Labelled } from './Labelled';
 
 const AVAILABLE_ICONS = [
   { name: 'Wallet', icon: Wallet, label: 'Wallet / Cash' },
@@ -263,29 +264,27 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
-                      View Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g. Operating Liquidity"
-                      className="w-full px-3 py-2 text-xs bg-[var(--bg)] border border-[var(--line)] rounded-lg text-[var(--text)] focus:border-[var(--brass)] outline-none"
-                    />
+                    <Labelled labelClassName="block text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1" label="View Name *">
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g. Operating Liquidity"
+                        className="w-full px-3 py-2 text-xs bg-[var(--bg)] border border-[var(--line)] rounded-lg text-[var(--text)] focus:border-[var(--brass)] outline-none"
+                      />
+                    </Labelled>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
-                      Description
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.description}
-                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Short summary of this filter lens"
-                      className="w-full px-3 py-2 text-xs bg-[var(--bg)] border border-[var(--line)] rounded-lg text-[var(--text)] focus:border-[var(--brass)] outline-none"
-                    />
+                    <Labelled labelClassName="block text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1" label="Description">
+                      <input
+                        type="text"
+                        value={formData.description}
+                        onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="Short summary of this filter lens"
+                        className="w-full px-3 py-2 text-xs bg-[var(--bg)] border border-[var(--line)] rounded-lg text-[var(--text)] focus:border-[var(--brass)] outline-none"
+                      />
+                    </Labelled>
                   </div>
 
                   <div>
@@ -321,6 +320,8 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                           key={c}
                           type="button"
                           onClick={() => setFormData(prev => ({ ...prev, color: c }))}
+                          aria-label={`Colour ${c}`}
+                          aria-pressed={formData.color === c}
                           className={cn(
                             "w-6 h-6 rounded-full border-2 transition-transform cursor-pointer",
                             formData.color === c ? "border-white scale-110 shadow-xs" : "border-transparent opacity-80 hover:opacity-100"
@@ -361,96 +362,91 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                   </h4>
 
                   <div>
-                    <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase mb-1">
-                      Search Keywords / Term
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.filter.searchTerm || ''}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        filter: { ...prev.filter, searchTerm: e.target.value }
-                      }))}
-                      placeholder="e.g. cash, Apple, tax, payroll..."
-                      className="w-full px-3 py-1.5 text-xs bg-[var(--surface-card)] border border-[var(--line)] rounded-lg text-[var(--text)] outline-none"
-                    />
+                    <Labelled labelClassName="block text-[10px] font-semibold text-[var(--muted)] uppercase mb-1" label="Search Keywords / Term">
+                      <input
+                        type="text"
+                        value={formData.filter.searchTerm || ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          filter: { ...prev.filter, searchTerm: e.target.value }
+                        }))}
+                        placeholder="e.g. cash, Apple, tax, payroll..."
+                        className="w-full px-3 py-1.5 text-xs bg-[var(--surface-card)] border border-[var(--line)] rounded-lg text-[var(--text)] outline-none"
+                      />
+                    </Labelled>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase mb-1">
-                        Min Amount ($)
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.filter.minAmountCents !== undefined ? formData.filter.minAmountCents / 100 : ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          filter: { 
-                            ...prev.filter, 
-                            minAmountCents: e.target.value ? parseAmountToCents(e.target.value) : undefined 
-                          }
-                        }))}
-                        placeholder="0.00"
-                        className="w-full px-3 py-1.5 text-xs bg-[var(--surface-card)] border border-[var(--line)] rounded-lg text-[var(--text)] outline-none"
-                      />
+                      <Labelled labelClassName="block text-[10px] font-semibold text-[var(--muted)] uppercase mb-1" label="Min Amount ($)">
+                        <input
+                          type="number"
+                          value={formData.filter.minAmountCents !== undefined ? formData.filter.minAmountCents / 100 : ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            filter: { 
+                              ...prev.filter, 
+                              minAmountCents: e.target.value ? parseAmountToCents(e.target.value) : undefined 
+                            }
+                          }))}
+                          placeholder="0.00"
+                          className="w-full px-3 py-1.5 text-xs bg-[var(--surface-card)] border border-[var(--line)] rounded-lg text-[var(--text)] outline-none"
+                        />
+                      </Labelled>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase mb-1">
-                        Max Amount ($)
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.filter.maxAmountCents !== undefined ? formData.filter.maxAmountCents / 100 : ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          filter: { 
-                            ...prev.filter, 
-                            maxAmountCents: e.target.value ? parseAmountToCents(e.target.value) : undefined 
-                          }
-                        }))}
-                        placeholder="Unlimited"
-                        className="w-full px-3 py-1.5 text-xs bg-[var(--surface-card)] border border-[var(--line)] rounded-lg text-[var(--text)] outline-none"
-                      />
+                      <Labelled labelClassName="block text-[10px] font-semibold text-[var(--muted)] uppercase mb-1" label="Max Amount ($)">
+                        <input
+                          type="number"
+                          value={formData.filter.maxAmountCents !== undefined ? formData.filter.maxAmountCents / 100 : ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            filter: { 
+                              ...prev.filter, 
+                              maxAmountCents: e.target.value ? parseAmountToCents(e.target.value) : undefined 
+                            }
+                          }))}
+                          placeholder="Unlimited"
+                          className="w-full px-3 py-1.5 text-xs bg-[var(--surface-card)] border border-[var(--line)] rounded-lg text-[var(--text)] outline-none"
+                        />
+                      </Labelled>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase mb-1">
-                        Transaction Type
-                      </label>
-                      <select
-                        value={formData.filter.type || 'all'}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          filter: { ...prev.filter, type: e.target.value }
-                        }))}
-                        className="w-full px-3 py-1.5 text-xs bg-[var(--surface-card)] border border-[var(--line)] rounded-lg text-[var(--text)] outline-none"
-                      >
-                        <option value="all">All Types</option>
-                        <option value="income">Income / Revenue (+)</option>
-                        <option value="expense">Expense / Outflow (-)</option>
-                      </select>
+                      <Labelled labelClassName="block text-[10px] font-semibold text-[var(--muted)] uppercase mb-1" label="Transaction Type">
+                        <select
+                          value={formData.filter.type || 'all'}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            filter: { ...prev.filter, type: e.target.value }
+                          }))}
+                          className="w-full px-3 py-1.5 text-xs bg-[var(--surface-card)] border border-[var(--line)] rounded-lg text-[var(--text)] outline-none"
+                        >
+                          <option value="all">All Types</option>
+                          <option value="income">Income / Revenue (+)</option>
+                          <option value="expense">Expense / Outflow (-)</option>
+                        </select>
+                      </Labelled>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase mb-1">
-                        Status
-                      </label>
-                      <select
-                        value={formData.filter.status || 'all'}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          filter: { ...prev.filter, status: e.target.value }
-                        }))}
-                        className="w-full px-3 py-1.5 text-xs bg-[var(--surface-card)] border border-[var(--line)] rounded-lg text-[var(--text)] outline-none"
-                      >
-                        <option value="all">All Statuses</option>
-                        <option value="posted">Posted</option>
-                        <option value="pending">Pending</option>
-                      </select>
+                      <Labelled labelClassName="block text-[10px] font-semibold text-[var(--muted)] uppercase mb-1" label="Status">
+                        <select
+                          value={formData.filter.status || 'all'}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            filter: { ...prev.filter, status: e.target.value }
+                          }))}
+                          className="w-full px-3 py-1.5 text-xs bg-[var(--surface-card)] border border-[var(--line)] rounded-lg text-[var(--text)] outline-none"
+                        >
+                          <option value="all">All Statuses</option>
+                          <option value="posted">Posted</option>
+                          <option value="pending">Pending</option>
+                        </select>
+                      </Labelled>
                     </div>
                   </div>
 

@@ -115,10 +115,15 @@ export function RootLayout() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* E-29: keyboard users skip the navigation */}
+      {/* the address hash picks the screen, so this moves focus instead of changing the hash */}
+      <a href="#main-content" onClick={(e) => { e.preventDefault(); document.getElementById('main-content')?.focus(); }} className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[1000] focus:px-3 focus:py-2 focus:rounded-lg focus:bg-[var(--surface)] focus:text-[var(--text)] focus:shadow-lg">
+        Skip to content
+      </a>
       <div className="flex-1 flex overflow-hidden relative">
         {/* Mobile/Tablet Backdrop Dimmer */}
         {isSidebarOpen && !isFocusMode && (
-          <div role="button" tabIndex={0} 
+          <div role="presentation" aria-hidden="true" 
             className="lg:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-[95] transition-opacity duration-300 animate-fade-in"
             onClick={toggleSidebar}
           />
@@ -154,7 +159,7 @@ export function RootLayout() {
         {!isFocusMode && <ModuleSubNav activeTab={activeTab as any} onTabChange={setActiveTab as any} />}
         
         {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden relative custom-scrollbar">
+        <div id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto overflow-x-hidden relative custom-scrollbar focus:outline-none">
           <MainViewSwitcher activeTab={activeTab as any} />
         </div>
 

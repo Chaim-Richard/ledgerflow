@@ -20,6 +20,7 @@ import { parseLocalDate, cn } from '../../lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { Labelled } from '../ui/Labelled';
 
 interface ReconciliationWizardProps {
   isOpen: boolean;
@@ -200,38 +201,41 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               >
                 <div className="space-y-8">
                   <div className="space-y-3">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic ml-2">Select Target Topology</label>
-                    <select 
-                      value={selectedAccount}
-                      onChange={(e) => setSelectedAccount(e.target.value)}
-                      className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-[var(--text)] uppercase italic tracking-tight"
-                    >
-                      <option value="" className="bg-[var(--ink)]">Protocol pending selection...</option>
-                      {accounts.filter(a => a.type === 'asset' || a.type === 'liability').map(acc => (
-                        <option key={acc.id} value={acc.name} className="bg-[var(--ink)] uppercase">{acc.name}</option>
-                      ))}
-                    </select>
+                    <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic ml-2" label="Select Target Topology">
+                      <select 
+                        value={selectedAccount}
+                        onChange={(e) => setSelectedAccount(e.target.value)}
+                        className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-[var(--text)] uppercase italic tracking-tight"
+                      >
+                        <option value="" className="bg-[var(--ink)]">Protocol pending selection...</option>
+                        {accounts.filter(a => a.type === 'asset' || a.type === 'liability').map(acc => (
+                          <option key={acc.id} value={acc.name} className="bg-[var(--ink)] uppercase">{acc.name}</option>
+                        ))}
+                      </select>
+                    </Labelled>
                   </div>
 
                   <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-3">
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic ml-2">Statement Horizon</label>
-                      <input 
-                        type="date"
-                        value={statementDate}
-                        onChange={(e) => setStatementDate(e.target.value)}
-                        className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-[var(--text)] uppercase italic tracking-tight"
-                      />
+                      <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic ml-2" label="Statement Horizon">
+                        <input 
+                          type="date"
+                          value={statementDate}
+                          onChange={(e) => setStatementDate(e.target.value)}
+                          className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-[var(--text)] uppercase italic tracking-tight"
+                        />
+                      </Labelled>
                     </div>
                     <div className="space-y-3">
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic ml-2">Terminal Amount Balance ($)</label>
-                      <input 
-                        type="number"
-                        step="0.01"
-                        value={endingBalance}
-                        onChange={(e) => setEndingBalance(e.target.value)}
-                        className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-mono font-black text-[var(--text)] text-lg italic"
-                      />
+                      <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic ml-2" label="Terminal Amount Balance ($)">
+                        <input 
+                          type="number"
+                          step="0.01"
+                          value={endingBalance}
+                          onChange={(e) => setEndingBalance(e.target.value)}
+                          className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-mono font-black text-[var(--text)] text-lg italic"
+                        />
+                      </Labelled>
                     </div>
                   </div>
                 </div>

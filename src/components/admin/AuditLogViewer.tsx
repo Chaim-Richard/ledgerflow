@@ -16,6 +16,7 @@ import { cn } from '../../lib/utils';
 import { auditDescription, auditTime } from '../../lib/auditFormat';
 import { auth } from '../../firebase';
 import { useCollection } from '../../hooks/useCollection';
+import { Labelled } from '../ui/Labelled';
 
 const fetchWithAuth = async (url: string, options: any = {}) => {
   const token = await auth.currentUser?.getIdToken();
@@ -154,18 +155,19 @@ export default function AuditLogViewer() {
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Action Type</label>
-            <select 
-              name="action"
-              value={filters.action}
-              onChange={handleFilterChange}
-              className="w-full bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 py-2 text-xs font-medium outline-none focus:border-[#0047AB]"
-            >
-              <option value="">All Actions</option>
-              <option value="ADMIN_WORKSPACE_UPDATED">Workspace Update</option>
-              <option value="ADMIN_USER_UPDATED">User Update</option>
-              <option value="ADMIN_GLOBAL_CONFIG_UPDATED">Global Config</option>
-            </select>
+            <Labelled labelClassName="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1" label="Action Type">
+              <select 
+                name="action"
+                value={filters.action}
+                onChange={handleFilterChange}
+                className="w-full bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 py-2 text-xs font-medium outline-none focus:border-[#0047AB]"
+              >
+                <option value="">All Actions</option>
+                <option value="ADMIN_WORKSPACE_UPDATED">Workspace Update</option>
+                <option value="ADMIN_USER_UPDATED">User Update</option>
+                <option value="ADMIN_GLOBAL_CONFIG_UPDATED">Global Config</option>
+              </select>
+            </Labelled>
           </div>
           <div className="space-y-1">
             <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Start Date</label>

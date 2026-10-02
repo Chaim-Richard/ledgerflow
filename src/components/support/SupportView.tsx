@@ -27,6 +27,7 @@ import { cn } from '../../lib/utils';
 import { useTimeout } from '../../hooks/useTimeout';
 import { db } from '../../firebase';
 import { doc, setDoc, updateDoc } from '../../lib/db/firestore';
+import { Labelled } from '../ui/Labelled';
 
 export default function SupportView() {
   const { user, userProfile, getCurrentWorkspace } = useAuthStore();
@@ -368,16 +369,17 @@ export default function SupportView() {
 
                 <form onSubmit={handleCreateTicket} className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Subject</label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={200}
-                      value={newTicketSubject}
-                      onChange={e => setNewTicketSubject(e.target.value)}
-                      className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="e.g. Encountered error during bank reconcile"
-                    />
+                    <Labelled labelClassName="block text-sm font-medium text-slate-700 mb-2" label="Subject">
+                      <input
+                        type="text"
+                        required
+                        maxLength={200}
+                        value={newTicketSubject}
+                        onChange={e => setNewTicketSubject(e.target.value)}
+                        className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="e.g. Encountered error during bank reconcile"
+                      />
+                    </Labelled>
                   </div>
 
                   <div>
@@ -423,16 +425,17 @@ export default function SupportView() {
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Message</label>
-                    <textarea
-                      required
-                      maxLength={5000}
-                      value={initialMessage}
-                      onChange={e => setInitialMessage(e.target.value)}
-                      rows={5}
-                      className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                      placeholder="Describe what happened, steps to reproduce, or what you were trying to accomplish..."
-                    />
+                    <Labelled labelClassName="block text-sm font-medium text-slate-700 mb-2" label="Message">
+                      <textarea
+                        required
+                        maxLength={5000}
+                        value={initialMessage}
+                        onChange={e => setInitialMessage(e.target.value)}
+                        rows={5}
+                        className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                        placeholder="Describe what happened, steps to reproduce, or what you were trying to accomplish..."
+                      />
+                    </Labelled>
                   </div>
 
                   <button
