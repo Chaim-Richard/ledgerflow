@@ -58,9 +58,8 @@ jobs:
       - name: Type check
         run: npm run lint:types
 
-      - name: ESLint
+      - name: ESLint (errors fail; warnings may not exceed --max-warnings in package.json)
         run: npm run lint:eslint
-        continue-on-error: true
 
       - name: Prepare the test database (Supabase migrations)
         run: npm run db:test-setup
