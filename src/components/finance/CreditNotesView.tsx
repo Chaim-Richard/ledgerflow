@@ -211,8 +211,8 @@ export default function CreditNotesView() {
                       <td className="p-3 font-medium text-gray-900 dark:text-white">{cn.customerName}</td>
                       <td className="p-3 text-gray-600 dark:text-gray-400">{cn.date}</td>
                       <td className="p-3 text-gray-600 dark:text-gray-400">{cn.reason}</td>
-                      <td className="p-3 text-right font-semibold text-gray-900 dark:text-white"><Money cents={cn.amountCents} colored /></td>
-                      <td className="p-3 text-right font-medium text-indigo-600 dark:text-indigo-400"><Money cents={cn.remainingCents} colored /></td>
+                      <td className="p-3 text-right font-semibold text-gray-900 dark:text-white"><Money cents={cn.amountCents} currency={cn.currency} colored /></td>
+                      <td className="p-3 text-right font-medium text-indigo-600 dark:text-indigo-400"><Money cents={cn.remainingCents} currency={cn.currency} colored /></td>
                       <td className="p-3 text-center">
                         <span className="px-2 py-1 text-xs rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 font-semibold">
                           {cn.status.toUpperCase()}
@@ -281,8 +281,8 @@ export default function CreditNotesView() {
                       <td className="p-3 font-medium text-gray-900 dark:text-white">{vc.vendorName}</td>
                       <td className="p-3 text-gray-600 dark:text-gray-400">{vc.date}</td>
                       <td className="p-3 text-gray-600 dark:text-gray-400">{vc.reason}</td>
-                      <td className="p-3 text-right font-semibold text-gray-900 dark:text-white"><Money cents={vc.amountCents} colored /></td>
-                      <td className="p-3 text-right font-medium text-emerald-600 dark:text-emerald-400"><Money cents={vc.remainingCents} colored /></td>
+                      <td className="p-3 text-right font-semibold text-gray-900 dark:text-white"><Money cents={vc.amountCents} currency={vc.currency} colored /></td>
+                      <td className="p-3 text-right font-medium text-emerald-600 dark:text-emerald-400"><Money cents={vc.remainingCents} currency={vc.currency} colored /></td>
                       <td className="p-3 text-center">
                         <span className="px-2 py-1 text-xs rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 font-semibold">
                           {vc.status.toUpperCase()}
