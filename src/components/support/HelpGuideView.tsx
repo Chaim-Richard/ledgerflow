@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useUIStore } from "../../stores/useUIStore";
+import ReleaseNotes from "./ReleaseNotes";
 
 interface SectionDoc {
   id: string;
@@ -217,6 +218,8 @@ export default function HelpGuideView() {
             />
           </div>
         </div>
+
+        <ReleaseNotes />
 
         <div className="max-w-7xl mx-auto flex items-center gap-2 mt-6 overflow-x-auto pb-1 custom-scrollbar">
           {categories.map(cat => (

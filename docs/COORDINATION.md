@@ -11,6 +11,22 @@ the checks pass and the change is right, and writes the next tasks here.
 
 ## Rules for Codex
 
+**Temporary later-backlog lane (owner-authorized, 2026-10-02):** while Claude is paused,
+Codex is taking **P-07 in-app changelog** on `codex/p-07-in-app-changelog`. Scope:
+`src/components/support/ReleaseNotes.tsx`, its integration in `HelpGuideView.tsx`, and progress
+notes. No changes to Claude's launch/forms, server, database, or accounting files. This branch
+starts independently from main; the earlier D-15 review branch is separate.
+
+**P-07 complete for review:** Help & Guide now includes a native “What’s new” disclosure with
+dated notes for already-shipped features. Future entries belong in `ReleaseNotes.tsx`, newest
+first; do not announce unfinished work. Validation passed: npm ci, type checking, 657 tests
+(201 suites, no skips), ESLint (1459 warnings unchanged on this independent main-based branch),
+production build, 10 existing browser tests, and 20 targeted desktop/light and mobile/dark
+checks covering keyboard toggles, dates in two time zones, bounded content, guide search,
+and zero browser errors. Quality baseline, existing tests, financial logic, and reserved
+files are unchanged. The owner explicitly requested a later-backlog item away from Claude's
+paused launch work; no coordination update from Claude was needed for this authorization.
+
 1. Start from the latest `main`. Work only on the task you picked, only in the files it names.
    Never edit a file listed under **Claude is working on**.
 2. Read `AGENTS.md` (money rules). Never change how money is calculated or posted. These tasks
