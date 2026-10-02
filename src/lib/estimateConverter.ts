@@ -15,13 +15,18 @@ export function convertEstimateToInvoice(estimate: Estimate): Invoice {
   const issueDate = getLocalDateISO();
   const dueDate = calculateDueDate(issueDate, 'net_30');
 
-  const invoiceItems = (estimate.lines || []).map(line => ({
-    id: `item_${Math.random().toString(36).substr(2, 9)}`,
+  // an estimate saved as one amount becomes one line
+  const lines = estimate.lines?.length
+    ? estimate.lines
+    : [{ description: `Estimate ${estimate.number || ''}`.trim(), quantity: 1, unitPriceCents: estimate.amountCents, amountCents: estimate.amountCents }];
+  const invoiceItems = lines.map((line, i) => ({
+    id: `${estimate.id}-${i}`,
     description: line.description || '',
     quantity: line.quantity || 1,
     rateCents: line.unitPriceCents || 0,
     amountCents: line.amountCents || (line.quantity || 1) * (line.unitPriceCents || 0),
-    accountId: 'acc_sales'
+    // no account picked: posting uses the workspace's income account (never a made-up account id)
+    accountId: ''
   }));
 
   const invoice: Invoice = {

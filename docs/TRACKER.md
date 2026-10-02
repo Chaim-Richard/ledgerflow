@@ -1468,8 +1468,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] H-20 AsyncButton (ui-primitives.test.tsx; found L-161)
 - [x] H-21 ConfirmButton (ui-primitives.test.tsx)
 - [x] H-22 EmptyState (ui-primitives.test.tsx)
-- [ ] H-23 PublicInvoicePage
-- [ ] H-24 EstimatesView
+- [x] H-23 PublicInvoicePage (public-invoice-page.test.tsx; loading/error states readable by screen readers)
+- [x] H-24 EstimatesView (estimate-conversion.test.ts; found L-163)
 - [ ] H-25 CustomerModal
 - [x] H-26 AuditLogViewer (audit-log-viewer.test.tsx, codex)
 - [ ] H-27 `src/components/finance`
@@ -1722,6 +1722,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-160 Account statements left out credit notes and vendor credits, so a customer with a credit showed a higher balance than the Customer Balance Summary; refunds of credits were invisible to both (a refunded credit still showed as owed back). Credits now appear on statements (screen, PDF and API); the server records `refundedCents` when a credit is refunded, and statements and balance summaries count a credit less what was refunded (tested; the closing balance equals the summary)
 - [x] L-161 Buttons: a quick double click on any AsyncButton (payments, saves, filings) ran the action twice (the "busy" flag only took effect after a re-render; now a ref guards it, test fails on the old code); RequireRole's greyed-out mode only blocked the mouse, Tab + Enter still pressed the button (now `inert`); the data grid's sort headers were mouse-only (now buttons)
 - [x] L-162 Customer and vendor pages: "Outstanding" was total − paid (deposits ignored) added across currencies, cancelled invoices counted, and "overdue" compared a due date read as UTC midnight with the current time (a day off in the Americas). Now `partyStats` / the aging rule (still owed, base currency, days past due, tested); each document shows its open amount in its own currency
+- [x] L-163 Converting an estimate to an invoice wrote the invoice straight to the database as "sent": no ledger posting (no receivable, no revenue: P&L and balance sheet missed it while Sales and aging showed it), a dropped `totalCents` field, no lines, and a random invoice number when numbering failed. Now a draft invoice with the estimate's lines through the posting path (useEntityOperations), no made-up number or account; guard test: no screen writes invoices, bills, credits, payments or transactions to the database directly
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

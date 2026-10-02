@@ -27,7 +27,9 @@ test.describe('Layout at 1280 x 800', () => {
       await page.goto(`/#${screen}`);
       const main = page.locator('#main-content');
       await main.waitFor({ timeout: 15000 });
-      await page.waitForTimeout(1500); // lazy screen + entrance animation
+      // wait for the lazy screen to draw (heavy screens take longer under load), then its entrance animation
+      await expect.poll(() => main.evaluate(el => el.innerText.trim().length), { timeout: 15000 }).toBeGreaterThan(20);
+      await page.waitForTimeout(600);
       const { overflow, text } = await main.evaluate(el => ({ overflow: el.scrollWidth - el.clientWidth, text: el.innerText.trim().length }));
       expect(overflow, `${screen} is ${overflow}px wider than the window`).toBeLessThanOrEqual(1);
       expect(text, `${screen} drew nothing`).toBeGreaterThan(20);
