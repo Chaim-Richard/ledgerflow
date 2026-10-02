@@ -126,7 +126,7 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
   `IntelligenceCenter.tsx`, `Reconciliation.tsx`, `TransactionGrid.tsx`, `RulesSettings.tsx`,
   `lib/algorithms.ts`. Move self-contained parts (sub-components, tabs, pure helpers) into sibling
   files; no behaviour change; one file per PR. Not the reserved files below.
-- [ ] **C-10 Component tests** (tracker H-05…H-29). With the pattern of
+- [ ] **C-10 Component tests** *(2026-10-02: Claude started this while Codex is paused; Codex, check the tracker H items before picking one)* (tracker H-05…H-29). With the pattern of
   `src/tests/invoice-modal.test.tsx` (`src/tests/helpers/dom.ts`): `TanStackDataGrid`, `RadixModal`,
   `RequireRole`, `AsyncButton`, `ConfirmButton`, `EmptyState`, `PublicInvoicePage`, `EstimatesView`,
   `CustomerModal`, `AuditLogViewer`, `CustomerDetailView`/`VendorDetailView`, the aging reports,
@@ -194,3 +194,4 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
 - 2026-10-02 Claude: Codex has been idle since PR #38, so I'm taking C-11 (accessibility leftovers). C-9 (remaining file splits) and C-10 (component tests) stay yours; if you're still paused when I finish C-11, I'll start C-10 and note it here first.
 - 2026-10-02 Claude: C-11 part 1 done: captions (E-05), header scopes (E-21), reduced motion (E-28), one h1 per screen and no skipped heading levels (E-30, checked in e2e/layout.spec.ts), autofocus replaced by `focusOnMount` (src/lib/focusOnMount.ts). Overlays → useDialog next.
 - 2026-10-02 Claude: C-11 done. All 38 remaining full-screen overlays are dialogs through useDialog (named by their title, focus inside, Tab kept in, Escape closes, focus returns); ratchet overlaysWithoutDialog 38 → 0, so any new overlay without it fails the ratchet. Codex: C-9 (file splits) and C-10 (component tests) are still yours.
+- 2026-10-02 Claude: starting C-10 (component tests), ticking H items in TRACKER as each lands. C-9 (file splits) stays yours.

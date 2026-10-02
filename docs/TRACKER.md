@@ -1456,11 +1456,11 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] H-08 StatementView
 - [ ] H-09 ARAgingReportView
 - [ ] H-10 APAgingReportView
-- [ ] H-11 ExpenseByCategoryReportView
-- [ ] H-12 IncomeBySourceReportView
-- [ ] H-13 AverageMonthlyReportView
-- [ ] H-14 TopExpensesIncomeReportView
-- [ ] H-15 TagBreakdownReportView
+- [x] H-11 ExpenseByCategoryReportView (report-views.test.tsx)
+- [x] H-12 IncomeBySourceReportView (report-views.test.tsx; found L-158)
+- [x] H-13 AverageMonthlyReportView (report-views.test.tsx)
+- [x] H-14 TopExpensesIncomeReportView (report-views.test.tsx)
+- [x] H-15 TagBreakdownReportView (report-views.test.tsx)
 - [ ] H-16 ForensicAuditor
 - [ ] H-17 TanStackDataGrid
 - [ ] H-18 RadixModal
@@ -1716,6 +1716,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-154 CSV exports: five built the file as a `data:` link through `encodeURI`, which leaves `#` alone, so the file stopped at the first "#" ("Invoice #1001"): General Ledger export, Trial Balance, Audit Trail; most didn't neutralise text a spreadsheet runs as a formula (`=…`, `@…`); none had the UTF-8 marker Excel needs for accented/Hebrew names; money was written as raw cents (bills) or `x/100`. All 15 exports now use `downloadCsv` (quoted cells, formula guard, UTF-8 marker, `csvMoney`); the transaction list exports amounts signed like the screen (in +, out −)
 - [x] L-155 Charts screen ("Executive Financial Visualizer") showed every amount 100× too small (it divided by 100, then formatted as cents), added each line's size so a reversed entry counted twice instead of cancelling, gave zero-balance bank accounts an invented 5,000, invented accounts and expenses ("Main Checking", "Payroll") and a runway when there was no data, and always printed "$". Now `src/lib/chartsData.ts` (tested): cents, signed lines, posted entries only, workspace currency, empty states instead of made-up numbers
 - [x] L-156 Query builder showed amounts 100× too small (divided by 100, then `formatDecimal`, which takes cents) with a hard-coded "$": the Amount column and each line in the expanded rows. Now `formatCurrency` in the entry's currency; money guard bans `formatDecimal(x / 100)`
+- [x] L-157 Expense by Category, Income by Source, Monthly Averages, Top Line Items and Tag Breakdown counted only the positive half of expense lines / negative half of revenue lines: a reversed entry still showed in full (its reversal was skipped) and refunds or credits back to customers never reduced the totals, so these reports disagreed with the P&L. Now every line counts with its sign; top-item lists leave out reversed pairs (reportGenerators.ts, tested)
+- [x] L-158 Income by Source report crashed on opening ("Maximum update depth exceeded"): its store selector filtered the transactions, making a new array on every read. Fixed; guard test bans `.filter/.map/...` inside store selectors
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
