@@ -12,6 +12,8 @@ export interface QualityMetrics {
   orphanFiles: number;
   eslintWarnings: number;
   untestedViews: number;
+  /** full-screen overlays (`fixed inset-0`) not marked as a dialog (useDialog / role="dialog") or hidden */
+  overlaysWithoutDialog: number;
 }
 
 function computeOrphanFiles(rootDir: string): number {
@@ -149,6 +151,7 @@ export function computeQualityMetrics(rootDir: string = process.cwd()): QualityM
   let arrayIndexKeys = 0;
   let blankNoOpener = 0;
   let consoleLog = 0;
+  let overlaysWithoutDialog = 0;
   let serverTsLines = 0;
   let filesOver800 = 0;
 
@@ -181,6 +184,10 @@ export function computeQualityMetrics(rootDir: string = process.cwd()): QualityM
       }
       if (/console\.log\(/.test(line)) {
         consoleLog++;
+      }
+      if (/\.tsx$/.test(fullPath) && /className="fixed inset-0[ "]/.test(line) && /<(div|motion\.div)\b/.test(line)) {
+        const tag = tagText(lines, n);
+        if (!/role="dialog"|role="alertdialog"|[dD]ialogProps\}|aria-hidden/.test(tag)) overlaysWithoutDialog++;
       }
     });
   }
@@ -238,6 +245,7 @@ export function computeQualityMetrics(rootDir: string = process.cwd()): QualityM
     orphanFiles,
     eslintWarnings,
     untestedViews,
+    overlaysWithoutDialog,
   };
 }
 

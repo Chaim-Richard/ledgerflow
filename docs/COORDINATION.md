@@ -111,9 +111,9 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
   `src/tests/`. Use the typed helpers in `src/tests/fixtures.ts` / `src/tests/helpers/` (add a typed
   mock database helper there if several files need one). **Never change a test's inputs or
   expected numbers**; the same tests must pass. *Done when:* no `no-explicit-any` in `src/tests/`.
-- [ ] **C-7 `any` in the remaining browser files.** `ProfitAndLossView` (17), `ApiHub` (14),
-  `useUIStore` (12), `algorithms.ts` (12), `CommandPalette` (11), `Reconciliation` (11),
-  `core/layout/RootLayout` (11), `App.tsx` (10), `BankFeedImport` (9), `excelExport` (9),
+- [ ] **C-7 `any` in the remaining browser files.** `ProfitAndLossView` (17),
+  `CommandPalette` (11), `core/layout/RootLayout` (11) (Claude already did `ApiHub`, `useUIStore`,
+  `algorithms.ts`, `Reconciliation`, `App.tsx`, `Ledger.tsx`, `useLedgerData` on 2026-10-02), `BankFeedImport` (9), `excelExport` (9),
   `lib/algorithms/types.ts` (9), `lib/utils.ts` (9), then the rest outside Claude's files.
   `src/types.ts` (14) last and only where the right type is obvious. Same "behaviour unchanged" rule.
 - [ ] **C-8 React hook warnings** (`react-hooks/exhaustive-deps` 38, `set-state-in-effect` 31,
@@ -138,6 +138,10 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
   `prefers-reduced-motion` (wrap the app in `MotionConfig reducedMotion="user"` from `motion/react`),
   `jsx-a11y/no-autofocus` (4). Keep `e2e/contrast-baseline.json` and `e2e/a11y-baseline.json` at or
   below their numbers (lower them when they drop).
+  Also: give the remaining full-screen overlays (`fixed inset-0`) the dialog behaviour with
+  `src/hooks/useDialog.ts` (`const { dialogProps, titleId } = useDialog(onClose, isOpen)`, spread
+  `dialogProps` on the overlay, `id={titleId}` on its title; see `CustomerModal.tsx`), then
+  `npm run ratchet:update` (`overlaysWithoutDialog`, 40 today). Decorative overlays: `aria-hidden`.
 
 ## Claude is working on (Codex: don't edit these files)
 

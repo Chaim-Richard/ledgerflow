@@ -1376,19 +1376,19 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] E-05 23 tables without caption
 - [ ] E-06 2 `<img>` without alt
 - [x] E-07 Eligible labels use matching htmlFor/id; per-instance IDs verified in Chromium; label-has-associated-control 185 → 46 → 0 (codex, branch `codex/c-3-accessible-form-labels`, PR pending)
-- [ ] E-08 InvoiceModal
-- [ ] E-09 BillModal
-- [ ] E-10 ReceivePaymentModal
-- [ ] E-11 CustomerModal
-- [ ] E-12 VendorModal
-- [ ] E-13 TransactionEditModal
-- [ ] E-14 JournalEntryModal
-- [ ] E-15 PurchaseOrder editor
-- [ ] E-16 Estimate editor
-- [ ] E-17 CreditNote editor
-- [ ] E-18 Item editor
-- [ ] E-19 Payment run
-- [ ] E-20 WriteOffModal
+- [x] E-08 InvoiceModal — dialog role + name, focus in, Tab kept inside, Escape (asks before discarding), focus returned; axe 0 (browser test)
+- [x] E-09 BillModal — same; title says "Edit bill …" when editing; axe 0 (browser test)
+- [x] E-10 ReceivePaymentModal — same (useDialog; component test still passes)
+- [x] E-11 CustomerModal — same; close button had no name; axe 0 (browser test)
+- [x] E-12 VendorModal — same; close button had no name; axe 0 (browser test)
+- [x] E-13 TransactionEditModal — same; heading levels fixed
+- [x] E-14 JournalEntryModal — its label pointed at an id that did not exist; now named by its title, focus kept inside
+- [x] E-15 PurchaseOrder editor — new order + goods received dialogs: focus, Tab, Escape
+- [x] E-16 Estimate editor — inline form; axe 0 (browser test)
+- [x] E-17 CreditNote editor — dialog role + name, Escape; axe 0 (browser test)
+- [x] E-18 Item editor — item and cost-of-sale dialogs in Inventory
+- [x] E-19 Payment run — no payment-run screen exists yet (K-24, later); new dialogs get the same behaviour from `useDialog`, and a ratchet counts overlays without a dialog role (40, only goes down)
+- [x] E-20 WriteOffModal — same as the other money dialogs
 - [ ] E-21 `scope="col"` on headers
 - [x] E-22 Visible focus ring on every keyboard-focused control (index.css; browser test)
 - [x] E-23 Keyboard-only invoicing (browser test); native buttons on report rows, grid headers and reconciliation controls; independent filter/Tab behavior (codex, `codex/c-4-keyboard-controls`)

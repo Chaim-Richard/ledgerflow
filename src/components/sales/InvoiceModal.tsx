@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Save, Download, Eye } from 'lucide-react';
@@ -178,10 +179,11 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     if (!dirty || safeConfirm('Discard your changes to this invoice?')) onClose();
   };
 
+  const { dialogProps, titleId } = useDialog(requestClose, isOpen);
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+    <div {...dialogProps} className="fixed inset-0 z-[600] flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -198,7 +200,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       >
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
           <div>
-            <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">{editingExisting ? `Edit invoice ${invoice.number || ''}`.trim() : 'New invoice'}</h3>
+            <h2 id={titleId} className="text-2xl font-black text-[var(--text)] tracking-tight">{editingExisting ? `Edit invoice ${invoice.number || ''}`.trim() : 'New invoice'}</h2>
             <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Sales & Receivables</p>
           </div>
           <div className="flex items-center gap-2">
@@ -436,7 +438,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="micro-label">Line Items</h4>
+              <h3 className="micro-label">Line Items</h3>
               <button 
                 type="button"
                 onClick={() => setItems([...items, { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }])}

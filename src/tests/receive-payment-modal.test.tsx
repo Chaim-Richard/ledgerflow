@@ -44,7 +44,7 @@ describe('Payment dialog', () => {
     const calls = stubFetchWithBodies(200, { status: 'success' });
     let closed = 0;
     render(<ReceivePaymentModal isOpen onClose={() => { closed++; }} />);
-    fireEvent.change(screen.getByLabelText(/Customer/), { target: { value: 'c1' } });
+    fireEvent.change(screen.getByLabelText(/^Customer/), { target: { value: 'c1' } });
     const row = (n: string) => screen.queryByLabelText(`Allocation amount for document ${n}`);
     assert.ok(row('INV-1') && row('INV-2'));
     assert.equal(row('INV-3'), null, 'drafts can\'t be paid');

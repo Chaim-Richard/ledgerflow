@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useId, useMemo, useState } from 'react';
 import { ShoppingCart, Plus, ShieldCheck, X, Check, CheckCircle2, FileText, Ban } from 'lucide-react';
 import type { Bill, GoodsReceipt, PurchaseOrder, PurchaseOrderItem, Vendor } from '../../types';
@@ -135,6 +136,9 @@ export const PurchaseOrdersView: React.FC = () => {
   ];
   const statusClass = (status: string) => status === 'received' || status === 'billed' || status === 'matched'
     ? 'bg-[var(--pos)]/10 text-[var(--pos)]' : status === 'cancelled' ? 'bg-[var(--line)] text-[var(--muted)]' : 'bg-[var(--brass-soft)] text-[var(--text)]';
+
+  const { dialogProps: newPoDialogProps } = useDialog(() => setIsCreatingPO(false), isCreatingPO);
+  const { dialogProps: receiveDialogProps } = useDialog(() => setReceivingPO(null), !!receivingPO);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6 text-[var(--text)]" id="purchase-orders-view">
@@ -275,7 +279,7 @@ export const PurchaseOrdersView: React.FC = () => {
       )}
 
       {isCreatingPO && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-labelledby={`${ids}-new`}>
+        <div {...newPoDialogProps} aria-labelledby={`${ids}-new`} className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-[var(--surface)] rounded-xl shadow-xl max-w-xl w-full border border-[var(--line)]">
             <div className="p-4 border-b border-[var(--line)] flex items-center justify-between">
               <h2 id={`${ids}-new`} className="text-sm font-bold">New purchase order</h2>
@@ -319,7 +323,7 @@ export const PurchaseOrdersView: React.FC = () => {
       )}
 
       {receivingPO && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-labelledby={`${ids}-receive`}>
+        <div {...receiveDialogProps} aria-labelledby={`${ids}-receive`} className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-[var(--surface)] rounded-xl shadow-xl max-w-md w-full border border-[var(--line)]">
             <div className="p-4 border-b border-[var(--line)] flex items-center justify-between">
               <h2 id={`${ids}-receive`} className="text-sm font-bold">Goods received for {receivingPO.poNumber}</h2>

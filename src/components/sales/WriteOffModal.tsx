@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 import { getIdToken } from '../../firebase';
@@ -27,6 +28,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
   const [reason, setReason] = useState('Uncollectible bad debt');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { dialogProps, titleId } = useDialog(onClose, isOpen && !!invoice);
   if (!isOpen || !invoice) return null;
 
   const remainingCents = calculateAmountDue(invoice);
@@ -61,7 +63,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div {...dialogProps} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl max-w-md w-full border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800 bg-amber-50 dark:bg-amber-950/30">
           <div className="flex items-center gap-3">
@@ -69,7 +71,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h2 id={titleId} className="text-lg font-bold text-slate-900 dark:text-white">
                 Bad Debt Write-off
               </h2>
               <p className="text-xs text-[var(--muted)] dark:text-slate-400">

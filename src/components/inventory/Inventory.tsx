@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { ConfirmButton } from '../ui/ConfirmButton';
@@ -235,6 +236,10 @@ export default function Inventory() {
     i.sku.toLowerCase().includes(searchTerm.toLowerCase())
   ) : filteredItems;
 
+
+  const closeItemDialog = () => { setIsAdding(false); setEditingItem(null); };
+  const { dialogProps: itemDialogProps, titleId: itemTitleId } = useDialog(closeItemDialog, isAdding || !!editingItem);
+  const { dialogProps: cogsDialogProps, titleId: cogsTitleId } = useDialog(() => setCogsItem(null), !!cogsItem);
 
   return (
     <div className="space-y-8">
@@ -568,7 +573,7 @@ export default function Inventory() {
 
       <AnimatePresence>
         {(isAdding || editingItem) && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div {...itemDialogProps} className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -586,7 +591,7 @@ export default function Inventory() {
               className="relative w-full max-w-2xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden"
             >
               <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
-                <h3 className="text-xl font-black text-[var(--text)] tracking-tighter">
+                <h3 id={itemTitleId} className="text-xl font-black text-[var(--text)] tracking-tighter">
                   {editingItem ? 'Edit Inventory Item' : 'New Inventory Item'}
                 </h3>
                 <button aria-label="Close item dialog"
@@ -713,7 +718,7 @@ export default function Inventory() {
         )}
 
         {cogsItem && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div {...cogsDialogProps} className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -729,7 +734,7 @@ export default function Inventory() {
             >
               <div className="p-6 border-b border-[var(--line)] flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-black text-[var(--text)] tracking-tight">
+                  <h3 id={cogsTitleId} className="text-lg font-black text-[var(--text)] tracking-tight">
                     Recognize COGS / Record Sale
                   </h3>
                   <p className="text-xs text-[var(--muted)] font-mono mt-0.5">{cogsItem.name} ({cogsItem.sku})</p>

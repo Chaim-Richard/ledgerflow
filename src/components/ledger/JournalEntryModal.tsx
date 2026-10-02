@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useMemo, useRef } from 'react';
 import { User } from '../../lib/db/auth';
@@ -86,15 +87,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
     }));
   };
 
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const { dialogProps, titleId } = useDialog(onClose, isOpen);
 
   React.useEffect(() => {
     if (transactionCurrency !== baseCurrency) {
@@ -325,9 +318,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
             className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
           />
           <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="journal-entry-modal-title"
+            {...dialogProps}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -340,7 +331,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                   <ArrowRightLeft size={20} className="md:size-[24px]" />
                 </div>
                 <div>
-                  <h2 className="text-xl md:text-2xl font-bold text-[var(--text)] tracking-tight">New Journal Entry</h2>
+                  <h2 id={titleId} className="text-xl md:text-2xl font-bold text-[var(--text)] tracking-tight">New Journal Entry</h2>
                   <p className="text-xs md:text-sm text-[var(--muted)] font-medium">Record manual adjustments to the ledger</p>
                 </div>
               </div>

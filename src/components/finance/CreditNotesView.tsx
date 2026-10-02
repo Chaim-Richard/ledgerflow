@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -120,6 +121,8 @@ export default function CreditNotesView() {
     setReason('');
     setShowCreateModal(false);
   };
+
+  const { dialogProps, titleId } = useDialog(() => setShowCreateModal(false), showCreateModal);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -304,9 +307,9 @@ export default function CreditNotesView() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div {...dialogProps} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 w-full max-w-lg shadow-xl space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <h2 id={titleId} className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <RotateCcw className="w-5 h-5 text-indigo-600" />
               {activeTab === 'customer' ? 'Issue Customer Credit Note' : 'Record Vendor Credit'}
             </h2>
