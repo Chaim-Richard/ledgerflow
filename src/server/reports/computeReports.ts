@@ -1,7 +1,7 @@
 import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount, isTransactionInDateRange } from "../../lib/txFilters";
 import { resolveAccountRole } from "../../lib/accountUtils";
 import { calculateDocumentTax, calculateDocumentNet } from "../../lib/documentMath";
-import type { Invoice, Bill, Payment, Customer, Vendor, Transaction, ChartAccount, TransactionLine } from "../../types";
+import type { Invoice, Bill, Payment, Customer, Vendor, Transaction, ChartAccount, TransactionLine, CreditNote, VendorCredit } from "../../types";
 
 export const INVOICE_IS_ISSUED = new Set<Invoice['status']>([
   'sent', 'approved', 'invoiced', 'pending', 'overdue', 'partially_paid', 'paid'
@@ -328,7 +328,9 @@ export function computeStatement(
   payments: Payment[],
   startDate: string,
   endDate: string,
-  type: 'customer' | 'vendor'
+  type: 'customer' | 'vendor',
+  /** credit notes (customer) or vendor credits (vendor); each counts less what was refunded (L-160) */
+  credits: Array<CreditNote | VendorCredit> = []
 ) {
   const start = startDate || "1970-01-01";
   const end = endDate || "2099-12-31";
@@ -354,6 +356,10 @@ export function computeStatement(
       openingBalanceCents -= (p.amountCents || 0);
     });
   }
+
+  const contactCredits = credits.filter(c => (isCustomer ? (c as CreditNote).customerId : (c as VendorCredit).vendorId) === contactId && c.status !== 'void' && c.status !== 'draft');
+  const creditNet = (c: CreditNote | VendorCredit) => (c.amountCents || 0) - (c.refundedCents || 0);
+  contactCredits.filter(c => (c.date || '') < start).forEach(c => { openingBalanceCents -= creditNet(c); });
 
   // Activity stream in range
   const activityItems: {
@@ -413,6 +419,19 @@ export function computeStatement(
       });
     });
   }
+
+  contactCredits.filter(c => (c.date || '') >= start && (c.date || '') <= end).forEach(c => {
+    const net = creditNet(c);
+    activityItems.push({
+      id: c.id,
+      date: c.date || '',
+      type: `${isCustomer ? 'Credit note' : 'Vendor credit'}${net === 0 ? ' (refunded)' : (c.refundedCents || 0) > 0 ? ' (part refunded)' : ''}`,
+      reference: c.number || c.id,
+      amountCents: net === 0 ? 0 : -net,
+      creditCents: net,
+      debitCents: 0
+    });
+  });
 
   activityItems.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 

@@ -4,7 +4,7 @@ import { getDb, validateWorkspaceMember } from '../db/firestore';
 import type { Firestore } from '../db/firestore';
 import { generateDocumentPdf } from '../services/pdfService';
 import type { PdfDocument, PdfDocumentType, PdfWorkspace } from '../services/pdfService';
-import type { Bill, Customer, Invoice, Payment } from '../../types';
+import type { Bill, CreditNote, Customer, Invoice, Payment, VendorCredit } from '../../types';
 import { computeStatement } from '../reports/computeReports';
 import { getLocalDateISO } from '../../lib/utils';
 
@@ -73,7 +73,11 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
       const paymentsSnap = await db.collection('payments').where('workspaceId', '==', workspaceId).get();
       const payments = paymentsSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Payment);
 
-      const stmt = computeStatement(contactData, invoices, bills, payments, '1970-01-01', '2099-12-31', contactType);
+      const creditsSnap = await db.collection(contactType === 'customer' ? 'creditNotes' : 'vendorCredits')
+        .where('workspaceId', '==', workspaceId).where(contactType === 'customer' ? 'customerId' : 'vendorId', '==', id).get();
+      const credits = creditsSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as CreditNote | VendorCredit);
+
+      const stmt = computeStatement(contactData, invoices, bills, payments, '1970-01-01', '2099-12-31', contactType, credits);
 
       docData = {
         number: `STMT-${id.substring(0, 6).toUpperCase()}`,

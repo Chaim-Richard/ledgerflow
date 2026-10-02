@@ -51,8 +51,9 @@ export function computeCustomerBalanceSummary(
       return true;
     });
 
+    // a credit counts less what was paid back in cash (L-160)
     const totalCreditNotesCents = custCreditNotes.reduce((sum, cn) => {
-      return sum + toBaseCents(cn.amountCents || 0, cn.exchangeRate);
+      return sum + toBaseCents((cn.amountCents || 0) - (cn.refundedCents || 0), cn.exchangeRate);
     }, 0);
 
     const custPayments = payments.filter(p => {
@@ -132,7 +133,7 @@ export function computeVendorBalanceSummary(
     });
 
     const totalVendorCreditsCents = custVendorCredits.reduce((sum, vc) => {
-      return sum + toBaseCents(vc.amountCents || 0, vc.exchangeRate);
+      return sum + toBaseCents((vc.amountCents || 0) - (vc.refundedCents || 0), vc.exchangeRate);
     }, 0);
 
     const vendorPayments = payments.filter(p => {

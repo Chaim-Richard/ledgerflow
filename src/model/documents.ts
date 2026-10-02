@@ -217,6 +217,8 @@ export interface CreditNote {
   invoiceId?: string;
   amountCents: number;
   remainingCents: number;
+  /** Paid back in cash so far (written by the server when a refund is made; L-160). */
+  refundedCents?: number;
   date: string;
   reason?: string;
   status: 'draft' | 'open' | 'applied' | 'partially_applied' | 'void';
@@ -243,6 +245,8 @@ export interface VendorCredit {
   billId?: string;
   amountCents: number;
   remainingCents: number;
+  /** Paid back in cash so far (written by the server when a refund is made; L-160). */
+  refundedCents?: number;
   date: string;
   reason?: string;
   status: 'draft' | 'open' | 'applied' | 'partially_applied' | 'void';

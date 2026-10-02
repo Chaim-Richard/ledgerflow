@@ -17,7 +17,9 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
   const invoices = useLedgerStore(s => s.invoices);
   const bills = useLedgerStore(s => s.bills);
   const payments = useLedgerStore(s => s.payments);
-  useLedgerCollections('bills', 'customers', 'invoices', 'payments', 'vendors');
+  const creditNotes = useLedgerStore(s => s.creditNotes);
+  const vendorCredits = useLedgerStore(s => s.vendorCredits);
+  useLedgerCollections('bills', 'creditNotes', 'customers', 'invoices', 'payments', 'vendorCredits', 'vendors');
 
   const [type, setType] = useState<'customer' | 'vendor'>('customer');
   const [contactId, setContactId] = useState<string>('');
@@ -43,9 +45,10 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
       payments,
       startDate,
       endDate,
-      type
+      type,
+      type === 'customer' ? creditNotes : vendorCredits
     );
-  }, [selectedContact, invoices, bills, payments, startDate, endDate, type]);
+  }, [selectedContact, invoices, bills, payments, creditNotes, vendorCredits, startDate, endDate, type]);
 
   const handlePrint = () => {
     window.print();
