@@ -1,0 +1,259 @@
+import { resolveAccountRole } from '../../lib/accountUtils';
+import { getLocalDateISO, roundCents } from '../../lib/utils';
+import { Invoice } from '../../types';
+import { isPostable } from '../../lib/txFilters';
+import { calculateDocumentTax, cashPostedWithDocumentCents, depositAppliedCents } from '../../lib/documentMath';
+import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
+import { planInvoiceCogs } from '../invoiceCogs';
+import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi } from './postingKit';
+import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
+
+/**
+ * Post standard double-entry journal entries for an invoice.
+ * Reverses prior postings instead of deleting them.
+ */
+export async function postInvoiceLedger(
+  invoiceId: string, 
+  invoiceData: Partial<Invoice>, 
+  workspaceId: string, 
+  uid: string, 
+  entityMutation?: EntityMutation, 
+  context?: LedgerPostContext
+): Promise<{ cogsPendingReason?: string }> {
+  if (!workspaceId || !invoiceId) return {};
+
+  const invoiceDate = invoiceData.date || getLocalDateISO();
+  verifyLockDate(invoiceDate, context);
+
+  const accounts = getAccounts(context);
+  const workspaces = getWorkspaces(context);
+  const currentWs = workspaces.find(w => w.id === workspaceId);
+  const mappings = currentWs?.defaultAccountMappings || {};
+
+  const arAccount = resolveAccount(
+    accounts,
+    mappings,
+    ['ar', 'accounts receivable', 'receivables', 'receivable'],
+    a => a.type === 'asset' && (a.category === 'Receivables' || a.name.toLowerCase().includes('receivable') || a.code === '1100'),
+    'Accounts Receivable (A/R)'
+  );
+
+  const revenueAccount = resolveAccount(
+    accounts,
+    mappings,
+    ['revenue', 'sales', 'income'],
+    a => a.type === 'income' || a.category === 'Revenue' || a.category === 'Sales',
+    'Sales Revenue'
+  );
+
+  const cashAccount = resolveAccount(
+    accounts,
+    mappings,
+    ['cash', 'bank', 'checking'],
+    a => resolveAccountRole(a) === 'cash',
+    'Cash & Cash Equivalents'
+  );
+
+  // Find prior active non-reversal postings for this invoice to generate reversing entries
+  // Improved logic: exclude any transaction that has ALREADY been reversed
+  const allTxs = getTransactions(context).filter(t => t.metadata?.invoiceId === invoiceId);
+  const reversedIds = new Set(allTxs.filter(t => t.metadata?.isReversal).map(t => t.metadata?.reversesTxId || t.metadata?.reversedTransactionId));
+  
+  const existingTxs = allTxs.filter(t => 
+    isPostable(t) && 
+    !t.metadata?.isReversal &&
+    !reversedIds.has(t.id)
+  );
+
+  const txsToPost: PostableTransaction[] = [];
+  const today = getLocalDateISO();
+
+  // 1. Reversing entries for existing postings
+  for (const prevTx of existingTxs) {
+    txsToPost.push({
+      uid,
+      workspaceId,
+      date: today,
+      description: `Reversal of prior invoice posting (Invoice ${invoiceData.number || invoiceId})`,
+      totalAmountCents: prevTx.totalAmountCents,
+      currency: prevTx.currency || 'USD',
+      exchangeRate: prevTx.exchangeRate || 1,
+      status: 'completed',
+      type: 'actual',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        invoiceId,
+        type: 'invoice-reversal',
+        reversesTxId: prevTx.id,
+        isReversal: true
+      },
+      lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
+    });
+  }
+
+  const status = invoiceData.status || 'pending';
+  if (status === 'draft' || status === 'rejected' || status === 'void' || status === 'cancelled') {
+    // If setting to draft, rejected, voided, or cancelled, reversing prior postings (if any) is sufficient
+    if (txsToPost.length > 0) {
+      await postTxsServerApi(txsToPost, workspaceId, entityMutation);
+    }
+    return {};
+  }
+
+  const rawAmount = invoiceData.amountCents || 0;
+  const rate = invoiceData.exchangeRate || 1;
+  const amount = roundCents(rawAmount * rate);
+  if (amount <= 0) { if (entityMutation) { await postTxsServerApi([], workspaceId, entityMutation); } return {}; }
+
+  const invoiceNum = invoiceData.number || invoiceId;
+  const customer = invoiceData.customerName || 'Customer';
+
+  const taxAmount = roundCents(calculateDocumentTax(invoiceData) * rate);
+  const discountAmount = roundCents((invoiceData.discountCents || 0) * rate);
+  const retainageAmount = roundCents((invoiceData.retainageCents || 0) * rate);
+
+  const taxAccount = taxAmount > 0 ? resolveAccount(
+    accounts,
+    mappings,
+    ['tax payable', 'sales tax', 'tax liability', 'tax'],
+    a => a.type === 'liability' && (a.name.toLowerCase().includes('tax') || a.category === 'Taxes'),
+    'Sales Tax Payable'
+  ) : null;
+
+  const discountAccount = discountAmount > 0 ? resolveAccount(
+    accounts,
+    mappings,
+    ['discount', 'sales discount'],
+    a => a.type === 'expense' || (a.type === 'income' && a.name.toLowerCase().includes('discount')),
+    'Sales Discounts'
+  ) : null;
+  
+  const retainageAccount = retainageAmount > 0 ? resolveAccount(
+    accounts,
+    mappings,
+    ['retainage', 'retention'],
+    a => a.type === 'asset' && a.category === 'Receivables' && (a.name.toLowerCase().includes('retainage') || a.name.toLowerCase().includes('retention')),
+    'Retainage Receivable'
+  ) : null;
+  
+  const accrualLines = TransactionTemplates.buildInvoiceLines({
+    invoiceNumber: String(invoiceNum),
+    customerName: customer,
+    totalCents: amount,
+    taxCents: taxAmount,
+    discountCents: discountAmount,
+    retainageCents: retainageAmount,
+    exchangeRate: rate,
+    arAccount,
+    revenueAccount,
+    lineAccounts: lineAccounts(invoiceData.items, accounts, revenueAccount, a => a.type === 'income'),
+    taxAccount,
+    discountAccount,
+    retainageAccount
+  });
+
+  const accrualTx = {
+    uid,
+    workspaceId,
+    date: invoiceDate,
+    description: `Invoice ${invoiceNum} - ${customer}`,
+    totalAmountCents: amount,
+    currency: invoiceData.currency || 'USD',
+    exchangeRate: rate,
+    status: 'completed',
+    type: 'actual',
+    createdAt: new Date().toISOString(),
+    metadata: {
+      invoiceId,
+      customerId: invoiceData.customerId,
+      type: 'invoice-accrual'
+    },
+    lines: accrualLines
+  };
+  txsToPost.push(inBaseCurrency(accrualTx, workspaceId, context));
+
+  // 2.2 Deposit received in advance (AF-03): the money was booked to a Customer Deposits liability
+  // when it came in; the invoice moves it against the receivable. Tax stays on the full invoice.
+  const depositAmount = roundCents(depositAppliedCents(invoiceData) * rate);
+  if (depositAmount > 0) {
+    const depositAccount = resolveAccount(
+      accounts,
+      mappings,
+      ['customer deposits', 'deposits', 'customer advances'],
+      a => resolveAccountRole(a) === 'liability' && /deposit|advance|unearned|retainer/i.test(a.name || ''),
+      'Customer Deposits'
+    );
+    const description = `Deposit applied to Invoice ${invoiceNum} - ${customer}`;
+    txsToPost.push(inBaseCurrency({
+      uid,
+      workspaceId,
+      date: invoiceDate,
+      description,
+      totalAmountCents: depositAmount,
+      currency: invoiceData.currency || 'USD',
+      exchangeRate: rate,
+      status: 'completed',
+      type: 'actual',
+      createdAt: new Date().toISOString(),
+      metadata: { invoiceId, customerId: invoiceData.customerId, type: 'invoice-deposit' },
+      lines: [
+        { accountId: depositAccount.id, accountName: depositAccount.name, amountCents: depositAmount, description, exchangeRate: rate },
+        { accountId: arAccount.id, accountName: arAccount.name, amountCents: -depositAmount, description, exchangeRate: rate },
+      ],
+    }, workspaceId, context));
+  }
+
+  // 2.5 Cost of goods sold for lines that sell inventory items (the server moves the stock).
+  const cogs = planInvoiceCogs({
+    invoiceId, invoice: invoiceData, date: invoiceDate, uid, workspaceId,
+    baseCurrency: currentWs?.currency || 'USD',
+    inventoryAccount: findAccount(accounts, mappings, ['inventory', 'stock', 'inventory asset'], a => resolveAccountRole(a) === 'inventory'),
+    cogsAccount: findAccount(accounts, mappings, ['cogs', 'cost of goods sold', 'direct costs'], a => resolveAccountRole(a) === 'cogs'),
+    items: await loadInventory(invoiceData, context),
+  });
+  txsToPost.push(...cogs.entries);
+  const wasPending = Boolean(invoiceData.metadata?.cogsPending);
+  if (entityMutation && entityMutation.action !== 'delete' && (cogs.pendingReason || wasPending)) {
+    entityMutation.data = { ...entityMutation.data, metadata: { ...(invoiceData.metadata || {}), cogsPending: Boolean(cogs.pendingReason) } };
+  }
+
+  // 3. Transaction 2: Payment Posting (DR Cash, CR A/R)
+  if (status === 'paid' || status === 'partially_paid') {
+    // Only what was marked paid on the document itself; payment records and credits post their own entries
+    const paidAmtCents = roundCents(cashPostedWithDocumentCents({ ...invoiceData, status }) * rate);
+    if (paidAmtCents > 0) {
+      const paymentDate = invoiceData.paymentDate || invoiceData.paidAt || today;
+      const paymentTx = {
+        uid,
+        workspaceId,
+        date: paymentDate,
+        description: `Payment Received for Invoice ${invoiceNum} - ${customer}`,
+        totalAmountCents: paidAmtCents,
+        currency: invoiceData.currency || 'USD',
+        exchangeRate: rate,
+        status: 'completed',
+        type: 'actual',
+        createdAt: new Date().toISOString(),
+        metadata: {
+          invoiceId,
+          customerId: invoiceData.customerId,
+          type: 'invoice-payment'
+        },
+        lines: TransactionTemplates.buildPaymentLines({
+          documentNumber: String(invoiceNum),
+          entityName: customer,
+          amountCents: paidAmtCents,
+          exchangeRate: rate,
+          cashAccount,
+          offsetAccount: arAccount,
+          isReceipt: true
+        })
+      };
+      txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context));
+    }
+  }
+
+  // Atomic post via Server API
+  await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
+  return { cogsPendingReason: cogs.pendingReason };
+}

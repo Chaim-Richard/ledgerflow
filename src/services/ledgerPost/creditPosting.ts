@@ -1,0 +1,254 @@
+import { getLocalDateISO, roundCents } from '../../lib/utils';
+import { CreditNote, VendorCredit } from '../../types';
+import { isPostable } from '../../lib/txFilters';
+import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi } from './postingKit';
+import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
+
+/**
+ * Post double-entry journal entries for a Customer Credit Note.
+ */
+export async function postCreditNoteLedger(
+  creditNoteId: string, 
+  creditNoteData: Partial<CreditNote>, 
+  workspaceId: string, 
+  uid: string, 
+  entityMutation?: EntityMutation, 
+  context?: LedgerPostContext
+) {
+  if (!workspaceId || !creditNoteId) return;
+
+  const cnDate = creditNoteData.date || getLocalDateISO();
+  verifyLockDate(cnDate, context);
+
+  const accounts = getAccounts(context);
+  const workspaces = getWorkspaces(context);
+  const currentWs = workspaces.find(w => w.id === workspaceId);
+  const mappings = currentWs?.defaultAccountMappings || {};
+
+  const arAccount = resolveAccount(
+    accounts,
+    mappings,
+    ['ar', 'accounts receivable', 'receivables', 'receivable'],
+    a => a.type === 'asset' && (a.category === 'Receivables' || a.name.toLowerCase().includes('receivable') || a.code === '1100'),
+    'Accounts Receivable (A/R)'
+  );
+
+  const salesReturnAccount = resolveAccount(
+    accounts,
+    mappings,
+    ['revenue', 'sales', 'income', 'sales returns'],
+    a => a.type === 'income' || a.category === 'Revenue',
+    'Sales Returns / Revenue'
+  );
+
+  // Reversals of prior CN postings
+  const allTxs = getTransactions(context).filter(t => t.metadata?.creditNoteId === creditNoteId);
+  const reversedIds = new Set(allTxs.filter(t => t.metadata?.isReversal).map(t => t.metadata?.reversesTxId || t.metadata?.reversedTransactionId));
+  
+  const existingTxs = allTxs.filter(t => 
+    isPostable(t) && 
+    !t.metadata?.isReversal &&
+    !reversedIds.has(t.id)
+  );
+
+  const txsToPost: PostableTransaction[] = [];
+  const today = getLocalDateISO();
+
+  for (const prevTx of existingTxs) {
+    txsToPost.push({
+      uid,
+      workspaceId,
+      date: today,
+      description: `Reversal of prior credit note posting (CN ${creditNoteId})`,
+      totalAmountCents: prevTx.totalAmountCents,
+      currency: prevTx.currency || 'USD',
+      exchangeRate: prevTx.exchangeRate || 1,
+      status: 'completed',
+      type: 'actual',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        creditNoteId,
+        type: 'credit-note-reversal',
+        reversesTxId: prevTx.id,
+        isReversal: true
+      },
+      lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
+    });
+  }
+
+  if (creditNoteData.status === 'void') {
+    // A credit already applied to invoices/bills or refunded can't be voided (that would undo money that moved)
+    if (typeof creditNoteData.remainingCents === 'number' && creditNoteData.remainingCents < (creditNoteData.amountCents || 0)) {
+      throw new Error('This credit has been applied or refunded and can no longer be voided.');
+    }
+    if (txsToPost.length > 0 || entityMutation) {
+      await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
+    }
+    return;
+  }
+
+  const rawAmount = creditNoteData.amountCents || 0;
+  const rate = creditNoteData.exchangeRate || 1;
+  const amount = roundCents(rawAmount * rate);
+  if (amount <= 0) return;
+  // The credited invoice's share of tax comes off tax payable too (L-118)
+  const cnTax = creditNoteData.taxVersion === 2 ? Math.min(amount, roundCents((creditNoteData.taxAmountCents || 0) * rate)) : 0;
+  const cnTaxAccount = cnTax > 0 ? resolveAccount(
+    accounts,
+    mappings,
+    ['tax payable', 'sales tax', 'tax liability', 'tax'],
+    a => a.type === 'liability' && (a.name.toLowerCase().includes('tax') || a.category === 'Taxes'),
+    'Sales Tax Payable'
+  ) : null;
+
+  const cnTx = {
+    uid,
+    workspaceId,
+    date: cnDate,
+    description: `Credit Note ${creditNoteData.number || creditNoteId}: ${creditNoteData.customerName || 'Customer'}`,
+    totalAmountCents: amount,
+    currency: creditNoteData.currency || 'USD',
+    exchangeRate: rate,
+    status: 'completed',
+    type: 'actual',
+    createdAt: new Date().toISOString(),
+    metadata: {
+      creditNoteId,
+      customerId: creditNoteData.customerId,
+      type: 'credit-note-issuance'
+    },
+    lines: [
+      { accountId: salesReturnAccount.id, accountName: salesReturnAccount.name, amountCents: amount - cnTax, debitCents: amount - cnTax, creditCents: 0, description: 'Sales Return / Discount' },
+      ...(cnTax > 0 && cnTaxAccount ? [{ accountId: cnTaxAccount.id, accountName: cnTaxAccount.name, amountCents: cnTax, debitCents: cnTax, creditCents: 0, description: 'Sales tax reversed by the credit' }] : []),
+      { accountId: arAccount.id, accountName: arAccount.name, amountCents: -amount, debitCents: 0, creditCents: amount, description: 'Accounts Receivable Credit' }
+    ]
+  };
+  txsToPost.push(inBaseCurrency(cnTx, workspaceId, context));
+
+  await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
+}
+
+/**
+ * Post double-entry journal entries for a Vendor Credit.
+ */
+export async function postVendorCreditLedger(
+  vendorCreditId: string, 
+  vendorCreditData: Partial<VendorCredit>, 
+  workspaceId: string, 
+  uid: string, 
+  entityMutation?: EntityMutation, 
+  context?: LedgerPostContext
+) {
+  if (!workspaceId || !vendorCreditId) return;
+
+  const vcDate = vendorCreditData.date || getLocalDateISO();
+  verifyLockDate(vcDate, context);
+
+  const accounts = getAccounts(context);
+  const workspaces = getWorkspaces(context);
+  const currentWs = workspaces.find(w => w.id === workspaceId);
+  const mappings = currentWs?.defaultAccountMappings || {};
+
+  const apAccount = resolveAccount(
+    accounts,
+    mappings,
+    ['ap', 'accounts payable', 'payables', 'payable'],
+    a => a.type === 'liability' && (a.category === 'Payables' || a.name.toLowerCase().includes('payable') || a.code === '2000'),
+    'Accounts Payable (A/P)'
+  );
+
+  const expenseAccount = resolveAccount(
+    accounts,
+    mappings,
+    ['expense', 'purchase rebates', 'cogs'],
+    a => a.type === 'expense' || a.category === 'Expense' || a.category === 'COGS',
+    'Purchase Rebates / Expense'
+  );
+
+  // Reversals of prior VC postings
+  const allTxs = getTransactions(context).filter(t => t.metadata?.vendorCreditId === vendorCreditId);
+  const reversedIds = new Set(allTxs.filter(t => t.metadata?.isReversal).map(t => t.metadata?.reversesTxId || t.metadata?.reversedTransactionId));
+  
+  const existingTxs = allTxs.filter(t => 
+    isPostable(t) && 
+    !t.metadata?.isReversal &&
+    !reversedIds.has(t.id)
+  );
+
+  const txsToPost: PostableTransaction[] = [];
+  const today = getLocalDateISO();
+
+  for (const prevTx of existingTxs) {
+    txsToPost.push({
+      uid,
+      workspaceId,
+      date: today,
+      description: `Reversal of prior vendor credit posting (VC ${vendorCreditId})`,
+      totalAmountCents: prevTx.totalAmountCents,
+      currency: prevTx.currency || 'USD',
+      exchangeRate: prevTx.exchangeRate || 1,
+      status: 'completed',
+      type: 'actual',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        vendorCreditId,
+        type: 'vendor-credit-reversal',
+        reversesTxId: prevTx.id,
+        isReversal: true
+      },
+      lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
+    });
+  }
+
+  if (vendorCreditData.status === 'void') {
+    // A credit already applied to invoices/bills or refunded can't be voided (that would undo money that moved)
+    if (typeof vendorCreditData.remainingCents === 'number' && vendorCreditData.remainingCents < (vendorCreditData.amountCents || 0)) {
+      throw new Error('This credit has been applied or refunded and can no longer be voided.');
+    }
+    if (txsToPost.length > 0 || entityMutation) {
+      await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
+    }
+    return;
+  }
+
+  const rawAmount = vendorCreditData.amountCents || 0;
+  const rate = vendorCreditData.exchangeRate || 1;
+  const amount = roundCents(rawAmount * rate);
+  if (amount <= 0) return;
+  // The credited bill's share of input tax is no longer reclaimable (L-118)
+  const vcTax = vendorCreditData.taxVersion === 2 ? Math.min(amount, roundCents((vendorCreditData.taxAmountCents || 0) * rate)) : 0;
+  const vcTaxAccount = vcTax > 0 ? resolveAccount(
+    accounts,
+    mappings,
+    ['tax paid', 'input tax', 'tax asset', 'tax', 'tax expense'],
+    a => (a.type === 'asset' || a.type === 'expense' || a.type === 'liability') && a.name.toLowerCase().includes('tax'),
+    'Tax Paid'
+  ) : null;
+
+  const vcTx = {
+    uid,
+    workspaceId,
+    date: vcDate,
+    description: `Vendor Credit ${vendorCreditData.number || vendorCreditId}: ${vendorCreditData.vendorName || 'Vendor'}`,
+    totalAmountCents: amount,
+    currency: vendorCreditData.currency || 'USD',
+    exchangeRate: rate,
+    status: 'completed',
+    type: 'actual',
+    createdAt: new Date().toISOString(),
+    metadata: {
+      vendorCreditId,
+      vendorId: vendorCreditData.vendorId,
+      type: 'vendor-credit-issuance'
+    },
+    lines: [
+      { accountId: apAccount.id, accountName: apAccount.name, amountCents: amount, debitCents: amount, creditCents: 0, description: 'Accounts Payable Reduction' },
+      { accountId: expenseAccount.id, accountName: expenseAccount.name, amountCents: -(amount - vcTax), debitCents: 0, creditCents: amount - vcTax, description: 'Purchase Rebate / Expense Discount' },
+      ...(vcTax > 0 && vcTaxAccount ? [{ accountId: vcTaxAccount.id, accountName: vcTaxAccount.name, amountCents: -vcTax, debitCents: 0, creditCents: vcTax, description: 'Input tax reversed by the credit' }] : [])
+    ]
+  };
+  txsToPost.push(inBaseCurrency(vcTx, workspaceId, context));
+
+  await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
+}

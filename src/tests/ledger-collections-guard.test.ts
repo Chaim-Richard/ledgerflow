@@ -20,7 +20,7 @@ const SKIP = new Set(['stores/useLedgerStore.ts', 'hooks/useLedgerData.ts', 'lib
  */
 const GET_STATE_ALLOWED: Record<string, string> = {
   'platform/settings/BackupExportSettings.tsx': 'the backup comes from the server; the browser copy is the offline fallback and says it is incomplete',
-  'services/LedgerPostService.ts': 'reads the loaded inventory and fetches any invoice item not loaded yet (loadInventory)',
+  'services/ledgerPost/postingKit.ts': 'reads the loaded inventory and fetches any invoice item not loaded yet (loadInventory)',
 };
 
 function sourceFiles(dir: string): string[] {

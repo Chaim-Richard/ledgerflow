@@ -1412,7 +1412,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] F-08 `TransactionGrid.tsx` (1,637)
 - [ ] F-09 `IntelligenceCenter.tsx`
 - [ ] F-10 `types.ts` — split by domain
-- [ ] F-11 `LedgerPostService.ts`
+- [x] F-11 `LedgerPostService.ts` 1,097 → 27 lines: one file per document type in `src/services/ledgerPost/` (invoice, bill, credits, payment, delete) plus `postingKit.ts` (lookups, lock check, the one server call); `LedgerPostService.*` names unchanged
 - [ ] F-12 `Reconciliation.tsx`
 - [ ] F-13 `BalanceSheetView.tsx`
 - [ ] F-14 `TransactionEditModal.tsx`

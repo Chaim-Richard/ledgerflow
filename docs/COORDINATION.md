@@ -147,7 +147,7 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
 
 | Item | Files | Since |
 |---|---|---|
-| Always | `server.ts`, everything in `src/server/`, `supabase/`, `src/services/LedgerPostService.ts`, `src/kernel/templates/`, `src/lib/documentMath.ts`, `src/lib/txFilters.ts`, `src/lib/taxCodes.ts` | — |
+| Always | `server.ts`, everything in `src/server/`, `supabase/`, `src/services/LedgerPostService.ts` + `src/services/ledgerPost/`, `src/kernel/templates/`, `src/lib/documentMath.ts`, `src/lib/txFilters.ts`, `src/lib/taxCodes.ts` | — |
 | Launch #7 tax depth: tax codes with parts, compound tax, zero-rated / exempt / reverse charge, tax return boxes, filed returns; fix tax-exclusive invoices (L-113) | `src/components/sales/InvoiceModal.tsx`, `src/components/sales/Sales.tsx`, `src/components/purchases/BillModal.tsx`, `src/components/purchases/Purchases.tsx`, `src/components/purchases/PurchaseOrdersView.tsx`, `src/components/finance/TaxManager.tsx`, `src/components/reporting/TaxLiabilityView.tsx`, `src/components/finance/CreditNotesView.tsx` | 2026-09-28 |
 | Launch #8 data-health checks and record links (done 2026-09-30) | `src/lib/dataChecks.ts`, `src/lib/recordLinks.ts`, `src/hooks/useRecordFocus.ts`, `src/stores/useUIStore.ts`, `src/components/system/DataHealthView.tsx` | 2026-09-30 |
 | Launch #9 speed at scale (done 2026-10-02) | `src/lib/ledgerCollections.ts`, `src/hooks/useLedgerCollections.ts`, `src/hooks/useLedgerData.ts`, `src/lib/db/firestore.ts`, `src/lib/db/liveQuery.ts`, `src/stores/useDataNeedsStore.ts` | 2026-10-02 |
