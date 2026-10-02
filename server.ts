@@ -1,11 +1,12 @@
-import type { AutoRule, ChartAccount, InventoryItem, Invoice, Transaction as LedgerTransaction } from "./src/types.ts";
+import type { ChartAccount, InventoryItem, Invoice, Transaction as LedgerTransaction } from "./src/types.ts";
 import { errorMessage, requestUser } from "./src/server/auth/requestUser.ts";
+import { formatTzDate, globalAdminConfig, syncGlobalAdminConfig, calculateWorkspaceCharges, sendError, handleApiError, authorizeWorkspace, authenticate, optionalAuthenticate, requireAdmin, writeAuditLog, getReportContext, resolveUserGeminiApiKey, upload } from "./src/server/http/serverKit.ts";
+import type { AuthenticatedRequest, AuthUser } from "./src/server/http/serverKit.ts";
 import { fxRouter } from "./src/server/routes/fxRoutes";
 import { aiRouter } from "./src/server/routes/aiRoutes";
 import { reportRouter } from "./src/server/routes/reportRoutes";
 import { accountRouter } from "./src/server/routes/accountRoutes";
 import { workspaceRouter, countWorkspaceOwners, requireWorkspaceRole } from "./src/server/routes/workspaceRoutes";
-import { LEDGER_WRITER_ROLES, roleInWorkspace } from "./src/server/middleware/requireLedgerWriter";
 import { invitePublicRouter } from "./src/server/routes/invitePublicRoutes";
 import { emailWebhookRouter } from "./src/server/routes/emailRoutes";
 import { publicInvoiceRouter } from "./src/server/routes/publicInvoiceRoutes";
@@ -31,13 +32,10 @@ import { recordStripeInvoicePayment } from "./src/server/services/onlinePaymentS
 import express from "express";
 import { currencyRouter, taxDataRouter } from "./src/server/routes/externalDataRoutes.ts";
 import cors from "cors";
-import Stripe from "stripe";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import dotenv from "dotenv";
-import multer from "multer";
 import fs from "fs";
-import os from "os";
 import { parse as parseCsv } from 'csv-parse/sync';
 import { z } from "zod";
 import compression from "compression";
@@ -57,23 +55,22 @@ import {
   AdminGlobalConfigSchema,
   ErrorTelemetrySchema
 } from "./src/schemas.ts";
-import { BayesianClassifier, sha256Sync } from "./src/lib/algorithms.ts";
+import { BayesianClassifier } from "./src/lib/algorithms.ts";
 import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
 import { TruthEngine } from "./src/modules/integrity/TruthEngine.ts";
-import { calculateNetIncome, isPostable, lineAmount } from "./src/lib/txFilters.ts";
+import { isPostable, lineAmount } from "./src/lib/txFilters.ts";
 import { assertWorkspaceAccess, getDb, FieldValue } from "./src/server/db/firestore.ts";
 import { AccountDeletionBlocked, deleteAccount } from "./src/server/services/accountDeletionService.ts";
 import { cronRouter } from "./src/server/routes/cronRoutes.ts";
 import { statusRouter } from "./src/server/routes/statusRoutes.ts";
 import { runDailyMaintenance } from "./src/server/services/maintenanceService.ts";
 import { exportWorkspaceBackup, restoreWorkspaceBackup, RestoreError } from "./src/server/services/workspaceRestoreService.ts";
-import type { DocumentData, Transaction } from "./src/server/db/firestore.ts";
+import type { Transaction } from "./src/server/db/firestore.ts";
 import { verifyIdToken, authAdmin, supabaseUrl } from "./src/server/auth/supabaseAuth.ts";
 import type { DecodedIdToken } from "./src/server/auth/supabaseAuth.ts";
 
 import { processAllRecurring } from "./src/server/services/recurringService.ts";
 import { processErrorDigest } from "./src/server/services/errorDigestService.ts";
-import { executeCommand } from "./src/server/utils/commandExecutor.ts";
 import { 
   executeIdempotent, 
   extractCanonicalOperationId, 
@@ -81,27 +78,6 @@ import {
 } from "./src/server/utils/idempotency.ts";
 import { csrfProtection } from "./src/server/middleware/csrf.ts";
 
-function formatTzDate(d: Date = new Date(), timezone = 'UTC'): string {
-  try {
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone || 'UTC',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    const parts = formatter.formatToParts(d);
-    const y = parts.find(p => p.type === 'year')?.value;
-    const m = parts.find(p => p.type === 'month')?.value;
-    const day = parts.find(p => p.type === 'day')?.value;
-    if (y && m && day) return `${y}-${m}-${day}`;
-  } catch (_e) {
-    // fallback
-  }
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 import { 
   publicInvoiceLimiter, 
   pdfGenerationLimiter, 
@@ -159,344 +135,6 @@ try {
   }
 }
 
-// --- Types ---
-interface AuthUser extends DecodedIdToken {
-  email_verified: boolean;
-}
-
-interface AuthenticatedRequest extends express.Request {
-  user: AuthUser;
-}
-
-// Temporary upload folder (the only writable place on Vercel); files are deleted after parsing.
-const upload = multer({
-  dest: path.join(os.tmpdir(), "ledgerflow-uploads"),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB limit
-    files: 1
-  }
-});
-
-// --- Global Admin Pricing & Billing Overrides System ---
-let globalAdminConfig = {
-  creditCostMultiplier: 1.0,
-  quotaCentsMultiplier: 1.0,
-  bypassBilling: false,
-  customKeyCreditCharge: 10,
-  customKeyCentsCharge: 0,
-  maxRegistrationLimit: 100,
-  freeWorkspaceTxCap: 100,
-};
-
-async function syncGlobalAdminConfig() {
-  try {
-    const db = getDb();
-    const doc = await db.collection("admins").doc("globalConfig").get();
-    if (doc.exists) {
-      const data = doc.data() || {};
-      globalAdminConfig = {
-        creditCostMultiplier: data.creditCostMultiplier !== undefined ? Number(data.creditCostMultiplier) : 1.0,
-        quotaCentsMultiplier: data.quotaCentsMultiplier !== undefined ? Number(data.quotaCentsMultiplier) : 1.0,
-        bypassBilling: data.bypassBilling === true,
-        customKeyCreditCharge: data.customKeyCreditCharge !== undefined ? Number(data.customKeyCreditCharge) : 10,
-        customKeyCentsCharge: data.customKeyCentsCharge !== undefined ? Number(data.customKeyCentsCharge) : 0,
-        maxRegistrationLimit: data.maxRegistrationLimit !== undefined ? Number(data.maxRegistrationLimit) : 100,
-        freeWorkspaceTxCap: data.freeWorkspaceTxCap !== undefined ? Number(data.freeWorkspaceTxCap) : 100,
-      };
-      console.debug("🌀 [Global Billing Config Sync] Loaded from database:", globalAdminConfig);
-    }
-  } catch (err) {
-    console.debug("🌀 [Global Billing Config Sync] Bypassed (Using default settings)");
-  }
-}
-
-function calculateWorkspaceCharges(wsData: any, baseCredits: number, baseCents: number, isCustomKeyUsed: boolean) {
-  const creditMult = wsData?.creditCostMultiplier !== undefined 
-    ? Number(wsData.creditCostMultiplier) 
-    : globalAdminConfig.creditCostMultiplier;
-    
-  const centsMult = wsData?.quotaCentsMultiplier !== undefined 
-    ? Number(wsData.quotaCentsMultiplier) 
-    : globalAdminConfig.quotaCentsMultiplier;
-
-  let credits = baseCredits;
-  let cents = baseCents;
-
-  if (isCustomKeyUsed) {
-    const wsCustomCredit = wsData?.customKeyCreditCharge !== undefined ? Number(wsData.customKeyCreditCharge) : null;
-    credits = wsCustomCredit !== null ? wsCustomCredit : globalAdminConfig.customKeyCreditCharge;
-
-    const wsCustomCents = wsData?.customKeyCentsCharge !== undefined ? Number(wsData.customKeyCentsCharge) : null;
-    cents = wsCustomCents !== null ? wsCustomCents : globalAdminConfig.customKeyCentsCharge;
-  }
-
-  credits = Math.round(credits * creditMult);
-  cents = Number((cents * centsMult).toFixed(6)); // Preserve micro-penny accuracy for accurate usage representation
-
-  const bypass = wsData?.bypassBilling === true || globalAdminConfig.bypassBilling === true;
-  if (bypass) {
-    credits = 0;
-    cents = 0;
-  }
-
-  return { credits, cents };
-}
-
-/**
- * Standard API error response
- */
-function sendError(res: express.Response, message: string, status: number = 500, details?: any) {
-  console.error(`[API Error] ${status}: ${message} (Path: ${res.req?.originalUrl || "unknown"})`, details || "");
-  res.status(status).json({
-    status: "error",
-    message,
-    ...(details && { details })
-  });
-}
-
-/**
- * Centralized API error handler
- */
-function handleApiError(res: express.Response, err: any) {
-  const message = errorMessage(err) || err.toString() || "";
-  const code = err.code || "";
-  
-  console.error("[Handling API Error]", err);
-  console.error("[API Error Details] message:", message, "code:", code);
-
-  if (message.includes("UNAUTHENTICATED") || code === 16) {
-    return sendError(res, "Unauthenticated: " + message, 401);
-  }
-  if (message.includes("FORBIDDEN") || message.includes("PERMISSION_DENIED") || code === 7) {
-    return sendError(res, "Forbidden access: " + message, 403);
-  }
-  if (message.includes("NOT_FOUND") || code === 5) {
-    return sendError(res, "Resource not found: " + message, 404);
-  }
-  if (message.includes("INVALID_ARGUMENT") || message.includes("FAILED_PRECONDITION") || code === 3 || code === 9) {
-    return sendError(res, "Unprocessable Entity: " + message, 422);
-  }
-  if (message.includes("ALREADY_EXISTS") || code === 6) {
-    return sendError(res, "Conflict: " + message, 409);
-  }
-
-  sendError(res, message || "Internal Server Error", 500);
-}
-
-/**
- * Authorization & Context Helper
- */
-async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string) {
-  const db = getDb();
-  
-  if (!workspaceId || typeof workspaceId !== 'string') {
-    throw new Error("NOT_FOUND: Invalid workspace identifier provided.");
-  }
-
-  try {
-    const { data } = await assertWorkspaceAccess(db, workspaceId, req.user);
-    
-    // Administrative Policy Enforcement & Access Matrix Checks
-  const url = req.originalUrl || req.url || "";
-    const isBillingOrMetadataRoute = url.includes("/billing/status") || url.includes("/billing/record-compute");
-    const isSystemAdmin = req.user?.admin === true;
-
-    if (!isSystemAdmin && !isBillingOrMetadataRoute) {
-      // 1. Account Freeze enforcement (concurrentUserLimit = 0 denotes administratively frozen account)
-      if (data?.concurrentUserLimit === 0) {
-        throw new Error("FORBIDDEN: This workspace is administratively suspended/frozen by Systems Administration. Please contact support@ledgerflow.app.");
-      }
-
-      const method = req.method || "GET";
-      const isMutation = ["POST", "PUT", "DELETE", "PATCH"].includes(method);
-      if (isMutation && !LEDGER_WRITER_ROLES.includes(roleInWorkspace(data, req.user.uid))) {
-        throw new Error("FORBIDDEN: your role in this workspace is read-only.");
-      }
-      const isCreditSensitive = isMutation || url.includes("/brain/");
-
-      if (isCreditSensitive) {
-        // 2. Compute credit balance checking
-        const baseline = data?.computeCreditBalance !== undefined ? Number(data.computeCreditBalance) : 100000;
-        const creditBalance = await getShardedCounterValue(db, workspaceId, 'computeCreditBalance', baseline);
-        if (creditBalance <= 0) {
-          throw new Error("PAYMENT_REQUIRED: This workspace has exhausted its compute credit balance (0 left). Please upgrade your plan or top up in settings.");
-        }
-
-        // 3. API Quota dollar limit enforcement
-        const quotaLimitCents = data?.apiQuotaMonthlyLimitCents !== undefined ? Number(data.apiQuotaMonthlyLimitCents) : 0;
-        const quotaUsedCents = data?.apiQuotaTotalCentsUsed !== undefined ? Number(data.apiQuotaTotalCentsUsed) : 0;
-        if (quotaLimitCents > 0 && quotaUsedCents >= quotaLimitCents) {
-          throw new Error("QUOTA_EXCEEDED: Workspace monthly spending quota limit exceeded. Please configure custom plan limits with your administrator.");
-        }
-      }
-    }
-    
-    return data;
-  } catch (err) {
-    if (errorMessage(err) && (errorMessage(err).includes("FORBIDDEN") || errorMessage(err).includes("PAYMENT_REQUIRED") || errorMessage(err).includes("QUOTA_EXCEEDED"))) {
-      throw err;
-    }
-    throw err;
-  }
-}
-
-/**
- * Authentication Middleware
- */
-const authenticate = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    // Return 401 silently for logs to avoid cluttering with pre-auth probes
-    return res.status(401).json({ status: "error", message: "Unauthorized: No token provided" });
-  }
-
-  const idToken = authHeader.split("Bearer ")[1];
-
-  try {
-    const decodedToken = await verifyIdToken(idToken) as AuthUser;
-    
-    if (decodedToken.admin === true || (decodedToken as any).role === 'admin') {
-      decodedToken.admin = true;
-    } else {
-      // Check if user has admin role in Firestore users collection
-      try {
-        const userDoc = await getDb().collection("users").doc(decodedToken.uid).get();
-        if (userDoc.exists && userDoc.data()?.role === 'admin') {
-          decodedToken.admin = true;
-          (decodedToken as any).role = 'admin';
-        }
-      } catch (dbErr) {
-        // Fallback silently if DB read restricted
-      }
-    }
-
-    const isAnonymous = decodedToken.firebase?.sign_in_provider === 'anonymous';
-    if (!decodedToken.email_verified && !isAnonymous && !decodedToken.admin) {
-      return sendError(res, "Access Denied: Please verify your email protocol.", 403);
-    }
-
-    (req as AuthenticatedRequest).user = decodedToken;
-    next();
-  } catch (error) {
-    sendError(res, "Unauthorized: Invalid token", 401, error);
-  }
-};
-
-/**
- * Optional Authentication Middleware for Telemetry
- * If valid Bearer token exists, attaches user; otherwise gracefully proceeds as unauthenticated
- */
-const optionalAuthenticate = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return next();
-  }
-
-  const idToken = authHeader.split("Bearer ")[1];
-  try {
-    const decodedToken = await verifyIdToken(idToken) as AuthUser;
-    (req as AuthenticatedRequest).user = decodedToken;
-  } catch (_err) {
-    // Non-blocking: unauthenticated telemetry fallback
-  }
-  next();
-};
-
-const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const user = (req as AuthenticatedRequest).user;
-  const isAdmin = Boolean(
-    user && (
-      user.admin === true || 
-      user.role === 'admin'
-    )
-  );
-  if (!isAdmin) {
-    return res.status(403).json({ status: "error", message: "Forbidden: Admin privileges required." });
-  }
-  next();
-};
-
-async function writeAuditLog(
-  userId: string, 
-  email: string, 
-  action: string, 
-  details: string, 
-  workspaceId: string = 'system',
-  before?: any,
-  after?: any,
-  transaction?: Transaction
-) {
-  try {
-    const db = getDb();
-    await writeServerAuditLog({
-      workspaceId,
-      uid: userId,
-      email,
-      action,
-      entityType: 'system',
-      entityId: workspaceId,
-      details: {
-        description: details,
-        before: before || null,
-        after: after || null
-      }
-    }, { db, tx: transaction as any });
-  } catch (err) {
-    console.warn("[AuditLog] Failed to persist audit log entry to database:", errorMessage(err));
-  }
-}
-
-/**
- * Shared data fetcher for reports to ensure consistent auth and efficiency
- */
-async function getReportContext(req: AuthenticatedRequest, workspaceId: string) {
-  const db = getDb();
-  await authorizeWorkspace(req, workspaceId);
-  const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get();
-  
-  // Streaming approach for transactions guarantees linear memory bounds and prevents Node.js OOM crashes on 100,000+ entries
-  const transactions: LedgerTransaction[] = [];
-  const txStream = db.collection("transactions").where("workspaceId", "==", workspaceId).stream();
-  
-  for await (const chunk of txStream as AsyncIterable<{ data: () => DocumentData }>) {
-    transactions.push(chunk.data() as LedgerTransaction);
-  }
-  
-  return {
-    accounts: accountsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as ChartAccount),
-    transactions
-  };
-}
-
-/**
- * Resolves the active Gemini API key for a user (supporting BYOK encrypted key or server fallback)
- */
-async function resolveUserGeminiApiKey(uid?: string): Promise<{ apiKey: string; isCustom: boolean }> {
-  if (!uid) {
-    return { apiKey: process.env.GEMINI_API_KEY || "", isCustom: false };
-  }
-  try {
-    const db = getDb();
-    const userDoc = await db.collection("users").doc(uid).get();
-    if (userDoc.exists) {
-      const data = userDoc.data();
-      if (data?.geminiApiKeyEncrypted) {
-        try {
-          const decrypted = SecurityService.decryptSensitiveField(data.geminiApiKeyEncrypted);
-          if (decrypted) return { apiKey: decrypted, isCustom: true };
-        } catch (decryptErr) {
-          console.warn("[resolveUserGeminiApiKey] Failed to decrypt user key:", decryptErr);
-        }
-      }
-      if (data?.geminiApiKey) {
-        return { apiKey: data.geminiApiKey, isCustom: true };
-      }
-    }
-  } catch (err) {
-    console.warn("[resolveUserGeminiApiKey] Error fetching user API key:", errorMessage(err));
-  }
-  return { apiKey: process.env.GEMINI_API_KEY || "", isCustom: false };
-}
 
 async function buildApp(): Promise<{ app: express.Express; port: number }> {
   const app = express();
@@ -3319,7 +2957,7 @@ You MUST output a valid JSON object matching this schema exactly:
         result = await db.runTransaction(performMutation);
       }
 
-      globalAdminConfig = result as any;
+      Object.assign(globalAdminConfig, result);
       res.json({ status: "success", data: result });
     } catch (err) {
       handleApiError(res, err);
