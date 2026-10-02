@@ -53,8 +53,8 @@ const TABLES: Record<string, [string, string[]]> = {
 // discount, "tax inclusive" and a bill's currency were silently lost). Every model field must be
 // in the schema, except those only the server writes.
 const SCHEMA_MODELS: Array<[string, () => Promise<Record<string, unknown>>, string[]]> = [
-  ['Invoice', async () => (await import('../schemas')).InvoiceSchema.shape, ['writtenOffCents', 'writeOffTransactionId', 'writeOffReason', 'writtenOffAt', 'writeOffReversalTransactionId']],
-  ['Bill', async () => (await import('../schemas')).BillSchema.shape, []],
+  ['Invoice', async () => (await import('../schemas')).InvoiceSchema.shape, ['writtenOffCents', 'writeOffTransactionId', 'writeOffReason', 'writtenOffAt', 'writeOffReversalTransactionId', 'createdAt', 'updatedAt']],
+  ['Bill', async () => (await import('../schemas')).BillSchema.shape, ['createdAt', 'updatedAt']],
   ['CreditNote', async () => (await import('../schemas')).CreditNoteSchema.shape, ['createdAt', 'updatedAt']],
   ['VendorCredit', async () => (await import('../schemas')).VendorCreditSchema.shape, ['createdAt', 'updatedAt']],
 ];

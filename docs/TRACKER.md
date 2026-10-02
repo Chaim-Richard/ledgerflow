@@ -1498,7 +1498,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [~] I-17 Deep-linkable report settings done; list filters elsewhere not yet
 - [x] I-18 Print stylesheet (Reports page)
 - [x] I-19 Active filters as chips — the transaction list shows each active filter as a chip with a remove button and "Clear All"; the command palette's search now shows there too (L-143)
-- [ ] I-20 "What changed since I last looked"
+- [x] I-20 "What changed since I last looked" — the Overview opens with "Since your last visit (date): 3 new transactions · 1 invoice paid…" per person and workspace on this device (tested)
 
 # SECTION J — MISSING REPORTS
 

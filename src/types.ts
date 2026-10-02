@@ -335,6 +335,9 @@ export interface Bill {
   /** Reverse charge: the tax the business accounts for itself (due and reclaimable). */
   selfAssessedTaxCents?: number;
   posted?: boolean;
+  /** set when saved (database row times) */
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Invoice {
@@ -405,6 +408,9 @@ export interface Invoice {
   isLocked?: boolean;
   lockedAt?: string;
   paymentToken?: string;
+  /** set when saved (database row times) */
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PaymentAllocation {
