@@ -17,6 +17,19 @@ function storedChoice<T extends string>(key: string, allowed: readonly T[], fall
   }
 }
 
+/** The tabs a workspace hides from the sidebar (Settings → Blueprint), saved per workspace. */
+function storedHiddenTabs(workspaceId: string | null | undefined): string[] {
+  try {
+    const key = workspaceId ? `lf_hidden_tabs_${workspaceId}` : 'lf_hidden_tabs';
+    let saved = localStorage.getItem(key);
+    if (!saved && workspaceId) saved = localStorage.getItem('lf_hidden_tabs');
+    const parsed: unknown = saved ? JSON.parse(saved) : [];
+    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 const initialHash = typeof window !== 'undefined' ? parseRecordHash(window.location.hash) : { tab: '' };
 
 interface UIState {
@@ -125,6 +138,8 @@ interface UIState {
   resetLexiconOverrides: () => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   hiddenTabs: string[];
+  /** a workspace was opened: its own hidden tabs (they used to carry over from the last one) */
+  loadHiddenTabs: (workspaceId: string | null) => void;
   toggleTabVisibility: (id: string) => void;
   speedDials: Record<string, string>;
   setSpeedDial: (key: string, tabId: string) => void;
@@ -190,17 +205,8 @@ export const useUIStore = create<UIState>((set) => ({
       return {};
     }
   })(),
-  hiddenTabs: (() => {
-    try {
-      const wsId = typeof window !== 'undefined' ? localStorage.getItem('ledgerflow_current_workspace') : null;
-      const key = wsId ? `lf_hidden_tabs_${wsId}` : 'lf_hidden_tabs';
-      let saved = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
-      if (!saved && wsId) saved = localStorage.getItem('lf_hidden_tabs');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  })(),
+  hiddenTabs: storedHiddenTabs(typeof window !== 'undefined' ? localStorage.getItem('ledgerflow_current_workspace') : null),
+  loadHiddenTabs: (workspaceId) => set({ hiddenTabs: storedHiddenTabs(workspaceId) }),
   speedDials: (() => {
     try {
       const saved = typeof window !== 'undefined' ? localStorage.getItem('lf_speed_dials') : null;

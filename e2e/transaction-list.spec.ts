@@ -8,9 +8,8 @@ import { test, expect, type Page } from '@playwright/test';
 async function openAllTransactions(page: Page) {
   await page.locator('[data-testid="nav-transactions"]').first().click();
   await page.locator('[data-testid="filtered-totals-bar"]').waitFor({ timeout: 15000 });
-  // the default view (cash accounts) is empty in the demo books: switch it off, clear filters
-  const view = page.locator('button[aria-pressed="true"]').first();
-  if (await view.isVisible()) await view.click({ force: true });
+  // no saved view is switched on at the start (one used to be, hiding most entries)
+  await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(0);
   const clear = page.getByRole('button', { name: 'Clear All' });
   if (await clear.isVisible()) await clear.click({ force: true });
 }

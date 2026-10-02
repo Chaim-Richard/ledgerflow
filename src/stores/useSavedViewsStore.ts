@@ -187,12 +187,13 @@ interface SavedViewsState {
 export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
   views: loadViewsFromStorage(),
   
-  activeViewId: 'view-liquid-cash',
+  // the full list until the person picks a view: a preset used to be switched on at every start,
+  // so the Transactions list opened showing only some entries (the rest looked missing)
+  activeViewId: null,
 
   loadViewsForWorkspace: (workspaceId?: string | null) => {
     const views = loadViewsFromStorage(workspaceId);
-    const activeViewId = views[0]?.id || null;
-    set({ views, activeViewId });
+    set({ views, activeViewId: null });
   },
 
   addSavedView: (newViewData) => {
@@ -247,7 +248,7 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
       } catch (e) {
         console.warn("Failed to delete saved view from localStorage", e);
       }
-      const nextActive = state.activeViewId === id ? (nextViews[0]?.id || null) : state.activeViewId;
+      const nextActive = state.activeViewId === id ? null : state.activeViewId;
       return { views: nextViews, activeViewId: nextActive };
     });
   },
@@ -294,7 +295,7 @@ export const useSavedViewsStore = create<SavedViewsState>((set, get) => ({
     } catch (e) {
       console.warn("Failed to reset saved views in localStorage", e);
     }
-    set({ views: DEFAULT_PRESET_VIEWS, activeViewId: 'view-liquid-cash' });
+    set({ views: DEFAULT_PRESET_VIEWS, activeViewId: null });
   },
 
   applySavedView: (view) => {
