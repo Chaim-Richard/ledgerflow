@@ -1452,7 +1452,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] H-04 WriteOffModal (component test: amount still owed, bad debt account, refusal)
 - [~] H-05 CustomerDetailView (merged into PartyDetailView; untested)
 - [ ] H-06 VendorDetailView
-- [ ] H-07 TaxLiabilityView
+- [x] H-07 TaxLiabilityView (tax-liability-view.test.tsx: boxes, who can file, the request, changes since filing)
 - [x] H-08 StatementView (statement-view.test.tsx, statement-credits.test.ts; found L-160)
 - [x] H-09 ARAgingReportView (aging-views.test.tsx; found L-159)
 - [x] H-10 APAgingReportView (aging-views.test.tsx)
@@ -1462,12 +1462,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] H-14 TopExpensesIncomeReportView (report-views.test.tsx)
 - [x] H-15 TagBreakdownReportView (report-views.test.tsx)
 - [ ] H-16 ForensicAuditor
-- [ ] H-17 TanStackDataGrid
-- [ ] H-18 RadixModal
-- [ ] H-19 RequireRole
-- [ ] H-20 AsyncButton
-- [ ] H-21 ConfirmButton
-- [ ] H-22 EmptyState
+- [x] H-17 TanStackDataGrid (ui-primitives.test.tsx; sort headers are buttons now)
+- [x] H-18 RadixModal — no longer exists (dialogs use useDialog, tested)
+- [x] H-19 RequireRole (ui-primitives.test.tsx; found L-161)
+- [x] H-20 AsyncButton (ui-primitives.test.tsx; found L-161)
+- [x] H-21 ConfirmButton (ui-primitives.test.tsx)
+- [x] H-22 EmptyState (ui-primitives.test.tsx)
 - [ ] H-23 PublicInvoicePage
 - [ ] H-24 EstimatesView
 - [ ] H-25 CustomerModal
@@ -1720,6 +1720,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-158 Income by Source report crashed on opening ("Maximum update depth exceeded"): its store selector filtered the transactions, making a new array on every read. Fixed; guard test bans `.filter/.map/...` inside store selectors
 - [x] L-159 A/R and A/P aging screens: counted total − paid (deposits and applied credits ignored) in each document's own currency (a EUR invoice added as dollars) and aged by the document date, while the /aging API used what is still owed in the base currency by due date — two different agings. Now one rule, `src/lib/aging.ts` (tested), used by both: Current / 1–30 / 31–60 / 61–90 / over 90 days past due; the drawer says "N days overdue"; rows open from a real button
 - [x] L-160 Account statements left out credit notes and vendor credits, so a customer with a credit showed a higher balance than the Customer Balance Summary; refunds of credits were invisible to both (a refunded credit still showed as owed back). Credits now appear on statements (screen, PDF and API); the server records `refundedCents` when a credit is refunded, and statements and balance summaries count a credit less what was refunded (tested; the closing balance equals the summary)
+- [x] L-161 Buttons: a quick double click on any AsyncButton (payments, saves, filings) ran the action twice (the "busy" flag only took effect after a re-render; now a ref guards it, test fails on the old code); RequireRole's greyed-out mode only blocked the mouse, Tab + Enter still pressed the button (now `inert`); the data grid's sort headers were mouse-only (now buttons)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

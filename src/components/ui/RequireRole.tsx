@@ -30,7 +30,9 @@ export const RequireRole: React.FC<RequireRoleProps> = ({
   if (disableOnly) {
     const defaultTooltip = tooltip || `${targetRole.toUpperCase()} role required (your role: ${currentRole.toUpperCase()})`;
     return (
-      <div className="relative group inline-block cursor-not-allowed opacity-50 pointer-events-none" title={defaultTooltip}>
+      // inert: the controls inside can't be clicked, focused or pressed with the keyboard either
+      // (pointer-events only stopped the mouse; Tab + Enter still ran the action; L-161)
+      <div className="relative group inline-block cursor-not-allowed opacity-50 pointer-events-none" title={defaultTooltip} inert aria-disabled="true">
         {children}
       </div>
     );

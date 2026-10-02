@@ -89,16 +89,16 @@ export function TanStackDataGrid<TData extends object>({
                           : 'ascending'
                         : 'none'
                     }
-                    className="px-4 py-3 text-xs font-bold text-slate-700 uppercase tracking-wider select-none cursor-pointer hover:bg-slate-100 transition-colors"
-                    onClick={header.column.getToggleSortingHandler()}
+                    className="px-4 py-3 text-xs font-bold text-slate-700 uppercase tracking-wider select-none hover:bg-slate-100 transition-colors"
                   >
-                    <div className="flex items-center gap-1.5">
+                    {/* a real button, so sorting works from the keyboard too */}
+                    <button type="button" onClick={header.column.getToggleSortingHandler()} className="flex items-center gap-1.5 uppercase font-bold tracking-wider cursor-pointer">
                       {flexRender(header.column.columnDef.header, header.getContext())}
                       {{
                         asc: <ChevronUp aria-hidden="true" size={13} className="text-indigo-600" />,
                         desc: <ChevronDown aria-hidden="true" size={13} className="text-indigo-600" />
                       }[header.column.getIsSorted() as string] ?? null}
-                    </div>
+                    </button>
                   </th>
                 ))}
               </tr>

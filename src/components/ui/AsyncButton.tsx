@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -24,16 +24,21 @@ export default function AsyncButton({
   ...props
 }: AsyncButtonProps) {
   const [internalPending, setInternalPending] = useState(false);
+  // a second click before React re-renders still sees pending = false; the ref closes that gap,
+  // so a quick double click can't run the action (e.g. post a payment) twice (L-161)
+  const running = useRef(false);
   const isPending = loading !== undefined ? loading : internalPending;
 
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (isPending || disabled) return;
+    if (isPending || disabled || running.current) return;
     
     if (onClick) {
+      running.current = true;
       try {
         setInternalPending(true);
         await onClick(e);
       } finally {
+        running.current = false;
         setInternalPending(false);
       }
     }
