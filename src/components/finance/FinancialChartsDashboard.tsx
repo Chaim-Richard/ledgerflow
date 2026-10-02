@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { isPostable, lineAmount } from '../../lib/txFilters';
-import { formatDecimal } from '../../lib/utils';
+import { formatCurrency } from '../../lib/utils';
+import { computeChartsData } from '../../lib/chartsData';
 import { 
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, Tooltip, Legend, CartesianGrid 
@@ -16,72 +16,11 @@ export default function FinancialChartsDashboard() {
   const [timeRange, setTimeRange] = useState<'6m' | '12m'>('6m');
 
   // Compute monthly revenue, expenses, burn rate, and profit
-  const { monthlyData, cashBreakdown, expenseBreakdown, totalCash, monthlyBurnRate, runwayMonths } = useMemo(() => {
-    const postableTxs = transactions.filter(isPostable);
-    
-    // Monthly aggregations map
-    const monthsMap: Record<string, { month: string; revenue: number; expense: number; profit: number }> = {};
-    const expCategoryMap: Record<string, number> = {};
-    const accountBalances: Record<string, number> = {};
-
-    postableTxs.forEach(tx => {
-      const dateKey = tx.date ? tx.date.substring(0, 7) : '2026-01';
-      if (!monthsMap[dateKey]) {
-        monthsMap[dateKey] = { month: dateKey, revenue: 0, expense: 0, profit: 0 };
-      }
-
-      (tx.lines || []).forEach(l => {
-        const acc = accounts.find(a => a.id === l.accountId);
-        const amount = lineAmount(l, tx) / 100;
-
-        if (l.accountId) {
-          accountBalances[l.accountId] = (accountBalances[l.accountId] || 0) + amount;
-        }
-
-        if (acc?.type === 'income' || l.category === 'Revenue') {
-          monthsMap[dateKey].revenue += Math.abs(amount);
-        } else if (acc?.type === 'expense' || l.category === 'Expense') {
-          monthsMap[dateKey].expense += Math.abs(amount);
-          const cat = acc?.name || l.category || 'Other Expense';
-          expCategoryMap[cat] = (expCategoryMap[cat] || 0) + Math.abs(amount);
-        }
-      });
-    });
-
-    const sortedMonths = Object.keys(monthsMap).sort().map(m => {
-      const data = monthsMap[m];
-      data.profit = data.revenue - data.expense;
-      return data;
-    });
-
-    const displayMonths = timeRange === '6m' ? sortedMonths.slice(-6) : sortedMonths.slice(-12);
-
-    // Cash Account balances
-    const cashAccounts = accounts.filter(a => a.type === 'asset' && (a.category === 'Cash' || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank')));
-    const cashData = cashAccounts.map(a => ({
-      id: a.id,
-      name: a.name,
-      value: Math.max(0, accountBalances[a.id] || 5000)
-    })).filter(a => a.value > 0);
-
-    const calcTotalCash = cashData.reduce((sum, c) => sum + c.value, 0) || 50000;
-    
-    // Average Monthly Burn
-    const totalExpensesRecent = displayMonths.reduce((sum, m) => sum + m.expense, 0);
-    const avgBurn = displayMonths.length > 0 ? totalExpensesRecent / displayMonths.length : 5000;
-    const calcRunway = avgBurn > 0 ? (calcTotalCash / avgBurn).toFixed(1) : '∞';
-
-    const expenseData = Object.entries(expCategoryMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 6);
-
-    return {
-      monthlyData: displayMonths,
-      cashBreakdown: cashData.length > 0 ? cashData : [{ id: 'main-checking', name: 'Main Checking', value: 45000 }, { id: 'savings-account', name: 'Savings Account', value: 15000 }],
-      expenseBreakdown: expenseData.length > 0 ? expenseData : [{ name: 'Payroll', value: 12000 }, { name: 'Software', value: 4500 }, { name: 'Rent', value: 3000 }],
-      totalCash: calcTotalCash,
-      monthlyBurnRate: avgBurn,
-      runwayMonths: calcRunway
-    };
-  }, [transactions, accounts, timeRange]);
+  // all amounts in cents of the base currency (src/lib/chartsData.ts, tested; L-155)
+  const data = useMemo(() => computeChartsData(transactions, accounts, timeRange === '6m' ? 6 : 12), [transactions, accounts, timeRange]);
+  const monthlyData = data.months.map(m => ({ month: m.month, revenue: m.revenueCents, expense: m.expenseCents }));
+  const money = (v: number | string | readonly (number | string)[]) => formatCurrency(Number(v));
+  const empty = (text: string) => <p className="text-sm text-[var(--muted)] text-center px-6">{text}</p>;
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto">
@@ -120,10 +59,10 @@ export default function FinancialChartsDashboard() {
             <Clock size={18} className="text-emerald-600" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900">{runwayMonths}</span>
+            <span className="text-3xl font-extrabold text-slate-900">{data.runwayMonths ?? '—'}</span>
             <span className="text-xs font-semibold text-[var(--muted)]">months remaining</span>
           </div>
-          <p className="text-[11px] text-[var(--muted)] mt-2">Based on current cash balance of ${formatDecimal(totalCash)}</p>
+          <p className="text-[11px] text-[var(--muted)] mt-2">{data.runwayMonths === null ? 'Needs a cash balance and some spending in the period' : `Based on a cash balance of ${formatCurrency(data.totalCashCents)}`}</p>
         </div>
 
         <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
@@ -132,7 +71,7 @@ export default function FinancialChartsDashboard() {
             <Flame size={18} className="text-rose-600" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900">${formatDecimal(monthlyBurnRate)}</span>
+            <span className="text-3xl font-extrabold text-slate-900">{formatCurrency(data.avgBurnCents)}</span>
             <span className="text-xs font-semibold text-[var(--muted)]">/ mo</span>
           </div>
           <p className="text-[11px] text-[var(--muted)] mt-2">Average operating expenses over selected period</p>
@@ -145,7 +84,7 @@ export default function FinancialChartsDashboard() {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-slate-900">
-              ${formatDecimal(monthlyData.reduce((sum, m) => sum + m.profit, 0))}
+              {formatCurrency(data.months.reduce((sum, m) => sum + m.profitCents, 0))}
             </span>
             <span className="text-xs font-semibold text-emerald-600">net total</span>
           </div>
@@ -162,17 +101,17 @@ export default function FinancialChartsDashboard() {
             <span>Monthly Profitability & Mix</span>
           </h2>
           <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            {monthlyData.length > 0 ? (<ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="month" tickLine={false} tick={{ fontSize: 11 }} />
-                <YAxis tickLine={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
+                <YAxis tickLine={false} tick={{ fontSize: 11 }} tickFormatter={v => formatCurrency(Number(v)).replace(/\.00$/, '')} width={80} />
+                <Tooltip formatter={money} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="revenue" fill="#4f46e5" name="Revenue" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="expense" fill="#ef4444" name="Expense" radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>) : empty('No posted income or expenses in this period yet.')}
           </div>
         </div>
 
@@ -183,15 +122,15 @@ export default function FinancialChartsDashboard() {
             <span>Operating Expense Burn Rate</span>
           </h2>
           <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            {monthlyData.length > 0 ? (<ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="month" tickLine={false} tick={{ fontSize: 11 }} />
-                <YAxis tickLine={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
+                <YAxis tickLine={false} tick={{ fontSize: 11 }} tickFormatter={v => formatCurrency(Number(v)).replace(/\.00$/, '')} width={80} />
+                <Tooltip formatter={money} />
                 <Area type="monotone" dataKey="expense" fill="#fee2e2" stroke="#ef4444" strokeWidth={2} name="Monthly Burn" />
               </AreaChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>) : empty('No posted expenses in this period yet.')}
           </div>
         </div>
       </div>
@@ -205,17 +144,17 @@ export default function FinancialChartsDashboard() {
             <span>Cash Balance Allocation</span>
           </h2>
           <div className="h-64 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+            {data.cash.length > 0 ? (<ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={cashBreakdown} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value">
-                  {cashBreakdown.map((entry, index) => (
-                    <Cell key={entry.id} fill={COLORS[index % COLORS.length]} />
+                <Pie data={data.cash} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="cents" nameKey="name">
+                  {data.cash.map((entry, index) => (
+                    <Cell key={entry.id} fill={COLORS[index % COLORS.length]} aria-label={`${entry.name}: ${formatCurrency(entry.cents)}`} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(val: number | string | readonly (number | string)[]) => `$${formatDecimal(val as number)}`} />
+                <Tooltip formatter={money} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>) : empty('No cash or bank account has a positive balance yet.')}
           </div>
         </div>
 
@@ -226,17 +165,17 @@ export default function FinancialChartsDashboard() {
             <span>Expense Category Mix</span>
           </h2>
           <div className="h-64 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+            {data.expenses.length > 0 ? (<ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={expenseBreakdown} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value">
-                  {expenseBreakdown.map((entry, index) => (
-                    <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
+                <Pie data={data.expenses} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="cents" nameKey="name">
+                  {data.expenses.map((entry, index) => (
+                    <Cell key={entry.name} fill={COLORS[index % COLORS.length]} aria-label={`${entry.name}: ${formatCurrency(entry.cents)}`} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(val: number | string | readonly (number | string)[]) => `$${formatDecimal(val as number)}`} />
+                <Tooltip formatter={money} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>) : empty('No posted expenses in this period yet.')}
           </div>
         </div>
       </div>

@@ -262,7 +262,7 @@ export default function HelpGuideView() {
                     <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--faint)]">{section.category}</span>
                     <ChevronRight aria-hidden="true" size={14} className={isSelected ? "text-[var(--brass)]" : "text-transparent"} />
                   </div>
-                  <h4 className="text-sm font-bold truncate mt-0.5">{section.title}</h4>
+                  <h2 className="text-sm font-bold truncate mt-0.5">{section.title}</h2>
                   <p className="text-xs text-[var(--muted)] line-clamp-1 mt-0.5">{section.summary}</p>
                 </div>
               </button>

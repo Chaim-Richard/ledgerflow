@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 /**
  * Every screen fits a 1280 px laptop: nothing sticks out past the right edge of the main area (the
  * Overview was cut off on screens under ~1600 px), and the screen draws something. Opened by
  * address (#tab), as a shared link would. Screen readers (E-30): each screen has exactly one h1,
- * and headings after it never skip a level (h1 -> h3).
+ * and headings after it never skip a level (h1 -> h3); axe finds nothing (E-24; contrast has its
+ * own test).
  */
 const screens = [
   'dashboard', 'inbox', 'copilot', 'transactions', 'credit-notes', 'assets', 'register', 'ledger',
@@ -44,6 +46,8 @@ test.describe('Layout at 1280 x 800', () => {
       });
       expect(headings.h1s, `${screen}: one h1`).toHaveLength(1);
       expect(headings.skips, `${screen}: heading levels`).toEqual([]);
+      const axe = await new AxeBuilder({ page }).disableRules(['color-contrast']).analyze();
+      expect(axe.violations.map(v => `${v.id} (${v.impact}): ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`), `${screen}: accessibility`).toEqual([]);
     });
   }
 });

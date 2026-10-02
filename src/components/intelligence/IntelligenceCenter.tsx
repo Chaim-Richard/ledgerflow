@@ -555,7 +555,7 @@ export default function AnalyticalCenter() {
       {/* -------------------------------------------------------------
           2. Main Workspace Detail View (Pristine Canvas)
           ------------------------------------------------------------- */}
-      <main className="flex-1 flex flex-col min-w-0 min-h-full bg-[var(--surface)]">
+      <div className="flex-1 flex flex-col min-w-0 min-h-full bg-[var(--surface)]">
         
         {/* Dynamic header toolbar */}
         <header className="px-5 py-3 border-b border-[var(--line)] flex items-center justify-between shrink-0 bg-[var(--ink)]/50">
@@ -1063,7 +1063,7 @@ export default function AnalyticalCenter() {
 
           </AnimatePresence>
         </div>
-      </main>
+      </div>
 
       {/* -------------------------------------------------------------
           4. Drawer/Sidebar for Mobile Layout Screen sizes

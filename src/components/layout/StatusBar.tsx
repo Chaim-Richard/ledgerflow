@@ -27,7 +27,7 @@ export default function StatusBar() {
   }, [transactions]);
 
   return (
-    <div className="hidden md:flex h-8 bg-[var(--surface)] border-t border-[var(--line)] items-center justify-between px-6 overflow-hidden text-[var(--faint)] font-mono text-[10.5px] relative select-none shrink-0 z-50">
+    <div role="contentinfo" aria-label="Status bar" className="hidden md:flex h-8 bg-[var(--surface)] border-t border-[var(--line)] items-center justify-between px-6 overflow-hidden text-[var(--faint)] font-mono text-[10.5px] relative select-none shrink-0 z-50">
       <div className="flex items-center gap-3 sm:gap-6 shrink-0">
         <div className="flex items-center gap-2">
           <div className={cn(

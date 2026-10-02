@@ -25,6 +25,8 @@ export default function CookieConsent({ onOpenPrivacyPolicy }: CookieConsentProp
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 50 }}
+        role="region"
+        aria-labelledby="cookie-notice-title"
         className="fixed bottom-4 right-4 left-4 md:left-auto md:max-w-md z-50 bg-slate-900 border border-slate-800 text-white p-5 rounded-2xl shadow-2xl backdrop-blur-md"
       >
         <div className="flex items-start justify-between gap-3 mb-3">
@@ -32,7 +34,7 @@ export default function CookieConsent({ onOpenPrivacyPolicy }: CookieConsentProp
             <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-lg">
               <Cookie size={18} />
             </div>
-            <h2 className="text-sm font-bold text-white">Cookie & Privacy Notice</h2>
+            <h2 id="cookie-notice-title" className="text-sm font-bold text-white">Cookie & Privacy Notice</h2>
           </div>
           <button
             onClick={() => handleAccept('essential')}
