@@ -8,10 +8,11 @@ import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { migrationsSql, ruleArrays } from './helpers/migrations';
+import { typesSource as readTypesSource } from './helpers/typesSource';
 
-const typesSource = fs.readFileSync('src/types.ts', 'utf8');
+const typesSource = readTypesSource();
 
-/** Top-level field names of `export interface Name { ... }` in src/types.ts. */
+/** Top-level field names of `export interface Name { ... }` in src/types.ts (and src/model/). */
 function interfaceFields(name: string): string[] {
   const start = typesSource.search(new RegExp(`export interface ${name}\\b[^{]*\\{`));
   assert.ok(start >= 0, `interface ${name} not found`);

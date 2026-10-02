@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
 import { Transaction, TransactionLine } from '../types';
+import { typesSource } from './helpers/typesSource';
 
 describe('A-04 & H-30: Property Invariants & Double-Entry Equality Suite', () => {
 
@@ -211,7 +212,7 @@ describe('A-04 & H-30: Property Invariants & Double-Entry Equality Suite', () =>
     );
 
     // Verify PurchaseOrderItem.totalCents in types.ts is strictly preserved as a line-item total (quantity * unitPrice)
-    const typesContent = readFileSync('src/types.ts', 'utf8');
+    const typesContent = typesSource(); // src/types.ts and the area files it re-exports (src/model/)
     assert.ok(
       typesContent.includes('totalCents: number;'),
       'PurchaseOrderItem.totalCents must be present in src/types.ts'
