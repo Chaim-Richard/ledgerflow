@@ -217,6 +217,36 @@ export default function SecuritySettings() {
                 </button>
             </div>
 
+            <div className="p-6 bg-[var(--ink)]/50 border border-[var(--line)] rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="space-y-1">
+                  <h4 className="text-base font-black text-[var(--text)] uppercase tracking-tight">Download my data</h4>
+                  <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
+                    Your profile, the workspaces you belong to, your notifications, sign-ins and what you did (audit trail), as one file. The books themselves are in each workspace's backup.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/v1/account/my-data', { headers: { Authorization: `Bearer ${await useAuthStore.getState().user?.getIdToken()}` } });
+                      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Could not collect your data');
+                      const blob = new Blob([JSON.stringify(await res.json(), null, 2)], { type: 'application/json' });
+                      const link = document.createElement('a');
+                      link.href = URL.createObjectURL(blob);
+                      link.download = 'ledgerflow-my-data.json';
+                      link.click();
+                      URL.revokeObjectURL(link.href);
+                    } catch (err) {
+                      const described = describeError(err, 'get');
+                      toast.error(described.title, { description: described.remedy });
+                    }
+                  }}
+                  className="px-6 py-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 shrink-0"
+                >
+                  Download my data
+                </button>
+            </div>
+
             <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-1">
                   <h4 className="text-base font-black text-rose-500 uppercase tracking-tight">Delete User Account</h4>

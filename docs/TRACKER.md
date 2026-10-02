@@ -48,6 +48,7 @@ then the 488 LATER items. Claude works through them in that order and ticks them
 | Bulk import | K-01 (= M-18 BK-01 BK-05 BK-06 CA-11): Settings → Import Data — customers, vendors, items, accounts from CSV/Excel; columns matched by name; every row checked, all or nothing; duplicates skipped; items' opening stock posted; undo keeps records already in use (12 tests) |
 | Period close 1 | R-01 R-02 R-03 R-08 R-10 BA-15: one lock rule (hard close, soft close for bookkeepers, partial unlock) in database + server + screens; close / reopen (reason; owner for hard) / unlock only through the server, audited; checklist with sign-offs; drafts block the close. Fixed: the close screen never loaded invoices/bills/bank lines; a lock on the 28th closed the month; "clear lock date" only changed the screen; bookkeepers could close months (11 tests) |
 | Notifications | S-01 S-03 S-04 S-06 S-14 S-19 + bounces: real notifications from the server (one per person, stored in the database, live bell): invoice emailed, invoice overdue (daily), customer payment received, email bounced / marked spam, bank connection expired, person invited / joined. Each person marks their own read and chooses which types they get (bell → gear). Only their own are visible (database rules tested). **The old bell showed made-up alerts kept only in the open page** |
+| Trust 2: privacy and errors | L-10: Settings → Security → "Download my data" (profile, workspaces and roles, notifications, sign-ins, own audit entries; tested). L-14: crashes inside a screen are now reported too (the view boundary caught them silently); browser errors were already stored with a daily digest. BJ-04 BJ-06 BJ-08 BJ-09: `docs/privacy/` — personal data inventory, retention, sub-processors, DPA template (for a lawyer to review). AD-02: guard test that effects starting timers clean them up |
 | Trust 1: deleting and restoring | L-07 L-09 L-124 L-130: a backup now holds the whole books (credit notes, vendor credits, bank lines, journal entries, purchase orders, employees, pay runs, numbering… were missing) and restoring it brings the trial balance and documents back exactly (database test); a backup can't rewrite closed periods. Deleting a workspace removes its data from every table (bank connections with their tokens, API keys, members, notifications… were left behind), with a guard so a new table can't be forgotten; the audit trail stays. Deleting an account hands shared workspaces to another owner or stops and says who to make owner first, schedules workspaces only you use for deletion (30 days), and removes personal data (tested). "Undo deletion" could never run: the backup import used the same address; it has its own now, with a "Keep this workspace" banner, and a guard test finds any two routes on the same address (it also found reports mounted twice). The Security screen's instant "purge" (wiped the books at once, no recovery) is now the 30-day "Delete workspace"; instant clearing is for demo data only |
 | Accessibility 2 | E-23 E-27: an invoice can be opened, filled in and saved with the keyboard only (browser test); 45 clickable rows/headers/menus answer Enter and Space or are marked as plain containers. Text contrast checked by axe on 6 screens in light and dark (new browser test with a baseline that may only go down): failures went from 5–44 per screen to 0–4. Causes fixed (**L-129**): `dark:` styles followed the computer's setting instead of the app's theme; the accent colour was the same in both themes (brass text about 2:1 in light); muted grey text just under the minimum in both themes |
 | Dates and errors | I-12: dates on screen follow Preferences → Date Display Format (it changed nothing before: **L-128**), with "Oct 02, 2026" as a choice and the default; inputs and files stay YYYY-MM-DD (tested in 3 time zones). BO-07: failed saves and loads say what happened and what to do (closed period → reopen in Month-End Close, no permission → ask an owner, session ended, offline, duplicate, unbalanced, invalid…) instead of "SYSTEM ERROR: CREATE" and a database message (tested) |
@@ -1568,11 +1569,11 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-07 Backup restore test: export → change → restore gives the same trial balance and documents (database test); backup holds all the books
 - [ ] L-08 Per-workspace retention settings
 - [x] L-09 Account deletion: shared workspaces handed over (or blocked with a clear message), solo ones scheduled for deletion, personal data removed (tested)
-- [ ] L-10 GDPR export on request
+- [x] L-10 Download my data (Settings → Security; tested)
 - [ ] L-11 Record of processing activities
 - [x] L-12 Structured logging: `src/server/utils/logger.ts` (JSON lines) used by server.ts (94661cd)
 - [x] L-13 `console.log` in `server.ts`: 0 (94661cd)
-- [ ] L-14 Error reporting service
+- [x] L-14 Browser errors and screen crashes reported to errorLogs with a daily digest; server errors as JSON log lines
 - [ ] L-15 Per-workspace usage metrics
 - [x] L-16 Health endpoint
 - [ ] L-17 Status page
@@ -1702,7 +1703,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] AB Storage purge error handling
 - [x] AC `customTemplates` scoping
 - [x] AD-01 Timers: all 7 listed already clear themselves (checked 5e4dfa9)
-- [ ] AD-02 eslint rule for effect cleanup — CARD 3.2
+- [x] AD-02 Guard test: effects that start timers return a cleanup (with a self-test)
 - [x] AD-03 `PublicInvoicePage` timers
 - [x] AE-01 Tax-inclusive branch in posting
 - [x] AE-02 Shared `calculateDocumentTax`
@@ -2108,12 +2109,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BJ-01 SOC 2 evidence export
 - [ ] BJ-02 Audit evidence pack
 - [ ] BJ-03 Access review report
-- [ ] BJ-04 Retention per entity type
+- [x] BJ-04 Retention per kind of data: docs/privacy/RETENTION.md
 - [ ] BJ-05 Legal hold
-- [ ] BJ-06 PII inventory
+- [x] BJ-06 Personal data inventory: docs/privacy/PERSONAL_DATA.md
 - [ ] BJ-07 Breach notification
-- [ ] BJ-08 Sub-processor list
-- [ ] BJ-09 DPA template
+- [x] BJ-08 Sub-processor list: docs/privacy/SUBPROCESSORS.md
+- [x] BJ-09 DPA template: docs/privacy/DPA_TEMPLATE.md (lawyer review before use)
 - [ ] BJ-10 ISO 27001 mapping
 - [x] BK-01 Generic CSV import (= K-01; columns matched by header name)
 - [ ] BK-02 QBO API import

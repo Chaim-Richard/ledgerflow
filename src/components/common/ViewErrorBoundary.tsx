@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, LayoutDashboard } from 'lucide-react';
+import { reportClientError } from '../../lib/errorTracker';
 
 interface Props {
   children: ReactNode;
@@ -24,6 +25,8 @@ export class ViewErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error(`[ViewErrorBoundary] Error captured in ${this.props.viewName || 'view'}:`, error, errorInfo);
+    // a crash inside a screen is caught here, so the global error listener never sees it (L-14)
+    reportClientError(error, { severity: 'error', componentStack: errorInfo.componentStack || undefined, metadata: { view: this.props.viewName || 'view' } }).catch(() => {});
   }
 
   private handleRetry = () => {

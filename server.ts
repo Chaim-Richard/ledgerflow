@@ -1,6 +1,7 @@
 import { fxRouter } from "./src/server/routes/fxRoutes";
 import { aiRouter } from "./src/server/routes/aiRoutes";
 import { reportRouter } from "./src/server/routes/reportRoutes";
+import { accountRouter } from "./src/server/routes/accountRoutes";
 import { workspaceRouter, countWorkspaceOwners, requireWorkspaceRole } from "./src/server/routes/workspaceRoutes";
 import { LEDGER_WRITER_ROLES, roleInWorkspace } from "./src/server/middleware/requireLedgerWriter";
 import { invitePublicRouter } from "./src/server/routes/invitePublicRoutes";
@@ -31,7 +32,6 @@ import cors from "cors";
 import Stripe from "stripe";
 import rateLimit from "express-rate-limit";
 import path from "path";
-import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import multer from "multer";
 import fs from "fs";
@@ -45,17 +45,8 @@ import crypto from "crypto";
 import { rateLimit as expressRateLimit } from "express-rate-limit";
 import { SecurityService } from "./src/services/securityService.ts";
 import { GoogleGenAI } from "@google/genai";
-import { getTrustedAppUrl } from "./src/server/utils/urlHelper.ts";
 import { 
-  ReportRangeSchema, 
   WorkspaceIdSchema,
-  DepreciationRequestSchema,
-  ValuationRequestSchema,
-  TemporalMathRequestSchema,
-  KPIRequestSchema,
-  AmortizationRequestSchema,
-  InventoryWACRequestSchema,
-  InventoryEOQRequestSchema,
   ChartAccountSchema,
   WorkspaceSchema,
   BankMappingRequestSchema,
@@ -3967,6 +3958,7 @@ You MUST output a valid JSON object matching this schema exactly:
   // Mount kernel routes
   app.use("/api/v1/reports", apiAuthenticate, reportRouter);
   app.use("/api/v1/workspaces", apiAuthenticate, workspaceRouter);
+  app.use("/api/v1/account", apiAuthenticate, accountRouter);
   app.use("/api/v1/transactions", apiAuthenticate, transactionRouter);
   app.use("/api/v1/revenue", apiAuthenticate, revenueRouter);
   app.use("/api/v1/consolidation", apiAuthenticate, consolidationRouter);
