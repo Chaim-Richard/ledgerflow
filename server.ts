@@ -62,6 +62,7 @@ import { calculateNetIncome, isPostable, lineAmount } from "./src/lib/txFilters.
 import { assertWorkspaceAccess, getDb, FieldValue } from "./src/server/db/firestore.ts";
 import { AccountDeletionBlocked, deleteAccount } from "./src/server/services/accountDeletionService.ts";
 import { cronRouter } from "./src/server/routes/cronRoutes.ts";
+import { statusRouter } from "./src/server/routes/statusRoutes.ts";
 import { runDailyMaintenance } from "./src/server/services/maintenanceService.ts";
 import { exportWorkspaceBackup, restoreWorkspaceBackup, RestoreError } from "./src/server/services/workspaceRestoreService.ts";
 import type { Transaction } from "./src/server/db/firestore.ts";
@@ -888,13 +889,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
     }
   });
 
-  app.get("/api/health", async (req, res) => {
-    res.json({ 
-      status: "ok", 
-      timestamp: new Date().toISOString(),
-      version: "2.0.0-PROXIMA"
-    });
-  });
+  app.use("/api", statusRouter);
 
   app.get("/api/v1/public/registration-status", async (req, res) => {
     try {

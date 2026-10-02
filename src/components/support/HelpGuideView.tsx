@@ -201,6 +201,7 @@ export default function HelpGuideView() {
               <div>
                 <h1 className="text-2xl font-black tracking-tight">Help & Operational Guide</h1>
                 <p className="text-xs text-[var(--muted)] font-medium">Standard operating procedures, workflows, and core architectural concepts</p>
+                <p className="text-xs text-[var(--muted)] font-medium">Something not working? <a href="/status" target="_blank" rel="noopener noreferrer" className="underline text-[var(--text)]">System status</a></p>
               </div>
             </div>
           </div>

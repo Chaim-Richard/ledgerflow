@@ -5,6 +5,8 @@ import { processAllRecurring } from '../services/recurringService';
 import { processErrorDigest } from '../services/errorDigestService';
 import { runNotificationJobs } from '../services/notificationService';
 import { runDailyReminders } from '../services/reminderService';
+import { recordDailyJobRun } from '../services/statusService';
+import { getDb } from '../db/firestore';
 
 /**
  * Scheduled jobs for Vercel Cron (see vercel.json). Vercel calls them with
@@ -32,6 +34,7 @@ cronRouter.get('/daily', async (req, res) => {
   if (!isCronRequest(req)) {
     return res.status(401).json({ status: 'error', message: 'Unauthorized' });
   }
+  const startedAt = new Date().toISOString();
   const results: Record<string, string> = {};
   for (const [name, job] of DAILY_JOBS) {
     try {
@@ -43,5 +46,7 @@ cronRouter.get('/daily', async (req, res) => {
     }
   }
   const failed = Object.values(results).some(r => r !== 'ok');
+  // for the status page (L-17)
+  await recordDailyJobRun(getDb(), startedAt, results).catch(err => console.error('[Cron] could not record the run:', err));
   res.status(failed ? 500 : 200).json({ status: failed ? 'error' : 'ok', results });
 });

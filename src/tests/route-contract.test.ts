@@ -35,13 +35,13 @@ describe('Route Contract Guard Suite (§0c Route Contract)', () => {
     // Allow-list for display strings, documentation examples, or mock paths
     const allowList = new Set([
       '/api/v1/audit/jobs/job_1701234567_abcd', // Display text in ApiHub documentation
-      '/api/v1/status', // Placeholder display text in ApiHub
       '/api/v1/auth/revoke-sessions', // Auth action endpoint UI placeholder
       '/api/v1/auth/delete-account', // Auth action endpoint UI placeholder
       '/api/v1/keys/provision', // API key UI endpoint
       '/api/v1/admin/global-config', // Admin system config route
       '/api/v1/forensics/anomaly-scan', // Forensics route
       '/api/v1/public/registration-status', // Public registration status
+      '/api/v1/status', // Developer API workspace status (server.ts), shown in ApiHub
       '/api/v1/telemetry/errors' // Error logging fallback endpoint
     ]);
 
@@ -69,7 +69,8 @@ describe('Route Contract Guard Suite (§0c Route Contract)', () => {
       '/api/v1/invites',
       '/api/v1/plaid',
       '/api/v1/math',
-      '/api/v1/system'
+      '/api/v1/system',
+      '/api/v1/public/status'
     ];
 
     const missingRoutes: string[] = [];

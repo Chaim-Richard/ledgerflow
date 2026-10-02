@@ -1576,7 +1576,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-14 Browser errors and screen crashes reported to errorLogs with a daily digest; server errors as JSON log lines
 - [ ] L-15 Per-workspace usage metrics
 - [x] L-16 Health endpoint
-- [ ] L-17 Status page
+- [x] L-17 Status page: public /status (no sign-in) from GET /api/v1/public/status — app, database, daily job (recorded by the cron, late/failed = problems), sign-in, email, card payments, bank feeds (set up or not); 30 s cache (tested + browser test)
 - [ ] L-18 i18n: finish or remove
 - [ ] L-19 Onboarding wizard → balanced trial balance
 - [ ] L-20 Docs page for all 74 views
@@ -2155,7 +2155,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BO-03 First-run wizard
 - [ ] BO-04 Video walkthroughs
 - [ ] BO-05 Feedback widget
-- [ ] BO-06 Status page link
+- [x] BO-06 Status page link in Help ("Something not working? System status")
 - [x] BO-07 Errors name a remedy (describeError: central reporter, payment and write-off dialogs; tested)
 - [ ] BO-08 Undo for destructive actions
 - [ ] BP-01 Docker compose

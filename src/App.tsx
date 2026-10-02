@@ -29,6 +29,7 @@ const LedgerAutoAuditor = lazy(() => import('./components/forensics/LedgerAutoAu
 
 import { FallbackBoundary } from './components/FallbackBoundary';
 import PublicInvoicePage from './components/sales/PublicInvoicePage';
+const StatusPage = lazy(() => import('./components/system/StatusPage'));
 import CookieConsent from './components/legal/CookieConsent';
 import LegalModal from './components/legal/LegalModal';
 
@@ -320,6 +321,15 @@ const shortcutMap = useMemo(() => {
 
 
   
+  // the public status page (L-17): no sign-in
+  if (window.location.pathname === '/status') {
+    return (
+      <Suspense fallback={null}>
+        <StatusPage />
+      </Suspense>
+    );
+  }
+
   const isPublicInvoice = window.location.pathname.startsWith('/i/');
   if (isPublicInvoice) {
     return <PublicInvoicePage />;

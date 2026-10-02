@@ -28,7 +28,6 @@ export class FallbackBoundary extends React.Component<Props, State> {
       severity: 'fatal',
       componentStack: errorInfo.componentStack || undefined
     }).catch(() => {});
-    fetch("/api/health", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ error: error.message, stack: error.stack, info: errorInfo }) }).catch(() => {});
   }
 
   public render() {
