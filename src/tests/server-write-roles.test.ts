@@ -57,7 +57,7 @@ describe('Server write roles', () => {
     for (const route of ['/checkout', '/portal', '/verify-session']) {
       const start = billing.indexOf(`billingRouter.post("${route}"`);
       const next = billing.indexOf('billingRouter.', start + 10);
-      assert.match(billing.slice(start, next), /await authorizeWorkspace\(\(req as any\)\.user, workspaceId, \['owner'\]\)/, route);
+      assert.match(billing.slice(start, next), /await authorizeWorkspace\(requestUser\(req\), workspaceId, \['owner'\]\)/, route);
     }
   });
 

@@ -1,3 +1,4 @@
+import { errorMessage, requestUser } from '../auth/requestUser';
 import express from "express";
 import type { DecodedIdToken } from "../auth/supabaseAuth";
 import type { Query } from "../db/firestore";
@@ -24,7 +25,7 @@ const REPORT_CACHE = new Map<string, { data: any; expiry: number }>();
 const CACHE_TTL_MS = 60000; // 60 seconds
 
 function getCacheKey(req: express.Request): string {
-  const payload = JSON.stringify({ path: req.path, query: req.query, body: req.body, user: (req as any).user?.uid });
+  const payload = JSON.stringify({ path: req.path, query: req.query, body: req.body, user: requestUser(req)?.uid });
   return crypto.createHash('sha256').update(payload).digest('hex');
 }
 
@@ -89,10 +90,10 @@ reportRouter.get(["/profit-and-loss", "/pl"], async (req, res) => {
     const pl = computeProfitAndLoss(accounts, transactions, startDate, endDate);
     REPORT_CACHE.set(cacheKey, { data: pl, expiry: Date.now() + CACHE_TTL_MS });
     res.json(pl);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Internal Reporting Error", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Internal Reporting Error", 500, errorMessage(error));
   }
 });
 
@@ -109,10 +110,10 @@ reportRouter.get("/balance-sheet", async (req, res) => {
     const bs = computeBalanceSheet(accounts, transactions, endDate);
     REPORT_CACHE.set(cacheKey, { data: bs, expiry: Date.now() + CACHE_TTL_MS });
     res.json(bs);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Internal Reporting Error", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Internal Reporting Error", 500, errorMessage(error));
   }
 });
 
@@ -174,10 +175,10 @@ reportRouter.get("/aging", async (req, res) => {
     });
 
     res.json(aging);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate aging report", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate aging report", 500, errorMessage(error));
   }
 });
 
@@ -191,10 +192,10 @@ reportRouter.get("/trial-balance", async (req, res) => {
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, asOfDate);
     const tb = computeTrialBalance(accounts, transactions, asOfDate);
     res.json(tb);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Trial Balance Failure", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Trial Balance Failure", 500, errorMessage(error));
   }
 });
 
@@ -208,10 +209,10 @@ reportRouter.get("/cash-flow", async (req, res) => {
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, startDate, endDate);
     const cf = computeCashFlow(accounts, transactions, startDate, endDate);
     res.json(cf);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate cash flow statement", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate cash flow statement", 500, errorMessage(error));
   }
 });
 
@@ -295,10 +296,10 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
     });
 
     res.json(report);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate budget vs actual report", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate budget vs actual report", 500, errorMessage(error));
   }
 });
 
@@ -312,10 +313,10 @@ reportRouter.get("/general-ledger", async (req, res) => {
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, endDate);
     const gl = computeGeneralLedger(accounts, transactions, startDate, endDate, accountId);
     res.json(gl);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate General Ledger report", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate General Ledger report", 500, errorMessage(error));
   }
 });
 
@@ -359,10 +360,10 @@ reportRouter.get("/statement", async (req, res) => {
     );
 
     res.json(statement);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate Statement", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate Statement", 500, errorMessage(error));
   }
 });
 
@@ -386,9 +387,9 @@ reportRouter.get("/tax-liability", async (req, res) => {
 
     const taxLiability = computeTaxLiability(invoices, bills, startDate, endDate);
     res.json(taxLiability);
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate Tax Liability report", 500, error.message);
+  } catch (error) {
+    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Failed to generate Tax Liability report", 500, errorMessage(error));
   }
 });

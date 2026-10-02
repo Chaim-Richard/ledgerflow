@@ -38,7 +38,7 @@ export async function recordAuthEvent(
   try {
     await docRef.set(auditRecord);
     return docRef.id;
-  } catch (err: any) {
+  } catch (err) {
     console.error('[authAuditService] Failed to record auth event:', err);
     return '';
   }

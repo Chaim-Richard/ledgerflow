@@ -1,3 +1,4 @@
+import { errorMessage, requestUser } from '../auth/requestUser';
 import { Request, Response } from 'express';
 import type { Transaction as FirestoreTransaction } from '../db/firestore';
 import { getDb } from '../db/firestore';
@@ -33,7 +34,7 @@ export async function executeCommand<T>(
     });
   }
 
-  const user = (req as any).user;
+  const user = requestUser(req);
   const rawOperationId = extractCanonicalOperationId(req);
   
   const ctx: CommandContext = {
@@ -52,8 +53,8 @@ export async function executeCommand<T>(
         return await action(ctx, t);
       });
       return res.json({ status: 'success', data: result });
-    } catch (error: any) {
-      const status = error.status || 500;
+    } catch (error) {
+      const status = (error as { status?: number }).status || 500;
       if (status >= 500) {
         const correlationId = `err_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         console.error(`[CommandExecutor:${correlationId}] ${operationType} failed:`, error);
@@ -66,8 +67,8 @@ export async function executeCommand<T>(
       console.error(`[CommandExecutor] Operation ${operationType} failed:`, error);
       return res.status(status).json({ 
         status: 'error', 
-        message: error.message, 
-        details: error.details 
+        message: errorMessage(error), 
+        details: (error as { details?: unknown }).details 
       });
     }
   }
@@ -80,11 +81,11 @@ export async function executeCommand<T>(
       return await action(ctx, t);
     });
     return res.json({ status: 'success', data: result });
-  } catch (error: any) {
-    if (error.status === 409 || error.message?.includes('already in progress')) {
-      return res.status(409).json({ status: 'error', message: error.message });
+  } catch (error) {
+    if ((error as { status?: number }).status === 409 || errorMessage(error).includes('already in progress')) {
+      return res.status(409).json({ status: 'error', message: errorMessage(error) });
     }
-    const status = error.status || 500;
+    const status = (error as { status?: number }).status || 500;
     if (status >= 500) {
       const correlationId = `err_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       console.error(`[CommandExecutor:${correlationId}] Idempotent operation ${scopedKey} failed:`, error);
@@ -97,8 +98,8 @@ export async function executeCommand<T>(
     console.error(`[CommandExecutor] Idempotent operation ${scopedKey} failed:`, error);
     return res.status(status).json({ 
       status: 'error', 
-      message: error.message, 
-      details: error.details 
+      message: errorMessage(error), 
+      details: (error as { details?: unknown }).details 
     });
   }
 }

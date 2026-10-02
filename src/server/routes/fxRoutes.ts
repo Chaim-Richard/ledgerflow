@@ -1,3 +1,4 @@
+import { errorMessage } from '../auth/requestUser';
 import express from 'express';
 import { FxService } from '../services/FxService';
 
@@ -9,8 +10,8 @@ fxRouter.get('/rate', async (req, res) => {
     const to = (req.query.to as string || 'EUR').toUpperCase();
     const rate = await FxService.getRate(from, to);
     res.json({ from, to, rate, timestamp: new Date().toISOString() });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    res.status(500).json({ error: errorMessage(error) });
   }
 });
 
@@ -19,7 +20,7 @@ fxRouter.get('/rates/:base', async (req, res) => {
     const base = (req.params.base || 'USD').toUpperCase();
     const rates = await FxService.getRatesForBase(base);
     res.json({ base, rates, timestamp: new Date().toISOString() });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    res.status(500).json({ error: errorMessage(error) });
   }
 });

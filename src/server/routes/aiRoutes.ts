@@ -1,3 +1,4 @@
+import { errorMessage } from '../auth/requestUser';
 import express from "express";
 import { z } from "zod";
 import { verifyIdToken } from "../auth/supabaseAuth";
@@ -100,10 +101,10 @@ aiRouter.post("/process", async (req: express.Request, res: express.Response) =>
   try {
     const memberValidation = await validateWorkspaceMember(db, workspaceId, decodedToken);
     wsData = memberValidation.data;
-  } catch (err: any) {
+  } catch (err) {
     return res.status(403).json({
       status: "error",
-      message: err.message || "Forbidden: You are not authorized to access this workspace."
+      message: errorMessage(err) || "Forbidden: You are not authorized to access this workspace."
     });
   }
 
@@ -142,14 +143,14 @@ aiRouter.post("/process", async (req: express.Request, res: express.Response) =>
     // 7. Process task
     const result = await AIBackendService.processTask(task, payload);
     return res.json(result);
-  } catch (err: any) {
+  } catch (err) {
     // Refund credits on failure so user is never charged for failed tasks
     if (wsData && wsData.bypassBilling !== true) {
       await incrementShardedCounter(db, workspaceId, 'computeCreditBalance', weight).catch(() => {});
     }
     return res.status(503).json({
       status: "error",
-      message: err.message || "AI task processing failed. Service Unavailable."
+      message: errorMessage(err) || "AI task processing failed. Service Unavailable."
     });
   }
 });

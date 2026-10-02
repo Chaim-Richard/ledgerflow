@@ -1,3 +1,4 @@
+import { errorMessage } from '../auth/requestUser';
 import express from 'express';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
 import { generateDocumentPdf } from '../services/pdfService';
@@ -115,10 +116,10 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${type}_${id}.pdf"`);
     return res.send(pdfBuffer);
-  } catch (err: any) {
-    if (err.message === 'FORBIDDEN') return res.status(403).json({ status: 'error', message: 'Forbidden' });
+  } catch (err) {
+    if (errorMessage(err) === 'FORBIDDEN') return res.status(403).json({ status: 'error', message: 'Forbidden' });
     console.error('PDF Generation Error:', err);
-    return res.status(500).json({ status: 'error', message: err.message || 'Failed to generate PDF' });
+    return res.status(500).json({ status: 'error', message: errorMessage(err) || 'Failed to generate PDF' });
   }
 }
 

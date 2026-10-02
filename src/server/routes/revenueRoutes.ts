@@ -1,3 +1,4 @@
+import { errorMessage, requestUser } from '../auth/requestUser';
 import express from 'express';
 import { z } from 'zod';
 import { FieldValue } from '../db/firestore';
@@ -29,7 +30,7 @@ revenueRouter.post('/recognize', async (req, res) => {
     }
 
     const { workspaceId, contractId, periodId, amountCents, deferredAccountId, revenueAccountId, date } = parseResult.data;
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
 
     // 1. Authorize workspace membership FIRST before checking idempotency (#82)
@@ -120,7 +121,7 @@ revenueRouter.post('/recognize', async (req, res) => {
     });
 
     res.json(resultResponse);
-  } catch (e: any) {
-    res.status(e.message?.includes('Unauthorized') || e.message?.includes('Forbidden') ? 403 : 400).json({ error: e.message });
+  } catch (e) {
+    res.status(errorMessage(e).includes('Unauthorized') || errorMessage(e).includes('Forbidden') ? 403 : 400).json({ error: errorMessage(e) });
   }
 });

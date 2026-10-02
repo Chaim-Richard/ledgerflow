@@ -17,7 +17,7 @@ export async function incrementShardedCounter(
       shardId,
       value: FieldValue.increment(value)
     }, { merge: true });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Failed to increment sharded counter:", err);
   }
 }
@@ -40,7 +40,7 @@ export async function getShardedCounterValue(
     });
     
     return baseline + shardSum;
-  } catch (err: any) {
+  } catch (err) {
     console.error("Failed to get sharded counter value:", err);
     return baseline;
   }

@@ -1,3 +1,4 @@
+import { errorMessage } from '../auth/requestUser';
 import fs from 'node:fs';
 
 export type AllowedMimeType = 'application/pdf' | 'image/png' | 'image/jpeg' | 'text/csv' | 'text/plain' | 'application/json';
@@ -103,7 +104,7 @@ export async function validateUploadedFile(filePath: string): Promise<FileValida
     await fd.close();
 
     return validateFileMagicBytes(buffer);
-  } catch (err: any) {
-    return { valid: false, error: `File inspection error: ${err.message}` };
+  } catch (err) {
+    return { valid: false, error: `File inspection error: ${errorMessage(err)}` };
   }
 }

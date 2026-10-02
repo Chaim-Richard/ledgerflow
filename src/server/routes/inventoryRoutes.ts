@@ -1,3 +1,4 @@
+import { errorMessage, requestUser } from '../auth/requestUser';
 import express from 'express';
 import { FieldValue } from '../db/firestore';
 import Decimal from 'decimal.js';
@@ -13,7 +14,7 @@ export const inventoryRouter = express.Router();
 inventoryRouter.post('/cogs', async (req, res) => {
   try {
     const { workspaceId, itemId, quantitySold, inventoryAccountId, cogsAccountId, date } = req.body;
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
     
     if (!workspaceId || !itemId || !quantitySold || !inventoryAccountId || !cogsAccountId) {
@@ -155,8 +156,8 @@ inventoryRouter.post('/cogs', async (req, res) => {
     });
 
     res.json(resultResponse);
-  } catch (e: any) {
-    res.status(e.message?.includes('Unauthorized') ? 403 : 400).json({ error: e.message });
+  } catch (e) {
+    res.status(errorMessage(e).includes('Unauthorized') ? 403 : 400).json({ error: errorMessage(e) });
   }
 });
 
@@ -167,7 +168,7 @@ inventoryRouter.post('/cogs', async (req, res) => {
 inventoryRouter.post('/adjust', async (req, res) => {
   try {
     const { workspaceId, itemId, quantityChange, unitCostCents, inventoryAccountId, offsetAccountId, type, date } = req.body;
-    const user = (req as any).user;
+    const user = requestUser(req);
     const db = getDb();
 
     if (!workspaceId || !itemId || quantityChange === undefined || !inventoryAccountId || !offsetAccountId) {
@@ -263,8 +264,8 @@ inventoryRouter.post('/adjust', async (req, res) => {
     }).then(result => {
         res.json({ status: 'ok', ...result });
     });
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
+  } catch (e) {
+    res.status(400).json({ error: errorMessage(e) });
   }
 });
 

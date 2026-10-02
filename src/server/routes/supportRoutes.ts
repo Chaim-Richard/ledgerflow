@@ -1,3 +1,4 @@
+import { errorMessage, requestUser } from '../auth/requestUser';
 import express from 'express';
 import { z } from 'zod';
 import { getDb } from '../db/firestore';
@@ -33,7 +34,7 @@ supportRouter.post('/tickets/:id/messages', async (req, res) => {
     }
 
     const { body, authorRole } = parseResult.data;
-    const user = (req as any).user;
+    const user = requestUser(req);
 
     const db = getDb();
     const ticketRef = db.collection('supportTickets').doc(ticketId);
@@ -134,9 +135,9 @@ supportRouter.post('/tickets/:id/messages', async (req, res) => {
     }
 
     res.status(200).json({ status: 'ok', data: result.newMessage });
-  } catch (e: any) {
+  } catch (e) {
     console.error('Support message error:', e);
-    res.status(e.message.includes('Forbidden') ? 403 : 400).json({ error: e.message });
+    res.status(errorMessage(e).includes('Forbidden') ? 403 : 400).json({ error: errorMessage(e) });
   }
 });
 
@@ -157,7 +158,7 @@ supportRouter.patch('/tickets/:id/status', async (req, res) => {
     }
 
     const { status } = parseResult.data;
-    const user = (req as any).user;
+    const user = requestUser(req);
 
     const isAdminUser = Boolean(user?.admin || user?.role === 'admin');
     if (!isAdminUser) {
@@ -193,7 +194,7 @@ supportRouter.patch('/tickets/:id/status', async (req, res) => {
     });
 
     res.status(200).json({ status: 'ok' });
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
+  } catch (e) {
+    res.status(400).json({ error: errorMessage(e) });
   }
 });
