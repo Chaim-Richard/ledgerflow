@@ -99,10 +99,19 @@ export default function QueryView() {
       cell: (info: any) => {
         const lines = info.getValue() as any[];
         if (!lines || lines.length === 0) return <span className="text-[var(--muted)]">Uncategorized</span>;
+        const occurrences = new Map<string, number>();
+        const displayedLines = lines.slice(0, 2).map(line => {
+          const identity = line.id
+            ? JSON.stringify(['id', line.id])
+            : JSON.stringify(['content', line.accountId, line.accountName, line.description, line.category, line.amountCents]);
+          const occurrence = occurrences.get(identity) || 0;
+          occurrences.set(identity, occurrence + 1);
+          return { line, key: JSON.stringify([identity, occurrence]) };
+        });
         return (
           <div className="space-y-0.5">
-            {lines.slice(0, 2).map((l, i) => (
-              <div key={i} className="text-xs text-slate-600">
+            {displayedLines.map(({ line: l, key }) => (
+              <div key={key} className="text-xs text-slate-600">
                 <span className="font-semibold">{l.accountName}</span> ({formatDecimal(l.amountCents / 100)})
               </div>
             ))}

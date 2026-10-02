@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Transaction, TransactionLine, ChartAccount } from '../../types';
 import { 
   X, 
@@ -29,6 +29,16 @@ import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import TagInput from './TagInput';
 import AsyncButton from '../ui/AsyncButton';
 import { isLockedDate } from '../../lib/periodLock';
+
+function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const content = identity(item);
+    const occurrence = occurrences.get(content) ?? 0;
+    occurrences.set(content, occurrence + 1);
+    return { item, key: JSON.stringify([content, occurrence]) };
+  });
+}
 
 interface TransactionEditModalProps {
   isOpen: boolean;
@@ -92,6 +102,12 @@ export default function TransactionEditModal({
   // Manage lines for splitting and multiple assignments
   const [lines, setLines] = useState<TransactionLine[]>(() => transaction?.lines ? transaction.lines.map(l => ({ ...l })) : []);
 
+  // UI-only keys are initialized once and survive changes to editable line fields.
+  const [lineKeys, setLineKeys] = useState(() => withOccurrenceKeys(lines, line =>
+    line.id || JSON.stringify([line.accountId, line.description, line.amountCents, line.project, line.class, line.location])
+  ).map(({ key }) => `existing-${key}`));
+  const nextLineKey = useRef(0);
+
   const isLocked = !isReverseMode && closed(date);
 
   // Compute total absolute sum (or sum of debits/credits in standard book)
@@ -108,6 +124,8 @@ export default function TransactionEditModal({
       accountName: defaultAcc?.name || '', 
       amountCents: 0 
     }]);
+    const key = `added-${nextLineKey.current++}`;
+    setLineKeys(keys => [...keys, key]);
   };
 
   const handleRemoveLine = (index: number) => {
@@ -116,6 +134,7 @@ export default function TransactionEditModal({
       return;
     }
     setLines(lines.filter((_, i) => i !== index));
+    setLineKeys(keys => keys.filter((_, i) => i !== index));
   };
 
   const handleLineChange = (index: number, updates: Partial<TransactionLine>) => {
@@ -564,7 +583,7 @@ export default function TransactionEditModal({
               <div className="space-y-3">
                 {lines.map((line, idx) => (
                   <div 
-                    key={line.id || `line-${line.accountId || idx}`}
+                    key={lineKeys[idx]}
                     className="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-[32px] border border-[var(--line)] bg-[var(--ink)]/20 hover:bg-[var(--ink)]/50 transition-colors"
                   >
                     {/* Top Row: Account & Amount & Delete */}
@@ -765,8 +784,8 @@ export default function TransactionEditModal({
 
               {fileUrls.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-                  {fileUrls.map((url, i) => (
-                    <div key={i} className="relative group rounded-xl border border-[var(--line)] overflow-hidden bg-[var(--surface)] h-24 flex items-center justify-center">
+                  {withOccurrenceKeys(fileUrls, url => url).map(({ item: url, key }, i) => (
+                    <div key={key} className="relative group rounded-xl border border-[var(--line)] overflow-hidden bg-[var(--surface)] h-24 flex items-center justify-center">
                       {url.startsWith('data:image') ? (
                         <img src={url} alt="Attached receipt" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
                       ) : (

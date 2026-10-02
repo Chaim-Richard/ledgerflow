@@ -33,6 +33,16 @@ import {
 import { cn } from '../../lib/utils';
 import { CustomTemplate } from '../../types';
 
+function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const contentKey = keyForItem(item);
+    const occurrence = occurrences.get(contentKey) ?? 0;
+    occurrences.set(contentKey, occurrence + 1);
+    return { item, key: JSON.stringify([contentKey, occurrence]) };
+  });
+}
+
 interface TemplateSelectorProps {
   isOpen: boolean;
   onClose: () => void;
@@ -358,7 +368,7 @@ export default function TemplateSelector({
                 </span>
 
                 <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-2 bg-[var(--surface)]/40 p-3 rounded-[32px] border border-[var(--line)]/60">
-                  {activeInspected.accounts.map((acc, key) => (
+                  {withOccurrenceKeys(activeInspected.accounts, acc => JSON.stringify([acc.code, acc.name, acc.type, acc.category])).map(({ item: acc, key }) => (
                     <div 
                       key={key}
                       className="px-3.5 py-2 bg-[var(--surface)] border border-[var(--line)] hover:border-slate-800/20 rounded-xl flex items-center justify-between transition-all"
@@ -387,15 +397,15 @@ export default function TemplateSelector({
 
                 {activeInspected.topology?.nodes ? (
                   <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] flex flex-wrap items-center justify-center gap-x-3 gap-y-2 shrink-0">
-                    {activeInspected.topology.nodes.map((node, key) => (
-                      <div key={key} className="flex items-center gap-2">
+                    {activeInspected.topology.nodes.map((node, index) => (
+                      <div key={node.id} className="flex items-center gap-2">
                         <div 
                           className="px-2.5 py-1 text-[9px] font-mono font-black border uppercase rounded-lg shadow-sm"
                           style={{ borderColor: `${node.config?.color}30`, backgroundColor: `${node.config?.color}08`, color: node.config?.color }}
                         >
                           {node.label}
                         </div>
-                        {key < (activeInspected.topology.nodes?.length ?? 0) - 1 && (
+                        {index < (activeInspected.topology.nodes?.length ?? 0) - 1 && (
                           <span className="text-slate-500/30 text-xs">→</span>
                         )}
                       </div>

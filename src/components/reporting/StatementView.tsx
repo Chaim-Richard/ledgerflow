@@ -225,8 +225,8 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
                   </td>
                 </tr>
 
-                {statementData.entries.map((entry: any, i: number) => (
-                  <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                {statementData.entries.map(entry => (
+                  <tr key={JSON.stringify([entry.type, entry.id])} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                     <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400">{entry.date}</td>
                     <td className="py-2.5 px-4 font-sans font-medium text-slate-900 dark:text-white">{entry.type}</td>
                     <td className="py-2.5 px-4 text-[var(--muted)]">#{entry.reference}</td>

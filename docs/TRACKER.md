@@ -12,7 +12,7 @@ tell Claude, or delete it under Routines on claude.ai.
 **Second AI:** if another AI works on the repository too, the lanes and the "who edits which
 files" board are in [COORDINATION.md](COORDINATION.md).
 
-- [x] Codex C-1: unused variables and parameters outside Claude's reserved files; ESLint warnings 2022 → 1805 (codex, branch `codex/c-1-unused-code`, PR pending).
+- [x] Codex C-1: unused variables and parameters outside Claude's reserved files; ESLint warnings 2022 → 1805 (codex, PR #31; merged snapshot verified).
 
 **Setting up a fresh machine (for Claude):** Node 24 and PostgreSQL 16. Create a local test
 database, apply `supabase/migrations/*` with `LF_TEST_DATABASE_URL=... npx tsx scripts/db-test.ts setup`,
@@ -1425,21 +1425,21 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [~] F-21 800-line limit (eslint `max-lines` warning on; 11 files over)
 - [ ] F-22 Shared report shell
 
-# SECTION G — REACT CORRECTNESS (61 array-index keys)
+# SECTION G — REACT CORRECTNESS
 
-- [ ] G-01 StatementImporter (4)
-- [ ] G-02 TransactionRow (3) — the money grid
+- [x] G-01 StatementImporter (4) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [x] G-02 TransactionRow (3) — the money grid (codex, branch `codex/c-2-stable-list-keys`, PR pending)
 - [ ] G-03 PurchaseOrdersView (3)
-- [ ] G-04 ToolSandbox (3)
-- [ ] G-05 QBOMigrationWizard (3)
-- [ ] G-06 TransactionEditModal (2)
-- [ ] G-07 HelpGuideView (2)
-- [ ] G-08 ForensicAuditor (2)
-- [ ] G-09 RulesSettings (2)
-- [ ] G-10 CashFlowPredictor (2)
-- [ ] G-11 ProjectProfitabilityView (2)
-- [ ] G-12 IntelligenceCenter / AICustomBlueprint / AICommandCenter / Dashboard
-- [ ] G-13 Remaining single-occurrence files
+- [x] G-04 ToolSandbox (3) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [x] G-05 QBOMigrationWizard (3) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [x] G-06 TransactionEditModal (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [x] G-07 HelpGuideView (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [x] G-08 ForensicAuditor (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [x] G-09 RulesSettings (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [x] G-10 CashFlowPredictor (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [x] G-11 ProjectProfitabilityView (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [x] G-12 IntelligenceCenter / AICustomBlueprint / AICommandCenter / Dashboard (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [~] G-13 Remaining single-occurrence files — all eligible files fixed; `BillModal` and `InvoiceModal` remain in Claude's lane (codex, branch `codex/c-2-stable-list-keys`, PR pending)
 - [x] G-14 `react/no-array-index-key` rule (plugin installed, ESLint passes)
 - [x] G-15 Error boundary per view (`MainViewSwitcher`, `key={activeTab}`)
 - [x] G-16 Recovery action on the boundary

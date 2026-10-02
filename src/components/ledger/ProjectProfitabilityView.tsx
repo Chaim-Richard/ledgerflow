@@ -98,8 +98,8 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
            { label: 'Total Energy Expense', val: formatCurrency(totalExpense), color: 'text-rose-500', icon: Zap },
            { label: 'Net System Amount', val: formatCurrency(totalNet), color: 'text-emerald-500', icon: Activity },
            { label: 'Overall Margin Resonance', val: totalIncome > 0 ? `${((totalNet / totalIncome) * 100).toFixed(1)}%` : '0%', color: 'text-purple-500', icon: BrainCircuit },
-         ].map((kpi, idx) => (
-           <div key={idx} className="bg-[var(--surface)] p-6 rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group hover:border-slate-300 transition-all">
+         ].map(kpi => (
+           <div key={kpi.label} className="bg-[var(--surface)] p-6 rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group hover:border-slate-300 transition-all">
              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                 <kpi.icon size={48} className={kpi.color} />
              </div>
@@ -202,8 +202,8 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100/50">
-              {projectProfitability.map((p, idx) => (
-                <tr key={idx} className="hover:bg-[var(--ink)]/50 transition-all group">
+              {projectProfitability.map(p => (
+                <tr key={p.name} className="hover:bg-[var(--ink)]/50 transition-all group">
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-slate-100 rounded-[32px] border border-[var(--line)] flex items-center justify-center text-slate-500 group-hover:bg-slate-900 group-hover:text-white transition-all transform group-hover:rotate-6">

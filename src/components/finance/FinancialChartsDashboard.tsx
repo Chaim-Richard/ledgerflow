@@ -59,6 +59,7 @@ export default function FinancialChartsDashboard() {
     // Cash Account balances
     const cashAccounts = accounts.filter(a => a.type === 'asset' && (a.category === 'Cash' || a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank')));
     const cashData = cashAccounts.map(a => ({
+      id: a.id,
       name: a.name,
       value: Math.max(0, accountBalances[a.id] || 5000)
     })).filter(a => a.value > 0);
@@ -74,7 +75,7 @@ export default function FinancialChartsDashboard() {
 
     return {
       monthlyData: displayMonths,
-      cashBreakdown: cashData.length > 0 ? cashData : [{ name: 'Main Checking', value: 45000 }, { name: 'Savings Account', value: 15000 }],
+      cashBreakdown: cashData.length > 0 ? cashData : [{ id: 'main-checking', name: 'Main Checking', value: 45000 }, { id: 'savings-account', name: 'Savings Account', value: 15000 }],
       expenseBreakdown: expenseData.length > 0 ? expenseData : [{ name: 'Payroll', value: 12000 }, { name: 'Software', value: 4500 }, { name: 'Rent', value: 3000 }],
       totalCash: calcTotalCash,
       monthlyBurnRate: avgBurn,
@@ -208,7 +209,7 @@ export default function FinancialChartsDashboard() {
               <PieChart>
                 <Pie data={cashBreakdown} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value">
                   {cashBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={entry.id} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(val: any) => `$${formatDecimal(val)}`} />
@@ -229,7 +230,7 @@ export default function FinancialChartsDashboard() {
               <PieChart>
                 <Pie data={expenseBreakdown} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value">
                   {expenseBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(val: any) => `$${formatDecimal(val)}`} />

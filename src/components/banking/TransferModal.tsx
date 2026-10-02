@@ -272,8 +272,8 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {candidates.map((cand, idx) => (
-                    <div key={idx} className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg flex items-center justify-between gap-3 text-xs">
+                  {candidates.map(cand => (
+                    <div key={JSON.stringify([cand.outflowTx.id, cand.inflowTx.id])} className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg flex items-center justify-between gap-3 text-xs">
                       <div>
                         <div className="font-semibold text-neutral-900 flex items-center gap-1.5">
                           <span>{cand.fromAccount.name}</span>

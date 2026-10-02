@@ -292,7 +292,7 @@ export default function HelpGuideView() {
               <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--faint)]">Step-by-Step Instructions</h3>
               <div className="space-y-3">
                 {selectedSection.steps.map((step, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3.5 bg-[var(--panel)] rounded-xl border border-[var(--line)]">
+                  <div key={step} className="flex items-start gap-3 p-3.5 bg-[var(--panel)] rounded-xl border border-[var(--line)]">
                     <span className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-xs font-mono font-bold shrink-0 text-[var(--brass)]">
                       {idx + 1}
                     </span>
@@ -309,8 +309,8 @@ export default function HelpGuideView() {
                   <span>Important Operational Tips</span>
                 </div>
                 <ul className="space-y-1.5 pl-5 list-disc text-xs text-[var(--text)] leading-relaxed">
-                  {selectedSection.tips.map((tip, idx) => (
-                    <li key={idx}>{tip}</li>
+                  {selectedSection.tips.map((tip) => (
+                    <li key={tip}>{tip}</li>
                   ))}
                 </ul>
               </div>

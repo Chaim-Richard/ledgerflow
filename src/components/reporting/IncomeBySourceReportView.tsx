@@ -66,8 +66,8 @@ export const IncomeBySourceReportView: React.FC<Props> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {breakdowns.map((item, idx) => (
-                <tr key={idx} className="hover:bg-neutral-50/80 transition-colors">
+              {breakdowns.map(item => (
+                <tr key={item.source} className="hover:bg-neutral-50/80 transition-colors">
                   <td className="py-3 px-4 font-medium text-neutral-900">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />

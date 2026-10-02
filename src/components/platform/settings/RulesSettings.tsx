@@ -11,6 +11,16 @@ import { aiService } from '../../../services/aiService';
 import { AutoRuleSchema } from '../../../schemas';
 import { Labelled } from '../../ui/Labelled';
 
+function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const contentKey = keyForItem(item);
+    const occurrence = occurrences.get(contentKey) ?? 0;
+    occurrences.set(contentKey, occurrence + 1);
+    return { item, key: JSON.stringify([contentKey, occurrence]) };
+  });
+}
+
 export const RulesSettings: React.FC = () => {
   const currentRole = useCurrentRole();
   const canBuildRules = currentRole === 'owner' || currentRole === 'accountant';
@@ -661,8 +671,8 @@ export const RulesSettings: React.FC = () => {
                 </div>
               ) : (
                 <div className="divide-y divide-neutral-200 border border-neutral-200 rounded-lg overflow-hidden">
-                  {dryRunResult.matches.slice(0, 50).map((match, idx) => (
-                    <div key={idx} className="p-3 bg-white text-xs hover:bg-neutral-50 flex items-start justify-between gap-4">
+                  {dryRunResult.matches.slice(0, 50).map(match => (
+                    <div key={JSON.stringify([match.transactionId, match.matchedRule.id])} className="p-3 bg-white text-xs hover:bg-neutral-50 flex items-start justify-between gap-4">
                       <div>
                         <div className="font-semibold text-neutral-900">
                           {match.txOriginal.date} — {match.txOriginal.description} (${(match.txOriginal.totalAmountCents / 100).toFixed(2)})
@@ -671,8 +681,8 @@ export const RulesSettings: React.FC = () => {
                           Matched rule: <span className="font-medium text-neutral-800">"{match.matchedRule.name || match.matchedRule.id}"</span>
                         </div>
                         <div className="mt-1 flex flex-wrap gap-1">
-                          {match.changes.map((c, i) => (
-                            <span key={i} className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
+                          {withOccurrenceKeys(match.changes, change => change).map(({ item: c, key }) => (
+                            <span key={key} className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded-sm text-[10px] font-medium">
                               {c}
                             </span>
                           ))}

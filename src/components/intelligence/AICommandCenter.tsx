@@ -164,9 +164,9 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
             <div className="space-y-6">
               <h4 className="text-[10px] font-black text-white/20 uppercase tracking-widest truncate">Command History</h4>
               <div className="space-y-3">
-                {history.length > 0 ? history.map((h, i) => (
+                {history.length > 0 ? history.map(h => (
                   <button 
-                    key={i}
+                    key={h}
                     onClick={() => runQuery(h)}
                     className="w-full text-left p-4 rounded-[32px] bg-[var(--surface)]/5 border border-white/5 hover:bg-[var(--surface)]/10 transition-all flex items-center justify-between group cursor-pointer"
                   >
@@ -186,9 +186,9 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                    { label: "Analyze High-Value Outflow", icon: AlertCircle, color: 'text-rose-400' },
                    { label: "Reconcile Missing Metadata", icon: Filter, color: 'text-amber-400' },
                    { label: "Predict Q3 Growth Matrix", icon: BarChart3, color: 'text-emerald-400' }
-                 ].map((item, i) => (
+                 ].map(item => (
                    <button 
-                     key={i} 
+                     key={item.label}
                      onClick={() => runQuery(item.label)}
                      className="flex items-center justify-between p-4 bg-[var(--surface)]/5 rounded-[32px] border border-white/5 hover:border-indigo-500/30 hover:bg-[var(--surface)]/10 transition-all group active:scale-95 cursor-pointer" 
                      aria-label={item.label}

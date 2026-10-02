@@ -131,8 +131,8 @@ export default function LedgerInterruptOverlay() {
                     Detailed Exception Queues:
                   </p>
                   <div className="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                    {result?.imbalances?.map((imb: any, index: number) => (
-                      <div key={`imb-${index}`} className="flex items-center justify-between text-xs p-3.5 bg-red-950/20 border border-red-900/10 rounded-xl">
+                    {result?.imbalances?.map((imb: any) => (
+                      <div key={JSON.stringify(['imbalance', imb.type, imb.id])} className="flex items-center justify-between text-xs p-3.5 bg-red-950/20 border border-red-900/10 rounded-xl">
                         <span className="font-mono text-zinc-400">UUID: {imb.id.substring(0, 8)}... ({imb.type})</span>
                         <span className="text-red-400 font-bold font-mono tabular-nums">Imbalance: {formatCurrency(imb.diff)}</span>
                       </div>
@@ -143,8 +143,8 @@ export default function LedgerInterruptOverlay() {
                         <span className="text-orange-400 font-semibold font-mono">Chain Index broken at {result?.brokenChainIndex}</span>
                       </div>
                     )}
-                    {result?.orphans?.map((orph: any, index: number) => (
-                      <div key={`orph-${index}`} className="flex items-center justify-between text-xs p-3.5 bg-zinc-800/40 border border-white/5 rounded-xl">
+                    {result?.orphans?.map((orph: any) => (
+                      <div key={JSON.stringify(['orphan', orph.type, orph.id])} className="flex items-center justify-between text-xs p-3.5 bg-zinc-800/40 border border-white/5 rounded-xl">
                         <span className="font-mono text-zinc-400">UUID: {orph.id.substring(0, 8)}... ({orph.type})</span>
                         <span className="text-zinc-300 font-semibold">{orph.message}</span>
                       </div>

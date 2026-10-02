@@ -1,11 +1,21 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Transaction, TransactionLine, ChartAccount, Project } from '../../types';
 import { Plus, Trash2, Save, X, AlertCircle, Layers } from 'lucide-react';
 import { motion } from 'motion/react';
 import { resolveAccountName, cn, parseAmountToCents } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { Labelled } from '../ui/Labelled';
+
+function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const content = identity(item);
+    const occurrence = occurrences.get(content) ?? 0;
+    occurrences.set(content, occurrence + 1);
+    return { item, key: JSON.stringify([content, occurrence]) };
+  });
+}
 
 interface SplitEditorProps {
   transaction: Transaction;
@@ -28,17 +38,26 @@ export default function SplitEditor({
       : [{ accountId: '', accountName: '', amountCents: transaction.totalAmountCents }]
   );
 
+  // UI-only keys are initialized once and survive changes to editable line fields.
+  const [lineKeys, setLineKeys] = useState(() => withOccurrenceKeys(lines, line =>
+    line.id || JSON.stringify([line.accountId, line.description, line.amountCents, line.project, line.class, line.location])
+  ).map(({ key }) => `existing-${key}`));
+  const nextLineKey = useRef(0);
+
   const totalCents = lines.reduce((sum, l) => sum + l.amountCents, 0);
   const diff = transaction.totalAmountCents - totalCents;
   const isBalanced = diff === 0;
 
   const addLine = () => {
     setLines([...lines, { accountId: '', accountName: '', amountCents: diff > 0 ? diff : 0 }]);
+    const key = `added-${nextLineKey.current++}`;
+    setLineKeys(keys => [...keys, key]);
   };
 
   const removeLine = (index: number) => {
     if (lines.length <= 1) return;
     setLines(lines.filter((_, i) => i !== index));
+    setLineKeys(keys => keys.filter((_, i) => i !== index));
   };
 
   const updateLine = (index: number, updates: Partial<TransactionLine>) => {
@@ -55,7 +74,7 @@ export default function SplitEditor({
     setLines(nextLines);
   };
 
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [expandedLineKey, setExpandedLineKey] = useState<string | null>(null);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -87,10 +106,10 @@ export default function SplitEditor({
 
             <div className="space-y-3">
               {lines.map((line, idx) => (
-                <div key={idx} className="space-y-2">
+                <div key={lineKeys[idx]} className="space-y-2">
                 <div className={cn(
                   "grid grid-cols-[1fr_150px_150px_100px_40px] gap-4 items-center p-3 rounded-[32px] border border-[var(--line)] transition-all group",
-                  expandedIndex === idx ? "bg-[var(--ink)]/40 border-indigo-600" : "bg-[var(--surface)]/30 hover:bg-[var(--ink)]/20"
+                  expandedLineKey === lineKeys[idx] ? "bg-[var(--ink)]/40 border-indigo-600" : "bg-[var(--surface)]/30 hover:bg-[var(--ink)]/20"
                 )}>
                   <div className="flex flex-col gap-1">
                     <div className="relative">
@@ -156,10 +175,10 @@ export default function SplitEditor({
 
                   <div className="flex items-center gap-1">
                     <button 
-                      onClick={() => setExpandedIndex(expandedIndex === idx ? null : idx)}
+                      onClick={() => setExpandedLineKey(expandedLineKey === lineKeys[idx] ? null : lineKeys[idx])}
                       className={cn(
                         "p-2 rounded-lg transition-all",
-                        expandedIndex === idx ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-[var(--ink)]"
+                        expandedLineKey === lineKeys[idx] ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Layers size={14} />
@@ -173,7 +192,7 @@ export default function SplitEditor({
                   </div>
                 </div>
 
-                {expandedIndex === idx && (
+                {expandedLineKey === lineKeys[idx] && (
                   <motion.div 
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}

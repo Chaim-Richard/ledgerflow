@@ -2637,10 +2637,10 @@ fetch(url, {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-[var(--surface)]">
-                    {apiLogs.map((log: any, idx: number) => {
+                    {apiLogs.map((log: any) => {
                       const isSuccess = log.status >= 200 && log.status < 300;
                       return (
-                        <tr key={idx} className="hover:bg-[var(--ink)]/50 transition-colors">
+                        <tr key={log.id} className="hover:bg-[var(--ink)]/50 transition-colors">
                           <td className="p-4 whitespace-nowrap text-xs font-mono font-bold text-slate-450 text-[11px]">
                             {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString()}
                           </td>

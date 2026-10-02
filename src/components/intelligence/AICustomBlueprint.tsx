@@ -23,6 +23,16 @@ interface AICustomBlueprintProps {
   onGenerated: (template: any) => void;
 }
 
+function withStableKeys<T>(items: T[], getContentKey: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const contentKey = getContentKey(item);
+    const occurrence = occurrences.get(contentKey) ?? 0;
+    occurrences.set(contentKey, occurrence + 1);
+    return { item, key: JSON.stringify([contentKey, occurrence]) };
+  });
+}
+
 export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICustomBlueprintProps) {
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -225,8 +235,8 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
 
               {/* Strategic Advice Section */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {generatedData.strategicAdvice?.map((advice: string, i: number) => (
-                  <div key={i} className="p-6 bg-zinc-900 text-white rounded-[32px] relative overflow-hidden group">
+                {withStableKeys(generatedData.strategicAdvice ?? [], (advice: string) => advice).map(({ item: advice, key }, i) => (
+                  <div key={key} className="p-6 bg-zinc-900 text-white rounded-[32px] relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                       <Sparkles size={40} />
                     </div>
@@ -241,8 +251,10 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
                   <h4 className="micro-label">Generated Chart of Accounts</h4>
                   <div className="bg-[var(--ink)] rounded-[32px] border border-[var(--line)] overflow-hidden">
                     <div className="divide-y divide-zinc-200">
-                      {(showAllAccounts ? generatedData.chartOfAccounts : generatedData.chartOfAccounts.slice(0, 8)).map((acc: any, i: number) => (
-                        <div key={i} className="p-4 flex items-center justify-between">
+                      {withStableKeys(showAllAccounts ? generatedData.chartOfAccounts : generatedData.chartOfAccounts.slice(0, 8), (acc: any) => JSON.stringify(
+                        acc.id != null ? ['id', acc.id] : ['account', acc.code, acc.name, acc.type, acc.category]
+                      )).map(({ item: acc, key }) => (
+                        <div key={key} className="p-4 flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <span className="mono-value !text-[10px] bg-[var(--surface)] px-2 py-1 rounded border border-[var(--line)]">{acc.code}</span>
                             <span className="text-sm font-bold text-[var(--text)]">{acc.name}</span>

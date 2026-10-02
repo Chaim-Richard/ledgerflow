@@ -1,5 +1,5 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { User } from '../../lib/db/auth';
 import { ChartAccount, JournalLine } from '../../types';
 import { 
@@ -70,6 +70,8 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
     { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
     { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
   ]);
+  const [lineKeys, setLineKeys] = useState(['initial-first', 'initial-second']);
+  const nextLineKey = useRef(0);
 
   const handleDimensionChange = (index: number, dimensionId: string, value: string) => {
     setLines(prev => prev.map((l, i) => {
@@ -162,11 +164,14 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
 
   const handleAddLine = () => {
     setLines([...lines, { accountId: '', accountName: '', debit: 0, credit: 0, class: '', location: '', project: '', dimensions: {} }]);
+    const key = `added-${nextLineKey.current++}`;
+    setLineKeys(keys => [...keys, key]);
   };
 
   const handleRemoveLine = (index: number) => {
     if (lines.length <= 2) return;
     setLines(lines.filter((_, i) => i !== index));
+    setLineKeys(keys => keys.filter((_, i) => i !== index));
   };
 
   const handleLineChange = (index: number, field: keyof JournalLine, value: any) => {
@@ -299,6 +304,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
         { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
       ]);
+      setLineKeys(['initial-first', 'initial-second']);
     } catch (error) {
       console.error("Journal Entry Error:", error);
       toast.error('Failed to record journal entry');
@@ -490,7 +496,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                     </thead>
                     <tbody className="divide-y divide-[var(--line)]">
                       {lines.map((line, idx) => (
-                        <tr key={line.id || `je-line-${line.accountId || idx}`} className="group hover:bg-[var(--ink)]/50 transition-colors">
+                        <tr key={lineKeys[idx]} className="group hover:bg-[var(--ink)]/50 transition-colors">
                           <td className="p-2.5">
                             <div className="relative">
                               <input 

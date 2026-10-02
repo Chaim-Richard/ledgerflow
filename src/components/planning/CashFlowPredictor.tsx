@@ -103,8 +103,8 @@ export default function CashFlowPredictor() {
                 <div className="col-span-3 text-right">Proj. Balance</div>
               </div>
               <div className="divide-y divide-slate-200">
-                {forecastData.projections.map((p: any, idx: number) => (
-                  <div key={idx} className="grid grid-cols-12 p-4 items-center hover:bg-[var(--ink)] transition-colors">
+                {forecastData.projections.map((p: any) => (
+                  <div key={p.month} className="grid grid-cols-12 p-4 items-center hover:bg-[var(--ink)] transition-colors">
                     <div className="col-span-3 flex items-center gap-2">
                        <Calendar className="w-4 h-4 text-[var(--muted)]" />
                        <span className="font-bold text-[var(--text)]">{p.month}</span>
@@ -128,11 +128,11 @@ export default function CashFlowPredictor() {
         {activeTab === 'trends' && (
            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 shadow-sm">
              <div className="flex h-64 items-end gap-2 mt-4">
-                {historicalData.map((d, idx) => {
+                {historicalData.map(d => {
                    const max = Math.max(...historicalData.map(h => Math.abs(h.value)), 1);
                    const height = (Math.abs(d.value) / max) * 100;
                    return (
-                      <div key={idx} className="flex-1 flex flex-col justify-end items-center gap-2 group relative">
+                      <div key={d.month} className="flex-1 flex flex-col justify-end items-center gap-2 group relative">
                          <div className={cn(
                            "w-full rounded-t-sm transition-colors relative",
                            d.value >= 0 ? "bg-emerald-200 hover:bg-emerald-300" : "bg-rose-200 hover:bg-rose-300"

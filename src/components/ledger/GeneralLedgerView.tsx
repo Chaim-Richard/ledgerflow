@@ -5,6 +5,18 @@ import { computeGeneralLedger } from '../../server/reports/computeReports';
 import { Search, BookOpen } from 'lucide-react';
 import { Labelled } from '../ui/Labelled';
 
+function keyedLedgerEntries(entries: ReturnType<typeof computeGeneralLedger>['accounts'][number]['entries']) {
+  const occurrences = new Map<string, number>();
+  return entries.map(entry => {
+    const content = JSON.stringify([
+      entry.transactionId, entry.date, entry.description, entry.reference, entry.debitCents, entry.creditCents
+    ]);
+    const occurrence = occurrences.get(content) || 0;
+    occurrences.set(content, occurrence + 1);
+    return { entry, key: JSON.stringify([content, occurrence]) };
+  });
+}
+
 export default function GeneralLedgerView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
   const accounts = useLedgerStore(s => s.accounts);
   const transactions = useLedgerStore(s => s.transactions);
@@ -170,8 +182,8 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
-                    {acc.entries.map((entry: any, i: number) => (
-                      <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                    {keyedLedgerEntries(acc.entries).map(({ entry, key }) => (
+                      <tr key={key} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                         <td className="py-2 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{entry.date}</td>
                         <td className="py-2 px-4 text-slate-900 dark:text-white font-sans font-medium">{entry.description}</td>
                         <td className="py-2 px-4 text-[var(--muted)]">{entry.reference || '-'}</td>

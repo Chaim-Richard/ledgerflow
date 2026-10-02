@@ -28,6 +28,16 @@ import CategoryWhyPopover from '../common/CategoryWhyPopover';
 import { normalizeDateString } from '../../lib/dateParsing';
 import { Labelled } from '../ui/Labelled';
 
+function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const content = identity(item);
+    const occurrence = occurrences.get(content) ?? 0;
+    occurrences.set(content, occurrence + 1);
+    return { item, key: JSON.stringify([content, occurrence]) };
+  });
+}
+
 interface StatementImporterProps {
   isOpen: boolean;
   onClose: () => void;
@@ -77,6 +87,8 @@ export default function StatementImporter({
   const [parsedTxs, setParsedTxs] = useState<ParsedTx[]>([]);
   const [step, setStep] = useState<'input' | 'mapping' | 'review'>('input');
   const [csvData, setCsvData] = useState<string[][]>([]);
+  const csvHeaders = withOccurrenceKeys(csvData[0] || [], column => column);
+  const csvPreview = withOccurrenceKeys(csvData.slice(1, 6), row => JSON.stringify(row));
   const [mapping, setMapping] = useState({ date: -1, description: -1, amount: -1, debit: -1, credit: -1, payee: -1, memo: -1, skipRows: 1 });
 
   const parseCsvText = (text: string): string[][] => {
@@ -486,8 +498,8 @@ export default function StatementImporter({
                           className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)] cursor-pointer"
                         >
                           <option value={-1}>Select Column</option>
-                          {csvData[0]?.map((col, idx) => (
-                            <option key={idx} value={idx}>{col || `Column ${idx + 1}`}</option>
+                          {csvHeaders.map(({ item: col, key }, idx) => (
+                            <option key={key} value={idx}>{col || `Column ${idx + 1}`}</option>
                           ))}
                         </select>
                       </Labelled>
@@ -503,16 +515,16 @@ export default function StatementImporter({
                     <table className="w-full text-left text-xs min-w-[600px]">
                       <thead>
                         <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
-                          {csvData[0]?.map((col, idx) => (
-                            <th key={idx} className="p-4 font-black text-[var(--text)] truncate max-w-[150px]">{col || `Col ${idx + 1}`}</th>
+                          {csvHeaders.map(({ item: col, key }, idx) => (
+                            <th key={key} className="p-4 font-black text-[var(--text)] truncate max-w-[150px]">{col || `Col ${idx + 1}`}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {csvData.slice(1, 6).map((row, rIdx) => (
-                          <tr key={rIdx} className="border-b border-[var(--line)]/50">
-                            {row.map((cell, cIdx) => (
-                              <td key={cIdx} className="p-4 text-[var(--muted)] font-medium truncate max-w-[150px]">{cell}</td>
+                        {csvPreview.map(({ item: row, key }) => (
+                          <tr key={key} className="border-b border-[var(--line)]/50">
+                            {withOccurrenceKeys(row, cell => cell).map(({ item: cell, key: cellKey }, column) => (
+                              <td key={csvHeaders[column] ? `column-${csvHeaders[column].key}` : `extra-${cellKey}`} className="p-4 text-[var(--muted)] font-medium truncate max-w-[150px]">{cell}</td>
                             ))}
                           </tr>
                         ))}
@@ -548,9 +560,9 @@ export default function StatementImporter({
                 </div>
 
                 <div className="space-y-2">
-                  {parsedTxs.map((tx, idx) => (
+                  {withOccurrenceKeys(parsedTxs, tx => JSON.stringify([tx.importIdentity, tx.date, tx.description, tx.amountCents])).map(({ item: tx, key }, idx) => (
                     <div 
-                      key={idx}
+                      key={key}
                       className={cn(
                         "p-4 rounded-xl border transition-all flex flex-col gap-3 group bg-[var(--surface)]",
                         tx.selected 
@@ -608,8 +620,8 @@ export default function StatementImporter({
                       {/* Sub-item Drilldown */}
                       {tx.lines && tx.lines.length > 1 && (
                         <div className="mt-2 pt-2 border-t border-[var(--line)] space-y-1.5 pl-10">
-                          {tx.lines.map((item, i) => (
-                            <div key={i} className="flex items-center justify-between group/item">
+                          {withOccurrenceKeys(tx.lines, item => JSON.stringify([item.description, item.amountCents, item.quantity, item.unitPriceCents, item.category])).map(({ item, key }) => (
+                            <div key={key} className="flex items-center justify-between group/item">
                               <div className="flex flex-col">
                                 <p className="text-[11px] font-medium text-[var(--muted)] group-hover/item:text-[var(--text)] transition-colors">
                                   {item.description}

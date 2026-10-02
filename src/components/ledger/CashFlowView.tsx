@@ -384,11 +384,11 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
 
            <div className="space-y-8">
               {[
-                  { label: labels.operating, desc: labels.operatingSub, data: currentData.operating, prev: prevData.operating },
-                  { label: labels.investing, desc: labels.investingSub, data: currentData.investing, prev: prevData.investing },
-                  { label: labels.financing, desc: labels.financingSub, data: currentData.financing, prev: prevData.financing }
-              ].map((section, idx) => (
-                  <div key={idx} className="space-y-4">
+                  { id: 'operating', label: labels.operating, desc: labels.operatingSub, data: currentData.operating, prev: prevData.operating },
+                  { id: 'investing', label: labels.investing, desc: labels.investingSub, data: currentData.investing, prev: prevData.investing },
+                  { id: 'financing', label: labels.financing, desc: labels.financingSub, data: currentData.financing, prev: prevData.financing }
+              ].map(section => (
+                  <div key={section.id} className="space-y-4">
                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
                         <h4 className="text-[11px] font-bold bg-slate-900 text-white px-3 py-1 rounded inline-flex uppercase tracking-wider">{section.label}</h4>
                         <span className="text-[9px] font-semibold text-slate-450 uppercase tracking-wider text-[var(--muted)]">{section.desc}</span>

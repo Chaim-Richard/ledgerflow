@@ -8,6 +8,8 @@ import { isPostable, lineAmount } from '../../lib/txFilters';
 import { toast } from 'sonner';
 import { useTimeout } from '../../hooks/useTimeout';
 
+const BENFORD_DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
 export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: boolean }) {
   const transactions = useLedgerStore(s => s.transactions);
   const [isRunning, setIsRunning] = useState(false);
@@ -158,13 +160,13 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
                <h4 className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-6">Digit Distribution Curve (1-9)</h4>
                
                <div className="flex items-end justify-between gap-1.5 h-36">
-                  {forensicData.distribution.map((val, i) => {
-                    const actualPercent = val * 100;
-                    const expectedPercent = expectedDist[i];
+                  {BENFORD_DIGITS.slice(0, forensicData.distribution.length).map(digit => {
+                    const actualPercent = forensicData.distribution[digit - 1] * 100;
+                    const expectedPercent = expectedDist[digit - 1];
                     const diff = Math.abs(actualPercent - expectedPercent);
                     
                     return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1.5 group/bar">
+                      <div key={digit} className="flex-1 flex flex-col items-center gap-1.5 group/bar">
                          <div className="w-full relative flex items-end justify-center h-full gap-0.5">
                             {/* Actual */}
                             <div 
@@ -182,7 +184,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
                               title={`Expected: ${expectedPercent.toFixed(1)}%`}
                             />
                          </div>
-                         <span className="text-[9px] font-bold font-mono text-[var(--muted)]">{i+1}</span>
+                         <span className="text-[9px] font-bold font-mono text-[var(--muted)]">{digit}</span>
                       </div>
                     );
                   })}
@@ -239,7 +241,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
                     "Standard pattern distribution",
                     "Autonomous scanning loops active"
                   ]).map((rec, i) => (
-                    <div key={i} className="flex items-center gap-3">
+                    <div key={rec} className="flex items-center gap-3">
                        <div className="w-5 h-5 bg-[var(--surface)] border border-slate-250/50 rounded-md flex items-center justify-center text-[10px] font-bold text-slate-700 font-mono">
                           {i + 1}
                        </div>
