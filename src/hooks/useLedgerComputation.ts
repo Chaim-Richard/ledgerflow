@@ -103,8 +103,8 @@ export function useLedgerComputation(
       if (!a || !b) return 0;
 
       if (sortConfig) {
-        let valA: any;
-        let valB: any;
+        let valA: string | number;
+        let valB: string | number;
 
         switch (sortConfig.key) {
           case 'date': {
@@ -141,8 +141,8 @@ export function useLedgerComputation(
             valB = (b.status || '').toLowerCase();
             break;
           default:
-            valA = (a as any)[sortConfig.key];
-            valB = (b as any)[sortConfig.key];
+            valA = (a as unknown as Record<string, string | number>)[sortConfig.key];
+            valB = (b as unknown as Record<string, string | number>)[sortConfig.key];
         }
 
         if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;

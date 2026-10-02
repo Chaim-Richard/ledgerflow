@@ -265,9 +265,9 @@ export default function DimensionsSettings() {
       setWorkspaces(updated);
 
       toast.success('Dimension axes & label nodes saved successfully');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to save dimension settings:', err);
-      toast.error(`Save failed: ${err.message || err}`);
+      toast.error(`Save failed: ${(err as Error).message || err}`);
     } finally {
       setIsSaving(false);
     }
@@ -338,9 +338,9 @@ export default function DimensionsSettings() {
       setWorkspaces(updated);
 
       toast.success(`Migration complete! Converted ${migrationCount} free-text labels to stable node IDs.`);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Migration failed:', err);
-      toast.error(`Migration failed: ${err.message || err}`);
+      toast.error(`Migration failed: ${(err as Error).message || err}`);
     } finally {
       setIsMigrating(false);
     }
@@ -390,9 +390,9 @@ export default function DimensionsSettings() {
       setWorkspaces(updated);
 
       toast.success(`One-time backfill complete: minted ${createdCount} new nodes from transaction paths.`);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Backfill failed:', err);
-      toast.error(`Backfill failed: ${err.message || err}`);
+      toast.error(`Backfill failed: ${(err as Error).message || err}`);
     } finally {
       setIsMigrating(false);
     }

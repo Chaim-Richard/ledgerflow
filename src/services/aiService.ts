@@ -1,3 +1,8 @@
+import type { ParsedReceiptData } from '../lib/receiptIngestion';
+import type { ResolvedEntry } from '../lib/intentResolver';
+import type { AutoRule, DashboardSchema } from '../types';
+export interface GeneratedBlueprint { name: string; description: string; industry?: string; strategicAdvice?: string[]; chartOfAccounts: Partial<ChartAccount>[]; dashboardSchema: Partial<DashboardSchema> }
+interface AIProcessResponses { 'parse-business-blueprint': GeneratedBlueprint; 'build-auto-rule': Partial<AutoRule> & { rule?: Partial<AutoRule> } }
 import { Transaction, Project, ChartAccount, AnalyticalMetrics } from "../types";
 import { IntentResolver } from "../lib/intentResolver";
 import { getIdToken } from "../firebase";
@@ -10,7 +15,7 @@ export interface StrategicDirectives {
 }
 
 class AIService {
-  private async callBackend(task: string, payload: any): Promise<any> {
+  private async callBackend<T>(task: string, payload: Record<string, unknown>): Promise<T> {
     const idToken = await getIdToken();
     const isGuest = typeof window !== 'undefined' && localStorage.getItem('isGuest') === 'true';
     if (!idToken && !isGuest) throw new Error("Authentication required for AI operations - falling back to local heuristic");
@@ -53,7 +58,7 @@ class AIService {
     }
   }
 
-  async process(task: string, payload: any): Promise<any> {
+  async process<K extends keyof AIProcessResponses>(task: K, payload: Record<string, unknown>): Promise<AIProcessResponses[K]> {
     return await this.callBackend(task, payload);
   }
 
@@ -63,7 +68,7 @@ class AIService {
     userApiKey?: string
   ): Promise<StrategicDirectives> {
     try {
-      return await this.callBackend('strategic-analysis', { mode, data });
+      return await this.callBackend<StrategicDirectives>('strategic-analysis', { mode, data });
     } catch (error) {
       console.warn(`[AI Saturation] Reverting to deterministic expert strategy model for '${mode}':`, error);
       
@@ -124,7 +129,7 @@ class AIService {
 
   async generateForecast(transactions: Transaction[], horizon: number, userApiKey?: string) {
     try {
-      return await this.callBackend('generate-forecast', { transactions, horizon });
+      return await this.callBackend<{ points: { date: string; value: number }[]; confidence: number; anomalies: unknown[] }>('generate-forecast', { transactions, horizon });
     } catch (error) {
       return {
         points: transactions.map(t => ({ date: t.date, value: t.totalAmountCents / 100 })),
@@ -136,7 +141,7 @@ class AIService {
 
   async mapTransactions(transactions: Transaction[], accounts: ChartAccount[], context: string) {
     try {
-      return await this.callBackend('map-transactions', { transactions, accounts, context });
+      return await this.callBackend<Transaction[]>('map-transactions', { transactions, accounts, context });
     } catch (error) {
       return [];
     }
@@ -144,34 +149,34 @@ class AIService {
 
   async analyzeTrends(transactions: Transaction[], context: string) {
     try {
-      return await this.callBackend('analyze-trends', { transactions, context });
+      return await this.callBackend<{ trends: unknown[]; anomalies: unknown[]; strategicAdvice: string[] }>('analyze-trends', { transactions, context });
     } catch (error) {
       return { trends: [], anomalies: [], strategicAdvice: ["AI analysis layer encountered an anomaly."] };
     }
   }
 
-  async parseQuery(query: string, context: string, categories: string[] = [], projects: string[] = []) {
+  async parseQuery(query: string, context: string, categories: string[] = [], projects: string[] = []): Promise<Partial<ReturnType<typeof IntentResolver.resolve>>> {
     const resolved = IntentResolver.resolve(query, categories, projects);
     if (resolved.category || resolved.project || resolved.minAmountCents || resolved.maxAmountCents || resolved.startDate || resolved.isAuditQuery) {
       return resolved;
     }
 
     try {
-      return await this.callBackend('parse-query', { query, context, categories, projects });
+      return await this.callBackend<ReturnType<typeof IntentResolver.resolve>>('parse-query', { query, context, categories, projects });
     } catch (error) {
       return {};
     }
   }
 
-  async parseMagicEntry(input: string, categories: string[] = [], accounts: any[] = [], projects: string[] = [], patternContext: string = "") {
+  async parseMagicEntry(input: string, categories: string[] = [], accounts: ChartAccount[] = [], projects: string[] = [], patternContext: string = "") {
     try {
-      return await this.callBackend('parse-magic-entry', { input, categories, accounts, projects, patternContext });
+      return await this.callBackend<ResolvedEntry[]>('parse-magic-entry', { input, categories, accounts, projects, patternContext });
     } catch (e) {
       return null;
     }
   }
 
-  async parseReceipt(file: File, userApiKey?: string, heuristicCache?: Record<string, any>, labels: string[] = []) {
+  async parseReceipt(file: File, userApiKey?: string, heuristicCache?: Record<string, unknown>, labels: string[] = []) {
     const base64Data = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
@@ -179,7 +184,7 @@ class AIService {
     });
 
     try {
-      return await this.callBackend('parse-receipt', { 
+      return await this.callBackend<ParsedReceiptData>('parse-receipt', {
         base64Data, 
         mimeType: file.type, 
         context: labels.join(', ') + (heuristicCache ? JSON.stringify(heuristicCache) : '')
@@ -189,11 +194,11 @@ class AIService {
     }
   }
 
-  async parseStatement(input: File | string, context: string = '', userApiKey?: string, heuristicCache?: Record<string, any>, labels: string[] = []) {
+  async parseStatement(input: File | string, context: string = '', userApiKey?: string, heuristicCache?: Record<string, unknown>, labels: string[] = []) {
     try {
       if (typeof input === 'string') {
         const payload = { content: input, mimeType: 'text/plain', context: labels.join(', ') + context };
-        const result = await this.callBackend('parse-statement', payload);
+        const result = await this.callBackend<ResolvedEntry[] & { transactions?: ResolvedEntry[] }>('parse-statement', payload);
         return result.transactions || result || [];
       } else {
         const base64Data = await new Promise<string>((resolve) => {
@@ -202,7 +207,7 @@ class AIService {
           reader.readAsDataURL(input);
         });
         const payload = { content: base64Data, mimeType: input.type, context: labels.join(', ') + context };
-        const result = await this.callBackend('parse-statement', payload);
+        const result = await this.callBackend<ResolvedEntry[] & { transactions?: ResolvedEntry[] }>('parse-statement', payload);
         return result.transactions || result || [];
       }
     } catch (error) {

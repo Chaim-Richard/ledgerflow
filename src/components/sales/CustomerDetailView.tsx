@@ -10,9 +10,9 @@ interface CustomerDetailViewProps {
 }
 
 export default function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
-  const customers = useLedgerStore(s => s.customers) || [];
-  const invoices = useLedgerStore(s => s.invoices) || [];
-  const payments = useLedgerStore(s => s.payments) || [];
+  const customers = useLedgerStore(s => s.customers);
+  const invoices = useLedgerStore(s => s.invoices);
+  const payments = useLedgerStore(s => s.payments);
   useLedgerCollections('customers', 'invoices', 'payments');
 
   const customer = useMemo(() => customers.find(c => c.id === customerId), [customers, customerId]);

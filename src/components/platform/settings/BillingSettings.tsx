@@ -9,7 +9,7 @@ export default function BillingSettings() {
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
   const workspaces = useAuthStore(state => state.workspaces);
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
-  const [billingStatus, setBillingStatus] = useState<any>(null);
+  const [billingStatus, setBillingStatus] = useState<{ plan?: string; paymentStatus?: string; stripeSubscriptionId?: string } | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
@@ -56,8 +56,8 @@ export default function BillingSettings() {
             } else {
               toast.error("Subscription could not be verified", { description: data.message });
             }
-          } catch (e: any) {
-            toast.error("Verification failed", { description: e.message || String(e) });
+          } catch (e) {
+            toast.error("Verification failed", { description: (e as Error).message || String(e) });
           } finally {
             setIsVerifying(false);
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -100,8 +100,8 @@ export default function BillingSettings() {
       } else {
         throw new Error(data.message || 'Failed to create checkout session');
       }
-    } catch (e: any) {
-      toast.error('Checkout Error', { description: e.message || String(e) });
+    } catch (e) {
+      toast.error('Checkout Error', { description: (e as Error).message || String(e) });
     }
   };
 
@@ -125,13 +125,13 @@ export default function BillingSettings() {
       } else {
         throw new Error(data.message || 'Customer portal unavailable');
       }
-    } catch (e: any) {
-      toast.error('Portal Error', { description: e.message || String(e) });
+    } catch (e) {
+      toast.error('Portal Error', { description: (e as Error).message || String(e) });
     }
   };
 
   const activePlan = (billingStatus?.plan || currentWorkspace?.plan || 'free').toLowerCase();
-  const isPastDue = billingStatus?.paymentStatus === 'past_due' || (currentWorkspace as any)?.paymentStatus === 'past_due';
+  const isPastDue = billingStatus?.paymentStatus === 'past_due' || (currentWorkspace as typeof currentWorkspace & { paymentStatus?: string })?.paymentStatus === 'past_due';
 
   const plans = [
     {

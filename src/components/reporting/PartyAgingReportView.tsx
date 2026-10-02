@@ -52,7 +52,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
   const agingRows: AgingRow[] = useMemo(() => {
     return parties.map(party => {
       const partyDocs = outstandingDocs.filter(d => {
-        const matchId = isCustomer ? (d as any).customerId : (d as any).vendorId;
+        const matchId = isCustomer ? (d as typeof d & { customerId?: string; vendorId?: string }).customerId : (d as typeof d & { customerId?: string; vendorId?: string }).vendorId;
         return matchId === party.id;
       });
 
@@ -67,7 +67,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
         const ageDays = differenceInDays(new Date(), docDate);
         
         const docTotal = doc.amountCents || 0;
-        const docPaid = (doc as any).amountPaidCents || 0;
+        const docPaid = (doc as typeof doc & { amountPaidCents?: number }).amountPaidCents || 0;
         const outstandingAmount = Math.max(0, docTotal - docPaid);
 
         if (outstandingAmount > 0) {
@@ -103,12 +103,12 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
     );
 
     return [...filtered].sort((a, b) => {
-      let valA: any = a[sortBy];
-      let valB: any = b[sortBy];
+      let valA = a[sortBy];
+      let valB = b[sortBy];
 
       if (typeof valA === 'string') {
         valA = valA.toLowerCase();
-        valB = valB.toLowerCase();
+        valB = (valB as string).toLowerCase();
       }
 
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
@@ -129,7 +129,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
   const selectedPartyDocs = useMemo(() => {
     return selectedPartyId
       ? outstandingDocs.filter(d => {
-          const matchId = isCustomer ? (d as any).customerId : (d as any).vendorId;
+          const matchId = isCustomer ? (d as typeof d & { customerId?: string; vendorId?: string }).customerId : (d as typeof d & { customerId?: string; vendorId?: string }).vendorId;
           return matchId === selectedPartyId;
         })
       : [];
@@ -370,7 +370,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {selectedPartyDocs.map(doc => {
                 const docTotal = doc.amountCents || 0;
-                const docPaid = (doc as any).amountPaidCents || 0;
+                const docPaid = (doc as typeof doc & { amountPaidCents?: number }).amountPaidCents || 0;
                 const outstanding = Math.max(0, docTotal - docPaid);
                 const docDate = doc.date ? parseISO(doc.date.slice(0, 10)) : new Date();
                 const ageDays = differenceInDays(new Date(), docDate);

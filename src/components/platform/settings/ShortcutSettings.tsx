@@ -67,7 +67,7 @@ export default function ShortcutSettings() {
                 <option value="">Select a tool...</option>
                 {ALL_TOOLS.map(tab => (
                   <option key={tab.id} value={tab.id}>
-                    {((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id}
+                    {((tab as typeof tab & { name?: string }).label?.[language] || (tab as typeof tab & { name?: string }).label?.['en']) || (tab as typeof tab & { name?: string }).name || tab.id}
                   </option>
                 ))}
               </select>
@@ -102,7 +102,7 @@ export default function ShortcutSettings() {
                     </div>
                     <div>
                       <div className="text-sm font-semibold text-[var(--text)]">
-                        {tab ? (((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id) : tabId}
+                        {tab ? (((tab as typeof tab & { name?: string }).label?.[language] || (tab as typeof tab & { name?: string }).label?.['en']) || (tab as typeof tab & { name?: string }).name || tab.id) : tabId}
                       </div>
                       <div className="text-xs text-[var(--muted)]">Alt + {key.toUpperCase()}</div>
                     </div>

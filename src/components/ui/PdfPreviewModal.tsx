@@ -57,8 +57,8 @@ export async function downloadDocumentPdf(
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 10000);
     toast.success('PDF downloaded successfully', { id: toastId });
-  } catch (err: any) {
-    toast.error(err.message || 'Failed to download PDF', { id: toastId });
+  } catch (err) {
+    toast.error((err as Error).message || 'Failed to download PDF', { id: toastId });
   }
 }
 
@@ -95,9 +95,9 @@ export default function PdfPreviewModal({
         setBlobUrl(url);
         setIsLoading(false);
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         if (!isMounted) return;
-        setError(err.message || 'Failed to load PDF preview');
+        setError((err as Error).message || 'Failed to load PDF preview');
         setIsLoading(false);
       });
 
@@ -203,7 +203,7 @@ export default function PdfPreviewModal({
                       setIsLoading(false);
                     })
                     .catch((err) => {
-                      setError(err.message || 'Retry failed');
+                      setError((err as Error).message || 'Retry failed');
                       setIsLoading(false);
                     });
                 }}

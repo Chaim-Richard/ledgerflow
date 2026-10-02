@@ -58,7 +58,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
   // Helper to parse file into rows
   const parseSpreadsheetData = async (data: ArrayBuffer | string, _fileName: string) => {
     try {
-      let json: any[][] = [];
+      let json: unknown[][] = [];
 
       if (typeof data === 'string') {
         // Simple CSV parser supporting quotes
@@ -135,7 +135,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
 
       for (let r = headerRowIndex + 1; r < json.length; r++) {
         const row = json[r];
-        if (!row || row.length === 0 || row.every((c: any) => !c || String(c).trim() === '')) {
+        if (!row || row.length === 0 || row.every((c) => !c || String(c).trim() === '')) {
           continue;
         }
 
@@ -189,7 +189,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
         let debitCents = 0;
         let creditCents = 0;
 
-        const parseMoney = (val: any): number => {
+        const parseMoney = (val: unknown): number => {
           if (typeof val === 'number') return Math.round(val * 100);
           if (!val) return 0;
           const str = String(val).trim();
@@ -287,9 +287,9 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
 
       setAccountMappings(mappings);
       toast.success(`Parsed ${rows.length} transactions and ${mappings.length} accounts.`);
-    } catch (err: any) {
+    } catch (err) {
       console.error('File parsing error:', err);
-      toast.error('Failed to parse file: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to parse file: ' + ((err as Error).message || 'Unknown error'));
     }
   };
 
@@ -430,7 +430,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
           updatedAccounts.find(a => a.type === 'expense');
 
         // 2. Prepare atomic double-entry transactions
-        const txList: any[] = [];
+        const txList: import("../../types").Transaction[] = [];
 
         for (const row of parsedRows) {
           const primaryAccId = createdAccountMap[row.account] || cashAccount?.id || updatedAccounts[0]?.id || '';
@@ -475,7 +475,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
             }
           ];
 
-          const newTx = {
+          const newTx: import("../../types").Transaction = {
             id: `tx-qbo-${crypto.randomUUID()}`,
             uid: user?.uid || 'system',
             workspaceId: currentWorkspaceId,
@@ -538,9 +538,9 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
         toast.success(`Successfully migrated ${parsedRows.length} transactions into LedgerFlow!`);
         setIsProcessing(false);
         onClose();
-      } catch (err: any) {
+      } catch (err) {
         console.error('Migration commit error:', err);
-        toast.error('Failed to commit migration: ' + (err.message || 'Unknown error'));
+        toast.error('Failed to commit migration: ' + ((err as Error).message || 'Unknown error'));
         setIsProcessing(false);
       }
     }

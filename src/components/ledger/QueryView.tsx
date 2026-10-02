@@ -77,27 +77,27 @@ export default function QueryView() {
   }, [transactions, queryFilter]);
 
   // Define TanStack columns
-  const columns = useMemo<ColumnDef<Transaction, any>[]>(() => [
+  const columns = useMemo<ColumnDef<Transaction, unknown>[]>(() => [
     {
       accessorKey: 'date',
       header: 'Date',
-      cell: (info: any) => <span className="font-mono text-slate-700">{info.getValue() as string}</span>
+      cell: (info) => <span className="font-mono text-slate-700">{info.getValue() as string}</span>
     },
     {
       accessorKey: 'id',
       header: 'Tx ID',
-      cell: (info: any) => <span className="font-mono font-bold text-slate-900">{info.getValue() as string}</span>
+      cell: (info) => <span className="font-mono font-bold text-slate-900">{info.getValue() as string}</span>
     },
     {
       accessorKey: 'payee',
       header: 'Payee / Entity',
-      cell: (info: any) => <span>{info.getValue() as string || info.row.original.description || 'N/A'}</span>
+      cell: (info) => <span>{info.getValue() as string || info.row.original.description || 'N/A'}</span>
     },
     {
       accessorKey: 'lines',
       header: 'Accounts & Category',
-      cell: (info: any) => {
-        const lines = info.getValue() as any[];
+      cell: (info) => {
+        const lines = info.getValue() as Transaction['lines'];
         if (!lines || lines.length === 0) return <span className="text-[var(--muted)]">Uncategorized</span>;
         const occurrences = new Map<string, number>();
         const displayedLines = lines.slice(0, 2).map(line => {
@@ -123,7 +123,7 @@ export default function QueryView() {
     {
       id: 'total',
       header: 'Amount',
-      cell: (info: any) => {
+      cell: (info) => {
         const total = getAbsoluteTotal(info.row.original) / 100;
         return <span className="font-mono font-bold text-slate-900">${formatDecimal(total)}</span>;
       }

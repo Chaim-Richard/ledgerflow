@@ -11,7 +11,7 @@ export function resolveAccountRole(account: ChartAccount | undefined | null): Ac
   const subtype = (account.subtype || '').toLowerCase();
 
   // Handle explicit role overrides first
-  if ((account as any).role === 'fx_rounding' || (account as any).subtype === 'rounding' || category === 'rounding differences') {
+  if (account.role === 'fx_rounding' || account.subtype === 'rounding' || category === 'rounding differences') {
     return 'fx_rounding';
   }
 
@@ -35,7 +35,7 @@ export function resolveAccountRole(account: ChartAccount | undefined | null): Ac
       name.includes('petty cash') ||
       name.includes('operating cash') ||
       name.includes('cash') ||
-      (account as any).role === 'cash'
+      account.role === 'cash'
     ) {
       return 'cash';
     }

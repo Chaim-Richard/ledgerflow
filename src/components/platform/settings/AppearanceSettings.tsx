@@ -139,7 +139,7 @@ export default function AppearanceSettings() {
               <button
                 key={preset.id}
                 aria-pressed={fontSizePreset === preset.id}
-                onClick={() => setFontSizePreset(preset.id as any)}
+                onClick={() => setFontSizePreset(preset.id as unknown as "small" | "normal" | "medium" | "large" | "xlarge")}
                 className={cn(
                   "p-3.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1",
                   fontSizePreset === preset.id
@@ -214,7 +214,7 @@ export default function AppearanceSettings() {
             <button
               key={font.id}
               aria-pressed={fontFamily === font.id}
-              onClick={() => setFontFamily(font.id as any)}
+              onClick={() => setFontFamily(font.id as unknown as "system" | "inter" | "jakarta" | "serif" | "mono")}
               className={cn(
                 "p-5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 group",
                 fontFamily === font.id
@@ -254,7 +254,7 @@ export default function AppearanceSettings() {
               <button
                 key={item.id}
                 aria-pressed={theme === item.id}
-                onClick={() => setTheme(item.id as any)}
+                onClick={() => setTheme(item.id as unknown as "light" | "dark" | "system")}
                 className={cn(
                   "p-4 rounded-xl border flex flex-col items-center gap-2 transition-all cursor-pointer",
                   theme === item.id
@@ -280,7 +280,7 @@ export default function AppearanceSettings() {
               <button
                 key={palette.id}
                 aria-pressed={accentColor === palette.id}
-                onClick={() => setAccentColor(palette.id as any)}
+                onClick={() => setAccentColor(palette.id as unknown as "emerald" | "indigo" | "amber" | "teal" | "violet" | "rose" | "slate")}
                 className={cn(
                   "p-3 rounded-xl border flex flex-col items-center gap-2 transition-all cursor-pointer",
                   accentColor === palette.id
@@ -319,7 +319,7 @@ export default function AppearanceSettings() {
                 <button
                   key={d.id}
                   aria-pressed={rowDensity === d.id}
-                  onClick={() => setRowDensity(d.id as any)}
+                  onClick={() => setRowDensity(d.id as unknown as "normal" | "compact" | "comfortable")}
                   className={cn(
                     "flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all cursor-pointer",
                     rowDensity === d.id

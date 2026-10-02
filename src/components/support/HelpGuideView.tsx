@@ -1,3 +1,4 @@
+import type { LucideIcon } from 'lucide-react';
 import React, { useState } from "react";
 import { 
   BookOpen, 
@@ -21,7 +22,7 @@ import ReleaseNotes from "./ReleaseNotes";
 interface SectionDoc {
   id: string;
   title: string;
-  icon: any;
+  icon: LucideIcon;
   category: string;
   summary: string;
   steps: string[];

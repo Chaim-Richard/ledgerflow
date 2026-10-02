@@ -5,7 +5,7 @@ export interface CachedReport<T> {
   ttlMs: number;
 }
 
-const cacheMap = new Map<string, CachedReport<any>>();
+const cacheMap = new Map<string, CachedReport<unknown>>();
 const DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function getCachedReport<T>(key: string): T | null {

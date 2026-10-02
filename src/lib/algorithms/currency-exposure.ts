@@ -10,7 +10,7 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'shockPct', label: 'Simulated FX Shock (%)', min: 1, max: 25, step: 1, defaultValue: 10 }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "shockPct": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounting } = ctx;
     const shockPct = (inputs.shockPct ?? 10) / 100;
     
@@ -21,7 +21,7 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
        if (!isPostable(tx)) return;
 
        const rate = tx.exchangeRate && tx.exchangeRate > 0 && tx.exchangeRate !== 1 ? tx.exchangeRate : 1;
-       const currencyCode = (tx as any).currency || (rate !== 1 ? 'FX' : 'USD');
+       const currencyCode = tx.currency || (rate !== 1 ? 'FX' : 'USD');
        
        if (rate !== 1 || (currencyCode !== 'USD' && currencyCode !== 'FX')) {
           sourceTransactionIds.add(tx.id);

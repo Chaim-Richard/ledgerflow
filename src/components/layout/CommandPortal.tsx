@@ -44,15 +44,15 @@ interface CommandPortalProps {
     closeHealthCheck: () => void;
     closeEntanglement: () => void;
     closeArchitecture: () => void;
-    handleAIQuery: (q: string) => Promise<any>;
-    handleFilter: (f: any) => void;
-    handleQuickAdd: (d: any) => void;
-    handleImportTransactions: (t: any[]) => void;
+    handleAIQuery: (q: string) => Promise<unknown>;
+    handleFilter: (f: import("../../types").FilterCriteria) => void;
+    handleQuickAdd: (d: Partial<import("../../types").Transaction>) => void;
+    handleImportTransactions: (t: Parameters<React.ComponentProps<typeof StatementImporter>['onImport']>[0]) => void;
     handleIntegrityAction: (a: string) => void;
     handleSelectTemplate: (id: string) => void;
     handleOpenAIBlueprint: () => void;
     handleSaveCurrentTemplate: () => void;
-    handleApplyAITemplate: (t: any) => void;
+    handleApplyAITemplate: (t: import("../../services/aiService").GeneratedBlueprint) => void;
   };
 }
 
@@ -72,7 +72,7 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
   const baseCurrency = currentWorkspace?.currency || 'USD';
   const currentTemplateId = currentWorkspace?.businessType || 'generic';
   
-  const categories = Array.from(new Set(accounts.filter((a: any) => a.type === 'income' || a.type === 'expense').map((a: any) => a.name)));
+  const categories = Array.from(new Set(accounts.filter((a) => a.type === 'income' || a.type === 'expense').map((a) => a.name)));
   
   return (
     <Suspense fallback={null}>
@@ -91,7 +91,7 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
           onAdd={handlers.handleQuickAdd}
           categories={categories}
           accounts={accounts}
-          projects={projects.map((p: any) => p.name)}
+          projects={projects.map((p) => p.name)}
           autoRules={autoRules}
           patternCache={patternCache}
         />

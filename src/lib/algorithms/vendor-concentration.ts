@@ -10,7 +10,7 @@ export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'topN', label: 'Top N Vendors to Analyze', min: 3, max: 20, step: 1, defaultValue: 5 }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "topN": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounts } = ctx;
     const topN = inputs.topN ?? 5;
     const vendorSpend: Record<string, number> = {};
@@ -27,7 +27,7 @@ export const VENDOR_CONCENTRATION_ALGO: AlgorithmDefinition = {
          return acc.type === 'expense' || acc.type === 'cost_of_goods' || catLower === 'cogs' || catLower === 'expense' || catLower === 'direct costs';
       });
 
-      if (isExpense || isOutflow(tx, accounts as any)) {
+      if (isExpense || isOutflow(tx, accounts as unknown as import("../../types").ChartAccount[] | Map<string, import("../../types").ChartAccount> | undefined)) {
          const payee = (tx.payee || tx.description || 'Unknown Vendor').toUpperCase().trim();
          if (!vendorSpend[payee]) vendorSpend[payee] = 0;
          

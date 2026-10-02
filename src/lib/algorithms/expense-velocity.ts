@@ -26,7 +26,7 @@ export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
       defaultValue: 7
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "spikeThresholdPct": number; "movingAverageDays": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounts, accounting } = ctx;
     const threshold = (inputs['spikeThresholdPct'] ?? 50) / 100;
     const windowDays = Math.max(1, inputs['movingAverageDays'] ?? 7);
@@ -55,7 +55,7 @@ export const EXPENSE_VELOCITY_ALGO: AlgorithmDefinition = {
       }
 
       // If no dedicated expense accounts identified, fallback to explicit expense transaction types
-      if (txExpenseCents === 0 && (tx.type === 'expense' || (tx.type as any) === 'cost_of_goods')) {
+      if (txExpenseCents === 0 && (tx.type === 'expense' || (tx.type as string) === 'cost_of_goods')) {
         txExpenseCents = Math.abs(tx.totalAmountCents || 0);
       }
 

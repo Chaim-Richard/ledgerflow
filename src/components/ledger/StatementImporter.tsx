@@ -144,14 +144,14 @@ export default function StatementImporter({
         if (result) {
           results = [{
             date: result.date || getLocalDateISO(),
-            description: result.vendorName,
+            description: result.vendorName as string,
             amountCents: result.totalAmountCents,
             categorySuggestion: result.categorySuggestion,
             lines: result.lines || []
           }];
         }
         if (results && results.length > 0) {
-          processResults(results);
+          processResults(results as unknown as StatementResult[]);
           toast.success(`Analytical Intelligence extracted ${results.length} nodes from ${file.name}`, { id: loader });
         } else {
           toast.error('AI was unable to identify fiscal nodes in this file.', { id: loader });
@@ -195,9 +195,9 @@ export default function StatementImporter({
           toast.error('File appears empty or unreadable.', { id: loader });
         }
       } else {
-        results = await aiService.parseStatement(file, businessContext, undefined, patternCache, labels);
+        results = await aiService.parseStatement(file, businessContext, undefined, patternCache, labels) as unknown as StatementResult[];
         if (results && results.length > 0) {
-          processResults(results);
+          processResults(results as unknown as StatementResult[]);
           toast.success(`Analytical Intelligence extracted ${results.length} nodes from ${file.name}`, { id: loader });
         } else {
           toast.error('AI was unable to identify fiscal nodes in this file.', { id: loader });
@@ -263,7 +263,7 @@ export default function StatementImporter({
     });
 
     setSkippedCount(skipped);
-    processResults(results);
+    processResults(results as unknown as StatementResult[]);
     if (results.length > 0 && csvData[0]) saveColumnLayout(csvData[0], mapping as ColumnMapping);
   };
 
@@ -297,10 +297,10 @@ export default function StatementImporter({
       const labels = accounts.map(a => a.name);
       const results = IntentResolver.resolveEntry(rawText, { accounts: accounts.map(a => ({ id: a.id, name: a.name })), ruleCache: patternCache });
       if (results && results.length > 0) {
-        processResults(results);
+        processResults(results as unknown as StatementResult[]);
       } else {
         const fallbackResults = await aiService.parseStatement(rawText, businessContext, undefined, patternCache, labels);
-        processResults(fallbackResults);
+        processResults(fallbackResults as unknown as StatementResult[]);
       }
     } catch (error) {
       console.error("Parsing error:", error);

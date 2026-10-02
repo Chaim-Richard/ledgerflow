@@ -11,7 +11,7 @@ describe('Financial Accounting Golden-Path Test Suite', () => {
   test('Currency formatting produces clean Intl representations', () => {
     assert.equal(formatCurrency(123456), '$1,234.56');
     assert.equal(formatCurrency(0), '$0.00');
-    assert.equal(formatCurrency(null as any), '$0.00');
+    assert.equal(formatCurrency(null as unknown as number), '$0.00');
     assert.equal(formatDollars(1234.56), '$1,234.56');
   });
 

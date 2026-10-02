@@ -1,3 +1,4 @@
+import type { Transaction, ChartAccount } from '../../types';
 import React from 'react';
 import { motion } from 'motion/react';
 import { Clipboard, X } from 'lucide-react';
@@ -8,8 +9,8 @@ interface SelectionBarProps {
   avgAmount: number;
   onCopy: () => void;
   onClear: () => void;
-  onBulkUpdate: (updates: any) => void;
-  accounts: any[];
+  onBulkUpdate: (updates: Partial<Transaction> & { accountId?: string }) => void;
+  accounts: ChartAccount[];
   formatCurrency: (cents: number) => string;
 }
 

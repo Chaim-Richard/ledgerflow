@@ -76,12 +76,12 @@ describe('AutoRule Schema & Security Guard Suite (Prompt D)', () => {
 
     assert.throws(
       () => testValidateCategory('NonExistentCategory', validCategories),
-      (err: any) => err.status === 422 && err.message.includes('NonExistentCategory')
+      (err: unknown) => (err as Error & { status: number }).status === 422 && (err as Error).message.includes('NonExistentCategory')
     );
 
     assert.throws(
       () => testValidateProject('NonExistentProject', validProjects),
-      (err: any) => err.status === 422 && err.message.includes('NonExistentProject')
+      (err: unknown) => (err as Error & { status: number }).status === 422 && (err as Error).message.includes('NonExistentProject')
     );
   });
 });

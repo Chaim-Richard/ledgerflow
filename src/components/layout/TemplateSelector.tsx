@@ -95,7 +95,7 @@ export default function TemplateSelector({
 
   if (!isOpen) return null;
 
-  const icons: Record<string, any> = {
+  const icons: Record<string, React.ElementType> = {
     creative: Palette,
     retail: ShoppingCart,
     saas: Cloud,

@@ -49,7 +49,7 @@ describe('FX Currency Rounding & Role Resolution', () => {
 
   it('guarantees all business templates include an fx_rounding account', () => {
     for (const [key, template] of Object.entries(BUSINESS_TEMPLATES)) {
-      const roundingAcc = template.accounts.find(a => resolveAccountRole(a as any) === 'fx_rounding');
+      const roundingAcc = template.accounts.find(a => resolveAccountRole(a as unknown as Parameters<typeof resolveAccountRole>[0]) === 'fx_rounding');
       assert.ok(roundingAcc, `Template '${key}' is missing default fx_rounding account`);
       assert.equal(roundingAcc.code, '8999');
     }
@@ -77,7 +77,7 @@ describe('FX Currency Rounding & Role Resolution', () => {
     };
 
     assert.throws(() => {
-      LedgerEngine.computeDimensionalBalances(accountsWithoutRounding, [tx as any]);
+      LedgerEngine.computeDimensionalBalances(accountsWithoutRounding, [tx as unknown as Parameters<typeof LedgerEngine.computeDimensionalBalances>[1][number]]);
     }, /no FX rounding account/i);
   });
 });

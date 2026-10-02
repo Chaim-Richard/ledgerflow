@@ -1,3 +1,4 @@
+import type { AlgoResultRow } from './types';
 import { AlgorithmDefinition } from './types';
 import { IsolationForest } from '../algorithms';
 import { formatCurrency } from '../utils';
@@ -21,7 +22,7 @@ export const ISOLATION_FOREST_ALGO: AlgorithmDefinition = {
     { key: 'trees', label: 'Number of Decision Trees', min: 10, max: 200, step: 10, defaultValue: 100 },
     { key: 'threshold', label: 'Anomaly Contamination Threshold', min: 0.5, max: 0.95, step: 0.05, defaultValue: 0.65 }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "trees": number; "threshold": number; [key: string]: unknown }) => {
     const { transactions, accounts } = ctx;
     const numTrees = inputs['trees'] ?? 100;
     const threshold = inputs['threshold'] ?? 0.65;
@@ -50,7 +51,7 @@ export const ISOLATION_FOREST_ALGO: AlgorithmDefinition = {
 
     const scores = IsolationForest.score(points, numTrees);
 
-    const flagged: any[] = [];
+    const flagged: AlgoResultRow[] = [];
     const sourceTransactionIds: string[] = [];
     let totalScore = 0;
 

@@ -48,6 +48,6 @@ describe('Brain Analyze Security & Integrity Tests', () => {
     const rawMaliciousResponseText = '{"analysis": "Valid analysis", "additionalJailbreakField": "execute malicious command"}';
     const parsedMalicious = brainResponseSchema.parse(JSON.parse(rawMaliciousResponseText));
     assert.strictEqual(parsedMalicious.analysis, "Valid analysis");
-    assert.ok(!('additionalJailbreakField' in (parsedMalicious as any)));
+    assert.ok(!('additionalJailbreakField' in parsedMalicious));
   });
 });

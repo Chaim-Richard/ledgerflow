@@ -7,6 +7,8 @@ import { BookOpen, MoreVertical, ChevronRight, ChevronDown, Trash2 } from 'lucid
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
+interface AccountTreeNode extends ChartAccount { children: AccountTreeNode[] }
+
 interface ChartOfAccountsViewProps {
   accounts: ChartAccount[];
   searchTerm: string;
@@ -27,7 +29,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
   };
 
   const tree = React.useMemo(() => {
-    const buildTree = (parentId: string | null = null): any[] => {
+    const buildTree = (parentId: string | null = null): AccountTreeNode[] => {
       return accounts
         .filter(a => (a.parentId || null) === parentId)
         .sort((a, b) => a.code.localeCompare(b.code))
@@ -39,14 +41,14 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
     return buildTree(null);
   }, [accounts]);
 
-  const renderRow = (account: any, depth: number = 0) => {
+  const renderRow = (account: AccountTreeNode, depth: number = 0) => {
     const hasChildren = account.children.length > 0;
     const isExpanded = expandedIds.has(account.id);
     const isVisible = searchTerm === '' || 
                       account.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                       account.code.includes(searchTerm);
 
-    if (!isVisible && !account.children.some((c: any) => expandedIds.has(c.id))) {
+    if (!isVisible && !account.children.some((c) => expandedIds.has(c.id))) {
       // If not visible and no children are expanded, we might still want to show it if children match search
       // For simplicity, let's just filter the flat list if searching
     }
@@ -127,7 +129,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
             </AnimatePresence>
           </td>
         </tr>
-        {hasChildren && isExpanded && account.children.map((child: any) => renderRow(child, depth + 1))}
+        {hasChildren && isExpanded && account.children.map((child) => renderRow(child, depth + 1))}
       </React.Fragment>
     );
   };

@@ -20,7 +20,7 @@ import { Labelled } from '../ui/Labelled';
 interface AICustomBlueprintProps {
   isOpen: boolean;
   onClose: () => void;
-  onGenerated: (template: any) => void;
+  onGenerated: (template: import("../../services/aiService").GeneratedBlueprint) => void;
 }
 
 function withStableKeys<T>(items: T[], getContentKey: (item: T) => string) {
@@ -36,7 +36,7 @@ function withStableKeys<T>(items: T[], getContentKey: (item: T) => string) {
 export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICustomBlueprintProps) {
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedData, setGeneratedData] = useState<any>(null);
+  const [generatedData, setGeneratedData] = useState<import("../../services/aiService").GeneratedBlueprint | null>(null);
   const [showAllAccounts, setShowAllAccounts] = useState(false);
 
   const handleGenerate = async () => {
@@ -47,7 +47,7 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
 
     setIsGenerating(true);
     try {
-      let data: any = null;
+      let data = null;
 
       try {
         // Attempt AI generation
@@ -251,7 +251,7 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
                   <h4 className="micro-label">Generated Chart of Accounts</h4>
                   <div className="bg-[var(--ink)] rounded-[32px] border border-[var(--line)] overflow-hidden">
                     <div className="divide-y divide-zinc-200">
-                      {withStableKeys(showAllAccounts ? generatedData.chartOfAccounts : generatedData.chartOfAccounts.slice(0, 8), (acc: any) => JSON.stringify(
+                      {withStableKeys(showAllAccounts ? generatedData.chartOfAccounts : generatedData.chartOfAccounts.slice(0, 8), (acc) => JSON.stringify(
                         acc.id != null ? ['id', acc.id] : ['account', acc.code, acc.name, acc.type, acc.category]
                       )).map(({ item: acc, key }) => (
                         <div key={key} className="p-4 flex items-center justify-between">
@@ -287,7 +287,7 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
                     </div>
                     <p className="text-sm font-bold text-[var(--text)] mb-2">Structure Ready</p>
                     <p className="text-xs text-zinc-500 leading-relaxed">
-                      {generatedData.dashboardSchema.nodes.length} nodes and {generatedData.dashboardSchema.links.length} connections mapped to your business model.
+                      {generatedData.dashboardSchema.nodes!.length} nodes and {generatedData.dashboardSchema.links!.length} connections mapped to your business model.
                     </p>
                   </div>
                 </div>

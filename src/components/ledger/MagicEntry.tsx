@@ -10,11 +10,11 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import { isCashAccount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 
-export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
+export default function MagicEntry({ isOpen, onClose, onAdd }: { isOpen?: boolean; onClose?: () => void; onAdd?: (data: Partial<import("../../types").Transaction> & { amount: number }) => void; categories?: string[]; accounts?: import("../../types").ChartAccount[]; projects?: string[]; autoRules?: import("../../types").AutoRule[]; patternCache?: Record<string, unknown> }) {
   const formId = useId();
   const [isAiParsing, setIsAiParsing] = useState(false);
   const [text, setText] = useState('');
-  const [parsed, setParsed] = useState<any>(null);
+  const [parsed, setParsed] = useState<{ action?: string; amount: number; description?: string; method?: string; dateStr?: string } | null>(null);
   const [, setReceiptMode] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const { handleQuickAdd, handleParseReceipt } = useTransactionActions();
@@ -89,7 +89,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
          description: parsed.description,
          amount: parsed.amount,
          date: parsed.dateStr,
-         type: parsed.action
+         type: parsed.action as import("../../types").Transaction['type']
        });
     } else {
        const { accounts } = useLedgerStore.getState();
@@ -108,7 +108,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
          description: parsed.description || 'Natural Language Entry',
          totalAmountCents: amt,
          date: parsed.dateStr || getLocalDateISO(),
-         type: actionType,
+         type: actionType as import("../../types").Transaction['type'],
          lines: [
            {
              accountId: targetAcc.id,

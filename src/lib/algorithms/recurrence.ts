@@ -79,7 +79,7 @@ export const RECURRENCE_DETECTION: AlgorithmDefinition = {
   inputs: [
     { key: 'minOccurrences', label: 'Min Occurrences', min: 2, max: 10, step: 1, defaultValue: 3 }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "minOccurrences": number; [key: string]: unknown }) => {
     const { transactions } = ctx;
     // We will use the live transactions
     const start = performance.now();

@@ -18,6 +18,6 @@ describe('formatDecimal tests', () => {
   });
   test('formats invalid', () => {
     assert.equal(formatDecimal(NaN), '0.00');
-    assert.equal(formatDecimal(null as any), '0.00');
+    assert.equal(formatDecimal(null as unknown as number), '0.00');
   });
 });

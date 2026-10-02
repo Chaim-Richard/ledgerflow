@@ -32,6 +32,9 @@ function linkedReportParams(): URLSearchParams {
   return new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search);
 }
 
+const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const quarterNames = ["Q1", "Q2", "Q3", "Q4"];
+
 const Reports = React.memo(() => {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
@@ -79,8 +82,7 @@ const Reports = React.memo(() => {
     return maxYear || workspaceYearMonth().year;
   });
 
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const quarterNames = ["Q1", "Q2", "Q3", "Q4"];
+
 
   useMemo(() => {
     if (!transactions || transactions.length === 0) return [workspaceYearMonth().month];
@@ -149,7 +151,7 @@ const Reports = React.memo(() => {
         setSelectedYear(maxYear);
       }
     }
-  }, [transactions, selectedYear]);
+  }, [transactions, selectedYear, linked.year]);
 
   useEffect(() => {
     if (transactions && transactions.length > 0) {
@@ -167,7 +169,7 @@ const Reports = React.memo(() => {
         setSelectedMonth(maxMonth);
       }
     }
-  }, [transactions, selectedYear, selectedMonth]);
+  }, [transactions, selectedYear, selectedMonth, linked.month]);
 
   const filteredReportTransactions = useMemo(() => {
     if (!transactions) return [];
@@ -358,7 +360,7 @@ const Reports = React.memo(() => {
                 onDrillDown: (name: string) => setDrillDownAccount(name)
               };
 
-              const reportTitle = typeof tab.label === 'string' ? tab.label : ((tab.label as any)?.en || tab.id);
+              const reportTitle = typeof tab.label === 'string' ? tab.label : (tab.label?.en || tab.id);
 
               return (
                 <ViewErrorBoundary key={tab.id} viewName={reportTitle}>

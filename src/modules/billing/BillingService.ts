@@ -46,10 +46,10 @@ export const useBillingStore = create<BillingState>()(
               });
             }
           }
-        } catch (e: any) {
+        } catch (e) {
           // Gracefully ignore aborted fetch on component unmount / dev reload
-          if (e?.name !== 'AbortError') {
-            console.debug("Registration status offline fallback enabled:", e?.message || e);
+          if ((e as Error)?.name !== 'AbortError') {
+            console.debug("Registration status offline fallback enabled:", (e as Error)?.message || e);
           }
         }
       },

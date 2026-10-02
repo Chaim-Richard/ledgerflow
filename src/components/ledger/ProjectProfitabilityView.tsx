@@ -79,7 +79,7 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
            {['all', 'high-yield', 'loss'].map((mode) => (
              <button
                key={mode}
-               onClick={() => setFilterMode(mode as any)}
+               onClick={() => setFilterMode(mode as unknown as React.SetStateAction<"all" | "high-yield" | "loss">)}
                className={cn(
                  "px-6 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all",
                  filterMode === mode ? "bg-slate-900 text-white shadow-lg" : "bg-[var(--surface)] text-slate-500 hover:bg-[var(--ink)] border border-[var(--line)]"

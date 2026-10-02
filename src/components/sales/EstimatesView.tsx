@@ -25,7 +25,7 @@ export default function EstimatesView() {
   const [amountDollars, setAmountDollars] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previewEstimate, setPreviewEstimate] = useState<any | null>(null);
+  const [previewEstimate, setPreviewEstimate] = useState<import("../../types").Estimate | null>(null);
 
   const handleCreateEstimate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,14 +83,14 @@ export default function EstimatesView() {
       setCustomerId('');
       setDescription('');
       setAmountDollars('');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create estimate');
+    } catch (err) {
+      toast.error((err as Error).message || 'Failed to create estimate');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleConvertToInvoice = async (est: any) => {
+  const handleConvertToInvoice = async (est: import("../../types").Estimate & { currency?: string; description?: string }) => {
     if (!currentWorkspaceId || !user || est.status === 'converted') return;
 
     try {
@@ -140,8 +140,8 @@ export default function EstimatesView() {
       });
 
       toast.success(`Estimate converted to Invoice #${invData.number}!`);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to convert estimate');
+    } catch (err) {
+      toast.error((err as Error).message || 'Failed to convert estimate');
     }
   };
 

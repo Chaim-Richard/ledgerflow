@@ -27,7 +27,7 @@ export const MONTE_CARLO_ALGO: AlgorithmDefinition = {
       defaultValue: 50 // 5000 iterations
     }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "simulationDays": number; "iterations": number; [key: string]: unknown }) => {
     const { transactions, accounts } = ctx;
     const horizon = inputs.simulationDays ?? 90;
     const runs = (inputs.iterations ?? 50) * 100;

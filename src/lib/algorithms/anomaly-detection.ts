@@ -1,3 +1,4 @@
+import type { AlgoResultRow } from './types';
 import { parseLocalDate, formatCurrency } from '../../lib/utils';
 import { Transaction } from '../../types';
 import { AlgorithmDefinition } from './types';
@@ -53,7 +54,7 @@ function findDuplicates(transactions: readonly Transaction[], windowDays = 3) {
     groups.set(key, group);
   }
 
-  const candidates: any[] = [];
+  const candidates: ({ transactionIds: string[]; date: string; amountCents: number; description: string; reason: string })[] = [];
   for (const group of groups.values()) {
     if (group.length < 2) continue;
     const sorted = [...group].sort((a, b) => a.date.localeCompare(b.date));
@@ -129,7 +130,7 @@ export const ANOMALY_DETECTION_ALGO: AlgorithmDefinition = {
     { key: 'windowDays', label: 'Duplicate Window (Days)', min: 1, max: 14, step: 1, defaultValue: 3 },
     { key: 'zScoreThreshold', label: 'Outlier Z-Score Threshold', min: 2.0, max: 5.0, step: 0.1, defaultValue: 3.5 }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "windowDays": number; "zScoreThreshold": number; [key: string]: unknown }) => {
     const { transactions, accounts, accounting } = ctx;
     const windowDays = inputs['windowDays'] ?? 3;
     const zScoreThreshold = inputs['zScoreThreshold'] ?? 3.5;
@@ -156,7 +157,7 @@ export const ANOMALY_DETECTION_ALGO: AlgorithmDefinition = {
             const group = byAccountLines.get(line.accountId) ?? [];
             group.push({
               transactionId: tx.id,
-              lineId: (line as any).id || `${tx.id}-${idx}`,
+              lineId: (line as typeof line & { id?: string }).id || `${tx.id}-${idx}`,
               date: tx.date,
               amountCents: amt,
               description: line.description || tx.description || 'Expense line'
@@ -167,8 +168,8 @@ export const ANOMALY_DETECTION_ALGO: AlgorithmDefinition = {
       });
     }
 
-    const allOutliers: any[] = [];
-    const rows: any[] = [];
+    const allOutliers= [];
+    const rows: (AlgoResultRow)[] = [];
 
     for (const [accountId, items] of byAccountLines.entries()) {
       const accOutliers = findAccountLineOutliers(items, zScoreThreshold);

@@ -112,10 +112,10 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
                         >
                           <div className="flex items-center gap-4">
                             <div className="w-8 h-8 rounded-lg bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-600 font-black">
-                              {(((tab as any)?.label?.[language] || (tab as any)?.label?.['en']) || (tab as any)?.name || tabId).charAt(0)}
+                              {(((tab as typeof tab & { name?: string })?.label?.[language] || (tab as typeof tab & { name?: string })?.label?.['en']) || (tab as typeof tab & { name?: string })?.name || tabId).charAt(0)}
                             </div>
                             <span className="text-sm font-semibold text-[var(--text)]">
-                              {tab ? (((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id) : tabId}
+                              {tab ? (((tab as typeof tab & { name?: string }).label?.[language] || (tab as typeof tab & { name?: string }).label?.['en']) || (tab as typeof tab & { name?: string }).name || tab.id) : tabId}
                             </span>
                           </div>
                           

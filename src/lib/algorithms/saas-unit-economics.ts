@@ -11,7 +11,7 @@ export const SAAS_UNIT_ECONOMICS_ALGO: AlgorithmDefinition = {
     { key: 'assumedChurnPct', label: 'Assumed Monthly Churn (%)', min: 1, max: 20, step: 1, defaultValue: 3 },
     { key: 'newCustomers', label: 'New Customers Acquired (Count)', min: 1, max: 1000, step: 10, defaultValue: 50 }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "assumedChurnPct": number; "newCustomers": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounts } = ctx;
     const churnRate = (inputs.assumedChurnPct ?? 3) / 100;
     const newCustomers = inputs.newCustomers ?? 50;

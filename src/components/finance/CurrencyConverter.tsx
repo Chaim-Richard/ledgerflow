@@ -39,8 +39,8 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to run revaluation');
       setRevalResult(data.message);
-    } catch (e: any) {
-      setRevalResult('Error: ' + e.message);
+    } catch (e) {
+      setRevalResult('Error: ' + (e as Error).message);
     } finally {
       setIsRevaluing(false);
     }

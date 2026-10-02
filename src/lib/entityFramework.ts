@@ -12,7 +12,7 @@ export interface EntityPermissionDef {
   delete?: string[];
 }
 
-export interface EntityDefinition<T extends z.ZodObject<any>> {
+export interface EntityDefinition<T extends z.ZodObject<z.ZodRawShape>> {
   name: string;
   collection: string;
   schema: T;
@@ -21,20 +21,20 @@ export interface EntityDefinition<T extends z.ZodObject<any>> {
   permissions?: EntityPermissionDef;
 }
 
-const entityRegistry = new Map<string, EntityDefinition<any>>();
+const entityRegistry = new Map<string, EntityDefinition<z.ZodObject<z.ZodRawShape>>>();
 
-export function defineEntity<T extends z.ZodObject<any>>(
+export function defineEntity<T extends z.ZodObject<z.ZodRawShape>>(
   config: EntityDefinition<T>
 ): EntityDefinition<T> {
   entityRegistry.set(config.name, config);
   return config;
 }
 
-export function getEntityRegistry(): Map<string, EntityDefinition<any>> {
+export function getEntityRegistry(): Map<string, EntityDefinition<z.ZodObject<z.ZodRawShape>>> {
   return entityRegistry;
 }
 
-export function getEntityDefinition(name: string): EntityDefinition<any> | undefined {
+export function getEntityDefinition(name: string): EntityDefinition<z.ZodObject<z.ZodRawShape>> | undefined {
   return entityRegistry.get(name);
 }
 

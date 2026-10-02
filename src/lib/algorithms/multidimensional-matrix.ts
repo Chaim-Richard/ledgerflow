@@ -60,16 +60,16 @@ export const MULTIDIMENSIONAL_MATRIX: AlgorithmDefinition = {
   inputs: [
     { key: 'minVolume', label: 'Minimum Volume Filter ($)', min: 0, max: 10000, step: 100, defaultValue: 500 }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "minVolume": number; [key: string]: unknown }) => {
     const { transactions } = ctx;
     // Process real transactions directly
     const processedTxs = transactions.map(t => {
       // If no explicit tags exist, check project, location, or class as dynamic dimensions
       if ((!t.tags || t.tags.length === 0) && (!t.lines || !t.lines.some(l => l.tags && l.tags.length > 0))) {
         const derivedTags: string[] = [];
-        if (t.project || (t as any).projectId) derivedTags.push(`project:${t.project || (t as any).projectId}`);
-        if ((t as any).location) derivedTags.push(`location:${(t as any).location}`);
-        if ((t as any).class) derivedTags.push(`class:${(t as any).class}`);
+        if (t.project || t.projectId) derivedTags.push(`project:${t.project || t.projectId}`);
+        if ((t as typeof t & { location?: string }).location) derivedTags.push(`location:${(t as typeof t & { location?: string }).location}`);
+        if ((t as typeof t & { class?: string }).class) derivedTags.push(`class:${(t as typeof t & { class?: string }).class}`);
         if (derivedTags.length > 0) {
           return { ...t, tags: derivedTags };
         }

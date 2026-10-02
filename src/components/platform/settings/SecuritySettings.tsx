@@ -20,7 +20,7 @@ export default function SecuritySettings() {
   const user = useAuthStore(state => state.user);
   const txActions = useTransactionActions();
   
-  const [mfaSecret, setMfaSecret] = useState<any>(null);
+  const [mfaSecret, setMfaSecret] = useState<Awaited<ReturnType<typeof TotpMultiFactorGenerator.generateSecret>> | null>(null);
   const [mfaCode, setMfaCode] = useState('');
   const [isEnrollingMfa, setIsEnrollingMfa] = useState(false);
 
@@ -31,8 +31,8 @@ export default function SecuritySettings() {
       const mfaSession = await multiFactor(user).getSession();
       const secret = await TotpMultiFactorGenerator.generateSecret(mfaSession);
       setMfaSecret(secret);
-    } catch (e: any) {
-      toast.error('Failed to start MFA: ' + e.message);
+    } catch (e) {
+      toast.error('Failed to start MFA: ' + (e as Error).message);
       setIsEnrollingMfa(false);
     }
   };
@@ -46,8 +46,8 @@ export default function SecuritySettings() {
       setMfaSecret(null);
       setMfaCode('');
       setIsEnrollingMfa(false);
-    } catch (e: any) {
-      toast.error('Failed to enroll MFA: ' + e.message);
+    } catch (e) {
+      toast.error('Failed to enroll MFA: ' + (e as Error).message);
     }
   };
 
@@ -69,7 +69,7 @@ export default function SecuritySettings() {
     setIsResetting(true);
     try {
         await txActions.handleResetWorkspace();
-    } catch (err: any) {
+    } catch (err) {
         const described = describeError(err, 'delete');
         toast.error(described.title, { description: described.remedy });
     } finally {
@@ -206,8 +206,8 @@ export default function SecuritySettings() {
                       });
                       if (!res.ok) throw new Error(await res.text());
                       toast.success('Sessions revoked. You will be signed out.');
-                    } catch (err: any) {
-                      toast.error('Failed to revoke sessions: ' + err.message);
+                    } catch (err) {
+                      toast.error('Failed to revoke sessions: ' + (err as Error).message);
                     }
                   }}
                   className="px-6 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--ink)] transition-all flex items-center gap-2 cursor-pointer shrink-0"

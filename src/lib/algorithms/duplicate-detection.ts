@@ -18,7 +18,7 @@ export const DUPLICATE_DETECTION_ALGO: AlgorithmDefinition = {
       defaultValue: 3
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "timeWindowDays": number; [key: string]: unknown }): AlgoResult => {
     const { transactions } = ctx;
     const timeWindowDays = inputs['timeWindowDays'] ?? 3;
     const windowMs = timeWindowDays * 24 * 60 * 60 * 1000;

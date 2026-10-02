@@ -13,7 +13,7 @@ interface AcceptInviteViewProps {
 
 export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initialToken, onSuccess }) => {
   const [token, setToken] = useState<string>(initialToken || '');
-  const [inviteDetails, setInviteDetails] = useState<any>(null);
+  const [inviteDetails, setInviteDetails] = useState<{ email: string; workspaceName: string; role: string } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<boolean>(false);
@@ -52,8 +52,8 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
         } else {
           setError(data.message || 'Invalid or expired invite token');
         }
-      } catch (err: any) {
-        setError(err.message || 'Failed to connect to invite service');
+      } catch (err) {
+        setError((err as Error).message || 'Failed to connect to invite service');
       } finally {
         setLoading(false);
       }
@@ -94,13 +94,13 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
 
         setSafeTimeout(() => {
           if (onSuccess) onSuccess();
-          else if (setActiveTab) setActiveTab('executive-overview' as any);
+          else if (setActiveTab) setActiveTab('executive-overview' as unknown as string);
         }, 1200);
       } else {
         toast.error('Failed to accept invite', { description: data.message || 'An error occurred' });
       }
-    } catch (err: any) {
-      toast.error('Acceptance error', { description: err.message });
+    } catch (err) {
+      toast.error('Acceptance error', { description: (err as Error).message });
     } finally {
       setAccepting(false);
     }
@@ -172,7 +172,7 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
                 </p>
                 <button
                   onClick={() => {
-                    if (setActiveTab) setActiveTab('auth' as any);
+                    if (setActiveTab) setActiveTab('auth' as unknown as string);
                   }}
                   className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs rounded-xl transition-all"
                 >

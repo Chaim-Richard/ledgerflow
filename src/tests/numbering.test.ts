@@ -1,11 +1,14 @@
+import type { AddressInfo } from './helpers/mockTypes';
+import type { TestDocument, TestDocumentReference, TestTransaction } from './helpers/mockTypes';
+import type { ListeningServer, TestRequest } from './helpers/mockTypes';
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { allocateNextNumber } from '../server/routes/workspaceRoutes';
 import type { Firestore } from '../server/db/firestore';
 
 class MockTransactionalDb {
-  private data: Map<string, any> = new Map();
-  private transactionQueue: Promise<any> = Promise.resolve();
+  private data: Map<string, TestDocument> = new Map();
+  private transactionQueue: Promise<unknown> = Promise.resolve();
 
   collection(collName: string) {
     return {
@@ -20,27 +23,27 @@ class MockTransactionalDb {
     };
   }
 
-  async runTransaction<T>(updateFunction: (tx: any) => Promise<T>): Promise<T> {
+  async runTransaction<T>(updateFunction: (tx: TestTransaction) => Promise<T>): Promise<T> {
     const resultPromise = this.transactionQueue.then(async () => {
-      const snapshotMap = new Map<string, any>();
+      const snapshotMap = new Map<string, TestDocument>();
       for (const [k, v] of this.data.entries()) {
         snapshotMap.set(k, JSON.parse(JSON.stringify(v)));
       }
 
       const tx = {
-        get: async (docRef: any) => {
+        get: async (docRef: TestDocumentReference) => {
           const val = snapshotMap.get(docRef.key);
           return {
             exists: val !== undefined,
             data: () => val ? JSON.parse(JSON.stringify(val)) : undefined
           };
         },
-        update: (docRef: any, updates: any) => {
+        update: (docRef: TestDocumentReference, updates: TestDocument) => {
           const current = snapshotMap.get(docRef.key) || {};
           const updated = { ...current, ...updates };
           snapshotMap.set(docRef.key, updated);
         },
-        set: (docRef: any, newData: any) => {
+        set: (docRef: TestDocumentReference, newData: TestDocument) => {
           snapshotMap.set(docRef.key, newData);
         }
       };
@@ -98,16 +101,16 @@ describe('Atomic Gapless Numbering Series Test Suite (Task 3)', () => {
 
     // Inject authenticated test user into req.user
     app.use((req, _res, next) => {
-      (req as any).user = { uid: 'test-user-owner', email: 'owner@example.com' };
+      (req as TestRequest).user = { uid: 'test-user-owner', email: 'owner@example.com' };
       next();
     });
 
     app.use('/api/v1/workspaces', workspaceRouter);
 
-    const server = await new Promise<any>((resolve) => {
+    const server = await new Promise<ListeningServer>((resolve) => {
       const s = app.listen(0, '127.0.0.1', () => resolve(s));
     });
-    const port = server.address().port;
+    const port = (server.address() as AddressInfo).port;
 
     try {
       // 1. Send GET request - MUST return 405 Method Not Allowed

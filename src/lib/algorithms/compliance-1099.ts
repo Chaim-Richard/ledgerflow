@@ -1,3 +1,4 @@
+import type { AlgoResultRow } from './types';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
@@ -32,7 +33,7 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
       defaultValue: 600
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "year": string; "threshold": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounting } = ctx;
     const vendors = ctx.entities?.vendors || [];
     const bills = ctx.entities?.bills || [];
@@ -41,7 +42,7 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
     const thresholdCents = (inputs['threshold'] ?? 600) * 100;
 
     // Filter to 1099 vendors
-    const eligibleVendors = vendors.filter((v: any) => v.is1099);
+    const eligibleVendors = vendors.filter((v) => v.is1099);
 
     if (eligibleVendors.length === 0) {
       return {
@@ -52,16 +53,16 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
       };
     }
 
-    const rows: any[] = [];
+    const rows: AlgoResultRow[] = [];
     const sourceTransactionIds = new Set<string>();
     let totalEligiblePayments = 0;
     let qualifyingVendorCount = 0;
 
-    eligibleVendors.forEach((vendor: any) => {
+    eligibleVendors.forEach((vendor) => {
       let paidCents = 0;
 
       // 1. Find all paid bills for this vendor paid in the target year (cash basis)
-      bills.forEach((bill: any) => {
+      bills.forEach((bill) => {
         if (bill.vendorId === vendor.id && (bill.status === 'paid' || bill.status === 'partially_paid')) {
           // Check actual payment date (cash basis)
           const paymentDateStr = bill.paidAt || bill.paymentDate || bill.paidDate || bill.date || '';
@@ -76,7 +77,7 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
       transactions.forEach(tx => {
         if (!isPostable(tx) || !tx.date.startsWith(year)) return;
         
-        const isVendorMatch = (tx as any).vendorId === vendor.id ||
+        const isVendorMatch = (tx as typeof tx & { vendorId?: string }).vendorId === vendor.id ||
           (tx.payee && tx.payee.toLowerCase().includes(vendor.name.toLowerCase())) ||
           (tx.description && tx.description.toLowerCase().includes(vendor.name.toLowerCase()));
 
@@ -87,7 +88,7 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
 
           if (isCashOut && hasExpense) {
             // Avoid double counting if transaction was generated from a bill
-            const isBillTx = (tx as any).billId || (tx as any).source === 'bill';
+            const isBillTx = (tx as typeof tx & { billId?: string }).billId || (tx as typeof tx & { source?: string }).source === 'bill';
             if (!isBillTx) {
               const expCents = tx.lines
                 .filter(l => (l.amountCents || 0) > 0)

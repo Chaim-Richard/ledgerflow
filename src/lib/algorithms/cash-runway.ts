@@ -17,7 +17,7 @@ export const CASH_RUNWAY_ALGO: AlgorithmDefinition = {
       defaultValue: 3
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "burnWindowMonths": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounts, accounting } = ctx;
     const burnWindowMonths = inputs['burnWindowMonths'] ?? 3;
     

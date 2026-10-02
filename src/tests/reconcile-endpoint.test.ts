@@ -1,3 +1,6 @@
+import type { TestDocument, TestDocumentReference, TestResponseBody } from './helpers/mockTypes';
+import type { AuditLog } from '../types';
+import type { TestReconcileTransaction } from './helpers/mockTypes';
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import type express from 'express';
@@ -5,7 +8,7 @@ import type { Firestore } from '../server/db/firestore';
 import { handleReconcile } from '../server/routes/transactionRoutes';
 
 class MockDb {
-  public data: Map<string, any> = new Map();
+  public data: Map<string, TestDocument> = new Map();
 
   collection(collName: string) {
     return {
@@ -28,14 +31,14 @@ class MockDb {
     };
   }
 
-  async runTransaction<T>(updateFunction: (tx: any) => Promise<T>): Promise<T> {
-    const snapshotMap = new Map<string, any>();
+  async runTransaction<T>(updateFunction: (tx: TestReconcileTransaction) => Promise<T>): Promise<T> {
+    const snapshotMap = new Map<string, TestDocument>();
     for (const [k, v] of this.data.entries()) {
       snapshotMap.set(k, JSON.parse(JSON.stringify(v)));
     }
 
     const tx = {
-      get: async (docRef: any) => {
+      get: async (docRef: TestDocumentReference) => {
         const val = snapshotMap.get(docRef.key);
         return {
           exists: val !== undefined,
@@ -43,18 +46,18 @@ class MockDb {
           data: () => val ? JSON.parse(JSON.stringify(val)) : undefined
         };
       },
-      update: (docRef: any, updates: any) => {
+      update: (docRef: TestDocumentReference, updates: TestDocument) => {
         const current = snapshotMap.get(docRef.key) || {};
         const updated = { ...current, ...updates };
         snapshotMap.set(docRef.key, updated);
       },
-      create: (docRef: any, newData: any) => {
+      create: (docRef: TestDocumentReference, newData: TestDocument) => {
         snapshotMap.set(docRef.key, newData);
       },
-      set: (docRef: any, newData: any) => {
+      set: (docRef: TestDocumentReference, newData: TestDocument) => {
         snapshotMap.set(docRef.key, newData);
       },
-      getAll: async (...docRefs: any[]) => {
+      getAll: async (...docRefs: TestDocumentReference[]) => {
         return docRefs.map(ref => {
           const val = snapshotMap.get(ref.key);
           return {
@@ -79,7 +82,7 @@ class MockDb {
   }
 
   getCollectionDocs(collName: string) {
-    const docs: any[] = [];
+    const docs: TestDocument[] = [];
     const prefix = `${collName}/`;
     for (const [k, v] of this.data.entries()) {
       if (k.startsWith(prefix)) {
@@ -100,7 +103,7 @@ describe('Reconcile Endpoint Test Suite (Part 2d)', () => {
     });
 
     let statusCode = 200;
-    let jsonBody: Record<string, any> | null = null;
+    let jsonBody: TestResponseBody | null = null;
 
     const req = {
       user: { uid: 'user-viewer' },
@@ -110,20 +113,20 @@ describe('Reconcile Endpoint Test Suite (Part 2d)', () => {
       }
     } as unknown as express.Request;
 
-    const res: any = {
+    const res: express.Response = {
       status: (code: number) => {
         statusCode = code;
         return res;
       },
-      json: (data: any) => {
+      json: (data: TestResponseBody) => {
         jsonBody = data;
         return res;
       }
-    };
+    } as unknown as express.Response;
 
     await handleReconcile(req, res, db as unknown as Firestore);
     assert.equal(statusCode, 403);
-    assert.ok((jsonBody as any)?.error?.includes('Forbidden'));
+    assert.ok((jsonBody as unknown as TestResponseBody)?.error?.includes('Forbidden'));
   });
 
   test('Bank line dated on or before lockDate returns 400 and writes nothing', async () => {
@@ -141,7 +144,7 @@ describe('Reconcile Endpoint Test Suite (Part 2d)', () => {
     });
 
     let statusCode = 200;
-    let jsonBody: Record<string, any> | null = null;
+    let jsonBody: TestResponseBody | null = null;
 
     const req = {
       user: { uid: 'user-owner' },
@@ -151,20 +154,20 @@ describe('Reconcile Endpoint Test Suite (Part 2d)', () => {
       }
     } as unknown as express.Request;
 
-    const res: any = {
+    const res: express.Response = {
       status: (code: number) => {
         statusCode = code;
         return res;
       },
-      json: (data: any) => {
+      json: (data: TestResponseBody) => {
         jsonBody = data;
         return res;
       }
-    };
+    } as unknown as express.Response;
 
     await handleReconcile(req, res, db as unknown as Firestore);
     assert.equal(statusCode, 400);
-    assert.ok((jsonBody as any)?.error?.includes('Period Locked'));
+    assert.ok((jsonBody as unknown as TestResponseBody)?.error?.includes('Period Locked'));
 
     const line = db.getDocData('bankLines', 'line-locked');
     assert.equal(line.status, 'pending', 'Bank line status must remain unchanged after aborted reconciliation');
@@ -204,7 +207,7 @@ describe('Reconcile Endpoint Test Suite (Part 2d)', () => {
     });
 
     let statusCode = 200;
-    let jsonBody: Record<string, any> | null = null;
+    let jsonBody: TestResponseBody | null = null;
 
     const req = {
       user: { uid: 'user-owner', email: 'owner@example.com' },
@@ -217,20 +220,20 @@ describe('Reconcile Endpoint Test Suite (Part 2d)', () => {
       }
     } as unknown as express.Request;
 
-    const res: any = {
+    const res: express.Response = {
       status: (code: number) => {
         statusCode = code;
         return res;
       },
-      json: (data: any) => {
+      json: (data: TestResponseBody) => {
         jsonBody = data;
         return res;
       }
-    };
+    } as unknown as express.Response;
 
     await handleReconcile(req, res, db as unknown as Firestore);
     assert.equal(statusCode, 200);
-    assert.equal((jsonBody as any)?.status, 'ok');
+    assert.equal((jsonBody as unknown as TestResponseBody)?.status, 'ok');
 
     const line = db.getDocData('bankLines', 'line-matched');
     assert.equal(line.status, 'pending');
@@ -239,7 +242,7 @@ describe('Reconcile Endpoint Test Suite (Part 2d)', () => {
     const tx = db.getDocData('transactions', 'tx-matched');
     assert.equal(tx.status, 'completed');
 
-    const auditLogs = db.getCollectionDocs('auditLogs');
+    const auditLogs = db.getCollectionDocs('auditLogs') as unknown as AuditLog[];
     assert.equal(auditLogs.length, 1);
     assert.equal(auditLogs[0].action, 'reconcile');
     assert.ok(auditLogs[0].details?.description?.includes('executed reconciliation batch'));

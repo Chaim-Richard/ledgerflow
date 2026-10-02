@@ -12,10 +12,10 @@ import { EmptyState } from '../ui/EmptyState';
 import { LoadingState } from '../ui/LoadingState';
 
 interface AuditTrailProps {
-  auditLogs?: any[];
+  auditLogs?: (Omit<import("../../types").AuditLog, 'uid'> & { uid?: string; targetId?: string })[];
 }
 
-const Row = ({ index, style, data }: { index: number, style: React.CSSProperties, data: { logs: any[], expandedId: string | null, setExpandedId: (id: string | null) => void } }) => {
+const Row = ({ index, style, data }: { index: number, style: React.CSSProperties, data: { logs: (Omit<import("../../types").AuditLog, 'uid'> & { uid?: string; targetId?: string })[], expandedId: string | null, setExpandedId: (id: string | null) => void } }) => {
   const log = data.logs[index];
   if (!log) return null;
 

@@ -14,7 +14,7 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'lateThresholdDays', label: 'Overdue Warning (Days)', min: 1, max: 120, step: 5, defaultValue: 30 }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "lateThresholdDays": number; [key: string]: unknown }): AlgoResult => {
     const { transactions, accounts } = ctx;
     let arPending = 0;
     let apPending = 0;

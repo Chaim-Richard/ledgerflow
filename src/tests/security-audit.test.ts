@@ -62,7 +62,7 @@ describe('Security and Integrity Deep Audit Test Suite', () => {
     };
 
     assert.doesNotThrow(() => {
-      DoubleEntryValidator.validateJournalEntry(balancedEntry as any);
+      DoubleEntryValidator.validateJournalEntry(balancedEntry as unknown as Parameters<typeof DoubleEntryValidator.validateJournalEntry>[0]);
     });
 
     const imbalancedEntry = {
@@ -77,7 +77,7 @@ describe('Security and Integrity Deep Audit Test Suite', () => {
     };
 
     assert.throws(() => {
-      DoubleEntryValidator.validateJournalEntry(imbalancedEntry as any);
+      DoubleEntryValidator.validateJournalEntry(imbalancedEntry as unknown as Parameters<typeof DoubleEntryValidator.validateJournalEntry>[0]);
     }, /Unbalanced entry/);
   });
 
@@ -93,7 +93,7 @@ describe('Security and Integrity Deep Audit Test Suite', () => {
     };
 
     assert.throws(() => {
-      DoubleEntryValidator.validateJournalEntry(singleLegEntry as any);
+      DoubleEntryValidator.validateJournalEntry(singleLegEntry as unknown as Parameters<typeof DoubleEntryValidator.validateJournalEntry>[0]);
     }, /Transaction must have at least two line items/);
   });
 

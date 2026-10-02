@@ -1,3 +1,4 @@
+import type { FilterCriteria } from '../types';
 import { useState } from 'react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -14,14 +15,14 @@ export function useAIActions() {
   const transactions = useLedgerStore(s => s.transactions);
   const uiStore = useUIStore();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [strategicInsights, setStrategicInsights] = useState<any>(null);
+  const [strategicInsights, setStrategicInsights] = useState<{ executiveSummary: string; strategicAdvice: string[]; anomalies: string[] } | null>(null);
 
   const handleAnalyzeTrends = async () => {
     if (!transactions.length) return;
     setIsAnalyzing(true);
     try {
       const { accounts } = useLedgerStore.getState();
-      const metrics = { kpis: { revenue: 1000, expenses: 500, prevExpenses: 400, totalCash: 5000, runwayMonths: 10 } } as any; 
+      const metrics = { kpis: { revenue: 1000, expenses: 500, prevExpenses: 400, totalCash: 5000, runwayMonths: 10 } } as unknown as Parameters<typeof StrategicEngine.analyze>[0]['metrics'];
       const insights = StrategicEngine.analyze({ metrics, projects: [] }, transactions, accounts);
       
       const formattedInsights = {
@@ -88,10 +89,10 @@ export function useAIActions() {
         query, 
         useLedgerStore.getState().accounts.map(a => a.name),
         useLedgerStore.getState().transactions.map(t => t.project).filter((v, i, a) => v && a.indexOf(v) === i) as string[]
-      ) as any;
+      );
       
       // Map AI response to Filter Criteria format
-      const filter: any = {};
+      const filter: FilterCriteria & { isAuditQuery?: boolean } = {};
       if (result?.category) filter.category = result.category;
       if (result?.project) filter.project = result.project;
       

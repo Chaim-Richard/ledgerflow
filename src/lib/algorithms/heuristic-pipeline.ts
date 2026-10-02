@@ -9,7 +9,7 @@ export const heuristicPipeline: AlgorithmDefinition = {
   inputs: [
     { key: 'automation', label: 'Confidence Threshold (%)', min: 10, max: 100, step: 5, defaultValue: 85 }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "automation": number; [key: string]: unknown }): AlgoResult => {
     const { transactions: txs } = ctx;
     const threshold = inputs.automation ?? 85;
 

@@ -99,9 +99,9 @@ export default function AISettings() {
       useLedgerStore.getState().setMatchingThreshold(Number(threshold));
 
       toast.success("AI Configuration synchronized persistently on cloud profile.", { id: loader });
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      toast.error(`Sync failed: ${error.message || 'Verification rejected.'}`, { id: loader });
+      toast.error(`Sync failed: ${(error as Error).message || 'Verification rejected.'}`, { id: loader });
     } finally {
       setIsUpdating(false);
     }

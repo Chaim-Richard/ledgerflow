@@ -102,7 +102,7 @@ export const TAX_SET_ASIDE_ALGO: AlgorithmDefinition = {
       defaultValue: 'c_corp'
     }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "entityType": string; [key: string]: unknown }) => {
     const { transactions, accounts } = ctx;
     const entityType = inputs['entityType'] || 'c_corp';
     const result = calculateSafeToSpend(transactions, accounts, entityType);

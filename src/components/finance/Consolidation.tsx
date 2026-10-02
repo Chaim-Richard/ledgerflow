@@ -1,3 +1,4 @@
+import type { TransactionLine } from '../../types';
 import React, { useState, useMemo } from 'react';
 import { Layers, Download, BarChart3, TrendingUp, Globe } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
@@ -12,10 +13,10 @@ export default function Consolidation() {
     const incomeAccountIds = new Set(accounts.filter(a => a.type === 'income').map(a => a.id));
     const expenseAccountIds = new Set(accounts.filter(a => a.type === 'expense').map(a => a.id));
 
-    const isIncomeLine = (l: any) => incomeAccountIds.has(l.accountId) || l.category?.toLowerCase().includes('income') || l.category?.toLowerCase().includes('revenue');
-    const isExpenseLine = (l: any) => expenseAccountIds.has(l.accountId) || l.category?.toLowerCase().includes('expense') || l.category?.toLowerCase().includes('cogs');
+    const isIncomeLine = (l: TransactionLine) => incomeAccountIds.has(l.accountId) || l.category?.toLowerCase().includes('income') || l.category?.toLowerCase().includes('revenue');
+    const isExpenseLine = (l: TransactionLine) => expenseAccountIds.has(l.accountId) || l.category?.toLowerCase().includes('expense') || l.category?.toLowerCase().includes('cogs');
 
-    return IntercompanyEliminationEngine.generateConsolidatedSummary(transactions, isIncomeLine, isExpenseLine);
+    return IntercompanyEliminationEngine.generateConsolidatedSummary(transactions, isIncomeLine as (line: TransactionLine) => boolean, isExpenseLine as (line: TransactionLine) => boolean);
   }, [transactions, accounts]);
 
   const [activeTab, setActiveTab] = useState<'matrix' | 'adjustments'>('matrix');
@@ -51,7 +52,7 @@ export default function Consolidation() {
           ].map(tab => (
              <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as unknown as React.SetStateAction<"matrix" | "adjustments">)}
                 className={cn(
                    "px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all",
                    activeTab === tab.id ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-[var(--ink)]"

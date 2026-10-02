@@ -1,3 +1,4 @@
+import type { FilterCriteria } from '../../types';
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Sparkles, 
@@ -18,7 +19,7 @@ import { useTimeout } from '../../hooks/useTimeout';
 interface AICommandCenterProps {
   isOpen: boolean;
   onClose: () => void;
-  onFilter: (criteria: any) => void;
+  onFilter: (criteria: FilterCriteria) => void;
   businessContext: string;
 }
 
@@ -44,7 +45,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
       const { accounts, transactions } = useLedgerStore.getState();
       const uniqueProjects = Array.from(new Set(
         transactions
-          .map((t: any) => t.projectId || t.project)
+          .map((t) => t.projectId || t.project)
           .filter(Boolean)
       )) as string[];
 
@@ -56,7 +57,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
       );
       const criteria = resolved || {};
       
-      const filter: any = {};
+      const filter: FilterCriteria & { isAuditQuery?: boolean } = {};
       if (criteria.category) filter.category = criteria.category;
       if (criteria.project) filter.project = criteria.project;
       if (criteria.minAmountCents !== undefined) filter.minAmount = criteria.minAmountCents / 100;

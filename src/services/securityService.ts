@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
 export class SecurityService {
-  private static deterministicStringify(obj: any): string {
+  private static deterministicStringify(obj: unknown): string {
     if (obj === null || typeof obj !== 'object') {
       return JSON.stringify(obj);
     }
@@ -9,12 +9,12 @@ export class SecurityService {
       return '[' + obj.map(this.deterministicStringify.bind(this)).join(',') + ']';
     }
     const keys = Object.keys(obj).sort();
-    return '{' + keys.map(k => JSON.stringify(k) + ':' + this.deterministicStringify(obj[k])).join(',') + '}';
+    return '{' + keys.map(k => JSON.stringify(k) + ':' + this.deterministicStringify((obj as Record<string, unknown>)[k])).join(',') + '}';
   }
 
-  static canonicalForensicPayload(data: any): any {
+  static canonicalForensicPayload(data: unknown): unknown {
     if (data === null || typeof data !== 'object') return data;
-    const { verification, ...rest } = data;
+    const { verification, ...rest } = data as Record<string, unknown>;
     return rest;
   }
 
@@ -22,7 +22,7 @@ export class SecurityService {
    * Generates a forensic hash for an entity state
    * Used for "Vault" integrity and "Audit Trail" verification
    */
-  static generateForensicHash(data: any): string {
+  static generateForensicHash(data: unknown): string {
     const payload = this.canonicalForensicPayload(data);
     const serialized = this.deterministicStringify(payload);
     const salt = process.env.SYSTEM_SALT;
@@ -37,7 +37,7 @@ export class SecurityService {
   /**
    * Verifies a payload against its recorded hash
    */
-  static verifyIntegrity(data: any, hash: string): boolean {
+  static verifyIntegrity(data: unknown, hash: string): boolean {
     const currentHash = this.generateForensicHash(data);
     const a = Buffer.from(currentHash, 'utf8');
     const b = Buffer.from(hash, 'utf8');
@@ -110,9 +110,9 @@ export class SecurityService {
       let decrypted = decipher.update(encrypted, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
       return decrypted;
-    } catch (err: any) {
+    } catch (err) {
       console.error("[SecurityService] Decryption failed:", err);
-      throw new Error(`Decryption failed: tampered ciphertext or invalid key. ${err?.message || ''}`, { cause: err });
+      throw new Error(`Decryption failed: tampered ciphertext or invalid key. ${(err as Error)?.message || ''}`, { cause: err });
     }
   }
 }

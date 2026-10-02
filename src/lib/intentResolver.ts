@@ -1,3 +1,6 @@
+import type { AutoRule, ChartAccount } from '../types';
+import type { AnalyticalPattern } from './MatchingEngine';
+export interface ResolvedEntry { amountCents: number; description: string; dimensions: { category: string; account: string }; lines?: { accountName: string; amountCents: number }[]; date: string; type: 'actual'; isLearned?: boolean }
 import { format, startOfMonth, endOfMonth, startOfYear, subMonths, subDays } from 'date-fns';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
 
@@ -137,9 +140,9 @@ export class IntentResolver {
     return result;
   }
 
-  static resolveEntry(input: string, options?: { rules?: any[], accounts?: any[], ruleCache?: Record<string, any> }): any[] | null {
+  static resolveEntry(input: string, options?: { rules?: AutoRule[], accounts?: (string | Pick<ChartAccount, 'name'>)[], ruleCache?: Record<string, AnalyticalPattern> }): ResolvedEntry[] | null {
     const lines = input.split(/\n+/).filter(line => line.trim().length > 0);
-    const results: any[] = [];
+    const results: ResolvedEntry[] = [];
 
     for (const line of lines) {
         const lowerInput = line.toLowerCase().trim();
@@ -251,11 +254,11 @@ export class IntentResolver {
                 // Check provided accounts first (dynamic learning)
                 if (options?.accounts) {
                     const dynamicMatch = options.accounts.find(acc => {
-                        const name = typeof acc === 'string' ? acc : (acc as any).name;
+                        const name = typeof acc === 'string' ? acc : acc.name;
                         return dLower.includes(name.toLowerCase());
                     });
                     if (dynamicMatch) {
-                        category = typeof dynamicMatch === 'string' ? dynamicMatch : (dynamicMatch as any).name;
+                        category = typeof dynamicMatch === 'string' ? dynamicMatch : dynamicMatch.name;
                     }
                 }
 

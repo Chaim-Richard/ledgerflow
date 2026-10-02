@@ -4,6 +4,8 @@ import { useLedgerStore } from '../stores/useLedgerStore';
 import { Transaction } from '../types';
 import { isPostable, calculateTransactionImpact } from '../lib/txFilters';
 
+export interface ServerAgingData { current: number; '1-30': number; '31-60': number; '61-90': number; '90+': number; total: number }
+
 export interface ServerPLData {
   income: { total: number; accounts: Record<string, { name: string; code?: string; balance: number; parentId?: string }> };
   cogs: { total: number; accounts: Record<string, { name: string; code?: string; balance: number; parentId?: string }> };
@@ -81,8 +83,8 @@ export function useFinancialReporting() {
     balanceSheet: ServerBalanceSheetData | null;
     trialBalance: ServerTrialBalanceData | null;
     cashFlow: ServerCashFlowData | null;
-    aging: any | null;
-    agingAP: any | null;
+    aging: ServerAgingData | null;
+    agingAP: ServerAgingData | null;
   }>({
     pl: null,
     balanceSheet: null,
@@ -110,7 +112,7 @@ export function useFinancialReporting() {
       const report: ServerPLData = data.data || data;
       setApiReports(prev => ({ ...prev, pl: report }));
       return report;
-    } catch (e: any) {
+    } catch (e) {
       console.warn('P&L server fetch fallback:', e);
       return null;
     } finally {
@@ -136,7 +138,7 @@ export function useFinancialReporting() {
       const report: ServerBalanceSheetData = data.data || data;
       setApiReports(prev => ({ ...prev, balanceSheet: report }));
       return report;
-    } catch (e: any) {
+    } catch (e) {
       console.warn('Balance Sheet server fetch fallback:', e);
       return null;
     } finally {
@@ -162,7 +164,7 @@ export function useFinancialReporting() {
       const report: ServerTrialBalanceData = data.data || data;
       setApiReports(prev => ({ ...prev, trialBalance: report }));
       return report;
-    } catch (e: any) {
+    } catch (e) {
       console.warn('Trial Balance server fetch fallback:', e);
       return null;
     } finally {
@@ -189,7 +191,7 @@ export function useFinancialReporting() {
       const report: ServerCashFlowData = data.data || data;
       setApiReports(prev => ({ ...prev, cashFlow: report }));
       return report;
-    } catch (e: any) {
+    } catch (e) {
       console.warn('Cash flow server fetch fallback:', e);
       return null;
     } finally {

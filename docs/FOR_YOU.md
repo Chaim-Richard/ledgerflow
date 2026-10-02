@@ -60,8 +60,7 @@ Last updated: 2026-10-02.
 
 ## B. Decisions (Claude uses the default until you say otherwise)
 
-10. **Hebrew.** Some screens have Hebrew labels, most don't. Finish Hebrew everywhere, or remove
-   the language switch for now? *Default: leave as is until you decide.*
+10. **Hebrew data — decided by owner (2 Oct).** Keep menus and options in English. The system and algorithms must handle Hebrew and mixed Hebrew/English names, labels, item descriptions and other record text throughout search/matching, imports/exports and documents. This is data-language support, not a request to translate the interface. Codex is auditing it after C-6…C-11; existing financial rules must stay intact.
 11. **Demo and fake features.** Some screens and endpoints return made-up data (the "API Hub" demo
     endpoints for e-commerce/marketing/HR, the Admin "command center" with simulated logs).
     Delete them, or keep them behind a "developer" switch? *Default: hide them behind a

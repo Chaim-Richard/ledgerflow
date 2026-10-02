@@ -13,10 +13,10 @@ import { resolveAccountRole } from '../lib/accountUtils';
  * Provides real-time financial health monitoring.
  */
 export function useAuditTelemetry(transactions: Transaction[] = [], accounts: ChartAccount[] = [], days = 30, passedMetrics?: AnalyticalMetrics): AnalyticalMetrics {
-  const safeTxs = Array.isArray(transactions) ? transactions : [];
-  const safeAccs = Array.isArray(accounts) ? accounts : [];
 
   return useMemo(() => {
+    const safeTxs = Array.isArray(transactions) ? transactions : [];
+    const safeAccs = Array.isArray(accounts) ? accounts : [];
     if (passedMetrics) return passedMetrics;
     if (!safeTxs.length || !safeAccs.length) {
        return {
@@ -397,7 +397,7 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
         metrics.graphCentrality = Array.from(centralityMap.entries())
           .map(([name, score]) => {
             const acc = accountMap.get(name) || accountNameMap.get(name);
-            return { id: name, name: acc ? acc.name : name, score: score as number, type: (acc ? 'account' : 'merchant') as any };
+            return { id: name, name: acc ? acc.name : name, score: score as number, type: (acc ? 'account' : 'merchant') as 'account' | 'merchant' };
           })
           .sort((a, b) => b.score - a.score)
           .slice(0, 5);

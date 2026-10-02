@@ -14,16 +14,16 @@ interface SidebarProps {
   setActiveTab: (tab: AppTab) => void;
   onLogout: () => void;
   onLoginPrompt?: () => void;
-  projects: any[];
+  projects: import("../../types").Project[];
   onNewProject: () => void;
-  workspaces: any[];
+  workspaces: import("../../types").Workspace[];
   currentWorkspaceId: string | null;
   onSelectWorkspace: (id: string) => void;
   onNewWorkspace: () => void;
   onAction: (action: string) => void;
 }
 
-const GROUP_ICONS: Record<string, any> = {
+const GROUP_ICONS: Record<string, React.ElementType> = {
   dashboard: LayoutGrid,
   transactions: Layers,
   reconcile: RefreshCw,
@@ -69,8 +69,8 @@ const Sidebar = React.memo(({
       return realProjects.map((p, idx) => ({
         id: p.id,
         name: p.name,
-        color: (p as any).color || WORLD_COLORS[idx % WORLD_COLORS.length],
-        val: formatCurrency(p.budgetCents || (p as any).spentCents || 0)
+        color: (p as typeof p & { color?: string; spentCents?: number }).color || WORLD_COLORS[idx % WORLD_COLORS.length],
+        val: formatCurrency(p.budgetCents || (p as typeof p & { color?: string; spentCents?: number }).spentCents || 0)
       }));
     }
 
@@ -172,7 +172,7 @@ const Sidebar = React.memo(({
                      key={groupId}
                      data-testid={`nav-${firstTabInGroup?.id || groupId}`}
                      onClick={() => {
-                       if (firstTabInGroup) setActiveTab(firstTabInGroup.id as any);
+                       if (firstTabInGroup) setActiveTab(firstTabInGroup.id as unknown as string);
                      }}
                      className={cn(
                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all relative group overflow-hidden",
@@ -235,7 +235,7 @@ const Sidebar = React.memo(({
          
          {isAdmin && uiStore.developerMode && (
            <button
-             onClick={() => setActiveTab('system-command-center' as any)}
+             onClick={() => setActiveTab('system-command-center' as unknown as string)}
              className={cn(
                "flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg transition-all w-full group mb-1 shadow-sm cursor-pointer",
                uiStore.isSidebarOpen ? "justify-between" : "justify-center",

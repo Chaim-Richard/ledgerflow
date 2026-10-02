@@ -118,8 +118,8 @@ export function getLineDimension(
         rawVal = tx.dimensions[normDim];
       } else if (tx) {
         if (normDim === 'project' && tx.projectId) rawVal = tx.projectId;
-        if (normDim === 'class' && (tx as any).classId) rawVal = (tx as any).classId;
-        if (normDim === 'location' && (tx as any).locationId) rawVal = (tx as any).locationId;
+        if (normDim === 'class' && tx.classId) rawVal = tx.classId;
+        if (normDim === 'location' && tx.locationId) rawVal = tx.locationId;
       }
     }
   }

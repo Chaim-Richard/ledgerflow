@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useId } from 'react';
 import { Project, Transaction } from '../../types';
-import { 
+import {
   BrainCircuit,
   Pencil,
-  Plus, 
-  Search, 
-  FolderKanban, 
+  Plus,
+  Search,
+  FolderKanban,
   Trash2,
   Target,
   Users,
@@ -43,6 +43,22 @@ function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
   });
 }
 
+const isProjectLine = (l: import("../../types").TransactionLine, p: Project) => {
+    if (!l || !p) return false;
+    return l.project === p.id ||
+           l.project === p.name ||
+           l.dimensions?.project === p.id ||
+           l.dimensions?.project === p.name;
+  };
+
+const isProjectTx = (t: Transaction, p: Project) => {
+    if (!t || !p) return false;
+    return t.projectId === p.id ||
+           t.project === p.id ||
+           t.project === p.name ||
+           (t.lines && t.lines.some(l => isProjectLine(l, p)));
+  };
+
 export default function Projects() {
   const formId = useId();
   const user = useAuthStore(s => s.user);
@@ -55,8 +71,8 @@ export default function Projects() {
   const { loading } = useLedgerCollections('bills', 'budgets', 'vendors');
   useCommandDispatcher();
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
-  const onAdd = (data: any) => addEntity('projects', data);
-  const onUpdate = (id: string, data: any) => updateEntity('projects', id, data);
+  const onAdd = (data: Partial<Project>) => addEntity('projects', data);
+  const onUpdate = (id: string, data: Partial<Project>) => updateEntity('projects', id, data);
   const onDelete = (id: string) => deleteEntity('projects', id);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'pipeline' | 'list'>('pipeline');
@@ -110,22 +126,6 @@ export default function Projects() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const isProjectLine = (l: any, p: Project) => {
-    if (!l || !p) return false;
-    return l.project === p.id || 
-           l.project === p.name || 
-           l.dimensions?.project === p.id || 
-           l.dimensions?.project === p.name;
-  };
-
-  const isProjectTx = (t: Transaction, p: Project) => {
-    if (!t || !p) return false;
-    return t.projectId === p.id || 
-           t.project === p.id || 
-           t.project === p.name || 
-           (t.lines && t.lines.some(l => isProjectLine(l, p)));
   };
 
   const handleDeleteProject = async (id: string) => {
@@ -202,8 +202,8 @@ export default function Projects() {
     return stats;
   }, [projects, transactions, accounts]);
 
-  const selectedProject = useMemo(() => 
-    projects.find(p => p.id === selectedProjectId), 
+  const selectedProject = useMemo(() =>
+    projects.find(p => p.id === selectedProjectId),
   [projects, selectedProjectId]);
 
   const projectVendors = useMemo(() => {
@@ -255,8 +255,8 @@ export default function Projects() {
                 onClick={() => setActiveSubTab('pipeline')}
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all gap-1.5 flex items-center cursor-pointer",
-                  activeSubTab === 'pipeline' 
-                    ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold shadow-sm" 
+                  activeSubTab === 'pipeline'
+                    ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold shadow-sm"
                     : "text-[var(--muted)] hover:text-[var(--text)]"
                 )}
               >
@@ -266,8 +266,8 @@ export default function Projects() {
                 onClick={() => setActiveSubTab('list')}
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all gap-1.5 flex items-center cursor-pointer",
-                  activeSubTab === 'list' 
-                    ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold shadow-sm" 
+                  activeSubTab === 'list'
+                    ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold shadow-sm"
                     : "text-[var(--muted)] hover:text-[var(--text)]"
                 )}
               >
@@ -276,7 +276,7 @@ export default function Projects() {
             </div>
             <div className="relative group">
               <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--brass)] transition-colors" size={14} />
-              <input 
+              <input
                 aria-label="Search projects or tags"
                 type="text"
                 placeholder="Search projects or tags..."
@@ -285,7 +285,7 @@ export default function Projects() {
                 className="pl-9 pr-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-xs focus:outline-none focus:border-[var(--brass-line)] focus:ring-1 focus:ring-[var(--brass)] transition-all w-52 sm:w-60 text-[var(--text)] placeholder:text-[var(--faint)] font-medium"
               />
             </div>
-            <button 
+            <button
               onClick={() => setIsNewProjectModalOpen(true)}
               className="h-9 px-4 bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black hover:opacity-95 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-md hover:shadow-lg cursor-pointer"
             >
@@ -297,7 +297,7 @@ export default function Projects() {
       </div>
 
       {activeSubTab === 'pipeline' ? (
-         <ProjectPipeline 
+         <ProjectPipeline
            projects={filteredProjects}
            onUpdateProject={async (id, data) => { if (onUpdate) await onUpdate(id, data); }}
          />
@@ -317,23 +317,23 @@ export default function Projects() {
           {filteredProjects.map((project) => {
             const stats = projectStats[project.id];
             const progress = stats.budgetCents > 0 ? (stats.expenseCents / stats.budgetCents) * 100 : 0;
-            
+
             return (
-              <motion.div 
+              <motion.div
                 key={project.id}
                 layoutId={project.id}
                 onClick={() => setSelectedProjectId(project.id)}
                 className={cn(
                   "p-5 rounded-xl border transition-all cursor-pointer group relative overflow-hidden",
-                  selectedProjectId === project.id 
-                    ? "bg-slate-900 border-slate-950 text-white shadow-xs" 
+                  selectedProjectId === project.id
+                    ? "bg-slate-900 border-slate-950 text-white shadow-xs"
                     : "bg-[var(--surface)] border-[var(--line)]/80 hover:border-slate-300 text-[var(--text)] shadow-3xs"
                 )}
               >
                 {selectedProjectId === project.id && (
                   <div className="absolute inset-0 technical-grid opacity-10 pointer-events-none" />
                 )}
-                
+
                   <div className="flex items-start justify-between mb-4 relative z-10">
                     <div className="flex items-center gap-4">
                       <div className={cn(
@@ -356,7 +356,7 @@ export default function Projects() {
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1 bg-[var(--surface)]/5 p-0.5 rounded-lg border border-slate-250/10">
-                        <button 
+                        <button
                           aria-label={`Edit project ${project.name}`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -369,7 +369,7 @@ export default function Projects() {
                         >
                           <Pencil aria-hidden="true" size={12} />
                         </button>
-                        <AsyncButton 
+                        <AsyncButton
                           aria-label={`Delete project ${project.name}`}
                           onClick={async () => {
                             handleDeleteProject(project.id);
@@ -408,13 +408,13 @@ export default function Projects() {
 
                 {/* Progress Bar */}
                 <div className={cn("h-1 w-full rounded-full overflow-hidden relative z-10", selectedProjectId === project.id ? "bg-[var(--surface)]/10" : "bg-slate-100")}>
-                  <motion.div 
+                  <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(progress, 100)}%` }}
                     className={cn(
                       "h-full rounded-full",
-                      selectedProjectId === project.id 
-                        ? "bg-[var(--surface)]" 
+                      selectedProjectId === project.id
+                        ? "bg-[var(--surface)]"
                         : (progress > 90 ? "bg-rose-500" : progress > 70 ? "bg-amber-500" : "bg-slate-900")
                     )}
                   />
@@ -428,7 +428,7 @@ export default function Projects() {
         <div className="space-y-4">
           <AnimatePresence mode="wait">
             {selectedProject ? (
-              <motion.div 
+              <motion.div
                 key={selectedProject.id}
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -462,8 +462,8 @@ export default function Projects() {
                         <div className="text-right">
                           <p className="text-xs font-bold font-mono text-[var(--text)] col-span-1 tabular-nums">
                             {formatCurrency(
-                              transactions.filter(t => 
-                                isPostable(t) && selectedProject && isProjectTx(t, selectedProject) && 
+                              transactions.filter(t =>
+                                isPostable(t) && selectedProject && isProjectTx(t, selectedProject) &&
                                 (t.metadata?.vendorId === vendor.id || t.payee?.toLowerCase() === vendor.name.toLowerCase())
                               ).reduce((sum, t) => sum + Math.abs(t.totalAmountCents), 0)
                             )}
@@ -486,7 +486,7 @@ export default function Projects() {
                       <div className="w-1.5 h-4 bg-[var(--brass)] rounded-full" />
                       <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Split Tranches</h3>
                     </div>
-                    
+
                     <div className="space-y-3">
                       {selectedProject.splitRules && withOccurrenceKeys(selectedProject.splitRules, rule => JSON.stringify([rule.partnerId, rule.partnerName, rule.percentage])).map(({ item: rule, key }) => (
                         <div key={key} className="space-y-1">
@@ -532,7 +532,7 @@ export default function Projects() {
       {/* New Project Modal */}
       {isNewProjectModalOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             className="w-full max-w-xl bg-[var(--ink)] border border-[var(--line)] rounded-[32px] shadow-2xl overflow-hidden"
@@ -542,7 +542,7 @@ export default function Projects() {
                 <h3 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Initialize Project</h3>
                 <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Deploying new objective into ledger matrix</p>
               </div>
-              <button 
+              <button
                 aria-label="Close new project dialog"
                 onClick={() => setIsNewProjectModalOpen(false)}
                 className="p-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors"
@@ -550,11 +550,11 @@ export default function Projects() {
                 <Plus aria-hidden="true" size={24} className="rotate-45" />
               </button>
             </div>
-            
+
             <div className="p-4 md:p-8 space-y-6">
               <div className="space-y-2">
                 <Labelled labelClassName="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] px-1" label="Protocol Name">
-                  <input 
+                  <input
                     type="text"
                     dir="auto"
                     value={newProject.name}
@@ -577,11 +577,11 @@ export default function Projects() {
                     <button
                       key={type.id}
                       aria-pressed={newProject.type === type.id}
-                      onClick={() => setNewProject({ ...newProject, type: type.id as any })}
+                      onClick={() => setNewProject({ ...newProject, type: type.id as unknown as "book" | "event" | "campaign" | "general" | undefined })}
                       className={cn(
                         "flex items-center gap-3 p-4 rounded-[32px] border transition-all text-left",
-                        newProject.type === type.id 
-                          ? "bg-indigo-600 border-indigo-600 text-white shadow-lg" 
+                        newProject.type === type.id
+                          ? "bg-indigo-600 border-indigo-600 text-white shadow-lg"
                           : "bg-[var(--surface)] border-[var(--line)] text-[var(--text)] hover:border-indigo-600/50"
                       )}
                     >
@@ -594,7 +594,7 @@ export default function Projects() {
 
               <div className="space-y-2">
                 <Labelled labelClassName="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] px-1" label="Strategic Description">
-                  <textarea 
+                  <textarea
                     dir="auto"
                     value={newProject.description || ''}
                     onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
@@ -606,13 +606,13 @@ export default function Projects() {
             </div>
 
             <div className="p-4 md:p-8 bg-[var(--ink)]/30 border-t border-[var(--line)] flex items-center justify-end gap-4">
-              <button 
+              <button
                 onClick={() => setIsNewProjectModalOpen(false)}
                 className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-[var(--muted)] hover:text-[var(--text)] transition-colors"
               >
                 Cancel
               </button>
-              <AsyncButton 
+              <AsyncButton
                 onClick={handleAddProject}
                 disabled={!newProject.name}
                 loadingText="PROCESSING..."
@@ -628,7 +628,7 @@ export default function Projects() {
       {/* Edit Project Modal */}
       {editingProject && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             className="w-full max-w-xl bg-[var(--ink)] border border-[var(--line)] rounded-[32px] shadow-2xl overflow-hidden"
@@ -638,7 +638,7 @@ export default function Projects() {
                 <h3 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Configure Project</h3>
                 <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Rule settings for project matrix {editingProject.id.slice(0, 8)}</p>
               </div>
-              <button 
+              <button
                 aria-label="Close project configuration dialog"
                 onClick={() => setEditingProject(null)}
                 className="p-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors"
@@ -646,11 +646,11 @@ export default function Projects() {
                 <Plus aria-hidden="true" size={24} className="rotate-45" />
               </button>
             </div>
-            
+
             <div className="p-4 md:p-8 space-y-6">
               <div className="space-y-2">
                 <Labelled labelClassName="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1" label="Protocol Name">
-                  <input 
+                  <input
                     type="text"
                     dir="auto"
                     value={editingProject.name}
@@ -671,11 +671,11 @@ export default function Projects() {
                     <button
                       key={status.id}
                       aria-pressed={editingProject.status === status.id}
-                      onClick={() => setEditingProject({ ...editingProject, status: status.id as any })}
+                      onClick={() => setEditingProject({ ...editingProject, status: status.id as unknown as "completed" | "archived" | "active" })}
                       className={cn(
                         "p-3 rounded-[32px] border transition-all text-xs font-bold uppercase tracking-wider",
-                        editingProject.status === status.id 
-                          ? `bg-${status.color} border-${status.color} text-white shadow-lg` 
+                        editingProject.status === status.id
+                          ? `bg-${status.color} border-${status.color} text-white shadow-lg`
                           : "bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:border-indigo-600/50"
                       )}
                     >
@@ -697,11 +697,11 @@ export default function Projects() {
                       <button
                         key={type.id}
                         aria-pressed={editingProject.type === type.id}
-                        onClick={() => setEditingProject({ ...editingProject, type: type.id as any })}
+                        onClick={() => setEditingProject({ ...editingProject, type: type.id as unknown as "book" | "event" | "campaign" | "general" })}
                         className={cn(
                           "flex items-center gap-3 p-4 rounded-[32px] border transition-all text-left",
-                          editingProject.type === type.id 
-                            ? "bg-indigo-600 border-indigo-600 text-white shadow-lg" 
+                          editingProject.type === type.id
+                            ? "bg-indigo-600 border-indigo-600 text-white shadow-lg"
                             : "bg-[var(--surface)] border-[var(--line)] text-[var(--text)] hover:border-indigo-600/50"
                         )}
                       >
@@ -717,7 +717,7 @@ export default function Projects() {
                   <label htmlFor={`${formId}-budget`} className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Budget Allocation</label>
                   <div className="relative">
                     <DollarSign aria-hidden="true" size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-                    <input 
+                    <input
                       id={`${formId}-budget`}
                       type="number"
                       value={editingProject.budgetCents / 100}
@@ -730,7 +730,7 @@ export default function Projects() {
 
               <div className="space-y-2">
                 <Labelled labelClassName="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1" label="Strategic Description">
-                  <textarea 
+                  <textarea
                     dir="auto"
                     value={editingProject.description || ''}
                     onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
@@ -741,13 +741,13 @@ export default function Projects() {
             </div>
 
             <div className="p-4 md:p-8 bg-[var(--ink)]/30 border-t border-[var(--line)] flex items-center justify-end gap-4">
-              <button 
+              <button
                 onClick={() => setEditingProject(null)}
                 className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-[var(--muted)] hover:text-[var(--text)] transition-colors"
               >
                 Cancel
               </button>
-              <AsyncButton 
+              <AsyncButton
                 onClick={handleUpdateProject}
                 disabled={!editingProject.name}
                 loadingText="COMMITTING..."

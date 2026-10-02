@@ -49,7 +49,7 @@ interface TransactionEditModalProps {
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<Transaction>) => void;
   isReverseAndCorrectMode?: boolean;
-  onReverseAndCorrect?: (id: string, reversalDate: string, reason: string, replacement?: Partial<Transaction>) => Promise<any>;
+  onReverseAndCorrect?: (id: string, reversalDate: string, reason: string, replacement?: Partial<Transaction>) => Promise<unknown>;
 }
 
 export default function TransactionEditModal({
@@ -441,7 +441,7 @@ export default function TransactionEditModal({
                   id={`${formId}-tx-type`}
                   disabled={isLocked}
                   value={type}
-                  onChange={(e) => setType(e.target.value as any)}
+                  onChange={(e) => setType(e.target.value as unknown as React.SetStateAction<"actual" | "forecast" | "adjustment" | "reversal" | "journal" | "expense" | "income" | "bank_import">)}
                   className="w-full px-3 py-2 bg-[var(--ink)] border border-[var(--line)] hover:border-zinc-300 rounded-xl text-xs font-semibold text-[var(--text)] outline-none focus:bg-[var(--surface)]"
                 >
                   <option value="actual">Actual Ledger Node</option>
@@ -459,7 +459,7 @@ export default function TransactionEditModal({
                   id={`${formId}-tx-status`}
                   disabled={isLocked}
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as any)}
+                  onChange={(e) => setStatus(e.target.value as unknown as React.SetStateAction<"draft" | "pending" | "certified" | "completed" | "failed" | "flagged" | "reconciled" | "reviewed" | "overdue" | "approved" | "void">)}
                   className="w-full px-3 py-2 bg-[var(--ink)] border border-[var(--line)] hover:border-zinc-300 rounded-xl text-xs font-semibold text-[var(--text)] outline-none focus:bg-[var(--surface)]"
                 >
                   <option value="completed">Completed / Signed</option>
@@ -515,8 +515,8 @@ export default function TransactionEditModal({
                           } else {
                              toast.error('Failed to sync rate', { description: data.error?.info || 'Unknown error' });
                           }
-                        } catch (err: any) {
-                          toast.error('Failed to fetch rate', { description: err.message });
+                        } catch (err) {
+                          toast.error('Failed to fetch rate', { description: (err as Error).message });
                         } finally {
                           setIsFetchingRate(false);
                         }

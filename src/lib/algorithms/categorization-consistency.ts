@@ -19,7 +19,7 @@ export const CATEGORIZATION_CONSISTENCY_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'consistencyThreshold', label: 'Minimum Consistency Ratio', min: 0.5, max: 0.95, step: 0.05, defaultValue: 0.8 }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "consistencyThreshold": number; [key: string]: unknown }) => {
     const { transactions, accounts } = ctx;
     const consistencyThreshold = inputs['consistencyThreshold'] ?? 0.8;
     const targetDomain = 'expense'; // default to only analyzing expenses

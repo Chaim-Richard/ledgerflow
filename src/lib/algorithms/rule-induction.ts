@@ -77,7 +77,7 @@ export const RULE_INDUCTION_ALGO: AlgorithmDefinition = {
     { key: 'minSupport', label: 'Minimum Support (Occurrences)', min: 1, max: 20, step: 1, defaultValue: 3 },
     { key: 'minConfidence', label: 'Minimum Confidence (%)', min: 50, max: 100, step: 5, defaultValue: 85 }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "minSupport": number; "minConfidence": number; [key: string]: unknown }) => {
     const { transactions } = ctx;
     const start = performance.now();
     // Check if there are explicitly verified transactions; if so, use them, otherwise evaluate all

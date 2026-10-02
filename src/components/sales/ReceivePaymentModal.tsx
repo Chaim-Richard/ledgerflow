@@ -10,7 +10,7 @@ import { calculateAmountDue } from '../../lib/documentMath';
 import { describeError } from '../../lib/errorRemedies';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
-const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
+const cn = (...classes: (string | false | null | undefined)[]) => classes.filter(Boolean).join(' ');
 
 interface ReceivePaymentModalProps {
   isOpen: boolean;
@@ -219,7 +219,7 @@ export default function ReceivePaymentModal({
 
       toast.success(`Payment of ${formatCurrency(paymentAmountCents)} recorded successfully!`);
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to post payment:', err);
       const described = describeError(err, 'create');
       toast.error(`Payment not recorded: ${described.title.charAt(0).toLowerCase()}${described.title.slice(1)}`, { description: described.remedy });
@@ -379,7 +379,7 @@ export default function ReceivePaymentModal({
               <select
                 id="pay-method"
                 value={method}
-                onChange={e => setMethod(e.target.value as any)}
+                onChange={e => setMethod(e.target.value as unknown as React.SetStateAction<"cash" | "check" | "bank_transfer" | "card" | "other">)}
                 className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
               >
                 <option value="bank_transfer">Bank Transfer / Wire</option>

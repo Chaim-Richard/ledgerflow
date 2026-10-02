@@ -7,7 +7,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 
 export default function LedgerInterruptOverlay() {
-  const [activeAlert, setActiveAlert] = useState<any>(null);
+  const [activeAlert, setActiveAlert] = useState<{ severity: string; result: NonNullable<ReturnType<typeof useLedgerStore.getState>['auditResult']> } | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
   const setActiveTab = useUIStore(s => s.setActiveTab);
   useLedgerStore(s => s.transactions);
@@ -17,7 +17,7 @@ export default function LedgerInterruptOverlay() {
 
   useEffect(() => {
     // Subscribe to audit exceptions from the global EventBus
-    const unsubscribe = globalEventBus.subscribe('LEDGER_AUDIT_EXCEPTION', (eventData: any) => {
+    const unsubscribe = globalEventBus.subscribe<{ severity: string; result: NonNullable<ReturnType<typeof useLedgerStore.getState>['auditResult']> }>('LEDGER_AUDIT_EXCEPTION', (eventData) => {
       // Only display the high-priority interrupt overlay for critical cryptographic or mathematical imbalances
       if (eventData && eventData.severity === 'critical') {
         setActiveAlert(eventData);
@@ -131,7 +131,7 @@ export default function LedgerInterruptOverlay() {
                     Detailed Exception Queues:
                   </p>
                   <div className="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                    {result?.imbalances?.map((imb: any) => (
+                    {result?.imbalances?.map((imb) => (
                       <div key={JSON.stringify(['imbalance', imb.type, imb.id])} className="flex items-center justify-between text-xs p-3.5 bg-red-950/20 border border-red-900/10 rounded-xl">
                         <span className="font-mono text-zinc-400">UUID: {imb.id.substring(0, 8)}... ({imb.type})</span>
                         <span className="text-red-400 font-bold font-mono tabular-nums">Imbalance: {formatCurrency(imb.diff)}</span>
@@ -143,7 +143,7 @@ export default function LedgerInterruptOverlay() {
                         <span className="text-orange-400 font-semibold font-mono">Chain Index broken at {result?.brokenChainIndex}</span>
                       </div>
                     )}
-                    {result?.orphans?.map((orph: any) => (
+                    {result?.orphans?.map((orph) => (
                       <div key={JSON.stringify(['orphan', orph.type, orph.id])} className="flex items-center justify-between text-xs p-3.5 bg-zinc-800/40 border border-white/5 rounded-xl">
                         <span className="font-mono text-zinc-400">UUID: {orph.id.substring(0, 8)}... ({orph.type})</span>
                         <span className="text-zinc-300 font-semibold">{orph.message}</span>

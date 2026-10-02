@@ -56,7 +56,7 @@ export default function CashFlowPredictor() {
           ].map(tab => (
              <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as unknown as React.SetStateAction<"forecast" | "trends">)}
                 className={cn(
                    "px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all",
                    activeTab === tab.id ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-[var(--ink)]"
@@ -103,7 +103,7 @@ export default function CashFlowPredictor() {
                 <div className="col-span-3 text-right">Proj. Balance</div>
               </div>
               <div className="divide-y divide-slate-200">
-                {forecastData.projections.map((p: any) => (
+                {forecastData.projections.map((p) => (
                   <div key={p.month} className="grid grid-cols-12 p-4 items-center hover:bg-[var(--ink)] transition-colors">
                     <div className="col-span-3 flex items-center gap-2">
                        <Calendar className="w-4 h-4 text-[var(--muted)]" />

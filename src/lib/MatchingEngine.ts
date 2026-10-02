@@ -2,6 +2,12 @@ import { AhoCorasick, optimizedTransactionSimilarity, BayesianClassifier, SpellC
 import { Transaction, AutoRule, DimensionNode, ChartAccount } from '../types';
 import { extractMultiDimensionalLabels, expandDeepLabels, decomposeHierarchicalLabel } from './dimensionUtils';
 
+export interface AnalyticalPattern {
+  accountName: string;
+  tags?: string[];
+  dimensions?: Record<string, string>;
+}
+
 export interface MatchingClaim {
   accountName: string;
   confidence: number;
@@ -24,7 +30,7 @@ export class MatchingEngine {
   private ac: AhoCorasick | null = null;
   private dimAc: AhoCorasick | null = null;
   private rules: AutoRule[] = [];
-  private analyticalCache: Record<string, any> = {};
+  private analyticalCache: Record<string, AnalyticalPattern> = {};
   private bayes: BayesianClassifier;
   private spellChecker: SpellChecker;
   private analyticalSalt: string;
@@ -34,7 +40,7 @@ export class MatchingEngine {
 
   constructor(
     rules: AutoRule[], 
-    analyticalCache: Record<string, any> = {}, 
+    analyticalCache: Record<string, AnalyticalPattern> = {},
     analyticalSalt = '', 
     threshold = 0.85, 
     allTransactions?: Transaction[], 
@@ -82,7 +88,7 @@ export class MatchingEngine {
 
     // 2. Seed Bayesian Network with Analytical Cache patterns (Google-Style Pre-training)
     // Guard against training on archived or inactive accounts
-    Object.entries(analyticalCache).forEach(([description, data]: [string, any]) => {
+    Object.entries(analyticalCache).forEach(([description, data]) => {
       if (data.accountName && !this.isAccountArchivedOrInactive(data.accountName)) {
         this.bayes.train(description, data.accountName);
       }
@@ -124,7 +130,7 @@ export class MatchingEngine {
     const lower = nameOrId.toLowerCase();
     const acc = list.find(a => a.id === nameOrId || a.name.toLowerCase() === lower);
     if (!acc) return false;
-    return (acc as any).archived === true || (acc as any).isArchived === true || acc.isActive === false;
+    return (acc as ChartAccount & { archived?: boolean; isArchived?: boolean }).archived === true || (acc as ChartAccount & { archived?: boolean; isArchived?: boolean }).isArchived === true || acc.isActive === false;
   }
 
   /**
@@ -441,8 +447,8 @@ export class MatchingEngine {
    * Global Matching Analysis (Stability Matcher)
    * Groups a batch of raw transactions into clusters based on resolved merchants.
    */
-  groupTransactions(transactions: any[]): Map<string, any[]> {
-    const groups = new Map<string, any[]>();
+  groupTransactions<T extends { description: string }>(transactions: T[]): Map<string, T[]> {
+    const groups = new Map<string, T[]>();
     
     transactions.forEach(tx => {
       const merchantId = this.resolveMerchant(tx.description, []); // Context-free for now

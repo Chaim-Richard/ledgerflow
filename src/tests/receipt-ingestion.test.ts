@@ -379,7 +379,7 @@ describe('Receipt Ingestion & Coordinate Labeling Pipeline', () => {
   });
 
   it('rejects fractional cent payloads failing Number.isInteger', () => {
-    const fractionalReceipt: any = {
+    const fractionalReceipt: ParsedReceiptData = {
       vendorName: 'Hardware Store',
       totalAmountCents: 1000.5,
       taxAmountCents: 80,

@@ -31,16 +31,16 @@ export const Field: React.FC<FieldProps> = ({
 
   // Clone single React element to automatically attach id, aria-invalid, and aria-describedby
   const renderChildren = () => {
-    if (React.isValidElement(children)) {
-      const childProps: Record<string, any> = {
-        id: (children.props as any).id || id,
+    if (React.isValidElement<React.HTMLAttributes<HTMLElement>>(children)) {
+      const childProps: React.HTMLAttributes<HTMLElement> = {
+        id: children.props.id || id,
       };
       if (error) {
         childProps['aria-invalid'] = true;
       }
       if (describedBy) {
         childProps['aria-describedby'] =
-          (children.props as any)['aria-describedby'] || describedBy;
+          children.props['aria-describedby'] || describedBy;
       }
       return React.cloneElement(children, childProps);
     }

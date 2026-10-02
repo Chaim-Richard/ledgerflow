@@ -1,3 +1,5 @@
+import type { AddressInfo } from './helpers/mockTypes';
+import type { ListeningServer, TestResponseBody, TestRequest } from './helpers/mockTypes';
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import express from 'express';
@@ -15,14 +17,14 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
     app.use(express.json());
     app.use('/api/v1/invites', invitePublicRouter);
 
-    const server: any = await new Promise((resolve) => {
+    const server = await new Promise<ListeningServer>((resolve) => {
       const s = app.listen(0, '127.0.0.1', () => resolve(s));
     });
-    const port = server.address().port;
+    const port = (server.address() as AddressInfo).port;
 
     try {
       const res = await fetch(`http://127.0.0.1:${port}/api/v1/invites/short`);
-      const body: any = await res.json();
+      const body: TestResponseBody & { message: string } = await res.json();
 
       assert.equal(res.status, 400);
       assert.equal(body.status, 'error');
@@ -38,14 +40,14 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
     app.use(express.json());
     app.use('/api/v1/invoices/public', publicInvoiceRouter);
 
-    const server: any = await new Promise((resolve) => {
+    const server = await new Promise<ListeningServer>((resolve) => {
       const s = app.listen(0, '127.0.0.1', () => resolve(s));
     });
-    const port = server.address().port;
+    const port = (server.address() as AddressInfo).port;
 
     try {
       const res = await fetch(`http://127.0.0.1:${port}/api/v1/invoices/public/invalid_token_123`);
-      const body: any = await res.json();
+      const body: TestResponseBody = await res.json();
 
       assert.equal(res.status, 400);
       assert.equal(body.error, 'Invalid token format');
@@ -58,13 +60,13 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
   test('paymentRoutes rejects missing workspaceId or negative amount with 400 Bad Request', async () => {
     const app = express();
     app.use(express.json());
-    app.use((req, _res, next) => { (req as any).user = { uid: 'user-1', admin: true }; next(); });
+    app.use((req, _res, next) => { (req as TestRequest).user = { uid: 'user-1', admin: true }; next(); });
     app.use('/api/v1/payments', paymentRouter);
 
-    const server: any = await new Promise((resolve) => {
+    const server = await new Promise<ListeningServer>((resolve) => {
       const s = app.listen(0, '127.0.0.1', () => resolve(s));
     });
-    const port = server.address().port;
+    const port = (server.address() as AddressInfo).port;
 
     try {
       const res = await fetch(`http://127.0.0.1:${port}/api/v1/payments`, {
@@ -72,7 +74,7 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amountCents: -500 })
       });
-      const body: any = await res.json();
+      const body: TestResponseBody = await res.json();
 
       assert.equal(res.status, 400);
       assert.equal(body.status, 'error');
@@ -87,10 +89,10 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
     app.use(express.json());
     app.use('/api/v1/leases', leaseRouter);
 
-    const server: any = await new Promise((resolve) => {
+    const server = await new Promise<ListeningServer>((resolve) => {
       const s = app.listen(0, '127.0.0.1', () => resolve(s));
     });
-    const port = server.address().port;
+    const port = (server.address() as AddressInfo).port;
 
     try {
       const res = await fetch(`http://127.0.0.1:${port}/api/v1/leases/capitalize`, {
@@ -98,7 +100,7 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workspaceId: 'ws-1', pvAmountCents: -100, rouAssetAccountId: 'acc-1', leaseLiabilityAccountId: 'acc-2' })
       });
-      const body: any = await res.json();
+      const body: TestResponseBody = await res.json();
 
       assert.equal(res.status, 400);
       assert.equal(body.status, 'error');
@@ -113,10 +115,10 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
     app.use(express.json());
     app.use('/api/v1/revenue', revenueRouter);
 
-    const server: any = await new Promise((resolve) => {
+    const server = await new Promise<ListeningServer>((resolve) => {
       const s = app.listen(0, '127.0.0.1', () => resolve(s));
     });
-    const port = server.address().port;
+    const port = (server.address() as AddressInfo).port;
 
     try {
       const res = await fetch(`http://127.0.0.1:${port}/api/v1/revenue/recognize`, {
@@ -124,7 +126,7 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workspaceId: 'ws-1', amountCents: 0 })
       });
-      const body: any = await res.json();
+      const body: TestResponseBody = await res.json();
 
       assert.equal(res.status, 400);
       assert.equal(body.status, 'error');
@@ -139,10 +141,10 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
     app.use(express.json());
     app.use('/api/v1/support', supportRouter);
 
-    const server: any = await new Promise((resolve) => {
+    const server = await new Promise<ListeningServer>((resolve) => {
       const s = app.listen(0, '127.0.0.1', () => resolve(s));
     });
-    const port = server.address().port;
+    const port = (server.address() as AddressInfo).port;
 
     try {
       const res = await fetch(`http://127.0.0.1:${port}/api/v1/support/tickets/tick-123/messages`, {
@@ -150,7 +152,7 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: 'Hello', authorRole: 'superhacker' })
       });
-      const body: any = await res.json();
+      const body: TestResponseBody = await res.json();
 
       assert.equal(res.status, 400);
       assert.equal(body.status, 'error');
@@ -165,10 +167,10 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
     app.use(express.json());
     app.use('/api/v1/workspaces/:workspaceId/emails', emailRouter);
 
-    const server: any = await new Promise((resolve) => {
+    const server = await new Promise<ListeningServer>((resolve) => {
       const s = app.listen(0, '127.0.0.1', () => resolve(s));
     });
-    const port = server.address().port;
+    const port = (server.address() as AddressInfo).port;
 
     try {
       const res = await fetch(`http://127.0.0.1:${port}/api/v1/workspaces/ws-1/emails/invoices/inv-123`, {
@@ -176,7 +178,7 @@ describe('Public and Mutating API Validation Guard Suite (§14 Finding F & B-18)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: 'not-an-email' })
       });
-      const body: any = await res.json();
+      const body: TestResponseBody = await res.json();
 
       assert.equal(res.status, 400);
       assert.equal(body.status, 'error');

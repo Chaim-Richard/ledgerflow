@@ -70,7 +70,7 @@ export function printInvoice(invoice: Invoice, customer?: Customer, workspaceNam
           </tr>
         </thead>
         <tbody>
-          ${((invoice.metadata && invoice.metadata.lines) || []).map((item: any) => `
+          ${((invoice.metadata && invoice.metadata.lines) || []).map((item: { description?: string; quantity?: number; rateCents?: number; amountCents: number }) => `
             <tr>
               <td>${item.description || 'Item'}</td>
               <td class="right">${item.quantity || 1}</td>

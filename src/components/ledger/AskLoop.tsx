@@ -80,8 +80,8 @@ export default function AskLoop() {
         }
       });
       toast.success(`Categorized "${tx.description}" as ${accountName}`);
-    } catch (err: any) {
-      toast.error(`Failed to update transaction: ${err?.message || 'Double-entry integrity check failed'}`);
+    } catch (err) {
+      toast.error(`Failed to update transaction: ${(err as Error)?.message || 'Double-entry integrity check failed'}`);
     }
   };
 

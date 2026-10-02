@@ -9,7 +9,7 @@ interface BottomNavProps {
   onTabChange: (tabId: string) => void;
 }
 
-const GROUP_ICONS: Record<string, any> = {
+const GROUP_ICONS: Record<string, React.ElementType> = {
   pulse: LayoutGrid,
   finance: Layers,
   operations: Briefcase,

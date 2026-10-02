@@ -25,7 +25,7 @@ export async function reportClientError(
   extra?: {
     severity?: 'error' | 'warning' | 'fatal';
     componentStack?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     ticketId?: string;
   }
 ): Promise<string> {

@@ -15,7 +15,7 @@ export function usePWAInstall() {
   const [isInstalled, setIsInstalled] = useState(() => {
     return typeof window !== 'undefined' && (
       window.matchMedia('(display-mode: standalone)').matches || 
-      (navigator as any).standalone === true
+      (navigator as Navigator & { standalone?: boolean }).standalone === true
     );
   });
 

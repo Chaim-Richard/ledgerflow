@@ -17,7 +17,7 @@ export const VENDOR_CHURN_ALGO: AlgorithmDefinition = {
       defaultValue: 90
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "inactivityDays": number; [key: string]: unknown }): AlgoResult => {
     const { transactions } = ctx;
     const inactivityDays = inputs['inactivityDays'] ?? 90;
     const now = new Date().getTime();

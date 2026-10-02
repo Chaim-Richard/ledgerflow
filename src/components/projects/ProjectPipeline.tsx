@@ -164,7 +164,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
                     layoutId={project.id}
                     key={project.id}
                     draggable
-                    onDragStart={(e: any) => handleDragStart(e, project.id!)}
+                    onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent<HTMLDivElement>, project.id!)}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}

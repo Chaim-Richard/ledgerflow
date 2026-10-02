@@ -86,7 +86,7 @@ export const NUMBER_EXPLAINER_ALGO: AlgorithmDefinition = {
   inputs: [
       { key: 'targetMonth', label: 'Month Index (1-12)', min: 1, max: 12, step: 1, defaultValue: workspaceYearMonth().month + 1 }
   ],
-  compute: (ctx, inputs) => {
+  compute: (ctx, inputs: { "targetMonth": number; [key: string]: unknown }) => {
     const { transactions, accounts } = ctx;
     const start = performance.now();
     

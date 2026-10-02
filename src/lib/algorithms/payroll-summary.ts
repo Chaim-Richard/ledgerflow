@@ -22,11 +22,11 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
       defaultValue: '2026'
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "year": string; [key: string]: unknown }): AlgoResult => {
     const employees = ctx.entities?.employees || [];
     const year = parseInt(inputs['year'] || '2026', 10);
     
-    const activeEmployees = employees.filter((e: any) => e.status === 'Active');
+    const activeEmployees = employees.filter((e) => e.status === 'Active');
 
     if (activeEmployees.length === 0) {
       return {
@@ -37,7 +37,7 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
       };
     }
 
-    const rows: any[] = [];
+    const rows: ({ id: string; employee: string; role: string; frequency: string; gross: string; taxes: string; net: string; employerBurden: string })[] = [];
     
     let totalGross = 0;
     let totalNet = 0;

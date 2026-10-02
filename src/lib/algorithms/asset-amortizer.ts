@@ -1,3 +1,4 @@
+import type { ChartAccount } from '../../types';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { isPostable, lineAmount } from '../txFilters';
 
@@ -22,14 +23,14 @@ export const assetAmortizer: AlgorithmDefinition = {
       defaultValue: 'half-year' 
     }
   ],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, inputs: { "life": number; "salvageValuePct": number; "taxRate": number; "convention": string; [key: string]: unknown }): AlgoResult => {
     const { transactions: txs, accounts, accounting } = ctx;
     
     // Strict isolation of Fixed / Capital Assets (excluding liquid cash, AR, and inventory)
-    const isFixedAssetAccount = (a: any) => {
+    const isFixedAssetAccount = (a: ChartAccount) => {
       if (!accounting.isAsset(a.id)) return false;
       const cat = (a.category || '').toLowerCase();
-      const sub = (a.subtype || a.subType || '').toLowerCase();
+      const sub = (a.subtype || (a as ChartAccount & { subType?: string }).subType || '').toLowerCase();
       const name = (a.name || '').toLowerCase();
       const role = (a.role || '').toLowerCase();
       
@@ -102,7 +103,7 @@ export const assetAmortizer: AlgorithmDefinition = {
     const straightLineYearly = depreciableBase / life;
     const ddbRate = 2 / life;
 
-    const data: any[] = [];
+    const data= [];
     
     let slRemaining = assetBase;
     let ddbRemaining = assetBase;

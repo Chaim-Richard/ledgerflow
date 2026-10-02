@@ -1,3 +1,4 @@
+import type { Workbook, Worksheet, CellValue } from 'exceljs';
 import { calendarDateISO } from './utils';
 
 export interface ExcelColumn {
@@ -15,7 +16,7 @@ export interface ExportToExcelOptions {
 /**
  * Creates a raw initialized ExcelJS workbook.
  */
-export async function createWorkbook(): Promise<any> {
+export async function createWorkbook(): Promise<Workbook> {
   const ExcelJS = await import('exceljs');
   return new ExcelJS.Workbook();
 }
@@ -23,9 +24,9 @@ export async function createWorkbook(): Promise<any> {
 /**
  * Downloads an ExcelJS workbook in the browser environment.
  */
-export async function downloadWorkbook(workbook: any, fileName: string): Promise<void> {
+export async function downloadWorkbook(workbook: Workbook, fileName: string): Promise<void> {
   const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { 
+  const blob = new Blob([buffer as unknown as BlobPart], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
   });
   const url = window.URL.createObjectURL(blob);
@@ -42,7 +43,7 @@ export async function downloadWorkbook(workbook: any, fileName: string): Promise
 export async function createStyledWorkbook(
   sheetName: string,
   columns: ExcelColumn[]
-): Promise<{ workbook: any; worksheet: any }> {
+): Promise<{ workbook: Workbook; worksheet: Worksheet }> {
   const workbook = await createWorkbook();
   const worksheet = workbook.addWorksheet(sheetName);
   worksheet.columns = columns.map(c => ({
@@ -56,14 +57,14 @@ export async function createStyledWorkbook(
 /**
  * Reads 2D rows from an Excel file ArrayBuffer.
  */
-export async function parseExcelToRows(data: ArrayBuffer): Promise<any[][]> {
+export async function parseExcelToRows(data: ArrayBuffer): Promise<CellValue[][]> {
   const workbook = await createWorkbook();
   await workbook.xlsx.load(data);
   const worksheet = workbook.worksheets[0];
-  const rows: any[][] = [];
+  const rows: CellValue[][] = [];
   if (worksheet) {
-    worksheet.eachRow((row: any) => {
-      const rowData: any[] = [];
+    worksheet.eachRow((row) => {
+      const rowData: CellValue[] = [];
       if (Array.isArray(row.values)) {
         // row.values is 1-indexed in ExcelJS
         for (let i = 1; i < row.values.length; i++) {
@@ -86,7 +87,7 @@ export async function parseExcelToRows(data: ArrayBuffer): Promise<any[][]> {
  */
 export async function exportToExcel(
   columns: ExcelColumn[],
-  rows: (Record<string, any> | (string | number | null | undefined)[])[],
+  rows: (Record<string, unknown> | (string | number | null | undefined)[])[],
   options?: ExportToExcelOptions
 ): Promise<void> {
   const sheetName = options?.sheetName || 'Report';

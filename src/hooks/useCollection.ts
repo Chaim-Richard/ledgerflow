@@ -7,6 +7,7 @@ import {
   orderBy,
   onSnapshot,
   getDocs,
+  QueryConstraint,
   WhereFilterOp
 } from '../lib/db/firestore';
 import { db } from '../firebase';
@@ -15,7 +16,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 export interface UseCollectionWhereFilter {
   field: string;
   op: WhereFilterOp;
-  value: any;
+  value: unknown;
 }
 
 export interface UseCollectionOptions {
@@ -36,7 +37,7 @@ export interface UseCollectionResult<T> {
   refetch: () => void;
 }
 
-export function useCollection<T = any>(
+export function useCollection<T = Record<string, unknown>>(
   collectionName: string,
   options: UseCollectionOptions = {}
 ): UseCollectionResult<T> {
@@ -62,7 +63,7 @@ export function useCollection<T = any>(
 
     try {
       const colRef = collection(db, collectionName);
-      const queryConstraints: any[] = [where('workspaceId', '==', targetWorkspaceId)];
+      const queryConstraints: QueryConstraint[] = [where('workspaceId', '==', targetWorkspaceId)];
 
       if (options.where) {
         for (const w of options.where) {
@@ -101,7 +102,7 @@ export function useCollection<T = any>(
           },
           err => {
             if (!isMounted) return;
-            setError(err);
+            setError(err as Error);
             setLoading(false);
           }
         );
@@ -116,13 +117,13 @@ export function useCollection<T = any>(
           })
           .catch(err => {
             if (!isMounted) return;
-            setError(err);
+            setError(err as Error);
             setLoading(false);
           });
       }
-    } catch (err: any) {
+    } catch (err) {
       if (isMounted) {
-        setError(err);
+        setError(err as Error);
         setLoading(false);
       }
     }

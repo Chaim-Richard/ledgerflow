@@ -7,7 +7,7 @@ export interface Collaborator {
   id: string;
   name: string;
   email: string;
-  lastActive: any;
+  lastActive: unknown;
   color: string;
   cursor?: { x: number; y: number };
   currentWorkspaceId?: string;
@@ -61,7 +61,7 @@ export function useCollaborators() {
         .map(doc => ({ id: doc.id, ...doc.data() } as Collaborator))
         .filter(c => {
           if (!c.lastActive) return true;
-          const lastActiveTime = c.lastActive.toDate?.()?.getTime() || now;
+          const lastActiveTime = (c.lastActive as { toDate?: () => Date }).toDate?.()?.getTime() || now;
           return now - lastActiveTime < activeThreshold;
         });
 

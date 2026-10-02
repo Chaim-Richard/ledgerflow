@@ -27,7 +27,7 @@ export const LedgerBackupReminder: React.FC = () => {
   }
 
   const handleGoToBackup = () => {
-    setActiveTab('settings' as any);
+    setActiveTab('settings' as unknown as string);
   };
 
   return (
