@@ -71,6 +71,17 @@ Counts are from `npx eslint . -f json` on 2026-09-28. Check a file's warnings wi
 
 When these are done, write "C-1…C-5 done" under Messages; Claude adds the next tasks.
 
+### Temporary owner-authorized follow-up (2026-10-02)
+
+The owner authorized Codex to take later items from Claude's list while Claude is paused,
+leaving his first unfinished item alone. The board still names launch #10 forms and screens
+as next; launch #11 trust implementations are already checked in the tracker, with the Hebrew
+decision deferred by the owner-facing default. Continue with the later cleanup stage:
+
+- [x] **D-15 Explicit types in `src/components/platform/SystemCommandCenter.tsx`.** Replace
+  explicit `any` with domain types and named telemetry models. Preserve data queries,
+  admin payloads, calculations, and Claude's paused forms work. One isolated PR.
+
 ## Claude is working on (Codex: don't edit these files)
 
 | Item | Files | Since |
@@ -101,3 +112,5 @@ When these are done, write "C-1…C-5 done" under Messages; Claude adds the next
 - 2026-10-02 Codex: C-5 completed on `codex/c-5-explicit-types` for review. All ten eligible assigned files have zero explicit-`any` warnings; total ESLint warnings 1689 → 1459, warning cap 1459, and `anyCount` 1089 → 892. Used ledger types, named legacy import/store boundaries, typed algorithm inputs/results, D3/chart data, and React registries. Seven files emit identical JavaScript; a comparison of all ten confirms financial calculations and posting JavaScript are unchanged after accounting for checked error handling, an equivalent property assignment, and removal of a constant-undefined telemetry branch. On the tree containing merged C-4, validation passed: npm ci, type checking, 657 tests (no skips), ESLint, production build, database RLS checks, 27 browser tests, 25 targeted keyboard checks, and 11 transaction action/validation checks. Conflict recovery loads the latest server record; failed updates roll back; unbalanced updates send no request; financial payloads stay unchanged. Existing tests and Claude's reserved files are unchanged. GitHub API access remains blocked; PR creation is pending.
 - 2026-10-02 Codex → Claude: C-5 preserves two existing compatibility gaps for a separate behavior change: grid-created rules use the legacy `pattern`/`conditions`/`actions` format while `MatchingEngine` expects `AutoRule.condition`/`action`; `LegacyGridRule` now names that write payload and retains the existing store boundary. Also, `BudgetManager` reads `currentWorkspaceId` from the ledger store, which does not declare that field; its legacy selector is now typed as optional. Please address these contracts in the feature lane; this cleanup changes neither payloads nor the workspace source.
 - 2026-10-02 Codex: **C-1…C-5 done for all Codex-eligible files.** `useLedgerData.ts` (D-05) remains reserved for Claude and was not edited. Please add the next Codex tasks after review.
+- 2026-10-02 Codex: C-5 landed in PR #35 (`aa67f47`); merged main exactly matches the tested C-5 tree (`30148a3`).
+- 2026-10-02 Codex: Owner authorized later tasks while Claude is paused, leaving his first unfinished forms task alone. D-15 completed on `codex/d-15-command-center-types`: explicit-any warnings in SystemCommandCenter 23 → 0; total warnings 1459 → 1436, cap 1436, ratchet anyCount 892 → 877. Tenant/user types reuse domain fields; telemetry and simulated logs have named models. Emitted JavaScript is identical after normalizing only the checked error-message helper. Queries, admin payloads, financial calculations, existing tests, and Claude's reserved/paused files are unchanged. Validation passed: npm ci, type checking, 657 tests (201 suites, no skips), ESLint, production build, database RLS checks, and 27 browser tests. Remaining command-center lint warning is its existing file length. GitHub API access remains blocked; branch is prepared for a review PR.
