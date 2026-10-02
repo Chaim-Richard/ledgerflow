@@ -1391,7 +1391,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] E-20 WriteOffModal
 - [ ] E-21 `scope="col"` on headers
 - [x] E-22 Visible focus ring on every keyboard-focused control (index.css; browser test)
-- [x] E-23 Keyboard-only invoicing (browser test); Enter/Space on clickable rows, headers and menus
+- [x] E-23 Keyboard-only invoicing (browser test); native buttons on report rows, grid headers and reconciliation controls; independent filter/Tab behavior (codex, `codex/c-4-keyboard-controls`)
 - [ ] E-24 Screen-reader pass
 - [ ] E-25 `aria-live` for async results
 - [ ] E-26 Colour not the only +/− signal

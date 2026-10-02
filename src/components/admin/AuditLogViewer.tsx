@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useId } from 'react';
 import { History, Search, User, Building, Calendar, ChevronDown, ChevronUp, Filter, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, activateOnKey } from '../../lib/utils';
+import { cn } from '../../lib/utils';
 import { auditDescription, auditTime } from '../../lib/auditFormat';
 import { auth } from '../../firebase';
 import { Labelled } from '../ui/Labelled';
@@ -212,9 +212,9 @@ export default function AuditLogViewer() {
                 "transition-all",
                 expandedId === log.id ? "bg-slate-50/50" : "hover:bg-slate-50/30"
               )}>
-                <div 
-                  role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
-                  className="p-4 md:p-6 cursor-pointer flex items-center gap-4"
+                <button
+                  type="button" onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+                  className="w-full text-left p-4 md:p-6 cursor-pointer flex items-center gap-4"
                 >
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center border",
@@ -250,7 +250,7 @@ export default function AuditLogViewer() {
                       {expandedId === log.id ? <ChevronUp aria-hidden="true" size={14} /> : <ChevronDown aria-hidden="true" size={14} />}
                     </div>
                   </div>
-                </div>
+                </button>
 
                 <AnimatePresence>
                   {expandedId === log.id && (

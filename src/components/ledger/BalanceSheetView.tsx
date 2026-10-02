@@ -2,7 +2,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import React, { useId, useState, useMemo, useCallback, useEffect } from 'react';
 import { ChartAccount, Transaction } from '../../types';
 import { AlertCircle, Layers, HandCoins, ShieldCheck, Activity, Calendar, FileSpreadsheet, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, CheckCircle2, RefreshCw } from 'lucide-react';
-import { cn, getLocalDateISO, addToDateISO, activateOnKey } from '../../lib/utils';
+import { cn, getLocalDateISO, addToDateISO } from '../../lib/utils';
 import { exportToExcel } from '../../lib/excelExport';
 import { isPostable, isTransactionInDateRange, lineAmount, calculateNetIncome } from '../../lib/txFilters';
 import { motion } from 'motion/react';
@@ -556,14 +556,14 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                 const variance = getVarianceAndPct(curVal, prVal);
 
                 return (
-                  <div 
+                  <button
                     key={acc.id} 
-                    role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {
+                    type="button" onClick={() => {
                       const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
                       setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
                     }}
                     title={`Click to drill down into ${acc.name}`}
-                    className="flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
+                    className="w-full text-left flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-8 h-8 bg-[var(--ink)] text-[var(--muted)] rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
@@ -590,7 +590,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                         </div>
                       )}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -645,14 +645,14 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                   const variance = getVarianceAndPct(curVal, prVal);
 
                   return (
-                    <div 
+                    <button
                       key={acc.id} 
-                      role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {
+                      type="button" onClick={() => {
                         const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
                         setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
                       }}
                       title={`Click to drill down into ${acc.name}`}
-                      className="flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
+                      className="w-full text-left flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 bg-[var(--ink)] text-[var(--muted)] rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
@@ -679,7 +679,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                           </div>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
                 <div className="flex justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
@@ -705,14 +705,14 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                   const variance = getVarianceAndPct(curVal, prVal);
 
                   return (
-                    <div 
+                    <button
                       key={acc.id} 
-                      role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {
+                      type="button" onClick={() => {
                         const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
                         setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
                       }}
                       title={`Click to drill down into ${acc.name}`}
-                      className="flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
+                      className="w-full text-left flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 bg-[var(--ink)] text-[var(--muted)] rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
@@ -739,13 +739,13 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                           </div>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
 
                 {/* Retained Earnings Line Item */}
-                <div 
-                  role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {
+                <button
+                  type="button" onClick={() => {
                     const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => {
                       const account = accounts.find(a => a.id === l.accountId);
                       return account && (account.type === 'income' || account.type === 'revenue' || account.type === 'expense' || account.type === 'cost_of_goods');
@@ -753,7 +753,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                     setDrillDownTarget({ accountName: 'Retained Earnings (Income & Expenses)', transactions: matchedTxs });
                   }}
                   title="Click to drill down into Retained Earnings transaction activity"
-                  className="flex justify-between items-center bg-emerald-50/20 hover:bg-emerald-50/50 p-2 rounded-lg transition-all border border-emerald-100/40 hover:border-emerald-300 min-w-0 cursor-pointer group/row"
+                  className="w-full text-left flex justify-between items-center bg-emerald-50/20 hover:bg-emerald-50/50 p-2 rounded-lg transition-all border border-emerald-100/40 hover:border-emerald-300 min-w-0 cursor-pointer group/row"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-emerald-100 shrink-0">
@@ -782,7 +782,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                       </div>
                     )}
                   </div>
-                </div>
+                </button>
 
                 <div className="flex justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Equity</span>

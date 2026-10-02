@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { cn, formatCurrency, activateOnKey } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
 import { useUIStore } from '../../stores/useUIStore';
 import { getIdToken } from '../../firebase';
 import { monthCloseState } from '../../lib/periodLock';
@@ -157,7 +157,7 @@ export default function FiscalPeriodManager() {
             {periods.map(p => (
               <div 
                 key={p.id}
-                role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => setSelectedPeriod(p.id)}
+                role="presentation" onClick={() => setSelectedPeriod(p.id)}
                 className={cn(
                   "p-4 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
                   p.isLocked 
@@ -166,7 +166,7 @@ export default function FiscalPeriodManager() {
                   selectedPeriod === p.id && "ring-2 ring-indigo-500 border-transparent shadow-lg"
                 )}
               >
-                <div className="flex items-center justify-between mb-3">
+                <button type="button" aria-pressed={selectedPeriod === p.id} className="w-full text-left flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2.5">
                     <div className={cn(
                       "p-2 rounded-lg",
@@ -186,7 +186,7 @@ export default function FiscalPeriodManager() {
                   ) : (
                     <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
                   )}
-                </div>
+                </button>
 
                 <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                   <span className={cn(

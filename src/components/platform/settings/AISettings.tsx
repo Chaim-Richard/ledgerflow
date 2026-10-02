@@ -2,7 +2,7 @@ import React, { useState, useEffect, useId } from 'react';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { Key, AlertCircle, RefreshCw, CheckCircle2, Lock, Eye, EyeOff, Database, Cpu as CpuIcon, Activity, ExternalLink, Sliders, Sparkles, BrainCircuit } from 'lucide-react';
-import { cn, activateOnKey } from '../../../lib/utils';
+import { cn } from '../../../lib/utils';
 import { toast } from 'sonner';
 import { db } from '../../../firebase';
 import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from '../../../lib/db/firestore';
@@ -326,12 +326,12 @@ export default function AISettings() {
           </h4>
           <div className="space-y-4">
             {MODEL_OPTIONS.map((m) => (
-              <div role="button" tabIndex={0}
+              <button type="button"
                 aria-pressed={selectedModel === m.name}
                 key={m.name} 
-                onKeyDown={activateOnKey} onClick={() => handleSelectModel(m.name)}
+                onClick={() => handleSelectModel(m.name)}
                 className={cn(
-                  "p-5 rounded-[32px] border flex flex-col gap-2 transition-all cursor-pointer select-none active:scale-[0.98]",
+                  "w-full text-left p-5 rounded-[32px] border flex flex-col gap-2 transition-all cursor-pointer select-none active:scale-[0.98]",
                   selectedModel === m.name ? "bg-indigo-50 border-indigo-200 ring-2 ring-indigo-50" : "bg-[var(--surface)] border-[var(--line)] hover:border-slate-350"
                 )}
               >
@@ -345,7 +345,7 @@ export default function AISettings() {
                   </span>
                 </div>
                 <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wider leading-relaxed">{m.desc}</p>
-              </div>
+              </button>
             ))}
           </div>
         </div>

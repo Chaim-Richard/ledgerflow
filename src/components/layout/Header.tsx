@@ -11,7 +11,6 @@ import NotificationDrawer from './NotificationDrawer';
 import { useCollaborators } from '../../hooks/useCollaborators';
 
 import { useCurrentRole } from '../../hooks/useCurrentRole';
-import { activateOnKey } from '../../lib/utils';
 
 interface HeaderProps {
   onLogout?: () => void;
@@ -163,15 +162,15 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
                 <span>ADMIN PANEL</span>
               </button>
             )}
-            <div 
-              role="button" 
-              tabIndex={0} 
-              onKeyDown={activateOnKey} onClick={onLogout}
+            <button
+              type="button"
+
+              onClick={onLogout}
               title={`Logged in as ${user.email}${isAdmin ? ' (Administrator)' : ''}. Click to Log Out.`}
               className="h-8 w-8 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] text-[11px] font-mono font-bold cursor-pointer hover:bg-[var(--brass)] hover:text-black transition-colors"
             >
               {user.email?.[0]?.toUpperCase() || 'S'}
-            </div>
+            </button>
           </div>
         ) : (
           <button
