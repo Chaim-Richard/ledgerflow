@@ -90,6 +90,15 @@ export default function Sales() {
     return map;
   }, [invoices, transactions, customers, accounts]);
   const onAddInvoice = async (data: any) => { 
+    // A customer typed in the invoice that isn't on the list yet is added first, so the invoice
+    // belongs to a real customer (statements, balances, emails)
+    if (typeof data.customerId === 'string' && data.customerId.startsWith('new-')) {
+      const name = String(data.customerName || '').trim();
+      if (!name) { toast.error('Pick a customer or type a new customer\'s name.'); return; }
+      const created = await addEntity('customers', { name, status: 'active' }, `Customer "${name}" added`);
+      if (!created) return;
+      data = { ...data, customerId: created.id };
+    }
     let res;
     if (data.id) { 
       const { id, ...updates } = data; 

@@ -86,7 +86,7 @@ const GUIDE_SECTIONS: SectionDoc[] = [
       "From Sales or Purchases, click \"Receive Payment\" or \"Pay Vendor Bill\".",
       "Select the customer or vendor to automatically populate open documents.",
       "Enter the total settlement amount.",
-      "Use \"Auto-Allocate (Oldest First)\" or manually specify split amounts per document.",
+      "Use \"Apply to oldest first\" or type an amount for each document.",
       "Confirm the deposit/payment cash account and submit."
     ]
   },

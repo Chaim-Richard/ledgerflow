@@ -8,6 +8,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, getLocalDateISO, roundCents } from '../../lib/utils';
 import { LedgerPostService } from '../../services/LedgerPostService';
 import { toast } from 'sonner';
+import { calculateAmountDue } from '../../lib/documentMath';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
@@ -69,45 +70,37 @@ export default function ReceivePaymentModal({
   }, [defaultDirection, defaultContactId, isOpen]);
 
   // Filter target open documents
+  // oldest first, so a payment settles the oldest invoices/bills first (the store lists newest first)
   const openDocs = useMemo(() => {
+    const oldestFirst = <T extends { date: string; number: string }>(list: T[]) =>
+      [...list].sort((a, b) => a.date.localeCompare(b.date) || a.number.localeCompare(b.number));
     if (direction === 'received') {
-      return (invoices || []).filter(inv => {
+      // what the server accepts: issued (not draft or void) and still owed (calculateAmountDue)
+      return oldestFirst((invoices || []).filter(inv => {
         if (contactId && inv.customerId !== contactId) return false;
-        const total = inv.amountCents || 0;
-        const paid = inv.amountPaidCents || 0;
-        return (total - paid) > 0 && inv.status !== 'void' && inv.status !== 'rejected';
-      }).map(inv => {
-        const total = inv.amountCents || 0;
-        const paid = inv.amountPaidCents || 0;
-        return {
-          id: inv.id,
-          number: inv.number || inv.id,
-          date: inv.date || '',
-          totalCents: total,
-          paidCents: paid,
-          remainingCents: total - paid,
-          type: 'invoice' as const
-        };
-      });
+        return calculateAmountDue(inv) > 0 && inv.status !== 'void' && inv.status !== 'draft' && inv.status !== 'rejected';
+      }).map(inv => ({
+        id: inv.id,
+        number: inv.number || inv.id,
+        date: inv.date || '',
+        totalCents: inv.amountCents || 0,
+        paidCents: inv.amountPaidCents || 0,
+        remainingCents: calculateAmountDue(inv),
+        type: 'invoice' as const
+      })));
     } else {
-      return (bills || []).filter(b => {
+      return oldestFirst((bills || []).filter(b => {
         if (contactId && b.vendorId !== contactId) return false;
-        const total = b.amountCents || 0;
-        const paid = b.amountPaidCents || 0;
-        return (total - paid) > 0 && b.status !== 'void';
-      }).map(b => {
-        const total = b.amountCents || 0;
-        const paid = b.amountPaidCents || 0;
-        return {
-          id: b.id,
-          number: b.number || b.id,
-          date: b.date || b.dueDate || '',
-          totalCents: total,
-          paidCents: paid,
-          remainingCents: total - paid,
-          type: 'bill' as const
-        };
-      });
+        return calculateAmountDue(b) > 0 && b.status !== 'void' && b.status !== 'draft';
+      }).map(b => ({
+        id: b.id,
+        number: b.number || b.id,
+        date: b.date || b.dueDate || '',
+        totalCents: b.amountCents || 0,
+        paidCents: b.amountPaidCents || 0,
+        remainingCents: calculateAmountDue(b),
+        type: 'bill' as const
+      })));
     }
   }, [direction, contactId, invoices, bills]);
 
@@ -425,7 +418,7 @@ export default function ReceivePaymentModal({
                 className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 transition-colors"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Auto-Allocate Top-Down
+                Apply to oldest first
               </button>
             </div>
 

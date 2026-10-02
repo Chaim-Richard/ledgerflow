@@ -49,7 +49,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || 'Failed to write off bad debt');
-      toast.success(`Written off ${formatCurrency(remainingCents)} as bad debt`);
+      toast.success(`Written off ${formatCurrency(remainingCents, invoice.currency)} as bad debt`);
       onClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to write off bad debt');
@@ -75,7 +75,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -89,7 +89,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
             <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span>Outstanding Balance:</span>
               <strong className="font-mono text-amber-600 dark:text-amber-400 font-bold">
-                {formatCurrency(remainingCents)}
+                {formatCurrency(remainingCents, invoice.currency)}
               </strong>
             </div>
           </div>

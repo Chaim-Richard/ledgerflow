@@ -39,8 +39,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     date: format(new Date(), 'yyyy-MM-dd'),
     dueDate: format(new Date(), 'yyyy-MM-dd'),
     status: 'pending',
-    amountCents: 0,
-    totalCents: 0
+    amountCents: 0
   }));
 
   const [items, setItems] = useState<Array<{ id: string, itemId?: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string, taxRate?: number, unitCostCents?: number }>>([
@@ -88,10 +87,15 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     }
   }, [isOpen, editingExisting]);
 
-  const [memo, setMemo] = useState('');
-  const [terms, setTerms] = useState('');
-  const [emailSubject, setEmailSubject] = useState('');
-  const [emailBody, setEmailBody] = useState('');
+  // an edited invoice keeps its memo, terms and email text (they were saved in metadata)
+  const savedText = (key: string) => {
+    const v = (initialInvoice?.metadata as Record<string, unknown> | undefined)?.[key];
+    return typeof v === 'string' ? v : '';
+  };
+  const [memo, setMemo] = useState(() => savedText('memo'));
+  const [terms, setTerms] = useState(() => savedText('terms'));
+  const [emailSubject, setEmailSubject] = useState(() => savedText('emailSubject'));
+  const [emailBody, setEmailBody] = useState(() => savedText('emailBody'));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
 
@@ -104,7 +108,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const taxCode = taxChoice === 'custom' ? customRateCode(Number(invoice.taxRate) || 0) : salesCodes.find(c => c.id === taxChoice) || null;
   const pricesIncludeTax = invoice.pricesIncludeTax ?? (invoice.taxVersion === 2 ? false : Boolean(invoice.taxInclusive));
   const totals = documentTotals(total, invoice.discountCents || 0, taxCode, pricesIncludeTax);
-  const money = (cents: number) => formatCurrency(cents, invoice.currency || workspaceCurrency);
+  const currency = invoice.currency || workspaceCurrency;
+  const currencyChoices = [...new Set([workspaceCurrency, currency, 'USD', 'EUR', 'GBP'])];
+  const money = (cents: number) => formatCurrency(cents, currency);
 
   const handleAction = async (e: React.FormEvent, actionStatus: string) => {
     e.preventDefault();
@@ -124,6 +130,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       await onSave({
         ...invoice,
         status: actionStatus as any,
+        currency,
         // the total owed (after the discount, tax included) and the tax, explicitly (taxCodes.ts)
         amountCents: totals.amountCents,
         lineSumCents: totals.subtotalCents,
@@ -179,7 +186,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       >
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
           <div>
-            <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Create New Invoice</h3>
+            <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">{editingExisting ? `Edit invoice ${invoice.number || ''}`.trim() : 'New invoice'}</h3>
             <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Sales & Receivables</p>
           </div>
           <div className="flex items-center gap-2">
@@ -328,7 +335,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
              <div className="space-y-2">
-               <label htmlFor="inv-discount" className="micro-label">Discount ($)</label>
+               <label htmlFor="inv-discount" className="micro-label">Discount ({currency})</label>
                <input 
                  id="inv-discount"
                  type="number" step="0.01" min="0" value={(invoice.discountCents || 0) / 100}
@@ -337,7 +344,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                />
              </div>
              <div className="space-y-2">
-               <label htmlFor="inv-deposit" className="micro-label">Deposit ($)</label>
+               <label htmlFor="inv-deposit" className="micro-label">Deposit ({currency})</label>
                <input 
                  id="inv-deposit"
                  type="number" step="0.01" min="0" value={(invoice.depositCents || 0) / 100}
@@ -346,7 +353,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                />
              </div>
              <div className="space-y-2">
-               <label htmlFor="inv-retainage" className="micro-label">Retainage ($)</label>
+               <label htmlFor="inv-retainage" className="micro-label">Retainage ({currency})</label>
                <input 
                  id="inv-retainage"
                  type="number" step="0.01" min="0" value={(invoice.retainageCents || 0) / 100}
@@ -395,13 +402,11 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  <label htmlFor="inv-currency" className="micro-label">Currency</label>
                  <select 
                    id="inv-currency"
-                   value={invoice.currency || 'USD'}
-                   onChange={(e) => setInvoice({ ...invoice, currency: e.target.value })}
+                   value={currency}
+                   onChange={(e) => setInvoice({ ...invoice, currency: e.target.value, exchangeRate: e.target.value === workspaceCurrency ? 1 : invoice.exchangeRate })}
                    className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
                  >
-                   <option value="USD">USD</option>
-                   <option value="EUR">EUR</option>
-                   <option value="GBP">GBP</option>
+                   {currencyChoices.map(c => <option key={c} value={c}>{c}</option>)}
                  </select>
              </div>
              <div className="space-y-2">
@@ -475,7 +480,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                     />
                   </div>
                   <div className="col-span-6 md:col-span-2 space-y-1">
-                    <label htmlFor={`inv-item-rate-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Rate ($)</label>
+                    <label htmlFor={`inv-item-rate-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Rate ({currency})</label>
                     <input 
                       id={`inv-item-rate-${idx}`}
                       type="number"

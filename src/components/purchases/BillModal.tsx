@@ -386,7 +386,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                     </select>
                   </div>
                   <div className="col-span-3 space-y-1">
-                    <label htmlFor={`bill-split-amount-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Amount ($)</label>
+                    <label htmlFor={`bill-split-amount-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Amount ({bill.currency || workspaceCurrency})</label>
                     <input 
                       id={`bill-split-amount-${idx}`}
                       type="number"

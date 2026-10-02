@@ -60,7 +60,7 @@ test.describe('E2E Smoke Suite', () => {
     await page.click('button:has-text("Invoices & AP")');
     await expect(page.locator('button:has-text("Add Invoice")').first()).toBeVisible();
     await page.click('button:has-text("Add Invoice")');
-    await expect(page.locator('text="Create New Invoice"').first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole('heading', { name: 'New invoice' })).toBeVisible({ timeout: 8000 });
   });
 
   test('5. ToolSandbox Algorithm: Sandbox renders without NaN on empty dates', async ({ page }) => {
