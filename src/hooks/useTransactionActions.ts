@@ -21,7 +21,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useUIStore } from '../stores/useUIStore';
 import { MatchingEngine } from '../lib/MatchingEngine';
-import { Transaction, BankStatementLine, AutoRule, TransactionLine } from '../types';
+import { Transaction, BankStatementLine, AutoRule, TransactionLine, ChartAccount, AuditLogDetails } from '../types';
 import { toast } from 'sonner';
 import { formatDecimal, parseLocalDate, sanitizeCsvCell, formatDate } from '../lib/utils';
 import { describeError } from '../lib/errorRemedies';
@@ -45,6 +45,36 @@ import { checkVersionConflict as _checkVersionConflict, resolveConflictLWW as _r
 import { addComment as _addComment, getCommentsForEntity as _getCommentsForEntity } from '../lib/commentService';
 import { postingLock } from '../lib/periodLock';
 
+type ImportedTransaction = Partial<Omit<Transaction, 'date' | 'description'>> & {
+  date: string;
+  description: string;
+  amountCents: number;
+  isAI?: boolean;
+};
+type ImportedBankLine = Omit<BankStatementLine, 'matchedTransactionId'> & { matchedTransactionId?: string | null; createdAt?: string };
+type TransactionUpdates = Partial<Transaction> & {
+  accountId?: string;
+  accountName?: string;
+  category?: string;
+  'dimensions.category'?: string;
+  'dimensions.project'?: string;
+};
+type TransactionConflictError = Error & { isConflict?: boolean; currentTransaction?: Transaction };
+type ReconcileOperation =
+  | { type: 'updateBankLine'; id: string; data: { status: 'pending' | 'matched'; matchedTransactionId: string | null } }
+  | { type: 'updateTransaction'; id: string; data: Pick<Transaction, 'status'> };
+
+function errorMessage(error: unknown): string | undefined {
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  return undefined;
+}
+
+function isConflictError(error: unknown): error is TransactionConflictError {
+  return error instanceof Error && 'isConflict' in error && Boolean(error.isConflict);
+}
+
 export function useTransactionActions() {
   const user = useAuthStore(s => s.user);
   const userProfile = useAuthStore(s => s.userProfile);
@@ -67,7 +97,7 @@ export function useTransactionActions() {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   };
 
-  const recordAudit = async (action: string, entityType: string, entityId: string, details: any) => {
+  const recordAudit = async (action: string, entityType: string, entityId: string, details: AuditLogDetails | Partial<Transaction> | string) => {
     if (!user || !currentWorkspaceId) return;
     try {
       setIsSyncing(true);
@@ -143,12 +173,12 @@ export function useTransactionActions() {
     }
   };
 
-  const handleImportTransactions = async (newTransactions: any[]) => {
+  const handleImportTransactions = async (newTransactions: ImportedTransaction[]) => {
     if (!user || !currentWorkspaceId) return;
 
     const existingTransactions = useLedgerStore.getState().transactions;
     // Fast deduplication via hash and date
-    const existingIds = new Set(existingTransactions.map(t => t.bankTransactionId || t.id));
+    const existingIds = new Set<string | undefined>(existingTransactions.map(t => t.bankTransactionId || t.id));
     
     setIsSyncing(true);
     const loader = toast.loading(`Synchronizing ${newTransactions.length} transactions...`);
@@ -163,11 +193,11 @@ export function useTransactionActions() {
         where('uid', '==', user.uid)
       );
       const rulesSnap = await getDocs(qRules);
-      const activeRules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      const activeRules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as AutoRule));
       const engine = new MatchingEngine(activeRules, analyticalPatternCache, user.uid, matchingThreshold, existingTransactions, dimensionNodes, accounts);
 
-      const accountsByName = new Map<string, any>();
-      const accountsById = new Map<string, any>();
+      const accountsByName = new Map<string, ChartAccount>();
+      const accountsById = new Map<string, ChartAccount>();
       accounts.forEach(a => {
         accountsByName.set(a.name, a);
         accountsById.set(a.id, a);
@@ -175,7 +205,7 @@ export function useTransactionActions() {
       let ccAccountPrecomputed = accounts.find(a => (a.type === 'liability' || a.type === 'asset') && (a.subtype === 'Credit Card' || (a.name || '').toLowerCase().includes('card')));
 
       const processedTxs: Transaction[] = [];
-      const bankLineRecords: any[] = [];
+      const bankLineRecords: ImportedBankLine[] = [];
 
       txsToMatch.forEach(tx => {
         const defaultAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || '';
@@ -221,7 +251,7 @@ export function useTransactionActions() {
                    category: 'Credit Card',
                    subtype: 'Credit Card',
                    balanceCents: 0
-                 } as any;
+                 } as ChartAccount;
                  if (ccAccount) {
                     setAccounts([...accounts, ccAccount]);
                     accountsByName.set(ccAccount.name, ccAccount);
@@ -264,7 +294,7 @@ export function useTransactionActions() {
 
         // 1. ALWAYS inject into the BankLines validation layer
         const bankLineRef = doc(collection(db, 'bankLines'));
-        const bankLineRecord = {
+        const bankLineRecord: ImportedBankLine = {
           id: bankLineRef.id,
           workspaceId: currentWorkspaceId,
           uid: user.uid,
@@ -279,20 +309,20 @@ export function useTransactionActions() {
         // 2. ONLY synthesize actual atomic transaction if category was resolved
         if (isResolvedCategory) {
           const newTxId = doc(collection(db, 'transactions')).id;
-          const txDraft: any = {
+          const txDraft = {
             ...tx,
             id: newTxId,
             lines: balancedLines,
             uid: user.uid,
             workspaceId: currentWorkspaceId,
-            status: (tx as any).isAI ? 'draft' : 'pending',
+            status: tx.isAI ? 'draft' : 'pending',
             type: 'actual',
             createdAt: new Date().toISOString()
-          };
+          } as Transaction;
 
           // Resolution check: If accountName was provided, resolve its ID FIRST
           if (txDraft.lines && txDraft.lines.length > 0) {
-            txDraft.lines = txDraft.lines.map((line: any) => {
+            txDraft.lines = txDraft.lines.map((line) => {
               if (line.accountName && line.accountId === 'uncategorized') {
                 const resolved = accountsByName.get(line.accountName);
                 if (resolved) {
@@ -312,7 +342,7 @@ export function useTransactionActions() {
               status: 'verified' as const,
               verifiedAt: new Date().toISOString(),
               method: 'manual' as const,
-              hash: DoubleEntryAuditor.computeHash(txDraft as any),
+              hash: DoubleEntryAuditor.computeHash(txDraft),
               timestamp: new Date().toISOString()
             }
           };
@@ -322,7 +352,7 @@ export function useTransactionActions() {
 
           // LEARN: Record as a seen pattern for every line item
           if (finalTx.lines && finalTx.lines.length > 0) {
-            finalTx.lines.forEach((line: any) => {
+            finalTx.lines.forEach((line) => {
               if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
                 const searchDesc = line.description || (finalTx.lines.length === 1 ? finalTx.description : undefined);
                 if (searchDesc) {
@@ -376,7 +406,7 @@ export function useTransactionActions() {
     // Do not record rule patterns into archived or inactive accounts
     const currentAccounts = useLedgerStore.getState().accounts;
     const targetAccount = currentAccounts.find(a => a.id === accountId || a.name.toLowerCase() === accountName.toLowerCase());
-    if (targetAccount && ((targetAccount as any).archived === true || (targetAccount as any).isArchived === true || targetAccount.isActive === false)) {
+    if (targetAccount && ((targetAccount as ChartAccount & { archived?: boolean }).archived === true || (targetAccount as ChartAccount & { isArchived?: boolean }).isArchived === true || targetAccount.isActive === false)) {
       return;
     }
     
@@ -393,7 +423,7 @@ export function useTransactionActions() {
     
     try {
       const patternRef = doc(db, 'rulePatterns', `${currentWorkspaceId}_${patternId}`);
-      const existingPattern = analyticalPatternCache[cleanDesc] as any;
+      const existingPattern = analyticalPatternCache[cleanDesc];
       const newCount = (existingPattern?.count || 0) + 1;
 
       // Merge tags and dimensions conservatively
@@ -456,7 +486,7 @@ export function useTransactionActions() {
     }
   };
 
-  const balanceTransactionLines = (lines: any[], fallbackAmountCents: number): any[] => {
+  const balanceTransactionLines = (lines: TransactionLine[], fallbackAmountCents: number): TransactionLine[] => {
     let finalLines = [...lines];
 
     // If lines are empty but we have an amount, create a default pair
@@ -547,8 +577,8 @@ export function useTransactionActions() {
           type: l.amountCents > 0 ? 'debit' : 'credit' // Simple mapping for validation demo
         })));
       }
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(errorMessage(e));
       return;
     }
 
@@ -592,7 +622,7 @@ export function useTransactionActions() {
 
     // --- Persistent Rule Learning ---
     if (optimisticTx.description && optimisticTx.lines && optimisticTx.lines.length > 0) {
-      optimisticTx.lines.forEach((line: any) => {
+      optimisticTx.lines.forEach((line) => {
         if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
           const searchDesc = line.description || (optimisticTx.lines.length === 1 ? optimisticTx.description : undefined);
           if (searchDesc) {
@@ -686,7 +716,7 @@ export function useTransactionActions() {
          throw new Error(data.error || 'Failed to save transaction');
       }
       err = null;
-    } catch(e: any) {
+    } catch(e) {
       err = e;
     }
     if (!err) {
@@ -703,7 +733,7 @@ export function useTransactionActions() {
     }
   }, [user, currentWorkspaceId, isPeriodLocked, recordRulePattern, handleVoidTransaction]);
 
-  const handleBulkUpdate = async (ids: string[], updates: any) => {
+  const handleBulkUpdate = async (ids: string[], updates: TransactionUpdates) => {
     if (!user || !currentWorkspaceId || !ids || ids.length === 0) return;
     
     setIsSyncing(true);
@@ -712,7 +742,7 @@ export function useTransactionActions() {
     try {
       const oldStates = new Map<string, Transaction>();
       const currentTransactions = useLedgerStore.getState().transactions;
-      const updatesMap = new Map<string, any>();
+      const updatesMap = new Map<string, TransactionUpdates>();
 
       const targetAccount = accounts.find(a => 
         (updates.accountId && a.id === updates.accountId) || 
@@ -727,7 +757,7 @@ export function useTransactionActions() {
         if (tx) {
           oldStates.set(id, { ...tx });
 
-          const updateData: Record<string, any> = {
+          const updateData: TransactionUpdates = {
             updatedAt: new Date().toISOString()
           };
 
@@ -743,7 +773,7 @@ export function useTransactionActions() {
           if (accId !== undefined || accName !== undefined || projId !== undefined) {
             const existingLines = tx.lines && tx.lines.length > 0 ? tx.lines : [];
             if (existingLines.length > 0) {
-              const newLines = existingLines.map((l: any, idx: number) => {
+              const newLines = existingLines.map((l: TransactionLine, idx: number) => {
                 const acc = accounts.find(a => a.id === l.accountId);
                 const role = resolveAccountRole(acc);
                 const isOffsetOrCash = role === 'cash' || (acc?.type === 'asset' && existingLines.length === 2 && idx === 1);
@@ -773,7 +803,7 @@ export function useTransactionActions() {
         }
       }
 
-      const updatesPayload: { id: string; data: any }[] = [];
+      const updatesPayload: { id: string; data: Partial<Transaction> }[] = [];
       for (const id of ids) {
         const u = updatesMap.get(id);
         if (u) {
@@ -824,7 +854,7 @@ export function useTransactionActions() {
           onClick: async () => {
             const undoLoader = toast.loading('Reverting bulk updates...');
             try {
-              const undoPayload: { id: string; data: any }[] = [];
+              const undoPayload: { id: string; data: Partial<Transaction> }[] = [];
               for (const id of ids) {
                 const oldState = oldStates.get(id);
                 if (oldState) {
@@ -860,9 +890,9 @@ export function useTransactionActions() {
           }
         }
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Bulk update error:', error);
-      const message = error?.message || 'Unknown network error';
+      const message = errorMessage(error) || 'Unknown network error';
       toast.error('Could not complete bulk update.', { 
         id: loader,
         description: `Sequence aborted. (${message})`
@@ -880,7 +910,7 @@ export function useTransactionActions() {
     const idempotencyKey = await generateFileHash(file);
     
     // 2. Prevent duplicate processing
-    const isDuplicate = parsingQueue.some((item: any) => item.idempotencyKey === idempotencyKey && item.status !== 'error');
+    const isDuplicate = parsingQueue.some((item) => item.idempotencyKey === idempotencyKey && item.status !== 'error');
     if (isDuplicate) {
       toast.info(`Receipt ${file.name} is already being processed.`);
       return;
@@ -932,7 +962,7 @@ export function useTransactionActions() {
 
       const headerDimensions: { world?: string; class?: string; project?: string } = {};
       if (currentWorkspace?.dimensions) {
-        const worldDim = currentWorkspace.dimensions.find((d: any) => d.isWorld || d.id === 'world');
+        const worldDim = currentWorkspace.dimensions.find((d) => d.isWorld || d.id === 'world');
         if (worldDim) headerDimensions.world = worldDim.id;
       }
 
@@ -969,7 +999,7 @@ export function useTransactionActions() {
       // Cleanup successful items from queue after 5 seconds
       setTimeout(() => {
         const { parsingQueue, setParsingQueue } = useUIStore.getState();
-        setParsingQueue(parsingQueue.filter((i: any) => i.id !== parsingId));
+        setParsingQueue(parsingQueue.filter((i) => i.id !== parsingId));
       }, 5000);
 
     } catch {
@@ -1042,9 +1072,9 @@ export function useTransactionActions() {
 
       toast.success(data.message || `Fiscal year closed successfully.`, { id: loader });
       return data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Close Year Error:', error);
-      toast.error(error.message || 'Year-end close failed.', { id: loader });
+      toast.error(errorMessage(error) || 'Year-end close failed.', { id: loader });
       throw error;
     } finally {
       setIsSyncing(false);
@@ -1171,15 +1201,15 @@ export function useTransactionActions() {
       if (!res.ok) {
          const data = await res.json();
          if (res.status === 409 || data.error === 'version_conflict') {
-           const err: any = new Error(data.message || 'This transaction was modified by another user.');
+           const err: TransactionConflictError = new Error(data.message || 'This transaction was modified by another user.');
            err.isConflict = true;
            err.currentTransaction = data.currentTransaction;
            throw err;
          }
          throw new Error(data.error || 'Failed to update transaction');
       }
-    } catch(e: any) {
-      if (e.isConflict) {
+    } catch(e) {
+      if (isConflictError(e)) {
         toast.error('Version conflict: Transaction modified by another user.', {
           description: 'Your changes were not saved to prevent overwriting someone else\'s updates. Loaded latest version.'
         });
@@ -1193,7 +1223,7 @@ export function useTransactionActions() {
           return false;
         }
       } else {
-        const message = e?.message || 'Unknown network error';
+        const message = errorMessage(e) || 'Unknown network error';
         toast.error('Could not save your changes.', {
           description: `Please try again. (${message})`
         });
@@ -1219,7 +1249,7 @@ export function useTransactionActions() {
         const description = tx.description;
         
         // Push to autonomous cache for immediate "soft" learning across all lines
-        updates.lines.forEach((line: any) => {
+        updates.lines.forEach((line) => {
           if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
             const searchDesc = line.description || (updates.lines?.length === 1 ? description : undefined);
             if (searchDesc && line.accountId) {
@@ -1303,8 +1333,8 @@ export function useTransactionActions() {
 
       toast.success(replacement ? 'Transaction reversed & corrected successfully' : 'Transaction reversed successfully', { id: loader });
       return data;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to reverse transaction', { id: loader });
+    } catch (err) {
+      toast.error(errorMessage(err) || 'Failed to reverse transaction', { id: loader });
       throw err;
     }
   };
@@ -1395,8 +1425,8 @@ export function useTransactionActions() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Server error on match');
       toast.success('Alignment confirmed and certified.');
-    } catch (error: any) {
-      toast.error('Matching cycle failed: ' + (error?.message || 'Network error'));
+    } catch (error) {
+      toast.error('Matching cycle failed: ' + (errorMessage(error) || 'Network error'));
     } finally {
       setIsSyncing(false);
     }
@@ -1417,8 +1447,8 @@ export function useTransactionActions() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Server error on ignore');
       toast.info('Item ignored');
-    } catch (error: any) {
-      toast.error('Action failed: ' + (error?.message || 'Network error'));
+    } catch (error) {
+      toast.error('Action failed: ' + (errorMessage(error) || 'Network error'));
     } finally {
       setIsSyncing(false);
     }
@@ -1459,9 +1489,9 @@ export function useTransactionActions() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to synthesize transaction');
       toast.success('Atomic transaction synthesized and reconciled.');
-    } catch (error: any) {
+    } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'bankLines/synthesis');
-      toast.error('Synthesis cycle interrupted: ' + (error?.message || 'Network error'));
+      toast.error('Synthesis cycle interrupted: ' + (errorMessage(error) || 'Network error'));
     } finally {
       setIsSyncing(false);
     }
@@ -1470,7 +1500,7 @@ export function useTransactionActions() {
   const handleReconcileUndo = async (bankLineId: string, transactionId?: string) => {
     setIsSyncing(true);
     try {
-      const operations: any[] = [{ type: 'updateBankLine', id: bankLineId, data: { status: 'pending', matchedTransactionId: null } }];
+      const operations: ReconcileOperation[] = [{ type: 'updateBankLine', id: bankLineId, data: { status: 'pending', matchedTransactionId: null } }];
       if (transactionId) {
          operations.push({ type: 'updateTransaction', id: transactionId, data: { status: 'completed' } });
       }
@@ -1491,7 +1521,7 @@ export function useTransactionActions() {
     }
   };
 
-  const handleAddRule = async (data: any) => {
+  const handleAddRule = async (data: Partial<AutoRule>) => {
     if (!user || !currentWorkspaceId) return;
     try {
       await addDoc(collection(db, 'autoRules'), {
@@ -1544,7 +1574,7 @@ export function useTransactionActions() {
       );
       const rulesSnap = await getDocs(qRules);
       const activeRules = rulesSnap.docs
-        .map(d => ({ id: d.id, ...d.data() } as any))
+        .map(d => ({ id: d.id, ...d.data() } as AutoRule))
         .filter(r => ruleIds.includes(r.id));
 
       if (activeRules.length === 0) {
@@ -1554,7 +1584,7 @@ export function useTransactionActions() {
 
       // Build search engine
       const patterns = activeRules.flatMap(r => {
-        const p: any[] = [];
+        const p: { pattern: string; ruleId: string }[] = [];
         if (r.condition.descriptionContains) p.push({ pattern: r.condition.descriptionContains, ruleId: r.id });
         if (r.condition.vendor) p.push({ pattern: r.condition.vendor, ruleId: r.id });
         return p;
@@ -1567,9 +1597,9 @@ export function useTransactionActions() {
       }
 
       let count = 0;
-      const accountMap = new Map(accounts.map(a => [a.id, a]));
+      const accountMap = new Map<string | undefined, ChartAccount>(accounts.map(a => [a.id, a]));
       const ruleMap = new Map(activeRules.map(r => [r.id, r]));
-      const updatesToPost: { id: string; data: any }[] = [];
+      const updatesToPost: { id: string; data: Partial<Transaction> }[] = [];
 
       const localUpdatedTxs = originalTransactions.map(tx => {
         let matchingRuleId: string | null = null;
@@ -1702,8 +1732,8 @@ export function useTransactionActions() {
          if (!res.ok) throw new Error('Batch repair API rejected updates');
       }
       toast.success('Ledger chain cryptographically certified.', { id: loader });
-    } catch (error: any) {
-      toast.error('Sync failed: ' + (error?.message || 'Network error'), { id: loader });
+    } catch (error) {
+      toast.error('Sync failed: ' + (errorMessage(error) || 'Network error'), { id: loader });
     }
   };
 
@@ -1801,7 +1831,7 @@ export function useTransactionActions() {
       const targetIds = Array.from(relevantTargets);
       
       const optimalMatches = findGlobalOptimalMatch(sourceItems, targetIds);
-      const batchReconcile: any[] = [];
+      const batchReconcile: ReconcileOperation[] = [];
 
       // 3. Apply Matches
       optimalMatches.forEach((txId, blId) => {
@@ -1827,14 +1857,14 @@ export function useTransactionActions() {
       } else {
         toast.info('Scan complete. No high-confidence matches found.', { id: loader });
       }
-    } catch (error: any) {
-      toast.error('Reconciliation cycle interrupted: ' + (error?.message || 'Error occurred'), { id: loader });
+    } catch (error) {
+      toast.error('Reconciliation cycle interrupted: ' + (errorMessage(error) || 'Error occurred'), { id: loader });
     } finally {
       setIsSyncing(false);
     }
   };
 
-  const handleIntegrityAction = async (action: string, _details?: any) => {
+  const handleIntegrityAction = async (action: string, _details?: unknown) => {
     if (!user || !currentWorkspaceId) return;
 
     if (action === 'repair-chain') {
@@ -1844,7 +1874,7 @@ export function useTransactionActions() {
         where('uid', '==', user.uid)
       );
       const snap = await getDocs(q);
-      const txs = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      const txs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction));
       const repaired = DoubleEntryAuditor.repairChain(txs);
       await handleBulkRepair(repaired);
     } else if (action === 'prune-range') {
@@ -1894,8 +1924,8 @@ export function useTransactionActions() {
 
         useLedgerStore.getState().setLockDate(data.closingDate);
         toast.success(data.message || `Month closed successfully.`, { id: loader });
-      } catch (error: any) {
-        toast.error(error.message || 'Month-end close failed.', { id: loader });
+      } catch (error) {
+        toast.error(errorMessage(error) || 'Month-end close failed.', { id: loader });
       } finally {
         setIsSyncing(false);
       }
@@ -1939,9 +1969,9 @@ export function useTransactionActions() {
           toast.success(`Successfully posted ${processedCount} recurring transaction(s).`, { id: loader });
         }
         return { count: processedCount };
-      } catch (err: any) {
+      } catch (err) {
         console.error('Failed to process recurring transactions:', err);
-        toast.error(err.message || 'Failed to process recurring transactions.', { id: loader });
+        toast.error(errorMessage(err) || 'Failed to process recurring transactions.', { id: loader });
         return { count: 0 };
       }
     },

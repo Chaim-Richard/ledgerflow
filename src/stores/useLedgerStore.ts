@@ -26,12 +26,44 @@ import {
   CustomTemplate,
   BankStatementLine,
   DimensionNode,
-  PeriodStatus
+  PeriodStatus,
+  AuditLog,
+  Partner,
+  ReconciliationSession,
+  AutoRule,
+  WorkspaceInvite,
+  SupportTicket,
+  SupportMessage
 } from '../types';
 
 
 import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator';
 import type { LockException } from '../lib/periodLock';
+declare global {
+  interface Window {
+    _recomputeTimer?: ReturnType<typeof setTimeout>;
+    __ledgerStore?: typeof useLedgerStore;
+    __ledgerBaseCurrency?: string;
+  }
+}
+
+// The grid still submits the legacy rule format; keep its payload unchanged at this boundary.
+export interface LegacyGridRule {
+  id: string;
+  name: string;
+  pattern: string;
+  targetAccountId?: string;
+  targetAccountName: string;
+  priority: number;
+  enabled: boolean;
+  conditions: { field: string; operator: string; value: string }[];
+  actions: { type: string; accountId?: string; accountName: string }[];
+}
+
+type StoredAuditLog = Omit<AuditLog, 'uid'> & { uid?: string; targetId?: string };
+type StoredPartner = Pick<Partner, 'id'> & Partial<Partner>;
+type StoredReconciliation = ReconciliationSession & { accountId?: string; accountName?: string };
+
 export interface LedgerState {
   _version: number;
   _lastSync: number;
@@ -58,18 +90,18 @@ export interface LedgerState {
   locations: string[];
   customFields: { name: string, type: string, showOnSales: boolean, showOnExpenses: boolean }[];
   dimensionNodes: DimensionNode[];
-  auditLogs: any[];
+  auditLogs: StoredAuditLog[];
   bankLines: BankStatementLine[];
   periods: PeriodStatus[];
-  partners: any[];
-  reconciliations: any[];
+  partners: StoredPartner[];
+  reconciliations: StoredReconciliation[];
   customTemplates: CustomTemplate[];
-  autoRules: any[];
-  invites: any[];
-  workspaceShards: any[];
-  billingLedgerTraces: any[];
-  supportTickets: any[];
-  supportMessages: any[];
+  autoRules: AutoRule[];
+  invites: WorkspaceInvite[];
+  workspaceShards: Record<string, unknown>[];
+  billingLedgerTraces: Record<string, unknown>[];
+  supportTickets: SupportTicket[];
+  supportMessages: SupportMessage[];
   integrityStatus: {
     lastChecked: string;
     isConsistent: boolean;
@@ -81,7 +113,7 @@ export interface LedgerState {
   projectedBalanceCents: number;
   lastActivity: string;
   analyticalPatternCache: Record<string, { accountId: string, accountName: string, projectId?: string, projectName?: string, count: number, tags?: string[], dimensions?: Record<string, string> }>;
-  activityFeed: any[];
+  activityFeed: Record<string, unknown>[];
   auditResult: AuditResult | null;
   optimisticIds: Set<string>;
   computedAccounts: ChartAccount[];
@@ -140,22 +172,22 @@ export interface LedgerState {
   setClasses: (data: string[]) => void;
   setLocations: (data: string[]) => void;
   setCustomFields: (data: { name: string, type: string, showOnSales: boolean, showOnExpenses: boolean }[]) => void;
-  setAuditLogs: (data: any[]) => void;
+  setAuditLogs: (data: StoredAuditLog[]) => void;
   setDimensionNodes: (data: DimensionNode[]) => void;
-  setPartners: (data: any[]) => void;
-  setReconciliations: (data: any[]) => void;
+  setPartners: (data: StoredPartner[]) => void;
+  setReconciliations: (data: StoredReconciliation[]) => void;
   setBankLines: (data: BankStatementLine[]) => void;
   setPeriods: (data: PeriodStatus[]) => void;
   setCustomTemplates: (data: CustomTemplate[]) => void;
-  setAutoRules: (data: any[]) => void;
-  setInvites: (data: any[]) => void;
-  setWorkspaceShards: (data: any[]) => void;
-  setBillingLedgerTraces: (data: any[]) => void;
-  setSupportTickets: (data: any[]) => void;
-  setSupportMessages: (data: any[]) => void;
-  setAnalyticalPatternCache: (data: Record<string, any>) => void;
+  setAutoRules: (data: (AutoRule | LegacyGridRule)[]) => void;
+  setInvites: (data: WorkspaceInvite[]) => void;
+  setWorkspaceShards: (data: Record<string, unknown>[]) => void;
+  setBillingLedgerTraces: (data: Record<string, unknown>[]) => void;
+  setSupportTickets: (data: SupportTicket[]) => void;
+  setSupportMessages: (data: SupportMessage[]) => void;
+  setAnalyticalPatternCache: (data: LedgerState['analyticalPatternCache']) => void;
   updateAnalyticalMatchCache: (description: string, accountId: string, accountName: string, tags?: string[], projectId?: string, projectName?: string, dimensions?: Record<string, string>) => void;
-  setActivityFeed: (data: any[]) => void;
+  setActivityFeed: (data: Record<string, unknown>[]) => void;
   runFullAudit: () => void;
   recomputeBalances: () => void;
   resetStore: () => void;
@@ -259,10 +291,10 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
 
   recomputeBalances: () => {
     if (typeof window !== 'undefined') {
-      if ((window as any)._recomputeTimer) {
-        clearTimeout((window as any)._recomputeTimer);
+      if (window._recomputeTimer) {
+        clearTimeout(window._recomputeTimer);
       }
-      (window as any)._recomputeTimer = setTimeout(() => {
+      window._recomputeTimer = setTimeout(() => {
       const { accounts, transactions, computedAccounts: currentComputed } = get();
       if (!accounts.length) {
         if (currentComputed.length > 0 || get().totalLedgerBalance !== 0) {
@@ -317,8 +349,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       DoubleEntryValidator.validateJournalEntry(tx);
       // Usually here it would call an API or event ledger
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : undefined };
     }
   },
 
@@ -542,7 +574,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   setBankLines: (bankLines) => set({ bankLines }),
   setPeriods: (periods) => set({ periods }),
   setCustomTemplates: (customTemplates) => set({ customTemplates }),
-  setAutoRules: (autoRules) => set({ autoRules }),
+  setAutoRules: (autoRules) => set({ autoRules: autoRules as AutoRule[] }),
   setInvites: (invites) => set({ invites }),
   setWorkspaceShards: (workspaceShards) => set({ workspaceShards }),
   setBillingLedgerTraces: (billingLedgerTraces) => set({ billingLedgerTraces }),
@@ -653,9 +685,9 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
 }));
 
 if (typeof window !== 'undefined') {
-  (window as any).__ledgerStore = useLedgerStore;
-  (window as any).__ledgerBaseCurrency = 'USD';
+  window.__ledgerStore = useLedgerStore;
+  window.__ledgerBaseCurrency = 'USD';
   useLedgerStore.subscribe((state) => {
-    (window as any).__ledgerBaseCurrency = state.baseCurrency || 'USD';
+    window.__ledgerBaseCurrency = state.baseCurrency || 'USD';
   });
 }

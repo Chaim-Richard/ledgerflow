@@ -1,4 +1,6 @@
 import { isPostable, lineAmount } from '../../lib/txFilters';
+import type { Budget } from '../../types';
+import type { LedgerState } from '../../stores/useLedgerStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
@@ -29,11 +31,11 @@ import { Labelled } from '../ui/Labelled';
 
 export default function BudgetManager() {
   const formId = useId();
-  const user = useAuthStore((s: any) => s.user);
-  const currentWorkspaceId = useLedgerStore((s: any) => s.currentWorkspaceId);
-  const budgets = useLedgerStore((s: any) => s.budgets);
-  const transactions = useLedgerStore((s: any) => s.transactions);
-  const accounts = useLedgerStore((s: any) => s.accounts);
+  const user = useAuthStore((s) => s.user);
+  const currentWorkspaceId = useLedgerStore((s: LedgerState & { currentWorkspaceId?: string }) => s.currentWorkspaceId);
+  const budgets = useLedgerStore((s) => s.budgets);
+  const transactions = useLedgerStore((s) => s.transactions);
+  const accounts = useLedgerStore((s) => s.accounts);
   useLedgerCollections('budgets');
   const [isAdding, setIsAdding] = useState(false);
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
@@ -85,22 +87,22 @@ export default function BudgetManager() {
   };
 
   const budgetAnalysis = useMemo(() => {
-    return budgets.map((budget: any) => {
+    return budgets.map((budget: Budget & { startDate?: string }) => {
       const targetLower = (budget.targetId || '').toLowerCase();
       // Find matching account ID or name
-      const matchingAccount = accounts.find((a: any) => 
+      const matchingAccount = accounts.find((a) =>
         a.id === budget.targetId || 
         (a.name || '').toLowerCase() === targetLower || 
         (a.code || '').toLowerCase() === targetLower
       );
 
-      const actualCents = (transactions || []).filter(isPostable).reduce((sum: number, t: any) => {
-        const lines = t.lines?.filter((l: any) => 
+      const actualCents = (transactions || []).filter(isPostable).reduce((sum: number, t) => {
+        const lines = t.lines?.filter((l) =>
           l.accountId === budget.targetId || 
           (matchingAccount && l.accountId === matchingAccount.id) ||
           (l.accountName || '').toLowerCase() === targetLower
         ) || [];
-        return sum + lines.reduce((s: number, l: any) => s + Math.max(0, lineAmount(l, t) || 0), 0);
+        return sum + lines.reduce((s: number, l) => s + Math.max(0, lineAmount(l, t) || 0), 0);
       }, 0);
       
       const variance = budget.amountCents - actualCents;
@@ -138,7 +140,7 @@ export default function BudgetManager() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {budgetAnalysis.map((b: any) => {
+        {budgetAnalysis.map((b) => {
           const isOver = b.percentUsed > 100;
           const isWarning = b.percentUsed > 85 && b.percentUsed <= 100;
 
@@ -331,7 +333,7 @@ export default function BudgetManager() {
                       className="w-full px-8 py-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-[var(--text)] uppercase tracking-widest"
                     />
                     <datalist id={`${formId}-account-list`}>
-                      {accounts.map((acc: any) => (
+                      {accounts.map((acc) => (
                         <option key={acc.id} value={acc.name}>{acc.code}</option>
                       ))}
                     </datalist>
@@ -358,7 +360,7 @@ export default function BudgetManager() {
                     <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest truncate opacity-50" label="Velocity Period">
                       <select 
                         value={newBudget.period}
-                        onChange={(e) => setNewBudget({ ...newBudget, period: e.target.value as any })}
+                        onChange={(e) => setNewBudget({ ...newBudget, period: e.target.value })}
                         className="w-full px-8 py-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-[var(--text)] appearance-none cursor-pointer uppercase tracking-widest"
                       >
                         <option value="monthly">Monthly Cycle</option>

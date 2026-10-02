@@ -5,10 +5,16 @@ import { Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveCont
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
+import type { AlgoInput } from '../../lib/algorithms/types';
 import { buildAlgorithmContext } from '../../lib/algorithms/types';
 import { exportToExcel } from '../../lib/excelExport';
 import { getLocalDateISO } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+
+type ParameterValue = AlgoInput['defaultValue'];
+type DateRangeValue = Extract<AlgoInput, { kind: 'dateRange' }>['defaultValue'];
+type NumberInput = Extract<AlgoInput, { kind?: 'number' }>;
+type SelectInput = Extract<AlgoInput, { kind: 'select' }>;
 
 interface ToolSandboxProps {
   toolId: string;
@@ -45,7 +51,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
   const algorithm = useMemo(() => {
     if (FINANCIAL_ALGORITHMS[toolId]) return FINANCIAL_ALGORITHMS[toolId];
     const found = Object.values(FINANCIAL_ALGORITHMS).find(
-      (a: any) => a.id === toolId || a.id?.replace(/_/g, '-') === toolId || a.id?.replace(/-/g, '_') === toolId
+      (a) => a.id === toolId || a.id?.replace(/_/g, '-') === toolId || a.id?.replace(/-/g, '_') === toolId
     );
     if (!found) throw new Error(`Unknown algorithm: ${toolId}`);
     return found;
@@ -53,26 +59,26 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
   
   // Custom user inputs per algorithm
   const [prevAlgoId, setPrevAlgoId] = useState(algorithm.id);
-  const [params, setParams] = useState<Record<string, any>>(() => {
-    const init: Record<string, any> = {};
-    algorithm.inputs.forEach((i: any) => init[i.key] = i.defaultValue);
+  const [params, setParams] = useState<Record<string, ParameterValue>>(() => {
+    const init: Record<string, ParameterValue> = {};
+    algorithm.inputs.forEach((i) => init[i.key] = i.defaultValue);
     return init;
   });
 
   // Automatically reset parameters during render when switching active algorithm
   if (prevAlgoId !== algorithm.id) {
     setPrevAlgoId(algorithm.id);
-    const init: Record<string, any> = {};
-    algorithm.inputs.forEach((i: any) => init[i.key] = i.defaultValue);
+    const init: Record<string, ParameterValue> = {};
+    algorithm.inputs.forEach((i) => init[i.key] = i.defaultValue);
     setParams(init);
   }
 
   // Re-run anytime params change, using REAL user dataset
   const results = useMemo(() => {
     const today = getLocalDateISO();
-    const asOfDate = params.asOfDate || today;
-    const rangeInput = algorithm.inputs.find((i: any) => i.kind === 'dateRange');
-    const range = rangeInput ? params[rangeInput.key] : undefined;
+    const asOfDate = (params.asOfDate as string | undefined) || today;
+    const rangeInput = algorithm.inputs.find((i) => i.kind === 'dateRange');
+    const range = rangeInput ? params[rangeInput.key] as DateRangeValue | undefined : undefined;
     const period = range?.start && range?.end 
       ? { start: range.start, end: range.end } 
       : { start: '1970-01-01', end: asOfDate };
@@ -188,8 +194,8 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                     type="button"
                     title="Reset to defaults"
                     onClick={() => {
-                      const init: Record<string, any> = {};
-                      algorithm.inputs.forEach((i: any) => init[i.key] = i.defaultValue);
+                      const init: Record<string, ParameterValue> = {};
+                      algorithm.inputs.forEach((i) => init[i.key] = i.defaultValue);
                       setParams(init);
                     }}
                     className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--line)] text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
@@ -198,7 +204,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                  </button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                 {algorithm.inputs.map((inp: any) => {
+                 {algorithm.inputs.map((inp) => {
                     const kind = inp.kind || 'number';
                     
                     return (
@@ -206,14 +212,14 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                          <div className="flex justify-between items-center text-xs font-bold font-mono">
                             <span className="text-[10px] text-[#8a8a8f] uppercase tracking-wider font-sans">{inp.label}</span>
                             {kind === 'number' && (
-                              <span className="text-[var(--text)] dark:text-white">{params[inp.key]}</span>
+                              <span className="text-[var(--text)] dark:text-white">{params[inp.key] as number}</span>
                             )}
                          </div>
                          
                          {kind === 'number' && (
                            <input aria-label={inp.label}
-                             type="range" min={inp.min} max={inp.max} step={inp.step} 
-                             value={params[inp.key]} 
+                             type="range" min={(inp as NumberInput).min} max={(inp as NumberInput).max} step={(inp as NumberInput).step}
+                             value={params[inp.key] as string | number | undefined}
                              onChange={e => setParams({...params, [inp.key]: Number(e.target.value)})}
                              className="w-full accent-ledger-ink"
                            />
@@ -234,11 +240,11 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
 
                          {kind === 'select' && (
                            <select aria-label={inp.label}
-                             value={params[inp.key]}
+                             value={params[inp.key] as string | number | undefined}
                              onChange={e => setParams({...params, [inp.key]: e.target.value})}
                              className="w-full p-2 border border-[var(--line)] rounded-lg bg-[var(--panel)] text-[var(--text)] text-xs font-medium"
                            >
-                             {inp.options?.map((opt: any) => (
+                             {(inp as SelectInput).options?.map((opt) => (
                                <option key={opt.value} value={opt.value}>{opt.label}</option>
                              ))}
                            </select>
@@ -248,14 +254,14 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                            <div className="grid grid-cols-2 gap-2">
                              <input aria-label={`${inp.label} start date`}
                                type="date"
-                               value={params[inp.key]?.start || ''}
-                               onChange={e => setParams({...params, [inp.key]: { ...params[inp.key], start: e.target.value }})}
+                               value={(params[inp.key] as DateRangeValue | undefined)?.start || ''}
+                               onChange={e => setParams({...params, [inp.key]: { ...(params[inp.key] as DateRangeValue), start: e.target.value }})}
                                className="w-full p-1.5 border border-[var(--line)] rounded-md bg-[var(--panel)] text-[var(--text)] text-[10px]"
                              />
                              <input aria-label={`${inp.label} end date`}
                                type="date"
-                               value={params[inp.key]?.end || ''}
-                               onChange={e => setParams({...params, [inp.key]: { ...params[inp.key], end: e.target.value }})}
+                               value={(params[inp.key] as DateRangeValue | undefined)?.end || ''}
+                               onChange={e => setParams({...params, [inp.key]: { ...(params[inp.key] as DateRangeValue), end: e.target.value }})}
                                className="w-full p-1.5 border border-[var(--line)] rounded-md bg-[var(--panel)] text-[var(--text)] text-[10px]"
                              />
                            </div>
@@ -263,12 +269,12 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
 
                          {kind === 'account' && (
                            <select aria-label={inp.label}
-                             value={params[inp.key] || ''}
+                             value={(params[inp.key] as string | undefined) || ''}
                              onChange={e => setParams({...params, [inp.key]: e.target.value})}
                              className="w-full p-2 border border-[var(--line)] rounded-lg bg-[var(--panel)] text-[var(--text)] text-xs font-medium"
                            >
                              <option value="">All Accounts</option>
-                             {accounts.map((acc: any) => (
+                             {accounts.map((acc) => (
                                <option key={acc.id} value={acc.id}>
                                  {acc.code ? `${acc.code} - ` : ''}{acc.name} ({acc.type})
                                </option>
@@ -320,7 +326,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                               <YAxis fontSize={10} tickLine={false} />
                               <Tooltip contentStyle={{ background: '#111', color: '#fff', borderRadius: '8px', border: 'none' }} />
                               <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 900 }} />
-                              {c.config.yKeys.map((y: any) => y.type === 'bar' ? (
+                              {c.config.yKeys.map((y) => y.type === 'bar' ? (
                                  <Bar key={y.key} dataKey={y.key} fill={y.color} name={y.name} radius={[4, 4, 0, 0]} />
                               ) : (
                                  <Line key={y.key} type="monotone" dataKey={y.key} stroke={y.color} strokeWidth={3} name={y.name} dot={{ r: 4 }} activeDot={{ r: 6 }} />

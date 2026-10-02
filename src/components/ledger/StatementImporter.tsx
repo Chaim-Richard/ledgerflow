@@ -1,6 +1,7 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useId, useState } from 'react';
 import { headerSignature, mappingToSaved, savedToMapping } from '../../lib/importColumnMaps';
+import type { LedgerState } from '../../stores/useLedgerStore';
 import type { ColumnMapping } from '../../lib/importColumnMaps';
 import { getIdToken } from '../../firebase';
 import { 
@@ -15,7 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Transaction } from '../../types';
+import { Transaction, ChartAccount, AutoRule } from '../../types';
 import { aiService } from '../../services/aiService';
 import { IntentResolver } from '../../lib/intentResolver';
 import { cn, getLocalDateISO, formatDate, activateOnKey } from '../../lib/utils';
@@ -41,13 +42,15 @@ function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => strin
 interface StatementImporterProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (transactions: any[]) => void;
+  onImport: (transactions: ParsedTx[]) => void;
   existingTransactions: Transaction[];
   businessContext: string;
-  accounts: any[];
-  autoRules?: any[];
-  patternCache?: Record<string, any>;
+  accounts: ChartAccount[];
+  autoRules?: AutoRule[];
+  patternCache?: LedgerState['analyticalPatternCache'];
 }
+
+type StatementResult = Omit<ParsedTx, 'selected'> & { categorySuggestion?: string };
 
 interface ParsedTx {
   date: string;
@@ -132,7 +135,7 @@ export default function StatementImporter({
     
     try {
       const labels = accounts.map(a => a.name);
-      let results: any[] = [];
+      let results: StatementResult[] = [];
       const fileType = file.type;
       const fileName = file.name.toLowerCase();
       
@@ -212,14 +215,14 @@ export default function StatementImporter({
 
   const handleMapColumns = () => {
     const hasAmount = mapping.amount !== -1;
-    const hasDebitCredit = (mapping as any).debit !== -1 && (mapping as any).credit !== -1;
+    const hasDebitCredit = mapping.debit !== -1 && mapping.credit !== -1;
     
     if (mapping.date === -1 || mapping.description === -1 || (!hasAmount && !hasDebitCredit)) {
       toast.error("Please map Date, Description, and either Amount OR Debit & Credit.");
       return;
     }
 
-    const dataRows = csvData.slice((mapping as any).skipRows !== undefined ? (mapping as any).skipRows : 1);
+    const dataRows = csvData.slice(mapping.skipRows !== undefined ? mapping.skipRows : 1);
     
     let skipped = 0;
     
@@ -229,8 +232,8 @@ export default function StatementImporter({
         const amountStr = cleanAmountStr(row[mapping.amount]);
         amountCents = TruthEngine.parseAmountToCentsOrZero(amountStr);
       } else {
-        const debitStr = cleanAmountStr(row[(mapping as any).debit]);
-        const creditStr = cleanAmountStr(row[(mapping as any).credit]);
+        const debitStr = cleanAmountStr(row[mapping.debit]);
+        const creditStr = cleanAmountStr(row[mapping.credit]);
         const debit = TruthEngine.parseAmountToCentsOrZero(debitStr);
         const credit = TruthEngine.parseAmountToCentsOrZero(creditStr);
         amountCents = credit - debit;
@@ -240,11 +243,11 @@ export default function StatementImporter({
       const date = normalizeDateString(rawDate);
       
       const descArr = [row[mapping.description]];
-      if ((mapping as any).payee !== undefined && (mapping as any).payee !== -1 && row[(mapping as any).payee]) {
-        descArr.push(row[(mapping as any).payee]);
+      if (mapping.payee !== undefined && mapping.payee !== -1 && row[mapping.payee]) {
+        descArr.push(row[mapping.payee]);
       }
-      if ((mapping as any).memo !== undefined && (mapping as any).memo !== -1 && row[(mapping as any).memo]) {
-        descArr.push(row[(mapping as any).memo]);
+      if (mapping.memo !== undefined && mapping.memo !== -1 && row[mapping.memo]) {
+        descArr.push(row[mapping.memo]);
       }
       
       return {
@@ -306,7 +309,7 @@ export default function StatementImporter({
     }
   };
 
-  const processResults = (results: any[]) => {
+  const processResults = (results: StatementResult[]) => {
     // THE HARD WORK: Layer 2 - Entity Resolution
     // Using Bloom for exact match and MinHash for structural similarity
     const bloom = new BloomFilter(Math.max(1000, existingTransactions.length * 10), 7);
@@ -325,7 +328,7 @@ export default function StatementImporter({
 
     const occurrences: Record<string, number> = {};
 
-    const processed = results.map((tx: any) => {
+    const processed = results.map((tx) => {
       const txKey = `${tx.date}-${Math.abs(tx.amountCents)}-${tx.description.toLowerCase()}`;
       const occIndex = occurrences[txKey] || 0;
       occurrences[txKey] = occIndex + 1;
@@ -350,7 +353,7 @@ export default function StatementImporter({
       }
 
       // 1. Check Analytical Memory/Cache for learned patterns (Project + Account)
-      const learned = AnalyticalMatcher.predict(tx.description, patternCache as any);
+      const learned = AnalyticalMatcher.predict(tx.description, patternCache as Parameters<typeof AnalyticalMatcher.predict>[1]);
       
       const suggestedAccount = learned?.accountName || tx.categorySuggestion || learned?.accountId;
       const suggestedProjectId = learned?.projectId;
@@ -488,7 +491,7 @@ export default function StatementImporter({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-3 md:col-span-3">
                     <Labelled labelClassName="micro-label !text-[var(--text)]" label="Header Rows to Skip">
-                      <input type="number" min="0" value={(mapping as any).skipRows} onChange={(e) => setMapping({...mapping, skipRows: parseInt(e.target.value) || 0})} className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)]" />
+                      <input type="number" min="0" value={mapping.skipRows} onChange={(e) => setMapping({...mapping, skipRows: parseInt(e.target.value) || 0})} className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-bold text-sm text-[var(--text)] outline-none focus:border-[var(--brass-line)]" />
                     </Labelled>
                   </div>
                   {(['date', 'description', 'amount', 'debit', 'credit', 'payee', 'memo'] as const).map(field => (
