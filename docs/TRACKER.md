@@ -1487,7 +1487,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] I-06 Optimistic updates with rollback
 - [x] I-07 Unsaved-changes warning in the invoice and bill dialogs (tested)
 - [x] I-08 Void/delete confirmations name the record (Sales, Purchases)
-- [ ] I-09 30-second undo
+- [x] I-09 30-second undo — "Undo" stays 30 seconds after adding or voiding a transaction, and says whether it worked (a failed undo was silent before)
 - [x] I-10 Discoverable keyboard shortcuts — one list (`src/config/shortcuts.ts`) feeds the keys and the card (press ?, or "Keyboard shortcuts" in the command palette); Ctrl/⌘ shown per platform; keys the browser keeps freed: Quick entry ⌘Q → ⌘⇧E (⌘Q quits the browser on a Mac), Focus mode ⌘F → ⌘⇧F (find works again), Reports ⌘P → ⌘4 (print works again); tested
 - [x] I-11 Tabular figures everywhere — table cells, fields and mono text use tabular figures app-wide (one CSS rule; browser test)
 - [x] I-12 Dates follow the user's chosen format (formatDate; Preferences); tested

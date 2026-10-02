@@ -75,6 +75,9 @@ function isConflictError(error: unknown): error is TransactionConflictError {
   return error instanceof Error && 'isConflict' in error && Boolean(error.isConflict);
 }
 
+/** How long "Undo" stays on screen after adding or voiding a transaction (I-09). */
+export const UNDO_WINDOW_MS = 30_000;
+
 export function useTransactionActions() {
   const user = useAuthStore(s => s.user);
   const userProfile = useAuthStore(s => s.userProfile);
@@ -147,18 +150,22 @@ export function useTransactionActions() {
     if (!err) {
       await recordAudit('VOID_TRANSACTION', 'transaction', id, { description: tx.description });
       toast.success('Transaction voided', {
+        duration: UNDO_WINDOW_MS, // I-09: time to change your mind
         action: {
           label: 'Undo',
           onClick: async () => {
             try {
               const token = await user?.getIdToken();
-              await fetch(`/api/v1/transactions/${id}`, {
+              const res = await fetch(`/api/v1/transactions/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ transaction: { ...tx, status: tx.status, deletedAt: tx.deletedAt || null, updatedAt: new Date().toISOString() } })
               });
+              if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+              toast.success('Transaction restored');
             } catch (err) {
-              console.warn('Undo void failed', err);
+              // the undo used to fail silently
+              toast.error('Could not undo the void', { description: err instanceof Error ? err.message : String(err) });
             }
           }
         }
@@ -722,6 +729,7 @@ export function useTransactionActions() {
     if (!err) {
       incrementTransaction();
       toast.success('Transaction added and certified', {
+        duration: UNDO_WINDOW_MS,
         action: {
           label: 'Undo',
           onClick: () => handleVoidTransaction(optimisticTx.id)
