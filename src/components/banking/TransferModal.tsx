@@ -3,7 +3,7 @@ import { Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { createAccountTransfer, detectPotentialTransfers, TransferMatchCandidate } from '../../lib/transferEngine';
-import { getLocalDateISO } from '../../lib/utils';
+import { getLocalDateISO, formatCurrency } from '../../lib/utils';
 import { isCashAccount } from '../../lib/txFilters';
 import { useTimeout } from '../../hooks/useTimeout';
 import { ArrowRightLeft, Check, X, Sparkles, HelpCircle, DollarSign } from 'lucide-react';
@@ -283,7 +283,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                           <span>{cand.toAccount.name}</span>
                         </div>
                         <div className="text-[11px] text-neutral-500 mt-0.5">
-                          ${(cand.amountCents / 100).toFixed(2)} &bull; {cand.outflowTx.date}
+                          {formatCurrency(cand.amountCents)} &bull; {cand.outflowTx.date}
                           {cand.dateDiffDays > 0 ? ` (+${cand.dateDiffDays}d)` : ''}
                         </div>
                       </div>

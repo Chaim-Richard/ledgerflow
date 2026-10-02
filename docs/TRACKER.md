@@ -1393,8 +1393,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] E-22 Visible focus ring on every keyboard-focused control (index.css; browser test)
 - [x] E-23 Keyboard-only invoicing (browser test); native buttons on report rows, grid headers and reconciliation controls; independent filter/Tab behavior (codex, `codex/c-4-keyboard-controls`)
 - [ ] E-24 Screen-reader pass
-- [ ] E-25 `aria-live` for async results
-- [ ] E-26 Colour not the only +/− signal
+- [x] E-25 `aria-live` for async results — save/fail messages go to the toast live region, loading/failed lines use `role="status"`, field errors `role="alert"`; buttons that wait say so (`aria-busy`)
+- [x] E-26 Colour not the only +/− signal — transaction list, pivot sheet and owner overview show "+" / "−" with the colour (`formatSignedAmount`, tested); found L-145
 - [x] E-27 Contrast in both themes: axe color-contrast on 6 screens × 2 themes with a baseline (0–4 left per screen)
 - [ ] E-28 `prefers-reduced-motion`
 - [x] E-29 Skip-to-content link, first Tab stop (browser test)
@@ -1705,6 +1705,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-142 Bank CSV upload: dates without a clear format fell back to the UTC day (the workspace was never read); now the workspace's time zone, members only
 - [x] L-143 Command palette "show …" never filtered the transaction list (it set a filter field nobody read); saved views put fields the filter doesn't know into the filter chips (they did nothing). Now the palette search filters (tested) and a view only adds its date range
 - [x] L-144 API Hub request log showed every request as "Error" (read `status`, the server sends `statusCode`)
+- [x] L-145 Six amounts were printed with a hard-coded "$" and their own division by 100 (owner overview totals, rule previews, saved-view minimum, transfer matches): wrong in any other currency; now `formatCurrency`, and a guard test stops it
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

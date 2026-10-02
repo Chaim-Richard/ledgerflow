@@ -14,7 +14,7 @@ import {
   BrainCircuit,
   Paperclip
 } from 'lucide-react';
-import { resolveAccountName, cn, formatDate } from '../../lib/utils';
+import { resolveAccountName, cn, formatDate, formatSignedAmount } from '../../lib/utils';
 import { isInflow } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
@@ -337,8 +337,9 @@ const TransactionRow = React.memo(({
             isFocused && focusedField === 'amountCents' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}
         >
-          <span className={cn("relative z-10 tabular-nums tracking-tighter truncate whitespace-nowrap", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
-            {formatCurrency(displayTx.totalAmountCents)}
+          <span data-testid="tx-amount" className={cn("relative z-10 tabular-nums tracking-tighter truncate whitespace-nowrap", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
+            {/* sign as well as colour (E-26): money in +, money out − */}
+            {formatSignedAmount(displayTx.totalAmountCents, isInflow(tx, accounts) ? 'in' : 'out')}
           </span>
           {tx.originalCurrency && tx.exchangeRate && (
             <span className={cn("text-[9px] font-sans font-bold uppercase tracking-wider text-[var(--muted)] mt-0.5 truncate whitespace-nowrap", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>

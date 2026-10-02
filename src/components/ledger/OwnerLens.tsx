@@ -1,3 +1,4 @@
+import { formatCurrency, formatSignedAmount } from '../../lib/utils';
 import React, { useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { ArrowUpRight, ArrowDownRight, Wallet, ArrowRight, Compass, Sparkles } from 'lucide-react';
@@ -66,7 +67,7 @@ export default function OwnerLens() {
             </h3>
             <span className="w-2 h-2 rounded-full bg-[var(--pos)] animate-pulse" />
           </div>
-          <p className="text-3xl sm:text-4xl font-mono font-bold text-[var(--text)] tracking-tight">${(stats.moneyIn / 100).toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+          <p className="text-3xl sm:text-4xl font-mono font-bold text-[var(--text)] tracking-tight">{formatCurrency(stats.moneyIn)}</p>
           <p className="text-[11px] font-mono text-[var(--muted)] mt-2">Verified Revenue Collected</p>
         </div>
 
@@ -78,7 +79,7 @@ export default function OwnerLens() {
             </h3>
             <span className="w-2 h-2 rounded-full bg-[var(--neg)]" />
           </div>
-          <p className="text-3xl sm:text-4xl font-mono font-bold text-[var(--text)] tracking-tight">${(stats.moneyOut / 100).toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+          <p className="text-3xl sm:text-4xl font-mono font-bold text-[var(--text)] tracking-tight">{formatCurrency(stats.moneyOut)}</p>
           <p className="text-[11px] font-mono text-[var(--muted)] mt-2">Operating Expenditures</p>
         </div>
 
@@ -90,7 +91,7 @@ export default function OwnerLens() {
             </h3>
             <span className="w-2 h-2 rounded-full bg-[var(--brass)] shadow-[0_0_8px_var(--brass)]" />
           </div>
-          <p className="text-3xl sm:text-4xl font-mono font-bold text-[var(--text)] tracking-tight">${(stats.left / 100).toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+          <p className="text-3xl sm:text-4xl font-mono font-bold text-[var(--text)] tracking-tight">{formatCurrency(stats.left)}</p>
           <p className="text-[11px] font-mono text-[var(--muted)] mt-2">Unencumbered Liquidity</p>
         </div>
       </div>
@@ -139,7 +140,7 @@ export default function OwnerLens() {
                     </div>
                   </div>
                   <p className={`font-mono font-bold text-base ${isInc ? 'text-[var(--pos)]' : isExp ? 'text-[var(--neg)]' : 'text-[var(--text)]'}`}>
-                    {isInc ? '+' : isExp ? '-' : ''}${(amt / 100).toFixed(2)}
+                    {formatSignedAmount(amt, isInc ? 'in' : isExp ? 'out' : 'none')}
                   </p>
                 </div>
               );

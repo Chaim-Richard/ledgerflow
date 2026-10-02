@@ -557,7 +557,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                               <span>Query: <strong className="text-[var(--text)]">"{view.filter.searchTerm}"</strong></span>
                             )}
                             {view.filter.minAmountCents !== undefined && (
-                              <span>Min: <strong className="text-[var(--text)]">${(view.filter.minAmountCents / 100).toLocaleString()}</strong></span>
+                              <span>Min: <strong className="text-[var(--text)]">{formatCurrency(view.filter.minAmountCents)}</strong></span>
                             )}
                             {view.filter.type && view.filter.type !== 'all' && (
                               <span>Type: <strong className="text-[var(--text)] uppercase">{view.filter.type}</strong></span>

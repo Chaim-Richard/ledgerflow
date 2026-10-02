@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Transaction } from '../../types';
 import { Table as TableIcon, Search, Download, ChevronDown, ChevronRight, Calculator, Grid3X3, ListCollapse, ExternalLink, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatDecimal, cn, formatCurrency, resolveAccountName, getLocalDateISO } from '../../lib/utils';
+import { formatDecimal, cn, formatCurrency, resolveAccountName, getLocalDateISO, formatSignedAmount } from '../../lib/utils';
 import { isPostable, isTransactionInDateRange, lineAmount } from '../../lib/txFilters';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -548,7 +548,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                           </td>
                           <td className="px-6 py-2.5 text-right font-mono text-[11px] font-medium">
                              <span className={((t.type as string) === 'income' || (t.type as string) === 'revenue') ? "text-emerald-500" : "text-rose-500"}>
-                                {formatCurrency(t.totalAmountCents)}
+                                {formatSignedAmount(t.totalAmountCents, ((t.type as string) === 'income' || (t.type as string) === 'revenue') ? 'in' : 'out')}
                              </span>
                           </td>
                        </tr>
