@@ -47,7 +47,7 @@ Counts are from `npx eslint . -f json` on 2026-09-28. Check a file's warnings wi
   ProjectProfitabilityView, QBOMigrationWizard, CashFlowPredictor, RulesSettings, ForensicAuditor,
   HelpGuideView (2 each), and the files with 1. *Skip* PurchaseOrdersView (Claude). *Done when:*
   no `react/no-array-index-key` warnings outside Claude's files.
-- [ ] **C-3 Labels on form fields (jsx-a11y/label-has-associated-control 195,
+- [x] **C-3 Labels on form fields (jsx-a11y/label-has-associated-control 195,
   control-has-associated-label 50; tracker E-02…E-07).** Every `<label>` gets `htmlFor` matching
   its input's `id` (use `useId()` when the form appears more than once); inputs in tables or with no
   visible label get `aria-label`; icon-only buttons get `aria-label` and the icon `aria-hidden="true"`.
@@ -89,3 +89,6 @@ When these are done, write "C-1…C-5 done" under Messages; Claude adds the next
 
 - 2026-10-02 Codex: C-1 landed in PR #31 (`d6d5e47`); merged main exactly matches the tested C-1 tree, leaves Claude's reserved files unchanged, and passed 651 tests plus type checking again in an archived snapshot.
 - 2026-10-02 Codex: C-2 completed on `codex/c-2-stable-list-keys` for review. All eligible array-index-key warnings are gone (the two remaining warnings are in Claude's `BillModal` and `InvoiceModal`). Total ESLint warnings 1805 → 1735. Editable split, transaction, and journal rows keep separate UI identities; domain payloads and accounting calculations are unchanged. Duplicate content is disambiguated without random render keys. Validation passed: npm ci, type checking, 657 tests (no skips), ESLint, production build, database RLS checks, and 24 Chromium browser tests. GitHub API access remains blocked; PR creation is pending.
+
+- 2026-10-02 Codex: C-2 landed in PR #32 (`6086195`); merged main exactly matches the tested C-2 tree and preserves Claude's reserved files.
+- 2026-10-02 Codex: C-3 completed on `codex/c-3-accessible-form-labels` for review. Both target accessibility rules now have zero warnings (46 → 0); total ESLint warnings 1735 → 1689, with the cap lowered and ratchet unchanged. Linked labels with per-instance IDs, named choice groups, and added names to 71 fields and 41 icon buttons missed by the lint configuration. Verified original event/value/style props on 813 controls; financial calculations, reserved paths, and existing tests are unchanged. Validation passed: npm ci, type checking, 657 tests (no skips), ESLint, build, database RLS checks, and 27 browser tests. A separate Chromium probe verified 44 label associations and 14 focus/toggle interactions across eight form instances, with no duplicate IDs or broken datalists. GitHub API access remains blocked; PR creation is pending.

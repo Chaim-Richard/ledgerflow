@@ -54,7 +54,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-            <BookOpen className="w-6 h-6" />
+            <BookOpen aria-hidden="true" className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">General Ledger</h1>
@@ -107,8 +107,8 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
         </div>
 
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-[var(--muted)]" />
-          <input
+          <Search aria-hidden="true" className="w-4 h-4 absolute left-3 top-2.5 text-[var(--muted)]" />
+          <input aria-label="Search GL accounts"
             type="text"
             placeholder="Search GL accounts..."
             value={searchTerm}

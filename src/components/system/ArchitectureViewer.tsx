@@ -32,7 +32,7 @@ export default function ArchitectureViewer() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-8 border-b border-[var(--line)]">
         <div>
           <h1 className="text-3xl font-black text-[var(--text)] flex items-center gap-3 tracking-tight">
-            <Network className="text-indigo-600 w-8 h-8" />
+            <Network aria-hidden="true" className="text-indigo-600 w-8 h-8" />
             System Architecture & Developer Hub
           </h1>
           <p className="text-[var(--muted)] mt-3 max-w-3xl text-sm leading-relaxed">
@@ -63,7 +63,7 @@ export default function ArchitectureViewer() {
             
             <div className="bg-[var(--surface)] p-10 rounded-[32px] border border-[var(--line)] shadow-xl shadow-slate-200/20">
               <h2 className="text-xl font-bold text-[var(--text)] mb-8 flex items-center gap-3">
-                <Waypoints className="text-indigo-500" />
+                <Waypoints aria-hidden="true" className="text-indigo-500" />
                 The Tripartite Data Flow
               </h2>
               
@@ -71,7 +71,7 @@ export default function ArchitectureViewer() {
                 
                 {/* Layer 1: Persistence */}
                 <div className="w-full lg:w-1/3 bg-[var(--ink)] border-2 border-[var(--line)] rounded-[24px] p-6 text-center relative z-10 hover:border-indigo-300 transition-colors">
-                  <Database className="w-10 h-10 text-[var(--muted)] mx-auto mb-4" />
+                  <Database aria-hidden="true" className="w-10 h-10 text-[var(--muted)] mx-auto mb-4" />
                   <h3 className="text-lg font-black text-[var(--text)] mb-2">Layer 1: Data Persistence</h3>
                   <p className="text-sm text-[var(--muted)] mb-4">Firebase Firestore & Auth</p>
                   <div className="inline-block px-4 py-2 bg-[var(--surface)] rounded-lg border border-[var(--line)] text-xs font-mono text-slate-600">
@@ -79,11 +79,11 @@ export default function ArchitectureViewer() {
                   </div>
                 </div>
 
-                <ArrowRight className="hidden lg:block w-8 h-8 text-indigo-300 flex-shrink-0" />
+                <ArrowRight aria-hidden="true" className="hidden lg:block w-8 h-8 text-indigo-300 flex-shrink-0" />
 
                 {/* Layer 2: State */}
                 <div className="w-full lg:w-1/3 bg-indigo-600 border-2 border-indigo-500 rounded-[24px] p-6 text-center relative z-10 shadow-lg shadow-indigo-600/20">
-                  <Activity className="w-10 h-10 text-indigo-200 mx-auto mb-4" />
+                  <Activity aria-hidden="true" className="w-10 h-10 text-indigo-200 mx-auto mb-4" />
                   <h3 className="text-lg font-black text-white mb-2">Layer 2: Local State (Integrity)</h3>
                   <p className="text-sm text-indigo-100 mb-4">Zustand Store (Transactions, Accounts)</p>
                   <div className="inline-block px-4 py-2 bg-indigo-700/50 rounded-lg border border-indigo-500 text-xs font-mono text-white">
@@ -91,17 +91,17 @@ export default function ArchitectureViewer() {
                   </div>
                 </div>
 
-                <ArrowRight className="hidden lg:block w-8 h-8 text-indigo-300 flex-shrink-0" />
+                <ArrowRight aria-hidden="true" className="hidden lg:block w-8 h-8 text-indigo-300 flex-shrink-0" />
 
                 {/* Layer 3: Presentation */}
                 <div className="w-full lg:w-1/3 space-y-4">
                   <div className="bg-emerald-50 border-2 border-emerald-200 rounded-[24px] p-6 text-center hover:border-emerald-400 transition-colors">
-                    <Cpu className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
+                    <Cpu aria-hidden="true" className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
                     <h3 className="font-bold text-[var(--text)] mb-1">Pure Algorithms</h3>
                     <div className="text-xs font-mono text-[var(--muted)]">src/lib/algorithms/</div>
                   </div>
                   <div className="bg-amber-50 border-2 border-amber-200 rounded-[24px] p-6 text-center hover:border-amber-400 transition-colors">
-                    <Layers className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+                    <Layers aria-hidden="true" className="w-8 h-8 text-amber-500 mx-auto mb-3" />
                     <h3 className="font-bold text-[var(--text)] mb-1">UI React Views</h3>
                     <div className="text-xs font-mono text-[var(--muted)]">src/components/</div>
                   </div>
@@ -111,7 +111,7 @@ export default function ArchitectureViewer() {
 
               <div className="mt-10 bg-indigo-50/50 rounded-2xl p-6 border border-indigo-100">
                 <h4 className="font-bold text-indigo-900 mb-2 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-indigo-500" /> Golden Rule of Scalability
+                  <Sparkles aria-hidden="true" className="w-5 h-5 text-indigo-500" /> Golden Rule of Scalability
                 </h4>
                 <p className="text-indigo-800/80 text-sm leading-relaxed">
                   Views (Layer 3) and Algorithms (Layer 3) <strong>MUST NEVER</strong> fetch their own data or access Firebase directly. They must always receive <code>transactions</code> and <code>accounts</code> directly from the Zustand Store (Layer 2) or via function props. This guarantees absolute decoupling, infinite testability, and prevents state fragmentation.
@@ -128,9 +128,9 @@ export default function ArchitectureViewer() {
             
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-[var(--text)] flex items-center gap-3">
-                <Blocks className="text-indigo-500" /> Active System Modules ({APP_TABS.length})
+                <Blocks aria-hidden="true" className="text-indigo-500" /> Active System Modules ({APP_TABS.length})
               </h2>
-              <input 
+              <input aria-label="Search modules"
                 type="text" 
                 placeholder="Search modules..." 
                 className="px-4 py-2 rounded-xl border border-[var(--line)] focus:ring-2 focus:ring-indigo-500 outline-none text-sm w-64"
@@ -170,9 +170,9 @@ export default function ArchitectureViewer() {
             
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-[var(--text)] flex items-center gap-3">
-                <Cpu className="text-emerald-500" /> Pure Computational Algorithms ({algorithmsList.length})
+                <Cpu aria-hidden="true" className="text-emerald-500" /> Pure Computational Algorithms ({algorithmsList.length})
               </h2>
-              <input 
+              <input aria-label="Search algorithms"
                 type="text" 
                 placeholder="Search algorithms..." 
                 className="px-4 py-2 rounded-xl border border-[var(--line)] focus:ring-2 focus:ring-emerald-500 outline-none text-sm w-64"
@@ -182,7 +182,7 @@ export default function ArchitectureViewer() {
             </div>
 
             <div className="bg-emerald-50/50 rounded-2xl p-6 border border-emerald-100 mb-8 flex gap-4 items-start">
-              <Code2 className="text-emerald-600 mt-1 flex-shrink-0" />
+              <Code2 aria-hidden="true" className="text-emerald-600 mt-1 flex-shrink-0" />
               <div>
                 <h4 className="font-bold text-emerald-900 mb-1">Algorithm Design Contract</h4>
                 <p className="text-emerald-800/80 text-sm">

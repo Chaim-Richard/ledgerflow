@@ -148,7 +148,7 @@ const TransactionRow = React.memo(({
       >
         <div className={cn("px-4 relative h-full flex items-center justify-center border-r border-[var(--line)]/50", isProMode && "px-2", isCompactMode && "px-1")}>
           {isFocused && <div className="absolute inset-y-0 left-0 w-1 bg-slate-900 shadow-[0_0_10px_rgba(0,0,0,0.2)]" />}
-          <input 
+          <input aria-label={`Select transaction ${tx.description}`}
             type="checkbox" 
             checked={isSelected}
             onChange={(e) => { e.stopPropagation(); onToggleSelection(tx.id); }}
@@ -182,7 +182,7 @@ const TransactionRow = React.memo(({
           dir="auto"
         >
           {isEditingDesc ? (
-            <input 
+            <input aria-label="Transaction description"
               type="text"
               autoFocus
               value={descValue}
@@ -209,19 +209,19 @@ const TransactionRow = React.memo(({
                     aria-label={`${displayTx.fileUrls.length} attachment${displayTx.fileUrls.length === 1 ? '' : 's'}`}
                     className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wider border bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 shrink-0 select-none group-hover/active:bg-indigo-500 group-hover/active:text-white group-hover/active:border-white/20"
                   >
-                    <Paperclip size={10} className="shrink-0" />
+                    <Paperclip aria-hidden="true" size={10} className="shrink-0" />
                     <span>{displayTx.fileUrls.length}</span>
                   </span>
                 )}
                 {isLocked && (
                   <span title="Locked under Absolute Integrity">
-                    <Lock className="text-amber-500 inline shrink-0 animate-pulse" size={11} />
+                    <Lock aria-hidden="true" className="text-amber-500 inline shrink-0 animate-pulse" size={11} />
                   </span>
                 )}
               </span>
               {!isCompactMode && tx.verification?.hash && (
                 <span className="text-[9px] text-slate-500 font-mono flex items-center gap-1 transition-colors group-hover/active:text-white/40">
-                  <Zap size={9} className={isLocked ? "text-amber-400" : "text-emerald-500"} />
+                  <Zap aria-hidden="true" size={9} className={isLocked ? "text-amber-400" : "text-emerald-500"} />
                   {tx.verification.hash.slice(0, 8)} {isLocked && <span className="text-[7px] font-black tracking-widest uppercase bg-amber-400/10 text-amber-500 dark:text-amber-400 px-1.5 py-0.5 border border-amber-400/20 rounded font-sans scale-90 origin-left">SEALED</span>}
                 </span>
               )}
@@ -248,7 +248,7 @@ const TransactionRow = React.memo(({
                     <HighlightMatch text={resolveAccountName(accounts, line.accountId, line.accountName)} match={searchTerm} />
                     {line.isAnalyticalTagged && (
                       <div className="absolute -top-2 -right-2 z-20 group/spark">
-                        <Sparkles size={10} className="text-amber-500 animate-[pulse_2s_infinite]" />
+                        <Sparkles aria-hidden="true" size={10} className="text-amber-500 animate-[pulse_2s_infinite]" />
                         <div className="absolute top-4 left-0 w-48 p-3 bg-slate-900 text-white rounded-xl text-[8px] font-medium leading-relaxed opacity-0 group-hover/spark:opacity-100 transition-opacity pointer-events-none shadow-2xl border border-white/10 italic">
                           Analytical pattern matched: This transaction corresponds to a recurring {resolveAccountName(accounts, line.accountId, line.accountName).toLowerCase()} vector based on historical consistency.
                         </div>
@@ -378,7 +378,7 @@ const TransactionRow = React.memo(({
             {isLocked ? (
               <div className="flex items-center justify-end gap-1.5">
                 <div className="flex items-center gap-1 text-[8px] font-medium uppercase tracking-wider text-[#d97706] bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded border border-amber-500/20 shrink-0 select-none">
-                  <Lock size={10} className="text-[#d97706]" /> Immutable
+                  <Lock aria-hidden="true" size={10} className="text-[#d97706]" /> Immutable
                 </div>
                 {!tx.reversalEventId && tx.type !== 'reversal' && (
                   <button
@@ -393,7 +393,7 @@ const TransactionRow = React.memo(({
                     className="flex items-center gap-1 px-2 py-1 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:text-indigo-400 dark:hover:text-white rounded border border-indigo-500/20 text-[9px] font-bold transition-all shrink-0 cursor-pointer"
                     title="Reverse & Correct (Sanctioned closed-period correction)"
                   >
-                    <RefreshCcw size={10} />
+                    <RefreshCcw aria-hidden="true" size={10} />
                     <span className="hidden sm:inline">Reverse & Correct</span>
                   </button>
                 )}
@@ -408,26 +408,26 @@ const TransactionRow = React.memo(({
                 "flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity", 
                 (isProMode || isCompactMode) && "opacity-100"
               )}>
-                <button 
+                <button aria-label="Edit Transaction Details"
                   onClick={(e) => { e.stopPropagation(); onEditDetails?.(tx); }}
                   className="p-1 text-[var(--muted)] hover:text-indigo-600 rounded transition-all"
                   title="Edit Transaction Details"
                 >
-                  <Edit3 size={14} />
+                  <Edit3 aria-hidden="true" size={14} />
                 </button>
-                <button 
+                <button aria-label="Split Transaction"
                   onClick={(e) => { e.stopPropagation(); onSplit(tx.id); }}
                   className="p-1 text-[var(--muted)] hover:text-indigo-600 rounded transition-all"
                   title="Split Transaction"
                 >
-                  <Columns size={14} />
+                  <Columns aria-hidden="true" size={14} />
                 </button>
-                <button 
+                <button aria-label="Duplicate Transaction"
                   onClick={(e) => { e.stopPropagation(); onDuplicate?.(tx.id); }}
                   className="p-1 text-[var(--muted)] hover:text-indigo-600 rounded transition-all"
                   title="Duplicate Transaction"
                 >
-                  <Copy size={14} />
+                  <Copy aria-hidden="true" size={14} />
                 </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onCreateRule(tx); }}
@@ -435,9 +435,9 @@ const TransactionRow = React.memo(({
                   title="Create Auto-Categorization Rule"
                   aria-label="Create Auto-Categorization Rule"
                 >
-                  <Zap size={14} />
+                  <Zap aria-hidden="true" size={14} />
                 </button>
-                <button 
+                <button aria-label={tx.isFlagged ? "Unflag transaction" : "Flag for Review"}
                   onClick={(e) => { e.stopPropagation(); onToggleFlag?.(tx.id); }}
                   className={cn(
                     "p-1 rounded transition-all",
@@ -445,16 +445,16 @@ const TransactionRow = React.memo(({
                   )}
                   title="Flag for Review"
                 >
-                  <AlertCircle size={14} />
+                  <AlertCircle aria-hidden="true" size={14} />
                 </button>
-                <AsyncButton 
+                <AsyncButton aria-label="Reverse transaction"
                   onClick={(e) => { e.stopPropagation(); return onVoid(tx.id); }}
                   className="p-1 text-[var(--muted)] hover:text-rose-600 rounded transition-all"
                   variant="ghost"
                   size="icon"
                   disabled={tx.type === 'reversal' || !!tx.reversalEventId}
                 >
-                  <RotateCcw size={14} />
+                  <RotateCcw aria-hidden="true" size={14} />
                 </AsyncButton>
               </div>
             )}
@@ -467,7 +467,7 @@ const TransactionRow = React.memo(({
         <div className="bg-indigo-50/50 border-b border-[var(--line)] px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <BrainCircuit className="text-indigo-600" size={16} />
+              <BrainCircuit aria-hidden="true" className="text-indigo-600" size={16} />
             </div>
             <div>
               <h4 className="text-sm font-bold text-indigo-900">Anomaly Detected</h4>

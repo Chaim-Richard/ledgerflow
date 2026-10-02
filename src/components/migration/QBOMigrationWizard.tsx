@@ -569,7 +569,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-xs font-bold uppercase tracking-widest mb-2">
-                <RefreshCw size={14} className={isProcessing ? 'animate-spin' : ''} />
+                <RefreshCw aria-hidden="true" size={14} className={isProcessing ? 'animate-spin' : ''} />
                 QuickBooks Migration Engine
               </div>
               <h2 className="text-2xl md:text-3xl font-black text-[var(--text)] tracking-tight">QuickBooks Switcher</h2>
@@ -580,7 +580,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
               {[1, 2, 3].map(i => (
                 <div key={i} className="flex items-center gap-2">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${step >= i ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>
-                    {step > i ? <CheckCircle2 size={16} /> : i}
+                    {step > i ? <CheckCircle2 aria-hidden="true" size={16} /> : i}
                   </div>
                   {i < 3 && <div className={`w-6 h-0.5 ${step > i ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
                 </div>
@@ -602,7 +602,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
               >
                 <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-5 flex gap-4 items-start">
                   <div className="w-10 h-10 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
-                    <Download size={20} />
+                    <Download aria-hidden="true" size={20} />
                   </div>
                   <div className="flex-1">
                     <h4 className="font-bold text-[var(--text)] text-sm">QuickBooks Export Instructions</h4>
@@ -615,7 +615,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                     onClick={handleLoadSampleQBO}
                     className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer"
                    aria-label="Try with Sample Export">
-                    <Sparkles size={14} /> Try with Sample Export
+                    <Sparkles aria-hidden="true" size={14} /> Try with Sample Export
                   </button>
                 </div>
 
@@ -625,9 +625,9 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                     isDragActive ? 'border-emerald-500 bg-emerald-50/10' : 'border-[var(--line)] hover:border-indigo-400 hover:bg-slate-50/50'
                   }`}
                 >
-                  <input {...getInputProps()} />
+                  <input {...getInputProps()} aria-label="Upload QuickBooks export" />
                   <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                    <FileUp size={32} />
+                    <FileUp aria-hidden="true" size={32} />
                   </div>
                   <h3 className="text-base font-bold text-[var(--text)] mb-1">
                     {file ? file.name : 'Drop your QuickBooks file here, or browse'}
@@ -636,7 +636,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                   
                   {file && (
                     <div className="mt-4 inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-full text-xs font-bold border border-emerald-500/20">
-                      <CheckCircle2 size={14} />
+                      <CheckCircle2 aria-hidden="true" size={14} />
                       {parsedRows.length} transactions parsed ready for mapping
                     </div>
                   )}
@@ -719,7 +719,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                             {m.txCount}
                           </td>
                           <td className="p-3">
-                            <select
+                            <select aria-label={`Target account for ${m.qbAccount}`}
                               value={m.targetAccountId}
                               onChange={(e) => {
                                 const newMappings = [...accountMappings];
@@ -755,7 +755,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                 className="space-y-6 text-center py-4"
               >
                 <div className="w-16 h-16 bg-emerald-500/10 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
-                  <Activity size={32} />
+                  <Activity aria-hidden="true" size={32} />
                 </div>
                 <div>
                   <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">Integrity Verification Complete</h3>
@@ -786,7 +786,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                 </div>
 
                 <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl max-w-lg mx-auto text-left flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <CheckCircle2 aria-hidden="true" className="w-5 h-5 text-emerald-600 shrink-0" />
                   <span className="text-xs text-[var(--text)] font-medium">
                     Ready to commit transactions into the double-entry matrix. Historical balances will synchronize automatically.
                   </span>
@@ -813,7 +813,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
             className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
            aria-label="Loader2 action">
             {isProcessing ? (
-              <><Loader2 size={16} className="animate-spin" /> Importing Transactions...</>
+              <><Loader2 aria-hidden="true" size={16} className="animate-spin" /> Importing Transactions...</>
             ) : (
               step === 3 ? 'Commit & Import to Ledger' : 'Continue'
             )}

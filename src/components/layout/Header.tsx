@@ -58,15 +58,15 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
   return (
     <header className="h-16 bg-[var(--surface)] border-b border-[var(--line)] flex items-center justify-between px-4 sm:px-6 shrink-0 relative z-30 text-[var(--text)]">
       <div className="flex items-center gap-3 flex-1">
-        <button 
+        <button aria-label="Open navigation menu"
           onClick={() => setSidebarOpen(true)}
           className="lg:hidden p-2 -ml-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors"
         >
-          <Menu size={20} />
+          <Menu aria-hidden="true" size={20} />
         </button>
         
         <div className="hidden lg:flex items-center gap-2 font-mono text-[12px] text-[var(--muted)]">
-          <Compass size={15} className="text-[var(--brass)]" />
+          <Compass aria-hidden="true" size={15} className="text-[var(--brass)]" />
           <span className="text-[var(--text)] font-semibold">{currentWorkspace?.name || 'Main Ledger'}</span>
           <span className="text-[var(--faint)]">·</span>
           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
@@ -79,7 +79,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           </span>
           {collaborators.length > 0 && (
             <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-[var(--line)]">
-              <Users size={13} className="text-[var(--brass)]" />
+              <Users aria-hidden="true" size={13} className="text-[var(--brass)]" />
               <div className="flex -space-x-1.5">
                 {collaborators.slice(0, 3).map(c => (
                   <div 
@@ -104,7 +104,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           onClick={() => setCommandPaletteOpen(true)}
           className="w-full flex items-center gap-2.5 bg-[var(--panel)] hover:bg-[var(--elevated)] text-[var(--muted)] px-3.5 py-2 rounded-lg text-[13px] border border-[var(--line)] shadow-sm transition-all group"
         >
-          <Search size={15} className="text-[var(--faint)] group-hover:text-[var(--brass)] transition-colors" />
+          <Search aria-hidden="true" size={15} className="text-[var(--faint)] group-hover:text-[var(--brass)] transition-colors" />
           <span className="font-mono text-[12px] text-[var(--faint)] truncate">
             world:realestate property:homes/* amount:&gt;1000
           </span>
@@ -122,7 +122,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           title="Open Help & Operational Guide"
           aria-label="Open Help & Operational Guide"
         >
-          <HelpCircle size={17} />
+          <HelpCircle aria-hidden="true" size={17} />
         </button>
 
         {/* Notification Bell */}
@@ -132,7 +132,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           title="Open Notifications"
           aria-label={unread > 0 ? `Open Notifications (${unread} unread)` : 'Open Notifications'}
         >
-          <Bell size={17} />
+          <Bell aria-hidden="true" size={17} />
           {unread > 0 && (
             <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-bold bg-indigo-600 text-white rounded-full leading-none" aria-hidden="true">
               {unread > 9 ? '9+' : unread}
@@ -146,7 +146,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
           className="p-2 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] rounded-lg transition-colors"
           title="Toggle light/dark map view"
          aria-label="Toggle light/dark map view">
-          {isDark ? <Sun size={17} /> : <Moon size={17} />}
+          {isDark ? <Sun aria-hidden="true" size={17} /> : <Moon aria-hidden="true" size={17} />}
         </button>
 
         <QuickCreateMenu />
@@ -159,7 +159,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
                 title="Open Admin Control Panel"
                 className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono font-bold text-[var(--brass)] bg-[var(--brass-soft)] hover:bg-[var(--brass)] hover:text-black border border-[var(--brass-line)] rounded-md transition-colors cursor-pointer"
               >
-                <ShieldCheck size={12} />
+                <ShieldCheck aria-hidden="true" size={12} />
                 <span>ADMIN PANEL</span>
               </button>
             )}

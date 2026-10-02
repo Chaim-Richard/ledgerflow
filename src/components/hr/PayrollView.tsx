@@ -200,7 +200,7 @@ export const PayrollView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
           <h1 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-            <Users className="w-5 h-5 text-neutral-800" />
+            <Users aria-hidden="true" className="w-5 h-5 text-neutral-800" />
             Payroll & Compensation Engine
           </h1>
           <p className="text-sm text-neutral-500 mt-1">
@@ -213,7 +213,7 @@ export const PayrollView: React.FC = () => {
             className="px-3.5 py-2 text-xs font-semibold bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg flex items-center gap-1.5 transition-colors border border-neutral-300 cursor-pointer"
             id="add-employee-btn"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus aria-hidden="true" className="w-3.5 h-3.5" />
             Add Employee
           </button>
           <button
@@ -222,7 +222,7 @@ export const PayrollView: React.FC = () => {
             className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
             id="create-pay-run-btn"
           >
-            <Play className="w-3.5 h-3.5" />
+            <Play aria-hidden="true" className="w-3.5 h-3.5" />
             Generate Pay Run
           </button>
         </div>
@@ -230,7 +230,7 @@ export const PayrollView: React.FC = () => {
 
       {/* Statutory Disclaimer Banner */}
       <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-lg text-amber-900 text-xs flex items-start gap-2.5">
-        <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+        <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
         <div>
           <span className="font-bold">Statutory Note: </span>
           {PAYROLL_DISCLAIMER}
@@ -240,11 +240,11 @@ export const PayrollView: React.FC = () => {
       {successMessage && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <CheckCircle2 aria-hidden="true" className="w-4 h-4 text-emerald-600" />
             <span>{successMessage}</span>
           </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-emerald-700 hover:text-emerald-900">
-            <X className="w-4 h-4" />
+          <button aria-label="Dismiss payroll confirmation" onClick={() => setSuccessMessage(null)} className="text-emerald-700 hover:text-emerald-900">
+            <X aria-hidden="true" className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -273,7 +273,7 @@ export const PayrollView: React.FC = () => {
       {activeTab === 'runs' ? (
         payRuns.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border border-neutral-200 p-6">
-            <Briefcase className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
+            <Briefcase aria-hidden="true" className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
             <h3 className="text-sm font-semibold text-neutral-800">No Pay Runs Processed Yet</h3>
             <p className="text-xs text-neutral-500 mt-1 max-w-md mx-auto">
               Add employees to your roster and execute your first automated pay run to calculate deductions and post wages to the ledger.
@@ -283,7 +283,7 @@ export const PayrollView: React.FC = () => {
               disabled={employees.length === 0}
               className="mt-4 px-4 py-2 text-xs font-semibold bg-neutral-900 text-white rounded-lg inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
-              <Play className="w-3.5 h-3.5" />
+              <Play aria-hidden="true" className="w-3.5 h-3.5" />
               Generate First Pay Run
             </button>
           </div>
@@ -312,7 +312,7 @@ export const PayrollView: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-semibold">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <CheckCircle2 aria-hidden="true" className="w-3 h-3 text-emerald-600" />
                         {run.status === 'processed' ? 'Posted to Ledger' : run.status}
                       </span>
                     </td>
@@ -325,7 +325,7 @@ export const PayrollView: React.FC = () => {
       ) : (
         employees.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border border-neutral-200 p-6">
-            <Users className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
+            <Users aria-hidden="true" className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
             <h3 className="text-sm font-semibold text-neutral-800">No Employees in Directory</h3>
             <p className="text-xs text-neutral-500 mt-1 max-w-md mx-auto">
               Add team members to calculate recurring payroll obligations, tax withholdings, and pay stubs.
@@ -334,7 +334,7 @@ export const PayrollView: React.FC = () => {
               onClick={() => setIsAddingEmployee(true)}
               className="mt-4 px-4 py-2 text-xs font-semibold bg-neutral-900 text-white rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus aria-hidden="true" className="w-3.5 h-3.5" />
               Add Employee
             </button>
           </div>
@@ -394,8 +394,8 @@ export const PayrollView: React.FC = () => {
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden border border-neutral-200">
             <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
               <h3 className="text-sm font-bold text-neutral-900">Add Employee to Roster</h3>
-              <button onClick={() => setIsAddingEmployee(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
-                <X className="w-4 h-4" />
+              <button aria-label="Close employee dialog" onClick={() => setIsAddingEmployee(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
+                <X aria-hidden="true" className="w-4 h-4" />
               </button>
             </div>
 
@@ -506,7 +506,7 @@ export const PayrollView: React.FC = () => {
                   disabled={!empName || !empSalary}
                   className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  <Check className="w-3.5 h-3.5" />
+                  <Check aria-hidden="true" className="w-3.5 h-3.5" />
                   Save Employee
                 </button>
               </div>
@@ -526,8 +526,8 @@ export const PayrollView: React.FC = () => {
                   Preview withholding taxes and post balanced journal entries to the ledger.
                 </p>
               </div>
-              <button onClick={() => setIsGeneratingRun(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
-                <X className="w-4 h-4" />
+              <button aria-label="Close payroll run dialog" onClick={() => setIsGeneratingRun(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
+                <X aria-hidden="true" className="w-4 h-4" />
               </button>
             </div>
 
@@ -623,7 +623,7 @@ export const PayrollView: React.FC = () => {
                 onClick={handlePostPayRunToLedger}
                 className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
               >
-                <Check className="w-3.5 h-3.5" />
+                <Check aria-hidden="true" className="w-3.5 h-3.5" />
                 Approve & Post to General Ledger
               </button>
             </div>

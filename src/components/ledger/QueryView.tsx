@@ -197,14 +197,14 @@ export default function QueryView() {
             onClick={() => setShowSaveModal(true)}
             className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
-            <Bookmark size={14} className="text-indigo-600" />
+            <Bookmark aria-hidden="true" size={14} className="text-indigo-600" />
             <span>Save Query</span>
           </button>
           <button
             onClick={handleExportCSV}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
-            <Download size={14} />
+            <Download aria-hidden="true" size={14} />
             <span>Export CSV</span>
           </button>
         </div>
@@ -214,7 +214,7 @@ export default function QueryView() {
       <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-            <Filter size={14} className="text-indigo-600" />
+            <Filter aria-hidden="true" size={14} className="text-indigo-600" />
             <span>Query Filters & Criteria</span>
           </h3>
           <button
@@ -288,7 +288,7 @@ export default function QueryView() {
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 max-w-md w-full">
             <h3 className="text-base font-bold text-slate-900 mb-2">Save Custom Ledger Query</h3>
             <p className="text-xs text-[var(--muted)] mb-4">Saved queries can be executed instantly at any time from your Saved Views drawer.</p>
-            <input
+            <input aria-label="Saved query name"
               type="text"
               value={savedQueryName}
               onChange={e => setSavedQueryName(e.target.value)}

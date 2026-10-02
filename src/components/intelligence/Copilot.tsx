@@ -168,7 +168,7 @@ export default function Copilot() {
       <div className="px-6 md:px-10 py-6 md:py-8 border-b border-[var(--line)] bg-[var(--surface)] sticky top-0 z-20 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-[var(--brass)] text-[var(--ink)] rounded-xl flex items-center justify-center shadow-md">
-            <Sparkles size={24} className="text-black" />
+            <Sparkles aria-hidden="true" size={24} className="text-black" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -183,11 +183,11 @@ export default function Copilot() {
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold">
-            <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+            <ShieldCheck aria-hidden="true" size={14} className="text-emerald-600 shrink-0" />
             <span>Read-Only Guardrail Active</span>
           </div>
           <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium">
-            <Database size={13} className="text-[var(--muted)] shrink-0" />
+            <Database aria-hidden="true" size={13} className="text-[var(--muted)] shrink-0" />
             <span>{accounts.length} Accounts • {transactions.length} Tx</span>
           </div>
         </div>
@@ -205,7 +205,7 @@ export default function Copilot() {
               >
                 {m.role === "assistant" && (
                   <div className="w-10 h-10 rounded-xl bg-[var(--brass)] text-[var(--ink)] flex items-center justify-center shrink-0 shadow-sm mt-1 font-bold">
-                    <Sparkles size={18} />
+                    <Sparkles aria-hidden="true" size={18} />
                   </div>
                 )}
                 <div className={cn(
@@ -216,7 +216,7 @@ export default function Copilot() {
                 </div>
                 {m.role === "user" && (
                   <div className="w-10 h-10 rounded-xl bg-[var(--panel)] flex items-center justify-center shrink-0 shadow-md mt-1 border border-[var(--line)] text-[var(--text)]">
-                    <User size={18} />
+                    <User aria-hidden="true" size={18} />
                   </div>
                 )}
               </motion.div>
@@ -228,7 +228,7 @@ export default function Copilot() {
                 className="flex gap-4"
               >
                 <div className="w-10 h-10 rounded-xl bg-[var(--brass)] text-[var(--ink)] flex items-center justify-center shrink-0 shadow-sm mt-1">
-                  <Sparkles size={18} className="animate-pulse" />
+                  <Sparkles aria-hidden="true" size={18} className="animate-pulse" />
                 </div>
                 <div className="px-6 py-5 bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm text-xs font-semibold text-[var(--muted)] flex items-center space-x-2">
                   <div className="w-2 h-2 bg-[var(--brass)] rounded-full animate-bounce"></div>
@@ -254,13 +254,13 @@ export default function Copilot() {
                   className="text-left flex items-center justify-between font-bold text-xs uppercase tracking-wider border border-[var(--line)] bg-[var(--surface)] px-5 py-4 rounded-xl text-slate-600 hover:border-slate-900 hover:text-[var(--text)] hover:shadow-sm transition-all group active:scale-95"
                 >
                   <span className="text-xs">{s}</span>
-                  <ChevronRight size={16} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
+                  <ChevronRight aria-hidden="true" size={16} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
                 </button>
               ))}
             </div>
           )}
           <form onSubmit={(e) => { e.preventDefault(); ask(input); }} className="relative flex items-center group">
-            <input 
+            <input aria-label="Ask Copilot"
               className="flex-1 w-full bg-[var(--ink)] border-2 border-[var(--line)] rounded-2xl px-6 py-4 text-sm focus:bg-[var(--surface)] focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 outline-none transition-all placeholder:text-slate-400 font-medium tracking-tight shadow-sm" 
               placeholder="Ask Copilot about cash runway, AR aging, spending patterns, or financial ratios…" 
               value={input}
@@ -270,7 +270,7 @@ export default function Copilot() {
               className="absolute right-2.5 p-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md active:scale-95" 
               disabled={loading || !input.trim()} 
               aria-label="Send action">
-              <Send size={18} />
+              <Send aria-hidden="true" size={18} />
             </button>
           </form>
         </div>

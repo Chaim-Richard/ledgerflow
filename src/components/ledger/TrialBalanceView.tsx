@@ -292,8 +292,8 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   };
 
   const renderSortIcon = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown size={11} className="opacity-40" />;
-    return sortDir === 'asc' ? <ArrowUp size={11} className="text-emerald-400" /> : <ArrowDown size={11} className="text-emerald-400" />;
+    if (sortField !== field) return <ArrowUpDown aria-hidden="true" size={11} className="opacity-40" />;
+    return sortDir === 'asc' ? <ArrowUp aria-hidden="true" size={11} className="text-emerald-400" /> : <ArrowDown aria-hidden="true" size={11} className="text-emerald-400" />;
   };
 
   return (
@@ -302,7 +302,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       {!isServerAuthoritative && isDataTruncated ? (
         <div id="tb-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-400 shrink-0" />
             <span>Showing 2,000 of N transactions — totals are incomplete</span>
           </div>
           <button
@@ -310,22 +310,22 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             disabled={loadingStates.trialBalance}
             className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded text-xs transition flex items-center gap-1.5"
           >
-            {loadingStates.trialBalance ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+            {loadingStates.trialBalance ? <RefreshCw aria-hidden="true" className="w-3.5 h-3.5 animate-spin" /> : null}
             <span>{loadingStates.trialBalance ? "Loading Server..." : "Load Full Server Report"}</span>
           </button>
         </div>
       ) : isServerAuthoritative ? (
         <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-emerald-400" />
             <span>Server-Authoritative Trial Balance (Full History Verified)</span>
           </div>
-          <button 
+          <button aria-label="Refresh server report"
             onClick={loadServerReport} 
             title="Refresh server report"
             className="text-emerald-400/80 hover:text-emerald-300 p-0.5 rounded transition"
           >
-            <RefreshCw className={cn("w-3 h-3", loadingStates.trialBalance && "animate-spin")} />
+            <RefreshCw aria-hidden="true" className={cn("w-3 h-3", loadingStates.trialBalance && "animate-spin")} />
           </button>
         </div>
       ) : null}
@@ -337,7 +337,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
         <div className="p-5 border-b border-[var(--line)] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest truncate mb-1">
-               <Scale size={12} className="shrink-0" />
+               <Scale aria-hidden="true" size={12} className="shrink-0" />
                Double-Entry Stability Protocol
             </div>
             <h3 className="text-xl font-bold text-[var(--text)] tracking-tight">Trial Balance</h3>
@@ -347,9 +347,9 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                 onMonthChange={({ end }) => setAsOfDate(end)}
               />
               <div className="flex items-center gap-1.5 bg-[var(--ink)] px-2.5 py-1 rounded-lg border border-[var(--line)]">
-                <Calendar size={13} className="text-[var(--muted)]" />
+                <Calendar aria-hidden="true" size={13} className="text-[var(--muted)]" />
                 <span className="text-[10px] font-bold text-[var(--muted)] uppercase">As of:</span>
-                <input 
+                <input aria-label="As of date"
                   type="date"
                   value={asOfDate}
                   onChange={(e) => setAsOfDate(e.target.value)}
@@ -405,7 +405,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                 : "bg-rose-500 text-white border-rose-400"
             )}
           >
-            {trialBalance.isBalanced ? <CheckCircle2 size={12} className="shrink-0 text-emerald-500" /> : <AlertCircle size={12} className="shrink-0" />}
+            {trialBalance.isBalanced ? <CheckCircle2 aria-hidden="true" size={12} className="shrink-0 text-emerald-500" /> : <AlertCircle aria-hidden="true" size={12} className="shrink-0" />}
             {trialBalance.isBalanced ? "Balanced Double-Entry" : "System Imbalance"}
           </motion.div>
         </div>
@@ -421,13 +421,13 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3 py-1 bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] rounded-lg text-[9px] font-bold uppercase tracking-wider hover:text-[var(--text)] transition-all cursor-pointer"
            aria-label="CSV">
-            <Download size={11} /> CSV
+            <Download aria-hidden="true" size={11} /> CSV
           </button>
           <button 
             onClick={handleExportExcel}
             className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600/10 text-emerald-600 border border-emerald-500/30 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-600/20 transition-all cursor-pointer"
            aria-label="Excel">
-            <FileSpreadsheet size={11} /> Excel
+            <FileSpreadsheet aria-hidden="true" size={11} /> Excel
           </button>
         </div>
       </div>
@@ -518,7 +518,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             <tr className="bg-[var(--ink)]/50 whitespace-nowrap">
               <td colSpan={2} className="px-5 py-3.5">
                 <div className="flex items-center gap-2">
-                  <Activity size={14} className="text-[var(--muted)] shrink-0" />
+                  <Activity aria-hidden="true" size={14} className="text-[var(--muted)] shrink-0" />
                   <span className="text-sm font-bold text-[var(--text)] uppercase">Total Trial Balance</span>
                 </div>
               </td>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { z } from 'zod';
 import { Field } from './Field';
 
@@ -29,6 +29,7 @@ export function SchemaForm<T extends z.ZodObject<any>>({
   hiddenFields = [],
   className = '',
 }: SchemaFormProps<T>) {
+  const formId = useId();
   const [formData, setFormData] = useState<Record<string, any>>(() => {
     const defaults: Record<string, any> = {};
     const shape = schema.shape;
@@ -87,6 +88,7 @@ export function SchemaForm<T extends z.ZodObject<any>>({
   const shape = schema.shape;
 
   const renderControl = (key: string, zodType: z.ZodTypeAny) => {
+    const controlId = `${formId}-${encodeURIComponent(key)}`;
     let currentType: z.ZodTypeAny = zodType;
 
     if (currentType instanceof z.ZodOptional || currentType instanceof z.ZodNullable) {
@@ -117,8 +119,9 @@ export function SchemaForm<T extends z.ZodObject<any>>({
 
     if (currentType instanceof z.ZodBoolean) {
       return (
-        <label className="flex items-center gap-2 text-xs font-medium text-[var(--text,#171717)] cursor-pointer">
+        <label id={`${controlId}-label`} htmlFor={controlId} className="flex items-center gap-2 text-xs font-medium text-[var(--text,#171717)] cursor-pointer">
           <input
+            id={controlId}
             type="checkbox"
             checked={!!value}
             disabled={isDisabled}
@@ -175,6 +178,7 @@ export function SchemaForm<T extends z.ZodObject<any>>({
         return (
           <Field
             key={key}
+            htmlFor={`${formId}-${encodeURIComponent(key)}`}
             label={label}
             error={errors[key]}
             hint={customHints[key]}

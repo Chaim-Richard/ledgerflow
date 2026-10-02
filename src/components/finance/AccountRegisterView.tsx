@@ -139,7 +139,7 @@ export const AccountRegisterView: React.FC = () => {
       <div className="p-4 border-b border-[var(--border)] flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 bg-[var(--surface-sunken)]">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[var(--accent)]/10 text-[var(--accent)] rounded-lg">
-            <BookOpen className="w-5 h-5" />
+            <BookOpen aria-hidden="true" className="w-5 h-5" />
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight">Account Register</h1>
@@ -150,8 +150,8 @@ export const AccountRegisterView: React.FC = () => {
         {/* Account Selector & Filters */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-[var(--text-muted)]" />
-            <select
+            <Building2 aria-hidden="true" className="w-4 h-4 text-[var(--text-muted)]" />
+            <select aria-label="Register account"
               id="select-register-account"
               value={selectedAccount?.id || ''}
               onChange={e => setSelectedAccountId(e.target.value)}
@@ -175,7 +175,7 @@ export const AccountRegisterView: React.FC = () => {
                 : "bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text)]"
             )}
           >
-            <Filter className="w-3.5 h-3.5" />
+            <Filter aria-hidden="true" className="w-3.5 h-3.5" />
             <span>{unclearedOnly ? "Uncleared Only" : "All Entries"}</span>
           </button>
         </div>
@@ -214,8 +214,8 @@ export const AccountRegisterView: React.FC = () => {
 
       {/* Search Input */}
       <div className="px-4 py-2 border-b border-[var(--border)] flex items-center gap-2 bg-[var(--surface-sunken)]">
-        <Search className="w-4 h-4 text-[var(--text-muted)]" />
-        <input
+        <Search aria-hidden="true" className="w-4 h-4 text-[var(--text-muted)]" />
+        <input aria-label="Filter register by payee, reference, or description"
           id="input-register-search"
           type="text"
           value={searchQuery}
@@ -257,15 +257,15 @@ export const AccountRegisterView: React.FC = () => {
                   )}
                 >
                   <td className="py-2.5 px-3 text-center">
-                    <button
+                    <button aria-label={entry.isCleared ? "Mark transaction as uncleared" : "Mark transaction as cleared"}
                       onClick={() => handleToggleCleared(entry.txId, entry.isCleared)}
                       title={entry.isCleared ? "Cleared (Click to unmark)" : "Uncleared (Click to clear)"}
                       className="text-[var(--text-muted)] hover:text-emerald-400 transition"
                     >
                       {entry.isCleared ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <CheckCircle2 aria-hidden="true" className="w-4 h-4 text-emerald-400" />
                       ) : (
-                        <Circle className="w-4 h-4 opacity-40 hover:opacity-100" />
+                        <Circle aria-hidden="true" className="w-4 h-4 opacity-40 hover:opacity-100" />
                       )}
                     </button>
                   </td>

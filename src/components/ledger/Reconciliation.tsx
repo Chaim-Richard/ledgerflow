@@ -323,7 +323,7 @@ export default function Reconciliation() {
         
         <div className="relative z-10 flex items-center gap-4">
           <div className="w-12 h-12 bg-[var(--brass-soft)] border border-[var(--brass-line)] rounded-xl flex items-center justify-center text-[var(--brass)] shrink-0">
-             <ArrowLeftRight size={22} />
+             <ArrowLeftRight aria-hidden="true" size={22} />
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-black text-[var(--text)] tracking-tight uppercase leading-none">Smart Matching & Bank Reconciliation</h1>
@@ -346,7 +346,7 @@ export default function Reconciliation() {
                  viewMode === 'pending' ? "bg-[var(--surface)] text-[var(--text)] shadow-sm" : "text-[var(--muted)] hover:text-[var(--text)]"
                )}
              >
-               <Layers size={11} />
+               <Layers aria-hidden="true" size={11} />
                Streams ({unmatchedBankLines.length})
              </button>
              <button 
@@ -356,7 +356,7 @@ export default function Reconciliation() {
                  viewMode === 'history' ? "bg-[var(--surface)] text-[var(--text)] shadow-sm" : "text-[var(--muted)] hover:text-[var(--text)]"
                )}
              >
-               <History size={11} />
+               <History aria-hidden="true" size={11} />
                Matched History ({matchedBankLines.length})
              </button>
            </div>
@@ -366,7 +366,7 @@ export default function Reconciliation() {
                 onClick={() => setShowAutoConfirm(true)}
                 className="flex items-center gap-2 px-4 h-10 bg-[var(--brass-soft)] text-[var(--brass)] font-bold rounded-xl text-[10px] uppercase tracking-wider hover:opacity-90 transition-all border border-[var(--brass-line)] cursor-pointer shadow-sm"
              >
-                <Zap size={14} className="fill-[var(--brass)]" />
+                <Zap aria-hidden="true" size={14} className="fill-[var(--brass)]" />
                 Review {Array.from(optimizedMatches.values()).length} Synapse Pairs
              </button>
            )}
@@ -377,13 +377,13 @@ export default function Reconciliation() {
                disabled={isAutoReconciling}
                className="flex items-center gap-2 px-5 h-10 bg-[var(--brass)] text-[var(--ink)] font-bold rounded-xl text-[10px] uppercase tracking-wider hover:opacity-90 transition-all shadow-md disabled:opacity-50 cursor-pointer"
               aria-label="Auto Align All">
-               {isAutoReconciling ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+               {isAutoReconciling ? <Loader2 aria-hidden="true" size={14} className="animate-spin" /> : <Sparkles aria-hidden="true" size={14} />}
                Auto Align All
              </button>
            )}
 
-           <button onClick={() => window.location.reload()} className="w-11 h-11 flex items-center justify-center bg-[var(--surface)]/5 border border-white/10 rounded-xl text-white/40 hover:text-white hover:bg-[var(--surface)]/10 transition-all cursor-pointer">
-             <RefreshCw size={18} className={cn(isProcessing && "animate-spin text-emerald-400")} />
+           <button aria-label="Reload reconciliation" onClick={() => window.location.reload()} className="w-11 h-11 flex items-center justify-center bg-[var(--surface)]/5 border border-white/10 rounded-xl text-white/40 hover:text-white hover:bg-[var(--surface)]/10 transition-all cursor-pointer">
+             <RefreshCw aria-hidden="true" size={18} className={cn(isProcessing && "animate-spin text-emerald-400")} />
            </button>
         </div>
       </div>
@@ -391,7 +391,7 @@ export default function Reconciliation() {
       {/* Verification Filter & Info Stripe */}
       <div className="bg-[var(--ink)] border-b border-[var(--line)] px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3 text-xs text-[var(--muted)] font-medium">
-          <Info size={14} className="text-[var(--brass)] shrink-0" />
+          <Info aria-hidden="true" size={14} className="text-[var(--brass)] shrink-0" />
           <span>
             {viewMode === 'pending' 
               ? "Select an isolated bank statement entry and trace its corresponding entry inside the internal ledger." 
@@ -400,7 +400,7 @@ export default function Reconciliation() {
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
           {cashAccounts.length > 0 && (
-            <select
+            <select aria-label="Reconciliation account"
               value={selectedAccountId}
               onChange={e => setSelectedAccountId(e.target.value)}
               className="h-9 px-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-xs font-semibold text-[var(--text)] outline-none focus:border-[var(--brass)] transition-all cursor-pointer"
@@ -414,8 +414,8 @@ export default function Reconciliation() {
             </select>
           )}
           <div className="relative w-full md:w-64">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={14} />
-            <input
+            <Search aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={14} />
+            <input aria-label="Search reconciliation amounts or descriptions"
               type="text"
               placeholder="Quick search amounts or labels..."
               className="w-full h-9 pl-9 pr-4 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-xs font-semibold text-[var(--text)] outline-none focus:border-[var(--brass)] transition-all"
@@ -434,7 +434,7 @@ export default function Reconciliation() {
           {/* Connector Graphic in Gap spacing */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none hidden xl:flex">
              <div className="w-14 h-14 bg-slate-900 rounded-full border-4 border-white shadow-xl flex items-center justify-center text-emerald-500 ring-2 ring-slate-100">
-                <LinkIcon size={20} className={cn(selectedBankId && selectedLedgerId && "animate-pulse text-indigo-500")} />
+                <LinkIcon aria-hidden="true" size={20} className={cn(selectedBankId && selectedLedgerId && "animate-pulse text-indigo-500")} />
              </div>
           </div>
 
@@ -473,7 +473,7 @@ export default function Reconciliation() {
                         <span className="text-sm font-bold tracking-tight truncate max-w-[220px] md:max-w-xs">{btx.description}</span>
                         {matchedLedgerId && !isSelected && (
                           <div className="flex items-center gap-1.5 mt-2 text-[8px] font-bold uppercase tracking-wider text-[var(--pos)] bg-[var(--pos)]/10 px-2 py-1 rounded border border-[var(--pos)]/20 w-fit">
-                            <Zap size={9} fill="currentColor" />
+                            <Zap aria-hidden="true" size={9} fill="currentColor" />
                             Match found
                           </div>
                         )}
@@ -503,7 +503,7 @@ export default function Reconciliation() {
                 })}
                 {filteredBankFeed.length === 0 && (
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
-                     <ShieldCheck size={40} className="text-[var(--pos)] mb-3" />
+                     <ShieldCheck aria-hidden="true" size={40} className="text-[var(--pos)] mb-3" />
                      <h3 className="font-bold text-sm text-[var(--text)] uppercase tracking-tight">Zero Pending Streams</h3>
                      <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1">Bank Statement Feed is pre-synchronized</p>
                   </div>
@@ -545,7 +545,7 @@ export default function Reconciliation() {
                           <span className={cn("text-[8px] font-semibold uppercase tracking-wider font-mono", isSelected ? "text-emerald-200" : "text-[var(--muted)]")}>
                             {format(parseLocalDate(ltx.date), 'MMM dd')} • {resolveAccountName(accounts, ltx.lines?.[0]?.accountId, ltx.lines?.[0]?.accountName)}
                           </span>
-                          {isPossibleMatch && !isSelected && <Zap size={10} className="text-emerald-500 animate-pulse" />}
+                          {isPossibleMatch && !isSelected && <Zap aria-hidden="true" size={10} className="text-emerald-500 animate-pulse" />}
                         </div>
                         <span className={cn("text-sm font-extrabold tracking-tight truncate max-w-[220px] md:max-w-xs", isSelected ? "text-white" : "text-[var(--text)]")}>
                           {ltx.description}
@@ -559,7 +559,7 @@ export default function Reconciliation() {
                 })}
                 {filteredLedgerEntries.length === 0 && (
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
-                     <ShieldCheck size={40} className="text-indigo-500 mb-3" />
+                     <ShieldCheck aria-hidden="true" size={40} className="text-indigo-500 mb-3" />
                      <h3 className="font-extrabold text-sm text-[var(--text)] uppercase tracking-tight">Registry Unoccupied</h3>
                      <p className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-widest mt-1">No unverified entries on the active chart</p>
                   </div>
@@ -577,7 +577,7 @@ export default function Reconciliation() {
                 <p className="text-[10px] text-[var(--muted)] uppercase tracking-widest font-semibold mt-0.5">Physical deposits & ledgers permanently welded and locked</p>
               </div>
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-1">
-                 <Lock size={12} />
+                 <Lock aria-hidden="true" size={12} />
                  <span>Cleared Protection System Active</span>
               </div>
             </div>
@@ -585,7 +585,7 @@ export default function Reconciliation() {
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                {filteredBankFeed.length === 0 ? (
                  <div className="py-24 text-center text-[var(--muted)] flex flex-col items-center justify-center space-y-3">
-                   <History size={36} className="text-slate-300" />
+                   <History aria-hidden="true" size={36} className="text-slate-300" />
                    <h4 className="font-extrabold text-[11px] uppercase tracking-widest">No cleared alignment history found</h4>
                    <p className="text-[10px] font-medium uppercase tracking-tight text-[var(--muted)] max-w-xs leading-normal">
                      Use the Pending Streams tab to forge balances and trace links
@@ -615,8 +615,8 @@ export default function Reconciliation() {
 
                              {/* Connector Node */}
                              <div className="flex shrink-0 items-center gap-2 text-emerald-500 lg:px-4">
-                               <ArrowRight size={14} className="hidden lg:block animate-pulse" />
-                               <LinkIcon size={12} />
+                               <ArrowRight aria-hidden="true" size={14} className="hidden lg:block animate-pulse" />
+                               <LinkIcon aria-hidden="true" size={12} />
                              </div>
 
                              {/* Internal Ledger Match Info */}
@@ -636,7 +636,7 @@ export default function Reconciliation() {
                                  loadingText="Reverting..."
                                  className="px-4 py-2 bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 hover:text-rose-700 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-1 leading-none shadow-xs"
                                >
-                                 <X size={10} strokeWidth={2.5} /> Revert Verification
+                                 <X aria-hidden="true" size={10} strokeWidth={2.5} /> Revert Verification
                                </AsyncButton>
                              </div>
                           </div>
@@ -669,7 +669,7 @@ export default function Reconciliation() {
                 
                 {/* Node A */}
                 <div className="md:col-span-2 flex flex-col bg-[var(--ink)]/50 p-4 rounded-xl border border-[var(--line)] relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-2 opacity-10"><Layers size={36} /></div>
+                  <div className="absolute top-0 right-0 p-2 opacity-10"><Layers aria-hidden="true" size={36} /></div>
                   <span className="text-[8px] font-bold text-[var(--pos)] uppercase tracking-wider font-mono">Statement Node A</span>
                   <span className="text-md font-bold truncate mt-1 tracking-tight">{selectedBankLine.description}</span>
                   <div className="flex items-center justify-between mt-3 flex-wrap gap-1">
@@ -700,7 +700,7 @@ export default function Reconciliation() {
                   ) : (
                      <>
                         <div className="w-10 h-10 bg-[var(--pos)]/10 border border-[var(--pos)]/20 rounded-full flex items-center justify-center text-[var(--pos)] mt-2">
-                          <Lock size={16} />
+                          <Lock aria-hidden="true" size={16} />
                         </div>
                         <span className="text-[7px] text-[var(--pos)] font-bold uppercase mt-2">Strict Clear</span>
                      </>
@@ -709,7 +709,7 @@ export default function Reconciliation() {
 
                 {/* Node B */}
                 <div className="md:col-span-2 flex flex-col bg-[var(--ink)]/50 p-4 rounded-xl border border-[var(--line)] relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-2 opacity-10"><Maximize2 size={36} /></div>
+                  <div className="absolute top-0 right-0 p-2 opacity-10"><Maximize2 aria-hidden="true" size={36} /></div>
                   <span className="text-[8px] font-bold text-[var(--brass)] uppercase tracking-wider font-mono">Ledger Node B</span>
                   <span className="text-md font-bold truncate mt-1 tracking-tight">{selectedLedgerTx?.description || 'Orphan Ledger'}</span>
                   <div className="flex items-center justify-between mt-3 flex-wrap gap-1">
@@ -758,7 +758,7 @@ export default function Reconciliation() {
                    {/* Alerts / Warnings inside discrepancy state */}
                    {checkSimilarity.amountDiff !== 0 && (
                      <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-amber-300 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 leading-none">
-                       <AlertCircle size={10} />
+                       <AlertCircle aria-hidden="true" size={10} />
                        <span>Fee or conversion delta absorbed</span>
                      </div>
                    )}
@@ -784,7 +784,7 @@ export default function Reconciliation() {
                       }}
                       className="px-8 h-12 bg-emerald-600 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-emerald-500 transition-all cursor-pointer shadow-lg shadow-emerald-900/30 w-full sm:w-auto"
                     >
-                      <ShieldCheck size={18} />
+                      <ShieldCheck aria-hidden="true" size={18} />
                       Assert Match Verification
                     </button>
                   ) : (
@@ -793,7 +793,7 @@ export default function Reconciliation() {
                       loadingText="Unbinding..."
                       className="px-8 h-12 bg-rose-600 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-rose-500 transition-all cursor-pointer shadow-lg shadow-rose-900/30 w-full sm:w-auto"
                     >
-                      <X size={18} />
+                      <X aria-hidden="true" size={18} />
                       Unbind & Reopen Vector
                     </AsyncButton>
                   )}
@@ -851,7 +851,7 @@ export default function Reconciliation() {
                >
                   <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-[var(--line)] pb-5 gap-4">
                     <div className="flex items-center gap-3">
-                       <Zap size={24} className="text-amber-500 fill-amber-500" />
+                       <Zap aria-hidden="true" size={24} className="text-amber-500 fill-amber-500" />
                        <div>
                          <h3 className="text-xl font-black uppercase tracking-tight text-[var(--text)]">
                             Cognitive Alignments Panel
@@ -904,7 +904,7 @@ export default function Reconciliation() {
                                    "w-5.5 h-5.5 rounded-lg border flex items-center justify-center transition-all",
                                    isChecked ? "bg-emerald-600 border-emerald-600 text-white" : "bg-[var(--surface)] border-slate-300"
                                  )}>
-                                    {isChecked && <Check size={12} strokeWidth={3} />}
+                                    {isChecked && <Check aria-hidden="true" size={12} strokeWidth={3} />}
                                  </div>
                               </div>
 
@@ -918,7 +918,7 @@ export default function Reconciliation() {
 
                                 {/* Flow indicator status line */}
                                 <div className="hidden md:flex justify-center text-emerald-500">
-                                    <ArrowRight size={16} />
+                                    <ArrowRight aria-hidden="true" size={16} />
                                 </div>
 
                                 {/* Mapped registry internal record item info */}
@@ -949,7 +949,7 @@ export default function Reconciliation() {
                         disabled={isProcessing} 
                         className="bg-emerald-600 hover:bg-emerald-500 cursor-pointer transition-all text-white px-8 h-12 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2.5 disabled:opacity-50"
                       aria-label="Apply Checked Synapses Now ( )">
-                        {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />} 
+                        {isProcessing ? <Loader2 aria-hidden="true" size={16} className="animate-spin" /> : <ShieldCheck aria-hidden="true" size={16} />}
                         Apply Checked Synapses Now ({Object.values(selectedBatchIds).filter(Boolean).length})
                      </button>
                   </div>

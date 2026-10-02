@@ -49,9 +49,9 @@ export default function PaymentsView() {
       <div className="flex flex-col md:flex-row gap-4 mb-8">
         <div className="relative flex-1 group">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <Search size={18} className="text-[var(--muted)] group-focus-within:text-indigo-500 transition-colors" />
+            <Search aria-hidden="true" size={18} className="text-[var(--muted)] group-focus-within:text-indigo-500 transition-colors" />
           </div>
-          <input
+          <input aria-label="Search payments by entity, method, or reference"
             type="text"
             placeholder="Search payments by entity, method, or reference..."
             value={searchTerm}
@@ -114,19 +114,19 @@ export default function PaymentsView() {
                   </td>
                   <td className="p-4 md:p-8 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button
+                      <button aria-label="Preview PDF Receipt"
                         onClick={() => setPreviewPayment(payment)}
                         className="p-2 text-[var(--muted)] hover:text-indigo-600 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
                         title="Preview PDF Receipt"
                       >
-                        <Eye size={16} />
+                        <Eye aria-hidden="true" size={16} />
                       </button>
-                      <button
+                      <button aria-label="Download PDF Receipt"
                         onClick={() => downloadDocumentPdf('payment', payment.id, currentWorkspaceId || 'default', `receipt_${payment.number || payment.id}.pdf`)}
                         className="p-2 text-[var(--muted)] hover:text-indigo-600 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
                         title="Download PDF Receipt"
                       >
-                        <Download size={16} />
+                        <Download aria-hidden="true" size={16} />
                       </button>
                     </div>
                   </td>
@@ -139,7 +139,7 @@ export default function PaymentsView() {
                     {loading ? <LoadingState what="payments" /> : (
                     <div className="relative z-10 flex flex-col items-center gap-4">
                       <div className="w-20 h-20 bg-slate-200/20 rounded-[32px] flex items-center justify-center text-slate-500/30">
-                        <DollarSign size={40} />
+                        <DollarSign aria-hidden="true" size={40} />
                       </div>
                       <p className="text-base font-black text-[var(--muted)] uppercase tracking-[0.3em]">No payments recorded</p>
                     </div>

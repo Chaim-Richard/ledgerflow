@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useId } from 'react';
 import { AutoRule, Transaction } from '../../../types';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
@@ -22,6 +22,7 @@ function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
 }
 
 export const RulesSettings: React.FC = () => {
+  const formId = useId();
   const currentRole = useCurrentRole();
   const canBuildRules = currentRole === 'owner' || currentRole === 'accountant';
 
@@ -324,7 +325,7 @@ export const RulesSettings: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
           <h1 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-            <SlidersHorizontal className="w-5 h-5 text-neutral-700" />
+            <SlidersHorizontal aria-hidden="true" className="w-5 h-5 text-neutral-700" />
             Rules & Automation Engine
           </h1>
           <p className="text-sm text-neutral-500 mt-1">
@@ -337,7 +338,7 @@ export const RulesSettings: React.FC = () => {
             className="px-3.5 py-2 text-xs font-semibold bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg flex items-center gap-1.5 transition-colors border border-neutral-300"
             id="test-all-rules-btn"
           >
-            <Play className="w-3.5 h-3.5 text-neutral-700" />
+            <Play aria-hidden="true" className="w-3.5 h-3.5 text-neutral-700" />
             Test Against Ledger
           </button>
           <button
@@ -345,7 +346,7 @@ export const RulesSettings: React.FC = () => {
             className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors"
             id="create-new-rule-btn"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus aria-hidden="true" className="w-3.5 h-3.5" />
             Create Rule
           </button>
         </div>
@@ -354,7 +355,7 @@ export const RulesSettings: React.FC = () => {
       {/* Describe a Rule (AI Rule Builder) */}
       <div className="bg-gradient-to-r from-neutral-900 to-neutral-800 text-white p-4 rounded-xl shadow-xs border border-neutral-700">
         <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="w-4 h-4 text-amber-400" />
+          <Sparkles aria-hidden="true" className="w-4 h-4 text-amber-400" />
           <h3 className="text-sm font-semibold text-white">Describe a Rule in Plain English</h3>
         </div>
         <p className="text-xs text-neutral-300 mb-3">
@@ -363,7 +364,7 @@ export const RulesSettings: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center gap-2">
           {canBuildRules ? (
             <>
-              <input
+              <input aria-label="Describe the rule to create"
                 type="text"
                 value={aiSentence}
                 onChange={(e) => setAiSentence(e.target.value)}
@@ -376,13 +377,13 @@ export const RulesSettings: React.FC = () => {
                 disabled={isGeneratingAiRule || !aiSentence.trim()}
                 className="w-full sm:w-auto px-4 py-2 text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-neutral-950 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                {isGeneratingAiRule ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {isGeneratingAiRule ? <RotateCw aria-hidden="true" className="w-3.5 h-3.5 animate-spin" /> : <Sparkles aria-hidden="true" className="w-3.5 h-3.5" />}
                 Generate Rule
               </button>
             </>
           ) : (
             <div className="flex-1 text-xs text-amber-300 bg-neutral-950/40 p-2.5 rounded-lg border border-amber-500/20 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+              <AlertCircle aria-hidden="true" className="w-4 h-4 shrink-0 text-amber-400" />
               <span>AI Rule Builder is restricted to Owners and Accountants. Your current role is {currentRole}.</span>
             </div>
           )}
@@ -390,7 +391,7 @@ export const RulesSettings: React.FC = () => {
 
         {aiError && (
           <div className="mt-3 p-2.5 bg-red-900/50 border border-red-700/50 rounded-md text-red-200 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <AlertCircle aria-hidden="true" className="w-4 h-4 text-red-400 shrink-0" />
             <span>{aiError}</span>
           </div>
         )}
@@ -461,11 +462,11 @@ export const RulesSettings: React.FC = () => {
       {applySuccessMessage && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <CheckCircle2 aria-hidden="true" className="w-4 h-4 text-emerald-600" />
             <span>{applySuccessMessage}</span>
           </div>
-          <button onClick={() => setApplySuccessMessage(null)} className="text-emerald-700 hover:text-emerald-900">
-            <X className="w-4 h-4" />
+          <button onClick={() => setApplySuccessMessage(null)} aria-label="Dismiss rule results" className="text-emerald-700 hover:text-emerald-900">
+            <X aria-hidden="true" className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -499,8 +500,8 @@ export const RulesSettings: React.FC = () => {
         </div>
 
         <div className="relative w-full sm:w-64">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-neutral-400" />
-          <input
+          <Search aria-hidden="true" className="w-3.5 h-3.5 absolute left-3 top-2.5 text-neutral-400" />
+          <input aria-label="Search rules"
             type="text"
             placeholder="Search rules..."
             value={searchQuery}
@@ -513,7 +514,7 @@ export const RulesSettings: React.FC = () => {
       {/* Rules Table */}
       {filteredRules.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-neutral-200 p-6">
-          <SlidersHorizontal className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
+          <SlidersHorizontal aria-hidden="true" className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
           <h3 className="text-sm font-semibold text-neutral-800">No automation rules configured</h3>
           <p className="text-xs text-neutral-500 mt-1 max-w-md mx-auto">
             Create deterministic rules to automatically match incoming transactions, assign chart-of-accounts categories, and append analytical coordinates.
@@ -522,7 +523,7 @@ export const RulesSettings: React.FC = () => {
             onClick={openCreateModal}
             className="mt-4 px-4 py-2 text-xs font-semibold bg-neutral-900 text-white rounded-lg inline-flex items-center gap-1.5"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus aria-hidden="true" className="w-3.5 h-3.5" />
             Add First Rule
           </button>
         </div>
@@ -545,7 +546,7 @@ export const RulesSettings: React.FC = () => {
                 return (
                   <tr key={rule.id} className={`hover:bg-neutral-50/80 transition-colors ${!isActive ? 'opacity-50' : ''}`}>
                     <td className="py-3 px-3">
-                      <input
+                      <input aria-label={`Enable rule ${rule.name}`}
                         type="checkbox"
                         checked={isActive}
                         onChange={() => handleToggleActive(rule.id)}
@@ -601,7 +602,7 @@ export const RulesSettings: React.FC = () => {
                       )}
                       {rule.action.addTags && rule.action.addTags.length > 0 && (
                         <div className="flex items-center gap-1">
-                          <Tag className="w-3 h-3 text-neutral-400" />
+                          <Tag aria-hidden="true" className="w-3 h-3 text-neutral-400" />
                           <span>{rule.action.addTags.join(', ')}</span>
                         </div>
                       )}
@@ -619,22 +620,25 @@ export const RulesSettings: React.FC = () => {
                         onClick={() => openEditModal(rule)}
                         className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors"
                         title="Edit Rule"
+                        aria-label={`Edit rule ${rule.name}`}
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye aria-hidden="true" className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDuplicateRule(rule)}
                         className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors"
                         title="Duplicate Rule"
+                        aria-label={`Duplicate rule ${rule.name}`}
                       >
-                        <Copy className="w-3.5 h-3.5" />
+                        <Copy aria-hidden="true" className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteRule(rule.id)}
                         className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-md transition-colors"
                         title="Delete Rule"
+                        aria-label={`Delete rule ${rule.name}`}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 aria-hidden="true" className="w-3.5 h-3.5" />
                       </button>
                     </td>
                   </tr>
@@ -652,15 +656,15 @@ export const RulesSettings: React.FC = () => {
             <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
               <div>
                 <h3 className="text-base font-bold text-neutral-900 flex items-center gap-2">
-                  <Play className="w-4 h-4 text-emerald-600" />
+                  <Play aria-hidden="true" className="w-4 h-4 text-emerald-600" />
                   Ledger Rules Dry-Run Simulation
                 </h3>
                 <p className="text-xs text-neutral-500 mt-0.5">
                   Scanned {dryRunResult.summary.totalScanned} transactions. Found {dryRunResult.summary.totalMatched} matches ready to update.
                 </p>
               </div>
-              <button onClick={() => setIsTestingRule(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
-                <X className="w-4 h-4" />
+              <button onClick={() => setIsTestingRule(false)} aria-label="Close rule test results" className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
+                <X aria-hidden="true" className="w-4 h-4" />
               </button>
             </div>
 
@@ -711,12 +715,12 @@ export const RulesSettings: React.FC = () => {
               >
                 {isApplyingExisting ? (
                   <>
-                    <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                    <RotateCw aria-hidden="true" className="w-3.5 h-3.5 animate-spin" />
                     Applying Rules...
                   </>
                 ) : (
                   <>
-                    <Check className="w-3.5 h-3.5" />
+                    <Check aria-hidden="true" className="w-3.5 h-3.5" />
                     Apply {dryRunResult.matches.length} Updates to Ledger
                   </>
                 )}
@@ -734,8 +738,8 @@ export const RulesSettings: React.FC = () => {
               <h3 className="text-base font-bold text-neutral-900">
                 {editingRule ? 'Edit Automation Rule' : 'Create Automation Rule'}
               </h3>
-              <button onClick={() => setIsCreatingRule(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
-                <X className="w-4 h-4" />
+              <button onClick={() => setIsCreatingRule(false)} aria-label="Close rule editor" className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
+                <X aria-hidden="true" className="w-4 h-4" />
               </button>
             </div>
 
@@ -769,7 +773,7 @@ export const RulesSettings: React.FC = () => {
               {/* Conditions */}
               <div className="p-3 bg-neutral-50 rounded-lg border border-neutral-200 space-y-3">
                 <div className="font-bold text-neutral-800 flex items-center gap-1.5">
-                  <Filter className="w-3.5 h-3.5 text-neutral-600" />
+                  <Filter aria-hidden="true" className="w-3.5 h-3.5 text-neutral-600" />
                   IF Transaction Matches (Conditions)
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -823,7 +827,7 @@ export const RulesSettings: React.FC = () => {
               {/* Actions */}
               <div className="p-3 bg-neutral-50 rounded-lg border border-neutral-200 space-y-3">
                 <div className="font-bold text-neutral-800 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-neutral-600" />
+                  <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-neutral-600" />
                   THEN Apply Actions
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -874,8 +878,9 @@ export const RulesSettings: React.FC = () => {
                 </div>
 
                 <div className="pt-2 flex flex-wrap items-center gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label htmlFor={`${formId}-review`} className="flex items-center gap-2 cursor-pointer">
                     <input
+                      id={`${formId}-review`}
                       type="checkbox"
                       checked={formFlagForReview}
                       onChange={e => setFormFlagForReview(e.target.checked)}
@@ -883,8 +888,9 @@ export const RulesSettings: React.FC = () => {
                     />
                     <span className="text-neutral-700">Flag for manual review</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label htmlFor={`${formId}-stop`} className="flex items-center gap-2 cursor-pointer">
                     <input
+                      id={`${formId}-stop`}
                       type="checkbox"
                       checked={formStopOnMatch}
                       onChange={e => setFormStopOnMatch(e.target.checked)}
@@ -944,7 +950,7 @@ export const RulesSettings: React.FC = () => {
                 onClick={handleSaveRule}
                 className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors"
               >
-                <Check className="w-3.5 h-3.5" />
+                <Check aria-hidden="true" className="w-3.5 h-3.5" />
                 Save Rule
               </button>
             </div>

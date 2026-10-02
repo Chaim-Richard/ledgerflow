@@ -18,9 +18,10 @@ interface TagInputProps {
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  'aria-label'?: string;
 }
 
-export default function TagInput({ tags, onChange, disabled, placeholder = "Add tag...", className }: TagInputProps) {
+export default function TagInput({ tags, onChange, disabled, placeholder = "Add tag...", className, 'aria-label': ariaLabel = 'Tags' }: TagInputProps) {
   const [inputValue, setInputValue] = useState('');
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -50,16 +51,18 @@ export default function TagInput({ tags, onChange, disabled, placeholder = "Add 
           {tag}
           {!disabled && (
             <button
+              aria-label={`Remove tag ${tag}`}
               type="button"
               onClick={() => removeTag(index)}
               className="text-zinc-400 hover:text-zinc-600 focus:outline-none"
             >
-              <X size={12} />
+              <X aria-hidden="true" size={12} />
             </button>
           )}
         </span>
       ))}
       <input
+        aria-label={ariaLabel}
         type="text"
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}

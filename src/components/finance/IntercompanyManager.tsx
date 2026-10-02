@@ -92,7 +92,7 @@ export default function IntercompanyManager() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-black text-[#0047AB] uppercase tracking-widest mb-4">
-            <Building2 size={14} />
+            <Building2 aria-hidden="true" size={14} />
             Consolidated Financial Group
           </div>
           <h2 className="text-4xl font-black text-[var(--text)] tracking-tighter">Intercompany Clearing</h2>
@@ -103,7 +103,7 @@ export default function IntercompanyManager() {
           onClick={() => setIsAdding(true)}
           className="h-12 px-8 bg-[#0047AB] text-white rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-blue-800 transition-all shadow-xl"
         >
-          <Plus size={18} />
+          <Plus aria-hidden="true" size={18} />
           Initiate Transfer
         </button>
       </div>
@@ -116,7 +116,7 @@ export default function IntercompanyManager() {
              {formatCurrency(intercompanyTransactions.reduce((sum, t) => sum + (t.totalAmountCents || 0), 0))}
            </h3>
            <div className="flex items-center gap-1.5 mt-3 text-xs font-bold text-emerald-600">
-             <CheckCircle2 size={14} />
+             <CheckCircle2 aria-hidden="true" size={14} />
              All Entities Reconciled
            </div>
         </div>
@@ -131,7 +131,7 @@ export default function IntercompanyManager() {
            <p className="text-[10px] font-bold text-black/40 uppercase tracking-widest mb-1">Pending Eliminations</p>
            <h3 className="text-3xl font-black">0</h3>
            <div className="flex items-center gap-1.5 mt-3 text-xs font-bold opacity-60">
-             <Clock size={14} />
+             <Clock aria-hidden="true" size={14} />
              Next consolidation in 12 days
            </div>
         </div>
@@ -142,8 +142,9 @@ export default function IntercompanyManager() {
         <div className="p-6 border-b border-[var(--line)] flex items-center justify-between bg-slate-50/50">
           <h3 className="font-bold text-[var(--text)]">Reciprocal Audit Trail</h3>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
             <input 
+              aria-label="Filter transfers"
               type="text" 
               placeholder="Filter transfers..." 
               className="pl-10 pr-4 py-2 bg-white border border-[var(--line)] rounded-xl text-sm focus:outline-none focus:border-[#0047AB]"
@@ -169,7 +170,7 @@ export default function IntercompanyManager() {
                 <tr>
                   <td colSpan={7} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center gap-4 opacity-40">
-                      <ArrowLeftRight size={48} className="text-slate-300" />
+                      <ArrowLeftRight aria-hidden="true" size={48} className="text-slate-300" />
                       <p className="font-bold text-[var(--muted)]">No intercompany transfers recorded.</p>
                     </div>
                   </td>
@@ -185,7 +186,7 @@ export default function IntercompanyManager() {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="inline-flex items-center justify-center w-8 h-8 bg-slate-100 rounded-full text-[#0047AB]">
-                        <ArrowRight size={16} />
+                        <ArrowRight aria-hidden="true" size={16} />
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -229,7 +230,7 @@ export default function IntercompanyManager() {
             >
               <div className="p-10 border-b border-[var(--line)]">
                 <h3 className="text-3xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
-                  <ArrowLeftRight className="text-[#0047AB]" size={32} />
+                  <ArrowLeftRight aria-hidden="true" className="text-[#0047AB]" size={32} />
                   New Cross-Entity Transfer
                 </h3>
                 <p className="text-[var(--muted)] font-medium mt-1">Initiate an atomic reciprocal posting between group entities.</p>
@@ -238,10 +239,10 @@ export default function IntercompanyManager() {
               <div className="p-10 overflow-y-auto space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Source Entity</label>
+                    <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Source Entity</span>
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center gap-3">
                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm text-[#0047AB]">
-                         <Building2 size={16} />
+                         <Building2 aria-hidden="true" size={16} />
                        </div>
                        <span className="font-bold text-slate-600">{activeWorkspace?.name || 'Current Workspace'}</span>
                     </div>
@@ -302,7 +303,7 @@ export default function IntercompanyManager() {
 
                 <div className="p-6 bg-blue-50/50 rounded-3xl border border-blue-100/50 space-y-4">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="text-[#0047AB] shrink-0 mt-0.5" size={16} />
+                    <AlertCircle aria-hidden="true" className="text-[#0047AB] shrink-0 mt-0.5" size={16} />
                     <div>
                       <p className="text-xs font-bold text-blue-900">Ledger Mapping Notice</p>
                       <p className="text-[10px] text-blue-700/70 mt-0.5 leading-relaxed">

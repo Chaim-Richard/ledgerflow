@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useId } from 'react';
 import { Transaction, TransactionLine, ChartAccount } from '../../types';
 import { 
   X, 
@@ -61,6 +61,7 @@ export default function TransactionEditModal({
   isReverseAndCorrectMode: initialReverseMode = false,
   onReverseAndCorrect
 }: TransactionEditModalProps) {
+  const formId = useId();
   const baseCurrency = useLedgerStore(s => s.baseCurrency) || 'USD';
   const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
   const todayISO = getLocalDateISO();
@@ -274,7 +275,7 @@ export default function TransactionEditModal({
                 "w-10 h-10 rounded-xl flex items-center justify-center shadow-md",
                 isReverseMode ? "bg-indigo-600 text-white shadow-indigo-600/20" : "bg-zinc-900 text-white shadow-zinc-800/10"
               )}>
-                {isReverseMode ? <RefreshCcw size={18} className="text-white" /> : <Sliders size={18} className="text-zinc-100" />}
+                {isReverseMode ? <RefreshCcw aria-hidden="true" size={18} className="text-white" /> : <Sliders aria-hidden="true" size={18} className="text-zinc-100" />}
               </div>
               <div>
                 <h3 className="text-lg font-bold text-[var(--text)] tracking-tight flex items-center gap-2">
@@ -289,7 +290,7 @@ export default function TransactionEditModal({
             <button aria-label="Close" 
               onClick={onClose} 
               className="p-2 hover:bg-zinc-100 rounded-full transition-all text-zinc-400 hover:text-[var(--text)]"
-            ><X size={18} /></button>
+            ><X aria-hidden="true" size={18} /></button>
           </div>
 
           {/* Form Content body */}
@@ -298,7 +299,7 @@ export default function TransactionEditModal({
             {/* Reverse & Correct Workflow Alert banner */}
             {isReverseMode && (
               <div className="flex items-start gap-3 p-4 bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-2xl text-indigo-900 dark:text-indigo-200">
-                <RefreshCcw className="shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-400" size={18} />
+                <RefreshCcw aria-hidden="true" className="shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-400" size={18} />
                 <div className="text-xs space-y-1">
                   <p className="font-bold">Sanctioned Closed-Period Correction</p>
                   <p className="text-indigo-700/90 dark:text-indigo-300 leading-relaxed">
@@ -312,7 +313,7 @@ export default function TransactionEditModal({
             {isLocked && !isReverseMode && (
               <div className="flex items-start justify-between gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800">
                 <div className="flex items-start gap-3">
-                  <ShieldAlert className="shrink-0 mt-0.5 text-amber-600" size={18} />
+                  <ShieldAlert aria-hidden="true" className="shrink-0 mt-0.5 text-amber-600" size={18} />
                   <div className="text-xs space-y-1">
                     <p className="font-bold">Period Locked (Absolute Integrity Principle)</p>
                     <p className="text-amber-700/90 leading-relaxed">
@@ -336,11 +337,11 @@ export default function TransactionEditModal({
             {isReverseMode && (
               <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-[var(--line)] grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="tx-reversal-date" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
-                    <Calendar size={12} /> Reversal Date (Open Period)
+                  <label htmlFor={`${formId}-tx-reversal-date`} className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                    <Calendar aria-hidden="true" size={12} /> Reversal Date (Open Period)
                   </label>
                   <input
-                    id="tx-reversal-date"
+                    id={`${formId}-tx-reversal-date`}
                     type="date"
                     value={reversalDate}
                     onChange={(e) => setReversalDate(e.target.value)}
@@ -348,11 +349,11 @@ export default function TransactionEditModal({
                   />
                 </div>
                 <div>
-                  <label htmlFor="tx-correction-reason" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
-                    <FileText size={12} /> Reason for Correction / Audit Note
+                  <label htmlFor={`${formId}-tx-correction-reason`} className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                    <FileText aria-hidden="true" size={12} /> Reason for Correction / Audit Note
                   </label>
                   <input
-                    id="tx-correction-reason"
+                    id={`${formId}-tx-correction-reason`}
                     type="text"
                     value={correctionReason}
                     onChange={(e) => setCorrectionReason(e.target.value)}
@@ -367,11 +368,11 @@ export default function TransactionEditModal({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
               <div className="space-y-1.5Col">
-                <label htmlFor="tx-date" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
-                  <Calendar size={11} /> Transaction Date
+                <label htmlFor={`${formId}-tx-date`} className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                  <Calendar aria-hidden="true" size={11} /> Transaction Date
                 </label>
                 <input
-                  id="tx-date"
+                  id={`${formId}-tx-date`}
                   type="date"
                   disabled={isLocked}
                   value={date}
@@ -381,11 +382,11 @@ export default function TransactionEditModal({
               </div>
 
               <div className="md:col-span-2 space-y-1.5">
-                <label htmlFor="tx-description" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
-                  <FileText size={11} /> Description
+                <label htmlFor={`${formId}-tx-description`} className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                  <FileText aria-hidden="true" size={11} /> Description
                 </label>
                 <input
-                  id="tx-description"
+                  id={`${formId}-tx-description`}
                   type="text"
                   disabled={isLocked}
                   value={description}
@@ -401,11 +402,11 @@ export default function TransactionEditModal({
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               
               <div className="space-y-1.5">
-                <label htmlFor="tx-payee" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
-                  <Building2 size={11} /> Payee / counterparty
+                <label htmlFor={`${formId}-tx-payee`} className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                  <Building2 aria-hidden="true" size={11} /> Payee / counterparty
                 </label>
                 <input
-                  id="tx-payee"
+                  id={`${formId}-tx-payee`}
                   type="text"
                   disabled={isLocked}
                   value={payee}
@@ -416,11 +417,11 @@ export default function TransactionEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="tx-project" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                <label htmlFor={`${formId}-tx-project`} className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
                   Custom Project Code
                 </label>
                 <input
-                  id="tx-project"
+                  id={`${formId}-tx-project`}
                   type="text"
                   disabled={isLocked}
                   value={project}
@@ -431,11 +432,11 @@ export default function TransactionEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="tx-type" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                <label htmlFor={`${formId}-tx-type`} className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                   Vector Type
                 </label>
                 <select
-                  id="tx-type"
+                  id={`${formId}-tx-type`}
                   disabled={isLocked}
                   value={type}
                   onChange={(e) => setType(e.target.value as any)}
@@ -449,11 +450,11 @@ export default function TransactionEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="tx-status" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                <label htmlFor={`${formId}-tx-status`} className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                   Process Status
                 </label>
                 <select
-                  id="tx-status"
+                  id={`${formId}-tx-status`}
                   disabled={isLocked}
                   value={status}
                   onChange={(e) => setStatus(e.target.value as any)}
@@ -467,11 +468,11 @@ export default function TransactionEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="tx-original-currency" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                <label htmlFor={`${formId}-tx-original-currency`} className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                   Currency Context
                 </label>
                 <select
-                  id="tx-original-currency"
+                  id={`${formId}-tx-original-currency`}
                   disabled={isLocked}
                   value={originalCurrency}
                   onChange={(e) => setOriginalCurrency(e.target.value)}
@@ -486,7 +487,7 @@ export default function TransactionEditModal({
               {(originalCurrency !== 'USD') && (
                 <div className="space-y-1.5 md:col-span-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
+                    <label htmlFor={`${formId}-exchange-rate`} className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
                       Historical Exchange Rate Offset (1 {originalCurrency} =)
                     </label>
                     <button
@@ -520,11 +521,12 @@ export default function TransactionEditModal({
                       }}
                       className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 disabled:opacity-50 flex items-center gap-1"
                     >
-                      <RefreshCcw size={12} className={isFetchingRate ? 'animate-spin' : ''} />
+                      <RefreshCcw aria-hidden="true" size={12} className={isFetchingRate ? 'animate-spin' : ''} />
                       Sync from Market
                     </button>
                   </div>
                   <input
+                    id={`${formId}-exchange-rate`}
                     type="number"
                     step="0.000001"
                     disabled={isLocked}
@@ -543,7 +545,7 @@ export default function TransactionEditModal({
               <div className="flex items-center justify-between border-b border-[var(--line)] pb-2">
                 <div>
                   <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
-                    <Hash size={13} className="text-zinc-500" /> Ledger Line Distribution Coordinates
+                    <Hash aria-hidden="true" size={13} className="text-zinc-500" /> Ledger Line Distribution Coordinates
                   </h4>
                   <p className="text-[10px] text-zinc-400">Specify precise split mappings to enforce trial balance zero-sum equivalence</p>
                 </div>
@@ -573,7 +575,7 @@ export default function TransactionEditModal({
                       onClick={handleAddLine}
                       className="flex items-center gap-1 px-3 py-1 bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-bold rounded-lg transition-all"
                      aria-label="Add Split Vector">
-                      <Plus size={12} />
+                      <Plus aria-hidden="true" size={12} />
                       <span>Add Split Vector</span>
                     </button>
                   </div>
@@ -596,6 +598,7 @@ export default function TransactionEditModal({
                         />
                       </div>
                       <select
+                        aria-label={`Chart of Account for line ${idx + 1}`}
                         disabled={isLocked}
                         value={line.accountId}
                         onChange={(e) => {
@@ -621,6 +624,7 @@ export default function TransactionEditModal({
                       <div className="relative">
                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-400 font-mono">$</span>
                         <input
+                          aria-label={`Amount for line ${idx + 1}`}
                           type="number"
                           step="0.01"
                           placeholder="0.00"
@@ -637,12 +641,13 @@ export default function TransactionEditModal({
                     <div className="md:col-span-1 pt-4 text-center">
                       {!isLocked && (
                         <button
+                          aria-label={`Remove distribution line ${idx + 1}`}
                           type="button"
                           onClick={() => handleRemoveLine(idx)}
                           className="p-1 px-2.5 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition-all"
                           title="Remove distribution vector"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 aria-hidden="true" size={14} />
                         </button>
                       )}
                     </div>
@@ -662,7 +667,8 @@ export default function TransactionEditModal({
                           <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">{dim.name}</div>
                           <div className="relative">
                             <input
-                              list={`dim-list-${idx}-${dim.id}`}
+                              aria-label={`${dim.name} for line ${idx + 1}`}
+                              list={`${formId}-dim-list-${idx}-${dim.id}`}
                               value={displayVal}
                               disabled={isLocked}
                               onChange={(e) => {
@@ -672,7 +678,7 @@ export default function TransactionEditModal({
                               placeholder={`Type or select ${dim.name.toLowerCase()}`}
                               className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--text)] outline-none focus:border-zinc-400"
                             />
-                            <datalist id={`dim-list-${idx}-${dim.id}`}>
+                            <datalist id={`${formId}-dim-list-${idx}-${dim.id}`}>
                               {pathOptions.map(p => <option key={p} value={p}>{p}</option>)}
                             </datalist>
                           </div>
@@ -683,6 +689,7 @@ export default function TransactionEditModal({
                     <div className="md:col-span-3 space-y-1">
                       <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Tags</div>
                       <TagInput
+                        aria-label={`Tags for line ${idx + 1}`}
                         tags={line.tags || []}
                         onChange={(tags) => handleLineChange(idx, { tags })}
                         disabled={isLocked}
@@ -693,6 +700,7 @@ export default function TransactionEditModal({
                     <div className="md:col-span-3 space-y-1">
                       <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Line Notes</div>
                       <input
+                        aria-label={`Line Notes for line ${idx + 1}`}
                         type="text"
                         placeholder="Optional details..."
                         disabled={isLocked}
@@ -711,8 +719,9 @@ export default function TransactionEditModal({
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Reconciliation Checklist</span>
                 <div className="flex gap-4 items-center">
-                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <label htmlFor={`${formId}-cleared`} className="flex items-center gap-1.5 cursor-pointer select-none">
                     <input 
+                      id={`${formId}-cleared`}
                       type="checkbox"
                       disabled={isLocked}
                       checked={isCleared}
@@ -722,8 +731,9 @@ export default function TransactionEditModal({
                     <span className="text-xs text-zinc-600 font-medium">Cleared and Verified</span>
                   </label>
                   
-                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <label htmlFor={`${formId}-flagged`} className="flex items-center gap-1.5 cursor-pointer select-none">
                     <input 
+                      id={`${formId}-flagged`}
                       type="checkbox"
                       disabled={isLocked}
                       checked={isFlagged}
@@ -753,14 +763,15 @@ export default function TransactionEditModal({
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
-                    <FileText size={13} className="text-zinc-500" /> Source Documents & Receipts
+                    <FileText aria-hidden="true" size={13} className="text-zinc-500" /> Source Documents & Receipts
                   </h4>
                   <p className="text-[10px] text-zinc-400">Attach underlying evidence for this specific vector node.</p>
                 </div>
-                <label className="flex items-center gap-1 px-3 py-1 bg-[var(--surface)] hover:bg-zinc-100 text-[var(--text)] border border-[var(--line)] text-[11px] font-bold rounded-lg transition-all cursor-pointer">
-                  <Plus size={12} />
+                <label htmlFor={`${formId}-documents`} className="flex items-center gap-1 px-3 py-1 bg-[var(--surface)] hover:bg-zinc-100 text-[var(--text)] border border-[var(--line)] text-[11px] font-bold rounded-lg transition-all cursor-pointer">
+                  <Plus aria-hidden="true" size={12} />
                   <span>Attach Document</span>
                   <input
+                    id={`${formId}-documents`}
                     type="file"
                     className="hidden"
                     accept="image/*,application/pdf"
@@ -790,17 +801,17 @@ export default function TransactionEditModal({
                         <img src={url} alt="Attached receipt" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
                       ) : (
                         <div className="flex flex-col items-center gap-1 text-zinc-400">
-                          <FileText size={24} />
+                          <FileText aria-hidden="true" size={24} />
                           <span className="text-[9px] uppercase font-bold tracking-widest">Document</span>
                         </div>
                       )}
                       
                       {!isLocked && (
-                        <button 
+                        <button aria-label="Remove attached document"
                           onClick={() => setFileUrls(prev => prev.filter((_, index) => index !== i))}
                           className="absolute top-1 right-1 p-1 bg-red-500/80 hover:bg-red-500 text-white rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                         >
-                          <Trash2 size={12} />
+                          <Trash2 aria-hidden="true" size={12} />
                         </button>
                       )}
                     </div>

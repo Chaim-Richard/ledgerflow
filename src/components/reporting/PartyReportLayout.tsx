@@ -97,7 +97,7 @@ export function PartyReportLayout<T>({
             onClick={onExportCSV}
             className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl flex items-center gap-2 text-xs shadow-sm transition-colors cursor-pointer"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download aria-hidden="true" className="w-3.5 h-3.5" />
             Export CSV
           </button>
         </div>
@@ -106,8 +106,8 @@ export function PartyReportLayout<T>({
       {/* Filter and Search Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="relative flex-1 min-w-[220px] max-w-sm">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input
+          <Search aria-hidden="true" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+          <input aria-label={searchPlaceholder || "Search report"}
             type="text"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -119,7 +119,7 @@ export function PartyReportLayout<T>({
         {onAsOfDateChange && (
           <div className="flex items-center gap-2 text-xs">
             <span className="text-neutral-500 text-[11px] font-semibold uppercase">As of Date:</span>
-            <input
+            <input aria-label="As of Date"
               type="date"
               value={asOfDate || ''}
               onChange={(e) => onAsOfDateChange(e.target.value)}
@@ -131,14 +131,14 @@ export function PartyReportLayout<T>({
         {onStartDateChange && onEndDateChange && (
           <div className="flex items-center gap-2 text-xs">
             <span className="text-neutral-500 text-[11px] font-semibold uppercase">From:</span>
-            <input
+            <input aria-label="From date"
               type="date"
               value={startDate || ''}
               onChange={(e) => onStartDateChange(e.target.value)}
               className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-900 dark:text-white"
             />
             <span className="text-neutral-500 text-[11px] font-semibold uppercase">To:</span>
-            <input
+            <input aria-label="To date"
               type="date"
               value={endDate || ''}
               onChange={(e) => onEndDateChange(e.target.value)}

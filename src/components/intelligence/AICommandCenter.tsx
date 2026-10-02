@@ -111,10 +111,10 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                  "p-4 bg-[var(--surface)]/5 rounded-[32px] transition-all",
                  isProcessing ? "text-indigo-500 animate-spin" : "text-indigo-400 shadow-[0_0_20px_rgba(79,70,229,0.3)]"
                )}>
-                 <Sparkles size={32} />
+                 <Sparkles aria-hidden="true" size={32} />
                </div>
                <div className="flex-1">
-                 <input 
+                 <input aria-label="Natural language query"
                    ref={inputRef}
                    type="text" 
                    value={query}
@@ -136,7 +136,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                 className="px-8 h-14 bg-indigo-600 text-white rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all active:scale-95 disabled:opacity-20 flex items-center gap-3 shadow-[0_15px_30px_-10px_rgba(79,70,229,0.4)]"
                aria-label="Zap action">
                 {isProcessing ? "Processing..." : "Run Analysis"}
-                <Zap size={14} />
+                <Zap aria-hidden="true" size={14} />
               </button>
               <div className="h-10 w-px bg-[var(--surface)]/10 mx-4" />
               <div className="flex items-center gap-6">
@@ -171,7 +171,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                     className="w-full text-left p-4 rounded-[32px] bg-[var(--surface)]/5 border border-white/5 hover:bg-[var(--surface)]/10 transition-all flex items-center justify-between group cursor-pointer"
                   >
                     <span className="text-xs font-bold text-white/60 group-hover:text-white transition-colors">{h}</span>
-                    <History size={14} className="text-white/20" />
+                    <History aria-hidden="true" size={14} className="text-white/20" />
                   </button>
                 )) : (
                   <p className="text-[11px] font-bold text-white/20 italic">No previous executions detected.</p>
@@ -197,7 +197,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
                        <item.icon size={16} className={item.color} />
                        <span className="text-[10px] font-black text-white/80 uppercase tracking-widest">{item.label}</span>
                      </div>
-                     <ArrowRight size={14} className="text-white/20 group-hover:text-indigo-400 transition-colors" />
+                     <ArrowRight aria-hidden="true" size={14} className="text-white/20 group-hover:text-indigo-400 transition-colors" />
                    </button>
                  ))}
                </div>

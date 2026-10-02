@@ -245,7 +245,7 @@ export default function BackupExportSettings() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center gap-4 border-b border-[var(--line)] pb-6">
         <div className="h-12 w-12 bg-indigo-500/10 text-indigo-500 rounded-xl flex items-center justify-center">
-          <Database size={24} />
+          <Database aria-hidden="true" size={24} />
         </div>
         <div>
           <h2 className="text-xl font-bold text-[var(--text)]">Backup & Export</h2>
@@ -256,7 +256,7 @@ export default function BackupExportSettings() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
-            <Archive className="text-zinc-400" size={24} />
+            <Archive aria-hidden="true" className="text-zinc-400" size={24} />
             <h3 className="font-bold text-[var(--text)]">Full Workspace Backup</h3>
           </div>
           <p className="text-sm text-zinc-500 mb-6 min-h-[40px]">
@@ -267,14 +267,14 @@ export default function BackupExportSettings() {
             disabled={isExporting}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            <Download size={16} />
+            <Download aria-hidden="true" size={16} />
             Export JSON Backup
           </button>
         </div>
 
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
-            <FileSpreadsheet className="text-green-500" size={24} />
+            <FileSpreadsheet aria-hidden="true" className="text-green-500" size={24} />
             <h3 className="font-bold text-[var(--text)]">Transactions (CSV)</h3>
           </div>
           <p className="text-sm text-zinc-500 mb-6 min-h-[40px]">
@@ -285,20 +285,20 @@ export default function BackupExportSettings() {
             disabled={isExporting}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            <Download size={16} />
+            <Download aria-hidden="true" size={16} />
             Export CSV
           </button>
         </div>
 
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
-            <Upload className="text-rose-500" size={24} />
+            <Upload aria-hidden="true" className="text-rose-500" size={24} />
             <h3 className="font-bold text-[var(--text)]">Restore Backup</h3>
           </div>
           <p className="text-sm text-zinc-500 mb-6 min-h-[40px]">
             Restore your workspace from a verified JSON backup file. Validates checksum and schema integrity before importing.
           </p>
-          <input 
+          <input aria-label="Restore backup file"
             type="file" 
             ref={fileInputRef} 
             onChange={handleFileSelect}
@@ -310,7 +310,7 @@ export default function BackupExportSettings() {
             disabled={isRestoring}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            <Upload size={16} />
+            <Upload aria-hidden="true" size={16} />
             Restore Workspace
           </button>
         </div>
@@ -321,7 +321,7 @@ export default function BackupExportSettings() {
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 bg-indigo-500/20 text-indigo-400 rounded-lg flex items-center justify-center">
-              <Database size={20} />
+              <Database aria-hidden="true" size={20} />
             </div>
             <div>
               <h3 className="font-bold text-white text-base">Firestore Point-In-Time Recovery (PITR) & Automated Backups</h3>
@@ -364,7 +364,7 @@ export default function BackupExportSettings() {
       </div>
 
       <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-4">
-        <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+        <AlertCircle aria-hidden="true" className="text-amber-500 shrink-0 mt-0.5" size={20} />
         <div>
           <h4 className="font-bold text-amber-500 text-sm">Accountant Access & QBO Export</h4>
           <p className="text-sm text-amber-500/80 mt-1">

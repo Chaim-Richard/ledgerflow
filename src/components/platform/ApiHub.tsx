@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import {
   Terminal,
@@ -45,6 +45,7 @@ const AVAILABLE_SCOPES = [
 ];
 
 export default function ApiHub() {
+  const formId = useId();
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const user = useAuthStore(s => s.user);
@@ -588,7 +589,7 @@ export default function ApiHub() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--line)]">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-[var(--text)] flex items-center gap-2.5 font-display">
-            <Terminal className="text-slate-950" size={18} />
+            <Terminal aria-hidden="true" className="text-slate-950" size={18} />
             API Platform
           </h1>
           <p className="text-[var(--muted)] mt-1 max-w-2xl text-xs font-medium">
@@ -600,6 +601,7 @@ export default function ApiHub() {
         <div className="flex items-center gap-2.5 self-start md:self-auto bg-[var(--ink)] border border-[var(--line)] px-3.5 py-1.5 rounded-lg shadow-3xs">
           <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-wider">Workspace:</span>
           <select
+            aria-label="Workspace"
             value={currentWorkspaceId || ''}
             onChange={(e) => setCurrentWorkspaceId(e.target.value)}
             className="bg-transparent border-0 font-bold text-xs text-[var(--text)] focus:ring-0 focus:outline-none cursor-pointer pr-1"
@@ -680,7 +682,7 @@ export default function ApiHub() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="ledger-card p-6 md:col-span-2 space-y-6">
             <h3 className="font-bold flex items-center gap-2 text-lg">
-              <Activity className="text-indigo-600" size={20} />
+              <Activity aria-hidden="true" className="text-indigo-600" size={20} />
               Platform Architecture
             </h3>
             <p className="text-sm text-[var(--muted)] leading-relaxed">
@@ -709,7 +711,7 @@ export default function ApiHub() {
           </div>
           <div className="ledger-card p-6">
              <h3 className="font-bold flex items-center gap-2 mb-4">
-               <CpuIcon className="text-emerald-500" size={18} />
+               <CpuIcon aria-hidden="true" className="text-emerald-500" size={18} />
                Brain Integration
              </h3>
              <p className="text-xs text-[var(--muted)] mb-4">
@@ -731,7 +733,7 @@ export default function ApiHub() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--line)] pb-6">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-[32px] bg-slate-950 text-white flex items-center justify-center">
-                  <Key size={24} />
+                  <Key aria-hidden="true" size={24} />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold font-display text-slate-950">Workspace API Keys</h2>
@@ -747,7 +749,7 @@ export default function ApiHub() {
                  }}
                  className="px-5 py-2.5 bg-slate-950 text-white font-bold rounded-xl text-sm hover:bg-slate-800 transition-all flex items-center gap-2 self-start sm:self-auto shrink-0 shadow-sm hover:scale-[1.01]"
                >
-                 <RefreshCw size={14} />
+                 <RefreshCw aria-hidden="true" size={14} />
                  Generate New Key
                </button>
             </div>
@@ -755,7 +757,7 @@ export default function ApiHub() {
             {apiKey && (
               <div className="p-6 bg-emerald-50 rounded-[32px] border border-emerald-500/20 shadow-3xs">
                 <div className="flex gap-3 items-center mb-3">
-                   <AlertCircle className="text-emerald-600 shrink-0" size={20} />
+                   <AlertCircle aria-hidden="true" className="text-emerald-600 shrink-0" size={20} />
                    <h4 className="text-sm font-black uppercase text-emerald-800 tracking-wider">Secret Key Generated Successfully</h4>
                 </div>
                 <p className="text-xs text-emerald-700/80 mb-4 font-medium">
@@ -769,8 +771,8 @@ export default function ApiHub() {
                   <button
                     onClick={copyKey}
                     className="px-6 py-4 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shrink-0 shadow-sm"
-                   aria-label="Check Circle2 action">
-                    {isCopied ? <CheckCircle2 size={18} /> : <Copy size={18} />}
+                   aria-label={isCopied ? 'Token copied' : 'Copy token'}>
+                    {isCopied ? <CheckCircle2 aria-hidden="true" size={18} /> : <Copy aria-hidden="true" size={18} />}
                     {isCopied ? 'Copied' : 'Copy Token'}
                   </button>
                 </div>
@@ -787,7 +789,7 @@ export default function ApiHub() {
 
             <div className="mt-6">
                <h3 className="font-bold text-sm text-[var(--text)] mb-4 flex items-center gap-2">
-                 <Shield size={16} className="text-slate-450" />
+                 <Shield aria-hidden="true" size={16} className="text-slate-450" />
                  Active Credentials ({publicKeys.length})
                </h3>
                {publicKeys.length === 0 ? (
@@ -840,18 +842,18 @@ export default function ApiHub() {
                                   <td className="p-4 text-xs font-mono text-slate-600">
                                      <div className="font-bold">{k.totalRequests} API calls</div>
                                      <div className="text-[10px] text-[var(--muted)] mt-1 flex items-center gap-1">
-                                        <Clock size={10} />
+                                        <Clock aria-hidden="true" size={10} />
                                         Last Used: {k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleString() : 'Never'}
                                      </div>
                                   </td>
                                   <td className="p-4">
                                      {isExpired ? (
                                         <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase bg-red-500/10 border border-red-500/20 text-red-650 px-2.5 py-1 rounded-full">
-                                          <Shield size={10} className="stroke-[3]" /> Expired
+                                          <Shield aria-hidden="true" size={10} className="stroke-[3]" /> Expired
                                         </span>
                                      ) : k.expiresAt === 'never' ? (
                                         <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase bg-slate-100 text-[var(--muted)] px-2.5 py-1 rounded-full border border-[var(--line)]">
-                                          <Lock size={10} /> Indefinite
+                                          <Lock aria-hidden="true" size={10} /> Indefinite
                                         </span>
                                      ) : (
                                         <div className="text-xs">
@@ -869,8 +871,9 @@ export default function ApiHub() {
                                        }}
                                        className="inline-flex items-center justify-center w-8 h-8 text-[var(--muted)] hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                        title="Revoke Credential"
+                                       aria-label={`Revoke credential ${k.name}`}
                                      >
-                                       <Trash2 size={15} />
+                                       <Trash2 aria-hidden="true" size={15} />
                                      </button>
                                   </td>
                                </tr>
@@ -890,7 +893,7 @@ export default function ApiHub() {
                 <div className="flex justify-between items-center p-6 border-b border-[var(--line)]">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center">
-                      <Key size={20} />
+                      <Key aria-hidden="true" size={20} />
                     </div>
                     <div>
                       <h3 className="font-bold text-[var(--text)] font-display text-base">Provision New Developer Credential</h3>
@@ -899,9 +902,10 @@ export default function ApiHub() {
                   </div>
                   <button 
                     onClick={() => setShowCreateModal(false)}
+                    aria-label="Close credential form"
                     className="p-1 px-1.5 text-[var(--muted)] hover:text-slate-950 rounded-lg hover:bg-[var(--ink)]"
                   >
-                    <X size={18} />
+                    <X aria-hidden="true" size={18} />
                   </button>
                 </div>
 
@@ -937,9 +941,9 @@ export default function ApiHub() {
                   </div>
 
                   {/* Scopes selection */}
-                  <div className="space-y-3">
+                  <div role="group" aria-labelledby={`${formId}-scopes`} className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <label className="text-xs font-black uppercase tracking-wider text-[var(--muted)]">Access Scopes & Permissions</label>
+                      <div id={`${formId}-scopes`} className="text-xs font-black uppercase tracking-wider text-[var(--muted)]">Access Scopes & Permissions</div>
                       <div className="flex gap-2">
                         <button 
                           onClick={() => setSelectedScopes(AVAILABLE_SCOPES.map(s => s.id))}
@@ -963,12 +967,15 @@ export default function ApiHub() {
                         return (
                           <label 
                             key={scope.id} 
+                            htmlFor={`${formId}-scope-${scope.id}`}
+                            aria-label={scope.label}
                             className={cn(
                               "flex items-start gap-3 p-2.5 rounded-xl cursor-pointer transition-all border",
                               checked ? "bg-[var(--surface)] border-[var(--line)] shadow-3xs" : "border-transparent opacity-75 hover:opacity-100"
                             )}
                           >
                             <input 
+                              id={`${formId}-scope-${scope.id}`}
                               type="checkbox"
                               checked={checked}
                               onChange={() => {
@@ -1010,7 +1017,7 @@ export default function ApiHub() {
                     onClick={generateNewKey}
                     disabled={isRegenerating || selectedScopes.length === 0}
                     className="px-5 py-2 bg-slate-950 text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-all disabled:opacity-50 shrink-0 shadow-sm"
-                   aria-label="Action button">
+                   aria-label={isRegenerating ? 'Generating credential' : 'Confirm and Provision'}>
                     {isRegenerating ? 'Generating...' : 'Confirm and Provision'}
                   </button>
                 </div>
@@ -2133,7 +2140,7 @@ fetch(url, {
             <div className="ledger-card p-6 space-y-6">
               <div className="flex items-center gap-3 border-b border-[var(--line)] pb-4">
                 <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-                  <Play size={18} />
+                  <Play aria-hidden="true" size={18} />
                 </div>
                 <div>
                   <h3 className="font-header font-bold text-[var(--text)]">Configure Live Request</h3>
@@ -2173,11 +2180,12 @@ fetch(url, {
               </div>
 
               {/* Credentials auth select */}
-              <div className="space-y-3 p-4 bg-[var(--ink)] border border-slate-150 rounded-xl">
-                <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 block">Security Authentication Identity</label>
+              <div role="group" aria-labelledby={`${formId}-auth`} className="space-y-3 p-4 bg-[var(--ink)] border border-slate-150 rounded-xl">
+                <div id={`${formId}-auth`} className="text-[11px] font-black uppercase tracking-wider text-slate-600 block">Security Authentication Identity</div>
                 <div className="flex gap-2.5">
                   <button
                     onClick={() => setSandboxCredType('session')}
+                    aria-pressed={sandboxCredType === 'session'}
                     className={cn(
                       "flex-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border cursor-pointer text-center",
                       sandboxCredType === 'session' ? "bg-slate-950 text-white border-slate-950" : "bg-[var(--surface)] text-[var(--text)] border-[var(--line)] hover:bg-[var(--ink)]"
@@ -2186,6 +2194,7 @@ fetch(url, {
                     Active Admin JWT Session
                   </button>
                   <button
+                    aria-pressed={sandboxCredType === 'key'}
                     onClick={() => {
                       setSandboxCredType('key');
                       if (publicKeys.length > 0 && !sandboxSelectedKey) {
@@ -2209,6 +2218,7 @@ fetch(url, {
                       </div>
                     ) : (
                       <select
+                        aria-label="API bearer key"
                         value={sandboxSelectedKey}
                         onChange={(e) => setSandboxSelectedKey(e.target.value)}
                         className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-lg px-2.5 py-1.5 text-[11px] font-mono focus:outline-none"
@@ -2268,7 +2278,7 @@ fetch(url, {
 
                     <div className="space-y-1.5 p-3 rounded-lg border border-[var(--line)] bg-[var(--ink)]/50">
                       <div className="flex items-center justify-between">
-                        <label className="text-[9px] font-black uppercase text-[var(--muted)]">Idempotency Cryptic Key</label>
+                        <label htmlFor={`${formId}-idempotency`} className="text-[9px] font-black uppercase text-[var(--muted)]">Idempotency Cryptic Key</label>
                         <button
                           onClick={() => setFieldIdempotencyKey("lf_idem_" + crypto.randomUUID())}
                           className="text-[9px] font-bold text-indigo-600 hover:underline bg-transparent border-0 cursor-pointer"
@@ -2277,6 +2287,7 @@ fetch(url, {
                         </button>
                       </div>
                       <input
+                        id={`${formId}-idempotency`}
                         type="text"
                         value={fieldIdempotencyKey}
                         onChange={(e) => setFieldIdempotencyKey(e.target.value)}
@@ -2290,6 +2301,7 @@ fetch(url, {
                         <span className="text-[9px] text-[var(--muted)]">Validate values without storage commit.</span>
                       </div>
                       <input
+                        aria-label="Dry-run mode"
                         type="checkbox"
                         checked={fieldDryRun}
                         onChange={(e) => setFieldDryRun(e.target.checked)}
@@ -2375,7 +2387,7 @@ fetch(url, {
                   <div className="space-y-3 animate-in fade-in duration-150">
                     <div className="space-y-1">
                       <div className="flex justify-between items-center">
-                        <label className="text-[9px] font-black uppercase text-[var(--muted)]">Descriptions feedstock array (one-per-line)</label>
+                        <label htmlFor={`${formId}-descriptions`} className="text-[9px] font-black uppercase text-[var(--muted)]">Descriptions feedstock array (one-per-line)</label>
                         <span className={cn(
                           "text-[9px] font-semibold px-1.5 rounded",
                           sandboxEndpoint === 'POST_v1_brain_classify_batch' ? "bg-purple-50 text-purple-650" : "bg-emerald-50 text-[#228B22]"
@@ -2384,6 +2396,7 @@ fetch(url, {
                         </span>
                       </div>
                       <textarea
+                        id={`${formId}-descriptions`}
                         rows={4}
                         value={fieldMatchDesc}
                         onChange={(e) => setFieldMatchDesc(e.target.value)}
@@ -2399,10 +2412,11 @@ fetch(url, {
                   <div className="space-y-3 animate-in fade-in duration-150">
                     <div className="space-y-1">
                       <div className="flex justify-between items-center">
-                        <label className="text-[9px] font-black uppercase text-[var(--muted)]">Cognitive Prompt Directive</label>
+                        <label htmlFor={`${formId}-prompt`} className="text-[9px] font-black uppercase text-[var(--muted)]">Cognitive Prompt Directive</label>
                         <span className="text-[9px] text-[#800080] font-semibold bg-purple-50 px-1.5 rounded">LedgerFlow AI Model</span>
                       </div>
                       <textarea
+                        id={`${formId}-prompt`}
                         rows={4}
                         value={fieldAIPrompt}
                         onChange={(e) => setFieldAIPrompt(e.target.value)}
@@ -2427,15 +2441,15 @@ fetch(url, {
                 onClick={runSandboxRequest}
                 disabled={sandboxLoading}
                 className="w-full py-3.5 bg-slate-950 text-white font-black uppercase tracking-wider text-xs rounded-xl hover:bg-slate-800 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:scale-[1.01]"
-               aria-label="Refresh Cw action">
+               aria-label={sandboxLoading ? 'Calculating Double-Entry Matrix' : 'Execute aperiodic API query'}>
                 {sandboxLoading ? (
                   <>
-                    <RefreshCw className="animate-spin" size={14} />
+                    <RefreshCw aria-hidden="true" className="animate-spin" size={14} />
                     Calculating Double-Entry Matrix...
                   </>
                 ) : (
                   <>
-                    <Play size={12} fill="currentColor" />
+                    <Play aria-hidden="true" size={12} fill="currentColor" />
                     EXECUTE APERIODIC API QUERY
                   </>
                 )}
@@ -2484,7 +2498,7 @@ fetch(url, {
                   }}
                   className="absolute top-2.5 right-2.5 py-1 px-2.5 bg-[#24283B] text-[#9ECE6A] text-[9px] rounded hover:bg-[#2F3549] cursor-pointer flex items-center gap-1 border-0"
                 >
-                  <Copy size={10} /> Copier
+                  <Copy aria-hidden="true" size={10} /> Copier
                 </button>
                 <pre id="playground_snippet_text" className="font-mono text-xs leading-relaxed max-h-[220px]">
 {/* Display generated source code dynamically */}
@@ -2529,7 +2543,7 @@ fetch(url, {
             <div className="ledger-card p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
                 <div className="flex items-center gap-2">
-                  <Database size={16} className="text-slate-450" />
+                  <Database aria-hidden="true" size={16} className="text-slate-450" />
                   <span className="font-header font-bold text-sm text-[var(--text)]">Integrity Engine Response Buffer</span>
                 </div>
 
@@ -2555,7 +2569,7 @@ fetch(url, {
 
               {sandboxLoading && (
                 <div className="p-12 text-center border border-[var(--line)] bg-[var(--ink)]/20 rounded-xl flex flex-col items-center justify-center space-y-4 animate-in fade-in">
-                  <RefreshCw size={24} className="animate-spin text-slate-550" />
+                  <RefreshCw aria-hidden="true" size={24} className="animate-spin text-slate-550" />
                   <div className="space-y-1">
                     <p className="text-xs font-bold text-slate-700">Inquiring Integrity Ledger Gateways...</p>
                     <p className="text-[10px] text-slate-450">Verifying signature key matching and double-entry transaction locks</p>
@@ -2580,7 +2594,7 @@ fetch(url, {
                     </pre>
                   </div>
                   <div className="flex justify-between items-center bg-[var(--ink)] border border-slate-220/80 rounded-xl px-4 py-3 text-[10px] text-[var(--muted)] font-medium">
-                    <span className="flex items-center gap-1.5"><Shield size={12} className="text-emerald-600" /> Double-entry verified successfully</span>
+                    <span className="flex items-center gap-1.5"><Shield aria-hidden="true" size={12} className="text-emerald-600" /> Double-entry verified successfully</span>
                     <span className="font-mono text-slate-600">Computation: {sandboxStatus === 201 || sandboxEndpoint.includes('POST_brain') ? '15 units computed' : '1 unit computed'}</span>
                   </div>
                 </div>
@@ -2595,7 +2609,7 @@ fetch(url, {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--line)] pb-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-indigo-600 flex items-center justify-center">
-                <FileText size={20} />
+                <FileText aria-hidden="true" size={20} />
               </div>
               <div>
                 <h3 className="font-header font-bold text-[var(--text)]">API Pipeline Chronological Logs</h3>
@@ -2608,7 +2622,7 @@ fetch(url, {
                 onClick={fetchLogs}
                 className="p-2 bg-[var(--ink)] border border-[var(--line)] text-slate-700 rounded-lg hover:bg-slate-100 transition-all flex items-center gap-1.5 text-xs font-bold shrink-0 cursor-pointer"
                aria-label="Sync Feed">
-                <RefreshCw size={12} /> Sync Feed
+                <RefreshCw aria-hidden="true" size={12} /> Sync Feed
               </button>
             </div>
           </div>
@@ -2617,7 +2631,7 @@ fetch(url, {
           {apiLogs.length === 0 ? (
             <div className="py-12 text-center border border-slate-150 bg-[var(--ink)]/50 rounded-[32px]">
               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                <Activity size={20} className="text-[var(--muted)]" />
+                <Activity aria-hidden="true" size={20} className="text-[var(--muted)]" />
               </div>
               <p className="text-xs text-[var(--muted)] font-medium italic">No integration API requests have been processed in this workspace yet.</p>
               <p className="text-[10px] text-[var(--muted)] mt-1">Make API queries via the <strong>Playground Sandbox</strong> or integrations to populate this monitor.</p>
@@ -2716,7 +2730,7 @@ fetch(url, {
             <div className="ledger-card p-6 space-y-3 shadow-3xs hover:border-slate-300 transition-all border border-slate-150">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase text-[var(--muted)] tracking-wider">Remaining Compute Balance</span>
-                <Zap size={14} className="text-[#FFD700] fill-[#FFD700]" />
+                <Zap aria-hidden="true" size={14} className="text-[#FFD700] fill-[#FFD700]" />
               </div>
               <div className="flex items-baseline gap-1 pt-1.5">
                 <span className="text-2xl font-black text-[var(--text)] font-mono">100,000 / 100,000</span>
@@ -2728,7 +2742,7 @@ fetch(url, {
             <div className="ledger-card p-6 space-y-3 shadow-3xs hover:border-slate-300 transition-all border border-slate-150">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase text-[var(--muted)] tracking-wider">Total Operations Calculated</span>
-                <TrendingUp size={14} className="text-emerald-500" />
+                <TrendingUp aria-hidden="true" size={14} className="text-emerald-500" />
               </div>
               <div className="flex items-baseline gap-1 pt-1.5">
                 <span className="text-2xl font-black text-[var(--text)] font-mono">{apiLogs.length}</span>
@@ -2740,7 +2754,7 @@ fetch(url, {
             <div className="ledger-card p-6 space-y-3 shadow-3xs hover:border-slate-300 transition-all border border-slate-150">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase text-[var(--muted)] tracking-wider">Seat Booking Capacity</span>
-                <Users size={14} className="text-[var(--muted)]" />
+                <Users aria-hidden="true" size={14} className="text-[var(--muted)]" />
               </div>
               <div className="flex items-baseline gap-1 pt-1.5">
                 <span className="text-2xl font-black text-[var(--text)] font-mono">1 / 50</span>
@@ -2755,7 +2769,7 @@ fetch(url, {
             <div className="ledger-card p-6 space-y-5 shadow-3xs border border-slate-150">
               <div className="flex items-center gap-3 border-b border-indigo-50 pb-3">
                 <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                  <Sliders size={16} />
+                  <Sliders aria-hidden="true" size={16} />
                 </div>
                 <div>
                   <h4 className="font-header font-bold text-[var(--text)] text-sm">Strategic Corporate Capacity Modeler</h4>
@@ -2770,6 +2784,7 @@ fetch(url, {
                     <span className="font-mono font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{simSeatsCount} Active Seats</span>
                   </div>
                   <input
+                    aria-label="Allocated ledger seats"
                     type="range"
                     min="1"
                     max="50"
@@ -2798,7 +2813,7 @@ fetch(url, {
                   onClick={() => handleCheckout("pro")}
                   className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <TrendingUp size={12} />
+                  <TrendingUp aria-hidden="true" size={12} />
                   Upgrade to Pro ($5/mo)
                 </button>
                 <p className="text-[10px] text-center text-[var(--muted)] font-medium">Over limit requests will be billed based on API compute utilization securely via Stripe.</p>
@@ -2809,7 +2824,7 @@ fetch(url, {
             <div className="ledger-card p-6 space-y-5 shadow-3xs border border-slate-150">
               <div className="flex items-center gap-3 border-b border-purple-50 pb-3">
                 <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
-                  <Gauge size={16} />
+                  <Gauge aria-hidden="true" size={16} />
                 </div>
                 <div>
                   <h4 className="font-header font-bold text-[var(--text)] text-sm">TruthEngine Stress-Testing Console</h4>
@@ -2824,6 +2839,7 @@ fetch(url, {
                     <span className="font-mono font-black text-purple-700 bg-purple-50 px-2 py-0.5 rounded">{simRequestsCount} Parallel Queries</span>
                   </div>
                   <input
+                    aria-label="Burst intensity"
                     type="range"
                     min="10"
                     max="100"
@@ -2858,7 +2874,7 @@ fetch(url, {
                   disabled={isSimulatingBurst}
                   className="w-full py-3 bg-[#8A2BE2] disabled:bg-slate-350 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs hover:scale-[1.01]"
                 >
-                  <Coins size={12} />
+                  <Coins aria-hidden="true" size={12} />
                   TRIGGER programatic stress test
                 </button>
               </div>
@@ -2868,7 +2884,7 @@ fetch(url, {
           {/* Subledgers trace of compute costs */}
           <div className="ledger-card p-6 space-y-4 shadow-3xs border border-slate-150">
             <div className="flex items-center gap-2 border-b border-[var(--line)] pb-3">
-              <Zap size={14} className="text-purple-600" />
+              <Zap aria-hidden="true" size={14} className="text-purple-600" />
               <h4 className="font-header font-bold text-[#8A2BE2] text-sm uppercase tracking-wide">Ledger computational processing trace</h4>
             </div>
 

@@ -1,5 +1,5 @@
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useId, useState, useMemo, useCallback, useEffect } from 'react';
 import { ChartAccount, Transaction } from '../../types';
 import { AlertCircle, Layers, HandCoins, ShieldCheck, Activity, Calendar, FileSpreadsheet, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, CheckCircle2, RefreshCw } from 'lucide-react';
 import { cn, getLocalDateISO, addToDateISO, activateOnKey } from '../../lib/utils';
@@ -20,6 +20,7 @@ interface BalanceSheetViewProps {
 }
 
 export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDate: pageAsOfDate, compareEndDate }: BalanceSheetViewProps) {
+  const formId = useId();
   const transactions = useLedgerStore(state => state.transactions || []);
   
   const [asOfDate, setAsOfDate] = useState<string>(getLocalDateISO());
@@ -335,7 +336,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
       {!isServerAuthoritative && isDataTruncated ? (
         <div id="bs-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-400 shrink-0" />
             <span>Showing 2,000 of N transactions — totals are incomplete</span>
           </div>
           <button
@@ -343,22 +344,23 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
             disabled={loadingStates.balanceSheet}
             className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded text-xs transition flex items-center gap-1.5"
           >
-            {loadingStates.balanceSheet ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+            {loadingStates.balanceSheet ? <RefreshCw aria-hidden="true" className="w-3.5 h-3.5 animate-spin" /> : null}
             <span>{loadingStates.balanceSheet ? "Loading Server..." : "Load Full Server Report"}</span>
           </button>
         </div>
       ) : isServerAuthoritative ? (
         <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-emerald-400" />
             <span>Server-Authoritative Balance Sheet (Full History Verified)</span>
           </div>
           <button 
             onClick={loadServerReport} 
             title="Refresh server report"
+            aria-label="Refresh server report"
             className="text-emerald-400/80 hover:text-emerald-300 p-0.5 rounded transition"
           >
-            <RefreshCw className={cn("w-3 h-3", loadingStates.balanceSheet && "animate-spin")} />
+            <RefreshCw aria-hidden="true" className={cn("w-3 h-3", loadingStates.balanceSheet && "animate-spin")} />
           </button>
         </div>
       ) : null}
@@ -373,11 +375,12 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
           />
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-[var(--muted)] shrink-0">
-               <Calendar size={13} />
+               <Calendar aria-hidden="true" size={13} />
             </div>
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">As Of Reporting Date</span>
+              <label htmlFor={`${formId}-as-of`} className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">As Of Reporting Date</label>
               <input 
+                id={`${formId}-as-of`}
                 type="date" 
                 value={asOfDate}
                 onChange={(e) => setAsOfDate(e.target.value)}
@@ -389,8 +392,9 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
           <div className="hidden sm:block w-px h-8 bg-slate-200" />
 
           {/* Comparative mode selector */}
-          <label className="flex items-center gap-2 cursor-pointer group/toggle">
+          <label htmlFor={`${formId}-comparative`} aria-label="Comparative Year-on-Year" className="flex items-center gap-2 cursor-pointer group/toggle">
             <input 
+               id={`${formId}-comparative`}
                type="checkbox" 
                className="hidden" 
                checked={isComparative} 
@@ -407,7 +411,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
-                Comparative Year-on-Year <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--muted)]")} />
+                Comparative Year-on-Year <SplitSquareHorizontal aria-hidden="true" size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--muted)]")} />
               </span>
               <span className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest">Compare historical snapshot balances</span>
             </div>
@@ -417,8 +421,9 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
             <>
               <div className="hidden sm:block w-px h-8 bg-slate-100" />
               <div className="flex flex-col">
-                <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">Prior As Of Reference</span>
+                <label htmlFor={`${formId}-prior-as-of`} className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">Prior As Of Reference</label>
                 <input 
+                  id={`${formId}-prior-as-of`}
                   type="date" 
                   value={priorDate}
                   onChange={(e) => setPriorDate(e.target.value)}
@@ -443,7 +448,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
               >
                 <span>{field}</span>
                 {sortBy === field && (
-                  sortDir === 'asc' ? <ArrowUp size={9} /> : <ArrowDown size={9} />
+                  sortDir === 'asc' ? <ArrowUp aria-hidden="true" size={9} /> : <ArrowDown aria-hidden="true" size={9} />
                 )}
               </button>
             ))}
@@ -453,7 +458,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
             onClick={exportBalanceSheet}
             className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
            aria-label="Export Blueprint">
-            <FileSpreadsheet size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
+            <FileSpreadsheet aria-hidden="true" size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
             <span>Export Blueprint</span>
           </button>
         </div>
@@ -493,14 +498,14 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                 : "bg-rose-500/10 border-rose-500/20 text-rose-400"
             )}
           >
-            {currentData.isBalanced ? <ShieldCheck size={16} /> : <AlertCircle size={16} />}
+            {currentData.isBalanced ? <ShieldCheck aria-hidden="true" size={16} /> : <AlertCircle aria-hidden="true" size={16} />}
           </motion.div>
         </div>
       </div>
 
       {currentData.orphanedLines && currentData.orphanedLines.length > 0 && (
         <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3 text-amber-800 dark:text-amber-200">
-          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <AlertCircle aria-hidden="true" className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="flex-1 text-xs">
             <p className="font-bold uppercase tracking-wider text-amber-900 dark:text-amber-100">
               Orphaned Account References Detected ({currentData.orphanedLines.length} line{currentData.orphanedLines.length > 1 ? 's' : ''})
@@ -528,7 +533,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
         >
           <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)]/50 flex justify-between items-center relative overflow-hidden shrink-0">
             <div className="absolute top-0 right-0 p-2 opacity-[0.015] pointer-events-none group-hover:rotate-6 transition-transform duration-700">
-              <Layers size={80} className="text-[var(--text)]" />
+              <Layers aria-hidden="true" size={80} className="text-[var(--text)]" />
             </div>
             <div className="relative z-10">
               <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider leading-none">{labels.assetsLabel}</h3>
@@ -567,7 +572,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase tracking-tight truncate flex items-center gap-1.5">
                           {acc.name}
-                          <ExternalLink size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
+                          <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
                         </p>
                         <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider truncate">{acc.category || 'Direct Asset'}</p>
                       </div>
@@ -591,7 +596,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
             </div>
             <div className="mt-6 pt-4 border-t border-slate-900 flex justify-between items-center relative overflow-hidden gap-4">
               <div className="flex items-center gap-1.5">
-                 <Activity size={14} className="text-slate-600 shrink-0" />
+                 <Activity aria-hidden="true" size={14} className="text-slate-600 shrink-0" />
                  <span className="text-[var(--text)] font-bold uppercase tracking-wider text-[9px]">Total {labels.assetsLabel}</span>
               </div>
               <div className="text-right">
@@ -614,7 +619,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
         >
           <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)]/50 flex justify-between items-center relative overflow-hidden shrink-0">
             <div className="absolute top-0 right-0 p-2 opacity-[0.015] pointer-events-none group-hover:-rotate-6 transition-transform duration-700">
-               <HandCoins size={80} className="text-[var(--text)]" />
+               <HandCoins aria-hidden="true" size={80} className="text-[var(--text)]" />
             </div>
             <div className="relative z-10">
               <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider leading-none">{labels.liabilitiesLabel} & {labels.equityLabel}</h3>
@@ -656,7 +661,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase tracking-tight truncate flex items-center gap-1.5">
                             {acc.name}
-                            <ExternalLink size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
+                            <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
                           </p>
                           <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider truncate">{acc.category || 'Current Liability'}</p>
                         </div>
@@ -716,7 +721,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase tracking-tight truncate flex items-center gap-1.5">
                             {acc.name}
-                            <ExternalLink size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
+                            <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
                           </p>
                           <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider truncate">{acc.category || 'Owner Equity'}</p>
                         </div>
@@ -757,7 +762,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-emerald-800 group-hover/row:text-emerald-950 uppercase tracking-tight truncate flex items-center gap-1.5">
                         {labels.retainedEarningsLabel}
-                        <ExternalLink size={10} className="opacity-0 group-hover/row:opacity-100 text-emerald-600 transition-opacity" />
+                        <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover/row:opacity-100 text-emerald-600 transition-opacity" />
                       </p>
                       <p className="text-[8px] font-bold text-emerald-600/60 uppercase tracking-wider truncate">{labels.retainedEarningsSub}</p>
                     </div>
@@ -796,7 +801,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                     transition={{ duration: 1.5, repeat: Infinity }}
                     className="text-[8px] text-rose-600 font-bold uppercase tracking-wider flex items-center gap-1 truncate"
                   >
-                    <AlertCircle size={10} className="shrink-0" /> Balance Drift Detected
+                    <AlertCircle aria-hidden="true" size={10} className="shrink-0" /> Balance Drift Detected
                   </motion.span>
                 )}
               </div>

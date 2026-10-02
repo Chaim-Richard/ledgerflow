@@ -171,7 +171,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                 </p>
              </div>
           </div>
-          <button aria-label="Close" onClick={onClose} className="p-3 bg-neutral-100 dark:bg-neutral-800 text-slate-500 rounded-xl transition-all cursor-pointer hover:bg-neutral-200"><X size={16} /></button>
+          <button aria-label="Close" onClick={onClose} className="p-3 bg-neutral-100 dark:bg-neutral-800 text-slate-500 rounded-xl transition-all cursor-pointer hover:bg-neutral-200"><X aria-hidden="true" size={16} /></button>
         </div>
 
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
@@ -180,7 +180,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
               <div className="p-6 border-b border-[var(--line)] flex items-center justify-between">
                  <div>
                     <h3 className="text-xs font-black uppercase tracking-wider text-[var(--text)] dark:text-white flex items-center gap-2">
-                       <Play size={14} className="text-indigo-600" /> Analysis Parameters
+                       <Play aria-hidden="true" size={14} className="text-indigo-600" /> Analysis Parameters
                     </h3>
                     <p className="text-[10px] text-[var(--muted)] uppercase tracking-wider mt-1 opacity-60">Tune computational vectors</p>
                  </div>
@@ -194,7 +194,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                     }}
                     className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--line)] text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
                  >
-                    <RotateCcw size={12} /> Reset
+                    <RotateCcw aria-hidden="true" size={12} /> Reset
                  </button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -211,7 +211,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                          </div>
                          
                          {kind === 'number' && (
-                           <input 
+                           <input aria-label={inp.label}
                              type="range" min={inp.min} max={inp.max} step={inp.step} 
                              value={params[inp.key]} 
                              onChange={e => setParams({...params, [inp.key]: Number(e.target.value)})}
@@ -233,7 +233,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                          )}
 
                          {kind === 'select' && (
-                           <select
+                           <select aria-label={inp.label}
                              value={params[inp.key]}
                              onChange={e => setParams({...params, [inp.key]: e.target.value})}
                              className="w-full p-2 border border-[var(--line)] rounded-lg bg-[var(--panel)] text-[var(--text)] text-xs font-medium"
@@ -246,13 +246,13 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                          
                          {kind === 'dateRange' && (
                            <div className="grid grid-cols-2 gap-2">
-                             <input 
+                             <input aria-label={`${inp.label} start date`}
                                type="date"
                                value={params[inp.key]?.start || ''}
                                onChange={e => setParams({...params, [inp.key]: { ...params[inp.key], start: e.target.value }})}
                                className="w-full p-1.5 border border-[var(--line)] rounded-md bg-[var(--panel)] text-[var(--text)] text-[10px]"
                              />
-                             <input 
+                             <input aria-label={`${inp.label} end date`}
                                type="date"
                                value={params[inp.key]?.end || ''}
                                onChange={e => setParams({...params, [inp.key]: { ...params[inp.key], end: e.target.value }})}
@@ -262,7 +262,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                          )}
 
                          {kind === 'account' && (
-                           <select
+                           <select aria-label={inp.label}
                              value={params[inp.key] || ''}
                              onChange={e => setParams({...params, [inp.key]: e.target.value})}
                              className="w-full p-2 border border-[var(--line)] rounded-lg bg-[var(--panel)] text-[var(--text)] text-xs font-medium"
@@ -309,7 +309,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                   <div key={key} className="p-6 bg-[var(--surface)] dark:bg-[#1b1c1d] border border-[var(--line)] rounded-[32px] shadow-sm h-96 flex flex-col">
                      <div className="flex justify-between items-center mb-6">
                          <h3 className="text-sm font-black uppercase tracking-wider text-[var(--text)] dark:text-white flex items-center gap-2">
-                            <BarChart3 size={16} /> Operational Topology Projection
+                            <BarChart3 aria-hidden="true" size={16} /> Operational Topology Projection
                          </h3>
                      </div>
                      <div className="flex-1 min-h-0">
@@ -337,7 +337,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                   <div className="space-y-2">
                      {withStableKeys(results.insights, ins => ins).map(({ item: ins, key }) => (
                         <div key={key} className="flex gap-3 text-sm text-indigo-900 dark:text-indigo-200">
-                           <CheckCircle2 size={16} className="text-indigo-500 shrink-0 mt-0.5" />
+                           <CheckCircle2 aria-hidden="true" size={16} className="text-indigo-500 shrink-0 mt-0.5" />
                            <p className="leading-relaxed font-medium">{ins}</p>
                         </div>
                      ))}
@@ -349,7 +349,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                  <div className="p-6 bg-slate-900 border border-white/10 rounded-[32px] space-y-4">
                    <div className="flex flex-wrap items-center justify-between gap-3">
                      <div className="flex items-center gap-2">
-                       <ListFilter size={16} className="text-[var(--brass)]" />
+                       <ListFilter aria-hidden="true" size={16} className="text-[var(--brass)]" />
                        <h3 className="text-xs font-black uppercase tracking-wider text-[var(--brass)]">
                          Report Output & Details ({results.rows.length} Items)
                        </h3>
@@ -361,7 +361,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                          className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
                          title="Download as CSV"
                         aria-label="Download as CSV">
-                         <Download size={13} />
+                         <Download aria-hidden="true" size={13} />
                          <span>CSV</span>
                        </button>
                        <button
@@ -370,7 +370,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                          className="px-2.5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
                          title="Download as Excel (.xlsx)"
                         aria-label="Download as Excel (.xlsx)">
-                         <FileSpreadsheet size={13} />
+                         <FileSpreadsheet aria-hidden="true" size={13} />
                          <span>Excel</span>
                        </button>
                        {results.sourceTransactionIds && results.sourceTransactionIds.length > 0 && (
@@ -382,7 +382,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                            }}
                            className="text-xs font-bold text-[var(--brass)] hover:underline flex items-center gap-1 cursor-pointer ml-2"
                          >
-                           View in Ledger Grid <ArrowUpRight size={14} />
+                           View in Ledger Grid <ArrowUpRight aria-hidden="true" size={14} />
                          </button>
                        )}
                      </div>

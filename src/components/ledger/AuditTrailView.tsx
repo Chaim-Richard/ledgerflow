@@ -20,7 +20,7 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
       <div className="w-full flex items-center justify-between p-4 bg-[var(--ink)]/30 rounded-xl border border-[var(--line)] hover:border-[var(--brass-line)] transition-all group overflow-hidden">
         <div className="flex items-center gap-4 overflow-hidden">
           <div className="w-10 h-10 bg-[var(--surface)] rounded-lg flex items-center justify-center text-[var(--muted)] border border-[var(--line)] shrink-0">
-            <Activity size={18} className="group-hover:text-[var(--brass)] transition-colors" />
+            <Activity aria-hidden="true" size={18} className="group-hover:text-[var(--brass)] transition-colors" />
           </div>
           <div className="overflow-hidden">
             <div className="flex items-center gap-2 mb-1">
@@ -38,8 +38,8 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
               </p>
             </div>
             <div className="flex items-center gap-4 text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider italic">
-              <span className="flex items-center gap-1.5"><History size={11} className="text-[var(--brass)]" />{auditTime(log) ? format(auditTime(log)!, 'MMM dd, HH:mm:ss') : 'N/A'}</span>
-              <span className="flex items-center gap-1.5"><User size={11} className="text-[var(--brass)]" />{log.email || log.userEmail || (log.uid && log.uid.substring(0, 8)) || 'System'}</span>
+              <span className="flex items-center gap-1.5"><History aria-hidden="true" size={11} className="text-[var(--brass)]" />{auditTime(log) ? format(auditTime(log)!, 'MMM dd, HH:mm:ss') : 'N/A'}</span>
+              <span className="flex items-center gap-1.5"><User aria-hidden="true" size={11} className="text-[var(--brass)]" />{log.email || log.userEmail || (log.uid && log.uid.substring(0, 8)) || 'System'}</span>
             </div>
           </div>
         </div>
@@ -133,10 +133,10 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
             onClick={handleExportCSV}
             className="px-3 py-1.5 bg-[var(--surface)] hover:bg-[var(--elevated)] border border-[var(--line)] text-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
           >
-            <Download size={14} /> Export CSV
+            <Download aria-hidden="true" size={14} /> Export CSV
           </button>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--brass-soft)] text-[var(--brass)] rounded-xl border border-[var(--brass-line)] shadow-sm">
-            <ShieldCheck size={16} />
+            <ShieldCheck aria-hidden="true" size={16} />
             <span className="text-[10px] font-bold uppercase tracking-wider">Authenticity Verified</span>
           </div>
         </div>
@@ -145,8 +145,8 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
       {/* Filter Controls Bar */}
       <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)]/10 grid grid-cols-1 sm:grid-cols-12 gap-3 shrink-0">
         <div className="relative sm:col-span-5">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-          <input
+          <Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+          <input aria-label="Search audit trail by description, entity, or ID"
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -156,8 +156,8 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
         </div>
 
         <div className="sm:col-span-4 flex items-center gap-2">
-          <Filter size={14} className="text-[var(--muted)] shrink-0" />
-          <select
+          <Filter aria-hidden="true" size={14} className="text-[var(--muted)] shrink-0" />
+          <select aria-label="Filter audit trail by user"
             value={userFilter}
             onChange={(e) => setUserFilter(e.target.value)}
             className="w-full px-2.5 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -170,7 +170,7 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
         </div>
 
         <div className="sm:col-span-3">
-          <select
+          <select aria-label="Filter audit trail by action"
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
             className="w-full px-2.5 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -202,7 +202,7 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
         ) : (
           <div className="h-full flex flex-col items-center justify-center p-12 text-center">
             <div className="w-16 h-16 bg-[var(--ink)] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[var(--line)]">
-              <ShieldCheck size={32} className="text-[var(--muted)]" />
+              <ShieldCheck aria-hidden="true" size={32} className="text-[var(--muted)]" />
             </div>
             <p className="font-bold uppercase tracking-wider text-[10px] text-[var(--muted)]">No matching audit directives found</p>
           </div>

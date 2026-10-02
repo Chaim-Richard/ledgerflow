@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
@@ -14,6 +14,7 @@ import { Labelled } from '../../ui/Labelled';
 import { activateOnKey } from '../../../lib/utils';
 
 export default function BlueprintSettings() {
+  const settingsId = useId();
   const language = useUIStore(state => state.language);
   const hiddenTabs = useUIStore(state => state.hiddenTabs);
   const toggleTabVisibility = useUIStore(state => state.toggleTabVisibility);
@@ -191,7 +192,7 @@ export default function BlueprintSettings() {
       <div className="ledger-card p-4 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm space-y-10">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-12 h-12 bg-zinc-950 text-white rounded-[32px] flex items-center justify-center">
-            <SlidersHorizontal size={22} />
+            <SlidersHorizontal aria-hidden="true" size={22} />
           </div>
           <div>
             <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest">Base Ledger Variables</h3>
@@ -201,11 +202,11 @@ export default function BlueprintSettings() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Base Currency Selector */}
-          <div className="space-y-4">
-            <label className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
-              <Globe size={13} className="text-zinc-500" />
+          <div role="group" aria-labelledby={`${settingsId}-base-currency`} className="space-y-4">
+            <span id={`${settingsId}-base-currency`} className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
+              <Globe aria-hidden="true" size={13} className="text-zinc-500" />
               Institutional Base Currency
-            </label>
+            </span>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed">
               Standardize ledger currency codes across operational, forensic, and projection matrix layers.
             </p>
@@ -213,6 +214,7 @@ export default function BlueprintSettings() {
               {['USD', 'EUR', 'GBP', 'ILS', 'JPY', 'CAD'].map(curr => (
                 <button
                   key={curr}
+                  aria-pressed={baseCurrency === curr}
                   type="button"
                   onClick={() => handleSaveCurrency(curr)}
                   className={`py-3 text-xs font-bold rounded-xl transition-all ${
@@ -229,8 +231,8 @@ export default function BlueprintSettings() {
 
           {/* Ledger Hard Period Lock */}
           <div className="space-y-4">
-            <label className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
-              <FolderLock size={13} className="text-zinc-500" />
+            <label htmlFor={`${settingsId}-closing-date`} className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
+              <FolderLock aria-hidden="true" size={13} className="text-zinc-500" />
               Accounting closing date
             </label>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed">
@@ -239,12 +241,13 @@ export default function BlueprintSettings() {
             <div className="flex gap-3">
               <div className="relative flex-1">
                 <input
+                  id={`${settingsId}-closing-date`}
                   type="date"
                   value={selectedLockDate}
                   onChange={(e) => setSelectedLockDate(e.target.value)}
                   className="w-full bg-[var(--surface)] hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3 pl-10 rounded-[32px] text-xs font-bold tracking-wider"
                 />
-                <Calendar size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+                <Calendar aria-hidden="true" size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
               </div>
               <AsyncButton
                 type="button"
@@ -252,7 +255,7 @@ export default function BlueprintSettings() {
                 loadingText="Applying..."
                 className="px-6 bg-zinc-950 hover:bg-zinc-850 text-white rounded-[32px] text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all self-stretch"
               >
-                <Check size={13} />
+                <Check aria-hidden="true" size={13} />
                 Apply
               </AsyncButton>
             </div>
@@ -265,7 +268,7 @@ export default function BlueprintSettings() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--line)] pb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-zinc-900 text-white rounded-[32px] flex items-center justify-center shadow-lg shadow-zinc-900/10">
-              <Zap size={20} className="text-amber-400" />
+              <Zap aria-hidden="true" size={20} className="text-amber-400" />
             </div>
             <div>
               <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest font-display">Rule Ingestion Architecture</h3>
@@ -279,7 +282,7 @@ export default function BlueprintSettings() {
             loadingText="Syncing..."
             className="px-6 py-3 bg-zinc-950 hover:bg-zinc-850 disabled:bg-zinc-300 text-white rounded-[32px] text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all self-stretch sm:self-auto justify-center"
           >
-            <Save size={12} />
+            <Save aria-hidden="true" size={12} />
             Save Mappings
           </AsyncButton>
         </div>
@@ -287,7 +290,7 @@ export default function BlueprintSettings() {
         {/* Global Warnings if fallbacks are missing */}
         {(!mappings['expense'] || !mappings['asset']) && (
           <div className="p-5 bg-amber-50 rounded-[32px] border border-amber-200 flex items-start gap-3.5">
-            <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={16} />
+            <AlertTriangle aria-hidden="true" className="text-amber-600 shrink-0 mt-0.5" size={16} />
             <div className="space-y-1">
               <h5 className="text-xs font-bold text-amber-900 uppercase tracking-wider">Unmapped Fallback Warnings</h5>
               <p className="text-[11px] text-amber-700 leading-relaxed font-semibold uppercase tracking-wide">
@@ -301,7 +304,7 @@ export default function BlueprintSettings() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Debit Fallback (Expense) */}
           <div className="space-y-3 p-6 bg-[var(--ink)]/50 rounded-[32px] border border-[var(--line)]">
-            <label className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
+            <label htmlFor={`${settingsId}-debit-fallback`} className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               Debit Fallback Account (expense)
             </label>
@@ -309,6 +312,7 @@ export default function BlueprintSettings() {
               The default ledger subaccount selected for transaction debits when the category is unclassified.
             </p>
             <select
+              id={`${settingsId}-debit-fallback`}
               value={mappings['expense'] || ''}
               onChange={(e) => handleUpdateMappingField('expense', e.target.value)}
               className="w-full bg-[var(--surface)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3.5 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
@@ -319,7 +323,7 @@ export default function BlueprintSettings() {
 
           {/* Credit Fallback (Asset) */}
           <div className="space-y-3 p-6 bg-[var(--ink)]/50 rounded-[32px] border border-[var(--line)]">
-            <label className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
+            <label htmlFor={`${settingsId}-credit-fallback`} className="text-xs font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Credit Fallback Account (asset)
             </label>
@@ -327,6 +331,7 @@ export default function BlueprintSettings() {
               The default ledger asset/cash subaccount selected for credit double-entry offsets in ingestion pipelines.
             </p>
             <select
+              id={`${settingsId}-credit-fallback`}
               value={mappings['asset'] || ''}
               onChange={(e) => handleUpdateMappingField('asset', e.target.value)}
               className="w-full bg-[var(--surface)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3.5 rounded-[32px] text-xs font-bold tracking-wider cursor-pointer"
@@ -367,11 +372,12 @@ export default function BlueprintSettings() {
 
                     <button
                       type="button"
+                      aria-label={`Delete category mapping rule for ${categoryKey}`}
                       onClick={() => handleRemoveCategoryMapping(categoryKey)}
                       className="p-2 text-[var(--muted)] hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
                       title="Delete category mapping rule"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 aria-hidden="true" size={14} />
                     </button>
                   </div>
                 );
@@ -413,7 +419,7 @@ export default function BlueprintSettings() {
               onClick={handleAddCategoryMapping}
               className="py-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
              aria-label="Add Override Rule">
-              <Plus size={14} strokeWidth={3} />
+              <Plus aria-hidden="true" size={14} strokeWidth={3} />
               Add Override Rule
             </button>
           </div>
@@ -424,7 +430,7 @@ export default function BlueprintSettings() {
       <div className="ledger-card p-4 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm space-y-8">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center shadow-lg shadow-indigo-600/15">
-            <Eye size={22} />
+            <Eye aria-hidden="true" size={22} />
           </div>
           <div>
             <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest font-display">Workflow Tab Architect</h3>
@@ -442,6 +448,7 @@ export default function BlueprintSettings() {
             return (
               <div role="button" tabIndex={0} 
                 key={tab.id}
+                aria-pressed={!isHidden}
                 onKeyDown={activateOnKey} onClick={() => toggleTabVisibility(tab.id)}
                 className={`p-5 rounded-[32px] border transition-all flex items-center justify-between cursor-pointer group ${
                   isHidden 
@@ -455,7 +462,7 @@ export default function BlueprintSettings() {
                       ? 'bg-gray-100 text-gray-400' 
                       : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100'
                   }`}>
-                    {React.createElement(tab.icon, { size: 16 })}
+                    {React.createElement(tab.icon, { size: 16, 'aria-hidden': true })}
                   </div>
                   <div className="text-left">
                     <p className={`text-xs font-black uppercase tracking-wider ${isHidden ? 'line-through text-gray-400' : 'text-[var(--text)]'}`}>
@@ -468,11 +475,11 @@ export default function BlueprintSettings() {
                 <div className="flex items-center">
                   {isHidden ? (
                     <div className="p-1.5 rounded-lg bg-gray-100 text-gray-400" title="Hidden Tab">
-                      <EyeOff size={13} />
+                      <EyeOff aria-hidden="true" size={13} />
                     </div>
                   ) : (
                     <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600" title="Active Tab">
-                      <Eye size={13} />
+                      <Eye aria-hidden="true" size={13} />
                     </div>
                   )}
                 </div>
@@ -487,7 +494,7 @@ export default function BlueprintSettings() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-amber-600 text-white rounded-[32px] flex items-center justify-center shadow-lg shadow-amber-600/15">
-              <Sliders size={22} />
+              <Sliders aria-hidden="true" size={22} />
             </div>
             <div>
               <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest">Aesthetic Nomenclature Registry</h3>
@@ -498,12 +505,13 @@ export default function BlueprintSettings() {
           <div className="relative">
             <input
               type="text"
+              aria-label="Search glossary labels"
               placeholder="Search labels..."
               value={lexiconSearch}
               onChange={(e) => setLexiconSearch(e.target.value)}
               className="bg-[var(--surface)] p-2.5 pl-9 pr-4 text-xs font-bold hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none rounded-xl w-60 tracking-wider"
             />
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            <Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           </div>
         </div>
 
@@ -541,6 +549,7 @@ export default function BlueprintSettings() {
                     <div className="flex flex-col sm:flex-row gap-3">
                       <input
                         type="text"
+                        aria-label={`English override for ${key}`}
                         value={editValEn}
                         onChange={(e) => setEditValEn(e.target.value)}
                         placeholder="English Override..."
@@ -549,6 +558,7 @@ export default function BlueprintSettings() {
                       {originalVal.he && (
                         <input
                           type="text"
+                          aria-label={`Hebrew override for ${key}`}
                           value={editValHe}
                           onChange={(e) => setEditValHe(e.target.value)}
                           placeholder="Hebrew Override..."

@@ -2,7 +2,7 @@ import { isPostable, lineAmount } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useId } from 'react';
 import { 
   Target, 
   Plus, 
@@ -28,6 +28,7 @@ import { Labelled } from '../ui/Labelled';
 
 
 export default function BudgetManager() {
+  const formId = useId();
   const user = useAuthStore((s: any) => s.user);
   const currentWorkspaceId = useLedgerStore((s: any) => s.currentWorkspaceId);
   const budgets = useLedgerStore((s: any) => s.budgets);
@@ -120,7 +121,7 @@ export default function BudgetManager() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate mb-4">
-            <Target size={14} />
+            <Target aria-hidden="true" size={14} />
             Resource Allocation Matrix
           </div>
           <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Budget Protocol</h2>
@@ -131,7 +132,7 @@ export default function BudgetManager() {
           onClick={() => setIsAdding(true)}
           className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-[32px] text-xs font-medium uppercase tracking-wider hover:bg-slate-900/90 transition-all shadow-2xl"
         >
-          <Plus size={18} />
+          <Plus aria-hidden="true" size={18} />
           Define Target
         </button>
       </div>
@@ -151,26 +152,27 @@ export default function BudgetManager() {
               
               <div className="flex items-center justify-between mb-8 relative z-10">
                 <div className="w-14 h-14 bg-slate-900 rounded-[32px] flex items-center justify-center text-white border border-white/5 shadow-2xl">
-                  <Activity size={28} />
+                  <Activity aria-hidden="true" size={28} />
                 </div>
                 <div className="flex items-center gap-2">
                   {isOver ? (
                     <div className="px-4 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-[9px] font-medium uppercase tracking-wider flex items-center gap-2">
-                      <AlertCircle size={12} />
+                      <AlertCircle aria-hidden="true" size={12} />
                       Critical Limit
                     </div>
                   ) : isWarning ? (
                     <div className="px-4 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-[9px] font-medium uppercase tracking-wider flex items-center gap-2">
-                      <Zap size={12} />
+                      <Zap aria-hidden="true" size={12} />
                       Warning Alert
                     </div>
                   ) : (
                     <div className="px-4 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[9px] font-medium uppercase tracking-wider flex items-center gap-2">
-                      <ShieldCheck size={12} />
+                      <ShieldCheck aria-hidden="true" size={12} />
                       Stable Allocation
                     </div>
                   )}
                   <button 
+                    aria-label={`Edit budget for ${b.targetId}`}
                     onClick={() => {
                       setNewBudget({
                         targetId: b.targetId,
@@ -184,13 +186,14 @@ export default function BudgetManager() {
                     }}
                     className="p-2 text-[var(--muted)] hover:text-indigo-600 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                   >
-                    <Edit2 size={16} />
+                    <Edit2 aria-hidden="true" size={16} />
                   </button>
                   <button 
+                    aria-label={`Delete budget for ${b.targetId}`}
                     onClick={async () => { if (await safeConfirm('Delete budget?')) { await deleteDoc(doc(db, 'budgets', b.id)); toast.success('Budget deleted'); } }}
                     className="p-2 text-[var(--muted)] hover:text-rose-500 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 aria-hidden="true" size={16} />
                   </button>
                 </div>
               </div>
@@ -240,7 +243,7 @@ export default function BudgetManager() {
 
               <div className="mt-8 pt-6 border-t border-[var(--line)] flex justify-between items-center relative z-10">
                  <div className="flex items-center gap-2">
-                    <Layers size={14} className="text-[var(--muted)] opacity-30" />
+                    <Layers aria-hidden="true" size={14} className="text-[var(--muted)] opacity-30" />
                     <span className="text-[9px] font-black text-[var(--muted)] uppercase tracking-widest opacity-30">Analytical Snapshot Matrix</span>
                  </div>
                  <button 
@@ -258,7 +261,7 @@ export default function BudgetManager() {
                    className="w-10 h-10 bg-[var(--ink)] rounded-xl flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface)] transition-all border border-[var(--line)] group-hover:scale-110" 
                    aria-label="Edit budget objective"
                  >
-                    <ArrowUpRight size={18} />
+                    <ArrowUpRight aria-hidden="true" size={18} />
                  </button>
               </div>
             </motion.div>
@@ -270,7 +273,7 @@ export default function BudgetManager() {
             <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
             <div className="relative z-10 flex flex-col items-center gap-6">
               <div className="w-24 h-24 bg-slate-200/20 rounded-[32px] flex items-center justify-center text-slate-500/30">
-                <Target size={48} />
+                <Target aria-hidden="true" size={48} />
               </div>
               <div className="space-y-2">
                 <h3 className="text-3xl font-black text-[var(--text)] uppercase tracking-tighter italic">Zero Objectives Detected</h3>
@@ -309,24 +312,25 @@ export default function BudgetManager() {
                     <h2 className="text-2xl md:text-4xl font-black text-[var(--text)] tracking-tight uppercase italic">Define Objective</h2>
                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] mt-1 opacity-50">Operational Resource Allocation</p>
                  </div>
-                 <button onClick={() => setIsAdding(false)} className="w-12 h-12 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] transition-all rotate-45 border border-[var(--line)]">
-                    <Plus size={24} />
+                 <button onClick={() => setIsAdding(false)} aria-label="Close budget dialog" className="w-12 h-12 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] transition-all rotate-45 border border-[var(--line)]">
+                    <Plus aria-hidden="true" size={24} />
                  </button>
               </div>
 
               <form onSubmit={handleAddBudget} className="space-y-8">
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest truncate opacity-50">Rule Mapping (Account)</label>
+                  <label htmlFor={`${formId}-account`} className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest truncate opacity-50">Rule Mapping (Account)</label>
                   <div className="relative w-full">
                     <input 
-                      list="budget-account-list"
+                      id={`${formId}-account`}
+                      list={`${formId}-account-list`}
                       required
                       value={newBudget.targetId}
                       onChange={(e) => setNewBudget({ ...newBudget, targetId: e.target.value })}
                       placeholder="Select Protocol Node..."
                       className="w-full px-8 py-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-black text-[var(--text)] uppercase tracking-widest"
                     />
-                    <datalist id="budget-account-list">
+                    <datalist id={`${formId}-account-list`}>
                       {accounts.map((acc: any) => (
                         <option key={acc.id} value={acc.name}>{acc.code}</option>
                       ))}
@@ -336,10 +340,11 @@ export default function BudgetManager() {
 
                 <div className="grid grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest truncate opacity-50">Target Magnitude ($)</label>
+                    <label htmlFor={`${formId}-amount`} className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest truncate opacity-50">Target Magnitude ($)</label>
                     <div className="relative">
-                      <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500/30" size={16} />
+                      <DollarSign aria-hidden="true" className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500/30" size={16} />
                       <input 
+                        id={`${formId}-amount`}
                         type="number" 
                         step="0.01"
                         required

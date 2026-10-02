@@ -272,7 +272,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
              <div className="p-2 bg-slate-900 text-white rounded-xl">
-                <TableIcon size={16} />
+                <TableIcon aria-hidden="true" size={16} />
              </div>
              <div>
                 <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-tight leading-none">Spreadsheet Pivot Matrix</h3>
@@ -283,7 +283,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
           <div className="flex flex-wrap items-center gap-3">
               {/* Period Filter */}
               <div className="flex items-center gap-1.5 bg-[var(--panel)] border border-[var(--line)] rounded-xl px-2 py-1">
-                 <Calendar size={12} className="text-[var(--muted)]" />
+                 <Calendar aria-hidden="true" size={12} className="text-[var(--muted)]" />
                  <select
                    aria-label="Filter period"
                    value={period}
@@ -328,7 +328,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                      pivotMode === 'flat' ? "bg-[var(--brass)] text-[var(--ink)] shadow-3xs" : "text-[var(--muted)] hover:text-[var(--text)]"
                    )}
                  >
-                   <ListCollapse size={11} />
+                   <ListCollapse aria-hidden="true" size={11} />
                    <span>Flat View</span>
                  </button>
                  <button
@@ -339,7 +339,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                      pivotMode === 'matrix' ? "bg-[var(--brass)] text-[var(--ink)] shadow-3xs" : "text-[var(--muted)] hover:text-[var(--text)]"
                    )}
                  >
-                   <Grid3X3 size={11} />
+                   <Grid3X3 aria-hidden="true" size={11} />
                    <span>Cross-Tab Matrix</span>
                  </button>
               </div>
@@ -377,7 +377,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                 }}
                 className="h-9 px-3 border border-[var(--line)] hover:border-slate-350 bg-[var(--surface)] hover:bg-[var(--ink)] rounded-xl flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0"
               >
-                <Download size={12} /> 
+                <Download aria-hidden="true" size={12} />
                 <span>CSV</span>
               </button>
           </div>
@@ -456,8 +456,8 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
           </div>
 
           <div className="relative group">
-             <Search size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--text)] transition-colors" />
-             <input 
+             <Search aria-hidden="true" size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--text)] transition-colors" />
+             <input aria-label="Search spreadsheet cells"
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
                placeholder="Search spreadsheet cells ..." 
@@ -490,7 +490,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                      >
                         <td className="px-6 py-3.5 text-center">
                            <div className="flex justify-center text-[var(--muted)] group-hover:text-slate-700">
-                             {expandedGroups.has(groupName) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                             {expandedGroups.has(groupName) ? <ChevronDown aria-hidden="true" size={14} /> : <ChevronRight aria-hidden="true" size={14} />}
                            </div>
                         </td>
                         <td className="px-4 py-3.5">
@@ -512,7 +512,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                              className="text-[9.5px] font-bold text-slate-600 hover:text-indigo-600 px-2.5 py-0.5 bg-slate-100 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-md transition-colors inline-flex items-center gap-1 cursor-pointer"
                            >
                              <span>{data.items.length} lines</span>
-                             <ExternalLink size={9} />
+                             <ExternalLink aria-hidden="true" size={9} />
                            </button>
                         </td>
                         <td className="px-4 py-3.5">
@@ -616,7 +616,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                                 cellVal >= 0 ? "text-emerald-500" : "text-rose-500"
                               , "tabular-nums")}>
                                  {formatCurrency(cellVal)}
-                                 <ExternalLink size={10} className="opacity-0 group-hover/cell:opacity-100 text-indigo-500 transition-opacity" />
+                                 <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover/cell:opacity-100 text-indigo-500 transition-opacity" />
                               </span>
                             ) : (
                               <span className="text-slate-300">-</span>
@@ -641,7 +641,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                       >
                         <span className={cn("flex items-center justify-end gap-1.5", rowTotalVal >= 0 ? "text-emerald-600" : "text-rose-600", "tabular-nums")}>
                            {formatCurrency(rowTotalVal)}
-                           <ExternalLink size={11} className="opacity-0 group-hover/rowtot:opacity-100 text-indigo-500 transition-opacity" />
+                           <ExternalLink aria-hidden="true" size={11} className="opacity-0 group-hover/rowtot:opacity-100 text-indigo-500 transition-opacity" />
                         </span>
                       </td>
                     </tr>
@@ -672,7 +672,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                       >
                         <span className={cn("flex items-center justify-end gap-1", colTotalVal >= 0 ? "text-emerald-600" : "text-rose-600", "tabular-nums")}>
                            {formatCurrency(colTotalVal)}
-                           <ExternalLink size={10} className="opacity-0 group-hover/coltot:opacity-100 text-indigo-500 transition-opacity" />
+                           <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover/coltot:opacity-100 text-indigo-500 transition-opacity" />
                         </span>
                       </td>
                     );
@@ -693,7 +693,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                   >
                     <span className={cn("flex items-center justify-end gap-1.5", matrixData.grandTotal >= 0 ? "text-emerald-700" : "text-rose-700", "tabular-nums")}>
                        {formatCurrency(matrixData.grandTotal)}
-                       <ExternalLink size={11} className="opacity-0 group-hover/gtot:opacity-100 text-indigo-600 transition-opacity" />
+                       <ExternalLink aria-hidden="true" size={11} className="opacity-0 group-hover/gtot:opacity-100 text-indigo-600 transition-opacity" />
                     </span>
                   </td>
                 </tr>
@@ -705,7 +705,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
         {/* Missing Elements Placeholders */}
         {((pivotMode === 'flat' && groupedData.length === 0) || (pivotMode === 'matrix' && matrixData.rows.length === 0)) && (
           <div className="p-24 text-center">
-             <Calculator size={44} className="mx-auto text-slate-300 mb-4 stroke-[1.5px]" />
+             <Calculator aria-hidden="true" size={44} className="mx-auto text-slate-300 mb-4 stroke-[1.5px]" />
              <p className="text-xs font-bold text-[var(--muted)] uppercase tracking-widest">No matching transaction intersections matched.</p>
           </div>
         )}

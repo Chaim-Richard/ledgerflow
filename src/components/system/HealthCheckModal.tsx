@@ -184,15 +184,15 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
           <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
-                <Activity size={20} />
+                <Activity aria-hidden="true" size={20} />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Ledger Health Check</h2>
                 <p className="text-sm text-[var(--muted)]">"Are my books right?"</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 text-[var(--muted)] hover:text-slate-600 rounded-lg transition-colors hover:bg-slate-200/50">
-              <X size={20} />
+            <button aria-label="Close health check dialog" onClick={onClose} className="p-2 text-[var(--muted)] hover:text-slate-600 rounded-lg transition-colors hover:bg-slate-200/50">
+              <X aria-hidden="true" size={20} />
             </button>
           </div>
 
@@ -202,7 +202,7 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
                 <div className="relative">
                   <div className="w-16 h-16 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin" />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <ShieldCheck className="w-6 h-6 text-indigo-600" />
+                    <ShieldCheck aria-hidden="true" className="w-6 h-6 text-indigo-600" />
                   </div>
                 </div>
                 <div className="text-center">
@@ -227,9 +227,9 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
                   {report.results.map((r: any) => (
                     <div key={r.id} className="p-4 rounded-xl border border-slate-200 bg-white flex items-start gap-4">
                       <div className="mt-0.5">
-                        {r.status === 'pass' && <CheckCircle2 className="text-emerald-500" size={20} />}
-                        {r.status === 'warn' && <AlertTriangle className="text-amber-500" size={20} />}
-                        {r.status === 'fail' && <AlertTriangle className="text-rose-500" size={20} />}
+                        {r.status === 'pass' && <CheckCircle2 aria-hidden="true" className="text-emerald-500" size={20} />}
+                        {r.status === 'warn' && <AlertTriangle aria-hidden="true" className="text-amber-500" size={20} />}
+                        {r.status === 'fail' && <AlertTriangle aria-hidden="true" className="text-rose-500" size={20} />}
                       </div>
                       <div className="flex-1">
                         <h4 className="font-semibold text-slate-900 text-sm">{r.title}</h4>
@@ -243,7 +243,7 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
 
                 {report.score < 100 && (
                   <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl flex gap-3">
-                    <RefreshCw className="text-indigo-600 shrink-0 mt-0.5" size={20} />
+                    <RefreshCw aria-hidden="true" className="text-indigo-600 shrink-0 mt-0.5" size={20} />
                     <div>
                       <h4 className="text-sm font-bold text-indigo-900">Recommendation</h4>
                       <p className="text-sm text-indigo-700 mt-1">

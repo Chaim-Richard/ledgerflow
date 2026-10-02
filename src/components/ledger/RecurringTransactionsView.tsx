@@ -79,7 +79,7 @@ export default function RecurringTransactionsView() {
       <div className="flex flex-col md:flex-row md:items-center justify-between p-6 border-b border-[var(--line)] bg-[var(--surface)] gap-4">
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 bg-indigo-500/10 text-indigo-500 rounded-xl flex items-center justify-center">
-            <RefreshCw size={24} />
+            <RefreshCw aria-hidden="true" size={24} />
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Recurring Transactions</h1>
@@ -89,8 +89,8 @@ export default function RecurringTransactionsView() {
 
         <div className="flex items-center gap-3">
           <div className="relative group">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" />
-            <input 
+            <Search aria-hidden="true" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" />
+            <input aria-label="Search recurring templates"
               type="text"
               placeholder="Search templates..."
               className="pl-10 pr-4 py-2 bg-[var(--bg)] border border-[var(--line)] rounded-lg text-sm w-full md:w-64 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
@@ -151,7 +151,7 @@ export default function RecurringTransactionsView() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-lg bg-zinc-500/10 text-zinc-500 flex items-center justify-center shrink-0">
-                        {(rule.type === 'invoice' || rule.invoiceTemplate || rule.template?.tags?.includes('invoice')) ? <FileText size={16} aria-label="Invoice" /> : <DollarSign size={16} aria-label="Entry" />}
+                        {(rule.type === 'invoice' || rule.invoiceTemplate || rule.template?.tags?.includes('invoice')) ? <FileText aria-hidden="true" size={16} aria-label="Invoice" /> : <DollarSign aria-hidden="true" size={16} aria-label="Entry" />}
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-[var(--text)]">{rule.description}</p>
@@ -161,7 +161,7 @@ export default function RecurringTransactionsView() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm text-[var(--text)]">
-                      <Clock size={14} className="text-zinc-400" />
+                      <Clock aria-hidden="true" size={14} className="text-zinc-400" />
                       {getFrequencyLabel(rule.frequency)}
                     </div>
                   </td>
@@ -172,7 +172,7 @@ export default function RecurringTransactionsView() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm font-medium text-indigo-500">
-                      <Calendar size={14} />
+                      <Calendar aria-hidden="true" size={14} />
                       {rule.nextOccurrence ? format(parseISO(rule.nextOccurrence), 'MMM dd, yyyy') : 'Not scheduled'}
                     </div>
                   </td>
@@ -216,7 +216,7 @@ export default function RecurringTransactionsView() {
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-zinc-500">
                     {loading ? <LoadingState what="recurring schedules" /> : (<>
-                    <RefreshCw size={48} className="mx-auto mb-4 opacity-10" />
+                    <RefreshCw aria-hidden="true" size={48} className="mx-auto mb-4 opacity-10" />
                     <p className="text-sm font-medium">No recurring invoices or entries yet</p>
                     <p className="mt-2 text-xs">Create an invoice in Sales and choose "Recurring" to send the same invoice on a schedule.</p>
                     </>)}

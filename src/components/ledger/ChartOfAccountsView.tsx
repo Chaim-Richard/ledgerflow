@@ -61,7 +61,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
             <div className="flex items-center gap-2" style={{ paddingLeft: `${depth * 16}px` }}>
               {hasChildren ? (
                 <button className="p-1 hover:bg-slate-100 rounded transition-colors text-[var(--muted)]" aria-label="Chevron Down action">
-                  {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                  {isExpanded ? <ChevronDown aria-hidden="true" size={13} /> : <ChevronRight aria-hidden="true" size={13} />}
                 </button>
               ) : (
                 <div className="w-5" />
@@ -92,14 +92,14 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
             {formatCurrency(account.balanceCents)}
           </td>
           <td className="p-4 text-right relative">
-            <button 
+            <button aria-label={`Account options for ${account.name}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setShowOptionsId(showOptionsId === account.id ? null : account.id);
               }}
               className="p-1.5 text-[var(--muted)] hover:text-[var(--text)] transition-colors rounded hover:bg-slate-100"
             >
-              <MoreVertical size={14} />
+              <MoreVertical aria-hidden="true" size={14} />
             </button>
             <AnimatePresence>
               {showOptionsId === account.id && (
@@ -118,7 +118,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 rounded transition-all text-[9.5px] font-bold uppercase tracking-wider"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 aria-hidden="true" size={12} />
                       Decommission Node
                     </button>
                   </motion.div>
@@ -158,7 +158,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
                 <td colSpan={6} className="p-16 text-center">
                   <div className="flex flex-col items-center gap-4 max-w-sm mx-auto">
                     <div className="w-12 h-12 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex items-center justify-center text-[var(--muted)] shadow-3xs">
-                      <BookOpen size={20} />
+                      <BookOpen aria-hidden="true" size={20} />
                     </div>
                     <div>
                       <p className="font-bold text-[var(--text)] uppercase tracking-wide text-xs">Void Detection</p>

@@ -172,7 +172,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-            <Clock className="w-6 h-6 text-indigo-500" />
+            <Clock aria-hidden="true" className="w-6 h-6 text-indigo-500" />
             {isCustomer ? 'Accounts Receivable (AR) Aging' : 'Accounts Payable (AP) Aging'}
           </h1>
           <p className="text-sm text-[var(--muted)] dark:text-slate-400">
@@ -184,7 +184,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
             onClick={exportToCSV}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors border border-slate-200 dark:border-slate-800"
           >
-            <Download className="w-4 h-4" />
+            <Download aria-hidden="true" className="w-4 h-4" />
             Export CSV
           </button>
         </div>
@@ -229,9 +229,9 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative w-full sm:max-w-xs">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Search className="h-4 w-4 text-[var(--muted)]" />
+              <Search aria-hidden="true" className="h-4 w-4 text-[var(--muted)]" />
             </span>
-            <input
+            <input aria-label={`Search by ${isCustomer ? "customer" : "vendor"}`}
               type="text"
               placeholder={`Search by ${isCustomer ? 'customer' : 'vendor'}...`}
               value={searchTerm}
@@ -248,37 +248,37 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                 <th className="p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('partyName')}>
                   <span className="flex items-center gap-1">
                     {isCustomer ? 'Customer' : 'Vendor'}
-                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
+                    <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('current')}>
                   <span className="flex items-center justify-end gap-1">
                     0-30 Days
-                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
+                    <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('thirtyToSixty')}>
                   <span className="flex items-center justify-end gap-1">
                     31-60 Days
-                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
+                    <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('sixtyToNinety')}>
                   <span className="flex items-center justify-end gap-1">
                     61-90 Days
-                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
+                    <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('overNinety')}>
                   <span className="flex items-center justify-end gap-1">
                     91+ Days
-                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
+                    <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('total')}>
                   <span className="flex items-center justify-end gap-1">
                     Total Outstanding
-                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
+                    <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 w-10"><span className="sr-only">Actions</span></th>
@@ -292,7 +292,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                   className="hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors group"
                 >
                   <td className="p-4 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Users className="w-4 h-4 text-[var(--muted)]" />
+                    <Users aria-hidden="true" className="w-4 h-4 text-[var(--muted)]" />
                     {row.partyName}
                   </td>
                   <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
@@ -311,7 +311,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                     {formatCurrency(row.total)}
                   </td>
                   <td className="p-4 text-right">
-                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 dark:group-hover:text-white transition-colors" />
+                    <ChevronRight aria-hidden="true" className="w-4 h-4 text-slate-300 group-hover:text-slate-600 dark:group-hover:text-white transition-colors" />
                   </td>
                 </tr>
               ))}
@@ -352,7 +352,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                   onClick={() => setSelectedPartyId(null)}
                   className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-bold mb-1"
                 >
-                  <ArrowLeft className="w-3 h-3" /> Back to Aging Schedule
+                  <ArrowLeft aria-hidden="true" className="w-3 h-3" /> Back to Aging Schedule
                 </button>
                 <h3 className="text-xl font-black text-slate-900 dark:text-white">
                   Outstanding Ledger: {selectedParty.name}
@@ -382,7 +382,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-indigo-500" />
+                        <FileText aria-hidden="true" className="w-4 h-4 text-indigo-500" />
                         <span className="font-bold text-slate-900 dark:text-white">
                           #{doc.number || doc.id.slice(0, 8).toUpperCase()}
                         </span>

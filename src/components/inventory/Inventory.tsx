@@ -242,7 +242,7 @@ export default function Inventory() {
         <div className="space-y-4">
           <div className="flex items-center gap-6">
              <div className="w-16 h-16 rounded-[32px] bg-slate-900 flex items-center justify-center text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.2)] border border-white/5 group hover:scale-110 transition-transform">
-               <Package size={32} className="animate-pulse" />
+               <Package aria-hidden="true" size={32} className="animate-pulse" />
              </div>
              <div>
                 <h1 className="text-4xl md:text-6xl font-display font-black text-[var(--text)] tracking-tight flex items-baseline gap-3">
@@ -258,8 +258,8 @@ export default function Inventory() {
 
         <div className="flex flex-wrap items-center gap-8">
            <div className="relative group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--muted)] opacity-40 group-focus-within:text-emerald-500 group-focus-within:opacity-100 transition-all" size={20} />
-              <input 
+              <Search aria-hidden="true" className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--muted)] opacity-40 group-focus-within:text-emerald-500 group-focus-within:opacity-100 transition-all" size={20} />
+              <input aria-label="Search inventory by SKU or item"
                 type="text"
                 placeholder="Scan sku or entity DNA..."
                 value={searchTerm}
@@ -277,7 +277,7 @@ export default function Inventory() {
                  : "bg-[var(--surface)] text-[var(--muted)] border-[var(--line)] hover:border-slate-800"
              )}
            >
-             <BarChart3 size={18} />
+             <BarChart3 aria-hidden="true" size={18} />
              {showRuleIntel ? "LedgerFlow AI Active" : "Rule Intel"}
            </button>
 
@@ -287,7 +287,7 @@ export default function Inventory() {
              onClick={() => setIsAdding(true)}
              className="px-10 py-4 bg-slate-900 text-white rounded-[32px] text-[12px] font-medium uppercase tracking-wider shadow-3xl hover:scale-105 transition-all flex items-center gap-3 border border-white/5 active:scale-95"
            >
-              <Plus size={20} />
+              <Plus aria-hidden="true" size={20} />
               Enlist Asset
            </button>
         </div>
@@ -297,12 +297,12 @@ export default function Inventory() {
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 mb-12">
         <div className="xl:col-span-3 bg-zinc-950 p-12 rounded-[32px] text-white flex flex-col md:flex-row items-center justify-between gap-10 border border-white/5 relative overflow-hidden group">
            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:scale-110 transition-transform pointer-events-none">
-              <Database size={240} />
+              <Database aria-hidden="true" size={240} />
            </div>
            <div className="relative z-10 w-full md:w-2/3">
               <div className="flex items-center gap-6 mb-6">
                  <div className="w-16 h-16 bg-[var(--surface)]/10 rounded-[32px] flex items-center justify-center text-white border border-white/5 shadow-2xl">
-                    <Zap size={32} />
+                    <Zap aria-hidden="true" size={32} />
                  </div>
                  <div>
                     <h3 className="text-3xl font-black uppercase tracking-tighter">Rule Inventory Core</h3>
@@ -343,7 +343,7 @@ export default function Inventory() {
            <div>
               <div className="flex items-center gap-4 mb-6">
                  <div className="w-12 h-12 bg-rose-50 rounded-[32px] flex items-center justify-center text-rose-500 border border-rose-100">
-                    <ShieldAlert size={24} />
+                    <ShieldAlert aria-hidden="true" size={24} />
                  </div>
                  <span className="text-xs font-black text-[var(--muted)] uppercase tracking-[0.2em]">Asset Risk</span>
               </div>
@@ -404,7 +404,7 @@ export default function Inventory() {
                       {item.quantityAtHand}
                     </span>
                     {item.quantityAtHand <= item.reorderPoint && (
-                      <AlertTriangle size={14} className="text-rose-500 animate-pulse" />
+                      <AlertTriangle aria-hidden="true" size={14} className="text-rose-500 animate-pulse" />
                     )}
                   </div>
                 </td>
@@ -416,9 +416,9 @@ export default function Inventory() {
                           "text-sm font-black font-mono",
                           item.anomaly ? "text-rose-600" : "text-[var(--text)]"
                         )}>{formatCurrency(item.trueCostCents)}</span>
-                        {item.integrityScore > 75 && <ShieldCheck size={12} className="text-emerald-500" />}
-                        {item.anomaly && <AlertTriangle size={10} className="text-rose-500" />}
-                        {!item.isAnalysisAccurate && <Info size={10} className="text-zinc-400" />}
+                        {item.integrityScore > 75 && <ShieldCheck aria-hidden="true" size={12} className="text-emerald-500" />}
+                        {item.anomaly && <AlertTriangle aria-hidden="true" size={10} className="text-rose-500" />}
+                        {!item.isAnalysisAccurate && <Info aria-hidden="true" size={10} className="text-zinc-400" />}
                       </div>
                       <div className="flex flex-col gap-0.5">
                         <p className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter tabular-nums">
@@ -457,10 +457,10 @@ export default function Inventory() {
                       <div className="flex items-center justify-between">
                          <div className="flex items-center gap-1">
                             <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Efficiency</span>
-                            {item.isCoreDriver && <Crown size={8} className="text-amber-500" />}
-                            {item.anomaly && <AlertTriangle size={8} className="text-rose-500 animate-pulse" />}
-                            {item.trajectory > 0 && <TrendingUp size={8} className="text-rose-500" />}
-                            {item.trajectory < 0 && <TrendingDown size={8} className="text-emerald-500" />}
+                            {item.isCoreDriver && <Crown aria-hidden="true" size={8} className="text-amber-500" />}
+                            {item.anomaly && <AlertTriangle aria-hidden="true" size={8} className="text-rose-500 animate-pulse" />}
+                            {item.trajectory > 0 && <TrendingUp aria-hidden="true" size={8} className="text-rose-500" />}
+                            {item.trajectory < 0 && <TrendingDown aria-hidden="true" size={8} className="text-emerald-500" />}
                          </div>
                          {item.arbitrage.saving > 0 && item.isAnalysisAccurate && (
                             <span className="text-[8px] font-black text-emerald-600 animate-pulse bg-emerald-50 px-1 rounded tabular-nums">-{formatCurrency(item.arbitrage.saving)} Saving</span>
@@ -535,22 +535,22 @@ export default function Inventory() {
                         title="Recognize COGS / Record Sale"
                         className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200 text-xs font-semibold flex items-center gap-1.5 transition-all"
                       >
-                        <ShoppingCart size={12} />
+                        <ShoppingCart aria-hidden="true" size={12} />
                         <span className="hidden lg:inline">COGS</span>
                       </button>
                     )}
-                    <button 
+                    <button aria-label={`Edit item ${item.name}`}
                       onClick={() => setEditingItem(item)}
                       className="p-2 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
                     >
-                      <Edit2 size={14} className="text-zinc-400" />
+                      <Edit2 aria-hidden="true" size={14} className="text-zinc-400" />
                     </button>
                     <ConfirmButton 
                       onConfirm={async () => handleDelete(item.id)}
                       confirmMessage="Are you sure you want to delete this inventory item?"
                       className="p-2 hover:bg-rose-50 rounded-xl border border-transparent hover:border-rose-100 transition-all text-rose-400"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 aria-hidden="true" size={14} />
                     </ConfirmButton>
                   </div>
                 </td>
@@ -560,7 +560,7 @@ export default function Inventory() {
         </table>
         {filteredItems.length === 0 && !loading && (
           <div className="py-20 text-center">
-            <Package size={40} className="text-zinc-200 mx-auto mb-4" />
+            <Package aria-hidden="true" size={40} className="text-zinc-200 mx-auto mb-4" />
             <p className="text-sm text-zinc-400 font-bold uppercase tracking-widest">No inventory items found</p>
           </div>
         )}
@@ -589,14 +589,14 @@ export default function Inventory() {
                 <h3 className="text-xl font-black text-[var(--text)] tracking-tighter">
                   {editingItem ? 'Edit Inventory Item' : 'New Inventory Item'}
                 </h3>
-                <button 
+                <button aria-label="Close item dialog"
                   onClick={() => {
                     setIsAdding(false);
                     setEditingItem(null);
                   }} 
                   className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
                 >
-                  <X size={20} className="text-zinc-400" />
+                  <X aria-hidden="true" size={20} className="text-zinc-400" />
                 </button>
               </div>
               <form onSubmit={editingItem ? handleUpdate : handleAdd} className="p-4 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -734,11 +734,11 @@ export default function Inventory() {
                   </h3>
                   <p className="text-xs text-[var(--muted)] font-mono mt-0.5">{cogsItem.name} ({cogsItem.sku})</p>
                 </div>
-                <button 
+                <button aria-label="Close cost of goods sold dialog"
                   onClick={() => setCogsItem(null)} 
                   className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
                 >
-                  <X size={18} className="text-zinc-400" />
+                  <X aria-hidden="true" size={18} className="text-zinc-400" />
                 </button>
               </div>
               <form onSubmit={handleRecognizeCogs} className="p-6 space-y-4">

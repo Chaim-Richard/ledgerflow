@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useId } from 'react';
 import { Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -20,6 +20,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
   onClose,
   defaultFromAccountId
 }) => {
+  const amountId = useId();
   const accounts = useLedgerStore(s => s.accounts);
   const transactions = useLedgerStore(s => s.transactions);
   const setTransactions = useLedgerStore(s => s.setTransactions);
@@ -121,11 +122,11 @@ export const TransferModal: React.FC<TransferModalProps> = ({
       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden border border-neutral-200">
         <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
           <div className="flex items-center gap-2">
-            <ArrowRightLeft className="w-4 h-4 text-neutral-800" />
+            <ArrowRightLeft aria-hidden="true" className="w-4 h-4 text-neutral-800" />
             <h3 className="text-sm font-bold text-neutral-900">Inter-Account Transfer</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
-            <X className="w-4 h-4" />
+          <button onClick={onClose} aria-label="Close transfer dialog" className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
+            <X aria-hidden="true" className="w-4 h-4" />
           </button>
         </div>
 
@@ -145,7 +146,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
               activeTab === 'detect' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
             }`}
           >
-            <Sparkles className="w-3 h-3 text-amber-600" />
+            <Sparkles aria-hidden="true" className="w-3 h-3 text-amber-600" />
             Transfer Suggestions ({candidates.length})
           </button>
         </div>
@@ -154,7 +155,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
           {successMessage ? (
             <div className="py-8 text-center space-y-2">
               <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                <Check className="w-6 h-6" />
+                <Check aria-hidden="true" className="w-6 h-6" />
               </div>
               <p className="text-sm font-semibold text-neutral-900">{successMessage}</p>
             </div>
@@ -196,10 +197,11 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-neutral-700 mb-1">Amount ($)</label>
+                  <label htmlFor={amountId} className="block font-semibold text-neutral-700 mb-1">Amount ($)</label>
                   <div className="relative">
-                    <DollarSign className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-neutral-400" />
+                    <DollarSign aria-hidden="true" className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-neutral-400" />
                     <input
+                      id={amountId}
                       type="number"
                       step="0.01"
                       min="0.01"
@@ -235,7 +237,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
               </div>
 
               <div className="p-3 bg-neutral-50 rounded-lg border border-neutral-200 text-[11px] text-neutral-600 flex items-start gap-2">
-                <HelpCircle className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
+                <HelpCircle aria-hidden="true" className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
                 <span>
                   Inter-account transfers are recorded as balanced double-entry journals without affecting your Profit & Loss income or operational expenses.
                 </span>
@@ -255,7 +257,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                   disabled={!fromAccountId || !toAccountId || !amount || parseFloat(amount) <= 0}
                   className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50"
                 >
-                  <Check className="w-3.5 h-3.5" />
+                  <Check aria-hidden="true" className="w-3.5 h-3.5" />
                   Post Transfer
                 </button>
               </div>
