@@ -5,7 +5,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { StrategicEngine } from '../../services/strategicEngine';
 import { DoubleEntryAuditor } from '../../services/auditor';
-import { cn } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
 import { isCashAccount, isPostable, calculateTransactionImpact } from '../../lib/txFilters';
 
 interface DiagnosticConsoleProps {
@@ -135,12 +135,12 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
         break;
       case 'accounts':
         accounts.forEach(a => {
-          newHistory.push(`  [Node] ${a.name.padEnd(20)} | Bal: $${((a.balanceCents || 0) / 100).toLocaleString()}`);
+          newHistory.push(`  [Node] ${a.name.padEnd(20)} | Bal: ${formatCurrency((a.balanceCents || 0))}`);
         });
         break;
       case 'history':
         transactions.slice(0, 25).forEach(t => {
-          newHistory.push(`  [Tx] ${t.date} | ${t.description.slice(0, 30).padEnd(32)} | $${(t.totalAmountCents / 100).toLocaleString()}`);
+          newHistory.push(`  [Tx] ${t.date} | ${t.description.slice(0, 30).padEnd(32)} | ${formatCurrency(t.totalAmountCents)}`);
         });
         if (transactions.length > 25) newHistory.push(`  ... and ${transactions.length - 25} more transactions.`);
         break;
@@ -154,8 +154,8 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
         const auditResult = DoubleEntryAuditor.auditLedger(transactions, allAccounts);
         
         newHistory.push(`Audit complete: ${auditResult.isBalanced ? 'System is Balanced.' : 'Imbalance Detected.'}`);
-        newHistory.push(`> Total Debits: $${(auditResult.totalDebits / 100).toLocaleString()}`);
-        newHistory.push(`> Total Credits: $${(auditResult.totalCredits / 100).toLocaleString()}`);
+        newHistory.push(`> Total Debits: ${formatCurrency(auditResult.totalDebits)}`);
+        newHistory.push(`> Total Credits: ${formatCurrency(auditResult.totalCredits)}`);
         if (!auditResult.hashChainValid) {
            newHistory.push(`> WARNING: Cryptographic chain drift detected at index ${auditResult.brokenChainIndex}.`);
         }

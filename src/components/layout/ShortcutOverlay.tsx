@@ -3,6 +3,9 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Command, Search, Activity, Zap, FileDown, Database, LayoutDashboard, List, Keyboard } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
+import { SHORTCUTS, isMacPlatform, shortcutLabel, type ShortcutId } from '../../config/shortcuts';
+import { useDialog } from '../../hooks/useDialog';
+import type { LucideIcon } from 'lucide-react';
 import { APP_TABS, SETTINGS_TABS_REGISTRY, REPORT_TABS_REGISTRY, INTELLIGENCE_TABS_REGISTRY, ANALYTICAL_LENSES_REGISTRY } from '../../config/registry';
 
 interface ShortcutOverlayProps {
@@ -10,26 +13,18 @@ interface ShortcutOverlayProps {
   onClose: () => void;
 }
 
+const SHORTCUT_ICONS: Partial<Record<ShortcutId, LucideIcon>> = {
+  palette: Search, quickEntry: Zap, overview: LayoutDashboard, transactions: List, ledger: Database,
+  export: FileDown, import: Database, architecture: Command, shortcuts: Keyboard,
+};
+
 export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProps) {
   const language = useUIStore(s => s.language);
   const speedDials = useUIStore(s => s.speedDials);
 
-  const shortcuts = [
-    { key: '⌘ + K', desc: 'Command Palette', icon: Search },
-    { key: '⌘ + Q', desc: 'Quick Entry Mode', icon: Zap },
-    { key: '⌘ + 1', desc: 'Dashboard View', icon: LayoutDashboard },
-    { key: '⌘ + 2', desc: 'Transactions', icon: List },
-    { key: '⌘ + 3', desc: 'Ledger Engine', icon: Database },
-    { key: '⌘ + E', desc: 'Export Data', icon: FileDown },
-    { key: '⌘ + P', desc: 'Reporting Engine', icon: Activity },
-    { key: '⌘ + ⇧ + A', desc: 'System Architecture', icon: Command },
-    { key: '⌘ + ⇧ + K', desc: 'Diagnostic Console', icon: Activity },
-    { key: '⌘ + ⇧ + D', desc: 'Toggle Dark Mode', icon: Activity },
-    { key: '⌘ + I', desc: 'Bank Feed Importer', icon: Database },
-    { key: '⌘ + F', desc: 'Zen/Focus Mode', icon: Activity },
-    { key: '?', desc: 'Keyboard Shortcuts', icon: Keyboard },
-    { key: 'Esc', desc: 'Close Drawers', icon: X },
-  ];
+  const mac = isMacPlatform();
+  const shortcuts = SHORTCUTS.map(sc => ({ key: shortcutLabel(sc.keys[0], mac), desc: sc.label, icon: SHORTCUT_ICONS[sc.id] || Activity }));
+  const { dialogProps, titleId } = useDialog(onClose, isOpen);
 
   const hasSpeedDials = speedDials && Object.keys(speedDials).length > 0;
   
@@ -44,7 +39,7 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <div {...dialogProps} className="fixed inset-0 z-[100] flex items-center justify-center p-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -62,7 +57,7 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
             <div className="p-8 md:p-10 border-b border-[var(--line)] bg-[var(--ink)]/30 shrink-0">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-3xl font-black text-[var(--text)] tracking-tighter">Command Directives</h2>
+                  <h2 id={titleId} className="text-3xl font-black text-[var(--text)] tracking-tighter">Keyboard shortcuts</h2>
                   <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest mt-1">Accelerated Keyboard Navigation</p>
                 </div>
                 <button aria-label="Close" 
@@ -126,7 +121,7 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
                           
                           <div className="flex items-center gap-2">
                             <span className="px-3 py-1.5 min-h-[30px] min-w-[32px] rounded-lg bg-[var(--surface)] border border-indigo-200 text-indigo-700 text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center shadow-sm">
-                              ⌥ + {key.toUpperCase()}
+                              {shortcutLabel(`alt+${key}`, mac)}
                             </span>
                           </div>
                         </div>

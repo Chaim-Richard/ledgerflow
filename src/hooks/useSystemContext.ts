@@ -34,6 +34,7 @@ export function useCommandDispatcher() {
       'open-health-check': () => useUIStore.getState().setHealthCheckOpen(true),
       'open-guide': () => setGuideOpen(true),
       'open-command-palette': () => setCommandPaletteOpen(true),
+      'open-shortcuts': () => useUIStore.getState().setShortcutOverlayOpen(true),
       'quick-entry': () => setQuickEntryOpen(true),
       'new-entry': () => setQuickEntryOpen(true),
       'bulk-repair-ledger': () => txActions.handleBulkRepair((details as CommandDetails)?.transactions || []),

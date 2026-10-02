@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
 
 interface PivotViewProps {
   pivotData: Array<{ name: string, value: number, count: number }>;
@@ -29,7 +29,7 @@ export default function PivotView({ pivotData }: PivotViewProps) {
                 "font-mono font-bold tabular-nums",
                 item.value >= 0 ? "text-emerald-600" : "text-rose-600"
               )}>
-                {item.value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                {formatCurrency(item.value)}
               </span>
             </div>
             <div className="w-full bg-zinc-100 h-1.5 rounded-full overflow-hidden">

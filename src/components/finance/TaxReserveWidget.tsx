@@ -142,7 +142,7 @@ export function TaxReserveWidget() {
     }
 
     return {
-      text: `All checks passed! You can safely deploy up to $${(autopilotSafeToSpendCents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })} today without impacting tax reserves, upcoming bills, or your safety buffer.`,
+      text: `All checks passed! You can safely deploy up to ${formatCurrency(autopilotSafeToSpendCents)} today without impacting tax reserves, upcoming bills, or your safety buffer.`,
       severity: 'safe'
     };
   }, [autopilotSafeToSpendCents, liquidCash, estimatedTax, totalCommittedBillsCents, nextPayday, overdraftProbability]);
@@ -484,7 +484,7 @@ export function TaxReserveWidget() {
                     />
                     <div className="space-y-0.5">
                       <p className="font-semibold text-[var(--text)]">Auto-Transfer Outlay Reserves</p>
-                      <p className="text-[10px] text-[var(--muted)]">Sweep ${((totalIrregularReservesCents + estimatedTax) / 100).toFixed(0)} to secondary secure vault envelope.</p>
+                      <p className="text-[10px] text-[var(--muted)]">Sweep {formatCurrency(totalIrregularReservesCents + estimatedTax)} to secondary secure vault envelope.</p>
                     </div>
                   </div>
 
@@ -497,7 +497,7 @@ export function TaxReserveWidget() {
                     />
                     <div className="space-y-0.5">
                       <p className="font-semibold text-[var(--text)]">Lock Pre-funded Bill Balances</p>
-                      <p className="text-[10px] text-[var(--muted)]">Lock ${((totalCommittedBillsCents) / 100).toFixed(0)} matching {upcomingBillsList.length} impending bills due before payday.</p>
+                      <p className="text-[10px] text-[var(--muted)]">Lock {formatCurrency(totalCommittedBillsCents)} matching {upcomingBillsList.length} impending bills due before payday.</p>
                     </div>
                   </div>
 

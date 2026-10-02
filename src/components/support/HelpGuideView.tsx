@@ -140,7 +140,7 @@ const GUIDE_SECTIONS: SectionDoc[] = [
     summary: "Speed up your daily accounting workflows with keyboard shortcuts.",
     steps: [
       "⌘K or Ctrl+K — Open Coordinate Search & Command Palette",
-      "? or Shift+/ — Open this Help & Operational Guide",
+      "? — Show every keyboard shortcut (also in the command palette: \"Keyboard shortcuts\")",
       "Esc — Close active modal, drilldown, or dialog",
       "⌘Enter or Ctrl+Enter — Submit and save active form / journal"
     ]

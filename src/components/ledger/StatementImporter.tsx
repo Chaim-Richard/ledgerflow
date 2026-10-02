@@ -19,7 +19,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Transaction, ChartAccount, AutoRule } from '../../types';
 import { aiService } from '../../services/aiService';
 import { IntentResolver } from '../../lib/intentResolver';
-import { cn, getLocalDateISO, formatDate } from '../../lib/utils';
+import { cn, getLocalDateISO, formatDate, formatCurrency } from '../../lib/utils';
 
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
@@ -616,7 +616,7 @@ export default function StatementImporter({
                             "text-sm font-black mono-value",
                             tx.amountCents > 0 ? "text-[var(--pos)]" : "text-[var(--text)]"
                           )}>
-                            {tx.amountCents > 0 ? '+' : ''}{(tx.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                            {tx.amountCents > 0 ? '+' : ''}{formatCurrency(tx.amountCents)}
                           </p>
                           {tx.isDuplicate && (
                             <span className="text-[9px] font-black text-rose-500 uppercase tracking-tighter">Duplicate Detected</span>
@@ -634,7 +634,7 @@ export default function StatementImporter({
                                   {item.description}
                                   {item.quantity && item.quantity > 1 && (
                                     <span className="ml-2 text-[9px] text-[var(--muted)] font-bold px-1 py-0.5 bg-[var(--surface)] rounded border border-[var(--line)]">
-                                      {item.quantity} units @ {( (item.unitPriceCents || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                                      {item.quantity} units @ {formatCurrency((item.unitPriceCents || 0))}
                                     </span>
                                   )}
                                 </p>
@@ -643,7 +643,7 @@ export default function StatementImporter({
                                 )}
                               </div>
                               <p className="text-[10px] font-mono font-bold text-[var(--muted)] tabular-nums">
-                                {((item.amountCents || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                                {formatCurrency((item.amountCents || 0))}
                               </p>
                             </div>
                           ))}

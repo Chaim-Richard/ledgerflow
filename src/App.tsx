@@ -11,6 +11,7 @@ import { useLedgerStore } from './stores/useLedgerStore';
 import { useUIStore } from './stores/useUIStore';
 import type { AppTab } from './types';
 import { errorMessage } from './lib/errorRemedies';
+import { shortcutKeyMap } from './config/shortcuts';
 import { useLedgerData } from './hooks/useLedgerData';
 import { useAIActions } from './hooks/useAIActions';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -193,22 +194,22 @@ export default function App() {
 
   // Operational Keyboard Shortcuts
 const shortcutMap = useMemo(() => {
-    const base: Record<string, () => void> = {
-      'mod+k': () => setCommandPaletteOpen(!isCommandPaletteOpen),
-      'mod+q': () => setQuickEntryOpen(!isQuickEntryOpen),
-      'mod+f': () => toggleFocusMode(),
-      'mod+shift+k': () => setDiagnosticConsoleOpen(!isDiagnosticConsoleOpen),
-      'mod+/?': () => setShortcutOverlayOpen(!isShortcutOverlayOpen),
-      '?': () => setShortcutOverlayOpen(!isShortcutOverlayOpen),
-      'mod+1': () => setActiveTab('dashboard'),
-      'mod+2': () => setActiveTab('transactions'),
-      'mod+3': () => setActiveTab('ledger'),
-      'mod+e': () => handleAction('export'),
-      'mod+p': () => setActiveTab('reports'),
-      'mod+shift+d': () => useUIStore.getState().setTheme(useUIStore.getState().theme === 'dark' ? 'light' : 'dark'),
-      'mod+i': () => setImporterOpen(true),
-      'mod+shift+a': () => setArchitectureOpen(!isArchitectureOpen),
-    };
+    // one list for the keys and the "Keyboard shortcuts" card (src/config/shortcuts.ts)
+    const base = shortcutKeyMap({
+      palette: () => setCommandPaletteOpen(!isCommandPaletteOpen),
+      quickEntry: () => setQuickEntryOpen(!isQuickEntryOpen),
+      overview: () => setActiveTab('dashboard'),
+      transactions: () => setActiveTab('transactions'),
+      ledger: () => setActiveTab('ledger'),
+      reports: () => setActiveTab('reports'),
+      export: () => handleAction('export'),
+      import: () => setImporterOpen(true),
+      theme: () => useUIStore.getState().setTheme(useUIStore.getState().theme === 'dark' ? 'light' : 'dark'),
+      focus: () => toggleFocusMode(),
+      diagnostics: () => setDiagnosticConsoleOpen(!isDiagnosticConsoleOpen),
+      architecture: () => setArchitectureOpen(!isArchitectureOpen),
+      shortcuts: () => setShortcutOverlayOpen(!isShortcutOverlayOpen),
+    });
     Object.entries(speedDials || {}).forEach(([key, tabId]) => {
       base[`alt+${key.toLowerCase()}`] = () => navigateTool(tabId);
     });
