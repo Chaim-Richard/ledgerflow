@@ -21,8 +21,10 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { withNewAmount } from '../../lib/transactionEdits';
+import { gridTemplate, OPTIONAL_COLUMNS, readHiddenColumns } from '../../lib/transactionColumns';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName, formatCurrency, getLocalDateISO } from '../../lib/utils';
-import { isCashAccount, isPostable } from '../../lib/txFilters';
+import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import TransactionRow from '../transactions/TransactionRow';
@@ -166,6 +168,7 @@ interface VirtualRowProps extends ListChildComponentProps {
     dateFormat: string;
     formatCurrency: (cents: number) => string;
     gridCols: string;
+    hiddenColumns: ReadonlySet<string>;
     searchTerm: string;
   };
 }
@@ -211,6 +214,7 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
         isTabletGrid={data.isTabletGrid}
         dateFormat={data.dateFormat}
         gridColumns={data.gridCols}
+        hiddenColumns={data.hiddenColumns}
         anomaly={data.anomalyMap.get(tx.id)}
         internalConflict={data.deterministicConflicts.get(tx.id)}
         searchTerm={data.searchTerm}
@@ -404,12 +408,13 @@ export default function TransactionGrid() {
   const anomalyMap = useMemo(() => new Map(anomaliesValues.map((a) => [a.transactionId, a])), [anomaliesValues]);
 
   // High volume pre-computations
+  // Debits minus credits over the listed entries: 0 when every entry balances. (It used to add up
+  // the entries' totals, which are always positive, so it always said "imbalance".)
   const totalBalancedSum = useMemo(() => {
     let sum = 0;
-    const filtered = transactionsWithBalance.filter(isPostable);
-    const len = filtered.length;
-    for (let i = 0; i < len; i++) {
-      sum += (filtered[i].totalAmountCents || 0);
+    for (const t of transactionsWithBalance) {
+      if (!isPostable(t)) continue;
+      for (const l of t.lines || []) sum += lineAmount(l, t);
     }
     return sum;
   }, [transactionsWithBalance]);
@@ -432,13 +437,17 @@ export default function TransactionGrid() {
 
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
   const [columnSearchTerms, setColumnSearchTerms] = useState<Record<string, string>>({});
-  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(['date', 'description', 'category', 'project', 'amount', 'status']));
+  // Columns switched off in the Columns menu, remembered per person on this device (I-13)
+  const columnsKey = `lf_tx_hidden_columns_${useAuthStore(s => s.user?.uid) || 'guest'}`;
+  const [hiddenColumns, setHiddenColumns] = useState<ReadonlySet<string>>(() => readHiddenColumns(columnsKey));
+  const show = (column: string) => !hiddenColumns.has(column);
 
   const toggleColumnVisibility = (col: string) => {
-    const next = new Set(visibleColumns);
+    const next = new Set(hiddenColumns);
     if (next.has(col)) next.delete(col);
     else next.add(col);
-    setVisibleColumns(next);
+    setHiddenColumns(next);
+    try { localStorage.setItem(columnsKey, JSON.stringify([...next])); } catch { /* storage blocked: kept for this visit */ }
   };
 
   const columnFilterValues = useMemo(() => {
@@ -604,13 +613,8 @@ export default function TransactionGrid() {
   }, []);
 
   const rowHeight = isCompactMode ? 32 : isProMode ? 44 : 72;
-  const gridCols = isMobileGrid
-    ? '40px 100px 1fr 100px'
-    : isTabletGrid
-    ? '40px 100px 1fr 180px 120px 100px'
-    : isProMode || isCompactMode 
-    ? '40px 100px 1fr 150px 100px 100px 100px 120px 120px 80px 80px' 
-    : '60px 120px 1fr 150px 100px 100px 100px 140px 120px 80px';
+  // one width per cell the rows draw (desktop rows also have a running balance and actions)
+  const gridCols = gridTemplate({ mobile: isMobileGrid, tablet: isTabletGrid, compact: isProMode || isCompactMode }, hiddenColumns);
 
   const selectedTransactions = useMemo(() => 
     transactions.filter(t => selectedIds.has(t.id)),
@@ -751,6 +755,7 @@ export default function TransactionGrid() {
     dateFormat,
     formatCurrency,
     gridCols,
+    hiddenColumns,
     searchTerm,
     onDuplicate: handleDuplicateTransaction
   }), [
@@ -776,7 +781,8 @@ export default function TransactionGrid() {
     handleToggleFlag,
     dateFormat, 
     formatCurrency,
-    gridCols
+    gridCols,
+    hiddenColumns
   ]);
 
   const itemKey = useCallback((index: number, data: VirtualRowProps['data']) => {
@@ -877,7 +883,7 @@ export default function TransactionGrid() {
               <div className="flex items-center gap-3 mt-2">
                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 border border-emerald-500/20 rounded-full">
                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.4)]" />
-                   <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Integrity Scan Active</span>
+                   <span className="text-[9px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">Integrity Scan Active</span>
                 </div>
                 <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider">Matrix Synchronized</span>
               </div>
@@ -944,7 +950,7 @@ export default function TransactionGrid() {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-center gap-2 p-2 bg-slate-900/10 border border-indigo-600/20 rounded-xl"
                 >
-                  <span className="text-xs font-bold text-indigo-600 px-2">{selectedIds.size} Selected</span>
+                  <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 px-2">{selectedIds.size} Selected</span>
                   <div className="h-4 w-px bg-slate-900/20" />
                   
                   {/* State Machine Actions */}
@@ -1000,16 +1006,16 @@ export default function TransactionGrid() {
                     <div className="absolute top-10 right-0 z-[150] w-56 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg p-3 normal-case font-medium text-[var(--text)]">
                       <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest mb-2">Visible Columns</p>
                       <div className="space-y-1">
-                        {['date', 'description', 'category', 'project', 'amount', 'status'].map(col => (
+                        {OPTIONAL_COLUMNS.map(([col, label]) => (
                           <label htmlFor={`${formId}-column-${col}`} key={col} className="flex items-center gap-2 p-1.5 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
                             <input 
                               id={`${formId}-column-${col}`}
                               type="checkbox" 
-                              checked={visibleColumns.has(col)}
+                              checked={!hiddenColumns.has(col)}
                               onChange={() => toggleColumnVisibility(col)}
                               className="w-3.5 h-3.5 rounded border-[var(--line)] text-[var(--brass)] focus:ring-[var(--brass)]"
                             />
-                            <span className="text-xs text-[var(--text)] capitalize">{col}</span>
+                            <span className="text-xs text-[var(--text)]">{label}</span>
                           </label>
                         ))}
                       </div>
@@ -1058,7 +1064,7 @@ export default function TransactionGrid() {
                {/* Filtered Inflow */}
                <div data-testid="filtered-inflow" className="flex items-center gap-2 px-3 py-2">
                  <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Filtered Inflow:</span>
-                 <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                 <span className="text-xs font-black text-[var(--pos)] tabular-nums">
                    +{formatCurrency(stats.inflowCents)}
                  </span>
                </div>
@@ -1066,7 +1072,7 @@ export default function TransactionGrid() {
                {/* Filtered Outflow */}
                <div data-testid="filtered-outflow" className="flex items-center gap-2 px-3 py-2">
                  <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Filtered Outflow:</span>
-                 <span className="text-xs font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                 <span className="text-xs font-black text-[var(--neg)] tabular-nums">
                    -{formatCurrency(stats.outflowCents)}
                  </span>
                </div>
@@ -1083,7 +1089,7 @@ export default function TransactionGrid() {
              {searchTerm && (
                <div style={{ height: '50.5px' }} className="hidden sm:flex items-center gap-3 px-5 py-2 bg-indigo-600/5 border border-indigo-600/20 rounded-full">
                   <Sparkles aria-hidden="true" size={14} className="text-indigo-600" />
-                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate italic serif">Analytical Filtering Enabled</span>
+                  <span className="text-[10px] font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest truncate italic serif">Analytical Filtering Enabled</span>
                </div>
              )}
           </div>
@@ -1125,7 +1131,7 @@ export default function TransactionGrid() {
             <div className="w-px h-6 bg-slate-200 opacity-50" />
             <button 
               onClick={handleBulkSweep}
-              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-[var(--surface)] border border-indigo-600/20 hover:border-indigo-600 rounded-xl transition-all shadow-sm shrink-0 cursor-pointer"
+              className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest bg-[var(--surface)] border border-indigo-600/20 hover:border-indigo-600 rounded-xl transition-all shadow-sm shrink-0 cursor-pointer"
               aria-label="Analytical Categorization"
             >
               <Sparkles aria-hidden="true" size={16} className="shrink-0" />
@@ -1162,7 +1168,7 @@ export default function TransactionGrid() {
            })}
            <button 
               onClick={() => onFilterApplied({})}
-              className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline px-2"
+              className="text-[10px] font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest hover:underline px-2"
            >
              Clear All
            </button>
@@ -1172,7 +1178,7 @@ export default function TransactionGrid() {
       <div className="flex-1 overflow-hidden relative bg-[var(--surface)]" dir="auto">
         {viewMode === 'grid' ? (
           <div className="h-full flex flex-col">
-            <div className="grid sticky top-0 bg-slate-900 text-white/75 z-20" style={{ gridTemplateColumns: gridCols }}>
+            <div data-testid="tx-header" className="grid sticky top-0 bg-slate-900 text-white/75 z-20" style={{ gridTemplateColumns: gridCols }}>
               <div className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-center">
                 <input type="checkbox" aria-label="Select all transactions" checked={selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0} onChange={(e) => setSelectedIds(e.target.checked ? new Set(transactionsWithBalance.map(t => t.id)) : new Set())} className="w-4 h-4 rounded border-white/20 bg-transparent accent-emerald-500" />
               </div>
@@ -1256,7 +1262,7 @@ export default function TransactionGrid() {
                   </div>
                 )}
               </div>
-              {!isMobileGrid && (
+              {!isMobileGrid && show('category') && (
                 <div
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
                 >
@@ -1319,7 +1325,7 @@ export default function TransactionGrid() {
                   )}
                 </div>
               )}
-              {!isMobileGrid && !isTabletGrid && (
+              {!isMobileGrid && !isTabletGrid && show('project') && (
                 <div
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
                 >
@@ -1368,7 +1374,7 @@ export default function TransactionGrid() {
                   )}
                 </div>
               )}
-              {!isMobileGrid && !isTabletGrid && (
+              {!isMobileGrid && !isTabletGrid && show('class') && (
                 <div
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
@@ -1404,7 +1410,7 @@ export default function TransactionGrid() {
                   )}
                 </div>
               )}
-              {!isMobileGrid && !isTabletGrid && (
+              {!isMobileGrid && !isTabletGrid && show('location') && (
                 <div
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
@@ -1440,7 +1446,7 @@ export default function TransactionGrid() {
                   )}
                 </div>
               )}
-              {((isProMode || isCompactMode) && !isMobileGrid && !isTabletGrid) ? (<><div className="p-4 font-black text-[10px] uppercase tracking-widest text-[var(--muted)] text-right">Debit</div><div className="p-4 font-black text-[10px] uppercase tracking-widest text-[var(--muted)] text-right">Credit</div></>) : (
+              {/* one Amount column in every mode: the rows have one amount cell */}{(
               <div
                 className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-right flex items-center justify-end gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
               >
@@ -1526,10 +1532,10 @@ export default function TransactionGrid() {
                 )}
                 </div>
               )}
-              {!isMobileGrid && !isTabletGrid && (
+              {!isMobileGrid && !isTabletGrid && show('balance') && (
                 <div className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-right">Running.Sum</div>
               )}
-              {!isMobileGrid && (
+              {!isMobileGrid && show('status') && (
                 <div
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-center flex items-center justify-center gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
@@ -1575,12 +1581,12 @@ export default function TransactionGrid() {
               <div className="absolute inset-0 technical-grid opacity-[0.03] pointer-events-none" />
               <div className="flex flex-wrap items-center gap-4 lg:gap-10 relative z-10 w-full overflow-x-auto no-scrollbar pb-2 md:pb-0">
                  <div className="flex flex-col whitespace-nowrap">
-                   <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 opacity-40">Dataset Depth</p>
+                   <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 text-white/70">Dataset Depth</p>
                    <p className="text-lg font-black italic text-white/80">{transactionsWithBalance.length} Nodes</p>
                  </div>
                  <div className="hidden sm:block w-px h-10 bg-[var(--surface)]/10" />
                  <div className="flex flex-col whitespace-nowrap">
-                   <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 opacity-40">Equilibrium</p>
+                   <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 text-white/70">Equilibrium</p>
                    <p className={cn(
                      "text-xl font-black font-mono tracking-tighter",
                      totalBalancedSum === 0 
@@ -1595,13 +1601,13 @@ export default function TransactionGrid() {
                      <div className="hidden sm:block w-px h-10 bg-[var(--surface)]/10" />
                      <div className="flex items-center gap-4 lg:gap-10">
                         <div className="flex flex-col text-emerald-400 whitespace-nowrap">
-                          <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 opacity-40">Sum ({selectedIds.size})</p>
+                          <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 text-white/70">Sum ({selectedIds.size})</p>
                           <p className="text-xl font-black font-mono tracking-tighter tabular-nums">
                             {formatCurrency(selectedMetricsResult.sum)}
                           </p>
                         </div>
                         <div className="flex flex-col text-white/60 whitespace-nowrap">
-                          <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 opacity-40">Mean Vector</p>
+                          <p className="text-[9px] font-medium uppercase tracking-wider truncate mb-1 text-white/70">Mean Vector</p>
                           <p className="text-xl font-black font-mono tracking-tighter uppercase tabular-nums">
                             {formatCurrency(selectedMetricsResult.mean)}
                           </p>
@@ -1632,7 +1638,7 @@ export default function TransactionGrid() {
                         ? "bg-emerald-500 shadow-[0_0_10px_#10b981]" 
                         : "bg-rose-500 animate-pulse shadow-[0_0_10px_#f43f5e]"
                     )} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/80">
                       {totalBalancedSum === 0 
                         ? "Consensus Balanced" 
                         : "Ledger Imbalance Detected"}
@@ -1640,7 +1646,8 @@ export default function TransactionGrid() {
                  </div>
               </div>
             </div>
-            <div className="flex-1">
+            {/* a floor for the list: without it the sections above could leave it 0 px high (no rows) */}
+            <div className="flex-1 min-h-[60vh]">
               <AutoSizer>
                 {({ height, width }: { height: number; width: number }) => (
                   <List

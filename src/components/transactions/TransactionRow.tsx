@@ -73,6 +73,8 @@ interface TransactionRowProps {
   isTabletGrid?: boolean;
   dateFormat?: string;
   gridColumns: string;
+  /** columns switched off in the Columns menu (category, project, class, location, balance, status) */
+  hiddenColumns?: ReadonlySet<string>;
   anomaly?: { score: number, reason: string };
   internalConflict?: { type: string, message: string };
   searchTerm?: string;
@@ -103,10 +105,12 @@ const TransactionRow = React.memo(({
   isMobileGrid = false,
   isTabletGrid = false,
   gridColumns,
+  hiddenColumns,
   anomaly,
   internalConflict,
   searchTerm
 }: TransactionRowProps) => {
+  const show = (column: string) => !hiddenColumns?.has(column);
   const isPrivacyMode = useLedgerStore(state => state.isPrivacyMode);
   const accounts = useLedgerStore(state => state.accounts);
   const lockDate = useLedgerStore(state => state.lockDate);
@@ -228,7 +232,7 @@ const TransactionRow = React.memo(({
             </>
           )}
         </div>
-        {!isMobileGrid && (
+        {!isMobileGrid && show('category') && (
           <div className={cn(
             "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2", 
@@ -242,7 +246,7 @@ const TransactionRow = React.memo(({
                     dir="auto"
                     className={cn(
                       "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider truncate flex-1 border transition-all",
-                      line.amountCents > 0 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover/active:text-white group-hover/active:border-white/20" : "bg-[var(--ink)] text-slate-500 border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-white/80 group-hover/active:border-white/20",
+                      line.amountCents > 0 ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover/active:text-white group-hover/active:border-white/20" : "bg-[var(--ink)] text-slate-500 border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-white/80 group-hover/active:border-white/20",
                     )}
                   >
                     <HighlightMatch text={resolveAccountName(accounts, line.accountId, line.accountName)} match={searchTerm} />
@@ -276,7 +280,7 @@ const TransactionRow = React.memo(({
             </div>
           </div>
         )}
-        {!isMobileGrid && !isTabletGrid && (
+        {!isMobileGrid && !isTabletGrid && show('project') && (
           <div className={cn(
             "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
@@ -298,7 +302,7 @@ const TransactionRow = React.memo(({
             </div>
           </div>
         )}
-        {!isMobileGrid && !isTabletGrid && (
+        {!isMobileGrid && !isTabletGrid && show('class') && (
           <div className={cn(
             "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
@@ -313,7 +317,7 @@ const TransactionRow = React.memo(({
             </div>
           </div>
         )}
-        {!isMobileGrid && !isTabletGrid && (
+        {!isMobileGrid && !isTabletGrid && show('location') && (
           <div className={cn(
             "px-4 h-full flex items-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
@@ -332,8 +336,8 @@ const TransactionRow = React.memo(({
           className={cn(
             "px-4 text-right font-black font-mono transition-colors text-sm h-full flex flex-col justify-center relative overflow-hidden border-r border-[var(--line)]/50 items-end",
             isInflow(tx, accounts)
-              ? "text-emerald-600 group-hover/active:text-emerald-400"
-              : "text-rose-600 group-hover/active:text-rose-400",
+              ? "text-[var(--pos)] group-hover/active:text-emerald-400"
+              : "text-[var(--neg)] group-hover/active:text-rose-400",
             isFocused && focusedField === 'amountCents' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}
         >
@@ -347,7 +351,7 @@ const TransactionRow = React.memo(({
             </span>
           )}
         </div>
-        {!isMobileGrid && !isTabletGrid && (
+        {!isMobileGrid && !isTabletGrid && show('balance') && (
           <div className={cn(
             "px-4 text-right font-bold font-mono text-slate-500 text-[11px] h-full flex items-center justify-end border-r border-[var(--line)]/50 transition-colors group-hover/active:text-white/60 whitespace-nowrap tabular-nums",
             isProMode && "px-2 text-[10px]"
@@ -355,7 +359,7 @@ const TransactionRow = React.memo(({
             {formatCurrency(tx.balanceCents || 0)}
           </div>
         )}
-        {!isMobileGrid && (
+        {!isMobileGrid && show('status') && (
           <div className={cn(
             "px-4 text-center h-full flex items-center justify-center border-r border-[var(--line)]/50", 
             isProMode && "px-2",
@@ -363,7 +367,7 @@ const TransactionRow = React.memo(({
           )}>
             <span className={cn(
               "px-2 py-0.5 rounded text-[9px] font-medium uppercase tracking-wider border transition-all",
-              tx.status === 'approved' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover:text-white" :
+              tx.status === 'approved' ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover:text-white" :
               tx.status === 'flagged' ? "bg-amber-500/10 text-amber-600 border-amber-500/20 group-hover/active:bg-amber-500 group-hover:text-white" :
               tx.status === 'void' ? "bg-rose-500/10 text-rose-600 border-rose-500/20 group-hover/active:bg-rose-500 group-hover:text-white" :
               tx.status === 'draft' ? "bg-[var(--ink)]0/10 text-slate-600 border-slate-500/20 group-hover/active:bg-[var(--ink)]0 group-hover:text-white" :

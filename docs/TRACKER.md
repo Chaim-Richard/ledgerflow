@@ -1491,7 +1491,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] I-10 Discoverable keyboard shortcuts — one list (`src/config/shortcuts.ts`) feeds the keys and the card (press ?, or "Keyboard shortcuts" in the command palette); Ctrl/⌘ shown per platform; keys the browser keeps freed: Quick entry ⌘Q → ⌘⇧E (⌘Q quits the browser on a Mac), Focus mode ⌘F → ⌘⇧F (find works again), Reports ⌘P → ⌘4 (print works again); tested
 - [x] I-11 Tabular figures everywhere — table cells, fields and mono text use tabular figures app-wide (one CSS rule; browser test)
 - [x] I-12 Dates follow the user's chosen format (formatDate; Preferences); tested
-- [ ] I-13 Persist column layout per user
+- [x] I-13 Persist column layout per user — the transaction list's Columns menu now really hides account, project, class, location, running balance or status, remembered per person on this device (browser test); it changed nothing before (L-148)
 - [x] I-14 Sticky headers + totals row — report tables (shared report layout, data grid) scroll in their box with the header kept in view (full length when printed); balance summaries have a totals row over the rows shown (component test)
 - [x] I-15 Inline row editing — description, account and amount can be changed in the transaction list; changing the amount now resizes both lines of a simple entry (L-147); split entries open the dialog
 - [ ] I-16 Breadcrumb on drill-down
@@ -1707,6 +1707,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-144 API Hub request log showed every request as "Error" (read `status`, the server sends `statusCode`)
 - [x] L-145 Six amounts were printed with a hard-coded "$" and their own division by 100 (owner overview totals, rule previews, saved-view minimum, transfer matches): wrong in any other currency; now `formatCurrency`, and a guard test stops it · L-146 same for 17 more: command palette results (invoices and bills always "USD"), statement and bank-feed import previews, Copilot's figures sent to the AI, tax reserve card, insights, Magic Entry, document vault, transaction pivot; two more guard patterns
 - [x] L-147 An amount changed in the transaction list showed the new number, but only the total was sent; the server works the total out from the lines, so the change was dropped. Both lines of a simple entry now change together (tested); split entries say to open the entry
+- [x] L-148 Transaction list on a normal desktop screen: **no rows were drawn** (the list area had no minimum height, so the sections above left it 0 px high); the header's last column wrapped (layout one width short); the pro layout's header split Amount into Debit/Credit while rows had one amount (every later column shifted); the Columns menu changed nothing; the footer always said "Ledger imbalance" (it added positive totals); the running balance added money out as if it came in ($15,000 then $27,000 instead of $3,000). All fixed, browser test + unit tests
+- [x] L-149 Light theme green/red text (`--pos`, `--neg`) was below the 4.5:1 minimum even on white; darkened (5.3 and 5.6 on the page); Transactions contrast failures 6/7 → 0/1
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

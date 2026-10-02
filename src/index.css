@@ -87,7 +87,7 @@
     --line: #D4DEDB; --grid: rgba(20, 60, 64, 0.05);
     --text: #0E2229; --muted: #4D6564; --faint: #4F6469;
     --brass: #7A550E; --brass-soft: rgba(122, 85, 14, 0.10); --brass-line: rgba(122, 85, 14, 0.35);
-    --pos: #1E8A57; --neg: #C0503A;
+    --pos: #17754A; --neg: #A9412C; /* ≥ 4.5:1 on surface and ink (were 4.06 / 4.41) */
     --w-personal: #4E6E92; --w-charity: #3F7C5E; --w-book: #7E5DA0; --w-estate: #A5537A;
     color-scheme: light;
   }

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Transaction, FilterCriteria, ChartAccount } from '../types';
 import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
-import { isPostable, calculateFilteredTotals } from '../lib/txFilters';
+import { isPostable, calculateFilteredTotals, runningBalances } from '../lib/txFilters';
 import { useScenarioStore } from '../lib/scenarioStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -153,8 +153,8 @@ export function useLedgerComputation(
       if (a.date > b.date) return -1;
       if (a.date < b.date) return 1;
       
-      const aTime = (a as any).createdAt || a.id;
-      const bTime = (b as any).createdAt || b.id;
+      const aTime = a.createdAt || a.id;
+      const bTime = b.createdAt || b.id;
       if (aTime > bTime) return -1;
       if (aTime < bTime) return 1;
       return 0;
@@ -227,22 +227,18 @@ export function useLedgerComputation(
     const chronologicalTxs = [...transactions].filter(isPostable).sort((a, b) => {
       if (a.date < b.date) return -1;
       if (a.date > b.date) return 1;
-      const aTime = (a as any).createdAt || a.id;
-      const bTime = (b as any).createdAt || b.id;
+      const aTime = a.createdAt || a.id;
+      const bTime = b.createdAt || b.id;
       if (aTime < bTime) return -1;
       if (aTime > bTime) return 1;
       return 0;
     });
 
-    const runningBalanceMap = new Map<string, number>();
-    let currentSum = 0;
-    for (let i = 0; i < chronologicalTxs.length; i++) {
-      const t = chronologicalTxs[i];
-      currentSum += (t.totalAmountCents || 0);
-      runningBalanceMap.set(t.id, currentSum);
-    }
-    return runningBalanceMap;
-  }, [transactions]);
+    // signed like the amount column: money in adds, money out subtracts (it used to add every
+    // entry's total, which is always positive)
+    const accountById = new Map(accounts.map(a => [a.id, a]));
+    return runningBalances(chronologicalTxs, accountById);
+  }, [transactions, accounts]);
 
   const transactionsWithBalance = useMemo(() => {
     return smartFilteredTransactions.map(t => {

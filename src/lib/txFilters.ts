@@ -275,6 +275,20 @@ export function isOpenBill(item: { status?: string } | null | undefined): boolea
 }
 
 /**
+ * Running total of the entries' effect in date order (the transaction list's running balance):
+ * income adds, expenses subtract (calculateTransactionImpact). `chronological` is already sorted.
+ */
+export function runningBalances(chronological: Transaction[], accountMap: Map<string, ChartAccount>): Map<string, number> {
+  const out = new Map<string, number>();
+  let sum = 0;
+  for (const t of chronological) {
+    sum += calculateTransactionImpact(t, accountMap);
+    out.set(t.id, sum);
+  }
+  return out;
+}
+
+/**
  * Pure math P&L & Net Income calculator
  */
 export function calculateNetIncome(
