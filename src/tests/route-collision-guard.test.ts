@@ -2,7 +2,7 @@
  * No two server routes answer the same method and path (L-130: the backup import in server.ts and
  * "undo workspace deletion" in workspaceRoutes.ts were both POST /api/v1/workspaces/:id/restore,
  * so the second could never run). Reads server.ts, the route files it registers on the app
- * (registerXRoutes, F-01) and the routers it mounts.
+ * (registerXRoutes, F-01) and the routers it mounts (with the area files a router imports, F-06).
  */
 import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,6 +12,17 @@ import path from 'node:path';
 const ROOT = process.cwd();
 const METHOD = /\b(\w+)\.(get|post|put|patch|delete)\(\s*(['"`])([^'"`]+)\3/g;
 const norm = (p: string) => p.replace(/:\w+/g, ':param').replace(/\/+$/, '') || '/';
+
+/** A router file plus the local files it imports (F-06: transactionRouter's areas live in ./transactions/). */
+function routerSource(file: string): string {
+  const text = fs.readFileSync(file, 'utf8');
+  const parts = [text];
+  for (const m of text.matchAll(/import\s*\{[^}]*\}\s*from\s*["'](\.\/[\w./-]+?)(?:\.ts)?["']/g)) {
+    const local = path.join(path.dirname(file), `${m[1]}.ts`);
+    if (fs.existsSync(local)) parts.push(fs.readFileSync(local, 'utf8'));
+  }
+  return parts.join('\n');
+}
 
 function serverRoutes(): Array<{ method: string; path: string; where: string }> {
   const server = fs.readFileSync(path.join(ROOT, 'server.ts'), 'utf8');
@@ -37,7 +48,7 @@ function serverRoutes(): Array<{ method: string; path: string; where: string }> 
   for (const m of server.matchAll(/app\.use\(\s*["'`]([^"'`]+)["'`][^)]*?\b(\w+Router)\s*\)/g)) {
     const file = routerFiles.get(m[2]);
     if (!file || !fs.existsSync(file)) continue;
-    const text = fs.readFileSync(file, 'utf8');
+    const text = routerSource(file);
     for (const r of text.matchAll(METHOD)) {
       if (r[1] !== m[2]) continue;
       routes.push({ method: r[2], path: norm(`${m[1]}${r[4] === '/' ? '' : r[4]}`), where: path.relative(ROOT, file) });

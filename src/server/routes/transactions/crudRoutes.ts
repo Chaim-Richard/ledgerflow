@@ -1,0 +1,340 @@
+import express from 'express';
+import { FieldValue } from '../../db/firestore';
+import { TransactionValidator } from '../../../kernel/validation/TransactionValidator';
+import { TransactionSchema } from '../../../schemas';
+import type { Transaction, TransactionLine } from '../../../types';
+import { getDb } from '../../db/firestore';
+import type { DocumentData } from '../../db/firestore';
+import { getAbsoluteTotal } from '../../../lib/txFilters';
+import { executeCommand } from '../../utils/commandExecutor';
+import { requirePlanCapacity } from '../../middleware/planCapacity';
+import { requireOpenPeriod } from '../../middleware/periodLock';
+import { writeServerAuditLog } from '../../services/auditLogService';
+import { assertPostingOpen, lockMessage, postingLock } from '../../../lib/periodLock';
+import { errorMessage, HttpError, requestUser } from '../../auth/requestUser';
+import { enforceDoubleEntrySafety, isUpdatedAtMismatch } from './helpers';
+
+/** Read, create, edit and delete one entry. Part of /api/v1/transactions (F-06), registered in the original order. */
+export function registerTransactionCrudRoutes(transactionRouter: express.Router): void {
+  transactionRouter.get('/', async (req, res) => {
+    try {
+      const user = requestUser(req);
+      const workspaceId = (req.query.workspaceId as string) || user.developerWorkspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "Missing workspaceId query parameters" });
+
+      if (user.developerWorkspaceId && user.developerWorkspaceId !== workspaceId) {
+        return res.status(403).json({ error: `Forbidden: API key is scoped strictly to workspace ${user.developerWorkspaceId}` });
+      }
+
+      const db = getDb();
+      const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+      if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+        return res.status(403).json({ error: 'Not a member' });
+      }
+
+      const { startDate, endDate, accountId, limit, cursor } = req.query;
+
+      let queryFn = db.collection("transactions").where("workspaceId", "==", workspaceId);
+    
+      // HushLedger-style cursor + ledger revision pagination
+      queryFn = queryFn.orderBy("date", "desc").orderBy("__name__", "desc");
+    
+      if (startDate) queryFn = queryFn.where("date", ">=", startDate as string);
+      if (endDate) queryFn = queryFn.where("date", "<=", endDate as string);
+    
+      if (cursor) {
+        const cursorDoc = await db.collection("transactions").doc(cursor as string).get();
+        if (cursorDoc.exists) {
+          queryFn = queryFn.startAfter(cursorDoc);
+        }
+      }
+    
+      const maxLimit = parseInt(limit as string, 10) || 100;
+      const fetchLimit = accountId ? 1000 : Math.min(maxLimit, 1000);
+      queryFn = queryFn.limit(fetchLimit);
+
+      const transactionsSnap = await queryFn.get();
+      let transactions = transactionsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+      if (accountId) {
+        transactions = transactions.filter((t: DocumentData) => t.lines?.some((l: TransactionLine) => l.accountId === accountId));
+      }
+
+      const nextCursor = transactionsSnap.docs.length === fetchLimit 
+        ? transactionsSnap.docs[transactionsSnap.docs.length - 1].id 
+        : null;
+
+      res.json({
+        status: "success",
+        workspaceId,
+        transactionsCount: transactions.length,
+        nextCursor,
+        transactions
+      });
+    } catch (err) {
+      if (errorMessage(err) === "FORBIDDEN") return res.status(403).json({ error: "Forbidden workspace access" });
+      console.error('[TRANSACTION ROUTE ERROR]', err);
+      res.status(500).json({ error: "An unexpected internal server error occurred." });
+    }
+  });
+
+  transactionRouter.post('/', requirePlanCapacity('transactions'), requireOpenPeriod('transactions'), enforceDoubleEntrySafety, async (req, res) => {
+    const { transaction } = req.body || {};
+    const workspaceId = transaction?.workspaceId || req.body?.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ status: 'error', message: 'Workspace ID is required' });
+    }
+
+    return executeCommand(req, res, workspaceId, 'TRANSACTION_CREATE', async (ctx, t) => {
+      const { transaction } = req.body;
+      const user = requestUser(req);
+    
+      if (!transaction || !transaction.workspaceId) {
+        throw new HttpError('Invalid payload', 400);
+      }
+    
+      transaction.uid = user.uid;
+
+      if (!transaction.totalAmountCents) {
+         transaction.totalAmountCents = getAbsoluteTotal(transaction);
+      }
+
+      const parsed = TransactionSchema.safeParse(transaction);
+      if (!parsed.success) {
+        throw Object.assign(new HttpError('Schema validation failed', 400), { details: parsed.error.issues });
+      }
+
+      const db = getDb();
+      const transactionToSave: Transaction = {
+        ...parsed.data,
+        id: parsed.data.id || db.collection("transactions").doc().id,
+      } as Transaction;
+    
+      const wsDoc = await db.collection('workspaces').doc(transactionToSave.workspaceId).get();
+      if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+        throw new HttpError('Not a member', 403);
+      }
+      const wsData = wsDoc.data();
+
+      const validatedTx = await TransactionValidator.validateAndPrepare(transactionToSave, {
+        workspaceId: transactionToSave.workspaceId,
+        user: { uid: user.uid, admin: user.admin },
+        wsData
+      });
+
+      // Execute atomic validation and create inside the single command transaction boundary
+      const txRef = db.collection('transactions').doc(transactionToSave.id);
+      const doc = await t.get(txRef);
+      if (doc.exists) {
+         throw new Error('Duplicate request processing: Transaction ID already exists');
+      }
+
+      t.create(txRef, { 
+        ...validatedTx, 
+        createdAt: FieldValue.serverTimestamp(), 
+        updatedAt: FieldValue.serverTimestamp() 
+      });
+
+      return validatedTx;
+    });
+  });
+
+  transactionRouter.put('/:id', requireOpenPeriod('transactions'), enforceDoubleEntrySafety, async (req, res) => {
+    try {
+      const { id } = req.params as Record<string, string>;
+      const { partialUpdate } = req.body;
+      let { transaction } = req.body;
+      const user = requestUser(req);
+      const db = getDb();
+
+      // Support flat API payloads: { workspaceId, lines, date, ... }
+      if (!transaction && !partialUpdate && (req.body.workspaceId || req.body.lines || req.body.date)) {
+        transaction = { ...req.body, id };
+      }
+    
+      // For partial updates (like flagging or voiding)
+      if (partialUpdate) {
+        let authoritativeWsId = '';
+        await db.runTransaction(async (t) => {
+           const txRef = db.collection('transactions').doc(id);
+           const doc = await t.get(txRef);
+           if (!doc.exists) throw new Error('Not found');
+           const txData = doc.data();
+
+           // Optimistic concurrency check
+           const expectedUpdatedAt = req.body.expectedUpdatedAt || partialUpdate.expectedUpdatedAt;
+           if (isUpdatedAtMismatch(expectedUpdatedAt, txData?.updatedAt)) {
+             throw Object.assign(new Error('version_conflict'), { currentTransaction: { ...txData, id: doc.id } });
+           }
+
+           const wsId = txData?.workspaceId;
+           authoritativeWsId = wsId;
+           // Verify workspace
+           const wsDoc = await db.collection('workspaces').doc(wsId).get();
+           const wsData = wsDoc.data();
+           if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
+             throw new Error('Not a member');
+           }
+           if (txData?.date) assertPostingOpen(txData.date, wsData, user.uid);
+           if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) {
+             throw new Error(`Forbidden: Transaction status is locked (${txData?.status}).`);
+           }
+         
+           if (partialUpdate.lines !== undefined || partialUpdate.amountCents !== undefined || partialUpdate.totalAmountCents !== undefined || partialUpdate.workspaceId !== undefined || partialUpdate.date !== undefined || partialUpdate.uid !== undefined) {
+             throw new Error('Restricted fields cannot be modified via partialUpdate. Use a full transaction update instead.');
+           }
+
+           const allowedStatuses = ['draft', 'pending', 'certified', 'void', 'reconciled', 'completed', 'failed', 'flagged', 'reviewed', 'overdue', 'approved'];
+           if (partialUpdate.status && !allowedStatuses.includes(partialUpdate.status)) {
+             throw new Error(`Invalid status '${partialUpdate.status}'.`);
+           }
+
+           const safePartial = { ...partialUpdate };
+           delete safePartial.workspaceId;
+           delete safePartial.uid;
+           delete safePartial.id;
+           delete safePartial.expectedUpdatedAt;
+
+           t.update(txRef, { ...safePartial, updatedAt: FieldValue.serverTimestamp() });
+        });
+
+        await writeServerAuditLog({
+          workspaceId: authoritativeWsId || "unknown",
+          uid: user.uid,
+          email: user.email || "developer@ledgerflow.io",
+          action: "TRANSACTION_UPDATED_PARTIAL",
+          entityType: "transaction",
+          entityId: id,
+          details: {
+            description: `Partial update on transaction ref [${id}].`
+          }
+        }, { db });
+
+        return res.json({ status: 'ok', transactionId: id });
+      }
+
+      if (!transaction || !transaction.workspaceId) return res.status(400).json({ error: 'Invalid payload: missing workspaceId' });
+      if (!transaction.id) transaction.id = id;
+      transaction.uid = user.uid; // Enforce ownership
+      const wsDoc = await db.collection('workspaces').doc(transaction.workspaceId).get();
+      const wsData = wsDoc.data();
+      if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
+        return res.status(403).json({ error: 'Not a member' });
+      }
+
+      // Load existing tx to pass to validator
+      const existingTxSnap = await db.collection('transactions').doc(id).get();
+      const existingTx = existingTxSnap.exists ? existingTxSnap.data() as Transaction : undefined;
+
+      const validatedTx = await TransactionValidator.validateAndPrepare(transaction, {
+        workspaceId: transaction.workspaceId,
+        user: { uid: user.uid, admin: user.admin },
+        wsData
+      }, existingTx);
+
+      await db.runTransaction(async (t) => {
+        const txRef = db.collection('transactions').doc(id);
+        const doc = await t.get(txRef);
+        if (!doc.exists) throw new Error('Not found');
+
+        // Optimistic concurrency check
+        const expectedUpdatedAt = req.body.expectedUpdatedAt || transaction?.expectedUpdatedAt;
+        if (isUpdatedAtMismatch(expectedUpdatedAt, doc.data()?.updatedAt)) {
+          throw Object.assign(new Error('version_conflict'), { currentTransaction: { ...doc.data(), id: doc.id } });
+        }
+
+        if (doc.data()?.workspaceId !== transaction.workspaceId) throw new Error('Workspace mismatch');
+        if ((doc.data()?.status === 'certified' || doc.data()?.status === 'void' || doc.data()?.isCleared === true) && !user.admin) {
+          throw new Error('Cannot modify certified, cleared, or voided transactions');
+        }
+        if (doc.data()?.date) assertPostingOpen(doc.data()?.date, wsData, user.uid);
+
+        const txToSave = { ...validatedTx };
+        delete (txToSave as { expectedUpdatedAt?: unknown }).expectedUpdatedAt;
+
+        t.update(txRef, { ...txToSave, updatedAt: FieldValue.serverTimestamp() });
+      });
+
+      await writeServerAuditLog({
+        workspaceId: transaction.workspaceId,
+        uid: user.uid,
+        email: user.email || "developer@ledgerflow.io",
+        action: "TRANSACTION_UPDATED",
+        entityType: "transaction",
+        entityId: id,
+        details: {
+          description: `Full update on transaction ref [${id}].`
+        }
+      }, { db });
+
+      res.json({ status: 'ok', transactionId: id, data: transaction });
+    } catch (e) {
+      if (errorMessage(e) === 'version_conflict') {
+         return res.status(409).json({
+           error: 'version_conflict',
+           message: 'This transaction was modified by another user.',
+           currentTransaction: (e as { currentTransaction?: unknown }).currentTransaction
+         });
+      }
+      if (errorMessage(e) === 'Not found') {
+         return res.status(404).json({ error: errorMessage(e) });
+      }
+      if (errorMessage(e) === 'Not a member' || errorMessage(e) === 'Workspace mismatch' || errorMessage(e).includes('Forbidden')) {
+         return res.status(403).json({ error: errorMessage(e) });
+      }
+      res.status(400).json({ error: errorMessage(e) }); 
+    }
+  });
+
+  transactionRouter.delete('/:id', requireOpenPeriod('transactions'), async (req, res) => {
+    try {
+      const { id } = req.params as Record<string, string>;
+      const workspaceId = (req.query.workspaceId as string) || (req.body?.workspaceId as string);
+      const user = requestUser(req);
+      const db = getDb();
+      const txRef = db.collection('transactions').doc(id);
+      const doc = await txRef.get();
+      if (!doc.exists) {
+        return res.status(404).json({ error: 'Transaction not found' });
+      }
+      const data = doc.data();
+      const transactionWsId = data?.workspaceId;
+      if (!transactionWsId) {
+        return res.status(400).json({ error: 'Corrupt transaction: missing workspaceId' });
+      }
+      if (workspaceId && workspaceId !== transactionWsId) {
+        return res.status(403).json({ error: 'Workspace mismatch: transaction belongs to a different workspace' });
+      }
+      const wsDoc = await db.collection('workspaces').doc(transactionWsId).get();
+      const wsData = wsDoc.data();
+      if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) {
+        return res.status(403).json({ error: 'Not a member' });
+      }
+
+      const lock = data?.date ? postingLock(data.date, wsData, user.uid) : null;
+      if (lock) return res.status(400).json({ error: lockMessage(data?.date, lock) });
+
+      if ((data?.status === 'certified' || data?.status === 'void' || data?.isCleared === true) && !user.admin) {
+        return res.status(403).json({ error: `Forbidden: Transaction status is audited, cleared, or locked (${data?.status}). Destructive actions are restricted to administrators.` });
+      }
+
+      await txRef.delete();
+
+      await writeServerAuditLog({
+        workspaceId: transactionWsId,
+        uid: user.uid,
+        email: user.email || "developer@ledgerflow.io",
+        action: "TRANSACTION_DELETED",
+        entityType: "transaction",
+        entityId: id,
+        details: {
+          description: `Deleted transaction ref [${id}].`
+        }
+      }, { db });
+
+      res.json({ status: 'ok', deletedId: id });
+    } catch (e) {
+      res.status(500).json({ error: errorMessage(e) });
+    }
+  });
+}

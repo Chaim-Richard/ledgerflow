@@ -70,9 +70,10 @@ describe('Server write roles', () => {
   });
 
   test('transactions router checks roles before any handler', () => {
+    // the routes are added by the area files in ./transactions/ (F-06), registered after the check
     const routes = fs.readFileSync('src/server/routes/transactionRoutes.ts', 'utf8');
     const use = routes.indexOf('transactionRouter.use(requireLedgerWriter);');
-    const firstRoute = routes.search(/transactionRouter\.(get|post|put|patch|delete)\(/);
+    const firstRoute = routes.search(/transactionRouter\.(get|post|put|patch|delete)\(|register\w+\(transactionRouter\)/);
     assert.ok(use > 0 && use < firstRoute);
   });
 });
