@@ -1,7 +1,7 @@
 import React, { useId, useState, useMemo, useEffect, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
-import { cn, getLocalDateISO, monthBoundsISO, formatCurrency, activateOnKey } from '../../lib/utils';
+import { cn, getLocalDateISO, monthBoundsISO, formatCurrency } from '../../lib/utils';
 import { exportToExcel as exportToExcelHelper } from '../../lib/excelExport';
 import { isPostable, lineAmount, calculateNetIncome, isTransactionInDateRange } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -568,9 +568,9 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                 const variance = isComparative && prevBalance !== 0 ? ((balance - prevBalance) / Math.abs(prevBalance)) * 100 : null;
 
                 return (
-                  <div 
+                  <button
                     key={id} 
-                    role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {
+                    type="button" onClick={() => {
                       const matchedTxs = transactions.filter(t => 
                         isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
                         t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
@@ -581,7 +581,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       });
                     }}
                     title={`Click to drill down into ${acc.name}`}
-                    className="flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 transition-all group gap-4 min-w-0 cursor-pointer"
+                    className="w-full text-left flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 transition-all group gap-4 min-w-0 cursor-pointer"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-mono text-[8px] font-bold text-[var(--muted)] bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
@@ -603,7 +603,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                         </div>
                       )}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -647,9 +647,9 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                 const variance = isComparative && prevBalance !== 0 ? ((balance - prevBalance) / Math.abs(prevBalance)) * 100 : null;
 
                 return (
-                  <div 
+                  <button
                     key={id} 
-                    role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {
+                    type="button" onClick={() => {
                       const matchedTxs = transactions.filter(t => 
                         isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
                         t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
@@ -660,7 +660,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       });
                     }}
                     title={`Click to drill down into ${acc.name}`}
-                    className="flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 transition-all group gap-4 min-w-0 cursor-pointer"
+                    className="w-full text-left flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 transition-all group gap-4 min-w-0 cursor-pointer"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-mono text-[8px] font-bold text-[var(--muted)] bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
@@ -682,7 +682,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                         </div>
                       )}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

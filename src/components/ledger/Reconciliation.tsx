@@ -450,7 +450,7 @@ export default function Reconciliation() {
                   const isSelected = selectedBankId === btx.id;
 
                   return (
-                    <motion.div
+                    <motion.div role="presentation"
                       key={btx.id}
                       layout
                       onClick={() => setSelectedBankId(btx.id)}
@@ -466,7 +466,7 @@ export default function Reconciliation() {
                         <div className="absolute top-0 left-0 w-1.5 h-full bg-[var(--pos)]" />
                       )}
 
-                      <div className="flex flex-col gap-1 overflow-hidden pl-1">
+                      <button type="button" aria-pressed={isSelected} className="text-left flex flex-col gap-1 overflow-hidden pl-1">
                         <span className={cn("text-[8px] font-bold uppercase tracking-wider font-mono", isSelected ? "text-[var(--brass)]" : "text-[var(--muted)]")}>
                           {formatDate(btx.date)}
                         </span>
@@ -477,12 +477,12 @@ export default function Reconciliation() {
                             Match found
                           </div>
                         )}
-                      </div>
+                      </button>
                       <div className="flex flex-col items-end shrink-0 ml-4">
                          <span className="text-md font-mono font-bold tabular-nums tracking-tight">
                           {formatCurrency(btx.amountCents)}
                         </span>
-                        <div className="flex gap-1 mt-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1 mt-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
                            <button type="button" onClick={(e) => { e.stopPropagation(); setBankLineAction({ mode: 'pay', line: btx }); }} className="p-1 px-2 text-[9px] font-bold text-[var(--muted)] hover:text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded cursor-pointer uppercase tracking-wider" title={btx.amountCents > 0 ? 'This deposit pays invoices' : 'This payment pays bills'}>
                              {btx.amountCents > 0 ? 'Invoices' : 'Bills'}
                            </button>
@@ -523,12 +523,12 @@ export default function Reconciliation() {
                   const isPossibleMatch = selectedBankId && optimizedMatches.get(selectedBankId) === ltx.id;
 
                   return (
-                    <motion.div
+                    <motion.button type="button" aria-pressed={isSelected}
                       key={ltx.id}
                       layout
                       onClick={() => setSelectedLedgerId(ltx.id)}
                       className={cn(
-                        "p-5 rounded-xl transition-all cursor-pointer border flex items-center justify-between group relative overflow-hidden",
+                        "w-full text-left p-5 rounded-xl transition-all cursor-pointer border flex items-center justify-between group relative overflow-hidden",
                         isSelected 
                           ? "bg-emerald-600 text-white border-emerald-600 shadow-lg ring-1 ring-white/10" 
                           : isPossibleMatch 
@@ -540,7 +540,7 @@ export default function Reconciliation() {
                         <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500" />
                       )}
 
-                      <div className="flex flex-col gap-1 overflow-hidden pl-1">
+                      <div className="text-left flex flex-col gap-1 overflow-hidden pl-1">
                         <div className="flex items-center gap-2">
                           <span className={cn("text-[8px] font-semibold uppercase tracking-wider font-mono", isSelected ? "text-emerald-200" : "text-[var(--muted)]")}>
                             {format(parseLocalDate(ltx.date), 'MMM dd')} • {resolveAccountName(accounts, ltx.lines?.[0]?.accountId, ltx.lines?.[0]?.accountName)}
@@ -554,7 +554,7 @@ export default function Reconciliation() {
                       <span className={cn("text-md font-mono font-black tabular-nums tracking-tighter shrink-0 ml-4", isSelected ? "text-white" : "text-[var(--text)]")}>
                         {formatCurrency(ltx.totalAmountCents)}
                       </span>
-                    </motion.div>
+                    </motion.button>
                   );
                 })}
                 {filteredLedgerEntries.length === 0 && (
@@ -599,19 +599,19 @@ export default function Reconciliation() {
 
                       return (
                         <div key={line.id} className="hover:bg-[var(--ink)] transition-all">
-                          <div role="presentation" aria-hidden="true" 
+                          <div role="presentation"
                              onClick={() => setSelectedBankId(isSelected ? null : line.id)}
                              className="flex flex-col lg:flex-row items-start lg:items-center justify-between p-5 gap-4 cursor-pointer"
                           >
                              {/* Statement Info */}
-                             <div className="flex-1 min-w-0">
+                             <button type="button" aria-expanded={isSelected} className="w-full text-left flex-1 min-w-0">
                                <div className="flex items-center gap-2 flex-wrap mb-1">
                                  <span className="text-[8px] font-black uppercase text-[var(--muted)] font-mono tracking-wider">{line.date}</span>
                                  <span className="px-2 py-0.2 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[7px] font-black uppercase tracking-wider">Locked Status</span>
                                </div>
                                <h5 className="font-extrabold text-sm text-[var(--text)] truncate">{line.description}</h5>
                                <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 tabular-nums">Statement Amount: {formatCurrency(line.amountCents)}</p>
-                             </div>
+                             </button>
 
                              {/* Connector Node */}
                              <div className="flex shrink-0 items-center gap-2 text-emerald-500 lg:px-4">
@@ -890,11 +890,11 @@ export default function Reconciliation() {
                         const isChecked = !!selectedBatchIds[btx.id];
 
                         return (
-                           <div role="presentation" aria-hidden="true" 
+                           <button type="button" aria-pressed={isChecked}
                              key={btx.id} 
                              onClick={() => setSelectedBatchIds(prev => ({ ...prev, [btx.id]: !prev[btx.id] }))}
                              className={cn(
-                               "flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer",
+                               "w-full text-left flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer",
                                isChecked ? "border-emerald-200 bg-emerald-50/20" : "border-slate-150 bg-[var(--ink)]/50 opacity-60 hover:opacity-100 hover:border-slate-300"
                              )}
                            >
@@ -934,7 +934,7 @@ export default function Reconciliation() {
 
                                 </div>
                               </div>
-                           </div>
+                           </button>
                         );
                      })}
                   </div>

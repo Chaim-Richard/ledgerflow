@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
-import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName, formatCurrency, getLocalDateISO, activateOnKey } from '../../lib/utils';
+import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { isCashAccount, isPostable } from '../../lib/txFilters';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
@@ -178,10 +178,10 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
   const isFocused = data.focusedCell?.id === tx.id;
 
   return (
-    <div role="button" tabIndex={0} 
+    <div role="presentation"
       style={style} 
       className="relative"
-      onKeyDown={activateOnKey} onClick={() => data.setFocusedCell({ id: tx.id, field: 'description', index })}
+     onClick={() => data.setFocusedCell({ id: tx.id, field: 'description', index })}
       onDoubleClick={() => data.setEditingCell({ id: tx.id, field: 'description' })}
     >
       <TransactionRow
@@ -506,6 +506,8 @@ export default function TransactionGrid() {
   // Keyboard Navigation Logic
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Native controls keep their own keyboard behavior, including Tab and Space.
+      if (e.target instanceof HTMLElement && e.target.closest('button, input, select, textarea, a, [contenteditable="true"]')) return;
       if (editingCell) return;
       if (!focusedCell) return;
 
@@ -1166,15 +1168,16 @@ export default function TransactionGrid() {
               <div className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-center">
                 <input type="checkbox" aria-label="Select all transactions" checked={selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0} onChange={(e) => setSelectedIds(e.target.checked ? new Set(transactionsWithBalance.map(t => t.id)) : new Set())} className="w-4 h-4 rounded border-white/20 bg-transparent accent-emerald-500" />
               </div>
-              <div role="button" tabIndex={0} 
-                onKeyDown={activateOnKey} onClick={() => handleSort('date')}
+              <div
                 className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
               >
-                Date {sortConfig?.key === 'date' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                <button type="button" onClick={() => handleSort('date')} className="flex flex-1 min-w-0 items-center gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                  Date {sortConfig?.key === 'date' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                </button>
                 <button 
                   aria-label="Filter by date"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'date' ? null : 'date'); }}
-                  className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-slate-200 rounded transition-all", (filterCriteria?.startDate || filterCriteria?.endDate) && "opacity-100 text-indigo-600")}
+                  className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-slate-200 rounded transition-all", (filterCriteria?.startDate || filterCriteria?.endDate) && "opacity-100 text-indigo-600")}
                 >
                   <Filter aria-hidden="true" size={10} />
                 </button>
@@ -1221,15 +1224,16 @@ export default function TransactionGrid() {
                   </div>
                 )}
               </div>
-              <div role="button" tabIndex={0} 
-                onKeyDown={activateOnKey} onClick={() => handleSort('description')}
+              <div
                 className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
               >
-                Description {sortConfig?.key === 'description' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                <button type="button" onClick={() => handleSort('description')} className="flex flex-1 min-w-0 items-center gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                  Description {sortConfig?.key === 'description' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                </button>
                 <button 
                   aria-label="Filter by description"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'description' ? null : 'description'); }}
-                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all"
+                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all"
                 >
                   <Filter aria-hidden="true" size={10} />
                 </button>
@@ -1245,15 +1249,16 @@ export default function TransactionGrid() {
                 )}
               </div>
               {!isMobileGrid && (
-                <div role="button" tabIndex={0} 
-                  onKeyDown={activateOnKey} onClick={() => handleSort('category')}
+                <div
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
                 >
-                  Category {sortConfig?.key === 'category' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                  <button type="button" onClick={() => handleSort('category')} className="flex flex-1 min-w-0 items-center gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                    Category {sortConfig?.key === 'category' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                  </button>
                   <button 
                     aria-label="Filter by category"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'category' ? null : 'category'); }}
-                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedCategories?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedCategories?.length > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter aria-hidden="true" size={10} />
                   </button>
@@ -1307,15 +1312,16 @@ export default function TransactionGrid() {
                 </div>
               )}
               {!isMobileGrid && !isTabletGrid && (
-                <div role="button" tabIndex={0} 
-                  onKeyDown={activateOnKey} onClick={() => handleSort('project')}
+                <div
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
                 >
-                  Project {sortConfig?.key === 'project' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                  <button type="button" onClick={() => handleSort('project')} className="flex flex-1 min-w-0 items-center gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                    Project {sortConfig?.key === 'project' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                  </button>
                   <button 
                     aria-label="Filter by project"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'project' ? null : 'project'); }}
-                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedProjects?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedProjects?.length > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter aria-hidden="true" size={10} />
                   </button>
@@ -1355,15 +1361,16 @@ export default function TransactionGrid() {
                 </div>
               )}
               {!isMobileGrid && !isTabletGrid && (
-                <div role="button" tabIndex={0} 
-                  onKeyDown={activateOnKey} onClick={() => handleSort('class')}
+                <div
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
-                  <div className="flex items-center gap-2">Class {sortConfig?.key === 'class' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}</div>
+                  <button type="button" onClick={() => handleSort('class')} className="flex flex-1 min-w-0 items-center gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                    <div className="flex items-center gap-2">Class {sortConfig?.key === 'class' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}</div>
+                  </button>
                   <button 
                     aria-label="Filter by class"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'class' ? null : 'class'); }}
-                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedClasses?.length || 0) > 0 && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedClasses?.length || 0) > 0 && "opacity-100 text-emerald-500")}
                   >
                     <Filter aria-hidden="true" size={10} />
                   </button>
@@ -1390,15 +1397,16 @@ export default function TransactionGrid() {
                 </div>
               )}
               {!isMobileGrid && !isTabletGrid && (
-                <div role="button" tabIndex={0} 
-                  onKeyDown={activateOnKey} onClick={() => handleSort('location')}
+                <div
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
-                  <div className="flex items-center gap-2">Location {sortConfig?.key === 'location' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}</div>
+                  <button type="button" onClick={() => handleSort('location')} className="flex flex-1 min-w-0 items-center gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                    <div className="flex items-center gap-2">Location {sortConfig?.key === 'location' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}</div>
+                  </button>
                   <button 
                     aria-label="Filter by location"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'location' ? null : 'location'); }}
-                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedLocations?.length || 0) > 0 && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedLocations?.length || 0) > 0 && "opacity-100 text-emerald-500")}
                   >
                     <Filter aria-hidden="true" size={10} />
                   </button>
@@ -1425,15 +1433,16 @@ export default function TransactionGrid() {
                 </div>
               )}
               {((isProMode || isCompactMode) && !isMobileGrid && !isTabletGrid) ? (<><div className="p-4 font-black text-[10px] uppercase tracking-widest text-[var(--muted)] text-right">Debit</div><div className="p-4 font-black text-[10px] uppercase tracking-widest text-[var(--muted)] text-right">Credit</div></>) : (
-              <div role="button" tabIndex={0} 
-                onKeyDown={activateOnKey} onClick={() => handleSort('amount')}
+              <div
                 className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-right flex items-center justify-end gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
               >
-                Amount {sortConfig?.key === 'amount' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                <button type="button" onClick={() => handleSort('amount')} className="flex justify-end flex-1 min-w-0 items-center gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                  Amount {sortConfig?.key === 'amount' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                </button>
                 <button 
                   aria-label="Filter by amount"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'amount' ? null : 'amount'); }}
-                  className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.minAmount !== undefined || filterCriteria?.maxAmount !== undefined) && "opacity-100 text-emerald-500")}
+                  className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.minAmount !== undefined || filterCriteria?.maxAmount !== undefined) && "opacity-100 text-emerald-500")}
                 >
                   <Filter aria-hidden="true" size={10} />
                 </button>
@@ -1477,15 +1486,15 @@ export default function TransactionGrid() {
                           <div className="grid grid-cols-1 gap-1">
                              <button onClick={() => { setSearchTerm('above average'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Above Average
-                                <TrendingUp aria-hidden="true" size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-emerald-500" />
+                                <TrendingUp aria-hidden="true" size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 text-emerald-500" />
                              </button>
                              <button onClick={() => { setSearchTerm('top 10 %'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Top 10% (High Value)
-                                <Sparkles aria-hidden="true" size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-amber-500" />
+                                <Sparkles aria-hidden="true" size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 text-amber-500" />
                              </button>
                              <button onClick={() => { setSearchTerm('below average'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Below Average
-                                <TrendingDown aria-hidden="true" size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-rose-500" />
+                                <TrendingDown aria-hidden="true" size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 text-rose-500" />
                              </button>
                           </div>
                        </div>
@@ -1513,15 +1522,16 @@ export default function TransactionGrid() {
                 <div className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-right">Running.Sum</div>
               )}
               {!isMobileGrid && (
-                <div role="button" tabIndex={0} 
-                  onKeyDown={activateOnKey} onClick={() => handleSort('status')}
+                <div
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-center flex items-center justify-center gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
-                  System Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                  <button type="button" onClick={() => handleSort('status')} className="flex justify-center flex-1 min-w-0 items-center gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                    System Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
+                  </button>
                   <button 
                     aria-label="Filter by status"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'status' ? null : 'status'); }}
-                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedStatuses?.length > 0) && "opacity-100 text-emerald-500")}
+                    className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedStatuses?.length > 0) && "opacity-100 text-emerald-500")}
                   >
                     <Filter aria-hidden="true" size={10} />
                   </button>

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { usePerformanceTrace } from '../../hooks/usePerformanceTrace';
 import { History, Search, Download, User, Activity, ChevronRight, Shield } from 'lucide-react';
-import { cn, activateOnKey } from '../../lib/utils';
+import { cn } from '../../lib/utils';
 import { auditDescription, auditTime } from '../../lib/auditFormat';
 import { format } from 'date-fns';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -29,9 +29,9 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
           isExpanded ? "border-indigo-600 ring-1 ring-indigo-600/20" : "border-[var(--line)] hover:border-zinc-400"
         )}
       >
-        <div 
-          className="flex items-center justify-between cursor-pointer"
-          role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => data.setExpandedId(isExpanded ? null : log.id)}
+        <button
+          className="w-full text-left flex items-center justify-between cursor-pointer"
+          type="button" onClick={() => data.setExpandedId(isExpanded ? null : log.id)}
         >
           <div className="flex items-center gap-6 overflow-hidden">
             <div className={cn(
@@ -71,7 +71,7 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
             </div>
             <ChevronRight aria-hidden="true" size={18} className={cn("text-zinc-400 transition-transform", isExpanded && "rotate-90")} />
           </div>
-        </div>
+        </button>
 
         {isExpanded && (
           <div className="mt-4 pt-4 border-t border-[var(--line)] animate-in fade-in slide-in-from-top-2 duration-300">

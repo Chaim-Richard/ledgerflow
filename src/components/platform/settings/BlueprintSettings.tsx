@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 import AsyncButton from '../../ui/AsyncButton';
 import { useTimeout } from '../../../hooks/useTimeout';
 import { Labelled } from '../../ui/Labelled';
-import { activateOnKey } from '../../../lib/utils';
 
 export default function BlueprintSettings() {
   const settingsId = useId();
@@ -446,11 +445,11 @@ export default function BlueprintSettings() {
           {APP_TABS.map(tab => {
             const isHidden = hiddenTabs.includes(tab.id);
             return (
-              <div role="button" tabIndex={0} 
+              <button type="button"
                 key={tab.id}
                 aria-pressed={!isHidden}
-                onKeyDown={activateOnKey} onClick={() => toggleTabVisibility(tab.id)}
-                className={`p-5 rounded-[32px] border transition-all flex items-center justify-between cursor-pointer group ${
+                onClick={() => toggleTabVisibility(tab.id)}
+                className={`w-full text-left p-5 rounded-[32px] border transition-all flex items-center justify-between cursor-pointer group ${
                   isHidden 
                     ? 'border-gray-200 bg-gray-50/50 text-[var(--muted)] hover:border-gray-300' 
                     : 'border-[var(--line)] hover:border-indigo-200 bg-[var(--surface)] text-[var(--text)] shadow-xs'
@@ -483,7 +482,7 @@ export default function BlueprintSettings() {
                     </div>
                   )}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

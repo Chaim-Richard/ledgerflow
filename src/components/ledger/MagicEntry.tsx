@@ -5,7 +5,7 @@ import { parseNaturalLanguageEntry } from '../../lib/algorithms/nl-parser';
 import { Check, Wand2, Camera, X, Loader2, Edit2 } from 'lucide-react';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { toast } from 'sonner';
-import { getLocalDateISO, activateOnKey } from '../../lib/utils';
+import { getLocalDateISO } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isCashAccount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
@@ -262,8 +262,8 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
       
       <div className="flex flex-wrap gap-2 justify-center pt-4">
         <span className="text-xs text-[var(--muted)]">Try typing:</span>
-        <span className="text-xs bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => handleParse("earned $1500 client retainer check today")}>earned $1500 client retainer check today</span>
-        <span className="text-xs bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => handleParse("paid $80 lunch card yesterday")}>paid $80 lunch card yesterday</span>
+        <button className="text-xs bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" type="button" onClick={() => handleParse("earned $1500 client retainer check today")}>earned $1500 client retainer check today</button>
+        <button className="text-xs bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" type="button" onClick={() => handleParse("paid $80 lunch card yesterday")}>paid $80 lunch card yesterday</button>
       </div>
     </div>
   );
