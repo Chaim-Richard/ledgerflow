@@ -1406,7 +1406,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] F-02 Lint rule blocking new routes in `server.ts`
 - [ ] F-03 `ApiHub.tsx` (3,147)
 - [x] F-04 `algorithms.ts` (codex, PR #38; six implementation modules below 800 lines)
-- [ ] F-05 `useTransactionActions.ts` (2,025)
+- [x] F-05 `useTransactionActions.ts` 2,032 → 68 lines: the actions live in `src/hooks/transactionActions/` (shared context, posting helpers, rules, entries, import, workspace, reconcile, integrity); same names and order returned
 - [x] F-06 `transactionRoutes.ts` 1,833 → 24 lines: the routes live in `src/server/routes/transactions/` (one-entry, bulk, reconciliation, period, reversal; same order and middleware, checked against the live router)
 - [ ] F-07 `SystemCommandCenter.tsx` (1,783)
 - [ ] F-08 `TransactionGrid.tsx` (1,637)

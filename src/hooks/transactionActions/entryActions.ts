@@ -1,0 +1,639 @@
+import { resolveAccountRole } from '../../lib/accountUtils';
+import { collection, doc, writeBatch } from '../../lib/db/firestore';
+import { db } from '../../firebase';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { Transaction, TransactionLine } from '../../types';
+import { toast } from 'sonner';
+import { safeAsync, getLocalDateISO, workspaceYearMonth } from '../../lib/utils';
+import { OperationType } from '../../lib/firebaseUtils';
+import { useBillingStore } from '../../modules/billing/BillingService';
+import { TruthEngine } from '../../modules/integrity/TruthEngine';
+import type { ActionContext, TransactionUpdates, TransactionConflictError } from './shared';
+import { UNDO_WINDOW_MS, errorMessage, isConflictError } from './shared';
+import type { PostingHelpers } from './postingHelpers';
+import type { RuleActions } from './ruleActions';
+
+/** One entry or a selection: add, change, void, reverse, duplicate, flag, bulk changes. (F-05, moved from useTransactionActions.) */
+export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, rules: RuleActions) {
+  const { user, currentWorkspaceId, setTransactions, accounts, setIsSyncing, recordAudit, isPeriodLocked } = ctx;
+  const { recordRulePattern, balanceTransactionLines } = posting;
+  const { handleAddRule } = rules;
+
+  const handleVoidTransaction = async (id: string) => {
+    const originalTransactions = useLedgerStore.getState().transactions;
+    const tx = originalTransactions.find(t => t.id === id);
+    if (!tx) return;
+
+    if (isPeriodLocked(tx.date)) {
+      toast.error("Security alert: This period is locked for historical integrity.");
+      return;
+    }
+
+    const [, err] = await safeAsync(
+      fetch(`/api/v1/transactions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+      body: JSON.stringify({ partialUpdate: { status: 'failed', deletedAt: new Date().toISOString() } })
+    }),
+      OperationType.UPDATE,
+      `transactions/${id}`,
+      { action: 'VOID_TRANSACTION' }
+    );
+
+    if (!err) {
+      await recordAudit('VOID_TRANSACTION', 'transaction', id, { description: tx.description });
+      toast.success('Transaction voided', {
+        duration: UNDO_WINDOW_MS, // I-09: time to change your mind
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            try {
+              const token = await user?.getIdToken();
+              const res = await fetch(`/api/v1/transactions/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ transaction: { ...tx, status: tx.status, deletedAt: tx.deletedAt || null, updatedAt: new Date().toISOString() } })
+              });
+              if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+              toast.success('Transaction restored');
+            } catch (err) {
+              // the undo used to fail silently
+              toast.error('Could not undo the void', { description: err instanceof Error ? err.message : String(err) });
+            }
+          }
+        }
+      });
+    } else {
+      // No optimistic update rollback needed
+      const message = err?.error || 'Unknown network error';
+      toast.error('Could not void transaction.', {
+        description: `Please try again. (${message})`
+      });
+      throw err;
+    }
+  };
+
+  const handleQuickAdd = async (data: Partial<Transaction>) => {
+    if (!user || !currentWorkspaceId) return;
+    
+    // Core App Feature: Integrity Enforcement
+    try {
+      if (data.lines) {
+        TruthEngine.validateAccountingIntegrity(data.lines.map((l: TransactionLine) => ({
+          amount: l.amountCents,
+          type: l.amountCents > 0 ? 'debit' : 'credit' // Simple mapping for validation demo
+        })));
+      }
+    } catch (e) {
+      toast.error(errorMessage(e));
+      return;
+    }
+
+    // Core App Feature: Billing and Usage limits
+    const checkQuota = useBillingStore.getState().checkQuota;
+    const incrementTransaction = useBillingStore.getState().incrementTransaction;
+    const currentWorkspace = useAuthStore.getState().getCurrentWorkspace();
+    const transactions = useLedgerStore.getState().transactions;
+    if (!checkQuota(currentWorkspace?.plan, transactions?.length)) {
+      toast.error("Usage Limit Reached: Please upgrade your plan to record more transactions.");
+      return;
+    }
+    
+    if (data.date && isPeriodLocked(data.date)) {
+      toast.error("Historical freeze active. Cannot inject data into locked periods.");
+      return;
+    }
+    
+    const processedLines = balanceTransactionLines(data.lines || [], data.totalAmountCents || 0);
+    const balancedData = {
+      ...data,
+      lines: processedLines
+    };
+
+    // Create optimistic ID
+    const tempId = `temp-${crypto.randomUUID().split('-')[0]}`;
+    const optimisticTx: Transaction = {
+      id: tempId,
+      uid: user.uid,
+      workspaceId: currentWorkspaceId,
+      status: 'completed',
+      type: 'actual',
+      createdAt: new Date().toISOString(),
+      description: 'New Transaction',
+      totalAmountCents: 0,
+      currency: 'USD',
+      date: getLocalDateISO(),
+      ...balancedData,
+      lines: balancedData.lines || []
+    };
+
+    // --- Persistent Rule Learning ---
+    if (optimisticTx.description && optimisticTx.lines && optimisticTx.lines.length > 0) {
+      optimisticTx.lines.forEach((line) => {
+        if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
+          const searchDesc = line.description || (optimisticTx.lines.length === 1 ? optimisticTx.description : undefined);
+          if (searchDesc) {
+            recordRulePattern(searchDesc, line.accountId || 'unassigned', line.accountName, line.tags, line.dimensions);
+          }
+        }
+      });
+    }
+
+    // Double-Entry Integrity Check
+    const balance = optimisticTx.lines?.reduce((sum, l) => sum + (l.amountCents || 0), 0) || 0;
+    if (balance !== 0) {
+      toast.error("Double-entry violation: Debits and Credits must sum to zero.");
+      return;
+    }
+
+    // --- Autonomous Yearly Tax Law Provisioner ---
+    const txYearNum = data.date ? parseInt(data.date.split('-')[0]) : workspaceYearMonth().year;
+    const allTxs = useLedgerStore.getState().transactions;
+    const existingYears = new Set(allTxs.map(t => {
+      const yearStr = t.date ? t.date.split('-')[0] : '';
+      return yearStr ? parseInt(yearStr) : null;
+    }).filter(Boolean));
+
+    const isFirstTimeForNewYear = existingYears.size > 0 && !existingYears.has(txYearNum);
+
+    if (isFirstTimeForNewYear) {
+      queueMicrotask(async () => {
+        try {
+          const batch = writeBatch(db);
+          const defaultRates = [
+            { name: `FEDERAL COMPLIANCE: ${txYearNum}`, rate: 0.22, type: 'Income' },
+            { name: `STATE STATUTORY (SIT): ${txYearNum}`, rate: 0.05, type: 'Income' },
+            { name: `METROPOLITAN CITY LEVY: ${txYearNum}`, rate: 0.015, type: 'Sales' },
+            { name: `LOCAL COUNTY TRANSIT: ${txYearNum}`, rate: 0.005, type: 'Sales' }
+          ];
+
+          defaultRates.forEach(rate => {
+            const docRef = doc(collection(db, 'taxRates'));
+            batch.set(docRef, {
+              ...rate,
+              uid: user.uid,
+              workspaceId: currentWorkspaceId,
+              createdAt: new Date().toISOString()
+            });
+          });
+
+          await batch.commit();
+          toast.success(`Fiscal Horizon ${txYearNum} Active!`, {
+            description: `Auto-search locked in. Registered standard progressive bounds, state levies, and city/county margins.`,
+            duration: 8000
+          });
+        } catch (e) {
+          console.warn("Autonomous fiscal setup deferred", e);
+        }
+      });
+    }
+
+    // Deferred to ledger integrity stream
+    setIsSyncing(true);
+
+    
+    const token = await user?.getIdToken();
+    let err;
+    try {
+      const finalTx = {
+        ...balancedData,
+        id: optimisticTx.id,
+        totalAmountCents: Math.round(balancedData.totalAmountCents || 0),
+        schemaVersion: '1.1',
+        uid: user.uid,
+        workspaceId: currentWorkspaceId,
+        status: 'completed',
+        type: 'actual',
+        createdAt: new Date().toISOString()
+      };
+      // Let's preserve the optimistic ID
+      finalTx.id = optimisticTx.id;
+      
+      const res = await fetch('/api/v1/transactions', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${token}`,
+          'x-operation-id': finalTx.id
+        },
+        body: JSON.stringify({ transaction: finalTx })
+      });
+      if (!res.ok) {
+         const data = await res.json();
+         throw new Error(data.error || 'Failed to save transaction');
+      }
+      err = null;
+    } catch(e) {
+      err = e;
+    }
+    if (!err) {
+      incrementTransaction();
+      toast.success('Transaction added and certified', {
+        duration: UNDO_WINDOW_MS,
+        action: {
+          label: 'Undo',
+          onClick: () => handleVoidTransaction(optimisticTx.id)
+        }
+      });
+    } else {
+      // Handled by true sync errors
+      toast.error('Failed to add transaction. Protocol interrupted.');
+    }
+  };
+
+  const handleBulkUpdate = async (ids: string[], updates: TransactionUpdates) => {
+    if (!user || !currentWorkspaceId || !ids || ids.length === 0) return;
+    
+    setIsSyncing(true);
+    const loader = toast.loading(`Synchronizing ${ids.length} updates...`);
+
+    try {
+      const oldStates = new Map<string, Transaction>();
+      const currentTransactions = useLedgerStore.getState().transactions;
+      const updatesMap = new Map<string, TransactionUpdates>();
+
+      const targetAccount = accounts.find(a => 
+        (updates.accountId && a.id === updates.accountId) || 
+        (updates.accountName && a.name === updates.accountName)
+      );
+      const accId = targetAccount?.id || updates.accountId;
+      const accName = targetAccount?.name || updates.accountName;
+      const projId = updates.project || updates.projectId;
+
+      for (const id of ids) {
+        const tx = currentTransactions.find(t => t.id === id);
+        if (tx) {
+          oldStates.set(id, { ...tx });
+
+          const updateData: TransactionUpdates = {
+            updatedAt: new Date().toISOString()
+          };
+
+          if (updates.isLocked !== undefined) updateData.isLocked = updates.isLocked;
+          if (updates.status !== undefined) updateData.status = updates.status;
+          if (updates.category !== undefined) updateData['dimensions.category'] = updates.category;
+          if (projId !== undefined) {
+            updateData['dimensions.project'] = projId;
+            updateData.projectId = projId;
+          }
+
+          // Handle lines preservation: NEVER drop lines or destroy amounts
+          if (accId !== undefined || accName !== undefined || projId !== undefined) {
+            const existingLines = tx.lines && tx.lines.length > 0 ? tx.lines : [];
+            if (existingLines.length > 0) {
+              const newLines = existingLines.map((l: TransactionLine, idx: number) => {
+                const acc = accounts.find(a => a.id === l.accountId);
+                const role = resolveAccountRole(acc);
+                const isOffsetOrCash = role === 'cash' || (acc?.type === 'asset' && existingLines.length === 2 && idx === 1);
+                
+                // Modify the primary category / expense / revenue line, or line 0
+                if (!isOffsetOrCash || idx === 0) {
+                  return {
+                    ...l,
+                    ...(accId !== undefined ? { accountId: accId } : {}),
+                    ...(accName !== undefined ? { accountName: accName } : {}),
+                    ...(projId !== undefined ? { project: projId || undefined } : {})
+                  };
+                }
+                if (projId !== undefined) {
+                  return { ...l, project: projId || undefined };
+                }
+                return l;
+              });
+              updateData.lines = newLines;
+            } else if (tx.totalAmountCents) {
+              // Balance from scratch if previously unlined
+              updateData.lines = balanceTransactionLines([], tx.totalAmountCents);
+            }
+          }
+
+          updatesMap.set(id, updateData);
+        }
+      }
+
+      const updatesPayload: { id: string; data: Partial<Transaction> }[] = [];
+      for (const id of ids) {
+        const u = updatesMap.get(id);
+        if (u) {
+          updatesPayload.push({ id, data: u });
+        }
+      }
+
+      if (updatesPayload.length > 0) {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/v1/transactions/batch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            workspaceId: currentWorkspaceId,
+            updates: updatesPayload
+          })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Server rejected batch updates');
+        }
+      }
+
+      // Update local state atomically
+      useLedgerStore.setState(state => ({
+        transactions: state.transactions.map(t => {
+          const u = updatesMap.get(t.id);
+          if (!u) return t;
+          const merged = { ...t, ...u };
+          if (u['dimensions.category'] !== undefined || u['dimensions.project'] !== undefined) {
+            merged.dimensions = {
+              ...t.dimensions,
+              ...(u['dimensions.category'] !== undefined ? { category: u['dimensions.category'] } : {}),
+              ...(u['dimensions.project'] !== undefined ? { project: u['dimensions.project'] } : {})
+            };
+          }
+          return merged;
+        })
+      }));
+      
+      toast.success(`Updated ${ids.length} transactions with atomic finality.`, { 
+        id: loader,
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            const undoLoader = toast.loading('Reverting bulk updates...');
+            try {
+              const undoPayload: { id: string; data: Partial<Transaction> }[] = [];
+              for (const id of ids) {
+                const oldState = oldStates.get(id);
+                if (oldState) {
+                  undoPayload.push({ id, data: oldState });
+                }
+              }
+              if (undoPayload.length > 0) {
+                const token = await user.getIdToken();
+                const res = await fetch('/api/v1/transactions/batch', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({
+                    workspaceId: currentWorkspaceId,
+                    updates: undoPayload
+                  })
+                });
+                if (!res.ok) {
+                  const errData = await res.json().catch(() => ({}));
+                  throw new Error(errData.error || 'Server rejected undo batch updates');
+                }
+              }
+              // Revert store state
+              useLedgerStore.setState(state => ({
+                transactions: state.transactions.map(t => oldStates.get(t.id) || t)
+              }));
+              toast.success('Bulk update reverted.', { id: undoLoader });
+            } catch {
+              toast.error('Failed to revert bulk update.', { id: undoLoader });
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Bulk update error:', error);
+      const message = errorMessage(error) || 'Unknown network error';
+      toast.error('Could not complete bulk update.', { 
+        id: loader,
+        description: `Sequence aborted. (${message})`
+      });
+      throw error;
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleToggleFlag = async (id: string) => {
+    const tx = useLedgerStore.getState().transactions.find(t => t.id === id);
+    if (!tx) return;
+    
+    await fetch(`/api/v1/transactions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+      body: JSON.stringify({ partialUpdate: { isFlagged: !tx.isFlagged, updatedAt: new Date().toISOString() } })
+    });
+    toast.info(tx.isFlagged ? 'Transaction flag removed' : 'Transaction flagged for review');
+  };
+
+  const handleDuplicateTransaction = async (id: string) => {
+    const tx = useLedgerStore.getState().transactions.find(t => t.id === id);
+    if (!tx) return;
+
+    const { id: _, createdAt: __, verification: ___, ...txData } = tx;
+    await handleQuickAdd({ 
+      ...txData,
+      description: `${txData.description} (Copy)`,
+      date: getLocalDateISO()
+    });
+    toast.success('Transaction duplicated');
+  };
+
+  const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>): Promise<boolean> => {
+    if (!user || !currentWorkspaceId) return false;
+    
+    const originalTransactions = [...useLedgerStore.getState().transactions];
+    const txIndex = originalTransactions.findIndex(t => t.id === id);
+    if (txIndex === -1) return false;
+
+    const tx = originalTransactions[txIndex];
+    if (updates.date && isPeriodLocked(updates.date)) {
+      toast.error("Period freeze active. Modification blocked.");
+      return false;
+    }
+
+    // Double-Entry Integrity Check for updates
+    if (updates.lines) {
+      const balance = updates.lines.reduce((sum, l) => sum + (l.amountCents || 0), 0) || 0;
+      if (balance !== 0) {
+        toast.error("Double-entry violation: Modified lines are unbalanced.");
+        return false;
+      }
+    }
+
+    // Optimistic Update
+    const updatedVerification = tx.verification ? {
+      ...tx.verification,
+      status: 'unverified' as const,
+      timestamp: new Date().toISOString()
+    } : undefined;
+
+    const updatedTx = { 
+      ...tx, 
+      ...updates, 
+      ...(updatedVerification ? { verification: updatedVerification } : {}),
+      updatedAt: new Date().toISOString() 
+    };
+    const nextTransactions = [...originalTransactions];
+    nextTransactions[txIndex] = updatedTx as Transaction;
+    setTransactions(nextTransactions);
+    setIsSyncing(true);
+
+    
+    const token = await user?.getIdToken();
+    try {
+      const expectedUpdatedAt = tx.updatedAt;
+      const payload = {
+        ...tx,
+        ...updates,
+        ...(updatedVerification ? { verification: updatedVerification } : {}),
+        updatedAt: new Date().toISOString()
+      };
+      const res = await fetch(`/api/v1/transactions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ transaction: payload, expectedUpdatedAt })
+      });
+      if (!res.ok) {
+         const data = await res.json();
+         if (res.status === 409 || data.error === 'version_conflict') {
+           const err: TransactionConflictError = new Error(data.message || 'This transaction was modified by another user.');
+           err.isConflict = true;
+           err.currentTransaction = data.currentTransaction;
+           throw err;
+         }
+         throw new Error(data.error || 'Failed to update transaction');
+      }
+    } catch(e) {
+      if (isConflictError(e)) {
+        toast.error('Version conflict: Transaction modified by another user.', {
+          description: 'Your changes were not saved to prevent overwriting someone else\'s updates. Loaded latest version.'
+        });
+        if (e.currentTransaction) {
+          const currentTxs = [...useLedgerStore.getState().transactions];
+          const idx = currentTxs.findIndex(t => t.id === id);
+          if (idx !== -1) {
+            currentTxs[idx] = e.currentTransaction;
+            setTransactions(currentTxs);
+          }
+          return false;
+        }
+      } else {
+        const message = errorMessage(e) || 'Unknown network error';
+        toast.error('Could not save your changes.', {
+          description: `Please try again. (${message})`
+        });
+      }
+      setTransactions(originalTransactions);
+      return false;
+    }
+
+    await recordAudit('UPDATE_TRANSACTION', 'transaction', id, updates);
+      
+      toast.success('Transaction updated', {
+        action: {
+          label: 'Undo',
+          onClick: () => handleUpdateTransaction(id, tx)
+        }
+      });
+
+      // --- Persistent Rule Learning ---
+      // If user manually updated the category, check if we should suggest a permanent rule
+      if (updates.lines && Array.isArray(updates.lines) && updates.lines.length > 0) {
+        const { autoRules } = useLedgerStore.getState();
+        const mainLine = updates.lines[0];
+        const description = tx.description;
+        
+        // Push to autonomous cache for immediate "soft" learning across all lines
+        updates.lines.forEach((line) => {
+          if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
+            const searchDesc = line.description || (updates.lines?.length === 1 ? description : undefined);
+            if (searchDesc && line.accountId) {
+              recordRulePattern(searchDesc, line.accountId, line.accountName, line.tags, line.dimensions);
+            }
+          }
+        });
+        
+        const existingRule = Array.isArray(autoRules) ? autoRules.find(r => 
+          r.condition.descriptionContains?.toLowerCase() === (description || '').toLowerCase() ||
+          r.condition.vendor?.toLowerCase() === (description || '').toLowerCase()
+        ) : null;
+
+        if (!existingRule && mainLine.accountName && mainLine.accountName !== 'Uncategorized') {
+          toast("Pattern detected", {
+            description: `Should I always categorize "${description}" as ${mainLine.accountName}?`,
+            action: {
+              label: "Create Rule",
+              onClick: () => handleAddRule({
+                condition: { descriptionContains: description },
+                action: { 
+                  targetNodeId: mainLine.accountId,
+                  targetCategory: mainLine.accountName
+                },
+                confidence: 1.0,
+                isHardened: true
+              })
+            }
+          });
+        }
+      }
+      // -------------------------------
+      return true;
+  };
+
+  const handleReverseTransaction = async (
+    id: string,
+    reversalDate: string,
+    reason: string,
+    replacement?: Partial<Transaction>
+  ) => {
+    if (!user || !currentWorkspaceId) return null;
+    const loader = toast.loading('Executing reverse & correct...');
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/v1/transactions/${id}/reverse`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          reversalDate,
+          reason,
+          replacement,
+          workspaceId: currentWorkspaceId
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'Failed to reverse transaction');
+      }
+
+      const data = await res.json();
+      const store = useLedgerStore.getState();
+      const currentTxs = store.transactions;
+      const updatedTxs = currentTxs.map(t => t.id === id ? { ...t, reversalEventId: data.reversal?.id || 'reversed' } : t);
+
+      const toAdd: Transaction[] = [];
+      if (data.reversal) toAdd.push(data.reversal);
+      if (data.replacement) toAdd.push(data.replacement);
+
+      store.setTransactions([...toAdd, ...updatedTxs]);
+
+      await recordAudit('TRANSACTION_REVERSED', 'transaction', id, {
+        reversalId: data.reversal?.id,
+        replacementId: data.replacement?.id,
+        reason
+      });
+
+      toast.success(replacement ? 'Transaction reversed & corrected successfully' : 'Transaction reversed successfully', { id: loader });
+      return data;
+    } catch (err) {
+      toast.error(errorMessage(err) || 'Failed to reverse transaction', { id: loader });
+      throw err;
+    }
+  };
+
+  return { handleVoidTransaction, handleQuickAdd, handleBulkUpdate, handleToggleFlag, handleDuplicateTransaction, handleUpdateTransaction, handleReverseTransaction };
+}
+
+export type EntryActions = ReturnType<typeof createEntryActions>;

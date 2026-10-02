@@ -31,7 +31,12 @@ test('Adoption Guard: Files iterating transactions and reading amountCents/lines
       file.endsWith('txFilters.ts') ||
       file.endsWith('reportGenerators.ts') ||
       file.endsWith('computeReports.ts') ||
-      file.endsWith('BankFeedImport.tsx')
+      file.endsWith('BankFeedImport.tsx') ||
+      // F-05 split of useTransactionActions: entryActions' transactions.map swaps edited entries in
+      // the store by id and its sums are one entry's own debit/credit balance check; workspaceActions'
+      // export lists the entries the screen passes in (with their status), it adds nothing up
+      file.endsWith('transactionActions/entryActions.ts') ||
+      file.endsWith('transactionActions/workspaceActions.ts')
     ) {
       continue;
     }

@@ -1,0 +1,259 @@
+import { resolveAccountRole } from '../../lib/accountUtils';
+import { isPostable, lineAmount } from '../../lib/txFilters';
+import { collection, doc, getDocs, query, where } from '../../lib/db/firestore';
+import { db } from '../../firebase';
+import { Transaction, BankStatementLine } from '../../types';
+import { toast } from 'sonner';
+import { parseLocalDate } from '../../lib/utils';
+import { findGlobalOptimalMatch, MinHash, jaroWinklerSimilarity } from '../../lib/algorithms';
+import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
+import type { ActionContext, ReconcileOperation } from './shared';
+import { errorMessage } from './shared';
+import type { PostingHelpers } from './postingHelpers';
+
+/** Bank reconciliation: match, ignore, create from a bank line, undo, automatic matching. (F-05, moved from useTransactionActions.) */
+export function createReconcileActions(ctx: ActionContext, posting: PostingHelpers) {
+  const { user, currentWorkspaceId, accounts, setIsSyncing } = ctx;
+  const { balanceTransactionLines } = posting;
+
+  const handleReconcileMatch = async (bankLineId: string, transactionId: string) => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch('/api/v1/transactions/reconcile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+        body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: [
+          { type: 'updateBankLine', id: bankLineId, data: { status: 'matched', matchedTransactionId: transactionId } },
+          { type: 'updateTransaction', id: transactionId, data: { status: 'reconciled' } }
+        ]})
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Server error on match');
+      toast.success('Alignment confirmed and certified.');
+    } catch (error) {
+      toast.error('Matching cycle failed: ' + (errorMessage(error) || 'Network error'));
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleReconcileIgnore = async (bankLineId: string) => {
+    if (!user || !currentWorkspaceId) return;
+    setIsSyncing(true);
+    try {
+      const res = await fetch('/api/v1/transactions/reconcile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+          body: JSON.stringify({ 
+            workspaceId: currentWorkspaceId, 
+            operations: [{ type: 'updateBankLine', id: bankLineId, data: { status: 'ignored' } }] 
+          })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Server error on ignore');
+      toast.info('Item ignored');
+    } catch (error) {
+      toast.error('Action failed: ' + (errorMessage(error) || 'Network error'));
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleReconcileCreate = async (bankLine: BankStatementLine) => {
+    if (!user || !currentWorkspaceId) return;
+    setIsSyncing(true);
+    try {
+      const txId = doc(collection(db, 'transactions')).id;
+      const targetAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id;
+      if (!targetAccId) throw new Error('No valid account node found to target.');
+      
+      const rawLines = [{ accountId: targetAccId, accountName: 'General Expense', amountCents: bankLine.amountCents }];
+      const balancedLines = balanceTransactionLines(rawLines, bankLine.amountCents);
+
+      const txData = {
+        id: txId,
+        uid: user.uid,
+        workspaceId: currentWorkspaceId,
+        date: bankLine.date,
+        description: bankLine.description,
+        totalAmountCents: Math.abs(bankLine.amountCents),
+        status: 'reconciled',
+        type: 'actual',
+        createdAt: new Date().toISOString(),
+        lines: balancedLines
+      };
+
+      const res = await fetch('/api/v1/transactions/reconcile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+        body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: [
+          { type: 'createTransaction', id: txId, data: txData },
+          { type: 'updateBankLine', id: bankLine.id, data: { status: 'matched', matchedTransactionId: txId } }
+        ]})
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to synthesize transaction');
+      toast.success('Atomic transaction synthesized and reconciled.');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'bankLines/synthesis');
+      toast.error('Synthesis cycle interrupted: ' + (errorMessage(error) || 'Network error'));
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleReconcileUndo = async (bankLineId: string, transactionId?: string) => {
+    setIsSyncing(true);
+    try {
+      const operations: ReconcileOperation[] = [{ type: 'updateBankLine', id: bankLineId, data: { status: 'pending', matchedTransactionId: null } }];
+      if (transactionId) {
+         operations.push({ type: 'updateTransaction', id: transactionId, data: { status: 'completed' } });
+      }
+      const res = await fetch('/api/v1/transactions/reconcile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+        body: JSON.stringify({ workspaceId: currentWorkspaceId, operations })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to revert reconcile alignment');
+      }
+      toast.success('Alignment reverted successfully. Re-inserted into potential pipeline matches.');
+    } catch {
+      toast.error('Failed to undo match.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleAutoReconcile = async () => {
+    if (!user || !currentWorkspaceId) return;
+    setIsSyncing(true);
+    const loader = toast.loading('Initiating auto-reconciliation...');
+    
+    try {
+      const qBank = query(
+        collection(db, 'bankLines'), 
+        where('workspaceId', '==', currentWorkspaceId), 
+        where('uid', '==', user.uid),
+        where('status', '==', 'pending')
+      );
+      const qTx = query(
+        collection(db, 'transactions'), 
+        where('workspaceId', '==', currentWorkspaceId), 
+        where('uid', '==', user.uid)
+      );
+      
+      const [bankSnap, txSnap] = await Promise.all([getDocs(qBank), getDocs(qTx)]);
+      const bankLines = bankSnap.docs.map(d => ({ id: d.id, ...d.data() } as BankStatementLine));
+      const transactions = txSnap.docs
+        .map(d => ({ id: d.id, ...d.data() } as Transaction))
+        .filter(t => t.status !== 'reconciled' && t.status !== 'void');
+      
+      const minHash = new MinHash(64, user?.uid);
+      let matchCount = 0;
+
+      // Pre-calculate signatures for transactions
+      const txSignatures = transactions.map(tx => ({
+        id: tx.id,
+        sig: minHash.createSignature(`${tx.description} ${tx.totalAmountCents}`)
+      }));
+
+      // 1. Calculate Score Matrix for all possible pairs
+      const sourceItems = bankLines.map(bl => {
+        const scoreMap = new Map<string, number>();
+        const blSig = minHash.createSignature(`${bl.description} ${bl.amountCents}`);
+        const blDescClean = (bl.description || '').toLowerCase().replace(/[^a-z0-9 \u0590-\u05FF]/g, '').trim();
+        
+        transactions.filter(isPostable).forEach((tx, idx) => {
+          // Check sign direction:
+          const cashLines = tx.lines?.filter(l => {
+            const acc = accounts.find(a => a.id === l.accountId);
+            return acc && resolveAccountRole(acc) === 'cash';
+          }) || [];
+          const cashDelta = cashLines.reduce((s, l) => s + lineAmount(l, tx), 0);
+
+          // If transaction has explicit cash lines, cash movement direction MUST match bank line sign!
+          if (cashDelta !== 0 && Math.sign(cashDelta) !== Math.sign(bl.amountCents)) {
+            return; // Skip incompatible cash directions
+          }
+
+          let score = 0;
+          
+          // Amount Match
+          const tTotal = Math.round(Math.abs(tx.totalAmountCents || 0) * (tx.exchangeRate || 1));
+          if (Math.abs(bl.amountCents) === tTotal) {
+            score += 65;
+          }
+
+          // Date Proximity
+          const bDate = parseLocalDate(bl.date).getTime();
+          const tDate = parseLocalDate(tx.date).getTime();
+          const dayDiff = Math.abs(bDate - tDate) / (1000 * 60 * 60 * 24);
+          if (dayDiff <= 7) score += (7 - dayDiff) * 3;
+
+          // Description Similarity (Hybrid: MinHash + Jaro-Winkler)
+          const txDescClean = (tx.description || '').toLowerCase().replace(/[^a-z0-9 \u0590-\u05FF]/g, '').trim();
+          const similarityMinHash = minHash.compare(blSig, txSignatures[idx].sig);
+          const similarityJW = jaroWinklerSimilarity(blDescClean, txDescClean, user?.uid);
+          
+          const combinedSimilarity = (similarityMinHash * 0.3) + (similarityJW * 0.7);
+          
+          if (combinedSimilarity > 0.3) {
+             score += combinedSimilarity * 45;
+          }
+
+          // Require a minimum combined similarity threshold (0.35) or higher score to prevent false amount-only matches
+          if (score >= 75 && (combinedSimilarity >= 0.35 || dayDiff <= 2)) {
+            scoreMap.set(tx.id, score);
+          }
+        });
+
+        return { id: bl.id, scoreMap };
+      });
+
+      // 2. Resolve via Global Optimum Algorithm
+      const relevantTargets = new Set<string>();
+      sourceItems.forEach(item => {
+        for (const key of item.scoreMap.keys()) relevantTargets.add(key);
+      });
+      const targetIds = Array.from(relevantTargets);
+      
+      const optimalMatches = findGlobalOptimalMatch(sourceItems, targetIds);
+      const batchReconcile: ReconcileOperation[] = [];
+
+      // 3. Apply Matches
+      optimalMatches.forEach((txId, blId) => {
+        batchReconcile.push(
+          { type: 'updateBankLine', id: blId, data: { status: 'matched', matchedTransactionId: txId } },
+          { type: 'updateTransaction', id: txId, data: { status: 'reconciled' } }
+        );
+        matchCount++;
+      });
+
+      if (batchReconcile.length > 0) {
+         const res = await fetch('/api/v1/transactions/reconcile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
+            body: JSON.stringify({ workspaceId: currentWorkspaceId, operations: batchReconcile })
+         });
+         const data = await res.json();
+         if (!res.ok) throw new Error(data.error || 'Server rejected auto-reconcile operations');
+      }
+
+      if (matchCount > 0) {
+        toast.success(`Optimal alignment complete. ${matchCount} nodes synchronized.`, { id: loader });
+      } else {
+        toast.info('Scan complete. No high-confidence matches found.', { id: loader });
+      }
+    } catch (error) {
+      toast.error('Reconciliation cycle interrupted: ' + (errorMessage(error) || 'Error occurred'), { id: loader });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  return { handleReconcileMatch, handleReconcileIgnore, handleReconcileCreate, handleReconcileUndo, handleAutoReconcile };
+}
+
+export type ReconcileActions = ReturnType<typeof createReconcileActions>;
