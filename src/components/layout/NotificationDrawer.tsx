@@ -73,7 +73,7 @@ function Preferences({ onDone }: { onDone: () => void }) {
       )}
       <div className="flex gap-2">
         <button type="button" disabled={saving || prefs === null} onClick={save}
-          className="px-4 py-2 rounded-lg bg-[var(--brass)] text-black text-sm font-bold disabled:opacity-50">Save</button>
+          className="px-4 py-2 rounded-lg bg-[var(--brass)] text-[var(--ink)] text-sm font-bold disabled:opacity-50">Save</button>
         <button type="button" onClick={onDone} className="px-3 py-2 rounded-lg border border-[var(--line)] text-sm text-[var(--text)]">Back</button>
       </div>
     </div>

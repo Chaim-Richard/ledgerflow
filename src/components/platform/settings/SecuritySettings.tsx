@@ -80,7 +80,7 @@ export default function SecuritySettings() {
       {/* Fiscal Period Locking */}
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl">
         <div className="flex items-center gap-5 mb-8">
-          <div className="w-12 h-12 bg-[var(--brass)] text-black rounded-xl flex items-center justify-center shadow-md">
+          <div className="w-12 h-12 bg-[var(--brass)] text-[var(--ink)] rounded-xl flex items-center justify-center shadow-md">
             <Lock size={24} />
           </div>
           <div>

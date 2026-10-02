@@ -62,7 +62,7 @@ export default function CategoryWhyPopover({ description, accountName, className
   }
 
   return (
-    <div className={`relative inline-block ${className}`} onClick={(e) => e.stopPropagation()}>
+    <div className={`relative inline-block ${className}`} role="presentation" onClick={(e) => e.stopPropagation()}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -77,7 +77,7 @@ export default function CategoryWhyPopover({ description, accountName, className
         <>
           <div 
             className="fixed inset-0 z-[100]" 
-            onClick={() => setIsOpen(false)} 
+            role="presentation" aria-hidden="true" onClick={() => setIsOpen(false)} 
           />
           <div className="absolute top-full left-0 mt-1 z-[110] w-72 p-3 bg-slate-900 text-slate-100 rounded-xl shadow-2xl border border-indigo-500/30 text-xs font-sans space-y-2 animate-in fade-in zoom-in-95 duration-100">
             <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
@@ -90,10 +90,10 @@ export default function CategoryWhyPopover({ description, accountName, className
             </div>
 
             <div className="space-y-1">
-              <div className="text-[10px] text-slate-400">
+              <div className="text-[10px] text-[var(--muted)]">
                 Description: <span className="text-slate-200 font-mono italic">"{description}"</span>
               </div>
-              <div className="text-[10px] text-slate-400 flex items-center gap-1">
+              <div className="text-[10px] text-[var(--muted)] flex items-center gap-1">
                 Resolved Account: <span className="font-bold text-white">{debugInfo.accountName || accountName || 'Manual Review'}</span>
               </div>
             </div>
@@ -110,7 +110,7 @@ export default function CategoryWhyPopover({ description, accountName, className
 
             {debugInfo.dimensions && Object.keys(debugInfo.dimensions).length > 0 && (
               <div className="space-y-1">
-                <div className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">
+                <div className="text-[9px] uppercase tracking-wider text-[var(--muted)] font-bold">
                   Extracted Dimensions
                 </div>
                 <div className="flex flex-wrap gap-1">
@@ -123,7 +123,7 @@ export default function CategoryWhyPopover({ description, accountName, className
               </div>
             )}
 
-            <div className="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800 flex items-center gap-1">
+            <div className="text-[9px] text-[var(--muted)] italic pt-1 border-t border-slate-800 flex items-center gap-1">
               <ArrowRight size={9} className="text-indigo-400" />
               100% deterministic matching pipeline — cost-ordered rule execution.
             </div>

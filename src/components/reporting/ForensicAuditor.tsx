@@ -135,7 +135,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
             </div>
             <div>
               <h3 className="text-lg font-bold tracking-tight text-[var(--text)] leading-none">Forensic Protocol</h3>
-              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mt-1.5 block">Logarithmic Digits Divergence Filter (Benford v2.1)</span>
+              <span className="text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest mt-1.5 block">Logarithmic Digits Divergence Filter (Benford v2.1)</span>
             </div>
           </div>
           
@@ -156,7 +156,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
                <div className="absolute top-4 right-4 p-4 opacity-[0.03] pointer-events-none">
                   <Fingerprint size={48} />
                </div>
-               <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Digit Distribution Curve (1-9)</h4>
+               <h4 className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-6">Digit Distribution Curve (1-9)</h4>
                
                <div className="flex items-end justify-between gap-1.5 h-36">
                   {forensicData.distribution.map((val, i) => {
@@ -183,7 +183,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
                               title={`Expected: ${expectedPercent.toFixed(1)}%`}
                             />
                          </div>
-                         <span className="text-[9px] font-bold font-mono text-slate-400">{i+1}</span>
+                         <span className="text-[9px] font-bold font-mono text-[var(--muted)]">{i+1}</span>
                       </div>
                     );
                   })}
@@ -191,18 +191,18 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
                <div className="mt-5 pt-4 border-t border-[var(--line)] flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                      <div className="w-2 h-2 bg-slate-800 rounded-full" />
-                     <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Ledger</span>
+                     <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted)]">Ledger</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                      <div className="w-2 h-2 border-t border-indigo-550 border-dashed rounded-full" />
-                     <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Logarithmic Expected</span>
+                     <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted)]">Logarithmic Expected</span>
                   </div>
                </div>
             </div>
             
             <div className="flex items-start gap-3 p-4 bg-slate-900 border border-slate-850 rounded-xl">
                <Fingerprint className="text-indigo-400 shrink-0 mt-0.5" size={16} />
-               <p className="text-xs text-slate-400 leading-relaxed font-medium">
+               <p className="text-xs text-[var(--muted)] leading-relaxed font-medium">
                   The statistical distribution aligns <span className="text-white font-bold">{riskLevel === 'NOMINAL' ? 'nominally' : 'irregularly'}</span> with logarithmic scales. {riskLevel !== 'NOMINAL' && 'A deviation in digit frequency marks potential administrative processing issues.'}
                </p>
             </div>
@@ -211,16 +211,16 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-3xs hover:-translate-y-0.5 transition-all">
-                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Divergence Index</span>
+                   <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest block mb-1">Divergence Index</span>
                    <div className="flex items-baseline gap-1.5">
                       <span className="text-2xl font-bold font-mono text-[var(--text)] leading-none">{forensicData.score.toFixed(2)}</span>
                    </div>
                 </div>
                 <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-3xs hover:-translate-y-0.5 transition-all">
-                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Confidence Score</span>
+                   <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest block mb-1">Confidence Score</span>
                    <div className="flex items-baseline gap-1.5">
                       <span className="text-2xl font-bold font-mono text-[var(--text)] leading-none">0.05</span>
-                      <span className="text-[9px] font-mono text-slate-400">p-Val</span>
+                      <span className="text-[9px] font-mono text-[var(--muted)]">p-Val</span>
                    </div>
                 </div>
             </div>

@@ -37,7 +37,7 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-[var(--text)] tracking-tight">System Architecture</h3>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">High-Level Deterministic Data Flow</p>
+                    <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest mt-1">High-Level Deterministic Data Flow</p>
                   </div>
                </div>
                <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-all"><X size={20} /></button>

@@ -376,7 +376,7 @@ const Ledger = React.memo(() => {
 
         {activeSubTab === 'coa' && (
           <div className="relative group max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-600 transition-colors" size={16} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-slate-600 transition-colors" size={16} />
             <input 
               type="text" 
               placeholder="Search accounts by name, code, or type..."
@@ -410,7 +410,7 @@ const Ledger = React.memo(() => {
                 />
               ))}
             </div>
-            <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Synchronizing real-time ledger layers...</p>
+            <p className="text-[10px] font-black uppercase text-[var(--muted)] tracking-[0.2em]">Synchronizing real-time ledger layers...</p>
           </div>
         }>
           
@@ -471,14 +471,14 @@ const Ledger = React.memo(() => {
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase italic">Add New Account</h2>
                 <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors">
-                  <Plus className="rotate-45 text-slate-500" size={24} />
+                  <Plus className="rotate-45 text-[var(--muted)]" size={24} />
                 </button>
               </div>
 
               <form onSubmit={handleAddAccount} className="space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Account Code">
+                    <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50" label="Account Code">
                       <input 
                         type="text" 
                         required
@@ -490,7 +490,7 @@ const Ledger = React.memo(() => {
                     </Labelled>
                   </div>
                   <div className="space-y-2">
-                    <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Account Type">
+                    <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50" label="Account Type">
                       <select 
                         value={newAccount.type}
                         onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value as any })}
@@ -507,7 +507,7 @@ const Ledger = React.memo(() => {
                 </div>
 
                 <div className="space-y-2">
-                  <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Account Name">
+                  <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50" label="Account Name">
                     <input 
                       type="text" 
                       required
@@ -520,7 +520,7 @@ const Ledger = React.memo(() => {
                 </div>
 
                 <div className="space-y-2">
-                  <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Category (Optional)">
+                  <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50" label="Category (Optional)">
                     <input 
                       type="text" 
                       value={newAccount.category}
@@ -532,7 +532,7 @@ const Ledger = React.memo(() => {
                 </div>
 
                 <div className="space-y-2">
-                  <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Description">
+                  <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50" label="Description">
                     <textarea 
                       value={newAccount.description}
                       onChange={(e) => setNewAccount({ ...newAccount, description: e.target.value })}
@@ -545,7 +545,7 @@ const Ledger = React.memo(() => {
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50">Parent Account</label>
+                    <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50">Parent Account</label>
                     <div className="relative">
                       <input 
                         list="ledger-parent-account"
@@ -565,7 +565,7 @@ const Ledger = React.memo(() => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="Opening Balance ($)">
+                    <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50" label="Opening Balance ($)">
                       <input 
                         type="number" 
                         step="0.01"
@@ -581,7 +581,7 @@ const Ledger = React.memo(() => {
                 </div>
 
                 <div className="space-y-2">
-                  <Labelled labelClassName="block text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-50" label="As of Date">
+                  <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50" label="As of Date">
                     <input 
                       type="date" 
                       value={newAccount.asOfDate}
@@ -595,7 +595,7 @@ const Ledger = React.memo(() => {
                   <button 
                     type="button"
                     onClick={() => setActiveModal(null)}
-                    className="flex-1 py-4 bg-[var(--ink)] text-slate-500 rounded-[32px] font-black hover:text-[var(--text)] transition-all uppercase tracking-widest text-[10px]"
+                    className="flex-1 py-4 bg-[var(--ink)] text-[var(--muted)] rounded-[32px] font-black hover:text-[var(--text)] transition-all uppercase tracking-widest text-[10px]"
                   >
                     Cancel
                   </button>

@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import AsyncButton from '../../ui/AsyncButton';
 import { useTimeout } from '../../../hooks/useTimeout';
 import { Labelled } from '../../ui/Labelled';
+import { activateOnKey } from '../../../lib/utils';
 
 export default function BlueprintSettings() {
   const language = useUIStore(state => state.language);
@@ -210,7 +211,7 @@ export default function BlueprintSettings() {
           </div>
           <div>
             <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest">Base Ledger Variables</h3>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Core Accounting Configurations</p>
+            <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.2em] mt-0.5">Core Accounting Configurations</p>
           </div>
         </div>
 
@@ -221,7 +222,7 @@ export default function BlueprintSettings() {
               <Globe size={13} className="text-zinc-500" />
               Institutional Base Currency
             </label>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
+            <p className="text-[11px] text-[var(--muted)] leading-relaxed">
               Standardize ledger currency codes across operational, forensic, and projection matrix layers.
             </p>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 bg-[var(--surface)] p-1.5 rounded-[32px] border border-[var(--line)]">
@@ -233,7 +234,7 @@ export default function BlueprintSettings() {
                   className={`py-3 text-xs font-bold rounded-xl transition-all ${
                     baseCurrency === curr 
                       ? 'bg-zinc-950 text-white shadow-xs' 
-                      : 'hover:bg-zinc-100 text-slate-500 hover:text-[var(--text)]'
+                      : 'hover:bg-zinc-100 text-[var(--muted)] hover:text-[var(--text)]'
                   }`}
                 >
                   {curr}
@@ -248,7 +249,7 @@ export default function BlueprintSettings() {
               <FolderLock size={13} className="text-zinc-500" />
               Accounting closing date
             </label>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
+            <p className="text-[11px] text-[var(--muted)] leading-relaxed">
               Restrict mutations to pre-dating items. Submitting transactions prior to this date triggers an immediate hard reject.
             </p>
             <div className="flex gap-3">
@@ -259,7 +260,7 @@ export default function BlueprintSettings() {
                   onChange={(e) => setSelectedLockDate(e.target.value)}
                   className="w-full bg-[var(--surface)] hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none p-3 pl-10 rounded-[32px] text-xs font-bold tracking-wider"
                 />
-                <Calendar size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Calendar size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
               </div>
               <AsyncButton
                 type="button"
@@ -284,7 +285,7 @@ export default function BlueprintSettings() {
             </div>
             <div>
               <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest font-display">Rule Ingestion Architecture</h3>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Automated Accounts & Fallback Mappings</p>
+              <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.2em] mt-0.5">Automated Accounts & Fallback Mappings</p>
             </div>
           </div>
           
@@ -320,7 +321,7 @@ export default function BlueprintSettings() {
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               Debit Fallback Account (expense)
             </label>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">
+            <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wide">
               The default ledger subaccount selected for transaction debits when the category is unclassified.
             </p>
             <select
@@ -338,7 +339,7 @@ export default function BlueprintSettings() {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Credit Fallback Account (asset)
             </label>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">
+            <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wide">
               The default ledger asset/cash subaccount selected for credit double-entry offsets in ingestion pipelines.
             </p>
             <select
@@ -355,7 +356,7 @@ export default function BlueprintSettings() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--line)] pb-4">
             <h4 className="text-xs font-black text-[var(--text)] uppercase tracking-widest">Category-Specific Routing Exclusions</h4>
-            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--muted)]">
               {Object.keys(mappings).filter(k => k !== 'expense' && k !== 'asset').length} rules registered
             </span>
           </div>
@@ -372,7 +373,7 @@ export default function BlueprintSettings() {
                       <div className="px-3 py-1.5 bg-zinc-100 text-[var(--text)] rounded-xl text-[10px] font-bold uppercase tracking-wider font-mono">
                         {categoryKey}
                       </div>
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[var(--muted)]">
                         <span>→</span>
                         <span className="text-[var(--text)] font-display">
                           {matchingAccount ? `${matchingAccount.name} (${matchingAccount.type.toUpperCase()})` : 'Unknown Account'}
@@ -383,7 +384,7 @@ export default function BlueprintSettings() {
                     <button
                       type="button"
                       onClick={() => handleRemoveCategoryMapping(categoryKey)}
-                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                      className="p-2 text-[var(--muted)] hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
                       title="Delete category mapping rule"
                     >
                       <Trash2 size={14} />
@@ -393,7 +394,7 @@ export default function BlueprintSettings() {
               })}
 
             {Object.keys(mappings).filter(k => k !== 'expense' && k !== 'asset').length === 0 && (
-              <div className="py-6 text-center text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+              <div className="py-6 text-center text-xs font-bold text-[var(--muted)] uppercase tracking-widest leading-relaxed">
                 No category-specific overrides configured. All categories default to general fallbacks.
               </div>
             )}
@@ -402,7 +403,7 @@ export default function BlueprintSettings() {
           {/* Add Option Form */}
           <div className="pt-4 border-t border-[var(--line)] grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             <div className="space-y-2">
-              <Labelled labelClassName="text-[9px] font-black text-slate-500 uppercase tracking-wider" label="Category Name (Lower-Case Match)">
+              <Labelled labelClassName="text-[9px] font-black text-[var(--muted)] uppercase tracking-wider" label="Category Name (Lower-Case Match)">
                 <input
                   type="text"
                   value={newCatName}
@@ -413,7 +414,7 @@ export default function BlueprintSettings() {
               </Labelled>
             </div>
             <div className="space-y-2">
-              <Labelled labelClassName="text-[9px] font-black text-slate-500 uppercase tracking-wider" label="Debit Override Account">
+              <Labelled labelClassName="text-[9px] font-black text-[var(--muted)] uppercase tracking-wider" label="Debit Override Account">
                 <select
                   value={newCatAccountId}
                   onChange={(e) => setNewCatAccountId(e.target.value)}
@@ -443,11 +444,11 @@ export default function BlueprintSettings() {
           </div>
           <div>
             <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest font-display">Workflow Tab Architect</h3>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5">Workspace Navigation Elasticity</p>
+            <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.2em] mt-0.5">Workspace Navigation Elasticity</p>
           </div>
         </div>
 
-        <p className="text-xs text-slate-500 leading-relaxed max-w-2xl">
+        <p className="text-xs text-[var(--muted)] leading-relaxed max-w-2xl">
           Toggle sidebar layout items on-the-fly. Hiding system items instantly streamlines employee access pipelines, allowing you to fine-tune your custom operations portal.
         </p>
 
@@ -457,10 +458,10 @@ export default function BlueprintSettings() {
             return (
               <div role="button" tabIndex={0} 
                 key={tab.id}
-                onClick={() => toggleTabVisibility(tab.id)}
+                onKeyDown={activateOnKey} onClick={() => toggleTabVisibility(tab.id)}
                 className={`p-5 rounded-[32px] border transition-all flex items-center justify-between cursor-pointer group ${
                   isHidden 
-                    ? 'border-gray-200 bg-gray-50/50 text-slate-500 hover:border-gray-300' 
+                    ? 'border-gray-200 bg-gray-50/50 text-[var(--muted)] hover:border-gray-300' 
                     : 'border-[var(--line)] hover:border-indigo-200 bg-[var(--surface)] text-[var(--text)] shadow-xs'
                 }`}
               >
@@ -506,7 +507,7 @@ export default function BlueprintSettings() {
             </div>
             <div>
               <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest">Aesthetic Nomenclature Registry</h3>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-0.5 font-display">System-Wide Glossary Patch Engine</p>
+              <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.2em] mt-0.5 font-display">System-Wide Glossary Patch Engine</p>
             </div>
           </div>
 
@@ -518,11 +519,11 @@ export default function BlueprintSettings() {
               onChange={(e) => setLexiconSearch(e.target.value)}
               className="bg-[var(--surface)] p-2.5 pl-9 pr-4 text-xs font-bold hover:bg-[var(--ink)] border border-[var(--line)] focus:border-zinc-400 focus:outline-none rounded-xl w-60 tracking-wider"
             />
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           </div>
         </div>
 
-        <p className="text-xs text-slate-500 leading-relaxed max-w-2xl">
+        <p className="text-xs text-[var(--muted)] leading-relaxed max-w-2xl">
           Quickly edit titles and descriptive terminology throughout the interface. To override labels permanently, modify words directly in the registry fields below.
         </p>
 

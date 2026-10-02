@@ -83,20 +83,24 @@ export default function App() {
     };
     root.style.setProperty('--font-sans', fontMap[fontFamily] || fontMap.system);
 
-    // Apply Accent Color Palette
-    const accentMap: Record<string, { brass: string; soft: string; line: string }> = {
-      emerald: { brass: '#D6A852', soft: 'rgba(214, 168, 82, 0.14)', line: 'rgba(214, 168, 82, 0.4)' },
-      indigo: { brass: '#6366F1', soft: 'rgba(99, 102, 241, 0.14)', line: 'rgba(99, 102, 241, 0.4)' },
-      amber: { brass: '#F59E0B', soft: 'rgba(245, 158, 11, 0.14)', line: 'rgba(245, 158, 11, 0.4)' },
-      teal: { brass: '#14B8A6', soft: 'rgba(20, 184, 166, 0.14)', line: 'rgba(20, 184, 166, 0.4)' },
-      violet: { brass: '#A855F7', soft: 'rgba(168, 85, 247, 0.14)', line: 'rgba(168, 85, 247, 0.4)' },
-      rose: { brass: '#F43F5E', soft: 'rgba(244, 63, 94, 0.14)', line: 'rgba(244, 63, 94, 0.4)' },
-      slate: { brass: '#94A3B8', soft: 'rgba(148, 163, 184, 0.14)', line: 'rgba(148, 163, 184, 0.4)' }
+    // Accent colour, darker in the light theme so text in it stays readable (E-27: 4.5:1 or more)
+    const resolvedTheme = theme === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : theme;
+    const accentMap: Record<string, { dark: string; light: string }> = {
+      emerald: { dark: '#D6A852', light: '#7A550E' },
+      indigo: { dark: '#818CF8', light: '#4F46E5' },
+      amber: { dark: '#F59E0B', light: '#96490A' },
+      teal: { dark: '#2DD4BF', light: '#0D6B64' },
+      violet: { dark: '#C084FC', light: '#7E22CE' },
+      rose: { dark: '#FB7185', light: '#BE123C' },
+      slate: { dark: '#94A3B8', light: '#475569' }
     };
-    const palette = accentMap[accentColor] || accentMap.emerald;
-    root.style.setProperty('--brass', palette.brass);
-    root.style.setProperty('--brass-soft', palette.soft);
-    root.style.setProperty('--brass-line', palette.line);
+    const brass = (accentMap[accentColor] || accentMap.emerald)[resolvedTheme === 'light' ? 'light' : 'dark'];
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(brass.slice(i, i + 2), 16));
+    root.style.setProperty('--brass', brass);
+    root.style.setProperty('--brass-soft', `rgba(${r}, ${g}, ${b}, ${resolvedTheme === 'light' ? 0.1 : 0.14})`);
+    root.style.setProperty('--brass-line', `rgba(${r}, ${g}, ${b}, ${resolvedTheme === 'light' ? 0.35 : 0.4})`);
 
     // High Contrast & Row Density
     if (highContrast) {

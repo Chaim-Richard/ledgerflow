@@ -108,7 +108,7 @@ export default function EmailSettings() {
             {canEdit && (
               <div className="flex gap-2">
                 <button type="button" disabled={saving} onClick={() => save({ emailTemplates: drafts }, 'Email templates saved.')}
-                  className="px-4 py-2 rounded-lg bg-[var(--brass)] text-black text-sm font-bold disabled:opacity-50">Save templates</button>
+                  className="px-4 py-2 rounded-lg bg-[var(--brass)] text-[var(--ink)] text-sm font-bold disabled:opacity-50">Save templates</button>
                 <button type="button" onClick={resetTemplate} className="px-3 py-2 rounded-lg border border-[var(--line)] text-sm text-[var(--text)] inline-flex items-center gap-1.5">
                   <RotateCcw className="w-4 h-4" aria-hidden="true" /> Use the default
                 </button>
@@ -140,7 +140,7 @@ export default function EmailSettings() {
           <input id="reminder-days" disabled={!canEdit} value={daysText} onChange={e => setDaysText(e.target.value)} placeholder="3, 14, 30" className={inputClass} />
         </div>
         {canEdit && (
-          <button type="button" disabled={saving} onClick={saveReminders} className="px-4 py-2 rounded-lg bg-[var(--brass)] text-black text-sm font-bold disabled:opacity-50">Save reminders</button>
+          <button type="button" disabled={saving} onClick={saveReminders} className="px-4 py-2 rounded-lg bg-[var(--brass)] text-[var(--ink)] text-sm font-bold disabled:opacity-50">Save reminders</button>
         )}
         {!canEdit && <p className="text-xs text-[var(--muted)]">Owners and accountants change these settings.</p>}
       </section>

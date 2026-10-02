@@ -72,12 +72,12 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                 Bad Debt Write-off
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-[var(--muted)] dark:text-slate-400">
                 Invoice #{invoice.number || invoice.id}
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <button type="button" onClick={onClose} aria-label="Close" className="text-[var(--muted)] hover:text-slate-600 p-1 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -129,7 +129,7 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
             />
           </div>
 
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-[var(--muted)] dark:text-slate-400">
             Debits the bad debt expense account and credits Accounts Receivable for what is still due. The sale stays in your reports. If the customer pays later, reverse the write-off first.
           </p>
 

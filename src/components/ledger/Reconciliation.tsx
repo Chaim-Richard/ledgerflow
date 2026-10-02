@@ -376,7 +376,7 @@ export default function Reconciliation() {
              <button 
                onClick={handleAutoReconcile}
                disabled={isAutoReconciling}
-               className="flex items-center gap-2 px-5 h-10 bg-[var(--brass)] text-black font-bold rounded-xl text-[10px] uppercase tracking-wider hover:opacity-90 transition-all shadow-md disabled:opacity-50 cursor-pointer"
+               className="flex items-center gap-2 px-5 h-10 bg-[var(--brass)] text-[var(--ink)] font-bold rounded-xl text-[10px] uppercase tracking-wider hover:opacity-90 transition-all shadow-md disabled:opacity-50 cursor-pointer"
               aria-label="Auto Align All">
                {isAutoReconciling ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                Auto Align All
@@ -543,7 +543,7 @@ export default function Reconciliation() {
 
                       <div className="flex flex-col gap-1 overflow-hidden pl-1">
                         <div className="flex items-center gap-2">
-                          <span className={cn("text-[8px] font-semibold uppercase tracking-wider font-mono", isSelected ? "text-emerald-200" : "text-slate-400")}>
+                          <span className={cn("text-[8px] font-semibold uppercase tracking-wider font-mono", isSelected ? "text-emerald-200" : "text-[var(--muted)]")}>
                             {format(parseLocalDate(ltx.date), 'MMM dd')} • {resolveAccountName(accounts, ltx.lines?.[0]?.accountId, ltx.lines?.[0]?.accountName)}
                           </span>
                           {isPossibleMatch && !isSelected && <Zap size={10} className="text-emerald-500 animate-pulse" />}
@@ -562,7 +562,7 @@ export default function Reconciliation() {
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
                      <ShieldCheck size={40} className="text-indigo-500 mb-3" />
                      <h3 className="font-extrabold text-sm text-[var(--text)] uppercase tracking-tight">Registry Unoccupied</h3>
-                     <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-1">No unverified entries on the active chart</p>
+                     <p className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-widest mt-1">No unverified entries on the active chart</p>
                   </div>
                 )}
              </div>
@@ -575,7 +575,7 @@ export default function Reconciliation() {
             <div className="px-5 py-4 border-b border-[var(--line)] bg-[var(--ink)]/50 flex items-center justify-between">
               <div>
                 <span className="text-xs font-black text-[var(--text)] uppercase tracking-wider">Audit Matrix logs</span>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mt-0.5">Physical deposits & ledgers permanently welded and locked</p>
+                <p className="text-[10px] text-[var(--muted)] uppercase tracking-widest font-semibold mt-0.5">Physical deposits & ledgers permanently welded and locked</p>
               </div>
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-1">
                  <Lock size={12} />
@@ -585,10 +585,10 @@ export default function Reconciliation() {
 
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                {filteredBankFeed.length === 0 ? (
-                 <div className="py-24 text-center text-slate-400 flex flex-col items-center justify-center space-y-3">
+                 <div className="py-24 text-center text-[var(--muted)] flex flex-col items-center justify-center space-y-3">
                    <History size={36} className="text-slate-300" />
                    <h4 className="font-extrabold text-[11px] uppercase tracking-widest">No cleared alignment history found</h4>
-                   <p className="text-[10px] font-medium uppercase tracking-tight text-slate-400 max-w-xs leading-normal">
+                   <p className="text-[10px] font-medium uppercase tracking-tight text-[var(--muted)] max-w-xs leading-normal">
                      Use the Pending Streams tab to forge balances and trace links
                    </p>
                  </div>
@@ -607,11 +607,11 @@ export default function Reconciliation() {
                              {/* Statement Info */}
                              <div className="flex-1 min-w-0">
                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                 <span className="text-[8px] font-black uppercase text-slate-400 font-mono tracking-wider">{line.date}</span>
+                                 <span className="text-[8px] font-black uppercase text-[var(--muted)] font-mono tracking-wider">{line.date}</span>
                                  <span className="px-2 py-0.2 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[7px] font-black uppercase tracking-wider">Locked Status</span>
                                </div>
                                <h5 className="font-extrabold text-sm text-[var(--text)] truncate">{line.description}</h5>
-                               <p className="text-[10px] text-slate-400 font-mono mt-0.5 tabular-nums">Statement Amount: {formatCurrency(line.amountCents)}</p>
+                               <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 tabular-nums">Statement Amount: {formatCurrency(line.amountCents)}</p>
                              </div>
 
                              {/* Connector Node */}
@@ -624,7 +624,7 @@ export default function Reconciliation() {
                              <div className="flex-1 min-w-0">
                                <span className="text-[8px] font-black uppercase text-indigo-400 font-mono tracking-wider">Linked Registry Record</span>
                                <h5 className="font-bold text-sm text-slate-700 truncate">{linkedTx?.description || 'Legacy Synapsed Node'}</h5>
-                               <p className="text-[10px] text-slate-400 font-mono mt-0.5 mt-0.5 tabular-nums">Registry value: {linkedTx ? formatCurrency(linkedTx.totalAmountCents) : 'N/A'}</p>
+                               <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 mt-0.5 tabular-nums">Registry value: {linkedTx ? formatCurrency(linkedTx.totalAmountCents) : 'N/A'}</p>
                              </div>
 
                              {/* Revert controls directly */}
@@ -857,7 +857,7 @@ export default function Reconciliation() {
                          <h3 className="text-xl font-black uppercase tracking-tight text-[var(--text)]">
                             Cognitive Alignments Panel
                          </h3>
-                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Select synapses to reconcile at once. Toggle individual checkboxes or apply bulk verification instantly.</p>
+                         <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-widest mt-0.5">Select synapses to reconcile at once. Toggle individual checkboxes or apply bulk verification instantly.</p>
                        </div>
                     </div>
                     {/* Header check/uncheck shortcuts */}
@@ -912,9 +912,9 @@ export default function Reconciliation() {
                               <div className="flex-1 grid grid-cols-1 md:grid-cols-11 gap-4 items-center overflow-hidden">
                                 {/* Bank Item info */}
                                 <div className="md:col-span-5 overflow-hidden">
-                                   <span className="text-[8px] uppercase tracking-widest font-black text-slate-400 block mb-0.5">Physical Inflow Node</span>
+                                   <span className="text-[8px] uppercase tracking-widest font-black text-[var(--muted)] block mb-0.5">Physical Inflow Node</span>
                                    <p className="font-bold text-[var(--text)] truncate text-sm">{btx.description}</p>
-                                   <p className="text-[10px] font-semibold text-slate-500 font-mono mt-0.5">{btx.date} • {formatCurrency(btx.amountCents)}</p>
+                                   <p className="text-[10px] font-semibold text-[var(--muted)] font-mono mt-0.5">{btx.date} • {formatCurrency(btx.amountCents)}</p>
                                 </div>
 
                                 {/* Flow indicator status line */}
@@ -924,9 +924,9 @@ export default function Reconciliation() {
 
                                 {/* Mapped registry internal record item info */}
                                 <div className="md:col-span-5 overflow-hidden text-right">
-                                   <span className="text-[8px] uppercase tracking-widest font-black text-slate-400 block mb-0.5">Assigned Target record</span>
+                                   <span className="text-[8px] uppercase tracking-widest font-black text-[var(--muted)] block mb-0.5">Assigned Target record</span>
                                    <p className="font-bold text-[var(--text)] truncate text-sm">{matchedLtx.description}</p>
-                                   <p className="text-[10px] font-semibold text-slate-500 font-mono mt-0.5">{matchedLtx.date} • {formatCurrency(matchedLtx.totalAmountCents)}</p>
+                                   <p className="text-[10px] font-semibold text-[var(--muted)] font-mono mt-0.5">{matchedLtx.date} • {formatCurrency(matchedLtx.totalAmountCents)}</p>
                                    {Math.abs(btx.amountCents) !== Math.abs(matchedLtx.totalAmountCents) && (
                                      <span className="text-[9px] text-amber-600 font-bold uppercase tracking-wider block mt-1 bg-amber-50/50 inline-block px-1.5 py-0.5 rounded border border-amber-200 tabular-nums">
                                        Diff: {formatCurrency(Math.abs(Math.abs(btx.amountCents) - Math.abs(matchedLtx.totalAmountCents)))}
@@ -942,7 +942,7 @@ export default function Reconciliation() {
 
                   {/* Batch validation button stripe */}
                   <div className="border-t pt-5 flex items-center justify-between shrink-0">
-                     <button onClick={() => setShowAutoConfirm(false)} className="px-6 py-3 font-bold text-xs uppercase tracking-widest text-slate-500 hover:text-[var(--text)] transition-colors cursor-pointer">
+                     <button onClick={() => setShowAutoConfirm(false)} className="px-6 py-3 font-bold text-xs uppercase tracking-widest text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer">
                         Dismiss alignments panel
                      </button>
                      <button 

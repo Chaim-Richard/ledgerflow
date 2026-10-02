@@ -136,7 +136,7 @@ const ForensicAudit = React.memo(() => {
             Forensic Integrity Suite
           </div>
           <h2 className="text-2xl md:text-4xl font-black text-[var(--text)] tracking-tight">Audit Intelligence</h2>
-          <p className="text-slate-500 font-medium text-sm">Automated fraud detection and anomaly projection across the general ledger.</p>
+          <p className="text-[var(--muted)] font-medium text-sm">Automated fraud detection and anomaly projection across the general ledger.</p>
         </div>
       </div>
 
@@ -196,7 +196,7 @@ const ForensicAudit = React.memo(() => {
                     <Brain className="text-indigo-600" size={24} />
                     Statistical Outliers
                  </h3>
-                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Z-Score Deviation Map (&gt;2.5σ)</p>
+                 <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-1">Z-Score Deviation Map (&gt;2.5σ)</p>
               </div>
               <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-500 rounded-lg text-[9px] font-medium uppercase tracking-wider border border-amber-500/20">
                  High Sensitivity Active
@@ -212,21 +212,21 @@ const ForensicAudit = React.memo(() => {
                        </div>
                        <div>
                           <p className="text-sm font-black text-[var(--text)] tracking-tight">{t.description}</p>
-                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 mt-1">
+                          <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest flex items-center gap-2 mt-1">
                              {t.lines?.[0]?.accountName} • <span className="text-rose-600">Deviation: {t.zScore.toFixed(2)}σ</span>
                           </p>
                        </div>
                     </div>
                     <div className="text-right">
                        <p className="text-lg font-black text-[var(--text)] mono-value tabular-nums">{CURRENCY.format(Math.abs(t.totalAmountCents) / 100)}</p>
-                       <p className="text-[9px] font-black text-slate-500 flex items-center justify-end gap-1 mt-1">
+                       <p className="text-[9px] font-black text-[var(--muted)] flex items-center justify-end gap-1 mt-1">
                           <History size={10} />
                           {format(parseLocalDate(t.date), 'MMM yyyy')}
                        </p>
                     </div>
                  </div>
               )) : (
-                 <div className="h-60 flex flex-col items-center justify-center text-slate-500 space-y-4 border-2 border-dashed border-[var(--line)] rounded-[32px]">
+                 <div className="h-60 flex flex-col items-center justify-center text-[var(--muted)] space-y-4 border-2 border-dashed border-[var(--line)] rounded-[32px]">
                     <ShieldAlert size={48} className="opacity-10" />
                     <p className="text-xs font-medium uppercase tracking-wider opacity-40">No significant statistical anomalies detected.</p>
                  </div>

@@ -251,7 +251,7 @@ export default function Inventory() {
                 </h1>
                 <div className="flex items-center gap-3">
                    <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
-                   <p className="text-[12px] font-black text-slate-500 uppercase tracking-[0.5em] font-mono">Real-time stock management.</p>
+                   <p className="text-[12px] font-black text-[var(--muted)] uppercase tracking-[0.5em] font-mono">Real-time stock management.</p>
                 </div>
              </div>
           </div>
@@ -259,7 +259,7 @@ export default function Inventory() {
 
         <div className="flex flex-wrap items-center gap-8">
            <div className="relative group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 opacity-40 group-focus-within:text-emerald-500 group-focus-within:opacity-100 transition-all" size={20} />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--muted)] opacity-40 group-focus-within:text-emerald-500 group-focus-within:opacity-100 transition-all" size={20} />
               <input 
                 type="text"
                 placeholder="Scan sku or entity DNA..."
@@ -275,7 +275,7 @@ export default function Inventory() {
                "px-8 py-4 rounded-[32px] font-black text-xs uppercase tracking-widest transition-all border-2 flex items-center gap-3",
                showRuleIntel 
                  ? "bg-slate-900 text-emerald-400 border-slate-800 shadow-2xl scale-105" 
-                 : "bg-[var(--surface)] text-slate-500 border-[var(--line)] hover:border-slate-800"
+                 : "bg-[var(--surface)] text-[var(--muted)] border-[var(--line)] hover:border-slate-800"
              )}
            >
              <BarChart3 size={18} />
@@ -346,7 +346,7 @@ export default function Inventory() {
                  <div className="w-12 h-12 bg-rose-50 rounded-[32px] flex items-center justify-center text-rose-500 border border-rose-100">
                     <ShieldAlert size={24} />
                  </div>
-                 <span className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Asset Risk</span>
+                 <span className="text-xs font-black text-[var(--muted)] uppercase tracking-[0.2em]">Asset Risk</span>
               </div>
               <div className="flex items-baseline gap-3">
                  <span className="text-3xl md:text-5xl font-black text-[var(--text)]">
@@ -733,7 +733,7 @@ export default function Inventory() {
                   <h3 className="text-lg font-black text-[var(--text)] tracking-tight">
                     Recognize COGS / Record Sale
                   </h3>
-                  <p className="text-xs text-slate-500 font-mono mt-0.5">{cogsItem.name} ({cogsItem.sku})</p>
+                  <p className="text-xs text-[var(--muted)] font-mono mt-0.5">{cogsItem.name} ({cogsItem.sku})</p>
                 </div>
                 <button 
                   onClick={() => setCogsItem(null)} 
@@ -745,15 +745,15 @@ export default function Inventory() {
               <form onSubmit={handleRecognizeCogs} className="p-6 space-y-4">
                 <div className="p-4 bg-[var(--ink)] rounded-2xl border border-[var(--line)] text-xs space-y-1.5">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Available Stock:</span>
+                    <span className="text-[var(--muted)]">Available Stock:</span>
                     <span className="font-bold text-[var(--text)]">{cogsItem.quantityAtHand} units</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Blended Unit Cost:</span>
+                    <span className="text-[var(--muted)]">Blended Unit Cost:</span>
                     <span className="font-bold text-[var(--text)] tabular-nums">{formatCurrency(cogsItem.unitCostCents || 5000)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Estimated Total COGS:</span>
+                    <span className="text-[var(--muted)]">Estimated Total COGS:</span>
                     <span className="font-bold text-emerald-600 font-mono tabular-nums">
                       {formatCurrency(cogsQty * (cogsItem.unitCostCents || 5000))}
                     </span>

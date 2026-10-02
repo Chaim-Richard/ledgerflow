@@ -54,7 +54,7 @@ export function TanStackDataGrid<TData extends object>({
       {enableGlobalFilter && (
         <div className="flex items-center justify-between gap-4">
           <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={15} />
             <input
               type="text"
               value={globalFilter ?? ''}
@@ -63,7 +63,7 @@ export function TanStackDataGrid<TData extends object>({
               className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
             />
           </div>
-          <div className="text-xs text-slate-500 font-medium">
+          <div className="text-xs text-[var(--muted)] font-medium">
             Showing {table.getRowModel().rows.length} of {data.length} entries
           </div>
         </div>
@@ -103,7 +103,7 @@ export function TanStackDataGrid<TData extends object>({
           <tbody className="divide-y divide-slate-100">
             {table.getRowModel().rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-xs text-slate-400 font-medium">
+                <td colSpan={columns.length} className="px-4 py-8 text-center text-xs text-[var(--muted)] font-medium">
                   No records found matching query
                 </td>
               </tr>
@@ -128,14 +128,14 @@ export function TanStackDataGrid<TData extends object>({
           <button
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
-            className="p-1.5 text-slate-500 hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
+            className="p-1.5 text-[var(--muted)] hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
           >
             <ChevronsLeft size={16} />
           </button>
           <button
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="p-1.5 text-slate-500 hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
+            className="p-1.5 text-[var(--muted)] hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
           >
             <ChevronLeft size={16} />
           </button>
@@ -145,14 +145,14 @@ export function TanStackDataGrid<TData extends object>({
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="p-1.5 text-slate-500 hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
+            className="p-1.5 text-[var(--muted)] hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
           >
             <ChevronRight size={16} />
           </button>
           <button
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
-            className="p-1.5 text-slate-500 hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
+            className="p-1.5 text-[var(--muted)] hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
           >
             <ChevronsRight size={16} />
           </button>

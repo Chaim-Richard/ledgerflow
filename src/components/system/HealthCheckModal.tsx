@@ -193,10 +193,10 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Ledger Health Check</h2>
-                <p className="text-sm text-slate-500">"Are my books right?"</p>
+                <p className="text-sm text-[var(--muted)]">"Are my books right?"</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-lg transition-colors hover:bg-slate-200/50">
+            <button onClick={onClose} className="p-2 text-[var(--muted)] hover:text-slate-600 rounded-lg transition-colors hover:bg-slate-200/50">
               <X size={20} />
             </button>
           </div>
@@ -212,7 +212,7 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
                 </div>
                 <div className="text-center">
                   <h3 className="text-lg font-medium text-slate-900">Scanning Ledgers...</h3>
-                  <p className="text-slate-500 mt-1">Running 12 validation rules across all records.</p>
+                  <p className="text-[var(--muted)] mt-1">Running 12 validation rules across all records.</p>
                 </div>
               </div>
             ) : report ? (
@@ -222,9 +222,9 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
                   <div className="text-center">
                     <div className="text-5xl font-bold text-slate-900 flex items-baseline justify-center gap-1">
                       {report.score}
-                      <span className="text-xl text-slate-500">/ 100</span>
+                      <span className="text-xl text-[var(--muted)]">/ 100</span>
                     </div>
-                    <p className="text-sm font-medium text-slate-500 mt-2 uppercase tracking-wider">Health Score</p>
+                    <p className="text-sm font-medium text-[var(--muted)] mt-2 uppercase tracking-wider">Health Score</p>
                   </div>
                 </div>
 

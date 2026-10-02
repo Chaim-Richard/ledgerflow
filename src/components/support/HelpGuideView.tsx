@@ -224,7 +224,7 @@ export default function HelpGuideView() {
               onClick={() => setActiveCategory(cat)}
               className={"px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors " + (
                 activeCategory === cat
-                  ? "bg-[var(--brass)] text-black font-bold shadow-xs"
+                  ? "bg-[var(--brass)] text-[var(--ink)] font-bold shadow-xs"
                   : "bg-[var(--panel)] text-[var(--muted)] hover:text-[var(--text)] border border-[var(--line)]"
               )}
             >
@@ -249,7 +249,7 @@ export default function HelpGuideView() {
                     : "bg-[var(--surface)] border-transparent hover:bg-[var(--panel)] hover:border-[var(--line)] text-[var(--muted)]"
                 )}
               >
-                <div className={"p-2 rounded-lg shrink-0 " + (isSelected ? "bg-[var(--brass)] text-black" : "bg-[var(--panel)] text-[var(--muted)]")}>
+                <div className={"p-2 rounded-lg shrink-0 " + (isSelected ? "bg-[var(--brass)] text-[var(--ink)]" : "bg-[var(--panel)] text-[var(--muted)]")}>
                   <Icon size={16} />
                 </div>
                 <div className="flex-1 min-w-0">

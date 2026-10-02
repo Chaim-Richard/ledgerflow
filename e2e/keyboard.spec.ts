@@ -33,4 +33,42 @@ test.describe('Keyboard', () => {
     });
     expect(outline).not.toBe('none');
   });
+
+  test('an invoice can be opened, filled in and saved with the keyboard only (E-23)', async ({ page }) => {
+    const press = async (name: string) => {
+      const target = page.getByRole('button', { name, exact: true }).first();
+      await target.focus();
+      await page.keyboard.press('Enter');
+    };
+    await press('Money In');
+    await press('Invoices & AP');
+    await page.getByRole('button', { name: /Add Invoice/ }).first().focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { name: 'New invoice' })).toBeVisible();
+
+    // every field and the save button are reachable with Tab, in order
+    await page.getByLabel('Customer', { exact: true }).focus();
+    await page.keyboard.type('Keyboard Customer');
+    const reached = new Set<string>();
+    for (let i = 0; i < 60 && !reached.has('Save Draft'); i++) {
+      await page.keyboard.press('Tab');
+      const label = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null;
+        if (!el) return '';
+        const id = el.getAttribute('id');
+        const byFor = id ? document.querySelector(`label[for="${id}"]`)?.textContent : '';
+        return (byFor || el.getAttribute('aria-label') || el.textContent || '').trim();
+      });
+      reached.add(label);
+      if (label === 'Item / Description') await page.keyboard.type('Consulting');
+      if (/^Rate/.test(label)) await page.keyboard.type('120');
+    }
+    for (const field of ['Invoice Number', 'Invoice Date', 'Due Date', 'Tax', 'Item / Description', 'Qty', 'Save Draft']) {
+      expect([...reached].some(r => r === field || r.startsWith(field)), `${field} reachable by Tab`).toBe(true);
+    }
+    await expect(page.getByLabel('Invoice totals')).toContainText('120.00');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { name: 'New invoice' })).toBeHidden({ timeout: 8000 });
+  });
 });
+

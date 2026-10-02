@@ -14,7 +14,7 @@ import {
   BrainCircuit,
   Paperclip
 } from 'lucide-react';
-import { resolveAccountName, cn, formatDate } from '../../lib/utils';
+import { resolveAccountName, cn, formatDate, activateOnKey } from '../../lib/utils';
 import { isInflow } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
@@ -122,7 +122,7 @@ const TransactionRow = React.memo(({
   return (
     <div className="flex flex-col w-full h-full relative group/row">
       <div role="button" tabIndex={0} 
-        onClick={() => onSelect?.(tx.id)}
+        onKeyDown={activateOnKey} onClick={() => onSelect?.(tx.id)}
         className={cn(
           "grid w-full h-full items-center transition-all border-b border-[var(--line)] cursor-pointer relative",
           tx.type === 'reversal' && "bg-rose-50/5",
@@ -332,7 +332,7 @@ const TransactionRow = React.memo(({
             {formatCurrency(displayTx.totalAmountCents)}
           </span>
           {tx.originalCurrency && tx.exchangeRate && (
-            <span className={cn("text-[9px] font-sans font-bold uppercase tracking-wider text-slate-500 mt-0.5 truncate whitespace-nowrap", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
+            <span className={cn("text-[9px] font-sans font-bold uppercase tracking-wider text-[var(--muted)] mt-0.5 truncate whitespace-nowrap", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
               {tx.originalCurrency} @ {tx.exchangeRate.toFixed(4)}
             </span>
           )}
@@ -401,28 +401,28 @@ const TransactionRow = React.memo(({
               )}>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onEditDetails?.(tx); }}
-                  className="p-1 text-slate-500 hover:text-indigo-600 rounded transition-all"
+                  className="p-1 text-[var(--muted)] hover:text-indigo-600 rounded transition-all"
                   title="Edit Transaction Details"
                 >
                   <Edit3 size={14} />
                 </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onSplit(tx.id); }}
-                  className="p-1 text-slate-500 hover:text-indigo-600 rounded transition-all"
+                  className="p-1 text-[var(--muted)] hover:text-indigo-600 rounded transition-all"
                   title="Split Transaction"
                 >
                   <Columns size={14} />
                 </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onDuplicate?.(tx.id); }}
-                  className="p-1 text-slate-500 hover:text-indigo-600 rounded transition-all"
+                  className="p-1 text-[var(--muted)] hover:text-indigo-600 rounded transition-all"
                   title="Duplicate Transaction"
                 >
                   <Copy size={14} />
                 </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onCreateRule(tx); }}
-                  className="p-1 text-slate-500 hover:text-indigo-600 rounded transition-all cursor-pointer"
+                  className="p-1 text-[var(--muted)] hover:text-indigo-600 rounded transition-all cursor-pointer"
                   title="Create Auto-Categorization Rule"
                   aria-label="Create Auto-Categorization Rule"
                 >
@@ -432,7 +432,7 @@ const TransactionRow = React.memo(({
                   onClick={(e) => { e.stopPropagation(); onToggleFlag?.(tx.id); }}
                   className={cn(
                     "p-1 rounded transition-all",
-                    tx.isFlagged ? "text-amber-500" : "text-slate-500 hover:text-amber-500"
+                    tx.isFlagged ? "text-amber-500" : "text-[var(--muted)] hover:text-amber-500"
                   )}
                   title="Flag for Review"
                 >
@@ -440,7 +440,7 @@ const TransactionRow = React.memo(({
                 </button>
                 <AsyncButton 
                   onClick={(e) => { e.stopPropagation(); return onVoid(tx.id); }}
-                  className="p-1 text-slate-500 hover:text-rose-600 rounded transition-all"
+                  className="p-1 text-[var(--muted)] hover:text-rose-600 rounded transition-all"
                   variant="ghost"
                   size="icon"
                   disabled={tx.type === 'reversal' || !!tx.reversalEventId}

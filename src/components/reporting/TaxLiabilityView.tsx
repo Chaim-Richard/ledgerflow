@@ -166,7 +166,7 @@ export default function TaxLiabilityView({ startDate: pageStartDate, endDate: pa
             <label htmlFor="tax-ref" className="block text-xs font-semibold mb-1">Reference (optional)</label>
             <input id="tax-ref" value={reference} maxLength={100} onChange={e => setReference(e.target.value)} placeholder="e.g. Q3 2026" className="px-3 py-1.5 text-xs bg-[var(--panel)] border border-[var(--line)] rounded-lg" />
           </div>
-          <button type="button" disabled={busy || !workspaceId} onClick={fileReturn} className="px-4 py-2 rounded-lg bg-[var(--brass)] text-black text-sm font-bold disabled:opacity-50">
+          <button type="button" disabled={busy || !workspaceId} onClick={fileReturn} className="px-4 py-2 rounded-lg bg-[var(--brass)] text-[var(--ink)] text-sm font-bold disabled:opacity-50">
             File this return
           </button>
           <p className="text-xs text-[var(--muted)]">Keeps a copy of these numbers. Submitting to the tax office is done on their website.</p>

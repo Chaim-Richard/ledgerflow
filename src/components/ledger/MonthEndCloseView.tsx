@@ -336,7 +336,7 @@ export default function MonthEndCloseView() {
                     Soft close (accountants can still adjust)
                   </button>
                   <button type="button" disabled={busy || isFutureMonth || !readiness.ready} onClick={() => close('hard')}
-                    className="px-4 py-2 rounded-lg bg-[var(--brass)] text-black text-sm font-bold disabled:opacity-50 inline-flex items-center gap-2">
+                    className="px-4 py-2 rounded-lg bg-[var(--brass)] text-[var(--ink)] text-sm font-bold disabled:opacity-50 inline-flex items-center gap-2">
                     <Lock className="w-4 h-4" aria-hidden="true" /> Close {month}
                   </button>
                   {isFiscalYearEnd && role === 'owner' && (
@@ -352,7 +352,7 @@ export default function MonthEndCloseView() {
               <div className="space-y-3">
                 {state === 'soft' && (
                   <button type="button" disabled={busy || !readiness.ready} onClick={() => close('hard')}
-                    className="px-4 py-2 rounded-lg bg-[var(--brass)] text-black text-sm font-bold disabled:opacity-50 inline-flex items-center gap-2">
+                    className="px-4 py-2 rounded-lg bg-[var(--brass)] text-[var(--ink)] text-sm font-bold disabled:opacity-50 inline-flex items-center gap-2">
                     <Lock className="w-4 h-4" aria-hidden="true" /> Close for good
                   </button>
                 )}
@@ -380,7 +380,7 @@ export default function MonthEndCloseView() {
             {lockException ? (
               <div className="flex items-center justify-between gap-3 flex-wrap text-sm text-[var(--text)]">
                 <span>Unlocked {lockException.fromDate} to {lockException.toDate}{lockException.reason ? `: ${lockException.reason}` : ''}</span>
-                <button type="button" disabled={busy} onClick={relock} className="px-3 py-1.5 rounded-lg bg-[var(--brass)] text-black text-xs font-bold disabled:opacity-50">Close again</button>
+                <button type="button" disabled={busy} onClick={relock} className="px-3 py-1.5 rounded-lg bg-[var(--brass)] text-[var(--ink)] text-xs font-bold disabled:opacity-50">Close again</button>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">

@@ -61,7 +61,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">Account Statement</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-[var(--muted)] dark:text-slate-400">
               Customer and Vendor itemized account balance & transaction statements
             </p>
           </div>
@@ -122,7 +122,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
         </div>
 
         <div>
-          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label={<>Select {type === 'customer' ? 'Customer' : 'Vendor'}</>}>
+          <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase mb-1" label={<>Select {type === 'customer' ? 'Customer' : 'Vendor'}</>}>
             <select
               value={selectedContact?.id || ''}
               onChange={e => setContactId(e.target.value)}
@@ -138,7 +138,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
         </div>
 
         <div>
-          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label="From">
+          <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase mb-1" label="From">
             <input
               type="date"
               value={startDate}
@@ -149,7 +149,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
         </div>
 
         <div>
-          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label="To">
+          <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase mb-1" label="To">
             <input
               type="date"
               value={endDate}
@@ -162,7 +162,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
 
       {/* Printable Statement Canvas */}
       {!statementData || !selectedContact ? (
-        <div className="p-12 text-center text-sm text-slate-500">
+        <div className="p-12 text-center text-sm text-[var(--muted)]">
           Please select a {type === 'customer' ? 'customer' : 'vendor'} to view statement.
         </div>
       ) : (
@@ -171,25 +171,25 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
           <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-800 pb-6">
             <div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">STATEMENT OF ACCOUNT</h2>
-              <p className="text-xs text-slate-500 mt-1">Period: {startDate} to {endDate}</p>
+              <p className="text-xs text-[var(--muted)] mt-1">Period: {startDate} to {endDate}</p>
             </div>
             <div className="text-right text-xs space-y-1">
               <div className="font-bold text-slate-900 dark:text-white">{selectedContact.name}</div>
-              {selectedContact.email && <div className="text-slate-500">{selectedContact.email}</div>}
+              {selectedContact.email && <div className="text-[var(--muted)]">{selectedContact.email}</div>}
             </div>
           </div>
 
           {/* Statement Overview Cards */}
           <div className="grid grid-cols-3 gap-4">
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
-              <span className="text-xs text-slate-500 uppercase font-semibold">Opening Balance</span>
+              <span className="text-xs text-[var(--muted)] uppercase font-semibold">Opening Balance</span>
               <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
                 {formatCurrency(statementData.openingBalanceCents)}
               </div>
             </div>
 
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
-              <span className="text-xs text-slate-500 uppercase font-semibold">Total Period Billed</span>
+              <span className="text-xs text-[var(--muted)] uppercase font-semibold">Total Period Billed</span>
               <div className="text-lg font-bold font-mono text-indigo-600 dark:text-indigo-400 mt-1">
                 {formatCurrency(statementData.entries.reduce((sum, e) => sum + (e.debitCents || 0), 0))}
               </div>
@@ -218,8 +218,8 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-mono">
                 <tr className="bg-slate-50/50 dark:bg-slate-900/30 font-semibold">
-                  <td className="py-2.5 px-4 text-slate-500">{startDate}</td>
-                  <td className="py-2.5 px-4 font-sans italic text-slate-500" colSpan={4}>Opening Balance Brought Forward</td>
+                  <td className="py-2.5 px-4 text-[var(--muted)]">{startDate}</td>
+                  <td className="py-2.5 px-4 font-sans italic text-[var(--muted)]" colSpan={4}>Opening Balance Brought Forward</td>
                   <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-white">
                     {formatCurrency(statementData.openingBalanceCents)}
                   </td>
@@ -229,7 +229,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
                   <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                     <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400">{entry.date}</td>
                     <td className="py-2.5 px-4 font-sans font-medium text-slate-900 dark:text-white">{entry.type}</td>
-                    <td className="py-2.5 px-4 text-slate-500">#{entry.reference}</td>
+                    <td className="py-2.5 px-4 text-[var(--muted)]">#{entry.reference}</td>
                     <td className="py-2.5 px-4 text-right text-slate-900 dark:text-white">
                       {entry.debitCents > 0 ? formatCurrency(entry.debitCents) : '-'}
                     </td>

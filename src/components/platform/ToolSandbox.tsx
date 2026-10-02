@@ -173,7 +173,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                     <h3 className="text-xs font-black uppercase tracking-wider text-[var(--text)] dark:text-white flex items-center gap-2">
                        <Play size={14} className="text-indigo-600" /> Analysis Parameters
                     </h3>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1 opacity-60">Tune computational vectors</p>
+                    <p className="text-[10px] text-[var(--muted)] uppercase tracking-wider mt-1 opacity-60">Tune computational vectors</p>
                  </div>
                  <button
                     type="button"
@@ -183,7 +183,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                       algorithm.inputs.forEach((i: any) => init[i.key] = i.defaultValue);
                       setParams(init);
                     }}
-                    className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--line)] text-slate-400 hover:text-[var(--text)] transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
+                    className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--line)] text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
                  >
                     <RotateCcw size={12} /> Reset
                  </button>
@@ -271,7 +271,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                  })}
                  
                  <div className="p-4 bg-[var(--ink)] rounded-xl border border-[var(--line)]">
-                    <span className="text-[9px] uppercase tracking-wider font-black text-slate-500 block mb-2">Ingestion Status</span>
+                    <span className="text-[9px] uppercase tracking-wider font-black text-[var(--muted)] block mb-2">Ingestion Status</span>
                     <div className="space-y-1 font-mono text-[10px] font-bold text-[var(--text)] dark:text-white">
                        <div className="flex justify-between"><span>Transactions:</span> <span className="text-emerald-500">{transactions.length}</span></div>
                        <div className="flex justify-between"><span>Active Accounts:</span> <span className="text-emerald-500">{accounts.length}</span></div>
@@ -286,7 +286,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {results.metrics.map((m: any, idx: number) => (
                      <div key={idx} className="p-6 bg-[var(--surface)] dark:bg-[#1b1c1d] border border-[var(--line)] rounded-[32px] shadow-sm">
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 block mb-1">{m.label}</span>
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)] block mb-1">{m.label}</span>
                         <h4 className="text-3xl font-black text-[var(--text)] dark:text-white tracking-tighter italic">
                            {m.value}
                         </h4>
@@ -381,7 +381,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
 
                    <div className="overflow-x-auto">
                      <table className="w-full text-left text-xs text-slate-300">
-                       <thead className="border-b border-white/10 text-[10px] uppercase font-bold text-slate-400">
+                       <thead className="border-b border-white/10 text-[10px] uppercase font-bold text-[var(--muted)]">
                          <tr>
                            {tableColumns.map(col => (
                              <th key={col.key} className="py-2.5 px-3 whitespace-nowrap">

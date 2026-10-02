@@ -32,12 +32,12 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'terms' }: Le
                 <h2 className="text-lg font-bold text-slate-900">
                   {activeTab === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}
                 </h2>
-                <p className="text-xs text-slate-500 font-medium">LedgerFlow Platform Compliance & Legal Agreement</p>
+                <p className="text-xs text-[var(--muted)] font-medium">LedgerFlow Platform Compliance & Legal Agreement</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-2 text-[var(--muted)] hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
               aria-label="Close modal"
             >
               <X size={18} />
@@ -51,7 +51,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'terms' }: Le
               className={`py-3 border-b-2 transition-all flex items-center gap-2 ${
                 activeTab === 'terms'
                   ? 'border-indigo-600 text-indigo-600 font-bold'
-                  : 'border-transparent text-slate-500 hover:text-slate-900'
+                  : 'border-transparent text-[var(--muted)] hover:text-slate-900'
               }`}
             >
               <FileText size={16} />
@@ -62,7 +62,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'terms' }: Le
               className={`py-3 border-b-2 transition-all flex items-center gap-2 ${
                 activeTab === 'privacy'
                   ? 'border-indigo-600 text-indigo-600 font-bold'
-                  : 'border-transparent text-slate-500 hover:text-slate-900'
+                  : 'border-transparent text-[var(--muted)] hover:text-slate-900'
               }`}
             >
               <ShieldCheck size={16} />
@@ -151,7 +151,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'terms' }: Le
 
           {/* Footer */}
           <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+            <div className="flex items-center gap-2 text-xs text-[var(--muted)] font-medium">
               <Lock size={12} />
               <span>TLS 1.3 Encrypted • Compliance Version 2026.1</span>
             </div>

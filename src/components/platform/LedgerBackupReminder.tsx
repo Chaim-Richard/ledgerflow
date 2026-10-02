@@ -34,10 +34,10 @@ export const LedgerBackupReminder: React.FC = () => {
     <div 
       role="status"
       id="ledger-backup-reminder-banner"
-      className="bg-amber-500/10 border-b border-amber-500/20 text-amber-300 px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm font-medium transition-colors"
+      className="bg-amber-500/10 border-b border-amber-500/20 text-amber-900 dark:text-amber-300 px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm font-medium transition-colors"
     >
       <div className="flex items-center gap-2.5 overflow-hidden">
-        <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+        <ShieldAlert className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" aria-hidden="true" />
         <span className="truncate">
           {health.status === 'never'
             ? "You've never exported a backup. Export an immutable snapshot to protect your ledger data."
@@ -49,7 +49,7 @@ export const LedgerBackupReminder: React.FC = () => {
         <button
           onClick={handleGoToBackup}
           id="btn-backup-reminder-export"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 rounded text-xs font-semibold transition"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 border border-amber-500/30 rounded text-xs font-semibold transition"
         >
           <Download className="w-3.5 h-3.5" />
           <span>Export Backup</span>
@@ -58,7 +58,7 @@ export const LedgerBackupReminder: React.FC = () => {
           onClick={() => setIsDismissed(true)}
           id="btn-backup-reminder-dismiss"
           aria-label="Dismiss backup reminder"
-          className="p-1 hover:bg-amber-500/20 rounded text-amber-400/80 hover:text-amber-200 transition"
+          className="p-1 hover:bg-amber-500/20 rounded text-amber-800 dark:text-amber-400/80 hover:text-amber-950 dark:hover:text-amber-200 transition"
         >
           <X className="w-4 h-4" />
         </button>

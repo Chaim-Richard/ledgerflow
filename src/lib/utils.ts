@@ -453,3 +453,14 @@ export function formatTzDate(d: Date = new Date(), timezone = 'UTC'): string {
   }
 }
 
+
+/**
+ * Keyboard activation for an element that acts as a button but isn't one (E-23): Enter or Space
+ * runs its onClick, like a real button.
+ */
+export function activateOnKey(e: { key: string; preventDefault: () => void; currentTarget: { click: () => void } }): void {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    e.currentTarget.click();
+  }
+}

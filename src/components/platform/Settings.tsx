@@ -23,7 +23,7 @@ export default function Settings() {
             Precision Core v2.0
           </div>
           <h1 className="text-4xl md:text-6xl font-black text-[var(--text)] tracking-tighter">Settings</h1>
-          <p className="text-slate-500 font-medium text-lg max-w-xl">
+          <p className="text-[var(--muted)] font-medium text-lg max-w-xl">
             Configure institutional rule bridges, developer integrations, and enterprise-grade security protocols.
           </p>
         </div>
@@ -37,7 +37,7 @@ export default function Settings() {
                 "flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-medium uppercase tracking-wider transition-all",
                 activeSubTab === tab.id 
                   ? "bg-[var(--surface)] text-[var(--text)] shadow-sm ring-1 ring-slate-200" 
-                  : "text-slate-500 hover:text-[var(--text)]"
+                  : "text-[var(--muted)] hover:text-[var(--text)]"
               )}
             >
               <tab.icon size={14} />
@@ -58,7 +58,7 @@ export default function Settings() {
               className="space-y-10"
             >
               {ActiveComponent && (
-                <Suspense fallback={<div className="h-40 flex items-center justify-center font-bold text-slate-500 uppercase tracking-widest text-xs">Loading module...</div>}>
+                <Suspense fallback={<div className="h-40 flex items-center justify-center font-bold text-[var(--muted)] uppercase tracking-widest text-xs">Loading module...</div>}>
                   <ViewErrorBoundary viewName={(activeTabDef as any)?.label?.en || activeSubTab}>
                     <ActiveComponent />
                   </ViewErrorBoundary>
@@ -73,7 +73,7 @@ export default function Settings() {
           <div className="p-4 md:p-10 bg-[var(--surface)] rounded-[40px] border border-[var(--line)] shadow-sm group hover:border-indigo-600 transition-all duration-500">
             <h4 className="text-[11px] font-black text-[var(--text)] uppercase tracking-[0.3em] mb-6 opacity-40">Documentation Protocol</h4>
             <div className="space-y-4">
-              <p className="text-[11px] text-slate-500 leading-relaxed font-bold uppercase tracking-widest mb-8">
+              <p className="text-[11px] text-[var(--muted)] leading-relaxed font-bold uppercase tracking-widest mb-8">
                 The architecture runs entirely on dynamic topological registries. Settings components are lazy-loaded on demand via the SETTINGS_COMPONENTS registry mapping.
               </p>
             </div>

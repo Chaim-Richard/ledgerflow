@@ -288,14 +288,14 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
              </div>
              <div>
                 <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-tight leading-none">Spreadsheet Pivot Matrix</h3>
-                <p className="text-[9.5px] text-slate-400 font-mono tracking-tight mt-1">Cross-tabulation & Dimension Aggregator</p>
+                <p className="text-[9.5px] text-[var(--muted)] font-mono tracking-tight mt-1">Cross-tabulation & Dimension Aggregator</p>
              </div>
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
               {/* Period Filter */}
               <div className="flex items-center gap-1.5 bg-[var(--panel)] border border-[var(--line)] rounded-xl px-2 py-1">
-                 <Calendar size={12} className="text-slate-400" />
+                 <Calendar size={12} className="text-[var(--muted)]" />
                  <select
                    aria-label="Filter period"
                    value={period}
@@ -318,7 +318,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                        onChange={(e) => setCustomStartDate(e.target.value)}
                        className="bg-[var(--surface)] border border-[var(--line)] rounded px-1.5 py-0.5 text-[9px] font-mono outline-none"
                      />
-                     <span className="text-[9px] text-slate-400">to</span>
+                     <span className="text-[9px] text-[var(--muted)]">to</span>
                      <input
                        type="date"
                        aria-label="End date"
@@ -337,7 +337,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                    onClick={() => setPivotMode('flat')}
                    className={cn(
                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer",
-                     pivotMode === 'flat' ? "bg-[var(--brass)] text-black shadow-3xs" : "text-[var(--muted)] hover:text-[var(--text)]"
+                     pivotMode === 'flat' ? "bg-[var(--brass)] text-[var(--ink)] shadow-3xs" : "text-[var(--muted)] hover:text-[var(--text)]"
                    )}
                  >
                    <ListCollapse size={11} />
@@ -348,7 +348,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                    onClick={() => setPivotMode('matrix')}
                    className={cn(
                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer",
-                     pivotMode === 'matrix' ? "bg-[var(--brass)] text-black shadow-3xs" : "text-[var(--muted)] hover:text-[var(--text)]"
+                     pivotMode === 'matrix' ? "bg-[var(--brass)] text-[var(--ink)] shadow-3xs" : "text-[var(--muted)] hover:text-[var(--text)]"
                    )}
                  >
                    <Grid3X3 size={11} />
@@ -400,7 +400,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
           <div className="flex flex-wrap items-center gap-4 text-left">
             {pivotMode === 'flat' ? (
               <div className="flex items-center gap-2">
-                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Group Rows:</span>
+                 <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Group Rows:</span>
                  <div className="flex flex-wrap gap-1">
                     {activeDimensions.map(dim => (
                       <button
@@ -422,7 +422,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
             ) : (
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2">
-                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rows (R):</span>
+                   <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Rows (R):</span>
                    <div className="flex flex-wrap gap-1">
                       {activeDimensions.map(dim => (
                         <button
@@ -433,7 +433,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                             "px-2.5 py-1 bg-[var(--surface)] border rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer",
                             rowDim === dim.id 
                               ? "border-indigo-600 bg-indigo-50/50 text-indigo-750 font-bold" 
-                              : "border-[var(--line)] hover:border-slate-300 text-slate-500"
+                              : "border-[var(--line)] hover:border-slate-300 text-[var(--muted)]"
                           )}
                         >
                           {dim.name}
@@ -443,7 +443,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                 </div>
 
                 <div className="flex items-center gap-2">
-                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Columns (C):</span>
+                   <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Columns (C):</span>
                    <div className="flex flex-wrap gap-1">
                       {activeDimensions.map(dim => (
                         <button
@@ -455,7 +455,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                             "px-2.5 py-1 bg-[var(--surface)] border rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer",
                             colDim === dim.id 
                               ? "border-indigo-600 bg-indigo-50/50 text-indigo-750 font-bold" 
-                              : "border-[var(--line)] hover:border-slate-300 text-slate-500 disabled:opacity-40"
+                              : "border-[var(--line)] hover:border-slate-300 text-[var(--muted)] disabled:opacity-40"
                           )}
                         >
                           {dim.name}
@@ -468,7 +468,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
           </div>
 
           <div className="relative group">
-             <Search size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[var(--text)] transition-colors" />
+             <Search size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--text)] transition-colors" />
              <input 
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
@@ -486,11 +486,11 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
           <table className="w-full border-collapse">
              <thead className="sticky top-0 z-20 bg-slate-55/90 backdrop-blur-md border-b border-[var(--line)] shadow-3xs">
                 <tr className="text-left bg-[var(--ink)]">
-                   <th className="px-6 py-3.5 text-[9.5px] font-bold text-slate-500 uppercase tracking-widest w-12 text-center">Collapse</th>
-                   <th className="px-4 py-3.5 text-[9.5px] font-bold text-slate-500 uppercase tracking-widest min-w-[320px]">Dimension Name / Nodes</th>
-                   <th className="px-4 py-3.5 text-[9.5px] font-bold text-slate-500 uppercase tracking-widest text-center">Count</th>
-                   <th className="px-4 py-3.5 text-[9.5px] font-bold text-slate-500 uppercase tracking-widest">Type Category</th>
-                   <th className="px-6 py-3.5 text-[9.5px] font-bold text-slate-500 uppercase tracking-widest text-right">Sum value</th>
+                   <th className="px-6 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest w-12 text-center">Collapse</th>
+                   <th className="px-4 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest min-w-[320px]">Dimension Name / Nodes</th>
+                   <th className="px-4 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest text-center">Count</th>
+                   <th className="px-4 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest">Type Category</th>
+                   <th className="px-6 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest text-right">Sum value</th>
                 </tr>
              </thead>
              <tbody>
@@ -501,13 +501,13 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                        className="group cursor-pointer hover:bg-[var(--ink)]/80 border-b border-[var(--line)] transition-colors bg-[var(--surface)] z-10 text-left"
                      >
                         <td className="px-6 py-3.5 text-center">
-                           <div className="flex justify-center text-slate-400 group-hover:text-slate-700">
+                           <div className="flex justify-center text-[var(--muted)] group-hover:text-slate-700">
                              {expandedGroups.has(groupName) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                            </div>
                         </td>
                         <td className="px-4 py-3.5">
                            <div className="flex items-center gap-3">
-                              <span className="text-[10px] font-mono font-bold text-slate-400 w-5">{(gIdx + 1).toString().padStart(2, '0')}</span>
+                              <span className="text-[10px] font-mono font-bold text-[var(--muted)] w-5">{(gIdx + 1).toString().padStart(2, '0')}</span>
                               <span className="text-xs font-bold text-slate-850 uppercase tracking-tight">{groupName}</span>
                            </div>
                         </td>
@@ -528,7 +528,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                            </button>
                         </td>
                         <td className="px-4 py-3.5">
-                           <span className="text-[9px] font-mono font-bold text-slate-400 uppercase">
+                           <span className="text-[9px] font-mono font-bold text-[var(--muted)] uppercase">
                              Aggregate Row Node
                            </span>
                         </td>
@@ -549,12 +549,12 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                           <td className="px-4 py-2.5">
                              <div className="flex flex-col">
                                 <span className="text-[11.5px] font-medium text-[var(--text)]">{t.description}</span>
-                                <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{t.payee || 'Direct Ledger Entry'}</span>
+                                <span className="text-[8.5px] font-bold text-[var(--muted)] uppercase tracking-widest mt-0.5">{t.payee || 'Direct Ledger Entry'}</span>
                              </div>
                           </td>
                           <td className="px-4 py-2.5" />
                           <td className="px-4 py-2.5">
-                             <span className="px-2 py-0.5 bg-[var(--surface)] border border-[var(--line)] rounded text-[8.5px] font-bold uppercase text-slate-500">
+                             <span className="px-2 py-0.5 bg-[var(--surface)] border border-[var(--line)] rounded text-[8.5px] font-bold uppercase text-[var(--muted)]">
                                 {resolveAccountName(accounts, t.lines[0]?.accountId, t.lines[0]?.accountName)}
                              </span>
                           </td>
@@ -575,11 +575,11 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
-                  <th className="sticky left-0 z-30 bg-[var(--ink)] text-left px-6 py-4 text-[9.5px] font-bold text-slate-500 uppercase tracking-widest border-r border-[var(--line)] min-w-[200px]">
+                  <th className="sticky left-0 z-30 bg-[var(--ink)] text-left px-6 py-4 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest border-r border-[var(--line)] min-w-[200px]">
                     Row Dim / Column Dim
                   </th>
                   {matrixData.cols.map(cKey => (
-                    <th key={cKey} className="px-4 py-4 text-[9.5px] font-bold text-slate-500 uppercase tracking-widest text-right font-mono border-r border-slate-150">
+                    <th key={cKey} className="px-4 py-4 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest text-right font-mono border-r border-slate-150">
                       {formatDimensionDisplay(colDim, cKey)}
                     </th>
                   ))}
@@ -596,7 +596,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                       {/* Row Header - Sticky */}
                       <td className="sticky left-0 z-10 bg-[var(--surface)] group-hover:bg-[var(--ink)]/50 px-6 py-3 text-xs font-bold text-slate-850 uppercase tracking-tight border-r border-[var(--line)]">
                         <div className="flex items-center gap-2">
-                           <span className="text-[8.5px] font-mono text-slate-400">R{(rIdx + 1).toString().padStart(2, '0')}</span>
+                           <span className="text-[8.5px] font-mono text-[var(--muted)]">R{(rIdx + 1).toString().padStart(2, '0')}</span>
                            <span className="truncate max-w-[170px]">{formatDimensionDisplay(rowDim, rKey)}</span>
                         </div>
                       </td>
@@ -718,7 +718,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
         {((pivotMode === 'flat' && groupedData.length === 0) || (pivotMode === 'matrix' && matrixData.rows.length === 0)) && (
           <div className="p-24 text-center">
              <Calculator size={44} className="mx-auto text-slate-300 mb-4 stroke-[1.5px]" />
-             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No matching transaction intersections matched.</p>
+             <p className="text-xs font-bold text-[var(--muted)] uppercase tracking-widest">No matching transaction intersections matched.</p>
           </div>
         )}
       </div>
@@ -733,7 +733,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
             <span className="hidden sm:inline">ROWS: {transactions.length} items</span>
             <span className="hidden sm:inline">GROUPS: {pivotMode === 'flat' ? groupedData.length : matrixData.rows.length} modes</span>
          </div>
-         <div className="flex items-center gap-4 text-slate-500">
+         <div className="flex items-center gap-4 text-[var(--muted)]">
             <span>ZOOM: 100%</span>
             <span>DOM: GRID-V3</span>
          </div>

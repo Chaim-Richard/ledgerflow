@@ -39,7 +39,7 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">
             Add Customer
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <button onClick={onClose} className="text-[var(--muted)] hover:text-slate-600 p-1 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>

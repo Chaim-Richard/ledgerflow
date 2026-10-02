@@ -124,7 +124,7 @@ export default function OnboardingView() {
           <button 
             type="button"
             onClick={() => setQuickEntryOpen(true)}
-            className="w-full sm:w-auto px-6 py-3 bg-[var(--brass)] text-black font-semibold rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto px-6 py-3 bg-[var(--brass)] text-[var(--ink)] font-semibold rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             {language === 'he' ? 'רישום תנועה ראשונה ידנית' : 'Record First Entry Manually'}

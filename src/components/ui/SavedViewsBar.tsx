@@ -165,7 +165,7 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
               />
               <button
                 onClick={handleQuickSaveCurrent}
-                className="px-2 py-1 text-xs font-semibold bg-[var(--brass)] text-black rounded hover:opacity-90"
+                className="px-2 py-1 text-xs font-semibold bg-[var(--brass)] text-[var(--ink)] rounded hover:opacity-90"
                aria-label="Save">
                 Save
               </button>

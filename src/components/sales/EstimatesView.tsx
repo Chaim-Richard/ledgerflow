@@ -154,7 +154,7 @@ export default function EstimatesView() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">Estimates & Quotes</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-[var(--muted)] dark:text-slate-400">
               Create proposals, track client approvals, and convert quotes directly into invoices
             </p>
           </div>
@@ -245,13 +245,13 @@ export default function EstimatesView() {
       {/* Estimates Table */}
       <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
         {loading ? <LoadingState what="estimates" /> : estimates.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-500">
+          <div className="p-8 text-center text-xs text-[var(--muted)]">
             No estimates found. Click "New Estimate" to create one.
           </div>
         ) : (
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-500 font-semibold uppercase text-[10px]">
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-[var(--muted)] font-semibold uppercase text-[10px]">
                 <th className="py-3 px-4">Estimate #</th>
                 <th className="py-3 px-4">Customer</th>
                 <th className="py-3 px-4">Date</th>
@@ -265,7 +265,7 @@ export default function EstimatesView() {
                 <tr key={est.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                   <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white">#{est.number}</td>
                   <td className="py-3 px-4 text-slate-800 dark:text-slate-200 font-medium">{est.customerName}</td>
-                  <td className="py-3 px-4 text-slate-500">{est.date}</td>
+                  <td className="py-3 px-4 text-[var(--muted)]">{est.date}</td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${est.status === 'converted' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'}`}>
                       {est.status}

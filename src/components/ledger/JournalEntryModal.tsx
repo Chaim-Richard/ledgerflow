@@ -331,7 +331,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
             {/* Header */}
             <div className="p-4 md:p-6 lg:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30 gap-4">
               <div className="flex items-center gap-3 md:gap-4">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-[var(--brass)] text-black rounded-xl flex items-center justify-center shadow-md shrink-0">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-[var(--brass)] text-[var(--ink)] rounded-xl flex items-center justify-center shadow-md shrink-0">
                   <ArrowRightLeft size={20} className="md:size-[24px]" />
                 </div>
                 <div>
@@ -618,7 +618,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 className={cn(
                   "py-3 px-4 rounded-xl font-bold transition-all shadow-md order-1 sm:order-2 sm:flex-[2] text-xs uppercase tracking-wider",
                   (totals.isBalanced && !isLocked)
-                    ? "bg-[var(--brass)] text-black hover:opacity-90 cursor-pointer" 
+                    ? "bg-[var(--brass)] text-[var(--ink)] hover:opacity-90 cursor-pointer" 
                     : "bg-[var(--ink)] text-[var(--muted)] cursor-not-allowed shadow-none"
                 )}
               >

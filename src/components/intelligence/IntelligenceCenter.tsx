@@ -232,7 +232,7 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-3">
          <div className="flex items-center gap-2">
            <Activity size={13} className="text-indigo-600 shrink-0" />
-           <span className="text-[10px] font-mono font-bold tracking-wider text-slate-500 uppercase">Recent Transaction Volume</span>
+           <span className="text-[10px] font-mono font-bold tracking-wider text-[var(--muted)] uppercase">Recent Transaction Volume</span>
          </div>
          <div className="flex items-center gap-2">
            <span className="px-2 py-0.5 bg-[var(--ink)] border border-[var(--line)] text-slate-700 text-[8px] font-mono font-black uppercase rounded-sm">Current</span>
@@ -263,7 +263,7 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
               </div>
             </motion.div>
           ) : (
-            <div className="absolute top-2 right-2 text-[9px] text-slate-400 uppercase font-mono pointer-events-none hidden sm:block">
+            <div className="absolute top-2 right-2 text-[9px] text-[var(--muted)] uppercase font-mono pointer-events-none hidden sm:block">
               Hover series peaks to scope ledger context
             </div>
           )}
@@ -435,7 +435,7 @@ export default function AnalyticalCenter() {
           <div className="p-4 border-b border-[var(--line)] bg-[var(--panel)] shrink-0 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-[var(--brass)] text-black rounded-lg flex items-center justify-center shrink-0 shadow-xs font-bold">
+                <div className="w-7 h-7 bg-[var(--brass)] text-[var(--ink)] rounded-lg flex items-center justify-center shrink-0 shadow-xs font-bold">
                   <Target size={14} className="stroke-[2.5px]" />
                 </div>
                 <div>
@@ -500,7 +500,7 @@ export default function AnalyticalCenter() {
                       >
                         <div className={cn(
                           "w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 transition-colors",
-                          isActive ? "bg-[var(--brass)] text-black font-bold" : "bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] group-hover:text-[var(--text)]"
+                          isActive ? "bg-[var(--brass)] text-[var(--ink)] font-bold" : "bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] group-hover:text-[var(--text)]"
                         )}>
                           <IconComponent size={12} className="stroke-[2.2px]" />
                         </div>
@@ -581,7 +581,7 @@ export default function AnalyticalCenter() {
                   onClick={() => setTimeRange(days)}
                   className={cn(
                     "px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap",
-                    timeRange === days ? "bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] shadow-3xs" : "text-slate-500 hover:text-[var(--text)]"
+                    timeRange === days ? "bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] shadow-3xs" : "text-[var(--muted)] hover:text-[var(--text)]"
                   )}
                 >
                   {days}D
@@ -593,7 +593,7 @@ export default function AnalyticalCenter() {
             <button
               onClick={() => onAction?.('toggle-focus-mode')}
               title={isFocusMode ? "Standard Workspace View" : "Maximize Intelligence Lens"}
-              className="p-1.5 border border-[var(--line)] hover:bg-[var(--ink)] rounded-lg text-slate-500 hover:text-[var(--text)] shadow-3xs cursor-pointer transition-all shrink-0"
+              className="p-1.5 border border-[var(--line)] hover:bg-[var(--ink)] rounded-lg text-[var(--muted)] hover:text-[var(--text)] shadow-3xs cursor-pointer transition-all shrink-0"
             >
               {isFocusMode ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
             </button>
@@ -648,15 +648,15 @@ export default function AnalyticalCenter() {
                   
                   {/* Card 1: Integrity */}
                   <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
-                    <div className="flex items-center justify-between text-slate-400 mb-2">
-                      <span className="text-[8.5px] font-bold uppercase tracking-wider text-slate-400">Data Integrity</span>
+                    <div className="flex items-center justify-between text-[var(--muted)] mb-2">
+                      <span className="text-[8.5px] font-bold uppercase tracking-wider text-[var(--muted)]">Data Integrity</span>
                       <ShieldCheck size={14} className="text-emerald-500" />
                     </div>
                     <div className="space-y-0.5">
                       <p className="text-lg font-black text-[var(--text)] leading-none">
                         {integrityStatus.isConsistent ? 'VERIFIED' : 'VARIANCE'}
                       </p>
-                      <p className="text-[9px] text-slate-500 font-mono tracking-tight leading-normal">
+                      <p className="text-[9px] text-[var(--muted)] font-mono tracking-tight leading-normal">
                         {transactions.length} secure trace logs
                       </p>
                     </div>
@@ -664,7 +664,7 @@ export default function AnalyticalCenter() {
 
                   {/* Card 2: Enterprise Viability Score */}
                   <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
-                    <div className="flex items-center justify-between text-slate-400 mb-2">
+                    <div className="flex items-center justify-between text-[var(--muted)] mb-2">
                       <span className="text-[8.5px] font-bold uppercase tracking-wider">Health Score</span>
                       <Sparkles size={14} className="text-indigo-500" />
                     </div>
@@ -684,7 +684,7 @@ export default function AnalyticalCenter() {
 
                   {/* Card 3: Cash Solvent Runway */}
                   <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
-                    <div className="flex items-center justify-between text-slate-400 mb-2">
+                    <div className="flex items-center justify-between text-[var(--muted)] mb-2">
                       <span className="text-[8.5px] font-bold uppercase tracking-wider">Estimated Runway</span>
                       <Calendar size={14} className="text-amber-500" />
                     </div>
@@ -692,7 +692,7 @@ export default function AnalyticalCenter() {
                       <p className="text-lg font-black text-[var(--text)] leading-none whitespace-nowrap">
                         {metrics.kpis.runwayMonths.toFixed(1)} Months
                       </p>
-                      <p className="text-[9px] text-slate-500 font-mono tracking-tight leading-normal whitespace-nowrap truncate">
+                      <p className="text-[9px] text-[var(--muted)] font-mono tracking-tight leading-normal whitespace-nowrap truncate">
                         At ${Math.round((metrics.kpis.burnRate * 30) / 100).toLocaleString()}/Mo burn
                       </p>
                     </div>
@@ -700,7 +700,7 @@ export default function AnalyticalCenter() {
 
                   {/* Card 4: Index Volatility */}
                   <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
-                    <div className="flex items-center justify-between text-slate-400 mb-2">
+                    <div className="flex items-center justify-between text-[var(--muted)] mb-2">
                       <span className="text-[8.5px] font-bold uppercase tracking-wider">Trend Volatility</span>
                       <Flame size={14} className="text-rose-500" />
                     </div>
@@ -708,7 +708,7 @@ export default function AnalyticalCenter() {
                       <p className="text-lg font-black text-[var(--text)] leading-none">
                         {metrics.kpis.volatility.toFixed(1)}%
                       </p>
-                      <p className="text-[9px] text-slate-500 font-mono tracking-tight leading-normal">
+                      <p className="text-[9px] text-[var(--muted)] font-mono tracking-tight leading-normal">
                         Cashflow trend deviation
                       </p>
                     </div>
@@ -724,7 +724,7 @@ export default function AnalyticalCenter() {
                      <div className="pb-3 border-b border-[var(--line)] flex items-center justify-between">
                         <div>
                            <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Metric Distribution Web</h3>
-                           <p className="text-[9px] text-slate-400">Comparative metrics across baseline dimensions</p>
+                           <p className="text-[9px] text-[var(--muted)]">Comparative metrics across baseline dimensions</p>
                         </div>
                      </div>
                      
@@ -746,15 +746,15 @@ export default function AnalyticalCenter() {
 
                      <div className="pt-3 border-t border-[var(--line)] grid grid-cols-3 gap-2 text-center bg-[var(--ink)]/50 -mx-5 -mb-5 rounded-b-2xl p-3">
                         <div>
-                           <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Quick Liquidity</p>
+                           <p className="text-[8.5px] font-bold text-[var(--muted)] uppercase tracking-wider">Quick Liquidity</p>
                            <p className="text-xs font-bold text-indigo-600 mt-0.5">{(metrics?.kpis?.currentRatio || 0).toFixed(2)}x</p>
                         </div>
                         <div>
-                           <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Compliance</p>
+                           <p className="text-[8.5px] font-bold text-[var(--muted)] uppercase tracking-wider">Compliance</p>
                            <p className="text-xs font-bold text-emerald-600 mt-0.5">{metrics?.kpis?.complianceScore || 0}%</p>
                         </div>
                         <div>
-                           <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Yield Factor</p>
+                           <p className="text-[8.5px] font-bold text-[var(--muted)] uppercase tracking-wider">Yield Factor</p>
                            <p className="text-xs font-bold text-[var(--text)] mt-0.5">{metrics?.kpis?.yieldEfficiency || 0}%</p>
                         </div>
                      </div>
@@ -794,7 +794,7 @@ export default function AnalyticalCenter() {
                              <div key={i} className={cn("p-2.5 border-l-2 bg-[var(--ink)]/50 rounded-r-lg space-y-1.5 transition-all hover:bg-[var(--ink)]", item.color)}>
                                <div className="flex items-center justify-between">
                                  <span className="text-[10px] font-bold text-slate-850">{item.title}</span>
-                                 <span className="text-[8px] font-mono font-black tracking-wider uppercase bg-[var(--surface)] border px-1.5 py-0.5 rounded-sm text-slate-500">
+                                 <span className="text-[8px] font-mono font-black tracking-wider uppercase bg-[var(--surface)] border px-1.5 py-0.5 rounded-sm text-[var(--muted)]">
                                    {item.status}
                                  </span>
                                </div>
@@ -856,7 +856,7 @@ export default function AnalyticalCenter() {
                             </BarChart>
                          </ResponsiveContainer>
                       </div>
-                      <p className="text-[8px] font-mono text-slate-400 uppercase text-center mt-3 tracking-wider">Click columns to filter transaction explorer down to project bounds</p>
+                      <p className="text-[8px] font-mono text-[var(--muted)] uppercase text-center mt-3 tracking-wider">Click columns to filter transaction explorer down to project bounds</p>
                    </div>
 
                    <div className="p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-3xs flex flex-col h-[320px]">
@@ -881,7 +881,7 @@ export default function AnalyticalCenter() {
                             </AreaChart>
                          </ResponsiveContainer>
                       </div>
-                      <p className="text-[8px] font-mono text-slate-400 uppercase text-center mt-3 tracking-wider">Dynamic mathematical ratio derived from live journal lines</p>
+                      <p className="text-[8px] font-mono text-[var(--muted)] uppercase text-center mt-3 tracking-wider">Dynamic mathematical ratio derived from live journal lines</p>
                    </div>
                 </div>
 
@@ -897,7 +897,7 @@ export default function AnalyticalCenter() {
                                </div>
                                <div>
                                   <p className="text-xs font-bold text-slate-850">{p.name}</p>
-                                  <p className="text-[9.5px] text-slate-500 mt-0.5 leading-none">
+                                  <p className="text-[9.5px] text-[var(--muted)] mt-0.5 leading-none">
                                      Operating profit bounds: <span className="font-semibold text-slate-700 whitespace-nowrap">${p.profit.toLocaleString()}</span>
                                   </p>
                                </div>
@@ -907,7 +907,7 @@ export default function AnalyticalCenter() {
                             <div className="flex items-center gap-4">
                                <div className="flex flex-col items-end text-right">
                                   <span className="text-[10px] font-extrabold text-[var(--text)]">{p.margin.toFixed(1)}% Margin</span>
-                                  <span className="text-[8px] text-slate-400 uppercase tracking-wider">Ratio yield</span>
+                                  <span className="text-[8px] text-[var(--muted)] uppercase tracking-wider">Ratio yield</span>
                                </div>
                                <span className={cn(
                                  "text-[8px] font-black tracking-wider uppercase px-2 py-0.5 rounded border shadow-3xs",
@@ -919,7 +919,7 @@ export default function AnalyticalCenter() {
                          </div>
                       ))}
                       {projectStats.length === 0 && (
-                        <p className="text-center text-[11px] text-slate-400 font-mono py-6">No enterprise segments categorized inside active ledger bounds.</p>
+                        <p className="text-center text-[11px] text-[var(--muted)] font-mono py-6">No enterprise segments categorized inside active ledger bounds.</p>
                       )}
                    </div>
                 </div>
@@ -1027,7 +1027,7 @@ export default function AnalyticalCenter() {
                         <React.Suspense fallback={
                           <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] min-h-[380px] text-center">
                             <Loader2 className="w-7 h-7 text-indigo-650 animate-spin shrink-0" />
-                            <p className="text-[10px] uppercase font-mono font-bold tracking-widest text-slate-400">Restructuring Lens Component...</p>
+                            <p className="text-[10px] uppercase font-mono font-bold tracking-widest text-[var(--muted)]">Restructuring Lens Component...</p>
                           </div>
                         }>
                           <Component 
@@ -1045,7 +1045,7 @@ export default function AnalyticalCenter() {
               }
               return (
                 <div className="p-4 md:p-8 text-center bg-[var(--surface)] border border-[var(--line)] rounded-[32px]">
-                  <p className="text-slate-400 text-xs font-mono">Select a channel lens to align telemetry parameters.</p>
+                  <p className="text-[var(--muted)] text-xs font-mono">Select a channel lens to align telemetry parameters.</p>
                 </div>
               );
             })()}
@@ -1084,7 +1084,7 @@ export default function AnalyticalCenter() {
                 </div>
                 <button 
                   onClick={() => setMobileMenuOpen(false)} 
-                  className="p-1 border border-[var(--line)] hover:bg-slate-100 rounded-lg text-slate-500 cursor-pointer"
+                  className="p-1 border border-[var(--line)] hover:bg-slate-100 rounded-lg text-[var(--muted)] cursor-pointer"
                 >
                   <X size={13} />
                 </button>
@@ -1094,7 +1094,7 @@ export default function AnalyticalCenter() {
               <div className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar select-none">
                 {CHANNELS.map((group, groupIdx) => (
                   <div key={groupIdx} className="space-y-1">
-                    <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-widest px-2 block">
+                    <span className="text-[8.5px] font-bold text-[var(--muted)] uppercase tracking-widest px-2 block">
                       {group.group[language] || group.group['en']}
                     </span>
                     <div className="space-y-0.5">
@@ -1115,7 +1115,7 @@ export default function AnalyticalCenter() {
                                 : "bg-transparent border-transparent text-[var(--muted)] hover:bg-[var(--ink)]"
                             )}
                           >
-                            <IconComponent size={13} className={cn(isActive ? "text-indigo-600" : "text-slate-400")} />
+                            <IconComponent size={13} className={cn(isActive ? "text-indigo-600" : "text-[var(--muted)]")} />
                             <span>{((item as any).label?.[language] || (item as any).label?.['en']) || (item as any).name || item.id}</span>
                           </button>
                         );

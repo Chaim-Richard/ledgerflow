@@ -99,7 +99,7 @@ function EditableNodeAliases({
         }
       }}
       placeholder="e.g. Alias 1, Alias 2"
-      className="w-full bg-[var(--surface)] border border-[var(--line)] focus:border-indigo-500 rounded-lg px-2.5 py-1 text-xs text-slate-400 outline-none"
+      className="w-full bg-[var(--surface)] border border-[var(--line)] focus:border-indigo-500 rounded-lg px-2.5 py-1 text-xs text-[var(--muted)] outline-none"
     />
   );
 }
@@ -420,7 +420,7 @@ export default function DimensionsSettings() {
           </div>
           <div>
             <h3 className="text-xl font-bold text-[var(--text)] tracking-tight">Dimensions & Label Node Registry</h3>
-            <p className="text-xs text-slate-500 font-medium">
+            <p className="text-xs text-[var(--muted)] font-medium">
               Stable identity map for dimensional accounting. Renaming a label node description updates all historical reporting without splitting buckets.
             </p>
           </div>
@@ -428,7 +428,7 @@ export default function DimensionsSettings() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
           <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl text-xs space-y-1">
-            <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+            <div className="flex items-center gap-2 text-[var(--muted)] font-bold uppercase tracking-wider text-[9px]">
               <Lock size={12} className="text-indigo-500" /> Immutable Axis ID
             </div>
             <p className="text-slate-600 font-medium leading-relaxed">
@@ -437,7 +437,7 @@ export default function DimensionsSettings() {
           </div>
 
           <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl text-xs space-y-1">
-            <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+            <div className="flex items-center gap-2 text-[var(--muted)] font-bold uppercase tracking-wider text-[9px]">
               <ShieldCheck size={12} className="text-emerald-500" /> Stable Node Identity
             </div>
             <p className="text-slate-600 font-medium leading-relaxed">
@@ -446,7 +446,7 @@ export default function DimensionsSettings() {
           </div>
 
           <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl text-xs space-y-1">
-            <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+            <div className="flex items-center gap-2 text-[var(--muted)] font-bold uppercase tracking-wider text-[9px]">
               <Archive size={12} className="text-amber-500" /> Append-Only Archiving
             </div>
             <p className="text-slate-600 font-medium leading-relaxed">
@@ -463,7 +463,7 @@ export default function DimensionsSettings() {
             <Database size={12} /> Auto-Migration Engine
           </div>
           <h4 className="text-base font-bold text-[var(--text)]">Migrate Free-Text Labels to Stable Nodes</h4>
-          <p className="text-xs text-slate-400 font-medium">
+          <p className="text-xs text-[var(--muted)] font-medium">
             Scans all existing transaction lines, automatically mints node records for free-text dimension labels, and rewrites lines to store stable node IDs.
           </p>
         </div>
@@ -509,7 +509,7 @@ export default function DimensionsSettings() {
             <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-400">Add New Dimension Axis</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Labelled labelClassName="text-[10px] font-bold text-slate-400 uppercase" label="Axis Key / ID (Immutable)">
+                <Labelled labelClassName="text-[10px] font-bold text-[var(--muted)] uppercase" label="Axis Key / ID (Immutable)">
                   <input
                     type="text"
                     value={newAxisId}
@@ -520,7 +520,7 @@ export default function DimensionsSettings() {
                 </Labelled>
               </div>
               <div className="space-y-1">
-                <Labelled labelClassName="text-[10px] font-bold text-slate-400 uppercase" label="Display Name">
+                <Labelled labelClassName="text-[10px] font-bold text-[var(--muted)] uppercase" label="Display Name">
                   <input
                     type="text"
                     value={newAxisName}
@@ -535,7 +535,7 @@ export default function DimensionsSettings() {
               <button
                 type="button"
                 onClick={() => setShowAddAxis(false)}
-                className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200"
+                className="px-4 py-2 text-xs font-bold text-[var(--muted)] hover:text-slate-200"
               >
                 Cancel
               </button>
@@ -580,8 +580,8 @@ export default function DimensionsSettings() {
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    Axis Key ID: <span className="font-mono text-slate-400">{dim.id}</span> (Immutable) — {axisNodes.length} registered label node{axisNodes.length === 1 ? '' : 's'}
+                  <p className="text-[11px] text-[var(--muted)]">
+                    Axis Key ID: <span className="font-mono text-[var(--muted)]">{dim.id}</span> (Immutable) — {axisNodes.length} registered label node{axisNodes.length === 1 ? '' : 's'}
                   </p>
                 </div>
               </div>
@@ -591,7 +591,7 @@ export default function DimensionsSettings() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-[var(--line)] text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <tr className="border-b border-[var(--line)] text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
                         <th className="py-2 px-3 w-24">Node ID</th>
                         <th className="py-2 px-3">Display Description</th>
                         <th className="py-2 px-3">Aliases (CSV)</th>
@@ -647,8 +647,8 @@ export default function DimensionsSettings() {
                   </table>
                 </div>
               ) : (
-                <div className="py-6 text-center border border-dashed border-[var(--line)] rounded-2xl text-xs text-slate-500">
-                  No registered label nodes for <span className="font-bold text-slate-400">{dim.name}</span> yet. Add one below.
+                <div className="py-6 text-center border border-dashed border-[var(--line)] rounded-2xl text-xs text-[var(--muted)]">
+                  No registered label nodes for <span className="font-bold text-[var(--muted)]">{dim.name}</span> yet. Add one below.
                 </div>
               )}
 
@@ -656,7 +656,7 @@ export default function DimensionsSettings() {
               <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl space-y-3">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 flex items-center justify-between">
                   <span>Register New Label Node</span>
-                  <span className="font-mono text-slate-500">Next ID: <strong className="text-indigo-400">{nextSuggestedId}</strong></span>
+                  <span className="font-mono text-[var(--muted)]">Next ID: <strong className="text-indigo-400">{nextSuggestedId}</strong></span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
                   <div className="sm:col-span-2 font-mono text-xs font-bold text-indigo-400 px-3 py-2 bg-slate-900 border border-[var(--line)] rounded-xl text-center">

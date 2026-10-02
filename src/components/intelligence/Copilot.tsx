@@ -160,7 +160,7 @@ export default function Copilot() {
     <div className="flex flex-col h-full bg-[var(--ink)]/50">
       <div className="px-6 md:px-10 py-6 md:py-8 border-b border-[var(--line)] bg-[var(--surface)] sticky top-0 z-20 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-[var(--brass)] text-black rounded-xl flex items-center justify-center shadow-md">
+          <div className="w-12 h-12 bg-[var(--brass)] text-[var(--ink)] rounded-xl flex items-center justify-center shadow-md">
             <Sparkles size={24} className="text-black" />
           </div>
           <div>
@@ -180,7 +180,7 @@ export default function Copilot() {
             <span>Read-Only Guardrail Active</span>
           </div>
           <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium">
-            <Database size={13} className="text-slate-500 shrink-0" />
+            <Database size={13} className="text-[var(--muted)] shrink-0" />
             <span>{accounts.length} Accounts • {transactions.length} Tx</span>
           </div>
         </div>
@@ -197,7 +197,7 @@ export default function Copilot() {
                 className={`flex gap-4 ${m.role === "user" ? "justify-end" : ""}`}
               >
                 {m.role === "assistant" && (
-                  <div className="w-10 h-10 rounded-xl bg-[var(--brass)] text-black flex items-center justify-center shrink-0 shadow-sm mt-1 font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brass)] text-[var(--ink)] flex items-center justify-center shrink-0 shadow-sm mt-1 font-bold">
                     <Sparkles size={18} />
                   </div>
                 )}
@@ -220,10 +220,10 @@ export default function Copilot() {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex gap-4"
               >
-                <div className="w-10 h-10 rounded-xl bg-[var(--brass)] text-black flex items-center justify-center shrink-0 shadow-sm mt-1">
+                <div className="w-10 h-10 rounded-xl bg-[var(--brass)] text-[var(--ink)] flex items-center justify-center shrink-0 shadow-sm mt-1">
                   <Sparkles size={18} className="animate-pulse" />
                 </div>
-                <div className="px-6 py-5 bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm text-xs font-semibold text-slate-500 flex items-center space-x-2">
+                <div className="px-6 py-5 bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm text-xs font-semibold text-[var(--muted)] flex items-center space-x-2">
                   <div className="w-2 h-2 bg-[var(--brass)] rounded-full animate-bounce"></div>
                   <div className="w-2 h-2 bg-[var(--brass)] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                   <div className="w-2 h-2 bg-[var(--brass)] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>

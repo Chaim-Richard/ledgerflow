@@ -121,7 +121,7 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
           <h2 className="text-xl font-black text-[var(--text)] tracking-tight">
             Workspace Invitation
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[var(--muted)]">
             LedgerFlow Enterprise Permissioned Multi-User Invite
           </p>
         </div>
@@ -129,7 +129,7 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
         {loading ? (
           <div className="py-12 text-center space-y-3">
             <RefreshCw size={24} className="animate-spin text-indigo-500 mx-auto" />
-            <p className="text-xs font-mono text-slate-400">Verifying cryptographically signed invite token...</p>
+            <p className="text-xs font-mono text-[var(--muted)]">Verifying cryptographically signed invite token...</p>
           </div>
         ) : error ? (
           <div className="p-5 bg-rose-500/10 border border-rose-500/20 rounded-2xl space-y-3 text-center">
@@ -148,15 +148,15 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
             {/* Invite Details Card */}
             <div className="p-4 bg-[var(--ink)]/40 border border-[var(--line)] rounded-2xl space-y-3 text-xs">
               <div className="flex justify-between items-center border-b border-[var(--line)] pb-2">
-                <span className="text-slate-400 font-medium">Workspace:</span>
+                <span className="text-[var(--muted)] font-medium">Workspace:</span>
                 <span className="font-bold text-[var(--text)]">{inviteDetails?.workspaceName}</span>
               </div>
               <div className="flex justify-between items-center border-b border-[var(--line)] pb-2">
-                <span className="text-slate-400 font-medium">Invited Email:</span>
+                <span className="text-[var(--muted)] font-medium">Invited Email:</span>
                 <span className="font-mono font-bold text-indigo-400">{inviteDetails?.email}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-medium">Assigned Role:</span>
+                <span className="text-[var(--muted)] font-medium">Assigned Role:</span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                   {inviteDetails?.role}
                 </span>
@@ -185,7 +185,7 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
                 <p className="text-rose-300 font-semibold">
                   Signed in as <span className="font-bold">{user.email}</span>. This invitation was sent to <span className="font-bold">{inviteDetails?.email}</span>.
                 </p>
-                <p className="text-slate-400 text-[11px]">
+                <p className="text-[var(--muted)] text-[11px]">
                   Please sign out and sign in with <span className="font-bold text-slate-200">{inviteDetails?.email}</span> to accept.
                 </p>
               </div>

@@ -98,7 +98,7 @@ export default function QueryView() {
       header: 'Accounts & Category',
       cell: (info: any) => {
         const lines = info.getValue() as any[];
-        if (!lines || lines.length === 0) return <span className="text-slate-400">Uncategorized</span>;
+        if (!lines || lines.length === 0) return <span className="text-[var(--muted)]">Uncategorized</span>;
         return (
           <div className="space-y-0.5">
             {lines.slice(0, 2).map((l, i) => (
@@ -106,7 +106,7 @@ export default function QueryView() {
                 <span className="font-semibold">{l.accountName}</span> ({formatDecimal(l.amountCents / 100)})
               </div>
             ))}
-            {lines.length > 2 && <div className="text-[10px] text-slate-400">+{lines.length - 2} more lines</div>}
+            {lines.length > 2 && <div className="text-[10px] text-[var(--muted)]">+{lines.length - 2} more lines</div>}
           </div>
         );
       }
@@ -178,7 +178,7 @@ export default function QueryView() {
               Fava BQL Spec
             </span>
           </div>
-          <p className="text-xs text-slate-500 font-medium mt-1">
+          <p className="text-xs text-[var(--muted)] font-medium mt-1">
             Build repeatable ledger queries across date ranges, account codes, transaction totals, and metadata tags
           </p>
         </div>
@@ -210,7 +210,7 @@ export default function QueryView() {
           </h3>
           <button
             onClick={() => setQueryFilter({ searchTerm: '', startDate: '', endDate: '', minAmountCents: undefined, maxAmountCents: undefined, accountIds: [], status: 'all' })}
-            className="text-xs text-slate-400 hover:text-slate-600 font-medium"
+            className="text-xs text-[var(--muted)] hover:text-slate-600 font-medium"
           >
             Reset All
           </button>
@@ -278,7 +278,7 @@ export default function QueryView() {
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 max-w-md w-full">
             <h3 className="text-base font-bold text-slate-900 mb-2">Save Custom Ledger Query</h3>
-            <p className="text-xs text-slate-500 mb-4">Saved queries can be executed instantly at any time from your Saved Views drawer.</p>
+            <p className="text-xs text-[var(--muted)] mb-4">Saved queries can be executed instantly at any time from your Saved Views drawer.</p>
             <input
               type="text"
               value={savedQueryName}

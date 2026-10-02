@@ -244,7 +244,7 @@ export default function ReceivePaymentModal({
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                 {direction === 'received' ? 'Receive Customer Payment' : 'Pay Vendor Bill'}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-[var(--muted)] dark:text-slate-400">
                 Record payment and apply to open balances across documents
               </p>
             </div>
@@ -253,7 +253,7 @@ export default function ReceivePaymentModal({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg"
+            className="text-[var(--muted)] hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg"
           >
             <X className="w-5 h-5" />
           </button>
@@ -425,7 +425,7 @@ export default function ReceivePaymentModal({
             </div>
 
             {openDocs.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-500 dark:text-slate-400">
+              <div className="p-6 text-center text-xs text-[var(--muted)] dark:text-slate-400">
                 {contactId ? `No open ${direction === 'received' ? 'invoices' : 'bills'} found for this contact.` : `Select a ${direction === 'received' ? 'customer' : 'vendor'} to view open documents.`}
               </div>
             ) : (
@@ -435,7 +435,7 @@ export default function ReceivePaymentModal({
                     <div className="col-span-3 font-medium text-slate-900 dark:text-white">
                       #{docItem.number}
                     </div>
-                    <div className="col-span-3 text-slate-500">
+                    <div className="col-span-3 text-[var(--muted)]">
                       {docItem.date}
                     </div>
                     <div className="col-span-3 font-mono text-slate-700 dark:text-slate-300">
@@ -467,15 +467,15 @@ export default function ReceivePaymentModal({
           {/* Payment Summary Footer */}
           <div className="flex flex-wrap items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-800 text-xs gap-4">
             <div>
-              <span className="text-slate-500">Total Payment:</span>{' '}
+              <span className="text-[var(--muted)]">Total Payment:</span>{' '}
               <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(paymentAmountCents)}</strong>
             </div>
             <div>
-              <span className="text-slate-500">Total Applied:</span>{' '}
+              <span className="text-[var(--muted)]">Total Applied:</span>{' '}
               <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(totalAllocatedCents)}</strong>
             </div>
             <div>
-              <span className="text-slate-500">Unapplied Balance:</span>{' '}
+              <span className="text-[var(--muted)]">Unapplied Balance:</span>{' '}
               <strong className={cn("font-mono", unappliedCents > 0 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-slate-900 dark:text-white")}>
                 {formatCurrency(unappliedCents)}
               </strong>

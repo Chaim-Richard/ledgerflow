@@ -1,0 +1,14 @@
+{
+  "light:Overview": 1,
+  "light:Transactions": 3,
+  "light:Sales": 1,
+  "light:Purchases": 1,
+  "light:Reports": 0,
+  "light:Settings": 1,
+  "dark:Overview": 0,
+  "dark:Transactions": 4,
+  "dark:Sales": 0,
+  "dark:Purchases": 0,
+  "dark:Reports": 3,
+  "dark:Settings": 3
+}

@@ -336,7 +336,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
         {/* Header & Controls */}
         <div className="p-5 border-b border-[var(--line)] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate mb-1">
+            <div className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest truncate mb-1">
                <Scale size={12} className="shrink-0" />
                Double-Entry Stability Protocol
             </div>
@@ -347,8 +347,8 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                 onMonthChange={({ end }) => setAsOfDate(end)}
               />
               <div className="flex items-center gap-1.5 bg-[var(--ink)] px-2.5 py-1 rounded-lg border border-[var(--line)]">
-                <Calendar size={13} className="text-slate-400" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase">As of:</span>
+                <Calendar size={13} className="text-[var(--muted)]" />
+                <span className="text-[10px] font-bold text-[var(--muted)] uppercase">As of:</span>
                 <input 
                   type="date"
                   value={asOfDate}
@@ -361,25 +361,25 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             <div className="flex items-center gap-1 text-[9px] font-bold uppercase">
               <button 
                 onClick={() => setPresetDate('today')}
-                className="px-2 py-1 bg-[var(--ink)] hover:bg-[var(--line)] text-slate-400 hover:text-[var(--text)] rounded border border-[var(--line)] transition-colors"
+                className="px-2 py-1 bg-[var(--ink)] hover:bg-[var(--line)] text-[var(--muted)] hover:text-[var(--text)] rounded border border-[var(--line)] transition-colors"
               >
                 Today
               </button>
               <button 
                 onClick={() => setPresetDate('last_month')}
-                className="px-2 py-1 bg-[var(--ink)] hover:bg-[var(--line)] text-slate-400 hover:text-[var(--text)] rounded border border-[var(--line)] transition-colors"
+                className="px-2 py-1 bg-[var(--ink)] hover:bg-[var(--line)] text-[var(--muted)] hover:text-[var(--text)] rounded border border-[var(--line)] transition-colors"
               >
                 Last Month
               </button>
               <button 
                 onClick={() => setPresetDate('last_quarter')}
-                className="px-2 py-1 bg-[var(--ink)] hover:bg-[var(--line)] text-slate-400 hover:text-[var(--text)] rounded border border-[var(--line)] transition-colors"
+                className="px-2 py-1 bg-[var(--ink)] hover:bg-[var(--line)] text-[var(--muted)] hover:text-[var(--text)] rounded border border-[var(--line)] transition-colors"
               >
                 Last Qtr
               </button>
               <button 
                 onClick={() => setPresetDate('last_year')}
-                className="px-2 py-1 bg-[var(--ink)] hover:bg-[var(--line)] text-slate-400 hover:text-[var(--text)] rounded border border-[var(--line)] transition-colors"
+                className="px-2 py-1 bg-[var(--ink)] hover:bg-[var(--line)] text-[var(--muted)] hover:text-[var(--text)] rounded border border-[var(--line)] transition-colors"
               >
                 Last Year
               </button>
@@ -389,11 +389,11 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
 
         <div className="flex flex-wrap items-center gap-6">
           <div className="text-left sm:text-right">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Debits</p>
+            <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">Total Debits</p>
             <p className="text-base font-bold font-mono text-[var(--text)] tabular-nums">{formatCurrency(trialBalance.totalDebits)}</p>
           </div>
           <div className="text-left sm:text-right">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Credits</p>
+            <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">Total Credits</p>
             <p className="text-base font-bold font-mono text-[var(--text)] tabular-nums">{formatCurrency(trialBalance.totalCredits)}</p>
           </div>
           <motion.div 
@@ -413,7 +413,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
 
       {/* Action Toolbar */}
       <div className="px-5 py-2.5 bg-[var(--ink)]/40 border-b border-[var(--line)] flex items-center justify-between gap-4">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+        <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
           {trialBalance.lines.length} Active Ledger Accounts
         </span>
         <div className="flex items-center gap-2">
@@ -484,7 +484,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                 className="group/row cursor-pointer transition-colors"
               >
                 <td className="px-5 py-3 font-mono">
-                  <span className="font-mono text-[9px] font-bold text-slate-400 bg-[var(--ink)] px-2 py-0.5 rounded border border-[var(--line)]">
+                  <span className="font-mono text-[9px] font-bold text-[var(--muted)] bg-[var(--ink)] px-2 py-0.5 rounded border border-[var(--line)]">
                     {line.code || '—'}
                   </span>
                 </td>
@@ -493,7 +493,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                     <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase">
                       {line.name}
                     </p>
-                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">
+                    <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider">
                       {line.type} Classification • {((line as any).category) || 'Standard'}
                     </p>
                   </div>
@@ -508,7 +508,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             ))}
             {trialBalance.lines.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-12 text-center text-slate-400 text-xs">
+                <td colSpan={4} className="py-12 text-center text-[var(--muted)] text-xs">
                   No accounts found in current ledger configuration.
                 </td>
               </tr>
@@ -518,7 +518,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             <tr className="bg-[var(--ink)]/50 whitespace-nowrap">
               <td colSpan={2} className="px-5 py-3.5">
                 <div className="flex items-center gap-2">
-                  <Activity size={14} className="text-slate-500 shrink-0" />
+                  <Activity size={14} className="text-[var(--muted)] shrink-0" />
                   <span className="text-sm font-bold text-[var(--text)] uppercase">Total Trial Balance</span>
                 </div>
               </td>

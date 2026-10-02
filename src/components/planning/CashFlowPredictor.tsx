@@ -97,7 +97,7 @@ export default function CashFlowPredictor() {
                     Liquidity Projections (Deterministic & Statistical)
                  </h2>
               </div>
-              <div className="grid grid-cols-12 p-4 bg-[var(--ink)] border-b border-[var(--line)] text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              <div className="grid grid-cols-12 p-4 bg-[var(--ink)] border-b border-[var(--line)] text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
                 <div className="col-span-3">Future Period</div>
                 <div className="col-span-3 text-right">Inflow</div>
                 <div className="col-span-3 text-right">Outflow</div>
@@ -107,7 +107,7 @@ export default function CashFlowPredictor() {
                 {forecastData.projections.map((p: any, idx: number) => (
                   <div key={idx} className="grid grid-cols-12 p-4 items-center hover:bg-[var(--ink)] transition-colors">
                     <div className="col-span-3 flex items-center gap-2">
-                       <Calendar className="w-4 h-4 text-slate-400" />
+                       <Calendar className="w-4 h-4 text-[var(--muted)]" />
                        <span className="font-bold text-[var(--text)]">{p.month}</span>
                     </div>
                     <div className="col-span-3 text-right font-mono font-bold text-emerald-600 tabular-nums">
@@ -142,7 +142,7 @@ export default function CashFlowPredictor() {
                                {formatCurrency(d.value * 100)}
                             </div>
                          </div>
-                         <div className="text-[10px] font-bold text-slate-500 uppercase">{d.month.split('-')[1]}</div>
+                         <div className="text-[10px] font-bold text-[var(--muted)] uppercase">{d.month.split('-')[1]}</div>
                       </div>
                    )
                 })}

@@ -10,6 +10,7 @@ import { t } from '../../locales/i18n';
 import { useCollaborators } from '../../hooks/useCollaborators';
 
 import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { activateOnKey } from '../../lib/utils';
 
 interface HeaderProps {
   onLogout?: () => void;
@@ -70,7 +71,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
             currentRole === 'owner' ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20' :
             currentRole === 'accountant' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
             currentRole === 'bookkeeper' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
-            'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+            'bg-slate-500/10 text-slate-700 dark:text-slate-400 border border-slate-500/20'
           }`} title={`Your current role in this workspace is ${currentRole}`}>
             {currentRole}
           </span>
@@ -163,7 +164,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
             <div 
               role="button" 
               tabIndex={0} 
-              onClick={onLogout}
+              onKeyDown={activateOnKey} onClick={onLogout}
               title={`Logged in as ${user.email}${isAdmin ? ' (Administrator)' : ''}. Click to Log Out.`}
               className="h-8 w-8 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] text-[11px] font-mono font-bold cursor-pointer hover:bg-[var(--brass)] hover:text-black transition-colors"
             >
@@ -173,11 +174,11 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
         ) : (
           <button
             onClick={onLoginPrompt || onLogout}
-            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-medium text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-md hover:bg-amber-500/20 transition-all"
+            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-medium text-amber-800 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-md hover:bg-amber-500/20 transition-all"
             title="Currently in Guest Mode. Click to sign in."
            aria-label="Currently in Guest Mode. Click to sign in.">
             <span>Guest</span>
-            <span className="text-[10px] text-amber-300 underline font-semibold">Sign In</span>
+            <span className="text-[10px] text-amber-900 dark:text-amber-300 underline font-semibold">Sign In</span>
           </button>
         )}
       </div>

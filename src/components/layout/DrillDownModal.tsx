@@ -51,7 +51,7 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
             <div className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar">
               <table className="w-full text-left border-separate border-spacing-y-2">
                 <thead>
-                  <tr className="micro-label text-slate-500">
+                  <tr className="micro-label text-[var(--muted)]">
                     <th className="pb-4 pl-4 font-black">Date</th>
                     <th className="pb-4 font-black">Description</th>
                     <th className="pb-4 text-right pr-4 font-black">Impact</th>
@@ -65,13 +65,13 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
 
                     return (
                       <tr key={tx.id} className="group hover:bg-[var(--ink)] transition-all rounded-[32px] overflow-hidden">
-                        <td className="py-4 pl-4 text-xs font-black text-slate-500 font-mono rounded-l-2xl border-y border-l border-[var(--line)] group-hover:border-slate-300">
+                        <td className="py-4 pl-4 text-xs font-black text-[var(--muted)] font-mono rounded-l-2xl border-y border-l border-[var(--line)] group-hover:border-slate-300">
                           {tx.date ? formatDate(tx.date) : 'N/A'}
                         </td>
                         <td className="py-4 text-sm font-bold text-[var(--text)] border-y border-[var(--line)] group-hover:border-slate-300">
                            <div className="flex flex-col">
                              <span>{tx.description}</span>
-                             {tx.payee && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{tx.payee}</span>}
+                             {tx.payee && <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider">{tx.payee}</span>}
                            </div>
                         </td>
                         <td className={cn(
@@ -103,14 +103,14 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                   <div className="w-16 h-16 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-slate-300 mx-auto">
                     <Search size={32} />
                   </div>
-                  <p className="text-sm text-slate-500 font-medium italic">No underlying transactions found for this period.</p>
+                  <p className="text-sm text-[var(--muted)] font-medium italic">No underlying transactions found for this period.</p>
                 </div>
               )}
             </div>
 
             <div className="p-4 md:p-8 border-t border-[var(--line)] bg-[var(--surface)]/30">
                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">End of Drill-Down View</p>
+                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em]">End of Drill-Down View</p>
                   <button onClick={onClose} className="btn-secondary" aria-label="Close Report">Close Report</button>
                </div>
             </div>

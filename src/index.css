@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
+/* dark: classes follow the app's theme (App.tsx puts .dark or .light on <html>), not the OS setting */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-ledger-bg: #fafafa;
   --color-ledger-paper: #ffffff;
@@ -73,7 +76,7 @@
   :root {
     --ink: #0A1920; --surface: #0F242D; --panel: #122A33; --elevated: #173741;
     --line: #20414B; --grid: rgba(120, 170, 175, 0.06);
-    --text: #DEE8E6; --muted: #87A0A2; --faint: #5E787C;
+    --text: #DEE8E6; --muted: #87A0A2; --faint: #7E989B;
     --brass: #D6A852; --brass-soft: rgba(214, 168, 82, 0.14); --brass-line: rgba(214, 168, 82, 0.4);
     --pos: #49B67F; --neg: #DE6E52;
     --w-personal: #6488AC; --w-charity: #63977B; --w-book: #9E7EBA; --w-estate: #BE7392;
@@ -82,8 +85,8 @@
   .light {
     --ink: #E7EDEB; --surface: #F4F8F7; --panel: #FFFFFF; --elevated: #FFFFFF;
     --line: #D4DEDB; --grid: rgba(20, 60, 64, 0.05);
-    --text: #0E2229; --muted: #57706F; --faint: #5B7075;
-    --brass: #956613; --brass-soft: rgba(149, 102, 19, 0.10); --brass-line: rgba(149, 102, 19, 0.35);
+    --text: #0E2229; --muted: #4D6564; --faint: #4F6469;
+    --brass: #7A550E; --brass-soft: rgba(122, 85, 14, 0.10); --brass-line: rgba(122, 85, 14, 0.35);
     --pos: #1E8A57; --neg: #C0503A;
     --w-personal: #4E6E92; --w-charity: #3F7C5E; --w-book: #7E5DA0; --w-estate: #A5537A;
     color-scheme: light;

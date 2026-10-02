@@ -244,7 +244,7 @@ export default function ToolsCatalog() {
               onClick={() => setActiveCat(cat)}
               className={cn(
                 "px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer flex items-center gap-2",
-                activeCat === cat ? "bg-[var(--brass)] text-black shadow-md font-bold" : "bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:border-[var(--brass-line)] hover:text-[var(--text)]"
+                activeCat === cat ? "bg-[var(--brass)] text-[var(--ink)] shadow-md font-bold" : "bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:border-[var(--brass-line)] hover:text-[var(--text)]"
               )}
             >
               {cat === 'Speed Dial' && <Star size={12} className={activeCat === cat ? "fill-black" : "fill-amber-400 text-amber-400"} />}
@@ -324,7 +324,7 @@ export default function ToolsCatalog() {
           </div>
 
           <div className="mt-20 py-12 text-center border-t border-[var(--line)]/50">
-             <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.5em] italic">Listing {filteredTools.length} Active Financial Modules</p>
+             <p className="text-[11px] font-black text-[var(--muted)] uppercase tracking-[0.5em] italic">Listing {filteredTools.length} Active Financial Modules</p>
           </div>
        </div>
 

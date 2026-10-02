@@ -145,7 +145,7 @@ export const PurchaseOrdersView: React.FC = () => {
         </div>
         {canEdit && (
           <button type="button" onClick={() => setIsCreatingPO(true)} id="create-po-btn"
-            className="px-4 py-2 text-xs font-semibold bg-[var(--brass)] text-black rounded-lg flex items-center gap-1.5">
+            className="px-4 py-2 text-xs font-semibold bg-[var(--brass)] text-[var(--ink)] rounded-lg flex items-center gap-1.5">
             <Plus className="w-3.5 h-3.5" aria-hidden="true" /> New purchase order
           </button>
         )}
@@ -190,7 +190,7 @@ export const PurchaseOrdersView: React.FC = () => {
                       <button type="button" onClick={() => openReceive(po)} className="px-2.5 py-1 font-semibold border border-[var(--line)] rounded-md">Receive goods</button>
                     )}
                     {canEdit && !po.billId && po.status !== 'cancelled' && (
-                      <button type="button" onClick={() => setBillingPO(po)} className="px-2.5 py-1 font-semibold bg-[var(--brass)] text-black rounded-md inline-flex items-center gap-1">
+                      <button type="button" onClick={() => setBillingPO(po)} className="px-2.5 py-1 font-semibold bg-[var(--brass)] text-[var(--ink)] rounded-md inline-flex items-center gap-1">
                         <FileText className="w-3 h-3" aria-hidden="true" /> Create bill
                       </button>
                     )}
@@ -309,7 +309,7 @@ export const PurchaseOrdersView: React.FC = () => {
               <button type="button" onClick={() => setPoItems(lines => [...lines, newLine()])} className="font-semibold flex items-center gap-1"><Plus className="w-3.5 h-3.5" aria-hidden="true" /> Add item</button>
               <div className="pt-3 flex items-center justify-end gap-2">
                 <button type="button" onClick={() => setIsCreatingPO(false)} className="px-4 py-2 font-semibold border border-[var(--line)] rounded-lg">Cancel</button>
-                <button type="button" disabled={saving} onClick={handleSavePO} className="px-4 py-2 font-semibold bg-[var(--brass)] text-black rounded-lg flex items-center gap-1.5 disabled:opacity-50">
+                <button type="button" disabled={saving} onClick={handleSavePO} className="px-4 py-2 font-semibold bg-[var(--brass)] text-[var(--ink)] rounded-lg flex items-center gap-1.5 disabled:opacity-50">
                   <Check className="w-3.5 h-3.5" aria-hidden="true" /> Save purchase order
                 </button>
               </div>
@@ -347,7 +347,7 @@ export const PurchaseOrdersView: React.FC = () => {
               </fieldset>
               <div className="pt-3 flex items-center justify-end gap-2">
                 <button type="button" onClick={() => setReceivingPO(null)} className="px-4 py-2 font-semibold border border-[var(--line)] rounded-lg">Cancel</button>
-                <button type="button" disabled={saving} onClick={handleSaveGoodsReceipt} className="px-4 py-2 font-semibold bg-[var(--brass)] text-black rounded-lg flex items-center gap-1.5 disabled:opacity-50">
+                <button type="button" disabled={saving} onClick={handleSaveGoodsReceipt} className="px-4 py-2 font-semibold bg-[var(--brass)] text-[var(--ink)] rounded-lg flex items-center gap-1.5 disabled:opacity-50">
                   <Check className="w-3.5 h-3.5" aria-hidden="true" /> Save
                 </button>
               </div>

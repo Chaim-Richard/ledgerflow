@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Transaction } from '../../types';
 import { aiService } from '../../services/aiService';
 import { IntentResolver } from '../../lib/intentResolver';
-import { cn, getLocalDateISO, formatDate } from '../../lib/utils';
+import { cn, getLocalDateISO, formatDate, activateOnKey } from '../../lib/utils';
 
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
@@ -513,7 +513,7 @@ export default function StatementImporter({
                         {csvData.slice(1, 6).map((row, rIdx) => (
                           <tr key={rIdx} className="border-b border-[var(--line)]/50">
                             {row.map((cell, cIdx) => (
-                              <td key={cIdx} className="p-4 text-slate-500 font-medium truncate max-w-[150px]">{cell}</td>
+                              <td key={cIdx} className="p-4 text-[var(--muted)] font-medium truncate max-w-[150px]">{cell}</td>
                             ))}
                           </tr>
                         ))}
@@ -538,7 +538,7 @@ export default function StatementImporter({
                      aria-label="Action button">
                       {parsedTxs.every(t => t.selected) ? 'Deselect All' : 'Select All'}
                     </button>
-                    <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">
+                    <span className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest">
                       {parsedTxs.filter(t => t.selected).length} Selected
                     </span>
                   </div>
@@ -563,7 +563,7 @@ export default function StatementImporter({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div role="button" tabIndex={0} 
-                            onClick={(e) => { e.stopPropagation(); toggleSelect(idx); }}
+                            onKeyDown={activateOnKey} onClick={(e) => { e.stopPropagation(); toggleSelect(idx); }}
                             className={cn(
                               "w-6 h-6 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
                               tx.selected ? "bg-[var(--brass)] border-[var(--brass-line)] text-black" : "bg-[var(--surface)] border-[var(--line)]"
@@ -657,7 +657,7 @@ export default function StatementImporter({
               <button 
                 onClick={handleParse}
                 disabled={isParsing || !rawText.trim()}
-                className="px-8 py-3 bg-[var(--brass)] text-black rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-xs uppercase tracking-wider cursor-pointer"
+                className="px-8 py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-xs uppercase tracking-wider cursor-pointer"
                aria-label="Loader2 action">
                 {isParsing ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />}
                 {isParsing ? 'Rule Analysis...' : 'Unstructured Parse'}
@@ -665,7 +665,7 @@ export default function StatementImporter({
             ) : step === 'mapping' ? (
               <button 
                 onClick={handleMapColumns}
-                className="px-8 py-3 bg-[var(--brass)] text-black rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-md text-xs uppercase tracking-wider cursor-pointer"
+                className="px-8 py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-md text-xs uppercase tracking-wider cursor-pointer"
                aria-label="Process Deterministic Mapping">
                 <ArrowRight size={16} />
                 Process Deterministic Mapping
@@ -674,7 +674,7 @@ export default function StatementImporter({
               <AsyncButton 
                 onClick={handleImport}
                 loadingText="Importing..."
-                className="px-8 py-3 bg-[var(--brass)] text-black rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-md text-xs uppercase tracking-wider cursor-pointer"
+                className="px-8 py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-md text-xs uppercase tracking-wider cursor-pointer"
               >
                 <Check size={16} />
                 Import {parsedTxs.filter(t => t.selected).length} Entries

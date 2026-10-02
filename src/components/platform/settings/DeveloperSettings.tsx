@@ -50,7 +50,7 @@ export default function DeveloperSettings() {
     <div className="space-y-10">
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border-[var(--line)] shadow-sm">
         <div className="flex items-center gap-5 mb-10">
-          <div className="w-12 h-12 bg-[var(--brass)] text-black rounded-xl flex items-center justify-center shadow-md">
+          <div className="w-12 h-12 bg-[var(--brass)] text-[var(--ink)] rounded-xl flex items-center justify-center shadow-md">
             <Globe size={24} />
           </div>
           <div>
@@ -70,7 +70,7 @@ export default function DeveloperSettings() {
                   Register endpoints to receive real-time rule updates and fiscal anomaly detected events.
                 </p>
               </div>
-              <button className="mt-4 px-8 py-3 bg-[var(--brass)] text-black rounded-xl text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-all cursor-pointer" aria-label="Provision New Endpoint">
+              <button className="mt-4 px-8 py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-all cursor-pointer" aria-label="Provision New Endpoint">
                 Provision New Endpoint
               </button>
             </div>
@@ -112,7 +112,7 @@ export default function DeveloperSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Get Permanent Copy Code:</p>
+                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">Get Permanent Copy Code:</p>
                     <div className="relative">
                       <pre className="text-[10px] font-mono bg-slate-900 text-slate-300 p-4 rounded-xl overflow-x-auto leading-relaxed max-h-32">
 {`// Add this directly inside SYSTEM_GLOSSARY in /src/config/registry.tsx:
@@ -129,7 +129,7 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
                   </div>
                 </div>
               ) : (
-                <div className="p-4 border border-dashed border-gray-200 rounded-xl text-center text-[11px] font-medium text-slate-500 py-8">
+                <div className="p-4 border border-dashed border-gray-200 rounded-xl text-center text-[11px] font-medium text-[var(--muted)] py-8">
                   No copy overrides active. Enable Dev Mode (Zap Icon) in top header, click or hover over any text element on the Dashboard to edit it inline instantly!
                 </div>
               )}

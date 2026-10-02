@@ -24,7 +24,7 @@ export function InitializationScreen({ language }: { language: string }) {
           <span className="w-2.5 h-2.5 rounded-full bg-[#fbbc04] animate-bounce" style={{ animationDelay: '300ms' }} />
           <span className="w-2.5 h-2.5 rounded-full bg-[#34a853] animate-bounce" style={{ animationDelay: '450ms' }} />
         </div>
-        <p className="text-[9px] font-black text-slate-400 tracking-widest truncate uppercase mt-2">
+        <p className="text-[9px] font-black text-[var(--muted)] tracking-widest truncate uppercase mt-2">
           {SYSTEM_GLOSSARY.connectingSecureVault[language] || SYSTEM_GLOSSARY.connectingSecureVault['en']}
         </p>
       </div>

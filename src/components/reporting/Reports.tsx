@@ -232,7 +232,7 @@ const Reports = React.memo(() => {
                   className={cn(
                     "px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer",
                     timeframe === t 
-                      ? "bg-[var(--brass)] text-black shadow-xs font-bold" 
+                      ? "bg-[var(--brass)] text-[var(--ink)] shadow-xs font-bold" 
                       : "text-[var(--muted)] hover:text-[var(--text)]"
                   )}
                 >

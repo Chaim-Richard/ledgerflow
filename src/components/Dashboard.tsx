@@ -274,7 +274,7 @@ export default function Dashboard() {
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-wider bg-[var(--brass)] text-black px-2 py-0.5 rounded-md font-bold">
+                <span className="font-mono text-[10px] uppercase tracking-wider bg-[var(--brass)] text-[var(--ink)] px-2 py-0.5 rounded-md font-bold">
                   Setup Progress ({setupStepCount}/3)
                 </span>
                 <h3 className="text-sm font-semibold text-[var(--text)]">Workspace Setup Checklist</h3>
@@ -494,7 +494,7 @@ export default function Dashboard() {
                 </p>
                 <button
                   onClick={() => setQuickEntryOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--brass)] text-black rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer mt-2"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--brass)] text-[var(--ink)] rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer mt-2"
                 >
                   <Plus size={14} />
                   Record First Entry

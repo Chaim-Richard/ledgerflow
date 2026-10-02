@@ -105,7 +105,7 @@ export default function Banking() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-900 text-sm leading-tight">{account.name}</h3>
-                    <p className="text-xs text-slate-400 font-mono mt-0.5">{account.code ? `Acct ${account.code}` : 'Bank Account'}</p>
+                    <p className="text-xs text-[var(--muted)] font-mono mt-0.5">{account.code ? `Acct ${account.code}` : 'Bank Account'}</p>
                   </div>
                 </div>
                 
@@ -116,7 +116,7 @@ export default function Banking() {
               
               <div className="mt-auto pt-4 border-t border-slate-100 space-y-4">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500 font-medium">Type</span>
+                  <span className="text-[var(--muted)] font-medium">Type</span>
                   <span className="text-slate-800 font-mono font-bold uppercase">{account.subtype || account.type || 'Asset'}</span>
                 </div>
                 <div className="flex gap-2">
@@ -139,7 +139,7 @@ export default function Banking() {
                 <Landmark className="w-7 h-7" />
               </div>
               <h3 className="text-lg font-bold text-slate-900">No Bank Connections Found</h3>
-              <p className="text-slate-500 mt-1 max-w-md text-sm leading-relaxed">
+              <p className="text-[var(--muted)] mt-1 max-w-md text-sm leading-relaxed">
                 Connect your checking accounts, credit cards, or cash repositories via secure Plaid link to stream transactions automatically into your ledger.
               </p>
               <div className="mt-6">

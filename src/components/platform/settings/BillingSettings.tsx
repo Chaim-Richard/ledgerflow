@@ -222,12 +222,12 @@ export default function BillingSettings() {
             </div>
             <div>
               <h3 className="text-xl font-bold text-slate-900 tracking-tight">Subscription & Plan Tiers</h3>
-              <p className="text-xs text-slate-500 font-medium">Manage workspace plan capacity, billing cycle, and billing portal</p>
+              <p className="text-xs text-[var(--muted)] font-medium">Manage workspace plan capacity, billing cycle, and billing portal</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-slate-500">Current Plan:</span>
+            <span className="text-xs font-semibold text-[var(--muted)]">Current Plan:</span>
             <span className="px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-full uppercase tracking-wider">
               {activePlan}
             </span>
@@ -245,7 +245,7 @@ export default function BillingSettings() {
         </div>
 
         {isVerifying ? (
-          <div className="p-12 text-center text-slate-500 font-medium animate-pulse">
+          <div className="p-12 text-center text-[var(--muted)] font-medium animate-pulse">
             Verifying secure checkout payment session...
           </div>
         ) : (
@@ -275,10 +275,10 @@ export default function BillingSettings() {
 
                   <div>
                     <h4 className="text-base font-bold text-slate-900">{p.name}</h4>
-                    <p className="text-xs text-slate-500 mt-1 min-h-[32px]">{p.desc}</p>
+                    <p className="text-xs text-[var(--muted)] mt-1 min-h-[32px]">{p.desc}</p>
                     <div className="mt-4 mb-6">
                       <span className="text-3xl font-extrabold text-slate-900">{p.price}</span>
-                      <span className="text-xs text-slate-500 font-medium">{p.period}</span>
+                      <span className="text-xs text-[var(--muted)] font-medium">{p.period}</span>
                     </div>
 
                     <ul className="space-y-2.5 text-xs text-slate-600 mb-6">
@@ -301,7 +301,7 @@ export default function BillingSettings() {
                   ) : p.id === 'free' ? (
                     <button
                       disabled
-                      className="w-full py-2.5 bg-slate-100 text-slate-400 font-semibold text-xs rounded-xl cursor-not-allowed"
+                      className="w-full py-2.5 bg-slate-100 text-[var(--muted)] font-semibold text-xs rounded-xl cursor-not-allowed"
                     >
                       Included
                     </button>

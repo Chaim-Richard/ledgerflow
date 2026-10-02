@@ -145,7 +145,7 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
       {/* Filter Controls Bar */}
       <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)]/10 grid grid-cols-1 sm:grid-cols-12 gap-3 shrink-0">
         <div className="relative sm:col-span-5">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           <input
             type="text"
             value={searchTerm}
@@ -156,7 +156,7 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
         </div>
 
         <div className="sm:col-span-4 flex items-center gap-2">
-          <Filter size={14} className="text-slate-400 shrink-0" />
+          <Filter size={14} className="text-[var(--muted)] shrink-0" />
           <select
             value={userFilter}
             onChange={(e) => setUserFilter(e.target.value)}

@@ -331,12 +331,12 @@ export default function Sales() {
             <table className="w-full border-collapse min-w-[700px]">
               <thead>
                 <tr className="text-left border-b border-[var(--line)]/50">
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Number</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Customer</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Date</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Due</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-right">Amount</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">State</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Number</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Customer</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Date</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Due</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Amount</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-center">State</th>
                   <th className="p-4 md:p-8 w-10"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
@@ -344,7 +344,7 @@ export default function Sales() {
                 {filteredInvoices.map((inv) => (
                   <tr key={inv.id} id={recordElementId('invoice', inv.id)} aria-current={focusedInvoiceId === inv.id ? 'true' : undefined}
                     className={cn("group hover:bg-[var(--ink)]/30 transition-all", focusedInvoiceId === inv.id && "ring-2 ring-inset ring-[var(--brass)]")}>
-                    <td className="p-4 md:p-8 font-mono font-bold text-slate-500 group-hover:text-[var(--text)] transition-colors">{inv.number}</td>
+                    <td className="p-4 md:p-8 font-mono font-bold text-[var(--muted)] group-hover:text-[var(--text)] transition-colors">{inv.number}</td>
                     <td className="p-4 md:p-8">
                        <div className="flex flex-col">
                           <span className="font-black text-[var(--text)] text-base tracking-tight">{inv.customerName}</span>
@@ -362,7 +362,7 @@ export default function Sales() {
                           {inv.dueDate ? formatDate(inv.dueDate) : 'N/A'}
                         </span>
                         {inv.status === 'pending' && (
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 opacity-50">
+                          <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-1 opacity-50">
                             {differenceInDays(parseLocalDate(inv.dueDate), new Date())} T-Days Left
                           </span>
                         )}
@@ -396,7 +396,7 @@ export default function Sales() {
                           <button
                             type="button"
                             onClick={() => { setNewInvoiceFor(inv); setIsInvoiceModalOpen(true); }}
-                            className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
+                            className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-[var(--muted)] hover:text-indigo-600 transition-all"
                             title="Edit invoice"
                             aria-label={`Edit invoice ${inv.number || ''}`.trim()}
                           >
@@ -445,7 +445,7 @@ export default function Sales() {
                         {inv.status !== 'draft' && inv.status !== 'void' && (
                           <button
                             onClick={() => setEmailInvoice(inv)}
-                            className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
+                            className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-[var(--muted)] hover:text-indigo-600 transition-all"
                             title="Email the invoice or a reminder; see emails sent"
                             aria-label="Email the invoice"
                           >
@@ -454,14 +454,14 @@ export default function Sales() {
                         )}
                         <button
                           onClick={() => setPreviewPdfInvoice(inv)}
-                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
+                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-[var(--muted)] hover:text-indigo-600 transition-all"
                           title="Preview PDF"
                         >
                           <Eye size={16} />
                         </button>
                         <button
                           onClick={() => downloadDocumentPdf('invoice', inv.id, currentWorkspaceId || 'default', `invoice_${inv.number || inv.id}.pdf`)}
-                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
+                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-[var(--muted)] hover:text-indigo-600 transition-all"
                           title="Download PDF"
                         >
                           <Download size={16} />
@@ -477,7 +477,7 @@ export default function Sales() {
                             setNewInvoiceFor({ ...fields, date: getLocalDateISO(), status: 'draft' });
                             setIsInvoiceModalOpen(true);
                           }}
-                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-indigo-600 transition-all"
+                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-[var(--muted)] hover:text-indigo-600 transition-all"
                           title="Duplicate as a new draft"
                           aria-label="Duplicate as a new draft"
                         >
@@ -489,7 +489,7 @@ export default function Sales() {
                               onAddInvoice({ id: inv.id, status: 'void' });
                             }
                           }}
-                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-rose-500 transition-all"
+                          className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-[var(--muted)] hover:text-rose-500 transition-all"
                           title="Void invoice"
                           aria-label="Void invoice"
                         >
@@ -525,9 +525,9 @@ export default function Sales() {
             <table className="w-full border-collapse min-w-[700px]">
               <thead>
                 <tr className="text-left border-b border-[var(--line)]/50">
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Customer Profile</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Contact</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap text-right">Net Receivable</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Customer Profile</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Contact</th>
+                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap text-right">Net Receivable</th>
                   <th className="p-4 md:p-8 w-10"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
@@ -558,7 +558,7 @@ export default function Sales() {
                     </td>
                     <td className="p-4 md:p-8">
                        <div className="flex items-center gap-2 group/email">
-                          <Users size={16} className="text-slate-500 opacity-40" />
+                          <Users size={16} className="text-[var(--muted)] opacity-40" />
                           <span className="font-bold text-[var(--text)] group-hover/email:text-indigo-600 transition-colors">{cust.email}</span>
                        </div>
                     </td>

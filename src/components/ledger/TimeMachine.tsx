@@ -103,7 +103,7 @@ export default function TimeMachine() {
               "pb-3 px-2 text-sm font-bold flex items-center gap-2 transition-all border-b-2",
               activeTab === tab.id 
                 ? 'border-[#0047AB] text-[#0047AB]' 
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-[var(--muted)] hover:text-slate-700'
             )}
           >
             <tab.icon size={16} />
@@ -131,10 +131,10 @@ export default function TimeMachine() {
                 )}
                 
                 <h3 className="font-black text-[var(--text)] text-lg flex items-center gap-2 mb-2">
-                  <GitBranch size={20} className={isActive ? "text-[#0047AB]" : "text-slate-400"} />
+                  <GitBranch size={20} className={isActive ? "text-[#0047AB]" : "text-[var(--muted)]"} />
                   {scenario.name}
                 </h3>
-                <p className="text-sm text-slate-500 mb-6 h-10">{scenario.description}</p>
+                <p className="text-sm text-[var(--muted)] mb-6 h-10">{scenario.description}</p>
                 
                 {!isMain && (
                   <div className="mb-6 space-y-2">
@@ -148,19 +148,19 @@ export default function TimeMachine() {
                       </button>
                     </h4>
                     {scenario.ghosts.length === 0 ? (
-                      <p className="text-xs text-slate-400 italic">No simulated entries yet.</p>
+                      <p className="text-xs text-[var(--muted)] italic">No simulated entries yet.</p>
                     ) : (
                       scenario.ghosts.map(ghost => (
                         <div key={ghost.id} className="flex items-center justify-between bg-blue-50/50 p-2 rounded-lg border border-blue-100">
                           <div>
                             <p className="text-sm font-medium text-[var(--text)]">{ghost.description}</p>
-                            <p className="text-xs text-slate-500">{ghost.type} • {ghost.frequency}</p>
+                            <p className="text-xs text-[var(--muted)]">{ghost.type} • {ghost.frequency}</p>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className={cn("font-mono font-bold text-sm", ghost.type === 'expense' ? "text-red-600" : "text-green-600")}>
                               {ghost.type === 'expense' ? '-' : '+'}{formatCurrency(ghost.amountCents)}
                             </span>
-                            <button onClick={async () => { if (await safeConfirm('Delete ghost transaction?')) deleteGhost(scenario.id, ghost.id); }} className="text-slate-400 hover:text-red-500"><Trash2 size={14}/></button>
+                            <button onClick={async () => { if (await safeConfirm('Delete ghost transaction?')) deleteGhost(scenario.id, ghost.id); }} className="text-[var(--muted)] hover:text-red-500"><Trash2 size={14}/></button>
                           </div>
                         </div>
                       ))
@@ -193,7 +193,7 @@ export default function TimeMachine() {
                           </select>
                         </div>
                         <div className="flex gap-2 justify-end">
-                          <button onClick={() => setShowNewGhostModal(null)} className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-700">Cancel</button>
+                          <button onClick={() => setShowNewGhostModal(null)} className="px-3 py-1.5 text-xs font-bold text-[var(--muted)] hover:text-slate-700">Cancel</button>
                           <button onClick={() => handleAddGhost(scenario.id)} className="px-3 py-1.5 text-xs font-bold bg-[#0047AB] text-white rounded-lg">Add Entry</button>
                         </div>
                       </div>
@@ -222,7 +222,7 @@ export default function TimeMachine() {
                     </button>
                   )}
                   {!isMain && (
-                    <button onClick={async () => { if (await safeConfirm('Delete scenario?')) deleteScenario(scenario.id); }} className="p-2 bg-[var(--ink)] hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-colors">
+                    <button onClick={async () => { if (await safeConfirm('Delete scenario?')) deleteScenario(scenario.id); }} className="p-2 bg-[var(--ink)] hover:bg-red-50 text-[var(--muted)] hover:text-red-500 rounded-xl transition-colors">
                       <Trash2 size={16} />
                     </button>
                   )}
@@ -254,9 +254,9 @@ export default function TimeMachine() {
                     <div>
                       <div className="flex items-center gap-3">
                         <span className="font-black text-[var(--text)] text-lg">{formatDate(commit.date)}</span>
-                        <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{commit.hash.substring(0, 7)}</span>
+                        <span className="text-xs font-mono font-bold text-[var(--muted)] bg-slate-100 px-2 py-1 rounded-md">{commit.hash.substring(0, 7)}</span>
                       </div>
-                      <div className="text-sm text-slate-500 mt-1 flex items-center gap-2">
+                      <div className="text-sm text-[var(--muted)] mt-1 flex items-center gap-2">
                         <Activity size={14} />
                         Posted {commit.txs.length} transactions
                       </div>
@@ -277,7 +277,7 @@ export default function TimeMachine() {
                     {(expandedCommitHash === commit.hash ? commit.txs : commit.txs.slice(0, 3)).map((tx: any) => (
                       <div key={tx.id} className="text-sm py-2 flex justify-between border-t border-slate-50">
                         <span className="text-slate-700 font-medium truncate flex items-center gap-2">
-                          <FileText size={14} className="text-slate-400" />
+                          <FileText size={14} className="text-[var(--muted)]" />
                           {tx.description || 'Unknown'}
                         </span>
                         <span className="font-mono text-[var(--text)] font-bold ml-4 tabular-nums">{formatCurrency(tx.totalAmountCents, tx.currency)}</span>
@@ -302,10 +302,10 @@ export default function TimeMachine() {
       {activeTab === 'diff' && (
         <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] p-12 text-center shadow-sm">
           <div className="w-20 h-20 bg-[var(--ink)] rounded-full flex items-center justify-center mx-auto mb-6">
-            <GitPullRequest className="text-slate-400" size={40} />
+            <GitPullRequest className="text-[var(--muted)]" size={40} />
           </div>
           <h3 className="text-2xl font-black text-[var(--text)] mb-3">Period Differences (Diff)</h3>
-          <p className="text-slate-500 max-w-lg mx-auto text-lg">Compare changes between any two points in time. See exactly what changed in Q1 since you filed your taxes — in one click.</p>
+          <p className="text-[var(--muted)] max-w-lg mx-auto text-lg">Compare changes between any two points in time. See exactly what changed in Q1 since you filed your taxes — in one click.</p>
           <div className="flex items-center justify-center gap-4 mt-8">
             <select 
               value={diffPeriodA}
@@ -315,7 +315,7 @@ export default function TimeMachine() {
               <option value="Tax Filing (March 15)">Tax Filing (March 15)</option>
               <option value="Q1 Close (April 1)">Q1 Close (April 1)</option>
             </select>
-            <ArrowRight className="text-slate-400" size={20} />
+            <ArrowRight className="text-[var(--muted)]" size={20} />
             <select 
               value={diffPeriodB}
               onChange={(e) => setDiffPeriodB(e.target.value)}
@@ -339,9 +339,9 @@ export default function TimeMachine() {
             <div className="mt-8 p-6 bg-[var(--ink)] border border-[var(--line)] rounded-2xl text-left max-w-2xl mx-auto space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest">+ 0 Unposted Adjustments</span>
-                <span className="text-xs font-bold text-slate-500 font-mono">0 Delta</span>
+                <span className="text-xs font-bold text-[var(--muted)] font-mono">0 Delta</span>
               </div>
-              <p className="text-xs text-slate-500 font-medium">Ledger states are 100% synchronized between {diffPeriodA} and {diffPeriodB}. No unaccounted variance detected.</p>
+              <p className="text-xs text-[var(--muted)] font-medium">Ledger states are 100% synchronized between {diffPeriodA} and {diffPeriodB}. No unaccounted variance detected.</p>
             </div>
           )}
         </div>
@@ -363,7 +363,7 @@ export default function TimeMachine() {
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-[var(--text)]">New Scenario</h3>
-                  <p className="text-sm text-slate-500">Fork your real books to try something safely.</p>
+                  <p className="text-sm text-[var(--muted)]">Fork your real books to try something safely.</p>
                 </div>
               </div>
 

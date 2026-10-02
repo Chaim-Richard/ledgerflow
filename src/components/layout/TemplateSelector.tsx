@@ -132,7 +132,7 @@ export default function TemplateSelector({
               <span className="px-2.5 py-1 bg-slate-900 text-emerald-400 font-mono text-[9px] font-medium uppercase tracking-wider rounded-lg">
                 Blueprint Studio
               </span>
-              <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">
+              <span className="text-[10px] text-[var(--muted)] font-black uppercase tracking-[0.2em]">
                 Verified Invariant Maturation
               </span>
             </div>
@@ -178,7 +178,7 @@ export default function TemplateSelector({
                     </div>
                     <div className="flex-grow">
                       <h3 className="text-xl font-black text-[var(--text)] uppercase italic tracking-tight">AI Generated Blueprint</h3>
-                      <p className="text-xs text-slate-500 font-medium max-w-2xl mt-1.5 leading-relaxed">
+                      <p className="text-xs text-[var(--muted)] font-medium max-w-2xl mt-1.5 leading-relaxed">
                         Synthesize a proprietary chart of accounts aligned immediately. Describe your operational models or industry constraints to automate deterministic graph configuration.
                       </p>
                     </div>
@@ -235,14 +235,14 @@ export default function TemplateSelector({
                         </div>
 
                         <h3 className="text-lg font-black text-[var(--text)] mb-2 uppercase tracking-tight italic">{template.name}</h3>
-                        <p className="text-xs text-slate-500 leading-relaxed font-semibold opacity-70 mb-6">
+                        <p className="text-xs text-[var(--muted)] leading-relaxed font-semibold opacity-70 mb-6">
                           {template.description}
                         </p>
                       </div>
 
                       <div className="flex items-center justify-between text-[9px] font-medium uppercase tracking-wider mt-auto border-t border-[var(--line)]/50 pt-4">
                         <span className={cn(
-                          isActive ? "text-emerald-600" : isInspected ? "text-[var(--text)]" : "text-slate-500"
+                          isActive ? "text-emerald-600" : isInspected ? "text-[var(--text)]" : "text-[var(--muted)]"
                         )}>
                           {isActive ? 'Protocol Engaged' : isInspected ? 'Inspecting Concept' : 'Investigate Blueprint'}
                         </span>
@@ -298,9 +298,9 @@ export default function TemplateSelector({
                           <Sparkles size={18} />
                         </div>
                         <h3 className="text-lg font-black text-[var(--text)] mb-2 uppercase tracking-tight italic">{template.name}</h3>
-                        <p className="text-xs text-slate-500 leading-relaxed font-semibold opacity-70 mb-6">-</p>
+                        <p className="text-xs text-[var(--muted)] leading-relaxed font-semibold opacity-70 mb-6">-</p>
                       </div>
-                      <div className="flex items-center justify-between text-[9px] font-medium uppercase tracking-wider text-slate-500 mt-auto pt-4 border-t border-[var(--line)]/50">
+                      <div className="flex items-center justify-between text-[9px] font-medium uppercase tracking-wider text-[var(--muted)] mt-auto pt-4 border-t border-[var(--line)]/50">
                         Initialize Template
                         <ArrowRight size={12} />
                       </div>
@@ -331,14 +331,14 @@ export default function TemplateSelector({
                     </h3>
                   </div>
                 </div>
-                <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed italic opacity-85">
+                <p className="text-xs text-[var(--muted)] font-medium mt-1 leading-relaxed italic opacity-85">
                   "{activeInspected.description}"
                 </p>
               </div>
 
               {/* SECTION 1: THE MATHEMATICAL INVARIANT INTEGRITY EQUATION */}
               <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-sm space-y-3">
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2">
                   <Cpu size={12} className="text-indigo-500" /> Core Equation Invariant
                 </span>
                 
@@ -346,14 +346,14 @@ export default function TemplateSelector({
                   {TEMPLATE_FORMULAS[activeInspected.id] || "Ledger Balance EQ : Assets (Σ Debit) = Liabilities (Σ Credit) + Owner's Equity"}
                 </div>
                 
-                <p className="text-[9px] text-slate-500 font-medium leading-normal">
+                <p className="text-[9px] text-[var(--muted)] font-medium leading-normal">
                   Our double-entry resolution pipeline continuously solves this objective function. If transactional components drifts, an immediate ledger shadow alert is broadcasted.
                 </p>
               </div>
 
               {/* SECTION 2: CHARTS OF ACCOUNTS TARGET LIST */}
               <div className="space-y-4">
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2">
                   <Layers size={12} className="text-emerald-500" /> Structure Protocol Accounts
                 </span>
 
@@ -371,7 +371,7 @@ export default function TemplateSelector({
                           {acc.name}
                         </span>
                       </div>
-                      <span className="text-[8.5px] font-black uppercase text-slate-500 tracking-wide">
+                      <span className="text-[8.5px] font-black uppercase text-[var(--muted)] tracking-wide">
                         {acc.category || acc.type}
                       </span>
                     </div>
@@ -381,7 +381,7 @@ export default function TemplateSelector({
 
               {/* SECTION 3: CORE WORKSPACE FLOW GRAPH SCHEMATIC */}
               <div className="space-y-4">
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2">
                   <Network size={12} className="text-amber-500" /> Consensus Invariant Map
                 </span>
 
@@ -402,7 +402,7 @@ export default function TemplateSelector({
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 bg-[var(--surface)]/50 border border-[var(--line)] border-dashed rounded-[32px] text-[10px] text-slate-500 text-center italic">
+                  <div className="p-4 bg-[var(--surface)]/50 border border-[var(--line)] border-dashed rounded-[32px] text-[10px] text-[var(--muted)] text-center italic">
                     Abstract accounting nodes
                   </div>
                 )}

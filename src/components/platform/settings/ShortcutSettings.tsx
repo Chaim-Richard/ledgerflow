@@ -34,10 +34,10 @@ export default function ShortcutSettings() {
     <div className="space-y-8 animate-fade-in">
       <div>
         <h2 className="text-2xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
-          <Keyboard size={24} className="text-slate-400" />
+          <Keyboard size={24} className="text-[var(--muted)]" />
           Speed Dial Shortcuts
         </h2>
-        <p className="text-slate-500 mt-2">
+        <p className="text-[var(--muted)] mt-2">
           Assign <code>Alt + [Key]</code> to quickly navigate to any tool or tab.
         </p>
       </div>
@@ -46,7 +46,7 @@ export default function ShortcutSettings() {
         <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-wider mb-4">Add New Speed Dial</h3>
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-1 space-y-2">
-            <Labelled labelClassName="text-xs font-semibold text-slate-500 uppercase tracking-wider" label="Key (e.g. 1, 2, A)">
+            <Labelled labelClassName="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider" label="Key (e.g. 1, 2, A)">
               <input 
                 type="text" 
                 maxLength={1}
@@ -58,7 +58,7 @@ export default function ShortcutSettings() {
             </Labelled>
           </div>
           <div className="flex-1 space-y-2">
-            <Labelled labelClassName="text-xs font-semibold text-slate-500 uppercase tracking-wider" label="Target Tool">
+            <Labelled labelClassName="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider" label="Target Tool">
               <select 
                 value={selectedTab}
                 onChange={(e) => setSelectedTab(e.target.value)}
@@ -87,7 +87,7 @@ export default function ShortcutSettings() {
       <div className="space-y-4">
         <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-wider">Active Speed Dials</h3>
         {!speedDials || Object.entries(speedDials).length === 0 ? (
-          <div className="p-8 border border-dashed border-[var(--line)] rounded-2xl text-center text-slate-500">
+          <div className="p-8 border border-dashed border-[var(--line)] rounded-2xl text-center text-[var(--muted)]">
             No speed dials configured.
           </div>
         ) : (
@@ -104,12 +104,12 @@ export default function ShortcutSettings() {
                       <div className="text-sm font-semibold text-[var(--text)]">
                         {tab ? (((tab as any).label?.[language] || (tab as any).label?.['en']) || (tab as any).name || tab.id) : tabId}
                       </div>
-                      <div className="text-xs text-slate-500">Alt + {key.toUpperCase()}</div>
+                      <div className="text-xs text-[var(--muted)]">Alt + {key.toUpperCase()}</div>
                     </div>
                   </div>
                   <button 
                     onClick={() => removeSpeedDial(key)}
-                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    className="p-2 text-[var(--muted)] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                   >
                     <Trash2 size={16} />
                   </button>

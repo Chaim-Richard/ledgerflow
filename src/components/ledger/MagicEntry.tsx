@@ -6,7 +6,7 @@ import { Check, Wand2, Receipt, Camera, X, Loader2, Edit2 } from 'lucide-react';
 import { parseReceiptOCR } from '../../lib/algorithms/receipt-capture';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { toast } from 'sonner';
-import { getLocalDateISO } from '../../lib/utils';
+import { getLocalDateISO, activateOnKey } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isCashAccount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
@@ -244,7 +244,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
               </button>
             )}
             <AsyncButton 
-              className="w-full sm:flex-1 bg-[var(--brass)] text-black font-bold py-3 px-4 rounded-xl flex items-center justify-center transition-opacity hover:opacity-90 shadow-md"
+              className="w-full sm:flex-1 bg-[var(--brass)] text-[var(--ink)] font-bold py-3 px-4 rounded-xl flex items-center justify-center transition-opacity hover:opacity-90 shadow-md"
               onClick={handleSave}
               loadingText="Saving..."
             >
@@ -256,8 +256,8 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
       
       <div className="flex flex-wrap gap-2 justify-center pt-4">
         <span className="text-xs text-[var(--muted)]">Try typing:</span>
-        <span className="text-xs bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" onClick={() => handleParse("earned $1500 client retainer check today")}>earned $1500 client retainer check today</span>
-        <span className="text-xs bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" onClick={() => handleParse("paid $80 lunch card yesterday")}>paid $80 lunch card yesterday</span>
+        <span className="text-xs bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => handleParse("earned $1500 client retainer check today")}>earned $1500 client retainer check today</span>
+        <span className="text-xs bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] px-2 py-0.5 rounded cursor-pointer hover:bg-[var(--elevated)]" role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => handleParse("paid $80 lunch card yesterday")}>paid $80 lunch card yesterday</span>
       </div>
     </div>
   );
@@ -272,10 +272,10 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
           <div className="flex items-center justify-between p-6 border-b border-[var(--line)]">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Magic Entry</h2>
-              <p className="text-slate-500">Just type what happened. No debit/credit knowledge required.</p>
+              <p className="text-[var(--muted)]">Just type what happened. No debit/credit knowledge required.</p>
             </div>
             {onClose && (
-              <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500"><X className="w-5 h-5" /></button>
+              <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-[var(--muted)]"><X className="w-5 h-5" /></button>
             )}
           </div>
           {content}
@@ -289,7 +289,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Magic Entry</h1>
-        <p className="text-slate-500">Just type what happened. No debit/credit knowledge required.</p>
+        <p className="text-[var(--muted)]">Just type what happened. No debit/credit knowledge required.</p>
       </div>
       <div className="bg-[var(--surface)] rounded-xl shadow-sm border border-[var(--line)] overflow-hidden">
         {content}

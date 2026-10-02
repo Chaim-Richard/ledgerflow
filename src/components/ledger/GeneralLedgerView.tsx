@@ -46,7 +46,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">General Ledger</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-[var(--muted)] dark:text-slate-400">
               Complete itemized transaction ledger for all chart of accounts
             </p>
           </div>
@@ -57,7 +57,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
         <div className="flex flex-wrap items-center gap-3">
           <div>
-            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label="From">
+            <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase mb-1" label="From">
               <input
                 type="date"
                 value={startDate}
@@ -67,7 +67,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
             </Labelled>
           </div>
           <div>
-            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label="To">
+            <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase mb-1" label="To">
               <input
                 type="date"
                 value={endDate}
@@ -77,7 +77,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
             </Labelled>
           </div>
           <div>
-            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase mb-1" label="Account">
+            <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase mb-1" label="Account">
               <select
                 value={selectedAccountId}
                 onChange={e => setSelectedAccountId(e.target.value)}
@@ -95,7 +95,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
         </div>
 
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-[var(--muted)]" />
           <input
             type="text"
             placeholder="Search GL accounts..."
@@ -119,31 +119,31 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
                 <span className="text-sm font-bold text-slate-900 dark:text-white">
                   {acc.accountName}
                 </span>
-                <span className="text-xs text-slate-500 ml-2 capitalize">
+                <span className="text-xs text-[var(--muted)] ml-2 capitalize">
                   ({acc.type} • {acc.category})
                 </span>
               </div>
               <div className="flex items-center gap-6 text-xs font-mono">
                 <div>
-                  <span className="text-slate-400 mr-1">Opening:</span>
+                  <span className="text-[var(--muted)] mr-1">Opening:</span>
                   <span className="font-semibold text-slate-700 dark:text-slate-300">
                     {formatCurrency(acc.openingBalanceCents)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 mr-1">Period Debits:</span>
+                  <span className="text-[var(--muted)] mr-1">Period Debits:</span>
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                     +{formatCurrency(acc.periodDebitsCents)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 mr-1">Period Credits:</span>
+                  <span className="text-[var(--muted)] mr-1">Period Credits:</span>
                   <span className="font-semibold text-rose-600 dark:text-rose-400">
                     -{formatCurrency(acc.periodCreditsCents)}
                   </span>
                 </div>
                 <div className="pl-2 border-l border-slate-300 dark:border-slate-700">
-                  <span className="text-slate-400 mr-1">Ending:</span>
+                  <span className="text-[var(--muted)] mr-1">Ending:</span>
                   <span className="font-bold text-slate-900 dark:text-white">
                     {formatCurrency(acc.endingBalanceCents)}
                   </span>
@@ -153,14 +153,14 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
 
             {/* Entries Table */}
             {acc.entries.length === 0 ? (
-              <div className="p-4 text-center text-xs text-slate-400">
+              <div className="p-4 text-center text-xs text-[var(--muted)]">
                 No transactions recorded in selected period
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-500 font-semibold uppercase text-[10px]">
+                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-[var(--muted)] font-semibold uppercase text-[10px]">
                       <th className="py-2.5 px-4">Date</th>
                       <th className="py-2.5 px-4">Description</th>
                       <th className="py-2.5 px-4">Reference</th>
@@ -174,7 +174,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
                       <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                         <td className="py-2 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{entry.date}</td>
                         <td className="py-2 px-4 text-slate-900 dark:text-white font-sans font-medium">{entry.description}</td>
-                        <td className="py-2 px-4 text-slate-500">{entry.reference || '-'}</td>
+                        <td className="py-2 px-4 text-[var(--muted)]">{entry.reference || '-'}</td>
                         <td className="py-2 px-4 text-right text-emerald-600 dark:text-emerald-400">
                           {entry.debitCents > 0 ? formatCurrency(entry.debitCents) : '-'}
                         </td>

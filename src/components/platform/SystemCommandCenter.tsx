@@ -394,19 +394,19 @@ export default function SystemCommandCenter() {
       {/* Header section matching upgraded architecture */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[var(--line)]">
         <div>
-          <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate mb-1">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest truncate mb-1">
             <Server size={12} />
             Institutional Telemetry & Control Tower
           </div>
           <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Admin Panel</h2>
-          <p className="text-slate-500 font-medium text-lg mt-2 italic opacity-60">Consolidated platform health, multi-tenant matrices, live billing pipelines, and granular override dials.</p>
+          <p className="text-[var(--muted)] font-medium text-lg mt-2 italic opacity-60">Consolidated platform health, multi-tenant matrices, live billing pipelines, and granular override dials.</p>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] flex items-center gap-3 shadow-3xs">
             <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
             <div>
-              <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-none">Diagnostic Socket</p>
+              <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest leading-none">Diagnostic Socket</p>
               <p className="text-xs font-bold text-emerald-600 uppercase mt-0.5 tracking-wider">ONLINE</p>
             </div>
           </div>
@@ -416,14 +416,14 @@ export default function SystemCommandCenter() {
       {loading && !telemetry ? (
         <div className="h-96 flex items-center justify-center flex-col gap-3">
           <Loader2 className="animate-spin text-[var(--text)] opacity-40" size={32} />
-          <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Hooking operational datastream...</span>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">Hooking operational datastream...</span>
         </div>
       ) : !telemetry || !telemetry.tenants ? (
         <div className="h-96 flex flex-col items-center justify-center gap-4 border border-dashed border-[var(--line)] rounded-[32px]">
           <AlertOctagon size={40} className="text-rose-500 opacity-60" />
           <div className="text-center">
             <h3 className="text-sm font-black text-[var(--text)] uppercase tracking-wider">Interface Refused</h3>
-            <p className="text-xs text-slate-500 mt-1">Unable to construct reliable stream channel to backend metrics.</p>
+            <p className="text-xs text-[var(--muted)] mt-1">Unable to construct reliable stream channel to backend metrics.</p>
           </div>
         </div>
       ) : (
@@ -433,7 +433,7 @@ export default function SystemCommandCenter() {
               onClick={() => setActiveMainTab('workspaces')}
               className={cn(
                 "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
-                activeMainTab === 'workspaces' ? "bg-[var(--brass)] text-black shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
+                activeMainTab === 'workspaces' ? "bg-[var(--brass)] text-[var(--ink)] shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
               )}
             >
               <Building className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
@@ -443,7 +443,7 @@ export default function SystemCommandCenter() {
               onClick={() => setActiveMainTab('users')}
               className={cn(
                 "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
-                activeMainTab === 'users' ? "bg-[var(--brass)] text-black shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
+                activeMainTab === 'users' ? "bg-[var(--brass)] text-[var(--ink)] shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
               )}
             >
               <Users className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
@@ -453,7 +453,7 @@ export default function SystemCommandCenter() {
               onClick={() => setActiveMainTab('lexicon')}
               className={cn(
                 "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
-                activeMainTab === 'lexicon' ? "bg-[var(--brass)] text-black shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
+                activeMainTab === 'lexicon' ? "bg-[var(--brass)] text-[var(--ink)] shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
               )}
             >
               <BookA className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
@@ -463,7 +463,7 @@ export default function SystemCommandCenter() {
               onClick={() => setActiveMainTab('audit')}
               className={cn(
                 "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
-                activeMainTab === 'audit' ? "bg-[var(--brass)] text-black shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
+                activeMainTab === 'audit' ? "bg-[var(--brass)] text-[var(--ink)] shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
               )}
             >
               <History className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
@@ -483,7 +483,7 @@ export default function SystemCommandCenter() {
                   </div>
                 </div>
                 <div className="p-6 md:p-8 space-y-6">
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-[var(--muted)]">
                     Use this administrative panel to override any hardcoded text across the system. This allows full white-labeling and customization of the site's terminology. Changes here are applied instantly for all users.
                   </p>
                   
@@ -514,14 +514,14 @@ export default function SystemCommandCenter() {
                 <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-3xs overflow-hidden">
                   <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]">
                     <div className="flex items-center gap-3">
-                      <Users size={16} className="text-slate-500" />
+                      <Users size={16} className="text-[var(--muted)]" />
                       <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Platform User Ledger</h3>
                     </div>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                       <thead>
-                        <tr className="border-b border-[var(--line)] bg-[var(--surface)] text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                        <tr className="border-b border-[var(--line)] bg-[var(--surface)] text-[9px] font-bold uppercase tracking-wider text-[var(--muted)]">
                           <th className="py-4 px-6 font-medium">User Details</th>
                           <th className="py-4 px-6 font-medium">Role</th>
                           <th className="py-4 px-6 font-medium text-right">Custom Limit ($)</th>
@@ -535,7 +535,7 @@ export default function SystemCommandCenter() {
                             <td className="py-4 px-6">
                               <div className="flex flex-col">
                                 <span className="text-xs font-bold text-[var(--text)]">{u.email || 'Unknown Email'}</span>
-                                <span className="text-[10px] font-mono text-slate-400">{u.uid}</span>
+                                <span className="text-[10px] font-mono text-[var(--muted)]">{u.uid}</span>
                               </div>
                             </td>
                             <td className="py-4 px-6">
@@ -568,7 +568,7 @@ export default function SystemCommandCenter() {
                         ))}
                         {usersList.length === 0 && (
                           <tr>
-                            <td colSpan={5} className="py-12 text-center text-[10px] uppercase font-bold tracking-widest text-slate-400">
+                            <td colSpan={5} className="py-12 text-center text-[10px] uppercase font-bold tracking-widest text-[var(--muted)]">
                               No user records located.
                             </td>
                           </tr>
@@ -594,7 +594,7 @@ export default function SystemCommandCenter() {
                       {editingUser && (
                         <div className="flex flex-col mt-1">
                           <span className="text-[11px] font-bold text-slate-700">{editingUser.email || 'Unknown Email'}</span>
-                          <span className="text-[9px] font-mono text-slate-500">{editingUser.uid}</span>
+                          <span className="text-[9px] font-mono text-[var(--muted)]">{editingUser.uid}</span>
                         </div>
                       )}
                     </div>
@@ -604,7 +604,7 @@ export default function SystemCommandCenter() {
                     <form onSubmit={handleSaveUser} className="space-y-6">
                       <div className="space-y-4">
                         <div>
-                          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Authority Role">
+                          <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="Authority Role">
                             <select 
                               value={userFormState.role}
                               onChange={e => setUserFormState(prev => ({ ...prev, role: e.target.value }))}
@@ -616,7 +616,7 @@ export default function SystemCommandCenter() {
                           </Labelled>
                         </div>
                         <div>
-                          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Custom Monetary Limit (Cents)">
+                          <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="Custom Monetary Limit (Cents)">
                             <input 
                               type="number"
                               value={userFormState.customLimit}
@@ -627,7 +627,7 @@ export default function SystemCommandCenter() {
                           </Labelled>
                         </div>
                         <div>
-                          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Compute Credit Ceiling">
+                          <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="Compute Credit Ceiling">
                             <input 
                               type="number"
                               value={userFormState.computeCreditLimit}
@@ -638,7 +638,7 @@ export default function SystemCommandCenter() {
                           </Labelled>
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
+                          <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
                             Quick Actions
                           </label>
                           <div className="flex gap-2">
@@ -664,7 +664,7 @@ export default function SystemCommandCenter() {
                         <button
                           type="button"
                           onClick={() => setEditingUser(null)}
-                          className="flex-1 px-4 py-3 border border-[var(--line)] rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-[var(--ink)] transition-all"
+                          className="flex-1 px-4 py-3 border border-[var(--line)] rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--muted)] hover:bg-[var(--ink)] transition-all"
                         >
                           Cancel
                         </button>
@@ -679,7 +679,7 @@ export default function SystemCommandCenter() {
                     </form>
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Select a user profile to override limits & roles</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted)]">Select a user profile to override limits & roles</p>
                     </div>
                   )}
                 </div>
@@ -699,10 +699,10 @@ export default function SystemCommandCenter() {
                   <div className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center">
                     <Database size={18} />
                   </div>
-                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Tenants</h4>
+                  <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Active Tenants</h4>
                 </div>
                 <h3 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">{telemetry.tenants.length}</h3>
-                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-2">Isolated workspaces in sync</p>
+                <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-2">Isolated workspaces in sync</p>
               </div>
 
               <div className="bg-[var(--surface)] border border-[var(--line)] p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
@@ -713,12 +713,12 @@ export default function SystemCommandCenter() {
                   <div className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center">
                     <Activity size={18} />
                   </div>
-                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Global Ledger Rows</h4>
+                  <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Global Ledger Rows</h4>
                 </div>
                 <h3 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">
                   {telemetry.tenants.reduce((acc: number, t: any) => acc + t.txCount, 0).toLocaleString()}
                 </h3>
-                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-2">Total transactional assertions</p>
+                <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-2">Total transactional assertions</p>
               </div>
 
               <div className="bg-[var(--surface)] border border-[var(--line)] p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
@@ -729,7 +729,7 @@ export default function SystemCommandCenter() {
                   <div className="w-10 h-10 bg-rose-500/10 text-rose-600 rounded-[32px] flex items-center justify-center">
                     <AlertOctagon size={18} />
                   </div>
-                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">API Incidents (400+)</h4>
+                  <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">API Incidents (400+)</h4>
                 </div>
                 <h3 className="text-2xl md:text-4xl font-black font-mono text-rose-600 tracking-tight">{totalErrors}</h3>
                 <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-2">Aggregated active warning nodes</p>
@@ -939,7 +939,7 @@ export default function SystemCommandCenter() {
                 </div>
                 <div>
                   <h3 className="text-lg font-black uppercase tracking-tight italic">Platform Revenue & Surcharge Modeler Simulation</h3>
-                  <p className="text-[10px] text-slate-500 font-bold tracking-wide uppercase mt-0.5">
+                  <p className="text-[10px] text-[var(--muted)] font-bold tracking-wide uppercase mt-0.5">
                     Model monetization yield based on query volume, cost multipliers, and proportion of private key users
                   </p>
                 </div>
@@ -949,7 +949,7 @@ export default function SystemCommandCenter() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Load-Test Queries per Month</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--muted)]">Load-Test Queries per Month</span>
                     <span className="text-xs font-mono font-black text-[#0047AB]">{simulatedQueries.toLocaleString()} / mo</span>
                   </div>
                   <input
@@ -961,7 +961,7 @@ export default function SystemCommandCenter() {
                     onChange={(e) => setSimulatedQueries(Number(e.target.value))}
                     className="w-full h-2 bg-slate-150 rounded-lg appearance-none cursor-pointer accent-[#0047AB]"
                   />
-                  <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase">
+                  <div className="flex justify-between text-[9px] text-[var(--muted)] font-bold uppercase">
                     <span>10k / low</span>
                     <span>1M / mid</span>
                     <span>5M / high-volume</span>
@@ -970,7 +970,7 @@ export default function SystemCommandCenter() {
 
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Proportion of Custom Key Users</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--muted)]">Proportion of Custom Key Users</span>
                     <span className="text-xs font-mono font-black text-indigo-650">{customKeyRatio}% of tenants</span>
                   </div>
                   <input
@@ -982,7 +982,7 @@ export default function SystemCommandCenter() {
                     onChange={(e) => setCustomKeyRatio(Number(e.target.value))}
                     className="w-full h-2 bg-slate-150 rounded-lg appearance-none cursor-pointer accent-[#0047AB]"
                   />
-                  <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase">
+                  <div className="flex justify-between text-[9px] text-[var(--muted)] font-bold uppercase">
                     <span>0% (All System Paid)</span>
                     <span>50% (Surcharge Hybrid)</span>
                     <span>100% (Pure key Surcharge)</span>
@@ -994,29 +994,29 @@ export default function SystemCommandCenter() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 bg-[var(--ink)] rounded-[32px] border border-[var(--line)]">
                 {/* 1 */}
                 <div className="space-y-1">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Est. Compute Credits Burn rate</span>
+                  <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-widest block">Est. Compute Credits Burn rate</span>
                   <div className="text-xl font-mono font-black text-[var(--text)]">
                     {Math.round(simulatedQueries * (customKeyRatio / 100 * (globalConfig.customKeyCreditCharge) + (1 - customKeyRatio / 100) * 100) * (globalConfig.creditCostMultiplier || 1)).toLocaleString()}
                   </div>
-                  <span className="text-[9px] font-bold text-slate-500 leading-none">Compute credits allocated monthly</span>
+                  <span className="text-[9px] font-bold text-[var(--muted)] leading-none">Compute credits allocated monthly</span>
                 </div>
 
                 {/* 2 */}
                 <div className="space-y-1 border-[var(--line)] sm:border-l sm:pl-6">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Gross Platform Cent Revenue</span>
+                  <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-widest block">Gross Platform Cent Revenue</span>
                   <div className="text-xl font-mono font-black text-emerald-650">
                     ${((simulatedQueries * (1 - customKeyRatio / 100) * 0.01 * (globalConfig.quotaCentsMultiplier || 1)) + (simulatedQueries * (customKeyRatio / 100) * (globalConfig.customKeyCentsCharge / 100))).toFixed(2)}
                   </div>
-                  <span className="text-[9px] font-bold text-slate-500 leading-none">Estimated revenue pool per month</span>
+                  <span className="text-[9px] font-bold text-[var(--muted)] leading-none">Estimated revenue pool per month</span>
                 </div>
 
                 {/* 3 */}
                 <div className="space-y-1 border-[var(--line)] sm:border-l sm:pl-6">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">System Key Royaltiy Yield</span>
+                  <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-widest block">System Key Royaltiy Yield</span>
                   <div className="text-xl font-mono font-black text-indigo-650">
                     {Math.round(simulatedQueries * (customKeyRatio / 100) * globalConfig.customKeyCreditCharge).toLocaleString()} cr
                   </div>
-                  <span className="text-[9px] font-bold text-slate-500 leading-none">Royalty fee extracted from bypass API</span>
+                  <span className="text-[9px] font-bold text-[var(--muted)] leading-none">Royalty fee extracted from bypass API</span>
                 </div>
               </div>
             </div>
@@ -1029,7 +1029,7 @@ export default function SystemCommandCenter() {
                   <div className="w-2.5 h-6 bg-slate-900 rounded-full" />
                   <div>
                     <h3 className="text-lg font-black uppercase tracking-tight italic">Multi-Tenant Ledger Matrix</h3>
-                    <p className="text-[10px] text-slate-500 font-bold tracking-wide uppercase mt-0.5">Click any workspace parameters row to customize limits & plans as Admin</p>
+                    <p className="text-[10px] text-[var(--muted)] font-bold tracking-wide uppercase mt-0.5">Click any workspace parameters row to customize limits & plans as Admin</p>
                   </div>
                 </div>
               </div>
@@ -1037,7 +1037,7 @@ export default function SystemCommandCenter() {
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-[var(--line)] text-slate-500 text-[10px] font-medium uppercase tracking-wider bg-[var(--ink)]/50">
+                    <tr className="border-b border-[var(--line)] text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider bg-[var(--ink)]/50">
                       <th className="py-4 px-4">Workspace Identity / Name</th>
                       <th className="py-4 px-4 text-center">Plan</th>
                       <th className="py-4 px-4 text-right">Max Seats</th>
@@ -1053,7 +1053,7 @@ export default function SystemCommandCenter() {
                   <tbody className="divide-y divide-ledger-line font-medium text-[var(--text)]">
                     {telemetry.tenants.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="py-8 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                        <td colSpan={10} className="py-8 text-center text-[var(--muted)] font-bold uppercase tracking-widest text-[10px]">
                           No workspaces detected on server
                         </td>
                       </tr>
@@ -1074,7 +1074,7 @@ export default function SystemCommandCenter() {
                               <div className="font-mono text-xs text-slate-600 font-bold tracking-tight group-hover:text-[#0047AB]">
                                 {tenant.id}
                               </div>
-                              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate max-w-[200px]">
+                              <div className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest mt-0.5 truncate max-w-[200px]">
                                 {tenant.name || "Default Workspace"}
                               </div>
                             </td>
@@ -1103,7 +1103,7 @@ export default function SystemCommandCenter() {
                             <td className="py-4 px-4 text-right font-mono text-xs text-purple-650 font-bold">
                               ${costPerUser}
                             </td>
-                            <td className="py-4 px-4 text-right font-mono text-xs text-slate-500">
+                            <td className="py-4 px-4 text-right font-mono text-xs text-[var(--muted)]">
                               {(tenant.txCount || 0).toLocaleString()}
                             </td>
                             <td className="py-4 px-4 text-right font-mono text-xs text-indigo-600">
@@ -1148,16 +1148,16 @@ export default function SystemCommandCenter() {
                   
                   <div className="mb-4 flex justify-between items-start">
                     <div>
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
+                      <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
                         Institutional Supervisor Control
                       </span>
                       <h3 className="text-2xl font-black text-[var(--text)] tracking-tight mt-1 truncate">Workspace Policy Editor</h3>
-                      <p className="text-slate-400 font-mono text-[9px] font-bold uppercase mt-0.5 truncate">Workspace Hash: {editingWorkspace.id}</p>
+                      <p className="text-[var(--muted)] font-mono text-[9px] font-bold uppercase mt-0.5 truncate">Workspace Hash: {editingWorkspace.id}</p>
                     </div>
                     <button 
                       type="button"
                       onClick={() => setEditingWorkspace(null)}
-                      className="text-slate-400 hover:text-slate-700 font-bold text-xs px-3 py-1.5 bg-[var(--ink)] hover:bg-slate-100 rounded-xl transition-all"
+                      className="text-[var(--muted)] hover:text-slate-700 font-bold text-xs px-3 py-1.5 bg-[var(--ink)] hover:bg-slate-100 rounded-xl transition-all"
                     >
                       CLOSE (ESC)
                     </button>
@@ -1172,7 +1172,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'tier' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
+                          : "text-[var(--muted)] hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Sparkles size={12} /> Pricing & Plan
@@ -1184,7 +1184,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'access' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
+                          : "text-[var(--muted)] hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Users size={12} /> Access & Seats
@@ -1196,7 +1196,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'credits' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
+                          : "text-[var(--muted)] hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Gift size={12} /> Grant Free Credits
@@ -1208,7 +1208,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'roadmap' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
+                          : "text-[var(--muted)] hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <DollarSign size={12} /> Monetization
@@ -1220,7 +1220,7 @@ export default function SystemCommandCenter() {
                         "px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap",
                         activeFormTab === 'rates' 
                           ? "bg-[#0047AB]/10 text-[#0047AB] border border-[#0047AB]/20" 
-                          : "text-slate-400 hover:text-slate-700 hover:bg-[var(--ink)]"
+                          : "text-[var(--muted)] hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
                       <Cpu size={12} /> Rates & Keys
@@ -1235,7 +1235,7 @@ export default function SystemCommandCenter() {
                     {activeFormTab === 'tier' && (
                       <div className="space-y-4">
                         <div>
-                          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Assigned Plan Model">
+                          <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="Assigned Plan Model">
                             <select
                               value={formState.plan}
                               onChange={(e) => setFormState(prev => ({ ...prev, plan: e.target.value }))}
@@ -1256,9 +1256,9 @@ export default function SystemCommandCenter() {
                           )}>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-xs font-black text-[var(--text)] uppercase tracking-tight">Sandbox / Free Tier</span>
-                              <span className="text-[9px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg">$0.00 / mo</span>
+                              <span className="text-[9px] font-black uppercase text-[var(--muted)] bg-slate-100 px-2 py-0.5 rounded-lg">$0.00 / mo</span>
                             </div>
-                            <p className="text-[10px] text-slate-500 font-medium lowercase first-letter:uppercase">Includes 100k standard compute units, 3 seat limit, normal query rates. Ideal for trial accounts.</p>
+                            <p className="text-[10px] text-[var(--muted)] font-medium lowercase first-letter:uppercase">Includes 100k standard compute units, 3 seat limit, normal query rates. Ideal for trial accounts.</p>
                           </div>
 
                           <div className={cn(
@@ -1271,7 +1271,7 @@ export default function SystemCommandCenter() {
                               </span>
                               <span className="text-[9px] font-black uppercase text-[#2e7d32] bg-emerald-50 px-2 py-0.5 rounded-lg">$49.00 / mo</span>
                             </div>
-                            <p className="text-[10px] text-slate-500 font-medium lowercase first-letter:uppercase">Allocates 500k standard compute credits, up to 15 seat limits, and standard API capabilities.</p>
+                            <p className="text-[10px] text-[var(--muted)] font-medium lowercase first-letter:uppercase">Allocates 500k standard compute credits, up to 15 seat limits, and standard API capabilities.</p>
                           </div>
 
                           <div className={cn(
@@ -1284,7 +1284,7 @@ export default function SystemCommandCenter() {
                               </span>
                               <span className="text-[9px] font-black uppercase text-purple-700 bg-purple-100 px-2 py-0.5 rounded-lg">Custom Quote</span>
                             </div>
-                            <p className="text-[10px] text-slate-500 font-medium lowercase first-letter:uppercase">Allocates custom credits (e.g. 5M+ credits), unlimited concurrent rate boundaries, VIP status.</p>
+                            <p className="text-[10px] text-[var(--muted)] font-medium lowercase first-letter:uppercase">Allocates custom credits (e.g. 5M+ credits), unlimited concurrent rate boundaries, VIP status.</p>
                           </div>
                         </div>
                       </div>
@@ -1297,13 +1297,13 @@ export default function SystemCommandCenter() {
                           <Users size={16} className="text-[#0047AB]" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Seat Limits & Operations</p>
-                            <p className="text-[10px] text-slate-500">Determine user access size per tenant. If seats count surpasses maximum limit, further user registration is blocked automatically.</p>
+                            <p className="text-[10px] text-[var(--muted)]">Determine user access size per tenant. If seats count surpasses maximum limit, further user registration is blocked automatically.</p>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Seat authorization (Max Seats)">
+                            <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="Seat authorization (Max Seats)">
                               <input
                                 type="number"
                                 value={formState.maxSeats}
@@ -1313,11 +1313,11 @@ export default function SystemCommandCenter() {
                                 className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                               />
                             </Labelled>
-                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Capped at 500 seats/tenant</p>
+                            <p className="text-[9px] text-[var(--muted)] mt-1 uppercase font-bold tracking-wider leading-relaxed">Capped at 500 seats/tenant</p>
                           </div>
 
                           <div>
-                            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Rate limit (Queries rate/min)">
+                            <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="Rate limit (Queries rate/min)">
                               <input
                                 type="number"
                                 value={formState.concurrentUserLimit}
@@ -1327,13 +1327,13 @@ export default function SystemCommandCenter() {
                                 className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                               />
                             </Labelled>
-                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Prevents endpoint throttling</p>
+                            <p className="text-[9px] text-[var(--muted)] mt-1 uppercase font-bold tracking-wider leading-relaxed">Prevents endpoint throttling</p>
                           </div>
                         </div>
 
                         {/* Lock / Suspense simulations */}
                         <div className="pt-2">
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
+                          <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
                             Workspace Access Status
                           </label>
                           <div className="grid grid-cols-2 gap-3">
@@ -1368,12 +1368,12 @@ export default function SystemCommandCenter() {
                           <Gift size={16} className="text-indigo-650" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Assign Free Promotional Allocations</p>
-                            <p className="text-[10px] text-slate-500">Inject computational balance credits for testing, marketing, or to reward long-term institutional customers with free credit balances.</p>
+                            <p className="text-[10px] text-[var(--muted)]">Inject computational balance credits for testing, marketing, or to reward long-term institutional customers with free credit balances.</p>
                           </div>
                         </div>
 
                         <div>
-                          <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Compute balance credits">
+                          <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="Compute balance credits">
                             <input
                               type="number"
                               value={formState.computeCreditBalance}
@@ -1383,12 +1383,12 @@ export default function SystemCommandCenter() {
                               className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                             />
                           </Labelled>
-                          <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Required dynamically by rule classifying pipeline & algorithms on API routes</p>
+                          <p className="text-[9px] text-[var(--muted)] mt-1 uppercase font-bold tracking-wider leading-relaxed">Required dynamically by rule classifying pipeline & algorithms on API routes</p>
                         </div>
 
                         {/* Quick Inject Grant Credit triggers */}
                         <div className="pt-2">
-                          <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-0.5">Quick Grant Presets (Click to Load)</span>
+                          <span className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-2 ml-0.5">Quick Grant Presets (Click to Load)</span>
                           <div className="grid grid-cols-3 gap-2">
                             <button
                               type="button"
@@ -1423,13 +1423,13 @@ export default function SystemCommandCenter() {
                           <DollarSign size={16} className="text-[#0047AB]" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Monetization & API Limits ($)</p>
-                            <p className="text-[10px] text-slate-500">Establish maximum billing limits per workspace to charge for premium services. Limit over-spending and manage enterprise custom invoicing.</p>
+                            <p className="text-[10px] text-[var(--muted)]">Establish maximum billing limits per workspace to charge for premium services. Limit over-spending and manage enterprise custom invoicing.</p>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="API Monthly Limit ($)">
+                            <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="API Monthly Limit ($)">
                               <input
                                 type="number"
                                 step="0.01"
@@ -1438,23 +1438,23 @@ export default function SystemCommandCenter() {
                                 className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                               />
                             </Labelled>
-                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Auto-caps programmatic use</p>
+                            <p className="text-[9px] text-[var(--muted)] mt-1 uppercase font-bold tracking-wider leading-relaxed">Auto-caps programmatic use</p>
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
+                            <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
                               Estimated Monthly Bill
                             </label>
                             <div className="w-full h-11 bg-slate-100 border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-slate-600 flex items-center">
                               ${formState.plan === 'growth' ? '49.00 / mo' : formState.plan === 'enterprise' ? '299.00 / mo' : '0.00 (Free)'}
                             </div>
-                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">Based on designated plan model</p>
+                            <p className="text-[9px] text-[var(--muted)] mt-1 uppercase font-bold tracking-wider leading-relaxed">Based on designated plan model</p>
                           </div>
                         </div>
 
                         <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)]">
                           <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1.5">Monetization Deployment Strategy</h4>
-                          <p className="text-[10px] text-slate-500 leading-relaxed uppercase tracking-wide">
+                          <p className="text-[10px] text-[var(--muted)] leading-relaxed uppercase tracking-wide">
                             LedgerFlow is fully structured to receive custom payment processors (e.g. Stripe Customer Portal). This admin system already manages and updates plans, quotas, and limits. By connecting a Stripe webhook, you will be able to process subscriptions and charge client cards directly, with this UI serving as your operational control tower.
                           </p>
                         </div>
@@ -1468,7 +1468,7 @@ export default function SystemCommandCenter() {
                           <Cpu size={16} className="text-emerald-505 animate-pulse" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Dynamic Pricing Multipliers & Private Key Surcharges</p>
-                            <p className="text-[10px] text-slate-500 leading-relaxed">Provide granular overrides for this specific workspace. You can scale charging metrics from zero to premium amounts dynamically.</p>
+                            <p className="text-[10px] text-[var(--muted)] leading-relaxed">Provide granular overrides for this specific workspace. You can scale charging metrics from zero to premium amounts dynamically.</p>
                           </div>
                         </div>
 
@@ -1476,7 +1476,7 @@ export default function SystemCommandCenter() {
                         <div className="p-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] flex items-center justify-between">
                           <div>
                             <p className="text-xs font-black text-[var(--text)] uppercase tracking-tight">Bypass All Billing & Caps</p>
-                            <p className="text-[9px] text-slate-500 uppercase font-black tracking-wider mt-0.5">Gives unmetered free operations, bypassing freeze limits completely</p>
+                            <p className="text-[9px] text-[var(--muted)] uppercase font-black tracking-wider mt-0.5">Gives unmetered free operations, bypassing freeze limits completely</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input 
@@ -1492,7 +1492,7 @@ export default function SystemCommandCenter() {
                         {/* Cost Multipliers */}
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Compute Credit Cost Multiplier">
+                            <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="Compute Credit Cost Multiplier">
                               <input
                                 type="number"
                                 step="0.01"
@@ -1503,13 +1503,13 @@ export default function SystemCommandCenter() {
                                 className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                               />
                             </Labelled>
-                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">
+                            <p className="text-[9px] text-[var(--muted)] mt-1 uppercase font-bold tracking-wider leading-relaxed">
                               0.00 = Free, 1.0 = Base, 2.0 = Double cost
                             </p>
                           </div>
 
                           <div>
-                            <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Platform Spend Multiplier (Cents)">
+                            <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="Platform Spend Multiplier (Cents)">
                               <input
                                 type="number"
                                 step="0.01"
@@ -1520,7 +1520,7 @@ export default function SystemCommandCenter() {
                                 className="w-full h-11 bg-[var(--ink)] border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-[var(--text)] focus:border-[#0047AB] outline-none transition-all"
                               />
                             </Labelled>
-                            <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider leading-relaxed">
+                            <p className="text-[9px] text-[var(--muted)] mt-1 uppercase font-bold tracking-wider leading-relaxed">
                               0.00 = Free spend, 1.0 = Base multiplier
                             </p>
                           </div>
@@ -1529,13 +1529,13 @@ export default function SystemCommandCenter() {
                         {/* Custom Key Parameters */}
                         <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] space-y-4">
                           <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Self-Funded API Key Rates</h4>
-                          <p className="text-[9px] text-slate-400 leading-normal uppercase tracking-wider font-extrabold">
+                          <p className="text-[9px] text-[var(--muted)] leading-normal uppercase tracking-wider font-extrabold">
                             Specify billing charges if this account provides their private Gemini key:
                           </p>
 
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Overhead Credits Per Query">
+                              <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="Overhead Credits Per Query">
                                 <input
                                   type="number"
                                   min="0"
@@ -1544,13 +1544,13 @@ export default function SystemCommandCenter() {
                                   className="w-full h-10 bg-[var(--surface)] border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-850 focus:border-[#0047AB] outline-none transition-all"
                                 />
                               </Labelled>
-                              <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">
+                              <p className="text-[9px] text-[var(--muted)] mt-1 uppercase font-bold tracking-wider">
                                 Credits (default is 10)
                               </p>
                             </div>
 
                             <div>
-                              <Labelled labelClassName="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5" label="Overhead Cents Per Query">
+                              <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5" label="Overhead Cents Per Query">
                                 <input
                                   type="number"
                                   min="0"
@@ -1559,7 +1559,7 @@ export default function SystemCommandCenter() {
                                   className="w-full h-10 bg-[var(--surface)] border border-slate-205 rounded-xl px-3 text-xs font-mono font-bold text-slate-855 focus:border-[#0047AB] outline-none transition-all"
                                 />
                               </Labelled>
-                              <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">
+                              <p className="text-[9px] text-[var(--muted)] mt-1 uppercase font-bold tracking-wider">
                                 Platform cents (default is 0)
                               </p>
                             </div>
@@ -1672,7 +1672,7 @@ export default function SystemCommandCenter() {
 
               <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3 font-mono text-[10px]">
                 {liveErrors.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 gap-2 text-center p-4">
+                  <div className="h-full flex flex-col items-center justify-center text-[var(--muted)] opacity-50 gap-2 text-center p-4">
                     <ShieldCheck size={36} className="text-emerald-500" />
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-700">Audit pipeline is empty</p>
                     <p className="text-[9px] lowercase max-w-[170px]">Invoke client endpoints to stream event triggers.</p>
@@ -1700,7 +1700,7 @@ export default function SystemCommandCenter() {
                           )}>
                             HTTP_{log.statusCode} {log.simulated && '[SIMULATED]'}
                           </span>
-                          <span className="text-slate-400 text-[8px] uppercase font-bold">
+                          <span className="text-[var(--muted)] text-[8px] uppercase font-bold">
                             {new Date(log.timestamp).toLocaleTimeString()}
                           </span>
                         </div>
@@ -1710,7 +1710,7 @@ export default function SystemCommandCenter() {
                             isError ? "text-rose-600" : isWarning ? "text-amber-600" : "text-indigo-600"
                           )}>{log.method}</span> {log.path}
                         </div>
-                        <div className="space-y-0.5 text-[8px] text-slate-500 font-semibold uppercase tracking-wider pt-1.5 border-t border-[var(--line)]">
+                        <div className="space-y-0.5 text-[8px] text-[var(--muted)] font-semibold uppercase tracking-wider pt-1.5 border-t border-[var(--line)]">
                           <div>Source Node: {log.ip}</div>
                           <div className="truncate">Client Ref: {log.apiKeyUsed}</div>
                         </div>
@@ -1750,7 +1750,7 @@ export default function SystemCommandCenter() {
                 <CheckCircle2 size={24} />
               </div>
               <h3 className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Ledger Synchronized</h3>
-              <p className="text-xs text-slate-500 mt-2 uppercase tracking-wide leading-relaxed">
+              <p className="text-xs text-[var(--muted)] mt-2 uppercase tracking-wide leading-relaxed">
                 Successfully propagated global cost coefficients, spend multipliers, and private api key surcharges to all {telemetry?.tenants?.length || 0} active workspaces securely.
               </p>
               <button

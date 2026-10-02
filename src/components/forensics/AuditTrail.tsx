@@ -11,7 +11,7 @@ import {
   Shield,
   Filter
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, activateOnKey } from '../../lib/utils';
 import { auditDescription, auditTime } from '../../lib/auditFormat';
 import { format } from 'date-fns';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -40,12 +40,12 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
       >
         <div 
           className="flex items-center justify-between cursor-pointer"
-          onClick={() => data.setExpandedId(isExpanded ? null : log.id)}
+          role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => data.setExpandedId(isExpanded ? null : log.id)}
         >
           <div className="flex items-center gap-6 overflow-hidden">
             <div className={cn(
               "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-[var(--line)] transition-colors",
-              log.action?.includes('ERROR') || log.action?.includes('DRIFT') ? "bg-rose-500/10 text-rose-500" : "bg-[var(--bg)] text-slate-500"
+              log.action?.includes('ERROR') || log.action?.includes('DRIFT') ? "bg-rose-500/10 text-rose-500" : "bg-[var(--bg)] text-[var(--muted)]"
             )}>
               <Activity size={18} />
             </div>
@@ -64,7 +64,7 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
                   {log.entityType} <span className="opacity-20 mx-1">/</span> {auditDescription(log) || log.entityId || 'SYSTEM'}
                 </p>
               </div>
-              <div className="flex items-center gap-4 text-[9px] font-black text-slate-500 uppercase tracking-widest italic opacity-60">
+              <div className="flex items-center gap-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-widest italic opacity-60">
                 <span className="flex items-center gap-1.5"><History size={10} />{auditTime(log) ? format(auditTime(log)!, 'MMM dd, HH:mm:ss') : 'N/A'}</span>
                 <span className="flex items-center gap-1.5"><User size={10} />{log.userEmail || log.email || log.uid?.substring(0, 8) || 'SYSTEM'}</span>
               </div>
@@ -176,11 +176,11 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
             Verified Audit Stream
           </div>
           <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Audit Trail</h2>
-          <p className="text-slate-500 font-normal text-lg mt-2 max-w-xl leading-relaxed italic opacity-80">Continuous cryptographic observability of legal and fiscal vectors.</p>
+          <p className="text-[var(--muted)] font-normal text-lg mt-2 max-w-xl leading-relaxed italic opacity-80">Continuous cryptographic observability of legal and fiscal vectors.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative group/search">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-hover/search:text-indigo-600 transition-colors" size={18} />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--muted)] group-hover/search:text-indigo-600 transition-colors" size={18} />
             <input 
               type="text"
               placeholder="Search history..."
@@ -220,7 +220,7 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <History size={64} className="text-slate-200 mx-auto mb-6 opacity-20" />
-                <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider truncate">Zero Vectors Detected in Current Buffer</p>
+                <p className="text-[10px] text-[var(--muted)] font-medium uppercase tracking-wider truncate">Zero Vectors Detected in Current Buffer</p>
               </div>
             </div>
           )}

@@ -125,7 +125,7 @@ export const FixedAssetsView: React.FC = () => {
               <input id="dep-month" type="month" value={runMonth} onChange={e => e.target.value && setRunMonth(e.target.value)} className={inputClass} />
             </div>
             <button type="button" onClick={runDepreciation} disabled={running || dueForRun.length === 0}
-              className="px-4 py-2 text-sm font-semibold rounded-lg bg-[var(--brass)] text-black disabled:opacity-50"
+              className="px-4 py-2 text-sm font-semibold rounded-lg bg-[var(--brass)] text-[var(--ink)] disabled:opacity-50"
               title={dueForRun.length === 0 ? 'Nothing to depreciate for this month' : undefined}>
               Post depreciation{dueForRun.length ? ` (${dueForRun.length})` : ''}
             </button>
@@ -246,7 +246,7 @@ export const FixedAssetsView: React.FC = () => {
               <p className="text-[11px] text-[var(--muted)]">Record the purchase itself as a bill or a transaction to the asset account. Depreciation starts the month after it was bought.</p>
               <div className="pt-2 flex items-center justify-end gap-2">
                 <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 font-semibold text-[var(--text)] rounded-lg">Cancel</button>
-                <button type="button" onClick={saveAsset} className="px-4 py-2 font-semibold rounded-lg bg-[var(--brass)] text-black inline-flex items-center gap-1.5">
+                <button type="button" onClick={saveAsset} className="px-4 py-2 font-semibold rounded-lg bg-[var(--brass)] text-[var(--ink)] inline-flex items-center gap-1.5">
                   <Check className="w-3.5 h-3.5" aria-hidden="true" /> Save
                 </button>
               </div>

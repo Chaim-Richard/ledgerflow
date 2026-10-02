@@ -237,7 +237,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                 
                 <button
                   onClick={handleStartCreate}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[var(--brass)] text-black rounded-xl hover:opacity-90 shadow-xs transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[var(--brass)] text-[var(--ink)] rounded-xl hover:opacity-90 shadow-xs transition-all cursor-pointer"
                  aria-label="Create Custom View">
                   <Plus size={15} />
                   <span>Create Custom View</span>
@@ -479,7 +479,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                 <button
                   type="button"
                   onClick={handleSaveForm}
-                  className="px-5 py-2 text-xs font-semibold bg-[var(--brass)] text-black rounded-xl hover:opacity-90 shadow-xs"
+                  className="px-5 py-2 text-xs font-semibold bg-[var(--brass)] text-[var(--ink)] rounded-xl hover:opacity-90 shadow-xs"
                  aria-label="Save View Config">
                   Save View Config
                 </button>
@@ -580,7 +580,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                             className={cn(
                               "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1",
                               isActive
-                                ? "bg-[var(--brass)] text-black"
+                                ? "bg-[var(--brass)] text-[var(--ink)]"
                                 : "bg-[var(--bg)] border border-[var(--line)] text-[var(--text)] hover:bg-[var(--line)]/50"
                             )}
                           >

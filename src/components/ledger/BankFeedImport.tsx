@@ -296,9 +296,9 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30">
           <div>
             <h2 className="text-xl font-black text-[var(--text)] uppercase italic tracking-tighter">Bank Feed Ingestion</h2>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1 opacity-40">Rule CSV parsing & topological mapping</p>
+            <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1 opacity-40">Rule CSV parsing & topological mapping</p>
           </div>
-          <button onClick={onClose} className="w-10 h-10 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-slate-500 transition-all" aria-label="Alert Circle action">
+          <button onClick={onClose} className="w-10 h-10 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-[var(--muted)] transition-all" aria-label="Alert Circle action">
             <AlertCircle className="rotate-45" size={20} />
           </button>
         </div>
@@ -314,12 +314,12 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
             >
               <input {...getInputProps()} />
               <div className="w-24 h-24 bg-[var(--ink)] rounded-[32px] flex items-center justify-center mb-8 border border-[var(--line)] group-hover:scale-110 transition-transform">
-                <Upload className={cn("text-slate-500 group-hover:text-indigo-600 transition-colors", isDragActive && "text-indigo-600")} size={40} />
+                <Upload className={cn("text-[var(--muted)] group-hover:text-indigo-600 transition-colors", isDragActive && "text-indigo-600")} size={40} />
               </div>
               {file ? (
                 <div className="text-center">
                   <p className="text-lg font-black text-[var(--text)] italic uppercase tracking-tight">{file.name}</p>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">{(file.size / 1024).toFixed(1)} KB DATA PACKET</p>
+                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mt-1">{(file.size / 1024).toFixed(1)} KB DATA PACKET</p>
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleUpload(); }}
                     disabled={isUploading}
@@ -332,9 +332,9 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
               ) : (
                 <div className="text-center flex flex-col items-center">
                   <p className="text-lg font-black text-[var(--text)] uppercase italic tracking-tighter">Deploy Ledger Source</p>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-2 opacity-40 mb-8">Drop CSV or click to browse system</p>
+                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] mt-2 opacity-40 mb-8">Drop CSV or click to browse system</p>
                   
-                  <div role="button" tabIndex={0} className="flex gap-4 items-center mt-4" onClick={(e) => e.stopPropagation()}>
+                  <div role="presentation" className="flex gap-4 items-center mt-4" onClick={(e) => e.stopPropagation()}>
                     <PlaidConnectButton />
                     <button 
                       onClick={(e) => { e.stopPropagation(); fetchFromPlaid(); }}
@@ -353,7 +353,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
                    <div className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
-                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                   <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em]">
                     {isMapping ? "Rule categorizer active..." : `${mappedTransactions.length} NODES DETECTED`}
                   </p>
                 </div>
@@ -372,10 +372,10 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                   <thead>
                     <tr className="bg-[var(--ink)]/50 border-b border-[var(--line)]">
                       <th className="px-6 py-4 w-12"><span className="sr-only">Actions</span></th>
-                      <th className="px-4 py-4 font-black text-slate-500 uppercase tracking-widest text-[9px]">Timestamp</th>
-                      <th className="px-4 py-4 font-black text-slate-500 uppercase tracking-widest text-[9px]">Description</th>
-                      <th className="px-4 py-4 font-black text-slate-500 uppercase tracking-widest text-[9px]">Amount</th>
-                      <th className="px-4 py-4 font-black text-slate-500 uppercase tracking-widest text-[9px]">AI Topology Hint</th>
+                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Timestamp</th>
+                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Description</th>
+                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Amount</th>
+                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">AI Topology Hint</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ledger-line/50">
@@ -397,7 +397,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                             {selectedIndices.has(idx) && <Check size={14} />}
                           </button>
                         </td>
-                        <td className="px-4 py-4 text-[11px] font-mono font-bold text-slate-500">{tx.date}</td>
+                        <td className="px-4 py-4 text-[11px] font-mono font-bold text-[var(--muted)]">{tx.date}</td>
                         <td className="px-4 py-4 font-black text-[var(--text)] italic uppercase tracking-tight text-xs">{tx.description}</td>
                         <td className="px-4 py-4 font-mono font-black text-[var(--text)] text-sm tabular-nums">
                           {(tx.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
@@ -437,7 +437,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
         </div>
 
         <div className="p-4 md:p-8 border-t border-[var(--line)] flex items-center justify-end gap-5 bg-[var(--ink)]/20">
-          <button onClick={onClose} className="px-8 py-3 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] hover:text-[var(--text)] transition-all" aria-label="Abort Mission">
+          <button onClick={onClose} className="px-8 py-3 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] hover:text-[var(--text)] transition-all" aria-label="Abort Mission">
             Abort Mission
           </button>
           <button 

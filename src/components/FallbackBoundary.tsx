@@ -42,7 +42,7 @@ export class FallbackBoundary extends React.Component<Props, State> {
             
             <div className="space-y-2">
               <h1 className="text-2xl font-semibold text-[var(--text)] tracking-tight font-display">System Exception Detected</h1>
-              <p className="text-sm font-medium text-slate-500">
+              <p className="text-sm font-medium text-[var(--muted)]">
                 The application encountered an unexpected error. Please reload the interface.
               </p>
             </div>

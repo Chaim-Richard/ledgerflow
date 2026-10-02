@@ -235,7 +235,7 @@ export default function TeamSettings() {
             <Users size={22} className="text-indigo-600" />
             Workspace Team & Role Management
           </h3>
-          <p className="text-xs text-slate-500 max-w-xl">
+          <p className="text-xs text-[var(--muted)] max-w-xl">
             Control member roles and permissions for <span className="font-bold text-[var(--text)]">{currentWorkspace?.name || 'this workspace'}</span>. Role gates enforce access across reports, transactions, period locks, and administration.
           </p>
         </div>
@@ -243,7 +243,7 @@ export default function TeamSettings() {
         {/* Seat Limit Badge */}
         <div className="p-4 bg-[var(--ink)]/50 border border-[var(--line)] rounded-2xl shrink-0 space-y-2 min-w-[200px]">
           <div className="flex items-center justify-between text-xs font-bold">
-            <span className="text-slate-400 uppercase tracking-wider text-[10px]">Seat Capacity</span>
+            <span className="text-[var(--muted)] uppercase tracking-wider text-[10px]">Seat Capacity</span>
             <span className={isSeatLimitReached ? "text-amber-500 font-mono" : "text-emerald-500 font-mono"}>
               {activeSeatCount} / {maxSeats} Used
             </span>
@@ -254,7 +254,7 @@ export default function TeamSettings() {
               style={{ width: `${Math.min(100, (activeSeatCount / maxSeats) * 100)}%` }}
             />
           </div>
-          <div className="text-[10px] text-slate-400 font-medium text-right">
+          <div className="text-[10px] text-[var(--muted)] font-medium text-right">
             {isSeatLimitReached ? "Limit reached · Upgrade required" : `${seatsRemaining} available seats`}
           </div>
         </div>
@@ -263,13 +263,13 @@ export default function TeamSettings() {
       {/* Invite Form */}
       <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can invite new members">
         <form onSubmit={handleSendInvite} className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-5">
-          <div className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <div className="text-xs font-black uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5">
             <UserPlus size={15} className="text-indigo-500" /> Invite Team Member or Accountant
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
             <div className="relative sm:col-span-6">
-              <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
               <input
                 type="email"
                 required
@@ -340,7 +340,7 @@ export default function TeamSettings() {
                       {inv.role}
                     </span>
                   </div>
-                  <div className="text-[10px] text-slate-400 flex items-center gap-2">
+                  <div className="text-[10px] text-[var(--muted)] flex items-center gap-2">
                     <span>Expires: {new Date(inv.expiresAt).toLocaleDateString()}</span>
                   </div>
                 </div>
@@ -374,20 +374,20 @@ export default function TeamSettings() {
       {/* Active Workspace Members List */}
       <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-4">
         <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
-          <div className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2">
+          <div className="text-xs font-black uppercase tracking-wider text-[var(--muted)] flex items-center gap-2">
             <Users size={16} className="text-indigo-500" />
             Authorized Active Workspace Members ({activeSeatCount})
           </div>
           <button
             onClick={fetchTeamData}
-            className="text-[10px] font-bold text-slate-400 hover:text-slate-200 flex items-center gap-1"
+            className="text-[10px] font-bold text-[var(--muted)] hover:text-slate-200 flex items-center gap-1"
           >
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-xs text-slate-500 font-mono">Loading team members and roles...</div>
+          <div className="py-8 text-center text-xs text-[var(--muted)] font-mono">Loading team members and roles...</div>
         ) : (
           <div className="space-y-2">
             {/* Owner Row */}
@@ -403,7 +403,7 @@ export default function TeamSettings() {
                       Primary
                     </span>
                   </div>
-                  <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                  <div className="text-[10px] text-[var(--muted)] flex items-center gap-1">
                     <ShieldCheck size={10} className="text-indigo-500" /> Workspace Creator & Owner
                   </div>
                 </div>
@@ -435,7 +435,7 @@ export default function TeamSettings() {
                     </div>
                     <div>
                       <div className="text-xs font-bold text-[var(--text)] font-mono">{mUid}</div>
-                      <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                      <div className="text-[10px] text-[var(--muted)] flex items-center gap-1">
                         <Check size={10} className="text-emerald-500" /> Active Member
                       </div>
                     </div>
@@ -482,7 +482,7 @@ export default function TeamSettings() {
             })}
 
             {members.length === 0 && (
-              <div className="py-6 text-center text-xs text-slate-400 italic">
+              <div className="py-6 text-center text-xs text-[var(--muted)] italic">
                 No additional bookkeepers or team members joined yet. Send an invitation above to collaborate.
               </div>
             )}
@@ -503,7 +503,7 @@ export default function TeamSettings() {
               </div>
               <button
                 onClick={() => setSelectedMemberForLogs(null)}
-                className="p-1 text-slate-400 hover:text-slate-100 rounded-lg"
+                className="p-1 text-[var(--muted)] hover:text-slate-100 rounded-lg"
               >
                 <X size={18} />
               </button>
@@ -511,9 +511,9 @@ export default function TeamSettings() {
 
             <div className="p-6 overflow-y-auto flex-1 space-y-3">
               {logsLoading ? (
-                <div className="py-8 text-center text-xs text-slate-500 font-mono">Loading activity history...</div>
+                <div className="py-8 text-center text-xs text-[var(--muted)] font-mono">Loading activity history...</div>
               ) : memberLogs.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400 italic">
+                <div className="py-8 text-center text-xs text-[var(--muted)] italic">
                   No activity logs recorded for this member.
                 </div>
               ) : (
@@ -526,11 +526,11 @@ export default function TeamSettings() {
                         </span>
                         <span>{log.entityType}</span>
                       </div>
-                      <p className="text-slate-400 text-[11px] mt-1 font-mono">
+                      <p className="text-[var(--muted)] text-[11px] mt-1 font-mono">
                         {log.details?.description || log.entityId}
                       </p>
                     </div>
-                    <div className="text-[10px] text-slate-400 font-mono">
+                    <div className="text-[10px] text-[var(--muted)] font-mono">
                       {new Date(log.timestamp).toLocaleString()}
                     </div>
                   </div>

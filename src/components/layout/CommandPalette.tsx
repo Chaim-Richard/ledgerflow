@@ -453,7 +453,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                 </div>
               ) : (
                  <div className="p-10 flex items-center justify-center opacity-50">
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 text-center max-w-sm">
+                    <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] text-center max-w-sm">
                       Amount Search Matrix active.<br/>Type any tag, location, class, or entity to instantly filter your workspace.
                     </p>
                  </div>

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
-import { parseLocalDate, cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
+import { parseLocalDate, cn, getLocalDateISO, formatCurrency, activateOnKey } from '../../lib/utils';
 import { exportToExcel as exportToExcelHelper } from '../../lib/excelExport';
 import { isPostable, lineAmount, calculateNetIncome, isTransactionInDateRange } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -344,11 +344,11 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             onMonthChange={({ start, end }) => setDateRange({ start, end })} 
           />
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-slate-500 shrink-0">
+            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-[var(--muted)] shrink-0">
                <Calendar size={13} />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Temporal Range</span>
+              <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">Temporal Range</span>
               <div className="flex flex-wrap items-center gap-2">
                 <input 
                   type="date" 
@@ -385,9 +385,9 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
-                Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-slate-400")} />
+                Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--muted)]")} />
               </span>
-              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Compare to Prior Prev</span>
+              <span className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest">Compare to Prior Prev</span>
             </div>
           </label>
         </div>
@@ -411,7 +411,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
              <TrendingUp size={80} />
            </div>
           <div>
-            <p className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider">{labels.inflowLabel}</p>
+            <p className="text-[9px] font-bold text-[var(--muted)] mb-2 uppercase tracking-wider">{labels.inflowLabel}</p>
             <p className="text-xl font-black text-[var(--text)] leading-none mb-3 tabular-nums font-mono">{formatCurrency(data.income?.total || 0)}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -440,7 +440,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
               <TrendingDown size={80} />
            </div>
           <div>
-            <p className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider">{labels.outflowLabel}</p>
+            <p className="text-[9px] font-bold text-[var(--muted)] mb-2 uppercase tracking-wider">{labels.outflowLabel}</p>
             <p className="text-xl font-black text-[var(--text)] leading-none mb-3 tabular-nums font-mono">{formatCurrency(data.expense?.total || 0)}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -499,10 +499,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         <div className="p-4 border-b border-slate-150 bg-[var(--ink)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">{labels.title}</h3>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Hierarchical Performance Synthesis</p>
+            <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-0.5">Hierarchical Performance Synthesis</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Sort By:</span>
+            <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider">Sort By:</span>
             <div className="flex items-center gap-1 bg-[var(--surface)] border border-[var(--line)] rounded-lg p-0.5">
               {(['balance', 'name', 'code'] as const).map(field => (
                 <button
@@ -536,7 +536,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                 <span className="font-mono text-base font-black text-emerald-700 tabular-nums">{formatCurrency(data.income?.total || 0)}</span>
                 {isComparative && prevData.income?.total !== 0 && (
                   <div className="flex items-center gap-1.5 mt-0.5">
-                     <span className="font-mono text-[9px] text-slate-400 font-medium tabular-nums">prev: {formatCurrency(prevData.income?.total)}</span>
+                     <span className="font-mono text-[9px] text-[var(--muted)] font-medium tabular-nums">prev: {formatCurrency(prevData.income?.total)}</span>
                      <span className={cn(
                        "text-[10px] font-bold", 
                        (data.income?.total || 0) >= prevData.income?.total ? "text-emerald-500" : "text-rose-500"
@@ -565,7 +565,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                 return (
                   <div 
                     key={id} 
-                    onClick={() => {
+                    role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {
                       const matchedTxs = transactions.filter(t => 
                         isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
                         t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
@@ -579,7 +579,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                     className="flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 transition-all group gap-4 min-w-0 cursor-pointer"
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-mono text-[8px] font-bold text-slate-400 bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
+                      <span className="font-mono text-[8px] font-bold text-[var(--muted)] bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
                       <span className="text-[var(--text)] font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-tight text-xs truncate flex items-center gap-1.5">
                         {acc.name}
                         <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
@@ -589,7 +589,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       <span className="font-mono text-[var(--text)] text-xs font-semibold tabular-nums">{formatCurrency(balance)}</span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-slate-400 tabular-nums">prev: {formatCurrency(prevBalance)}</span>
+                          <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: {formatCurrency(prevBalance)}</span>
                           {variance !== null && (
                             <span className={cn("text-[9px] font-bold", variance >= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance >= 0 ? '+' : ''}{variance.toFixed(1)}%
@@ -615,7 +615,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                  <span className="font-mono text-base font-black text-rose-700 tabular-nums">{formatCurrency(data.expense?.total || 0)}</span>
                  {isComparative && prevData.expense?.total !== 0 && (
                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="font-mono text-[9px] text-slate-400 font-medium tabular-nums">prev: {formatCurrency(prevData.expense?.total)}</span>
+                      <span className="font-mono text-[9px] text-[var(--muted)] font-medium tabular-nums">prev: {formatCurrency(prevData.expense?.total)}</span>
                       <span className={cn(
                         "text-[10px] font-bold", 
                         (data.expense?.total || 0) <= prevData.expense?.total ? "text-emerald-500" : "text-rose-500"
@@ -644,7 +644,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                 return (
                   <div 
                     key={id} 
-                    onClick={() => {
+                    role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => {
                       const matchedTxs = transactions.filter(t => 
                         isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
                         t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
@@ -658,7 +658,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                     className="flex items-center justify-between p-3 bg-[var(--ink)]/50 rounded-lg border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 transition-all group gap-4 min-w-0 cursor-pointer"
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-mono text-[8px] font-bold text-slate-400 bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
+                      <span className="font-mono text-[8px] font-bold text-[var(--muted)] bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
                       <span className="text-[var(--text)] font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-tight text-xs truncate flex items-center gap-1.5">
                         {acc.name}
                         <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
@@ -668,7 +668,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       <span className="font-mono text-[var(--text)] text-xs font-semibold tabular-nums">{formatCurrency(balance)}</span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-slate-400 tabular-nums">prev: {formatCurrency(prevBalance)}</span>
+                          <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: {formatCurrency(prevBalance)}</span>
                           {variance !== null && (
                             <span className={cn("text-[9px] font-bold", variance <= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance >= 0 ? '+' : ''}{variance.toFixed(1)}%
@@ -686,13 +686,13 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           {/* Net Income Cluster */}
           <div className="mt-6 p-4 bg-slate-900 text-white rounded-lg border border-slate-950 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex flex-col self-start sm:self-auto">
-              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{labels.netChangeTitle}</h4>
-              <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">{labels.netSub}</p>
+              <h4 className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">{labels.netChangeTitle}</h4>
+              <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider">{labels.netSub}</p>
             </div>
             <div className="flex flex-col items-end sm:items-center sm:flex-row gap-4 text-right tabular-nums">
               {isComparative && prevData.netIncome !== 0 && (
                 <div className="flex flex-col sm:items-end items-end mr-4">
-                  <span className="text-[9px] font-bold text-slate-400 font-medium tracking-wider mb-1">PRIOR PERIOD</span>
+                  <span className="text-[9px] font-bold text-[var(--muted)] font-medium tracking-wider mb-1">PRIOR PERIOD</span>
                   <span className="font-mono text-sm text-slate-300 line-through opacity-70">
                     {formatCurrency(prevData.netIncome)}
                   </span>

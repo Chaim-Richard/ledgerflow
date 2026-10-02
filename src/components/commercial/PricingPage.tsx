@@ -76,13 +76,13 @@ export const PricingPage: React.FC = () => {
                   {tier.id === 'enterprise' && <Building className="w-5 h-5 text-blue-500" />}
                 </div>
 
-                <p className="text-xs text-slate-500 dark:text-slate-400 min-h-[36px] mb-6">
+                <p className="text-xs text-[var(--muted)] dark:text-slate-400 min-h-[36px] mb-6">
                   {tier.description}
                 </p>
 
                 <div className="mb-6">
                   <span className="text-4xl font-black text-slate-900 dark:text-white">${price}</span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400"> / month</span>
+                  <span className="text-xs text-[var(--muted)] dark:text-slate-400"> / month</span>
                 </div>
 
                 <div className="space-y-2.5 mb-8">

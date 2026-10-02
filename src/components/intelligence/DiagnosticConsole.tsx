@@ -244,23 +244,23 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
                 className="flex-1 bg-transparent border-none outline-none text-slate-100 text-[13px] placeholder:text-slate-500"
               />
               <div className="flex items-center gap-2 px-2.5 py-1 bg-slate-800 rounded-md border border-slate-800">
-                <Command size={10} className="text-slate-400" />
-                <span className="text-[10px] font-medium text-slate-400">ENTER</span>
+                <Command size={10} className="text-[var(--muted)]" />
+                <span className="text-[10px] font-medium text-[var(--muted)]">ENTER</span>
               </div>
             </form>
 
             <div className="bg-slate-950 px-6 py-2.5 flex items-center gap-8 border-t border-slate-800">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,168,83,0.4)]" />
-                <span className="text-[10px] text-slate-400 uppercase font-medium tracking-wider">Connected</span>
+                <span className="text-[10px] text-[var(--muted)] uppercase font-medium tracking-wider">Connected</span>
               </div>
               <div className="flex items-center gap-2">
-                <Globe size={11} className="text-slate-400" />
-                <span className="text-[10px] text-slate-400 uppercase font-medium tracking-wider">TLS 1.3 Encryption</span>
+                <Globe size={11} className="text-[var(--muted)]" />
+                <span className="text-[10px] text-[var(--muted)] uppercase font-medium tracking-wider">TLS 1.3 Encryption</span>
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <Sparkles size={11} className="text-indigo-400" />
-                <span className="text-[10px] text-slate-400 uppercase font-medium tracking-wider">AI Guard Active</span>
+                <span className="text-[10px] text-[var(--muted)] uppercase font-medium tracking-wider">AI Guard Active</span>
               </div>
             </div>
           </motion.div>

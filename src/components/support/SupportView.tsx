@@ -299,7 +299,7 @@ export default function SupportView() {
 
         <div className="flex-1 overflow-y-auto">
           {filteredTickets.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">
+            <div className="p-8 text-center text-[var(--muted)]">
               <Headphones className="w-12 h-12 mx-auto mb-4 opacity-20" />
               <p>No support tickets found.</p>
             </div>
@@ -327,7 +327,7 @@ export default function SupportView() {
                     {ticket.status.replace('_', ' ')}
                   </span>
                 </div>
-                <div className="flex items-center text-xs text-slate-500 gap-2">
+                <div className="flex items-center text-xs text-[var(--muted)] gap-2">
                   <Clock className="w-3 h-3" />
                   {format(new Date(ticket.lastMessageAt), 'MMM d, HH:mm')}
                   {ticket.errorDiagnostics && (
@@ -463,7 +463,7 @@ export default function SupportView() {
                   </button>
                   <div>
                     <h3 className="font-bold text-slate-900 line-clamp-1">{selectedTicket.subject}</h3>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
                       <span>ID: {selectedTicket.id}</span>
                       <span>•</span>
                       <span className="capitalize">{selectedTicket.priority} Priority</span>
@@ -517,13 +517,13 @@ export default function SupportView() {
                   {showDiagnosticsDetail && (
                     <div className="mt-3 pt-3 border-t border-slate-800 font-mono space-y-2">
                       <div>
-                        <span className="text-slate-500">URL: </span>
+                        <span className="text-[var(--muted)]">URL: </span>
                         <span className="text-slate-300">{selectedTicket.errorDiagnostics.url || '/'}</span>
                       </div>
                       {selectedTicket.errorDiagnostics.stack && (
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-slate-500">Stack trace:</span>
+                            <span className="text-[var(--muted)]">Stack trace:</span>
                             <button 
                               onClick={copyDiagnostics}
                               className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
@@ -556,7 +556,7 @@ export default function SupportView() {
                         isOwn ? "bg-blue-600 text-white rounded-tr-none" : "bg-white border text-slate-800 rounded-tl-none"
                       )}>
                         {!isOwn && (
-                          <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                             <User className="w-3 h-3" />
                             {msg.authorRole === 'admin' ? 'Support Agent' : 'User'}
                           </div>
@@ -597,7 +597,7 @@ export default function SupportView() {
                 </div>
               ) : (
                 <div className="p-6 bg-slate-100 text-center border-t border-slate-200">
-                  <p className="text-sm text-slate-500 font-medium">
+                  <p className="text-sm text-[var(--muted)] font-medium">
                     This ticket is {selectedTicket.status}. Re-open it by sending a message?
                     {isAdmin && (
                       <button 
@@ -622,7 +622,7 @@ export default function SupportView() {
                 <MessageSquare className="w-10 h-10 text-blue-600" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Select a ticket to view</h2>
-              <p className="text-slate-500 max-w-sm">
+              <p className="text-[var(--muted)] max-w-sm">
                 Choose a conversation from the list or create a new ticket to get help from our support team.
               </p>
             </motion.div>

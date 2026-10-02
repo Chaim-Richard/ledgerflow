@@ -187,7 +187,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
             <Clock className="w-6 h-6 text-indigo-500" />
             {isCustomer ? 'Accounts Receivable (AR) Aging' : 'Accounts Payable (AP) Aging'}
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-[var(--muted)] dark:text-slate-400">
             Aging schedule of outstanding {isCustomer ? 'customer invoices' : 'vendor bills'} grouped by outstanding duration.
           </p>
         </div>
@@ -205,31 +205,31 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
       {/* Visual Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Outstanding</span>
+          <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">Total Outstanding</span>
           <span className="text-xl font-mono font-black text-slate-900 dark:text-white tracking-tight block mt-1">
             {formatCurrency(grandTotal)}
           </span>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">0 - 30 Days</span>
+          <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">0 - 30 Days</span>
           <span className="text-xl font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-tight block mt-1">
             {formatCurrency(totalCurrent)}
           </span>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">31 - 60 Days</span>
+          <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">31 - 60 Days</span>
           <span className="text-xl font-mono font-black text-amber-500 tracking-tight block mt-1">
             {formatCurrency(total30to60)}
           </span>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">61 - 90 Days</span>
+          <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">61 - 90 Days</span>
           <span className="text-xl font-mono font-black text-orange-500 tracking-tight block mt-1">
             {formatCurrency(total60to90)}
           </span>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">91+ Days</span>
+          <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">91+ Days</span>
           <span className="text-xl font-mono font-black text-rose-600 dark:text-rose-400 tracking-tight block mt-1">
             {formatCurrency(total90plus)}
           </span>
@@ -241,7 +241,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative w-full sm:max-w-xs">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Search className="h-4 w-4 text-slate-400" />
+              <Search className="h-4 w-4 text-[var(--muted)]" />
             </span>
             <input
               type="text"
@@ -256,41 +256,41 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
                 <th className="p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('partyName')}>
                   <span className="flex items-center gap-1">
                     {isCustomer ? 'Customer' : 'Vendor'}
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('current')}>
                   <span className="flex items-center justify-end gap-1">
                     0-30 Days
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('thirtyToSixty')}>
                   <span className="flex items-center justify-end gap-1">
                     31-60 Days
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('sixtyToNinety')}>
                   <span className="flex items-center justify-end gap-1">
                     61-90 Days
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('overNinety')}>
                   <span className="flex items-center justify-end gap-1">
                     91+ Days
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('total')}>
                   <span className="flex items-center justify-end gap-1">
                     Total Outstanding
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    <ArrowUpDown className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
                 <th className="p-4 w-10"><span className="sr-only">Actions</span></th>
@@ -304,7 +304,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                   className="hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors group"
                 >
                   <td className="p-4 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Users className="w-4 h-4 text-slate-400" />
+                    <Users className="w-4 h-4 text-[var(--muted)]" />
                     {row.partyName}
                   </td>
                   <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
@@ -330,7 +330,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
 
               {sortedAndFilteredRows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={7} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
                     No outstanding {isCustomer ? 'receivables' : 'payables'} found matching criteria.
                   </td>
                 </tr>
@@ -402,7 +402,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                           {ageDays} Days Old
                         </span>
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                      <div className="text-xs text-[var(--muted)] dark:text-slate-400">
                         Date: {doc.date?.slice(0, 10)} | Due Date: {doc.dueDate || doc.date?.slice(0, 10)}
                       </div>
                     </div>
@@ -410,7 +410,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                       <div className="text-lg font-mono font-black text-slate-900 dark:text-white">
                         {formatCurrency(outstanding)}
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-[var(--muted)]">
                         Total {formatCurrency(docTotal)} | Paid {formatCurrency(docPaid)}
                       </div>
                     </div>
@@ -419,7 +419,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
               })}
 
               {selectedPartyDocs.length === 0 && (
-                <div className="text-center py-12 text-slate-400">
+                <div className="text-center py-12 text-[var(--muted)]">
                   No unpaid records found.
                 </div>
               )}

@@ -112,7 +112,7 @@ function TaxRateForm({ initial, onSave, onCancel }: { initial: TaxRate | null; o
       </fieldset>
       <div className="pt-4 flex gap-3 border-t border-[var(--line)]">
         <button type="button" onClick={onCancel} className="flex-1 py-3 border border-[var(--line)] rounded-xl font-semibold">Cancel</button>
-        <AsyncButton type="submit" loadingText="Saving…" className="flex-[2] py-3 bg-[var(--brass)] text-black rounded-xl font-bold">Save</AsyncButton>
+        <AsyncButton type="submit" loadingText="Saving…" className="flex-[2] py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl font-bold">Save</AsyncButton>
       </div>
     </form>
   );
@@ -203,12 +203,12 @@ export default function TaxManager({
       {/* Rule Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-[var(--line)] pb-8">
         <div>
-          <div className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-widest truncate mb-2">
+          <div className="flex items-center gap-2 text-xs font-black text-[var(--muted)] uppercase tracking-widest truncate mb-2">
             <Receipt size={24} className="text-slate-600" />
             Fiscal Compliance Protocol
           </div>
           <h2 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase font-display">Tax Reserve Estimator</h2>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Rough tax reserve estimate — not tax advice. Confirm with your accountant.</p>
+          <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider mt-1">Rough tax reserve estimate — not tax advice. Confirm with your accountant.</p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -223,7 +223,7 @@ export default function TaxManager({
                ))}
              </select>
           </div>
-          <button className="flex items-center gap-2 px-6 py-3.5 bg-[var(--brass)] text-black rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-md cursor-pointer" aria-label="Fiscal Export">
+          <button className="flex items-center gap-2 px-6 py-3.5 bg-[var(--brass)] text-[var(--ink)] rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-md cursor-pointer" aria-label="Fiscal Export">
             <Download size={16} />
             Fiscal Export
           </button>
@@ -236,7 +236,7 @@ export default function TaxManager({
           onClick={() => setActiveTab('rates')}
           className={cn(
             "px-6 py-3 rounded-[32px] text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer active:scale-95",
-            activeTab === 'rates' ? "bg-[var(--brass)] text-black font-bold shadow-md" : "text-[var(--muted)] hover:text-[var(--text)]"
+            activeTab === 'rates' ? "bg-[var(--brass)] text-[var(--ink)] font-bold shadow-md" : "text-[var(--muted)] hover:text-[var(--text)]"
           )}
         >
           Federal Rates & Provisions
@@ -281,11 +281,11 @@ export default function TaxManager({
 
         <div className="p-6 md:p-8 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm relative overflow-hidden group">
           <div className="absolute technical-grid inset-0 opacity-[0.02] pointer-events-none" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Fiscal Period Yield</p>
+          <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-4 relative z-10">Fiscal Period Yield</p>
           <p className="text-3xl md:text-4xl font-black text-[var(--text)] font-mono tracking-tighter relative z-10 tabular-nums">
             {formatCurrency(taxMetrics.netProfit)}
           </p>
-          <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-[var(--ink)] p-2 rounded-lg border border-[var(--line)] w-fit">
+          <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-[var(--muted)] uppercase tracking-widest bg-[var(--ink)] p-2 rounded-lg border border-[var(--line)] w-fit">
              <Activity size={12} />
              Net Taxable Momentum
           </div>
@@ -293,7 +293,7 @@ export default function TaxManager({
 
         <div className="p-6 md:p-8 bg-slate-900 text-white rounded-[32px] shadow-xl relative overflow-hidden group border border-slate-800">
           <div className="absolute technical-grid inset-0 opacity-[0.03] pointer-events-none" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Audit Deadline</p>
+          <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-4 relative z-10">Audit Deadline</p>
           <p className="text-3xl md:text-4xl font-black text-amber-400 tracking-tighter font-display relative z-10">April 15</p>
           <div className="mt-4 flex items-center gap-2 text-[9px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/10 p-2 rounded-lg border border-amber-500/20 w-fit">
              <Zap size={12} />
@@ -329,15 +329,15 @@ export default function TaxManager({
                 <div className="flex items-center justify-between relative z-10">
                   <div className="space-y-1">
                     <p className="text-sm font-black text-[var(--text)] leading-none uppercase tracking-tight">{rate.name}</p>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{rate.type} Classification</p>
+                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">{rate.type} Classification</p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-black font-mono text-[var(--text)] tracking-tighter">{(rate.rate * 100).toFixed(rate.components?.some(c => !Number.isInteger(c.rate)) ? 3 : 1)}%</p>
                     {rate.components && rate.components.length > 1 && <p className="text-[10px] text-[var(--muted)]">{rate.components.map(c => `${c.name} ${c.rate}%${c.compound ? ' (on top)' : ''}`).join(' + ')}</p>}
                     {rate.treatment && rate.treatment !== 'standard' && <p className="text-[10px] text-[var(--muted)]">{TAX_TREATMENTS[rate.treatment]}</p>}
                     <div className="flex items-center justify-end gap-3 mt-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setEditingRate(rate); setIsModalOpen(true); }} className="text-slate-400 hover:text-[var(--text)] transition-colors"><Edit2 size={14} /></button>
-                      <button onClick={() => onDeleteTaxRate?.(rate.id)} className="text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
+                      <button onClick={() => { setEditingRate(rate); setIsModalOpen(true); }} className="text-[var(--muted)] hover:text-[var(--text)] transition-colors"><Edit2 size={14} /></button>
+                      <button onClick={() => onDeleteTaxRate?.(rate.id)} className="text-[var(--muted)] hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
                     </div>
                   </div>
                 </div>
@@ -350,7 +350,7 @@ export default function TaxManager({
         <div className="lg:col-span-8 space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-black text-[var(--text)] tracking-tight uppercase font-display">Liability Mapping</h3>
-            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">
                <Layers size={14} />
                Cross-Analysis active
             </div>
@@ -362,9 +362,9 @@ export default function TaxManager({
               <table className="w-full text-left relative z-10 min-w-[700px]">
               <thead>
                 <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Protocol Domain</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Basis</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Metric</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Protocol Domain</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-right">Basis</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-center">Metric</th>
                   <th className="px-6 py-5 text-[10px] font-black text-slate-700 uppercase tracking-widest text-right bg-slate-100/50">Apportionment</th>
                 </tr>
               </thead>
@@ -372,13 +372,13 @@ export default function TaxManager({
                 <tr className="hover:bg-[var(--ink)]/50 transition-all group/row">
                   <td className="px-6 py-6">
                     <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">Federal Corporate Levy</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-mono">IRC SEC 11 COMPLIANT</p>
+                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-1 font-mono">IRC SEC 11 COMPLIANT</p>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)] tabular-nums">
                     {formatCurrency(taxMetrics.netProfit)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50 tabular-nums">
                     {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * (taxRates.find(r => r.type === 'Income')?.rate ?? 0.21) : 0)}
@@ -388,13 +388,13 @@ export default function TaxManager({
                 <tr className="hover:bg-[var(--ink)]/50 transition-all group/row">
                   <td className="px-6 py-6">
                     <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">Self-Employment Tax</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-mono">SECA PROVISION (15.3%)</p>
+                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-1 font-mono">SECA PROVISION (15.3%)</p>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)] tabular-nums">
                     {formatCurrency(taxMetrics.netProfit)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50 tabular-nums">
                     {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * 0.153 : 0)}
@@ -404,13 +404,13 @@ export default function TaxManager({
                 <tr className="hover:bg-[var(--ink)]/50 transition-all group/row">
                   <td className="px-6 py-6">
                     <p className="text-sm font-black text-[var(--text)] tracking-tight uppercase">Indirect Consumption Flow</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-mono">SALES & USE PASS-THROUGH</p>
+                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-1 font-mono">SALES & USE PASS-THROUGH</p>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-sm font-black text-[var(--text)] tabular-nums">
                     {formatCurrency(taxMetrics.salesTaxCollected)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest border border-[var(--line)]">GROSS_FLOW</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">GROSS_FLOW</div>
                   </td>
                   <td className="px-6 py-6 text-right font-mono text-base font-black text-emerald-600 bg-emerald-50/50 group-hover/row:bg-emerald-50 tabular-nums">
                     {formatCurrency(taxMetrics.salesTaxCollected)}

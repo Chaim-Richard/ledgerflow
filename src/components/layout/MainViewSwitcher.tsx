@@ -20,7 +20,7 @@ const MainViewSwitcher = React.memo(({ activeTab }: MainViewSwitcherProps) => {
           <div className="min-h-full flex flex-col items-center justify-center space-y-6 flex-1">
             <Loader2 className="animate-spin text-slate-300" size={32} />
             <div className="text-center space-y-2">
-              <span className="text-sm font-medium text-slate-500">Loading module...</span>
+              <span className="text-sm font-medium text-[var(--muted)]">Loading…</span>
             </div>
           </div>
         }>

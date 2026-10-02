@@ -71,7 +71,7 @@ export default function Consolidation() {
             
             <div className="overflow-x-auto">
             <div className="divide-y divide-slate-200 min-w-[700px]">
-              <div className="grid grid-cols-12 p-4 bg-slate-100/80 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              <div className="grid grid-cols-12 p-4 bg-slate-100/80 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
                 <div className="col-span-4">World / Sub-Ledger Coordinate</div>
                 <div className="col-span-2 text-right">Transactions</div>
                 <div className="col-span-2 text-right">Total Revenue</div>
@@ -85,7 +85,7 @@ export default function Consolidation() {
                     <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                     {stmt.world}
                   </div>
-                  <div className="col-span-2 text-right text-slate-500">{stmt.transactionCount}</div>
+                  <div className="col-span-2 text-right text-[var(--muted)]">{stmt.transactionCount}</div>
                   <div className="col-span-2 text-right text-emerald-600 tabular-nums">{formatCurrency(stmt.totalRevenueCents)}</div>
                   <div className="col-span-2 text-right text-slate-700 tabular-nums">{formatCurrency(stmt.totalExpenseCents)}</div>
                   <div className={cn("col-span-2 text-right font-bold", stmt.netIncomeCents >= 0 ? "text-indigo-600" : "text-rose-600", "tabular-nums")}>
@@ -96,7 +96,7 @@ export default function Consolidation() {
 
               <div className="grid grid-cols-12 p-4 items-center bg-slate-900 text-white font-mono text-sm font-bold">
                 <div className="col-span-4 font-sans uppercase tracking-wider text-xs">Consolidated Group Total</div>
-                <div className="col-span-2 text-right text-slate-400">{transactions.length}</div>
+                <div className="col-span-2 text-right text-[var(--muted)]">{transactions.length}</div>
                 <div className="col-span-2 text-right text-emerald-400 tabular-nums">{formatCurrency(summary.consolidatedRevenueCents)}</div>
                 <div className="col-span-2 text-right text-slate-300 tabular-nums">{formatCurrency(summary.consolidatedExpenseCents)}</div>
                 <div className={cn("col-span-2 text-right font-bold text-base", summary.consolidatedNetIncomeCents >= 0 ? "text-purple-300" : "text-rose-300", "tabular-nums")}>

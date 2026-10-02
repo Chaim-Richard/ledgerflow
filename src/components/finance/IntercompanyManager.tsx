@@ -96,7 +96,7 @@ export default function IntercompanyManager() {
             Consolidated Financial Group
           </div>
           <h2 className="text-4xl font-black text-[var(--text)] tracking-tighter">Intercompany Clearing</h2>
-          <p className="text-slate-500 font-medium mt-2 italic opacity-60">Manage cross-entity transfers and reciprocal ledger balances.</p>
+          <p className="text-[var(--muted)] font-medium mt-2 italic opacity-60">Manage cross-entity transfers and reciprocal ledger balances.</p>
         </div>
 
         <button 
@@ -111,7 +111,7 @@ export default function IntercompanyManager() {
       {/* Stats / Status */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-8 bg-white rounded-[32px] border-2 border-[var(--line)] shadow-sm">
-           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Cross-Entity Volume</p>
+           <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1">Total Cross-Entity Volume</p>
            <h3 className="text-3xl font-black text-[var(--text)]">
              {formatCurrency(intercompanyTransactions.reduce((sum, t) => sum + (t.totalAmountCents || 0), 0))}
            </h3>
@@ -142,7 +142,7 @@ export default function IntercompanyManager() {
         <div className="p-6 border-b border-[var(--line)] flex items-center justify-between bg-slate-50/50">
           <h3 className="font-bold text-[var(--text)]">Reciprocal Audit Trail</h3>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
             <input 
               type="text" 
               placeholder="Filter transfers..." 
@@ -154,7 +154,7 @@ export default function IntercompanyManager() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-[var(--line)]">
+              <tr className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest border-b border-[var(--line)]">
                 <th className="px-6 py-4 text-left">Date</th>
                 <th className="px-6 py-4 text-left">Source Entity</th>
                 <th className="px-6 py-4 text-center">Direction</th>
@@ -170,7 +170,7 @@ export default function IntercompanyManager() {
                   <td colSpan={7} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center gap-4 opacity-40">
                       <ArrowLeftRight size={48} className="text-slate-300" />
-                      <p className="font-bold text-slate-500">No intercompany transfers recorded.</p>
+                      <p className="font-bold text-[var(--muted)]">No intercompany transfers recorded.</p>
                     </div>
                   </td>
                 </tr>
@@ -232,13 +232,13 @@ export default function IntercompanyManager() {
                   <ArrowLeftRight className="text-[#0047AB]" size={32} />
                   New Cross-Entity Transfer
                 </h3>
-                <p className="text-slate-500 font-medium mt-1">Initiate an atomic reciprocal posting between group entities.</p>
+                <p className="text-[var(--muted)] font-medium mt-1">Initiate an atomic reciprocal posting between group entities.</p>
               </div>
 
               <div className="p-10 overflow-y-auto space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Source Entity</label>
+                    <label className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Source Entity</label>
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center gap-3">
                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm text-[#0047AB]">
                          <Building2 size={16} />
@@ -248,7 +248,7 @@ export default function IntercompanyManager() {
                   </div>
 
                   <div className="space-y-3">
-                    <Labelled labelClassName="text-[10px] font-black text-slate-400 uppercase tracking-widest" label="Target Entity">
+                    <Labelled labelClassName="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest" label="Target Entity">
                       <select 
                         value={formData.targetWorkspaceId}
                         onChange={e => setFormData({...formData, targetWorkspaceId: e.target.value})}
@@ -264,7 +264,7 @@ export default function IntercompanyManager() {
                 </div>
 
                 <div className="space-y-3">
-                  <Labelled labelClassName="text-[10px] font-black text-slate-400 uppercase tracking-widest" label="Description">
+                  <Labelled labelClassName="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest" label="Description">
                     <input 
                       type="text" 
                       placeholder="e.g. Monthly management fee recharge..."
@@ -277,7 +277,7 @@ export default function IntercompanyManager() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <Labelled labelClassName="text-[10px] font-black text-slate-400 uppercase tracking-widest" label="Transfer Amount ($)">
+                    <Labelled labelClassName="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest" label="Transfer Amount ($)">
                       <input 
                         type="number" 
                         placeholder="0.00"
@@ -289,7 +289,7 @@ export default function IntercompanyManager() {
                   </div>
 
                   <div className="space-y-3">
-                    <Labelled labelClassName="text-[10px] font-black text-slate-400 uppercase tracking-widest" label="Effective Date">
+                    <Labelled labelClassName="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest" label="Effective Date">
                       <input 
                         type="date" 
                         value={formData.date}

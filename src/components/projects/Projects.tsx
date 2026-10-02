@@ -415,11 +415,11 @@ export default function Projects() {
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-[var(--line)]">
                     <div>
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Collaborators</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">Collaborators</h4>
                       <h3 className="text-sm font-black text-[var(--text)] tracking-tight mt-0.5">{selectedProject.name}</h3>
                     </div>
                     <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)]/60 rounded-lg flex items-center justify-center">
-                      <Users size={14} className="text-slate-500" />
+                      <Users size={14} className="text-[var(--muted)]" />
                     </div>
                   </div>
 
@@ -476,7 +476,7 @@ export default function Projects() {
                         </div>
                       ))}
                       {!selectedProject.splitRules?.length && (
-                        <p className="text-[10px] text-slate-400 font-bold italic">No split allocations configured.</p>
+                        <p className="text-[10px] text-[var(--muted)] font-bold italic">No split allocations configured.</p>
                       )}
                     </div>
                   </div>
@@ -491,11 +491,11 @@ export default function Projects() {
               </motion.div>
             ) : (
               <div className="bg-slate-100/30 rounded-xl border border-dashed border-[var(--line)] p-4 md:p-8 text-center h-full flex flex-col items-center justify-center">
-                <div className="w-12 h-12 bg-[var(--surface)] rounded-lg shadow-3xs flex items-center justify-center text-slate-400 border border-[var(--line)] mx-auto mb-4">
+                <div className="w-12 h-12 bg-[var(--surface)] rounded-lg shadow-3xs flex items-center justify-center text-[var(--muted)] border border-[var(--line)] mx-auto mb-4">
                   <BrainCircuit size={20} />
                 </div>
                 <h3 className="text-xs font-bold text-[var(--text)] mb-1 uppercase tracking-wider">Select Initiative</h3>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider max-w-[200px] mx-auto leading-relaxed">
+                <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider max-w-[200px] mx-auto leading-relaxed">
                   Select a workflow folder from the left pane to analyze members, expenses, and split tranches.
                 </p>
               </div>
@@ -516,11 +516,11 @@ export default function Projects() {
             <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Initialize Project</h3>
-                <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider mt-1">Deploying new objective into ledger matrix</p>
+                <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Deploying new objective into ledger matrix</p>
               </div>
               <button 
                 onClick={() => setIsNewProjectModalOpen(false)}
-                className="p-2 text-slate-500 hover:text-[var(--text)] transition-colors"
+                className="p-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors"
               >
                 <Plus size={24} className="rotate-45" />
               </button>
@@ -528,7 +528,7 @@ export default function Projects() {
             
             <div className="p-4 md:p-8 space-y-6">
               <div className="space-y-2">
-                <Labelled labelClassName="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-1" label="Protocol Name">
+                <Labelled labelClassName="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] px-1" label="Protocol Name">
                   <input 
                     type="text"
                     dir="auto"
@@ -541,7 +541,7 @@ export default function Projects() {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Dimensional Type</label>
+                <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Dimensional Type</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { id: 'general', label: 'General', icon: FolderKanban },
@@ -567,7 +567,7 @@ export default function Projects() {
               </div>
 
               <div className="space-y-2">
-                <Labelled labelClassName="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-1" label="Strategic Description">
+                <Labelled labelClassName="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] px-1" label="Strategic Description">
                   <textarea 
                     dir="auto"
                     value={newProject.description || ''}
@@ -582,7 +582,7 @@ export default function Projects() {
             <div className="p-4 md:p-8 bg-[var(--ink)]/30 border-t border-[var(--line)] flex items-center justify-end gap-4">
               <button 
                 onClick={() => setIsNewProjectModalOpen(false)}
-                className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-slate-500 hover:text-[var(--text)] transition-colors"
+                className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-[var(--muted)] hover:text-[var(--text)] transition-colors"
               >
                 Cancel
               </button>
@@ -610,11 +610,11 @@ export default function Projects() {
             <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Configure Project</h3>
-                <p className="text-slate-500 text-[10px] font-medium uppercase tracking-wider mt-1">Rule settings for project matrix {editingProject.id.slice(0, 8)}</p>
+                <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Rule settings for project matrix {editingProject.id.slice(0, 8)}</p>
               </div>
               <button 
                 onClick={() => setEditingProject(null)}
-                className="p-2 text-slate-500 hover:text-[var(--text)] transition-colors"
+                className="p-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors"
               >
                 <Plus size={24} className="rotate-45" />
               </button>
@@ -622,7 +622,7 @@ export default function Projects() {
             
             <div className="p-4 md:p-8 space-y-6">
               <div className="space-y-2">
-                <Labelled labelClassName="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1" label="Protocol Name">
+                <Labelled labelClassName="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1" label="Protocol Name">
                   <input 
                     type="text"
                     dir="auto"
@@ -634,7 +634,7 @@ export default function Projects() {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Status</label>
+                <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Status</label>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { id: 'active', label: 'Active', color: 'ledger-success' },
@@ -648,7 +648,7 @@ export default function Projects() {
                         "p-3 rounded-[32px] border transition-all text-xs font-bold uppercase tracking-wider",
                         editingProject.status === status.id 
                           ? `bg-${status.color} border-${status.color} text-white shadow-lg` 
-                          : "bg-[var(--surface)] border-[var(--line)] text-slate-500 hover:border-indigo-600/50"
+                          : "bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:border-indigo-600/50"
                       )}
                     >
                       {status.label}
@@ -658,7 +658,7 @@ export default function Projects() {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Dimensional Type</label>
+                <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Dimensional Type</label>
                 <div className="grid grid-cols-2 gap-3">
                     {[
                       { id: 'general', label: 'General', icon: FolderKanban },
@@ -685,9 +685,9 @@ export default function Projects() {
 
                 <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">Budget Allocation</label>
+                  <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Budget Allocation</label>
                   <div className="relative">
-                    <DollarSign size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <DollarSign size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
                     <input 
                       type="number"
                       value={editingProject.budgetCents / 100}
@@ -699,7 +699,7 @@ export default function Projects() {
               </div>
 
               <div className="space-y-2">
-                <Labelled labelClassName="text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1" label="Strategic Description">
+                <Labelled labelClassName="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1" label="Strategic Description">
                   <textarea 
                     dir="auto"
                     value={editingProject.description || ''}
@@ -713,7 +713,7 @@ export default function Projects() {
             <div className="p-4 md:p-8 bg-[var(--ink)]/30 border-t border-[var(--line)] flex items-center justify-end gap-4">
               <button 
                 onClick={() => setEditingProject(null)}
-                className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-slate-500 hover:text-[var(--text)] transition-colors"
+                className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-[var(--muted)] hover:text-[var(--text)] transition-colors"
               >
                 Cancel
               </button>

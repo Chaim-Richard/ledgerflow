@@ -144,7 +144,7 @@ export default function PdfPreviewModal({
             </div>
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-base leading-tight">{title}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">{downloadName}</p>
+              <p className="text-xs text-[var(--muted)] dark:text-slate-400 font-mono mt-0.5">{downloadName}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export default function PdfPreviewModal({
         {/* Content Body */}
         <div className="flex-1 min-h-[550px] bg-slate-100 dark:bg-slate-950 p-4 flex items-center justify-center overflow-hidden">
           {isLoading ? (
-            <div className="flex flex-col items-center gap-3 text-slate-500">
+            <div className="flex flex-col items-center gap-3 text-[var(--muted)]">
               <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
               <p className="text-sm font-medium">Generating PDF document...</p>
             </div>
@@ -190,7 +190,7 @@ export default function PdfPreviewModal({
             <div className="flex flex-col items-center gap-3 max-w-md text-center p-6 bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-900/50 shadow-sm">
               <AlertCircle className="w-8 h-8 text-rose-500" />
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Unable to render PDF</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
+              <p className="text-xs text-[var(--muted)] dark:text-slate-400">{error}</p>
               <button
                 type="button"
                 onClick={() => {

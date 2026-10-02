@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, isAfter, isBefore, parseISO, addMonths, subMonths } from 'date-fns';
-import { cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { cn, formatCurrency, getLocalDateISO, activateOnKey } from '../../lib/utils';
 import { useUIStore } from '../../stores/useUIStore';
 import { getIdToken } from '../../firebase';
 import { monthCloseState } from '../../lib/periodLock';
@@ -125,7 +125,7 @@ export default function FiscalPeriodManager() {
             <Lock className="w-5 h-5 text-indigo-600" />
             Fiscal Periods & Hard Close
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-[var(--muted)] mt-1">
             Manage accounting periods and enforce immutable record locking for finalized cycles.
           </p>
         </div>
@@ -133,7 +133,7 @@ export default function FiscalPeriodManager() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Active Lock Date:</span>
+            <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-tight">Active Lock Date:</span>
             <span className="text-xs font-mono font-bold text-slate-900">{lockDate || 'NONE'}</span>
           </div>
           {lockDate && (
@@ -158,7 +158,7 @@ export default function FiscalPeriodManager() {
             {periods.map(p => (
               <div 
                 key={p.id}
-                onClick={() => setSelectedPeriod(p.id)}
+                role="button" tabIndex={0} onKeyDown={activateOnKey} onClick={() => setSelectedPeriod(p.id)}
                 className={cn(
                   "p-4 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
                   p.isLocked 
@@ -171,19 +171,19 @@ export default function FiscalPeriodManager() {
                   <div className="flex items-center gap-2.5">
                     <div className={cn(
                       "p-2 rounded-lg",
-                      p.isLocked ? "bg-slate-200 text-slate-500" : "bg-indigo-50 text-indigo-600"
+                      p.isLocked ? "bg-slate-200 text-[var(--muted)]" : "bg-indigo-50 text-indigo-600"
                     )}>
                       <Calendar className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-slate-900">{p.label}</p>
-                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                      <p className="text-[10px] text-[var(--muted)] font-medium uppercase tracking-wider">
                         {p.startDate} — {p.endDate}
                       </p>
                     </div>
                   </div>
                   {p.isLocked ? (
-                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                    <Lock className="w-3.5 h-3.5 text-[var(--muted)]" />
                   ) : (
                     <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
                   )}
@@ -212,14 +212,14 @@ export default function FiscalPeriodManager() {
         <div className="space-y-4">
           <div className="bg-white p-6 rounded-3xl border border-[var(--color-ledger-line)] shadow-xs sticky top-6">
             <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <History className="w-4 h-4 text-slate-400" />
+              <History className="w-4 h-4 text-[var(--muted)]" />
               Period Closing Audit
             </h3>
 
             {selectedPeriod ? (
               <div className="space-y-6">
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                  <p className="text-xs font-bold text-slate-500 uppercase">Target: {periods.find(p => p.id === selectedPeriod)?.label}</p>
+                  <p className="text-xs font-bold text-[var(--muted)] uppercase">Target: {periods.find(p => p.id === selectedPeriod)?.label}</p>
                   
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -261,13 +261,13 @@ export default function FiscalPeriodManager() {
                     <Lock className="w-3.5 h-3.5" />
                     Hard Close Period
                   </button>
-                  <p className="text-[10px] text-center text-slate-400 italic px-2">
+                  <p className="text-[10px] text-center text-[var(--muted)] italic px-2">
                     Closing a period prevents any future modifications or deletions of transactions within this cycle.
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="py-12 text-center text-slate-400">
+              <div className="py-12 text-center text-[var(--muted)]">
                 <Settings2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-xs font-medium">Select a period to run audit and initiate closing.</p>
               </div>

@@ -95,7 +95,7 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
               </div>
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-1">State Machine</h4>
               <h3 className="text-xl font-bold text-white tracking-tight">Zustand Central Store</h3>
-              <p className="text-xs text-slate-400 mt-2">Single source of integrity for UI state, Active Tools, and Global Data.</p>
+              <p className="text-xs text-[var(--muted)] mt-2">Single source of integrity for UI state, Active Tools, and Global Data.</p>
             </div>
           </div>
         </motion.div>
@@ -123,7 +123,7 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
               </div>
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-1">Data Access Layer (DAL)</h4>
               <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">Supabase (Postgres)</h3>
-              <p className="text-xs text-slate-500 mt-2">Screens read through src/lib/db with row level security; live lists fetch only what changed.</p>
+              <p className="text-xs text-[var(--muted)] mt-2">Screens read through src/lib/db with row level security; live lists fetch only what changed.</p>
             </div>
           </div>
         </motion.div>
@@ -152,7 +152,7 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
               </div>
               <div>
                 <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">Dynamic Registry Hub</h3>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">{totalModules} Total Active Modules</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)] mt-1">{totalModules} Total Active Modules</p>
               </div>
             </div>
           </div>
@@ -176,7 +176,7 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
                 </div>
                 <div>
                   <h5 className="text-sm font-bold text-[var(--text)] tracking-tight">{node.name}</h5>
-                  <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-snug">{node.desc}</p>
+                  <p className="text-[10px] font-medium text-[var(--muted)] mt-0.5 leading-snug">{node.desc}</p>
                 </div>
               </motion.div>
             ))}

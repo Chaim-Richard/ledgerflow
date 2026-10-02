@@ -312,11 +312,11 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
             onMonthChange={({ start, end }) => setDateRange({ start, end })}
           />
           <div className="flex items-center gap-3 w-full">
-            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-slate-500 shrink-0">
+            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-[var(--muted)] shrink-0">
                <Calendar size={13} />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Temporal Range</span>
+              <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">Temporal Range</span>
               <div className="flex flex-wrap items-center gap-2">
                 <input 
                   type="date" 
@@ -353,9 +353,9 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
-                Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-slate-400")} />
+                Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--muted)]")} />
               </span>
-              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Compare to Prior Prev</span>
+              <span className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest">Compare to Prior Prev</span>
             </div>
           </label>
         </div>
@@ -377,7 +377,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
            <div className="border-b border-slate-900 pb-4 flex items-end justify-between">
               <div>
                 <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase italic">{labels.title}</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">For period ending {dateRange.end}</p>
+                <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">For period ending {dateRange.end}</p>
               </div>
               <Waves size={24} className="text-slate-200" />
            </div>
@@ -391,7 +391,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
                   <div key={idx} className="space-y-4">
                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
                         <h4 className="text-[11px] font-bold bg-slate-900 text-white px-3 py-1 rounded inline-flex uppercase tracking-wider">{section.label}</h4>
-                        <span className="text-[9px] font-semibold text-slate-450 uppercase tracking-wider text-slate-400">{section.desc}</span>
+                        <span className="text-[9px] font-semibold text-slate-450 uppercase tracking-wider text-[var(--muted)]">{section.desc}</span>
                      </div>
                      
                      <div className="pl-4 space-y-3">
@@ -427,8 +427,8 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
                <div className="flex items-center gap-6 tabular-nums">
                  {isComparative && prevData.netChange !== 0 && (
                     <div className="text-right">
-                       <span className="block text-[8px] font-bold text-slate-500 uppercase tracking-widest">Prior Delta</span>
-                       <span className="font-mono text-sm text-slate-400">{formatCurrency(prevData.netChange)}</span>
+                       <span className="block text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest">Prior Delta</span>
+                       <span className="font-mono text-sm text-[var(--muted)]">{formatCurrency(prevData.netChange)}</span>
                     </div>
                  )}
                  <span className={cn("text-3xl font-black font-mono tracking-tighter", currentData.netChange >= 0 ? "text-emerald-400" : "text-rose-400", "tabular-nums")}>

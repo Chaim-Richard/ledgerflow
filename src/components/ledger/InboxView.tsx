@@ -129,7 +129,7 @@ export default function InboxView() {
           <CheckCircle2 size={48} className="text-green-500" />
         </div>
         <h2 className="text-2xl font-black text-[var(--text)] mb-2">Inbox Zero</h2>
-        <p className="text-slate-500 text-center max-w-sm">
+        <p className="text-[var(--muted)] text-center max-w-sm">
           All transactions have been categorized and filed. Your books are perfectly up to date.
         </p>
       </div>
@@ -159,7 +159,7 @@ export default function InboxView() {
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--text)] text-lg">High Confidence ({highConfidence.length})</h3>
-                  <p className="text-sm text-slate-500">Over 90% match certainty. Ready to auto-file.</p>
+                  <p className="text-sm text-[var(--muted)]">Over 90% match certainty. Ready to auto-file.</p>
                 </div>
               </div>
               <button 
@@ -181,7 +181,7 @@ export default function InboxView() {
               {highConfidence.length > 5 && (
                 <button 
                   onClick={() => setShowAllHighConfidence(!showAllHighConfidence)}
-                  className="bg-[var(--ink)] border border-[var(--line)] px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:text-[var(--text)] transition-colors cursor-pointer"
+                  className="bg-[var(--ink)] border border-[var(--line)] px-3 py-2 rounded-lg text-xs font-medium text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
                 >
                   {showAllHighConfidence ? 'Show Less' : `+${highConfidence.length - 5} more`}
                 </button>
@@ -201,7 +201,7 @@ export default function InboxView() {
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--text)] text-lg">Needs Quick Review ({mediumConfidence.length})</h3>
-                  <p className="text-sm text-slate-500">We're fairly sure about these. One tap to confirm the batch.</p>
+                  <p className="text-sm text-[var(--muted)]">We're fairly sure about these. One tap to confirm the batch.</p>
                 </div>
               </div>
               <button 
@@ -220,12 +220,12 @@ export default function InboxView() {
                     <div className="w-2 h-2 rounded-full bg-[#0047AB]"></div>
                     <div>
                       <p className="font-bold text-[var(--text)] text-sm">{t.description}</p>
-                      <p className="text-xs text-slate-500">{formatDate(t.date)}</p>
+                      <p className="text-xs text-[var(--muted)]">{formatDate(t.date)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-right">
-                      <p className="text-xs text-slate-400 mb-0.5">Suggested</p>
+                      <p className="text-xs text-[var(--muted)] mb-0.5">Suggested</p>
                       <p className="text-sm font-medium text-[#0047AB] bg-blue-50 px-2 py-0.5 rounded-md">Software / SaaS</p>
                     </div>
                     <p className="font-mono font-bold text-[var(--text)] tabular-nums">{formatCurrency(t.totalAmountCents)}</p>
@@ -245,7 +245,7 @@ export default function InboxView() {
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--text)] text-lg">Your Input Needed ({lowConfidence.length})</h3>
-                  <p className="text-sm text-slate-500">Unrecognized patterns. Answer a simple question to train the model.</p>
+                  <p className="text-sm text-[var(--muted)]">Unrecognized patterns. Answer a simple question to train the model.</p>
                 </div>
               </div>
 

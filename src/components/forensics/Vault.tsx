@@ -295,7 +295,7 @@ export default function Vault() {
           <p className="text-[var(--muted)] font-black text-[10px] uppercase tracking-widest truncate opacity-80">Enterprise Secure Storage • Encryption Active</p>
         </div>
         <div className="flex items-center gap-4">
-          <label className="h-12 px-6 bg-[var(--brass)] text-black rounded-xl cursor-pointer flex items-center gap-3 font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all shadow-md group">
+          <label className="h-12 px-6 bg-[var(--brass)] text-[var(--ink)] rounded-xl cursor-pointer flex items-center gap-3 font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all shadow-md group">
             <div className="w-7 h-7 bg-black/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
               <Upload size={16} />
             </div>
@@ -307,7 +307,7 @@ export default function Vault() {
 
       <div className="flex items-center gap-4 bg-[var(--surface)] p-3 rounded-[32px] border border-[var(--line)] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.1)]">
         <div className="relative flex-1">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 opacity-40" size={24} />
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--muted)] opacity-40" size={24} />
           <input 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -325,7 +325,7 @@ export default function Vault() {
                 "px-6 h-10 rounded-[32px] text-[10px] font-black uppercase tracking-[0.2em] transition-all border",
                 (filterTag === tag || (tag === 'all' && !filterTag))
                   ? "bg-slate-900 text-white border-slate-800 shadow-lg" 
-                  : "bg-[var(--ink)]/50 text-slate-500 border-[var(--line)] hover:bg-[var(--ink)]"
+                  : "bg-[var(--ink)]/50 text-[var(--muted)] border-[var(--line)] hover:bg-[var(--ink)]"
               )}
             >
               {tag}
@@ -362,7 +362,7 @@ export default function Vault() {
 
               <div className="space-y-2">
                 <h4 className="text-base font-black text-[var(--text)] line-clamp-1 leading-none tracking-tight">{docItem.name}</h4>
-                <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] font-mono">
+                <div className="flex items-center gap-3 text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.1em] font-mono">
                   <span>{format(new Date(docItem.createdAt), 'MMM dd, yyyy')}</span>
                   <span className="w-1 h-1 bg-slate-100 rounded-full" />
                   <span>{(docItem.sizeBytes / 1024).toFixed(1)} KB</span>
@@ -371,7 +371,7 @@ export default function Vault() {
 
               <div className="flex flex-wrap gap-2 mt-auto">
                 {docItem.tags?.map(tag => (
-                  <span key={tag} className="px-3 h-6 bg-[var(--ink)] text-[9px] font-black text-slate-500 rounded-full uppercase tracking-[0.1em] border border-[var(--line)]">
+                  <span key={tag} className="px-3 h-6 bg-[var(--ink)] text-[9px] font-black text-[var(--muted)] rounded-full uppercase tracking-[0.1em] border border-[var(--line)]">
                     {tag}
                   </span>
                 ))}
@@ -394,7 +394,7 @@ export default function Vault() {
                 <File size={64} />
               </div>
               <h3 className="text-3xl font-black text-[var(--text)] tracking-tight mb-3">Vault Depleted</h3>
-              <p className="text-slate-500 max-w-sm mx-auto text-xs font-black uppercase tracking-[0.2em] opacity-50">Secure storage is currently empty. Initialize upload to establish audit compliance.</p>
+              <p className="text-[var(--muted)] max-w-sm mx-auto text-xs font-black uppercase tracking-[0.2em] opacity-50">Secure storage is currently empty. Initialize upload to establish audit compliance.</p>
             </div>
           )}
         </div>
@@ -424,12 +424,12 @@ export default function Vault() {
                   </div>
                   <div>
                     <h3 className="text-2xl font-black text-[var(--text)] tracking-tight line-clamp-1 leading-none mb-2">{selectedDoc.name}</h3>
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-40 font-mono">
+                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest truncate opacity-40 font-mono">
                       Timestamp: {format(new Date(selectedDoc.createdAt), 'yyyy-MM-dd HH:mm:ss')}
                     </p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedDoc(null)} className="w-12 h-12 flex items-center justify-center hover:bg-[var(--ink)] rounded-[32px] transition-all text-slate-500">
+                <button onClick={() => setSelectedDoc(null)} className="w-12 h-12 flex items-center justify-center hover:bg-[var(--ink)] rounded-[32px] transition-all text-[var(--muted)]">
                   <X size={28} />
                 </button>
               </div>
@@ -449,7 +449,7 @@ export default function Vault() {
                     </div>
                     <div>
                       <h4 className="text-xl font-black text-[var(--text)] tracking-tight">Preview Restricted</h4>
-                      <p className="text-sm font-medium text-slate-500 mt-2">MIME: {selectedDoc.mimeType}</p>
+                      <p className="text-sm font-medium text-[var(--muted)] mt-2">MIME: {selectedDoc.mimeType}</p>
                     </div>
                     <a 
                       href={selectedDoc.fileUrl} 
@@ -467,7 +467,7 @@ export default function Vault() {
               <div className="p-4 md:p-10 bg-[var(--surface)] border-t border-[var(--line)] space-y-8">
                  <div className="grid grid-cols-2 gap-6">
                     <div className="p-6 bg-[var(--ink)]/30 rounded-[32px] border border-[var(--line)]">
-                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-40 mb-3">Protocol Status</p>
+                       <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest truncate opacity-40 mb-3">Protocol Status</p>
                        <div className="flex items-center gap-3 font-black text-xs tracking-widest">
                           {selectedDoc.linkedTransactionId ? (
                             <>
@@ -487,14 +487,14 @@ export default function Vault() {
                        </div>
                     </div>
                     <div className="p-6 bg-[var(--ink)]/30 rounded-[32px] border border-[var(--line)] font-mono">
-                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-40 mb-3">Data Magnitude</p>
+                       <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest truncate opacity-40 mb-3">Data Magnitude</p>
                        <p className="font-black text-sm text-[var(--text)] tracking-tight">{(selectedDoc.sizeBytes / 1024).toFixed(1)} KB</p>
                     </div>
                  </div>
 
                  {selectedDoc.linkedTransactionId && (
                    <div className="space-y-3">
-                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate opacity-40 px-1">Linked Transaction Association</p>
+                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest truncate opacity-40 px-1">Linked Transaction Association</p>
                      <div className="p-6 bg-slate-900 text-white rounded-[32px] flex items-center justify-between border border-white/5 shadow-xl group cursor-pointer overflow-hidden relative">
                         <div className="absolute inset-0 bg-[var(--surface)]/5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
                         <div className="relative z-10">

@@ -137,7 +137,7 @@ export default function Purchases() {
             <ShoppingBag className="w-6 h-6 text-emerald-500" />
             Purchases & AP
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-[var(--muted)] dark:text-slate-400">
             Manage vendor bills, purchase orders, vendors, and Accounts Payable accounts.
           </p>
         </div>
@@ -176,7 +176,7 @@ export default function Purchases() {
           className={`pb-3 text-sm font-bold border-b-2 transition-all ${
             activeSubTab === 'bills'
               ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700'
+              : 'border-transparent text-[var(--muted)] dark:text-slate-400 hover:text-slate-700'
           }`}
         >
           Bills ({bills.length})
@@ -186,7 +186,7 @@ export default function Purchases() {
           className={`pb-3 text-sm font-bold border-b-2 transition-all ${
             activeSubTab === 'vendors'
               ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700'
+              : 'border-transparent text-[var(--muted)] dark:text-slate-400 hover:text-slate-700'
           }`}
         >
           Vendors ({vendors.length})
@@ -196,7 +196,7 @@ export default function Purchases() {
       {/* Search Input Bar */}
       <div className="relative max-w-xs">
         <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <Search className="h-4 w-4 text-slate-400" />
+          <Search className="h-4 w-4 text-[var(--muted)]" />
         </span>
         <input
           type="text"
@@ -213,7 +213,7 @@ export default function Purchases() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
                   <th className="p-4">Vendor</th>
                   <th className="p-4">Bill #</th>
                   <th className="p-4">Date</th>
@@ -235,10 +235,10 @@ export default function Purchases() {
                       <td className="p-4 text-slate-600 dark:text-slate-400 font-mono text-xs">
                         {b.number || b.id.slice(0, 8).toUpperCase()}
                       </td>
-                      <td className="p-4 text-slate-500 dark:text-slate-400">
+                      <td className="p-4 text-[var(--muted)] dark:text-slate-400">
                         {b.date?.slice(0, 10)}
                       </td>
-                      <td className="p-4 text-slate-500 dark:text-slate-400">
+                      <td className="p-4 text-[var(--muted)] dark:text-slate-400">
                         {b.dueDate?.slice(0, 10)}
                       </td>
                       <td className="p-4">
@@ -261,7 +261,7 @@ export default function Purchases() {
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); setEditingBill(b); setIsBillModalOpen(true); }}
-                            className="p-1 text-slate-500 hover:text-slate-800 rounded-lg"
+                            className="p-1 text-[var(--muted)] hover:text-slate-800 rounded-lg"
                             title="Edit bill"
                             aria-label={`Edit bill ${b.number || ''}`.trim()}
                           >
@@ -312,7 +312,7 @@ export default function Purchases() {
 
                 {filteredBills.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-slate-500 dark:text-slate-400">
+                    <td colSpan={7} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
                       {loading ? <LoadingState what="bills" /> : searchTerm ? 'No bills match your search.' : 'No bills recorded yet.'}
                     </td>
                   </tr>
@@ -324,7 +324,7 @@ export default function Purchases() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
                   <th className="p-4">Vendor Name</th>
                   <th className="p-4">Category</th>
                   <th className="p-4">Email</th>
@@ -345,10 +345,10 @@ export default function Purchases() {
                     <td className="p-4 text-slate-600 dark:text-slate-400">
                       {v.category || 'Standard'}
                     </td>
-                    <td className="p-4 text-slate-500 dark:text-slate-400">
+                    <td className="p-4 text-[var(--muted)] dark:text-slate-400">
                       {v.email || 'N/A'}
                     </td>
-                    <td className="p-4 text-slate-500 dark:text-slate-400">
+                    <td className="p-4 text-[var(--muted)] dark:text-slate-400">
                       {v.phone || 'N/A'}
                     </td>
                     <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
@@ -359,7 +359,7 @@ export default function Purchases() {
 
                 {filteredVendors.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-slate-500 dark:text-slate-400">
+                    <td colSpan={5} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
                       No vendors listed yet.
                     </td>
                   </tr>
